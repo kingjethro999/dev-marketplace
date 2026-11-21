@@ -1,0 +1,26 @@
+{
+  "thresholds": {
+    "minLaunchConfidence": 60,
+    "minRealityScore": 50,
+    "minPerceivedPerformance": 70,
+    "maxCriticalFindings": 0,
+    "maxHighFindings": 0,
+    "maxMediumFindings": 5
+  },
+  "checks": {
+    "peridermInstall": true,
+    "peridermScan": true,
+    "peridermReview": true,
+    "dependencyAudit": true,
+    "envValidation": true,
+    "buildVerification": true
+  },
+  "envRequired": [
+    "PERIDERM_API_KEY",
+    "NODE_ENV"
+  ],
+  "buildCommand": "npm run build",
+  "testCommand": "npm test",
+  "aiHandoff": true,
+  "outputFormat": "text"
+}
