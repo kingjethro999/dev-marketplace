@@ -6,6 +6,7 @@
 Applied in a fixed order: levels, brightness/contrast, saturation, blur, sharpen.
 Dimensions never change. ImageMagick only.
 """
+
 import os
 import re
 import sys
@@ -30,21 +31,36 @@ from _common import (  # noqa: E402
 
 
 def build_parser():
-    parser = JSONArgumentParser(description="Adjust levels, brightness, contrast, saturation, blur or sharpness")
+    parser = JSONArgumentParser(
+        description="Adjust levels, brightness, contrast, saturation, blur or sharpness"
+    )
     parser.add_argument("input", help="image file to read (never modified)")
     add_output_args(parser)
-    parser.add_argument("--levels", help="BLACK,WHITE[,GAMMA]: input black and white points in percent (0-100) and "
-                                          "optional gamma, e.g. 5,95 or 0,100,1.2")
+    parser.add_argument(
+        "--levels",
+        help="BLACK,WHITE[,GAMMA]: input black and white points in percent (0-100) and "
+        "optional gamma, e.g. 5,95 or 0,100,1.2",
+    )
     parser.add_argument("--brightness", type=float, help="-100 to 100 (0 = unchanged)")
     parser.add_argument("--contrast", type=float, help="-100 to 100 (0 = unchanged)")
-    parser.add_argument("--saturation", type=float, help="percent of the current saturation, 0-400 (100 = unchanged, 0 = grey)")
-    parser.add_argument("--blur", type=float, help="Gaussian blur sigma in pixels, 0.1-50")
-    parser.add_argument("--sharpen", type=float, help="unsharp-mask sigma in pixels, 0.1-10")
+    parser.add_argument(
+        "--saturation",
+        type=float,
+        help="percent of the current saturation, 0-400 (100 = unchanged, 0 = grey)",
+    )
+    parser.add_argument(
+        "--blur", type=float, help="Gaussian blur sigma in pixels, 0.1-50"
+    )
+    parser.add_argument(
+        "--sharpen", type=float, help="unsharp-mask sigma in pixels, 0.1-10"
+    )
     return parser
 
 
 def _levels(value):
-    m = re.fullmatch(r"\s*([0-9.]+)\s*,\s*([0-9.]+)\s*(?:,\s*([0-9.]+)\s*)?", value or "")
+    m = re.fullmatch(
+        r"\s*([0-9.]+)\s*,\s*([0-9.]+)\s*(?:,\s*([0-9.]+)\s*)?", value or ""
+    )
     if not m:
         raise ImageSkillError(f"--levels must be BLACK,WHITE[,GAMMA], got {value!r}")
     black, white = float(m.group(1)), float(m.group(2))
@@ -58,7 +74,9 @@ def _levels(value):
 
 def _check_range(name, value, low, high):
     if value is not None and not (low <= value <= high):
-        raise ImageSkillError(f"--{name} must be between {low:g} and {high:g}, got {value:g}")
+        raise ImageSkillError(
+            f"--{name} must be between {low:g} and {high:g}, got {value:g}"
+        )
 
 
 def run_adjust(args):
@@ -69,8 +87,20 @@ def run_adjust(args):
     _check_range("saturation", args.saturation, 0, 400)
     _check_range("blur", args.blur, 0.1, 50)
     _check_range("sharpen", args.sharpen, 0.1, 10)
-    if all(v is None for v in (args.levels, args.brightness, args.contrast, args.saturation, args.blur, args.sharpen)):
-        raise ImageSkillError("nothing to do: give at least one of --levels --brightness --contrast --saturation --blur --sharpen")
+    if all(
+        v is None
+        for v in (
+            args.levels,
+            args.brightness,
+            args.contrast,
+            args.saturation,
+            args.blur,
+            args.sharpen,
+        )
+    ):
+        raise ImageSkillError(
+            "nothing to do: give at least one of --levels --brightness --contrast --saturation --blur --sharpen"
+        )
     backend, magick = select_backend("sips has no tone or detail adjustments")
 
     ops = []

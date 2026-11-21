@@ -16,7 +16,9 @@ process(), step by step:
             talker. A bin where I + H is badly conditioned (condition number > MAX_CONDITION) falls back to the
             first-order X_i - sum H_ij X_j. Linear and time-invariant: nothing is gated, nothing is generated
   istft     weighted overlap-add (wavio.stft_process); sample-aligned with the input, no delay added
-  write     one 32-bit float WAV per track, same rate, mono, same length as that track"""
+  write     one 32-bit float WAV per track, same rate, mono, same length as that track
+"""
+
 from __future__ import annotations
 
 import importlib.util
@@ -26,15 +28,25 @@ from typing import Any, Dict, List, Optional, Sequence
 from .. import __version__
 from ..errors import VoiceEnhanceError
 from . import wavio
-from .base import INCOMPATIBLE, MISSING, OK, Engine, EngineRequest, EngineResult, parse_version
+from .base import (
+    INCOMPATIBLE,
+    MISSING,
+    OK,
+    Engine,
+    EngineRequest,
+    EngineResult,
+    parse_version,
+)
 
 NUMPY_MIN = (1, 21)
 DEFAULTS = {"dominance_db": 3.0}
 LIMITS = {"dominance_db": (0.0, 30.0)}
 MIN_TRACKS, MAX_TRACKS = 2, 8
-HOP_SECONDS = 0.016                  # STFT hop; the window is 4 hops (64 ms): room for the acoustic delay between mics
-BLOCK_SECONDS = 30.0                 # frames per block in both passes, so memory does not grow with the file's length
-MAX_CONDITION = 10.0                 # above this, a bin is demixed to first order instead of by the inverse
+HOP_SECONDS = 0.016  # STFT hop; the window is 4 hops (64 ms): room for the acoustic delay between mics
+BLOCK_SECONDS = 30.0  # frames per block in both passes, so memory does not grow with the file's length
+MAX_CONDITION = (
+    10.0  # above this, a bin is demixed to first order instead of by the inverse
+)
 METHOD = "dominance-gated least-squares coupling, per-bin linear demixing"
 OUTPUT_FORMAT = "pcm_f32le"
 
@@ -61,8 +73,16 @@ def check_params(params: Dict[str, Any]) -> Dict[str, float]:
     value = params.get("dominance_db")
     value = DEFAULTS["dominance_db"] if value is None else value
     lo, hi = LIMITS["dominance_db"]
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not lo <= float(value) <= hi:
-        raise VoiceEnhanceError("INVALID_ARGUMENT", f"--dominance-db must be a number from {lo:g} to {hi:g}", {"dominance_db": value})
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not lo <= float(value) <= hi
+    ):
+        raise VoiceEnhanceError(
+            "INVALID_ARGUMENT",
+            f"--dominance-db must be a number from {lo:g} to {hi:g}",
+            {"dominance_db": value},
+        )
     return {"dominance_db": float(value)}
 
 
@@ -88,10 +108,16 @@ def demixing_matrices(np: Any, h: Any) -> Any:
     return w, int(np.count_nonzero(~ok))
 
 
-def reduce_files(srcs: Sequence[str], dsts: Sequence[str], dominance_db: float, np: Any,
-                 block_seconds: float = BLOCK_SECONDS) -> Dict[str, Any]:
+def reduce_files(
+    srcs: Sequence[str],
+    dsts: Sequence[str],
+    dominance_db: float,
+    np: Any,
+    block_seconds: float = BLOCK_SECONDS,
+) -> Dict[str, Any]:
     """Cross-talk reduction of the mono WAVs `srcs` (one sample rate), written to `dsts` as 32-bit float WAVs with
-    each track's own length. Two streaming passes: estimate the couplings, then demix."""
+    each track's own length. Two streaming passes: estimate the couplings, then demix.
+    """
     reader = wavio.TrackReader(srcs)
     try:
         rate, n_tracks, n = reader.rate, reader.channels, reader.frames
@@ -104,27 +130,44 @@ def reduce_files(srcs: Sequence[str], dsts: Sequence[str], dominance_db: float, 
         num = np.zeros((bins, n_tracks, n_tracks), dtype=complex)
         den = np.zeros((bins, n_tracks, n_tracks))
         used = np.zeros((n_tracks, n_tracks), dtype=np.int64)
-        for a in range(0, total, block):                                  # pass 1: estimate
-            spec = wavio.stft_frames(np, reader, a, min(a + block, total), size, hop, window)      # (T, F, N)
+        for a in range(0, total, block):  # pass 1: estimate
+            spec = wavio.stft_frames(
+                np, reader, a, min(a + block, total), size, hop, window
+            )  # (T, F, N)
             power = np.abs(spec) ** 2
             for i in range(n_tracks):
                 for j in range(n_tracks):
                     if i == j:
                         continue
                     gate = power[:, :, j] > rho * power[:, :, i]
-                    num[:, i, j] += np.sum(np.where(gate, spec[:, :, i] * np.conj(spec[:, :, j]), 0.0), axis=0)
+                    num[:, i, j] += np.sum(
+                        np.where(gate, spec[:, :, i] * np.conj(spec[:, :, j]), 0.0),
+                        axis=0,
+                    )
                     den[:, i, j] += np.sum(np.where(gate, power[:, :, j], 0.0), axis=0)
                     used[i, j] += int(np.count_nonzero(gate))
         h = coupling(np, num, den)
         w, fallback = demixing_matrices(np, h)
-        writer = wavio.TrackWriter(dsts, rate, reader.lengths)               # pass 2: demix
+        writer = wavio.TrackWriter(dsts, rate, reader.lengths)  # pass 2: demix
         try:
-            wavio.stft_process(reader, writer, np, size, hop, block, 0,
-                               lambda spec, skip: np.einsum("fij,tfj->tfi", w, spec[skip:]))
+            wavio.stft_process(
+                reader,
+                writer,
+                np,
+                size,
+                hop,
+                block,
+                0,
+                lambda spec, skip: np.einsum("fij,tfj->tfi", w, spec[skip:]),
+            )
         finally:
             writer.close()
         if writer.frames != n:
-            raise VoiceEnhanceError("INVALID_RESULT", f"wrote {writer.frames} frames, expected {n}", {"engine": "crosstalk"})
+            raise VoiceEnhanceError(
+                "INVALID_RESULT",
+                f"wrote {writer.frames} frames, expected {n}",
+                {"engine": "crosstalk"},
+            )
         # Energy-weighted broadband coupling of track j into track i, in dB (None: no bin where j dominated i).
         db: List[List[Optional[float]]] = []
         for i in range(n_tracks):
@@ -137,9 +180,16 @@ def reduce_files(srcs: Sequence[str], dsts: Sequence[str], dominance_db: float, 
                 gain = float(np.sum(np.abs(h[:, i, j]) ** 2 * den[:, i, j])) / total_den
                 row.append(round(10.0 * math.log10(max(gain, 1e-12)), 2))
             db.append(row)
-        return {"sample_rate": rate, "tracks": n_tracks, "frames": list(reader.lengths),
-                "stft": {"window": "hann", "size": size, "hop": hop}, "block_seconds": float(block_seconds),
-                "coupling_db": db, "estimation_bins": used.tolist(), "first_order_bins": fallback}
+        return {
+            "sample_rate": rate,
+            "tracks": n_tracks,
+            "frames": list(reader.lengths),
+            "stft": {"window": "hann", "size": size, "hop": hop},
+            "block_seconds": float(block_seconds),
+            "coupling_db": db,
+            "estimation_bins": used.tolist(),
+            "first_order_bins": fallback,
+        }
     finally:
         reader.close()
 
@@ -147,8 +197,10 @@ def reduce_files(srcs: Sequence[str], dsts: Sequence[str], dominance_db: float, 
 class CrosstalkEngine(Engine):
     id = "crosstalk"
     ops = ("bleed_reduce",)
-    description = ("Microphone bleed reduction for time-aligned per-mic tracks: dominance-gated least-squares coupling and "
-                   "per-bin linear demixing (NumPy, no model weights)")
+    description = (
+        "Microphone bleed reduction for time-aligned per-mic tracks: dominance-gated least-squares coupling and "
+        "per-bin linear demixing (NumPy, no model weights)"
+    )
     kind = "python"
     code_license = "MIT (this repository)"
     weights_license = "none (signal processing, no weights)"
@@ -160,29 +212,66 @@ class CrosstalkEngine(Engine):
 
     def inspect(self) -> Dict[str, Any]:
         if not _found("numpy"):
-            return {"status": MISSING, "version": None, "missing": "package", "detail": "numpy is not installed", "model": None}
+            return {
+                "status": MISSING,
+                "version": None,
+                "missing": "package",
+                "detail": "numpy is not installed",
+                "model": None,
+            }
         nv = _numpy_version()
         parsed = parse_version(nv)
         if parsed is None or parsed[:2] < NUMPY_MIN:
-            return {"status": INCOMPATIBLE, "version": __version__, "detail": f"numpy {nv} is outside {self.version_range}",
-                    "model": None, "numpy": nv}
-        return {"status": OK, "version": __version__, "detail": f"crosstalk {__version__} on numpy {nv}", "model": None, "numpy": nv}
+            return {
+                "status": INCOMPATIBLE,
+                "version": __version__,
+                "detail": f"numpy {nv} is outside {self.version_range}",
+                "model": None,
+                "numpy": nv,
+            }
+        return {
+            "status": OK,
+            "version": __version__,
+            "detail": f"crosstalk {__version__} on numpy {nv}",
+            "model": None,
+            "numpy": nv,
+        }
 
     def process(self, req: EngineRequest) -> EngineResult:
         """Runs in the worker. `req.input_paths` are the prepared mono WAVs (one sample rate, time-aligned); one
         32-bit float WAV per track is written to the matching `req.output_paths`."""
         info = self.require()
         if req.op not in self.ops:
-            raise VoiceEnhanceError("INVALID_ARGUMENT", f"engine {self.id!r} does not do {req.op}", {"engine": self.id, "op": req.op})
+            raise VoiceEnhanceError(
+                "INVALID_ARGUMENT",
+                f"engine {self.id!r} does not do {req.op}",
+                {"engine": self.id, "op": req.op},
+            )
         srcs, dsts = list(req.input_paths), list(req.output_paths)
         if not MIN_TRACKS <= len(srcs) <= MAX_TRACKS or len(dsts) != len(srcs):
-            raise VoiceEnhanceError("INVALID_ARGUMENT", f"{self.id} needs {MIN_TRACKS} to {MAX_TRACKS} tracks and one output per track",
-                                    {"engine": self.id, "inputs": len(srcs), "outputs": len(dsts)})
+            raise VoiceEnhanceError(
+                "INVALID_ARGUMENT",
+                f"{self.id} needs {MIN_TRACKS} to {MAX_TRACKS} tracks and one output per track",
+                {"engine": self.id, "inputs": len(srcs), "outputs": len(dsts)},
+            )
         params = check_params(req.params)
         import numpy as np
+
         facts = reduce_files(srcs, dsts, params["dominance_db"], np)
-        return EngineResult(output_path=dsts[0], engine_version=str(info["version"]), model=None, output_paths=dsts,
-                            extra=dict(params, method=METHOD, numpy=info.get("numpy"), stft=facts["stft"],
-                                       block_seconds=facts["block_seconds"], coupling_db=facts["coupling_db"],
-                                       estimation_bins=facts["estimation_bins"], first_order_bins=facts["first_order_bins"],
-                                       output_format=OUTPUT_FORMAT))
+        return EngineResult(
+            output_path=dsts[0],
+            engine_version=str(info["version"]),
+            model=None,
+            output_paths=dsts,
+            extra=dict(
+                params,
+                method=METHOD,
+                numpy=info.get("numpy"),
+                stft=facts["stft"],
+                block_seconds=facts["block_seconds"],
+                coupling_db=facts["coupling_db"],
+                estimation_bins=facts["estimation_bins"],
+                first_order_bins=facts["first_order_bins"],
+                output_format=OUTPUT_FORMAT,
+            ),
+        )

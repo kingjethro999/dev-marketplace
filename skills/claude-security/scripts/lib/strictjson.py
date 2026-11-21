@@ -70,7 +70,9 @@ def _finite(digits: str) -> float:
 def loads(document: str) -> object:
     """The JSON value in `document`; ValueError if not strict JSON."""
     try:
-        return cast("object", json.loads(document, parse_constant=_refuse, parse_float=_finite))
+        return cast(
+            "object", json.loads(document, parse_constant=_refuse, parse_float=_finite)
+        )
     except RecursionError as error:
         msg = "nested too deeply"
         raise ValueError(msg) from error
@@ -85,5 +87,6 @@ def text(value: object, indent: int | None = None) -> str:
     """`value` as UTF-8-encodable JSON text: non-ASCII kept, finite only, separators escaped."""
     dumped = json.dumps(value, ensure_ascii=False, allow_nan=False, indent=indent)
     return _SURROGATES.sub(
-        lambda match: f"\\u{ord(match.group()):04x}", dumped.translate(_SEPARATOR_ESCAPES)
+        lambda match: f"\\u{ord(match.group()):04x}",
+        dumped.translate(_SEPARATOR_ESCAPES),
     )

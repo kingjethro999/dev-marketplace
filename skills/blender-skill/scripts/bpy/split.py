@@ -15,6 +15,7 @@ references/pitfalls.md). It has no parent, so without stripping it first it woul
 misidentified as its own independent hierarchy and exported as a spurious, meaningless output
 file -- stripped before grouping, below.
 """
+
 import sys
 from pathlib import Path
 
@@ -38,7 +39,10 @@ def _hierarchy(root):
 
 def _safe_filename(name: str) -> str:
     keep = "-_. ()"
-    return "".join(c if c.isalnum() or c in keep else "_" for c in name).strip() or "object"
+    return (
+        "".join(c if c.isalnum() or c in keep else "_" for c in name).strip()
+        or "object"
+    )
 
 
 def run(args):
@@ -93,11 +97,13 @@ def run(args):
 
         out_path = out_dir / f"{name}{ext}"
         _compat.export_selected(str(out_path), out_fmt)
-        groups.append({
-            "root_object": root.name,
-            "objects": [o.name for o in group],
-            "output": str(out_path),
-        })
+        groups.append(
+            {
+                "root_object": root.name,
+                "objects": [o.name for o in group],
+                "output": str(out_path),
+            }
+        )
 
     return {
         "input": args["path"],

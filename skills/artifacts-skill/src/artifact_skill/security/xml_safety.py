@@ -87,7 +87,9 @@ def reject_xml_entity_declaration(data: bytes, source: str) -> None:
     safe default. Scans the entire input, not a bounded prefix — see this
     module's docstring for why that's fine performance-wise.
     """
-    if b"<!ENTITY" in data or (b"<!DOCTYPE" in data and b"[" in data.split(b"<!DOCTYPE", 1)[1]):
+    if b"<!ENTITY" in data or (
+        b"<!DOCTYPE" in data and b"[" in data.split(b"<!DOCTYPE", 1)[1]
+    ):
         raise ArtifactSecurityError(
             code="ARTIFACT_XML_ENTITY_DECLARATION_REJECTED",
             message=f"'{source}' declares a DOCTYPE/ENTITY, which this adapter refuses to parse "

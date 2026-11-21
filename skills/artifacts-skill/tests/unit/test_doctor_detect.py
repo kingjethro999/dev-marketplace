@@ -13,7 +13,9 @@ def test_ffmpeg_skill_capability_not_required_when_absent(tmp_path, monkeypatch)
     assert cap.status == CapabilityStatus.NOT_REQUIRED
 
 
-def test_ffmpeg_skill_capability_available_when_skill_md_present_in_home(tmp_path, monkeypatch):
+def test_ffmpeg_skill_capability_available_when_skill_md_present_in_home(
+    tmp_path, monkeypatch
+):
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.chdir(tmp_path)
     skill_dir = tmp_path / ".claude" / "skills" / "ffmpeg-skill"
@@ -27,7 +29,9 @@ def test_ffmpeg_skill_capability_available_when_skill_md_present_in_home(tmp_pat
     assert str(skill_dir) in cap.detail
 
 
-def test_ffmpeg_skill_capability_available_when_skill_md_present_in_project(tmp_path, monkeypatch):
+def test_ffmpeg_skill_capability_available_when_skill_md_present_in_project(
+    tmp_path, monkeypatch
+):
     other_home = tmp_path / "home"
     other_home.mkdir()
     monkeypatch.setenv("HOME", str(other_home))

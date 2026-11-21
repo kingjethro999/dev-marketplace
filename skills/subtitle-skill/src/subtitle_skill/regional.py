@@ -18,6 +18,7 @@ carries `ruby` is annotated with or without a profile.
 
 Other regions are added as further entries of `PROFILES`.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
@@ -68,7 +69,8 @@ PROFILES = {
 def profile_named(name) -> RegionalProfile:
     if not isinstance(name, str) or name not in PROFILES:
         raise SubtitleSkillError(
-            "INVALID_INPUT", f"regional_profile must be one of {sorted(PROFILES)}, got {name!r}"
+            "INVALID_INPUT",
+            f"regional_profile must be one of {sorted(PROFILES)}, got {name!r}",
         )
     return PROFILES[name]
 
@@ -87,11 +89,15 @@ def speaker_colors(profile: RegionalProfile, document: SubtitleDocument) -> dict
     out: dict = {}
     for cue in sorted(document.cues, key=lambda c: (c.start, c.end, c.id)):
         if cue.speaker and cue.speaker not in out:
-            out[cue.speaker] = profile.speaker_colors[len(out) % len(profile.speaker_colors)]
+            out[cue.speaker] = profile.speaker_colors[
+                len(out) % len(profile.speaker_colors)
+            ]
     return out
 
 
-def apply_profile(profile: RegionalProfile, document: SubtitleDocument, *, colors_carried: bool = True) -> tuple:
+def apply_profile(
+    profile: RegionalProfile, document: SubtitleDocument, *, colors_carried: bool = True
+) -> tuple:
     """The document as the profile draws it, and the speaker colour map.
 
     Each speaker's cues get the speaker's colour (a cue's own `style.color` wins);
@@ -114,5 +120,12 @@ def apply_profile(profile: RegionalProfile, document: SubtitleDocument, *, color
         if profile.show_speaker_names:
             cues.append(replace(cue, style=style))
         else:
-            cues.append(replace(cue, style=style, speaker=None, metadata={**cue.metadata, "speaker": cue.speaker}))
+            cues.append(
+                replace(
+                    cue,
+                    style=style,
+                    speaker=None,
+                    metadata={**cue.metadata, "speaker": cue.speaker},
+                )
+            )
     return replace(document, cues=tuple(cues)), colors

@@ -190,7 +190,9 @@ def arguments(args: list[str]) -> tuple[list[str], dict[str, str | None]]:
     return positionals, options
 
 
-def scan_started(scan_root: str, options: dict[str, str | None]) -> dict[str, int | bool] | None:
+def scan_started(
+    scan_root: str, options: dict[str, str | None]
+) -> dict[str, int | bool] | None:
     """The event for a write_scan_meta.py run; None unless it names a mode and an effort."""
     asked = (options.get("--effort") or "").strip().lower()
     mode, effort = code(MODES, options.get("--mode")), code(EFFORTS, asked)
@@ -198,15 +200,24 @@ def scan_started(scan_root: str, options: dict[str, str | None]) -> dict[str, in
         return None
     root = os.path.normpath(scan_root)
     scope = (options.get("--scope") or "").split(",")
-    scoped = any(os.path.normpath(os.path.join(root, entry.strip())) != root for entry in scope)
-    return {"mode": mode, "effort": effort, "scoped": scoped, "py_minor": sys.version_info.minor}
+    scoped = any(
+        os.path.normpath(os.path.join(root, entry.strip())) != root for entry in scope
+    )
+    return {
+        "mode": mode,
+        "effort": effort,
+        "scoped": scoped,
+        "py_minor": sys.version_info.minor,
+    }
 
 
 def scan_finished(products: Path) -> dict[str, int | bool] | None:
     """The event for a render_report.py run, from the one revision stamp it wrote; else None."""
     try:
         (path,) = (
-            p for p in products.iterdir() if p.name.startswith(STAMP_PREFIX) and p.suffix == ".json"
+            p
+            for p in products.iterdir()
+            if p.name.startswith(STAMP_PREFIX) and p.suffix == ".json"
         )
     except (OSError, ValueError):
         return None
@@ -229,7 +240,9 @@ def scan_finished(products: Path) -> dict[str, int | bool] | None:
         "candidates_deduped": count(verification.get("candidates_deduped")),
         "unverified_reason": 0 if verification.get("status") == "verified" else reason,
         "researchers_dispatched": dispatched,
-        "researchers_lost": count(dispatched - count(verification.get("researchers_returned"))),
+        "researchers_lost": count(
+            dispatched - count(verification.get("researchers_returned"))
+        ),
         "panels_short": count(verification.get("incomplete_panel_candidates")),
         "findings_refused": len(arr(verification.get("refused_findings"))),
         "verify_runs": count(shape.get("verification_runs")),
@@ -288,7 +301,9 @@ def metrics(failed: frozenset[str]) -> None:
     elif event != "PostToolUse":
         return
     elif script == "write_scan_meta.py" and len(positionals) >= 2:
-        name, body = "scan_started", scan_started(os.path.join(cwd, positionals[1]), options)
+        name, body = "scan_started", scan_started(
+            os.path.join(cwd, positionals[1]), options
+        )
     elif script == "render_report.py" and positionals:
         products = Path(cwd, options.get("--products-dir") or positionals[0])
         name, body = "scan_finished", scan_finished(products)
@@ -315,7 +330,8 @@ def unanswered() -> None:
 def git(cwd: str, *args: str, deadline: float) -> str:
     """The stdout of `git -C <cwd> <args>` less its newline, or "" when git fails.
 
-    Raises OSError when git cannot start, TimeoutExpired when it is slow or the deadline is past."""
+    Raises OSError when git cannot start, TimeoutExpired when it is slow or the deadline is past.
+    """
     left = deadline - time.monotonic()
     if left <= 0:
         raise subprocess.TimeoutExpired(args, 0)
@@ -346,7 +362,9 @@ class TipState:
         shown, last = raw.get("shown"), raw.get("last")
         keys = cast("list[object]", shown) if isinstance(shown, list) else []
         kept = [key for key in keys if isinstance(key, str)]
-        return cls(path, raw.get("opened") is True, kept, last if isinstance(last, str) else "")
+        return cls(
+            path, raw.get("opened") is True, kept, last if isinstance(last, str) else ""
+        )
 
     def save(self) -> None:
         """Write the record whole, so that a reader never meets a partial file."""
@@ -354,7 +372,9 @@ class TipState:
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as out:
                 out.write(
-                    json.dumps({"opened": self.opened, "shown": self.shown, "last": self.last})
+                    json.dumps(
+                        {"opened": self.opened, "shown": self.shown, "last": self.last}
+                    )
                 )
             Path(part).replace(self.path)
         except OSError:
@@ -406,7 +426,9 @@ class Branch:
     def key(self, *, per_commit: bool) -> str:
         """An opaque key for this branch, or for this branch at this commit; it names neither."""
         parts = (self.repo, self.name, self.head if per_commit else "")
-        return hashlib.sha256("\0".join(parts).encode("utf-8", "surrogateescape")).hexdigest()[:16]
+        return hashlib.sha256(
+            "\0".join(parts).encode("utf-8", "surrogateescape")
+        ).hexdigest()[:16]
 
     def change(self, deadline: float) -> tuple[int, str] | None:
         """(files changed, base) for this branch; None with no base, nothing ahead, or too much."""
@@ -477,7 +499,11 @@ def main(argv: list[str]) -> int:
     elif verb == "banner" and len(args) == 1:
         banner(tip_state_path(args[0]))
     elif verb == "tip" and len(args) == 3 and args[0] in {"push", "pr"}:
-        tip(tip_state_path(args[1]), after_pr=args[0] == "pr", always=args[2].lower() == "always")
+        tip(
+            tip_state_path(args[1]),
+            after_pr=args[0] == "pr",
+            always=args[2].lower() == "always",
+        )
     else:
         usage = (
             "usage: hooks.py metrics [failed-interpreter ...] | unanswered | banner <data> | "

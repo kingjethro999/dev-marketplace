@@ -11,23 +11,56 @@ Examples:
   python3 reverse.py input.mp4
   python3 reverse.py input.mp4 --no-audio -o backwards.mp4
 """
+
 import argparse
 import math
 import sys
 
-from _common import add_common, apply_common, aac_args, cfr_args, cfr_filter, default_output, die, emit, ffmpeg_base, info, probe, run, video_args, X264_PRESETS, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    cfr_filter,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+)
 from _common.emit import warn
-from _common.decision import (HELD_FRAMES_WARN_BYTES, av_clip_length, av_trim, delivered_rate, frame_durations, frame_rate,
-                              held_frames_bytes, stream_starts)
+from _common.decision import (
+    HELD_FRAMES_WARN_BYTES,
+    av_clip_length,
+    av_trim,
+    delivered_rate,
+    frame_durations,
+    frame_rate,
+    held_frames_bytes,
+    stream_starts,
+)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="output file (default: <name>_reverse.<ext>)")
-    ap.add_argument("--no-audio", action="store_true", help="drop audio instead of reversing it")
+    ap.add_argument(
+        "-o", "--output", help="output file (default: <name>_reverse.<ext>)"
+    )
+    ap.add_argument(
+        "--no-audio", action="store_true", help="drop audio instead of reversing it"
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -45,9 +78,13 @@ def main() -> int:
     frames = v.get("nb_frames") or vdur * (frame_rate(meta) or v.get("fps") or 30.0)
     held = held_frames_bytes(v, frames)
     if held > HELD_FRAMES_WARN_BYTES:
-        warn(f"reverse holds about {held / 1024 ** 3:.1f} GiB of decoded frames in memory "
-             f"({vdur:.0f}s of {v['width']}x{v['height']}) -- cut the part to reverse first (cut.py) if RAM is tight",
-             "memory_heavy", duration=meta.get("duration"), bytes=held)
+        warn(
+            f"reverse holds about {held / 1024 ** 3:.1f} GiB of decoded frames in memory "
+            f"({vdur:.0f}s of {v['width']}x{v['height']}) -- cut the part to reverse first (cut.py) if RAM is tight",
+            "memory_heavy",
+            duration=meta.get("duration"),
+            bytes=held,
+        )
     cmd = ffmpeg_base() + ["-i", args.input]
     # A VFR source is put on the delivered grid before the reversal (#523). `reverse` hands its
     # frames the forward timestamps in order, so a reversed VFR picture kept its gaps where they
@@ -59,7 +96,9 @@ def main() -> int:
     # reversal then opened on the frame before it. The conformed picture's time base is one frame,
     # and a trim rescales its bound to it (a half-frame bound can round onto a frame and cut it:
     # freeze.py), so a microsecond base follows.
-    reversed_conform = f"{cfr_filter(meta)}:round=down,settb=AVTB" if cfr_filter(meta) else ""
+    reversed_conform = (
+        f"{cfr_filter(meta)}:round=down,settb=AVTB" if cfr_filter(meta) else ""
+    )
     if has_audio:
         # Both streams are reversed about one end (#409); each reversed about its own end put a sound
         # 0.6 s longer than its picture 0.396 s off. As in a join, both start at the first frame (the
@@ -79,17 +118,24 @@ def main() -> int:
         # The trim that drops the hold's spare clones stays on the source's own grid (half a frame
         # of r_frame_rate before the end): half a delivered frame cut a real last frame that sits
         # nearer the end than that, and reverse then opened on the one before it.
-        rate = delivered_rate(meta) or frame_rate(meta) or meta["video"].get("fps") or 30.0
+        rate = (
+            delivered_rate(meta) or frame_rate(meta) or meta["video"].get("fps") or 30.0
+        )
         length = av_clip_length(meta, rate)
         vlen = meta["video"].get("duration") or length
         end = math.ceil(length * rate - 1e-6) / rate
         vtrim, atrim = av_trim(stream_starts(meta)[0], None)
         conform = f"{reversed_conform}," if reversed_conform else ""
-        cmd += ["-filter_complex",
-                f"[0:v:0]tpad=stop_mode=clone:stop_duration={max(0.0, end - vlen) + 2 / rate:.6f},{vtrim},"
-                f"{conform}trim=end={end - 0.5 / max(rate, frame_rate(meta) or rate):.6f},reverse,{frame_durations(meta, rate)}[v];"
-                f"[0:a:0]{atrim},apad=whole_dur={end:.6f},atrim=end={end:.6f},areverse,asetpts=N/SR/TB[a]",
-                "-map", "[v]", "-map", "[a]"]
+        cmd += [
+            "-filter_complex",
+            f"[0:v:0]tpad=stop_mode=clone:stop_duration={max(0.0, end - vlen) + 2 / rate:.6f},{vtrim},"
+            f"{conform}trim=end={end - 0.5 / max(rate, frame_rate(meta) or rate):.6f},reverse,{frame_durations(meta, rate)}[v];"
+            f"[0:a:0]{atrim},apad=whole_dur={end:.6f},atrim=end={end:.6f},areverse,asetpts=N/SR/TB[a]",
+            "-map",
+            "[v]",
+            "-map",
+            "[a]",
+        ]
     else:
         cmd += ["-vf", f"{reversed_conform},reverse" if reversed_conform else "reverse"]
     cmd += video_args(meta, args.crf, args.preset)
@@ -102,7 +148,9 @@ def main() -> int:
     run(cmd)
 
     result = probe(output, role="output")
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {result['video']['width']}x{result['video']['height']})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {result['video']['width']}x{result['video']['height']})"
+    )
     emit(output)
     return 0
 

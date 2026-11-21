@@ -5,6 +5,7 @@ Kept as a real script file rather than an inline YAML heredoc: embedding a multi
 inside a YAML block-scalar `run:` step is fragile (indentation rules for the YAML block scalar and
 for Python code conflict), so CI logic like this lives here instead, unit-testable on its own.
 """
+
 from __future__ import annotations
 
 import json

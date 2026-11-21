@@ -14,6 +14,7 @@ and / or explicit words). A word is removed only where the caller's timings say 
   4. consecutive fillers with no other word between them are removed as one range when the gap between them is at
      most merge_gap (so the breath between "えー" and "あのー" goes too); a gap with a real word in it never merges.
 """
+
 from __future__ import annotations
 
 import unicodedata
@@ -25,7 +26,19 @@ from typing import Any, Dict, FrozenSet, Iterable, List, Sequence, Tuple
 # FILLER_REMOVE has no lexicon unless the caller names one (ADR-18).
 LEXICON_PRESETS: Dict[str, Tuple[str, ...]] = {
     "en": ("um", "umm", "uh", "uhh", "uhm", "erm", "er", "hmm", "mm", "ah"),
-    "ja": ("えー", "えーと", "えーっと", "えっと", "えと", "あー", "あのー", "そのー", "うーん", "んー", "ええと"),
+    "ja": (
+        "えー",
+        "えーと",
+        "えーっと",
+        "えっと",
+        "えと",
+        "あー",
+        "あのー",
+        "そのー",
+        "うーん",
+        "んー",
+        "ええと",
+    ),
 }
 
 # Opt-in lists (ADR-25): words a caller may add on purpose, published in the contract (`filler_lexicons.opt_in`) and
@@ -40,7 +53,12 @@ OPT_IN_LISTS: Dict[str, Tuple[str, ...]] = {
 MAX_RUN_TOKENS = 3
 RUN_MAX_GAP = 0.05
 _LONG_VOWEL = "ー"
-_LONG_VOWEL_VARIANTS = {"〜": _LONG_VOWEL, "~": _LONG_VOWEL, "～": _LONG_VOWEL, "ｰ": _LONG_VOWEL}
+_LONG_VOWEL_VARIANTS = {
+    "〜": _LONG_VOWEL,
+    "~": _LONG_VOWEL,
+    "～": _LONG_VOWEL,
+    "ｰ": _LONG_VOWEL,
+}
 
 
 def normalise(token: str) -> str:
@@ -54,21 +72,32 @@ def normalise(token: str) -> str:
                 out.append(ch)
             continue
         cat = unicodedata.category(ch)
-        if ch.isspace() or cat.startswith("P") or cat.startswith("Z") or cat.startswith("C"):
+        if (
+            ch.isspace()
+            or cat.startswith("P")
+            or cat.startswith("Z")
+            or cat.startswith("C")
+        ):
             continue
         out.append(ch)
     return "".join(out)
 
 
-def effective_lexicon(presets: Sequence[str], words: Sequence[str], keep: Sequence[str]) -> FrozenSet[str]:
+def effective_lexicon(
+    presets: Sequence[str], words: Sequence[str], keep: Sequence[str]
+) -> FrozenSet[str]:
     """Normal forms of presets + words, minus keep."""
-    chosen = {normalise(w) for p in presets for w in LEXICON_PRESETS[p]} | {normalise(w) for w in words}
+    chosen = {normalise(w) for p in presets for w in LEXICON_PRESETS[p]} | {
+        normalise(w) for w in words
+    }
     chosen -= {normalise(w) for w in keep}
     chosen.discard("")
     return frozenset(chosen)
 
 
-def match_fillers(words: Sequence[Dict[str, Any]], lexicon: Iterable[str]) -> List[Tuple[int, int]]:
+def match_fillers(
+    words: Sequence[Dict[str, Any]], lexicon: Iterable[str]
+) -> List[Tuple[int, int]]:
     """Index runs [a, b) of `words` (sorted by start) that are fillers. Longest run first, left to right, no overlap."""
     lex = frozenset(lexicon)
     norms = [normalise(str(w["text"])) for w in words]
@@ -77,9 +106,12 @@ def match_fillers(words: Sequence[Dict[str, Any]], lexicon: Iterable[str]) -> Li
     while i < n:
         hit = 0
         for k in range(min(MAX_RUN_TOKENS, n - i), 0, -1):
-            if any(words[j + 1]["start"] - words[j]["end"] > RUN_MAX_GAP for j in range(i, i + k - 1)):
+            if any(
+                words[j + 1]["start"] - words[j]["end"] > RUN_MAX_GAP
+                for j in range(i, i + k - 1)
+            ):
                 continue
-            joined = "".join(norms[i:i + k])
+            joined = "".join(norms[i : i + k])
             if joined and joined in lex:
                 hit = k
                 break
@@ -91,10 +123,16 @@ def match_fillers(words: Sequence[Dict[str, Any]], lexicon: Iterable[str]) -> Li
     return out
 
 
-def removal_ranges(words: Sequence[Dict[str, Any]], runs: Sequence[Tuple[int, int]], pad: float, merge_gap: float,
-                   duration: float) -> List[Tuple[float, float]]:
+def removal_ranges(
+    words: Sequence[Dict[str, Any]],
+    runs: Sequence[Tuple[int, int]],
+    pad: float,
+    merge_gap: float,
+    duration: float,
+) -> List[Tuple[float, float]]:
     """Ranges (start, end) to remove for the matched runs, padded and merged as described in the module docstring.
-    Sorted and non-overlapping; empty ranges (a word wholly past `duration`) are dropped."""
+    Sorted and non-overlapping; empty ranges (a word wholly past `duration`) are dropped.
+    """
     ranges: List[Tuple[float, float, int, int]] = []
     n = len(words)
     for a, b in runs:
@@ -121,4 +159,8 @@ def opt_in_hits(text: str) -> List[str]:
     """Names of the opt-in lists whose words include `text` (normalised): a matched filler that is also an ordinary
     word, which the run reports instead of passing over in silence."""
     n = normalise(text)
-    return [name for name, ws in OPT_IN_LISTS.items() if n and n in {normalise(w) for w in ws}]
+    return [
+        name
+        for name, ws in OPT_IN_LISTS.items()
+        if n and n in {normalise(w) for w in ws}
+    ]

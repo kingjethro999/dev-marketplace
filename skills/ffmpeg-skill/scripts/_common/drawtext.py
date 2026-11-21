@@ -2,6 +2,7 @@
 font-name escape and the shaping-library probe that decides drawtext vs libass per script.
 Split out of _common.text in the refactor after 1.17.3; every body is byte-identical.
 """
+
 from __future__ import annotations
 
 import os
@@ -10,7 +11,14 @@ import shutil
 import subprocess
 from typing import Dict, List, Optional
 from _common.decision import escape_filter_path
-from _common.runner import STATE, _DRAWTEXT_PENDING, _drawtext_tmpdir, ffmpeg_exe, ffmpeg_release, require_tool
+from _common.runner import (
+    STATE,
+    _DRAWTEXT_PENDING,
+    _drawtext_tmpdir,
+    ffmpeg_exe,
+    ffmpeg_release,
+    require_tool,
+)
 
 
 def _on_windows() -> bool:
@@ -24,6 +32,7 @@ def _windows_short_path(path: str) -> "Optional[str]":
         return None
     try:
         import ctypes
+
         buf = ctypes.create_unicode_buffer(32768)
         n = ctypes.windll.kernel32.GetShortPathNameW(str(path), buf, len(buf))
     except (OSError, AttributeError, ValueError):
@@ -54,27 +63,45 @@ def drawtext_fontfile(path: str) -> str:
         return f"fontfile={escape_filter_path(short, bind=False)}"
     import hashlib
     from _common.emit import record_fallback, warn
+
     tmpdir = _drawtext_tmpdir(create=not STATE.dry_run)
     if not tmpdir.isascii():
         tmpdir = _windows_short_path(tmpdir) or tmpdir
     st = os.stat(path)
     # the path plus size and mtime: a font replaced in place during the run gets a new copy
     key = f"{path}|{st.st_size}|{st.st_mtime_ns}".encode("utf-8")
-    name = "font_" + hashlib.sha1(key, usedforsecurity=False).hexdigest()[:16] + os.path.splitext(path)[1].lower()
+    name = (
+        "font_"
+        + hashlib.sha1(key, usedforsecurity=False).hexdigest()[:16]
+        + os.path.splitext(path)[1].lower()
+    )
     copy = os.path.join(tmpdir, name)
     if not copy.isascii():
-        warn(f"font: {path} is not an ASCII path and no ASCII copy could be placed; drawtext may "
-             "not open it on Windows (move the font to a folder named in ASCII)", "font_path_not_ascii", font=path)
+        warn(
+            f"font: {path} is not an ASCII path and no ASCII copy could be placed; drawtext may "
+            "not open it on Windows (move the font to a folder named in ASCII)",
+            "font_path_not_ascii",
+            font=path,
+        )
         return f"fontfile={escape_filter_path(path, bind=False)}"
     if not STATE.dry_run and not os.path.exists(copy):
         try:
             shutil.copyfile(path, copy)
         except OSError as e:
-            warn(f"font: could not copy {path} to an ASCII path ({e}); drawtext may not open it on "
-                 "Windows (move the font to a folder named in ASCII)", "font_path_not_ascii", font=path)
+            warn(
+                f"font: could not copy {path} to an ASCII path ({e}); drawtext may not open it on "
+                "Windows (move the font to a folder named in ASCII)",
+                "font_path_not_ascii",
+                font=path,
+            )
             return f"fontfile={escape_filter_path(path, bind=False)}"
-    record_fallback(f"font: {path} is not an ASCII path, which drawtext cannot open on Windows; "
-                    f"drawing with a copy at {copy}", "font_path_copied", font=path, file=copy)
+    record_fallback(
+        f"font: {path} is not an ASCII path, which drawtext cannot open on Windows; "
+        f"drawing with a copy at {copy}",
+        "font_path_copied",
+        font=path,
+        file=copy,
+    )
     return f"fontfile={escape_filter_path(copy, bind=False)}"
 
 
@@ -90,7 +117,9 @@ def drawtext_boxborderw(vertical: int, horizontal: int) -> str:
 # these come out wrong through drawtext on every build and must go through libass. Arabic and
 # Hebrew are NOT here: drawtext's text_shaping uses fribidi, which does bidi and Arabic joining
 # correctly -- they only join this set on a build compiled without fribidi.
-SHAPING_SCRIPTS = frozenset({"hi", "bn", "ta", "te", "kn", "ml", "gu", "pa", "si", "th", "lo", "km", "my"})
+SHAPING_SCRIPTS = frozenset(
+    {"hi", "bn", "ta", "te", "kn", "ml", "gu", "pa", "si", "th", "lo", "km", "my"}
+)
 
 
 BIDI_SCRIPTS = frozenset({"ar", "he"})
@@ -109,15 +138,26 @@ def drawtext_shaping() -> "Dict[str, bool]":
     if exe:
         for flag in ("-buildconf", "-version"):
             try:
-                proc = subprocess.run([exe, "-hide_banner", flag], stdout=subprocess.PIPE,
-                                      stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", timeout=10)
+                proc = subprocess.run(
+                    [exe, "-hide_banner", flag],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=10,
+                )
             except (subprocess.TimeoutExpired, OSError):
                 break
             if proc.returncode == 0 and proc.stdout.strip():
                 text = proc.stdout
                 break
-    _SHAPING_BUILD_CACHE.update({"fribidi": "--enable-libfribidi" in text,
-                                 "harfbuzz": "--enable-libharfbuzz" in text})
+    _SHAPING_BUILD_CACHE.update(
+        {
+            "fribidi": "--enable-libfribidi" in text,
+            "harfbuzz": "--enable-libharfbuzz" in text,
+        }
+    )
     return dict(_SHAPING_BUILD_CACHE)
 
 
@@ -126,10 +166,14 @@ def shaping_refusal(script: str) -> str:
     for the scripts harfbuzz reorders, on this build for Arabic and Hebrew, which a build with
     fribidi draws (#402: both were refused as "on any ffmpeg build")."""
     if script in BIDI_SCRIPTS:
-        return ("cannot be shaped by drawtext on this ffmpeg build (it was built without libfribidi, which "
-                "drawtext needs for right-to-left order and Arabic joining; a build with it draws this text)")
-    return ("cannot be shaped by drawtext on any ffmpeg build (the marks are reordered by harfbuzz, which "
-            "drawtext does not use)")
+        return (
+            "cannot be shaped by drawtext on this ffmpeg build (it was built without libfribidi, which "
+            "drawtext needs for right-to-left order and Arabic joining; a build with it draws this text)"
+        )
+    return (
+        "cannot be shaped by drawtext on any ffmpeg build (the marks are reordered by harfbuzz, which "
+        "drawtext does not use)"
+    )
 
 
 def needs_shaping(script: str) -> bool:
@@ -180,7 +224,8 @@ NEWLINE_GLYPH_RELEASES = frozenset({(8, 0, 0), (8, 0, 1), (8, 1, 0)})
 def drawtext_draws_newline_glyph() -> bool:
     """Whether this build's drawtext draws a box at each line break of a multi-line text (see
     NEWLINE_GLYPH_RELEASES). A git or vendor build without a release number is taken to be fixed:
-    the fix is on master, and a guess the other way would reroute every multi-line title."""
+    the fix is on master, and a guess the other way would reroute every multi-line title.
+    """
     return ffmpeg_release() in NEWLINE_GLYPH_RELEASES
 
 
@@ -203,7 +248,9 @@ def drawtext_clean(text: "Optional[str]") -> str:
     line, which would centre the block half a line too high; a label that is only newlines stays
     as it is)."""
     cleaned = (text or "").replace("\r\n", "\n").replace("\r", "\n")
-    cleaned = re.sub(r"[\x00-\x08\x0e-\x1f\x7f]", "", re.sub(r"[\t\x0b\x0c]", " ", cleaned))
+    cleaned = re.sub(
+        r"[\x00-\x08\x0e-\x1f\x7f]", "", re.sub(r"[\t\x0b\x0c]", " ", cleaned)
+    )
     return cleaned.rstrip("\n") or cleaned
 
 
@@ -230,6 +277,7 @@ def drawtext_text_opts(text: str, tmpdir: "Optional[str]" = None) -> str:
     """
     cleaned = drawtext_clean(text)
     import hashlib
+
     name = "t_" + hashlib.sha256(cleaned.encode("utf-8")).hexdigest()[:16] + ".txt"
     if tmpdir is None:
         tmpdir = _drawtext_tmpdir(create=not STATE.dry_run)
@@ -238,7 +286,9 @@ def drawtext_text_opts(text: str, tmpdir: "Optional[str]" = None) -> str:
     return f"textfile={escape_filter_path(path)}:expansion=none"
 
 
-def drawtext_line_metrics(lines: "List[str]", font_opt: str, fontsize: int) -> "List[Optional[Dict[str, float]]]":
+def drawtext_line_metrics(
+    lines: "List[str]", font_opt: str, fontsize: int
+) -> "List[Optional[Dict[str, float]]]":
     """Each line's drawtext metrics as this ffmpeg measures it ALONE, on one line, where the
     8.0/8.0.1/8.1.0 newline bug cannot reach it: {w: text_w, top: top_a, bottom: bottom_d, lh},
     None for an empty line (drawtext measures it as no glyphs).
@@ -252,17 +302,36 @@ def drawtext_line_metrics(lines: "List[str]", font_opt: str, fontsize: int) -> "
     import tempfile
     from _common.emit import die
     from _common.runner import flush_drawtext_textfiles, run_analysis
+
     out: "List[Optional[Dict[str, float]]]" = [None] * len(lines)
     with tempfile.TemporaryDirectory(prefix="ffmpeg-skill-measure-") as td:
         chain = []
         for i, line in enumerate(lines):
             if line:
-                chain.append(f"drawtext={drawtext_text_opts(line, tmpdir=td)}:{font_opt}:fontsize={fontsize}:x=0:"
-                             f"y='print({-(1000 + i)},16)+print(text_w,16)+print(top_a,16)+print(bottom_d,16)+print(lh,16)'")
+                chain.append(
+                    f"drawtext={drawtext_text_opts(line, tmpdir=td)}:{font_opt}:fontsize={fontsize}:x=0:"
+                    f"y='print({-(1000 + i)},16)+print(text_w,16)+print(top_a,16)+print(bottom_d,16)+print(lh,16)'"
+                )
         if not chain:
             return out
-        cmd = [require_tool("ffmpeg"), "-hide_banner", "-nostdin", "-v", "error", "-f", "lavfi",
-               "-i", "color=c=black:s=16x16:r=1", "-frames:v", "1", "-vf", ",".join(chain), "-f", "null", "-"]
+        cmd = [
+            require_tool("ffmpeg"),
+            "-hide_banner",
+            "-nostdin",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=16x16:r=1",
+            "-frames:v",
+            "1",
+            "-vf",
+            ",".join(chain),
+            "-f",
+            "null",
+            "-",
+        ]
         try:
             flush_drawtext_textfiles(cmd)
             proc = run_analysis(cmd, record=True)
@@ -271,7 +340,11 @@ def drawtext_line_metrics(lines: "List[str]", font_opt: str, fontsize: int) -> "
                 del _DRAWTEXT_PENDING[path]
     current, values = None, {}  # type: Optional[int], Dict[int, List[float]]
     # 8.x prefixes each value with "[Eval @ 0x...] ", 6.1 prints it bare
-    for m in re.finditer(r"^(?:\[Eval @ [^\]]*\] )?(-?[0-9]+(?:\.[0-9]+)?|-?nan|-?inf)\s*$", proc.stderr, re.M):
+    for m in re.finditer(
+        r"^(?:\[Eval @ [^\]]*\] )?(-?[0-9]+(?:\.[0-9]+)?|-?nan|-?inf)\s*$",
+        proc.stderr,
+        re.M,
+    ):
         try:
             v = float(m.group(1))
         except ValueError:
@@ -284,7 +357,10 @@ def drawtext_line_metrics(lines: "List[str]", font_opt: str, fontsize: int) -> "
     for i, line in enumerate(lines):
         got = values.get(i) if line else None
         if line and (not got or len(got) != 4):
-            die("could not measure a line of --text with drawtext (no print() output from ffmpeg)", kind="ffmpeg")
+            die(
+                "could not measure a line of --text with drawtext (no print() output from ffmpeg)",
+                kind="ffmpeg",
+            )
         if got:
             out[i] = {"w": got[0], "top": got[1], "bottom": got[2], "lh": got[3]}
     return out

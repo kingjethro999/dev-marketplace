@@ -55,7 +55,9 @@ class TestCheck(unittest.TestCase):
     def test_fails_for_wrong_width(self):
         good = os.path.join(self.tmp.name, "good2.png")
         write_solid_png(good, 30, 15)
-        args = check.build_parser().parse_args([good, "--expect-width", "999", "--json"])
+        args = check.build_parser().parse_args(
+            [good, "--expect-width", "999", "--json"]
+        )
         with self.assertRaises(ImageSkillError):
             check.run_check(args)
 

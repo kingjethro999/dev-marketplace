@@ -1,4 +1,5 @@
 """Roadmap step 11: the `shorts` caption profile (docs/adr/ADR-009-shorts-captions.md)."""
+
 import json
 import shutil
 import subprocess
@@ -10,10 +11,18 @@ from subtitle_skill.errors import SubtitleSkillError
 from subtitle_skill.formats.ass import generate_shorts_ass
 from subtitle_skill.models import SubtitleDocument
 from subtitle_skill.operations import execute
-from subtitle_skill.shorts import PLATFORM_SAFE, SAFE, ShortsLayout, chunk_document, estimate_width
+from subtitle_skill.shorts import (
+    PLATFORM_SAFE,
+    SAFE,
+    ShortsLayout,
+    chunk_document,
+    estimate_width,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
-FIXTURE = json.loads((FIXTURES / "shorts" / "vertical_words_en.json").read_text(encoding="utf-8"))
+FIXTURE = json.loads(
+    (FIXTURES / "shorts" / "vertical_words_en.json").read_text(encoding="utf-8")
+)
 VENDOR_ROOT = FIXTURES / "ffmpeg_skill_vendor"
 W, H = 360, 640
 
@@ -32,22 +41,40 @@ def test_safe_zone_is_inside_every_9x16_destination():
 def test_chunks_are_one_or_two_words_from_word_timings():
     chunks = chunk_document(_doc())
     assert [c.text for c in chunks.cues] == [
-        "Welcome back,", "everyone to", "the channel", "Today:", "unbelievably extraordinary", "results!", "Let's go",
+        "Welcome back,",
+        "everyone to",
+        "the channel",
+        "Today:",
+        "unbelievably extraordinary",
+        "results!",
+        "Let's go",
     ]
     assert all(1 <= len(c.words) <= 2 for c in chunks.cues)
     first = chunks.cues[0]
     assert (first.id, first.start, first.metadata["source_cue"]) == ("1.1", 0.0, "1")
     # held to the next chunk when the gap is short; a name prefix would be a third word
-    assert first.end == 0.75 and first.speaker is None and first.metadata["speaker"] == "Host"
+    assert (
+        first.end == 0.75
+        and first.speaker is None
+        and first.metadata["speaker"] == "Host"
+    )
     assert chunks.cues[-1].end == 5.2  # the last chunk ends with its last word
 
 
 def test_words_are_validated():
-    bad = {**FIXTURE, "cues": [{**FIXTURE["cues"][2], "words": [{"text": "x", "start": 9.0, "end": 9.5}]}]}
+    bad = {
+        **FIXTURE,
+        "cues": [
+            {**FIXTURE["cues"][2], "words": [{"text": "x", "start": 9.0, "end": 9.5}]}
+        ],
+    }
     with pytest.raises(SubtitleSkillError) as exc:
         _doc(bad)
     assert exc.value.code == "INVALID_TIME_RANGE"
-    missing = {**FIXTURE, "cues": [{k: v for k, v in FIXTURE["cues"][2].items() if k != "words"}]}
+    missing = {
+        **FIXTURE,
+        "cues": [{k: v for k, v in FIXTURE["cues"][2].items() if k != "words"}],
+    }
     with pytest.raises(SubtitleSkillError) as exc:
         chunk_document(_doc(missing))
     assert exc.value.code == "MISSING_INPUT"
@@ -66,7 +93,9 @@ def _events(ass):
 
 @pytest.mark.parametrize("width, height", [(360, 640), (1080, 1920)])
 def test_every_cue_box_sits_inside_the_safe_zone(width, height):
-    events = _events(generate_shorts_ass(chunk_document(_doc()), width=width, height=height))
+    events = _events(
+        generate_shorts_ass(chunk_document(_doc()), width=width, height=height)
+    )
     assert len(events) == 7
     left, right = SAFE["left"] * width, (1 - SAFE["right"]) * width
     top, bottom = SAFE["top"] * height, (1 - SAFE["bottom"]) * height
@@ -84,7 +113,11 @@ def test_every_cue_box_sits_inside_the_safe_zone(width, height):
 @pytest.fixture
 def ffmpeg_skill_install(tmp_path, monkeypatch):
     install_dir = tmp_path / "ffmpeg-skill-install"
-    shutil.copytree(VENDOR_ROOT / "scripts", install_dir / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(
+        VENDOR_ROOT / "scripts",
+        install_dir / "scripts",
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
     monkeypatch.setenv("SUBTITLE_SKILL_FFMPEG_SKILL_DIR", str(install_dir))
     return install_dir
 
@@ -93,14 +126,45 @@ def _video(path, width=W, height=H, duration=6):
     if not shutil.which("ffmpeg"):
         pytest.skip("real ffmpeg is required for render tests")
     subprocess.run(
-        [shutil.which("ffmpeg"), "-y", "-f", "lavfi", "-i", f"color=c=0x203040:s={width}x{height}:d={duration}:r=25",
-         "-c:v", "libx264", "-pix_fmt", "yuv420p", str(path)], check=True, capture_output=True)
+        [
+            shutil.which("ffmpeg"),
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c=0x203040:s={width}x{height}:d={duration}:r=25",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            str(path),
+        ],
+        check=True,
+        capture_output=True,
+    )
 
 
 def _ink_box(path, t):
     data = subprocess.run(
-        [shutil.which("ffmpeg"), "-v", "error", "-ss", str(t), "-i", str(path), "-frames:v", "1",
-         "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True, check=True).stdout
+        [
+            shutil.which("ffmpeg"),
+            "-v",
+            "error",
+            "-ss",
+            str(t),
+            "-i",
+            str(path),
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "gray",
+            "-",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout
     assert len(data) == W * H
     xs = [i % W for i, v in enumerate(data) if v > 200]
     ys = [i // W for i, v in enumerate(data) if v > 200]
@@ -108,8 +172,16 @@ def _ink_box(path, t):
 
 
 def _request(tmp_path, **extra):
-    return {"operation": "render", "workspace": str(tmp_path), "format": "srt", "output_path": "out.mp4",
-            "video_input": "in.mp4", "subtitle": FIXTURE, "caption_profile": "shorts", **extra}
+    return {
+        "operation": "render",
+        "workspace": str(tmp_path),
+        "format": "srt",
+        "output_path": "out.mp4",
+        "video_input": "in.mp4",
+        "subtitle": FIXTURE,
+        "caption_profile": "shorts",
+        **extra,
+    }
 
 
 def test_burned_9x16_cues_sit_inside_the_safe_zone(tmp_path, ffmpeg_skill_install):
@@ -123,7 +195,10 @@ def test_burned_9x16_cues_sit_inside_the_safe_zone(tmp_path, ffmpeg_skill_instal
         box = _ink_box(tmp_path / "out.mp4", (cue["start"] + cue["end"]) / 2)
         assert box is not None, cue
         x0, y0, x1, y1 = box
-        assert left <= x0 and x1 <= right and top <= y0 and y1 <= bottom, (cue["text"], box)
+        assert left <= x0 and x1 <= right and top <= y0 and y1 <= bottom, (
+            cue["text"],
+            box,
+        )
 
 
 def test_the_speakers_face_is_avoided(tmp_path, ffmpeg_skill_install):

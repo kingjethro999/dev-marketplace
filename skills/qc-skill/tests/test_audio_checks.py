@@ -36,7 +36,11 @@ def test_inspect_clean_audio_measurements(media, workspace):
 
 
 def test_video_no_audio_reports_stream_absent(media, workspace):
-    doc = {"operation": "inspect", "kind": "audio", "input": str(media["video_no_audio"])}
+    doc = {
+        "operation": "inspect",
+        "kind": "audio",
+        "input": str(media["video_no_audio"]),
+    }
     resp = run(doc, workspace)
     m = measurements_by_id(resp)
     assert m["audio.stream_present"]["value"] is False
@@ -45,7 +49,9 @@ def test_video_no_audio_reports_stream_absent(media, workspace):
 
 def test_require_audio_stream_true_fails_when_absent(media, workspace):
     doc = {
-        "operation": "check", "kind": "audio", "input": str(media["video_no_audio"]),
+        "operation": "check",
+        "kind": "audio",
+        "input": str(media["video_no_audio"]),
         "rules": {"audio": {"require_audio_stream": True}},
     }
     resp = run(doc, workspace)
@@ -56,7 +62,9 @@ def test_require_audio_stream_true_fails_when_absent(media, workspace):
 
 def test_require_audio_stream_false_passes_when_absent(media, workspace):
     doc = {
-        "operation": "check", "kind": "audio", "input": str(media["video_no_audio"]),
+        "operation": "check",
+        "kind": "audio",
+        "input": str(media["video_no_audio"]),
         "rules": {"audio": {"require_audio_stream": False}},
     }
     resp = run(doc, workspace)
@@ -95,7 +103,9 @@ def test_internal_silence_detected_in_gap_fixture(media, workspace):
 
 def test_internal_silence_check_fails_over_tolerance(media, workspace):
     doc = {
-        "operation": "check", "kind": "audio", "input": str(media["silence_gap"]),
+        "operation": "check",
+        "kind": "audio",
+        "input": str(media["silence_gap"]),
         "rules": {"audio": {"max_internal_silence_sec": 0.2}},
     }
     resp = run(doc, workspace)
@@ -107,7 +117,9 @@ def test_internal_silence_check_fails_over_tolerance(media, workspace):
 
 def test_internal_silence_check_passes_within_tolerance(media, workspace):
     doc = {
-        "operation": "check", "kind": "audio", "input": str(media["silence_gap"]),
+        "operation": "check",
+        "kind": "audio",
+        "input": str(media["silence_gap"]),
         "rules": {"audio": {"max_internal_silence_sec": 5.0}},
     }
     resp = run(doc, workspace)
@@ -118,11 +130,20 @@ def test_internal_silence_check_passes_within_tolerance(media, workspace):
 def test_loudness_target_within_tolerance_passes(media, workspace):
     doc = {"operation": "inspect", "kind": "audio", "input": str(media["clean"])}
     inspected = run(doc, workspace)
-    measured_lufs = measurements_by_id(inspected)["audio.integrated_loudness_lufs"]["value"]
+    measured_lufs = measurements_by_id(inspected)["audio.integrated_loudness_lufs"][
+        "value"
+    ]
 
     doc2 = {
-        "operation": "check", "kind": "audio", "input": str(media["clean"]),
-        "rules": {"audio": {"integrated_loudness_target_lufs": measured_lufs, "integrated_loudness_tolerance_lu": 0.5}},
+        "operation": "check",
+        "kind": "audio",
+        "input": str(media["clean"]),
+        "rules": {
+            "audio": {
+                "integrated_loudness_target_lufs": measured_lufs,
+                "integrated_loudness_tolerance_lu": 0.5,
+            }
+        },
     }
     resp = run(doc2, workspace)
     checks = checks_by_id(resp)
@@ -131,8 +152,15 @@ def test_loudness_target_within_tolerance_passes(media, workspace):
 
 def test_loudness_target_out_of_tolerance_fails(media, workspace):
     doc = {
-        "operation": "check", "kind": "audio", "input": str(media["clean"]),
-        "rules": {"audio": {"integrated_loudness_target_lufs": -14.0, "integrated_loudness_tolerance_lu": 0.5}},
+        "operation": "check",
+        "kind": "audio",
+        "input": str(media["clean"]),
+        "rules": {
+            "audio": {
+                "integrated_loudness_target_lufs": -14.0,
+                "integrated_loudness_tolerance_lu": 0.5,
+            }
+        },
     }
     resp = run(doc, workspace)
     checks = checks_by_id(resp)
@@ -142,12 +170,22 @@ def test_loudness_target_out_of_tolerance_fails(media, workspace):
 
 
 def test_sample_rate_and_channel_rules(media, workspace):
-    inspected = run({"operation": "inspect", "kind": "audio", "input": str(media["clean"])}, workspace)
+    inspected = run(
+        {"operation": "inspect", "kind": "audio", "input": str(media["clean"])},
+        workspace,
+    )
     m = measurements_by_id(inspected)
     sr, channels = m["audio.sample_rate"]["value"], m["audio.channels"]["value"]
 
     ok = run(
-        {"operation": "check", "kind": "audio", "input": str(media["clean"]), "rules": {"audio": {"expected_sample_rate": sr, "expected_channels": channels}}},
+        {
+            "operation": "check",
+            "kind": "audio",
+            "input": str(media["clean"]),
+            "rules": {
+                "audio": {"expected_sample_rate": sr, "expected_channels": channels}
+            },
+        },
         workspace,
     )
     checks = checks_by_id(ok)
@@ -155,7 +193,12 @@ def test_sample_rate_and_channel_rules(media, workspace):
     assert checks["audio.channels_match_expected"]["status"] == "PASS"
 
     bad = run(
-        {"operation": "check", "kind": "audio", "input": str(media["clean"]), "rules": {"audio": {"expected_sample_rate": sr + 1}}},
+        {
+            "operation": "check",
+            "kind": "audio",
+            "input": str(media["clean"]),
+            "rules": {"audio": {"expected_sample_rate": sr + 1}},
+        },
         workspace,
     )
     assert checks_by_id(bad)["audio.sample_rate_matches_expected"]["status"] == "FAIL"
@@ -166,11 +209,19 @@ def test_channel_layout_unmeasured_is_unknown_not_fail(media, workspace):
     # audio (confirmed against loud_clipping.wav) - a rule expecting a
     # specific layout must report UNKNOWN, not a false "mismatch" FAIL,
     # when the underlying measurement was never available to compare.
-    inspected = run({"operation": "inspect", "kind": "audio", "input": str(media["loud_clipping"])}, workspace)
+    inspected = run(
+        {"operation": "inspect", "kind": "audio", "input": str(media["loud_clipping"])},
+        workspace,
+    )
     assert measurements_by_id(inspected)["audio.channel_layout"]["value"] is None
 
     resp = run(
-        {"operation": "check", "kind": "audio", "input": str(media["loud_clipping"]), "rules": {"audio": {"expected_channel_layout": "mono"}}},
+        {
+            "operation": "check",
+            "kind": "audio",
+            "input": str(media["loud_clipping"]),
+            "rules": {"audio": {"expected_channel_layout": "mono"}},
+        },
         workspace,
     )
     check = checks_by_id(resp)["audio.channel_layout_matches_expected"]

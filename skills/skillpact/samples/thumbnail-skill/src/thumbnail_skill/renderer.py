@@ -4,7 +4,9 @@ This is where the actual picture is drawn, and it never touches ffmpeg: it is a 
 raster pipeline over Pillow (canvas fill, paste, crop, resize, ImageDraw text). There is no filter
 string, no shell, no arbitrary code path; every operation here corresponds to exactly one validated
 field of a ThumbnailElement (model.py). Elements are drawn in z_index order (ties broken by their
-position in the document, stable sort) so the caller's stacking is the only stacking that happens."""
+position in the document, stable sort) so the caller's stacking is the only stacking that happens.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Dict, List
@@ -19,9 +21,9 @@ from .model import Crop, ImageContent, TextContent, ThumbnailDocument, Thumbnail
 def _hex_color(value: str) -> tuple:
     v = value.lstrip("#")
     if len(v) == 6:
-        r, g, b = (int(v[i:i + 2], 16) for i in (0, 2, 4))
+        r, g, b = (int(v[i : i + 2], 16) for i in (0, 2, 4))
         return (r, g, b, 255)
-    r, g, b, a = (int(v[i:i + 2], 16) for i in (0, 2, 4, 6))
+    r, g, b, a = (int(v[i : i + 2], 16) for i in (0, 2, 4, 6))
     return (r, g, b, a)
 
 
@@ -37,12 +39,21 @@ def _apply_opacity(img: "Image.Image", opacity: float) -> "Image.Image":
 def _apply_crop(img: "Image.Image", crop: Crop, where: str) -> "Image.Image":
     w, h = img.size
     if crop.x + crop.width > w or crop.y + crop.height > h:
-        raise ThumbnailError("INVALID_REQUEST", f"{where}.crop [{crop.x},{crop.y},{crop.width}x{crop.height}] exceeds the source image size ({w}x{h})",
-                             {"field": f"{where}.crop", "reason": "crop_out_of_bounds", "image_size": {"width": w, "height": h}})
+        raise ThumbnailError(
+            "INVALID_REQUEST",
+            f"{where}.crop [{crop.x},{crop.y},{crop.width}x{crop.height}] exceeds the source image size ({w}x{h})",
+            {
+                "field": f"{where}.crop",
+                "reason": "crop_out_of_bounds",
+                "image_size": {"width": w, "height": h},
+            },
+        )
     return img.crop((crop.x, crop.y, crop.x + crop.width, crop.y + crop.height))
 
 
-def _apply_fit(img: "Image.Image", target_w: int, target_h: int, fit: str) -> "Image.Image":
+def _apply_fit(
+    img: "Image.Image", target_w: int, target_h: int, fit: str
+) -> "Image.Image":
     """Resize `img` for placement in a target_w x target_h box.
     - fill:    stretch to exactly the box (aspect not preserved)
     - cover:   scale to fully cover the box, cropping the overflow, centred
@@ -70,10 +81,14 @@ def _apply_fit(img: "Image.Image", target_w: int, target_h: int, fit: str) -> "I
 def _rotate(img: "Image.Image", degrees: int) -> "Image.Image":
     if degrees == 0:
         return img
-    return img.rotate(-degrees, expand=True)   # PIL rotates counter-clockwise; this skill's rotation is clockwise
+    return img.rotate(
+        -degrees, expand=True
+    )  # PIL rotates counter-clockwise; this skill's rotation is clockwise
 
 
-def draw_image_element(canvas: "Image.Image", content: ImageContent, source: "Image.Image", where: str) -> None:
+def draw_image_element(
+    canvas: "Image.Image", content: ImageContent, source: "Image.Image", where: str
+) -> None:
     img = source.convert("RGBA")
     if content.crop is not None:
         img = _apply_crop(img, content.crop, where)
@@ -88,7 +103,12 @@ def draw_image_element(canvas: "Image.Image", content: ImageContent, source: "Im
     canvas.alpha_composite(img, dest=(x, y))
 
 
-def _measure_lines(draw: "ImageDraw.ImageDraw", lines: List[str], font: "ImageFont.FreeTypeFont", line_spacing: float) -> Any:
+def _measure_lines(
+    draw: "ImageDraw.ImageDraw",
+    lines: List[str],
+    font: "ImageFont.FreeTypeFont",
+    line_spacing: float,
+) -> Any:
     ascent, descent = font.getmetrics()
     line_h = int(round((ascent + descent) * line_spacing))
     widths = []
@@ -98,11 +118,15 @@ def _measure_lines(draw: "ImageDraw.ImageDraw", lines: List[str], font: "ImageFo
     return widths, line_h, ascent, descent
 
 
-def draw_text_element(canvas: "Image.Image", content: TextContent, font_file: ResolvedFont) -> None:
+def draw_text_element(
+    canvas: "Image.Image", content: TextContent, font_file: ResolvedFont
+) -> None:
     draw = ImageDraw.Draw(canvas)
     font = ImageFont.truetype(font_file.path, content.font_size, index=font_file.index)
     lines = content.text.split("\n")
-    widths, line_h, ascent, descent = _measure_lines(draw, lines, font, content.line_spacing)
+    widths, line_h, ascent, descent = _measure_lines(
+        draw, lines, font, content.line_spacing
+    )
     block_w = max(widths) if widths else 0
     block_h = line_h * len(lines)
 
@@ -118,9 +142,16 @@ def draw_text_element(canvas: "Image.Image", content: TextContent, font_file: Re
 
     if content.background is not None:
         pad = content.background.padding
-        box = (round(ax - pad), round(ay - pad), round(ax + block_w + pad), round(ay + block_h + pad))
+        box = (
+            round(ax - pad),
+            round(ay - pad),
+            round(ax + block_w + pad),
+            round(ay + block_h + pad),
+        )
         overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        ImageDraw.Draw(overlay).rectangle(box, fill=_hex_color(content.background.color))
+        ImageDraw.Draw(overlay).rectangle(
+            box, fill=_hex_color(content.background.color)
+        )
         canvas.alpha_composite(_apply_opacity(overlay, content.opacity))
         draw = ImageDraw.Draw(canvas)
 
@@ -135,26 +166,51 @@ def draw_text_element(canvas: "Image.Image", content: TextContent, font_file: Re
             lx = ax + (block_w - widths[i])
         ly = ay + i * line_h
         if content.shadow is not None:
-            tdraw.text((lx + content.shadow.offset_x, ly + content.shadow.offset_y), ln, font=font, fill=_hex_color(content.shadow.color))
+            tdraw.text(
+                (lx + content.shadow.offset_x, ly + content.shadow.offset_y),
+                ln,
+                font=font,
+                fill=_hex_color(content.shadow.color),
+            )
         if content.stroke is not None and content.stroke.width > 0:
-            tdraw.text((lx, ly), ln, font=font, fill=fill, stroke_width=content.stroke.width, stroke_fill=_hex_color(content.stroke.color))
+            tdraw.text(
+                (lx, ly),
+                ln,
+                font=font,
+                fill=fill,
+                stroke_width=content.stroke.width,
+                stroke_fill=_hex_color(content.stroke.color),
+            )
         else:
             tdraw.text((lx, ly), ln, font=font, fill=fill)
     canvas.alpha_composite(_apply_opacity(text_layer, content.opacity))
 
 
-def render_document(document: ThumbnailDocument, images: Dict[str, "Image.Image"], fonts_used: Dict[str, ResolvedFont]) -> "Image.Image":
+def render_document(
+    document: ThumbnailDocument,
+    images: Dict[str, "Image.Image"],
+    fonts_used: Dict[str, ResolvedFont],
+) -> "Image.Image":
     """`images` maps asset_id -> an already-opened, already-validated Pillow Image (the still image
     itself, or the decoded video frame). `fonts_used` maps font_id -> ResolvedFont. Pure function:
-    no file I/O, no ffmpeg, no randomness; the same inputs always draw the same pixels."""
-    canvas = Image.new("RGBA", (document.canvas.width, document.canvas.height), _hex_color(document.canvas.background))
-    ordered: List[ThumbnailElement] = sorted(enumerate(document.elements), key=lambda pair: (pair[1].z_index, pair[0]))
+    no file I/O, no ffmpeg, no randomness; the same inputs always draw the same pixels.
+    """
+    canvas = Image.new(
+        "RGBA",
+        (document.canvas.width, document.canvas.height),
+        _hex_color(document.canvas.background),
+    )
+    ordered: List[ThumbnailElement] = sorted(
+        enumerate(document.elements), key=lambda pair: (pair[1].z_index, pair[0])
+    )
     for _, element in ordered:
         if element.type == "image":
             content = element.image
             assert content is not None
             source = images[content.asset_id]
-            draw_image_element(canvas, content, source, f"elements[{element.element_id}].image")
+            draw_image_element(
+                canvas, content, source, f"elements[{element.element_id}].image"
+            )
         else:
             content = element.text
             assert content is not None

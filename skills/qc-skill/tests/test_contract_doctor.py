@@ -21,22 +21,40 @@ def test_contract_identifies_the_skill():
 def test_contract_lists_only_implemented_operations():
     doc = skill_contract()
     assert set(doc["operations"]) == {"inspect", "check", "validate"}
-    assert set(doc["kinds"]) == {"video", "audio", "subtitle", "delivery", "delivery_package"}
+    assert set(doc["kinds"]) == {
+        "video",
+        "audio",
+        "subtitle",
+        "delivery",
+        "delivery_package",
+    }
 
 
 def test_contract_never_advertises_unimplemented_features():
     doc = skill_contract()
     # These belong only in not_provided (an explicit disclaimer) - never as
     # an advertised operation, check, or measurement.
-    banned = ("transcription", "diarization", "translation", "auto-repair", "autorepair", "llm", "thumbnail")
+    banned = (
+        "transcription",
+        "diarization",
+        "translation",
+        "auto-repair",
+        "autorepair",
+        "llm",
+        "thumbnail",
+    )
     for key in ("operations", "kinds", "checks"):
         haystack = json.dumps(doc[key]).lower()
         for term in banned:
-            assert term not in haystack, f"{term!r} must not appear in contract[{key!r}]"
+            assert (
+                term not in haystack
+            ), f"{term!r} must not appear in contract[{key!r}]"
     for kind_measurements in doc["measurements"].values():
         haystack = json.dumps(kind_measurements).lower()
         for term in banned:
-            assert term not in haystack, f"{term!r} must not appear in contract measurements"
+            assert (
+                term not in haystack
+            ), f"{term!r} must not appear in contract measurements"
 
 
 def test_contract_declares_security_boundary():
@@ -80,4 +98,8 @@ def test_doctor_reports_all_required_filters():
     report = doctor_report(".")
     for name in ("blackdetect", "freezedetect", "ebur128", "astats", "silencedetect"):
         assert f"filter:{name}" in report["checks"]
-        assert report["checks"][f"filter:{name}"]["status"] in ("AVAILABLE", "MISSING", "UNKNOWN")
+        assert report["checks"][f"filter:{name}"]["status"] in (
+            "AVAILABLE",
+            "MISSING",
+            "UNKNOWN",
+        )

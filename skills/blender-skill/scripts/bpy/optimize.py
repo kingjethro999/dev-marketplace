@@ -8,6 +8,7 @@ armature input's reported triangles_before/triangles_after were inflated by the 
 triangles (confirmed on fox.glb: 656 instead of the real 576), and --texture-auto-resolution's
 scene-bounding-box calculation would be skewed by an object that isn't really part of the asset.
 """
+
 import re
 import sys
 from pathlib import Path
@@ -67,9 +68,22 @@ PRESETS = {
     "ar": {"texture_max": 2048, "decimate_ratio": 0.7, "triangle_budget": None},
     "sketchfab": {"texture_max": 4096, "decimate_ratio": None, "triangle_budget": None},
     "vrchat": {"texture_max": 2048, "decimate_ratio": None, "triangle_budget": 70_000},
-    "roblox": {"texture_max": 1024, "decimate_ratio": None, "triangle_budget": 20_000, "triangle_budget_scope": "per_mesh"},
-    "gltf-viewer": {"texture_max": 1024, "decimate_ratio": 0.6, "triangle_budget": None},
-    "quicklook": {"texture_max": 2048, "decimate_ratio": None, "triangle_budget": 100_000},
+    "roblox": {
+        "texture_max": 1024,
+        "decimate_ratio": None,
+        "triangle_budget": 20_000,
+        "triangle_budget_scope": "per_mesh",
+    },
+    "gltf-viewer": {
+        "texture_max": 1024,
+        "decimate_ratio": 0.6,
+        "triangle_budget": None,
+    },
+    "quicklook": {
+        "texture_max": 2048,
+        "decimate_ratio": None,
+        "triangle_budget": 100_000,
+    },
 }
 
 
@@ -79,7 +93,9 @@ def _apply_modifier(obj, mod):
         bpy.ops.object.modifier_apply(modifier=mod.name)
 
 
-def _weld_and_triangulate(obj, weld: bool, triangulate: bool, recalc_normals: bool) -> int:
+def _weld_and_triangulate(
+    obj, weld: bool, triangulate: bool, recalc_normals: bool
+) -> int:
     """Returns the number of vertices removed by welding (0 if not requested)."""
     if not (weld or triangulate or recalc_normals):
         return 0
@@ -100,7 +116,9 @@ def _weld_and_triangulate(obj, weld: bool, triangulate: bool, recalc_normals: bo
     return removed
 
 
-_DEGENERATE_DIST = 0.0  # see _clean_mesh's docstring -- NOT bpy.ops.mesh.dissolve_degenerate's own
+_DEGENERATE_DIST = (
+    0.0  # see _clean_mesh's docstring -- NOT bpy.ops.mesh.dissolve_degenerate's own
+)
 # 1e-4 default: that default is a short-*edge*-collapse tolerance, which also collapses a real,
 # legitimately tiny (but positive-area) triangle -- confirmed directly (edges of 5e-5 units each,
 # a real ~1.25e-9 area face) collapses away entirely at dist=1e-4. 0.0 disables that edge-collapse
@@ -206,7 +224,9 @@ def _resize_textures(max_size: int) -> list:
     for img in bpy.data.images:
         if img.name in ("Render Result", "Viewer Node"):
             continue
-        len(img.pixels)  # force the lazy load (see look.py) before reading/changing size
+        len(
+            img.pixels
+        )  # force the lazy load (see look.py) before reading/changing size
         w, h = img.size
         if max(w, h) <= max_size:
             continue
@@ -236,7 +256,9 @@ def _resize_textures_per_image(caps: dict) -> list:
         scale = max_size / max(w, h)
         new_w, new_h = max(1, round(w * scale)), max(1, round(h * scale))
         img.scale(new_w, new_h)
-        resized.append({"name": img.name, "from": [w, h], "to": [new_w, new_h], "cap": max_size})
+        resized.append(
+            {"name": img.name, "from": [w, h], "to": [new_w, new_h], "cap": max_size}
+        )
     return resized
 
 
@@ -251,7 +273,9 @@ def _combined_bounding_diameter(objs) -> float:
             zs.append(world.z)
     if not xs:
         return 0.0
-    return ((max(xs) - min(xs)) ** 2 + (max(ys) - min(ys)) ** 2 + (max(zs) - min(zs)) ** 2) ** 0.5
+    return (
+        (max(xs) - min(xs)) ** 2 + (max(ys) - min(ys)) ** 2 + (max(zs) - min(zs)) ** 2
+    ) ** 0.5
 
 
 def _next_pow2(n: int) -> int:
@@ -301,7 +325,10 @@ def _auto_texture_max(mesh_objs, viewport_width: int) -> dict:
 
 def _safe_filename(name: str) -> str:
     keep = "-_. ()"
-    return "".join(c if c.isalnum() or c in keep else "_" for c in name).strip() or "texture"
+    return (
+        "".join(c if c.isalnum() or c in keep else "_" for c in name).strip()
+        or "texture"
+    )
 
 
 def _generate_mipmaps(mesh_objs, out_dir: str) -> list:
@@ -418,7 +445,9 @@ def _set_origin(obj, mode: str) -> None:
         xs = [c.x for c in corners]
         ys = [c.y for c in corners]
         zs = [c.z for c in corners]
-        bottom_center = mathutils.Vector(((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, min(zs)))
+        bottom_center = mathutils.Vector(
+            ((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, min(zs))
+        )
         saved_cursor = bpy.context.scene.cursor.location.copy()
         bpy.context.scene.cursor.location = bottom_center
         bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
@@ -458,8 +487,14 @@ def _thin_point_cloud(obj, voxel_size: float) -> int:
     bm.from_mesh(obj.data)
     buckets = {}
     for v in bm.verts:
-        key = (round(v.co.x / voxel_size), round(v.co.y / voxel_size), round(v.co.z / voxel_size))
-        buckets.setdefault(key, v)  # first vertex seen per cell is the kept representative
+        key = (
+            round(v.co.x / voxel_size),
+            round(v.co.y / voxel_size),
+            round(v.co.z / voxel_size),
+        )
+        buckets.setdefault(
+            key, v
+        )  # first vertex seen per cell is the kept representative
     keep_indices = {v.index for v in buckets.values()}
     to_remove = [v for v in bm.verts if v.index not in keep_indices]
     removed = len(to_remove)
@@ -567,7 +602,9 @@ def _set_all_colorspace(name: str) -> list:
         try:
             img.colorspace_settings.name = name
         except TypeError as e:
-            raise ValueError(f"{name!r} is not a valid colorspace in this Blender: {e}") from e
+            raise ValueError(
+                f"{name!r} is not a valid colorspace in this Blender: {e}"
+            ) from e
         changed.append(img.name)
     return changed
 
@@ -578,7 +615,9 @@ def _skinned_to(armature_obj, obj) -> bool:
     datablock (e.g. duplicated rigs with the same skeleton), and a mesh bound to a sibling object
     is just as truly skinned to this bone data as one bound to `armature_obj` itself."""
     return any(
-        m.type == "ARMATURE" and m.object is not None and m.object.data == armature_obj.data
+        m.type == "ARMATURE"
+        and m.object is not None
+        and m.object.data == armature_obj.data
         for m in obj.modifiers
     )
 
@@ -625,7 +664,9 @@ def _animated_bone_names() -> set:
     return names
 
 
-def _transfer_bone_weight_to_parent(mesh_objs, armature_obj, bone_name: str, parent_name) -> None:
+def _transfer_bone_weight_to_parent(
+    mesh_objs, armature_obj, bone_name: str, parent_name
+) -> None:
     """Moves a removed bone's own vertex-group weight onto its parent's vertex group (creating
     one if the parent had none) rather than just dropping it -- a vertex that was influenced by
     the removed bone stays attached to the rig, following the parent instead, rather than losing
@@ -641,11 +682,13 @@ def _transfer_bone_weight_to_parent(mesh_objs, armature_obj, bone_name: str, par
         if vg_old is None:
             continue
         if parent_name:
-            vg_new = obj.vertex_groups.get(parent_name) or obj.vertex_groups.new(name=parent_name)
+            vg_new = obj.vertex_groups.get(parent_name) or obj.vertex_groups.new(
+                name=parent_name
+            )
             for v in obj.data.vertices:
                 for g in v.groups:
                     if g.group == vg_old.index and g.weight > 0:
-                        vg_new.add([v.index], g.weight, 'ADD')
+                        vg_new.add([v.index], g.weight, "ADD")
         obj.vertex_groups.remove(vg_old)
 
 
@@ -661,7 +704,7 @@ def _remove_unused_bones(armature_obj, mesh_objs) -> list:
     influence = _bone_influence(armature_obj, mesh_objs)
     removed = []
     bpy.context.view_layer.objects.active = armature_obj
-    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.object.mode_set(mode="EDIT")
     changed = True
     while changed:
         changed = False
@@ -673,7 +716,7 @@ def _remove_unused_bones(armature_obj, mesh_objs) -> list:
             removed.append(eb.name)
             armature_obj.data.edit_bones.remove(eb)
             changed = True
-    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.mode_set(mode="OBJECT")
     for name in removed:
         for obj in mesh_objs:
             vg = obj.vertex_groups.get(name)
@@ -704,15 +747,16 @@ def _cap_bone_count(armature_obj, mesh_objs, max_bones: int):
     influence = _bone_influence(armature_obj, mesh_objs)
     while len(armature_obj.data.bones) > max_bones:
         bpy.context.view_layer.objects.active = armature_obj
-        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.object.mode_set(mode="EDIT")
         candidates = [
-            eb for eb in armature_obj.data.edit_bones
+            eb
+            for eb in armature_obj.data.edit_bones
             if not eb.children
             and eb.name not in animated
             and not (eb.parent is None and influence.get(eb.name, 0.0) > 1e-6)
         ]
         if not candidates:
-            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.mode_set(mode="OBJECT")
             warning = (
                 f"{armature_obj.name}: could not reduce to {max_bones} bones without removing an "
                 f"animated bone or a weighted root bone -- stopped at {len(armature_obj.data.bones)}"
@@ -723,10 +767,14 @@ def _cap_bone_count(armature_obj, mesh_objs, max_bones: int):
         victim_name = victim.name
         parent_name = victim.parent.name if victim.parent else None
         armature_obj.data.edit_bones.remove(victim)
-        bpy.ops.object.mode_set(mode='OBJECT')
-        _transfer_bone_weight_to_parent(mesh_objs, armature_obj, victim_name, parent_name)
+        bpy.ops.object.mode_set(mode="OBJECT")
+        _transfer_bone_weight_to_parent(
+            mesh_objs, armature_obj, victim_name, parent_name
+        )
         if parent_name:
-            influence[parent_name] = influence.get(parent_name, 0.0) + influence.get(victim_name, 0.0)
+            influence[parent_name] = influence.get(parent_name, 0.0) + influence.get(
+                victim_name, 0.0
+            )
         influence.pop(victim_name, None)
         demoted.append({"bone": victim_name, "reassigned_to": parent_name})
     return demoted, warning
@@ -780,7 +828,12 @@ def _decimate_fcurve(fcurve, tolerance: float) -> tuple:
             if start_interp == "CONSTANT":
                 interp = start_val
             else:
-                interp = start_val if span == 0 else start_val + (frame - start_frame) / span * (end_val - start_val)
+                interp = (
+                    start_val
+                    if span == 0
+                    else start_val
+                    + (frame - start_frame) / span * (end_val - start_val)
+                )
             err = abs(val - interp)
             if err > max_err:
                 max_err = err
@@ -819,11 +872,13 @@ def _decimate_keyframes(tolerance: float) -> dict:
         before_total += action_before
         after_total += action_after
         if action_before:
-            by_action.append({
-                "action": action.name,
-                "keyframe_points_before": action_before,
-                "keyframe_points_after": action_after,
-            })
+            by_action.append(
+                {
+                    "action": action.name,
+                    "keyframe_points_before": action_before,
+                    "keyframe_points_after": action_after,
+                }
+            )
     return {
         "keyframe_points_before": before_total,
         "keyframe_points_after": after_total,
@@ -831,7 +886,9 @@ def _decimate_keyframes(tolerance: float) -> dict:
     }
 
 
-_SHAPE_KEY_EPSILON = 1e-5  # matches this file's own weld-doubles vertex-position precision
+_SHAPE_KEY_EPSILON = (
+    1e-5  # matches this file's own weld-doubles vertex-position precision
+)
 
 
 def _shape_key_max_displacement(key_block) -> float:
@@ -883,7 +940,9 @@ def _remove_unused_shape_keys(mesh_objs) -> list:
                     continue
                 d = _shape_key_max_displacement(kb)
                 if d <= _SHAPE_KEY_EPSILON:
-                    removed.append({"mesh": obj.name, "shape_key": kb.name, "max_displacement": d})
+                    removed.append(
+                        {"mesh": obj.name, "shape_key": kb.name, "max_displacement": d}
+                    )
                     obj.shape_key_remove(kb)
                     changed = True
     return removed
@@ -939,7 +998,9 @@ def _mesh_fully_identical(mesh_a, mesh_b) -> bool:
     selection could still make the same shared material sample different data for each -- caught
     by review; see references/pitfalls.md.
     """
-    if len(mesh_a.vertices) != len(mesh_b.vertices) or len(mesh_a.polygons) != len(mesh_b.polygons):
+    if len(mesh_a.vertices) != len(mesh_b.vertices) or len(mesh_a.polygons) != len(
+        mesh_b.polygons
+    ):
         return False
     if len(mesh_a.edges) != len(mesh_b.edges):
         return False
@@ -955,9 +1016,13 @@ def _mesh_fully_identical(mesh_a, mesh_b) -> bool:
             return False
         if fa.material_index != fb.material_index or fa.use_smooth != fb.use_smooth:
             return False
-    if _bool_attr_values(mesh_a, "sharp_face", len(mesh_a.polygons)) != _bool_attr_values(mesh_b, "sharp_face", len(mesh_b.polygons)):
+    if _bool_attr_values(
+        mesh_a, "sharp_face", len(mesh_a.polygons)
+    ) != _bool_attr_values(mesh_b, "sharp_face", len(mesh_b.polygons)):
         return False
-    if _bool_attr_values(mesh_a, "sharp_edge", len(mesh_a.edges)) != _bool_attr_values(mesh_b, "sharp_edge", len(mesh_b.edges)):
+    if _bool_attr_values(mesh_a, "sharp_edge", len(mesh_a.edges)) != _bool_attr_values(
+        mesh_b, "sharp_edge", len(mesh_b.edges)
+    ):
         return False
     if len(mesh_a.uv_layers) != len(mesh_b.uv_layers):
         return False
@@ -969,9 +1034,15 @@ def _mesh_fully_identical(mesh_a, mesh_b) -> bool:
                 return False
     if len(mesh_a.color_attributes) != len(mesh_b.color_attributes):
         return False
-    if mesh_a.color_attributes.default_color_name != mesh_b.color_attributes.default_color_name:
+    if (
+        mesh_a.color_attributes.default_color_name
+        != mesh_b.color_attributes.default_color_name
+    ):
         return False
-    if mesh_a.color_attributes.render_color_index != mesh_b.color_attributes.render_color_index:
+    if (
+        mesh_a.color_attributes.render_color_index
+        != mesh_b.color_attributes.render_color_index
+    ):
         return False
     for ca, cb in zip(mesh_a.color_attributes, mesh_b.color_attributes):
         if ca.name != cb.name or ca.domain != cb.domain or ca.data_type != cb.data_type:
@@ -1000,7 +1071,11 @@ def _instance_duplicate_meshes(mesh_objs) -> list:
     by_data = {}
     for o in mesh_objs:
         by_data.setdefault(o.data, []).append(o)
-    by_data = {data: objs for data, objs in by_data.items() if not any(_mesh_is_animatable(o) for o in objs)}
+    by_data = {
+        data: objs
+        for data, objs in by_data.items()
+        if not any(_mesh_is_animatable(o) for o in objs)
+    }
 
     buckets = {}
     for data, objs in by_data.items():
@@ -1033,39 +1108,86 @@ def _instance_duplicate_meshes(mesh_objs) -> list:
                     merged_names.append(o.name)
                 removed_data_names.append(dup_data.name)
                 bpy.data.meshes.remove(dup_data)
-            merged.append({
-                "canonical_mesh": canonical_data.name,
-                "canonical_objects": [o.name for o in canonical_objs],
-                "merged_objects": merged_names,
-                "datablocks_removed": removed_data_names,
-            })
+            merged.append(
+                {
+                    "canonical_mesh": canonical_data.name,
+                    "canonical_objects": [o.name for o in canonical_objs],
+                    "merged_objects": merged_names,
+                    "datablocks_removed": removed_data_names,
+                }
+            )
     return merged
 
 
 _MATERIAL_IGNORED_PROPS = {
-    "rna_type", "name", "name_full", "node_tree", "original", "id_data", "library",
-    "library_weak_reference", "override_library", "preview", "users", "use_fake_user",
-    "is_embedded_data", "is_evaluated", "session_uid", "tag", "asset_data",
+    "rna_type",
+    "name",
+    "name_full",
+    "node_tree",
+    "original",
+    "id_data",
+    "library",
+    "library_weak_reference",
+    "override_library",
+    "preview",
+    "users",
+    "use_fake_user",
+    "is_embedded_data",
+    "is_evaluated",
+    "session_uid",
+    "tag",
+    "asset_data",
 }
 
 _NODE_IGNORED_PROPS = {
-    "rna_type", "name", "label", "select", "location", "location_absolute", "width",
-    "width_hidden", "height", "dimensions", "show_expanded", "show_options", "show_preview",
-    "show_texture", "hide", "parent", "internal_links", "color", "use_custom_color", "type",
-    "inputs", "outputs", "bl_idname", "bl_label", "bl_description", "bl_icon", "bl_static_type",
-    "bl_width_default", "bl_width_min", "bl_width_max", "bl_height_default", "bl_height_min",
+    "rna_type",
+    "name",
+    "label",
+    "select",
+    "location",
+    "location_absolute",
+    "width",
+    "width_hidden",
+    "height",
+    "dimensions",
+    "show_expanded",
+    "show_options",
+    "show_preview",
+    "show_texture",
+    "hide",
+    "parent",
+    "internal_links",
+    "color",
+    "use_custom_color",
+    "type",
+    "inputs",
+    "outputs",
+    "bl_idname",
+    "bl_label",
+    "bl_description",
+    "bl_icon",
+    "bl_static_type",
+    "bl_width_default",
+    "bl_width_min",
+    "bl_width_max",
+    "bl_height_default",
+    "bl_height_min",
     "bl_height_max",
 }
 
 
-_MAX_STRUCT_DEPTH = 8  # guards against a pathological/cyclic property graph; never hit by any
-                        # real node or material property structure, which is always tree-shaped
+_MAX_STRUCT_DEPTH = (
+    8  # guards against a pathological/cyclic property graph; never hit by any
+)
+# real node or material property structure, which is always tree-shaped
 
 
 def _is_nested_value(value) -> bool:
     """True for anything `_value_key` needs to walk INTO rather than compare directly with `==`
     -- an ID datablock, a non-ID struct (ImageUser, ColorRamp, ...), or a collection."""
-    return isinstance(value, bpy.types.bpy_struct) or (hasattr(value, "__len__") and not isinstance(value, (str, bytes)))
+    return isinstance(value, bpy.types.bpy_struct) or (
+        hasattr(value, "__len__") and not isinstance(value, (str, bytes))
+    )
 
 
 def _value_key(value, depth=0):
@@ -1143,7 +1265,9 @@ def _socket_default_equal(sock_a, sock_b) -> bool:
     if sock_a.is_linked:
         return True  # the driving link itself is part of the node tree's own link-set comparison
     if not hasattr(sock_a, "default_value"):
-        return True  # a socket type with nothing to hold constant (e.g. NodeSocketShader)
+        return (
+            True  # a socket type with nothing to hold constant (e.g. NodeSocketShader)
+        )
     return _value_key(sock_a.default_value) == _value_key(sock_b.default_value)
 
 
@@ -1152,15 +1276,24 @@ def _node_fully_identical(node_a, node_b) -> bool:
         return False
     if node_a.mute != node_b.mute:
         return False
-    if len(node_a.inputs) != len(node_b.inputs) or len(node_a.outputs) != len(node_b.outputs):
+    if len(node_a.inputs) != len(node_b.inputs) or len(node_a.outputs) != len(
+        node_b.outputs
+    ):
         return False
     if not _rna_props_equal(node_a, node_b, _NODE_IGNORED_PROPS):
         return False
-    return all(_socket_default_equal(sa, sb) for sa, sb in zip(node_a.inputs, node_b.inputs))
+    return all(
+        _socket_default_equal(sa, sb) for sa, sb in zip(node_a.inputs, node_b.inputs)
+    )
 
 
 def _link_signature(link) -> tuple:
-    return (link.from_node.name, link.from_socket.identifier, link.to_node.name, link.to_socket.identifier)
+    return (
+        link.from_node.name,
+        link.from_socket.identifier,
+        link.to_node.name,
+        link.to_socket.identifier,
+    )
 
 
 def _node_tree_fully_identical(tree_a, tree_b) -> bool:
@@ -1222,7 +1355,9 @@ def _reassign_material_users(dup, canonical) -> None:
     dup.user_remap(canonical)
 
 
-_VERTEX_CACHE_SIZE = 32  # a common assumption for a modern GPU's post-transform vertex cache
+_VERTEX_CACHE_SIZE = (
+    32  # a common assumption for a modern GPU's post-transform vertex cache
+)
 
 
 def _vertex_cache_acmr(obj, cache_size=_VERTEX_CACHE_SIZE):
@@ -1316,16 +1451,38 @@ def _merge_identical_materials() -> list:
                 _reassign_material_users(dup, canonical)
                 merged_names.append(dup.name)
                 bpy.data.materials.remove(dup)
-            merged.append({"canonical_material": canonical.name, "merged_materials": merged_names})
+            merged.append(
+                {"canonical_material": canonical.name, "merged_materials": merged_names}
+            )
     return merged
 
 
 def _purge_unused() -> int:
-    before = sum(len(getattr(bpy.data, coll)) for coll in
-                 ("meshes", "materials", "images", "actions", "armatures", "cameras", "lights"))
+    before = sum(
+        len(getattr(bpy.data, coll))
+        for coll in (
+            "meshes",
+            "materials",
+            "images",
+            "actions",
+            "armatures",
+            "cameras",
+            "lights",
+        )
+    )
     bpy.ops.outliner.orphans_purge(do_recursive=True)
-    after = sum(len(getattr(bpy.data, coll)) for coll in
-                ("meshes", "materials", "images", "actions", "armatures", "cameras", "lights"))
+    after = sum(
+        len(getattr(bpy.data, coll))
+        for coll in (
+            "meshes",
+            "materials",
+            "images",
+            "actions",
+            "armatures",
+            "cameras",
+            "lights",
+        )
+    )
     return before - after
 
 
@@ -1400,21 +1557,34 @@ def run(args):
                 "info.py before trusting this output"
             )
         welded_total += _weld_and_triangulate(
-            o, weld=bool(args.get("weld_doubles")), triangulate=bool(args.get("triangulate")),
+            o,
+            weld=bool(args.get("weld_doubles")),
+            triangulate=bool(args.get("triangulate")),
             recalc_normals=bool(args.get("recalc_normals")),
         )
 
-    if args.get("decimate_ratio") is None and triangle_budget and triangle_budget_scope == "aggregate":
+    if (
+        args.get("decimate_ratio") is None
+        and triangle_budget
+        and triangle_budget_scope == "aggregate"
+    ):
         post_topology_tris = sum(_compat.object_triangle_count(o) for o in mesh_objs)
-        decimate_ratio = triangle_budget / post_topology_tris if post_topology_tris > triangle_budget else None
+        decimate_ratio = (
+            triangle_budget / post_topology_tris
+            if post_topology_tris > triangle_budget
+            else None
+        )
     for o in mesh_objs:
         obj_decimate_ratio = decimate_ratio
         if (
-            args.get("decimate_ratio") is None and triangle_budget
+            args.get("decimate_ratio") is None
+            and triangle_budget
             and triangle_budget_scope == "per_mesh"
         ):
             obj_tris = _compat.object_triangle_count(o)
-            obj_decimate_ratio = triangle_budget / obj_tris if obj_tris > triangle_budget else None
+            obj_decimate_ratio = (
+                triangle_budget / obj_tris if obj_tris > triangle_budget else None
+            )
         if obj_decimate_ratio and 0 < obj_decimate_ratio < 1:
             bpy.context.view_layer.objects.active = o
             _decimate(o, obj_decimate_ratio)
@@ -1460,12 +1630,18 @@ def run(args):
             if args.get("remove_unused_bones"):
                 bones_removed.extend(_remove_unused_bones(arm, mesh_objs))
             if args.get("max_bones"):
-                demoted, bone_warning = _cap_bone_count(arm, mesh_objs, args["max_bones"])
+                demoted, bone_warning = _cap_bone_count(
+                    arm, mesh_objs, args["max_bones"]
+                )
                 bones_demoted.extend(demoted)
                 if bone_warning:
                     warnings.append(bone_warning)
 
-    keyframes_decimated = {"keyframe_points_before": 0, "keyframe_points_after": 0, "by_action": []}
+    keyframes_decimated = {
+        "keyframe_points_before": 0,
+        "keyframe_points_after": 0,
+        "by_action": [],
+    }
     if args.get("keyframe_decimate"):
         keyframes_decimated = _decimate_keyframes(args["keyframe_decimate"])
 
@@ -1484,11 +1660,13 @@ def run(args):
     after_tris = sum(_compat.object_triangle_count(o) for o in mesh_objs)
     if args.get("vertex_cache_report"):
         for o in mesh_objs:
-            vertex_cache_report.append({
-                "name": o.name,
-                "acmr_before": acmr_before.get(o),
-                "acmr_after": _vertex_cache_acmr(o),
-            })
+            vertex_cache_report.append(
+                {
+                    "name": o.name,
+                    "acmr_before": acmr_before.get(o),
+                    "acmr_after": _vertex_cache_acmr(o),
+                }
+            )
     export_kwargs = {}
     if args.get("webp") and args["output_format"] == "gltf":
         # export_image_add_webp/export_image_webp_fallback both default to False already (a

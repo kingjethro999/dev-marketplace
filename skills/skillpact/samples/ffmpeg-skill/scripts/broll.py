@@ -17,26 +17,90 @@ Examples:
   python3 broll.py talk.mp4 --insert shot1.mp4 --at 12 --end 16 --insert shot2.mp4 --at 40 --from 2
   python3 broll.py talk.mp4 --insert demo.mp4 --at 30 --duration 8 --audio mix
 """
+
 import argparse
 import sys
 from typing import Any, Dict, List
 
-from _common import STATE, add_common, aac_args, apply_common, cfr_args, default_output, die, draws_chroma, drawn_chain, emit, ffmpeg_base, info, time_arg, label_chain, matrix_chain, probe, run, validate_color, video_args, X264_PRESETS, fmt_secs
+from _common import (
+    STATE,
+    add_common,
+    aac_args,
+    apply_common,
+    cfr_args,
+    default_output,
+    die,
+    draws_chroma,
+    drawn_chain,
+    emit,
+    ffmpeg_base,
+    info,
+    time_arg,
+    label_chain,
+    matrix_chain,
+    probe,
+    run,
+    validate_color,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input", help="the A-roll (its timeline and length are kept)")
     ap.add_argument("-o", "--output", help="output file (default: <name>_broll.<ext>)")
-    ap.add_argument("--insert", action="append", required=True, metavar="B", help="B-roll clip (repeat with --at for several cutaways)")
-    ap.add_argument("--at", action="append", required=True, metavar="TIME", help="where in A the cutaway starts (seconds or mm:ss); one per --insert")
-    ap.add_argument("--duration", action="append", metavar="T", help="cutaway length (default 4); one per --insert, or omit")
-    ap.add_argument("--end", action="append", metavar="TIME", help="where in A the cutaway ends, instead of --duration")
-    ap.add_argument("--from", dest="from_", action="append", metavar="TIME", help="where in B to start from (default 0); one per --insert, or omit")
-    ap.add_argument("--audio", choices=["a", "b", "mix"], default="a", help="under a cutaway: A's audio (default), B's audio, or both mixed")
-    ap.add_argument("--pad-color", default="black", help="pad colour when B's aspect differs from A's (default black)")
+    ap.add_argument(
+        "--insert",
+        action="append",
+        required=True,
+        metavar="B",
+        help="B-roll clip (repeat with --at for several cutaways)",
+    )
+    ap.add_argument(
+        "--at",
+        action="append",
+        required=True,
+        metavar="TIME",
+        help="where in A the cutaway starts (seconds or mm:ss); one per --insert",
+    )
+    ap.add_argument(
+        "--duration",
+        action="append",
+        metavar="T",
+        help="cutaway length (default 4); one per --insert, or omit",
+    )
+    ap.add_argument(
+        "--end",
+        action="append",
+        metavar="TIME",
+        help="where in A the cutaway ends, instead of --duration",
+    )
+    ap.add_argument(
+        "--from",
+        dest="from_",
+        action="append",
+        metavar="TIME",
+        help="where in B to start from (default 0); one per --insert, or omit",
+    )
+    ap.add_argument(
+        "--audio",
+        choices=["a", "b", "mix"],
+        default="a",
+        help="under a cutaway: A's audio (default), B's audio, or both mixed",
+    )
+    ap.add_argument(
+        "--pad-color",
+        default="black",
+        help="pad colour when B's aspect differs from A's (default black)",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -45,9 +109,15 @@ def main() -> int:
     n = len(args.insert)
     if len(args.at) != n:
         die(f"{n} --insert but {len(args.at)} --at: give one --at per --insert")
-    for name, values in (("--duration", args.duration), ("--end", args.end), ("--from", args.from_)):
+    for name, values in (
+        ("--duration", args.duration),
+        ("--end", args.end),
+        ("--from", args.from_),
+    ):
         if values and len(values) not in (1, n):
-            die(f"{name} given {len(values)} times for {n} cutaways: give it once per --insert, or once for all, or not at all")
+            die(
+                f"{name} given {len(values)} times for {n} cutaways: give it once per --insert, or once for all, or not at all"
+            )
     if args.duration and args.end:
         die("--duration and --end exclude each other")
 
@@ -82,15 +152,32 @@ def main() -> int:
         if length <= 0:
             die(f"cutaway {i + 1}: length must be > 0 (at {at:g}s, got {length:g}s)")
         if dur_a and at >= dur_a:
-            die(f"cutaway {i + 1}: --at {at:g}s is past the end of the A-roll ({dur_a:.3f}s)")
+            die(
+                f"cutaway {i + 1}: --at {at:g}s is past the end of the A-roll ({dur_a:.3f}s)"
+            )
         if dur_a and at + length > dur_a + 0.01:
-            die(f"cutaway {i + 1}: {at:g}s + {length:g}s runs past the end of the A-roll ({dur_a:.3f}s)")
+            die(
+                f"cutaway {i + 1}: {at:g}s + {length:g}s runs past the end of the A-roll ({dur_a:.3f}s)"
+            )
         dur_b = meta_b.get("duration") or 0.0
         if dur_b and start_b + length > dur_b + 0.01 and not STATE.dry_run:
-            die(f"cutaway {i + 1}: {path} has only {dur_b - start_b:.3f}s from {start_b:g}s, {length:g}s asked for")
+            die(
+                f"cutaway {i + 1}: {path} has only {dur_b - start_b:.3f}s from {start_b:g}s, {length:g}s asked for"
+            )
         if cutaways and at < cutaways[-1]["at"] + cutaways[-1]["length"]:
-            die(f"cutaway {i + 1} at {at:g}s overlaps the previous one (ends {cutaways[-1]['at'] + cutaways[-1]['length']:g}s)")
-        cutaways.append({"path": path, "at": at, "length": length, "from": start_b, "has_audio": bool(meta_b.get("audio")), "meta": meta_b})
+            die(
+                f"cutaway {i + 1} at {at:g}s overlaps the previous one (ends {cutaways[-1]['at'] + cutaways[-1]['length']:g}s)"
+            )
+        cutaways.append(
+            {
+                "path": path,
+                "at": at,
+                "length": length,
+                "from": start_b,
+                "has_audio": bool(meta_b.get("audio")),
+                "meta": meta_b,
+            }
+        )
     if args.audio != "a" and not all(c["has_audio"] for c in cutaways):
         die("--audio b/mix needs audio on every B-roll clip")
 
@@ -107,20 +194,35 @@ def main() -> int:
     # every clip is converted by its own colour tags to the BT.709 the output is tagged with; beside
     # a converted clip (or under a --pad-color with chroma) an untagged one gets its BT.709 label,
     # tags only, so 7.1+'s overlay and pad have nothing to convert or misread
-    convert = [matrix_chain(m, meta_a) for m in [meta_a] + [c["meta"] for c in cutaways]]
+    convert = [
+        matrix_chain(m, meta_a) for m in [meta_a] + [c["meta"] for c in cutaways]
+    ]
     if any(convert) or draws_chroma([args.pad_color], meta_a):
-        convert = [cv or label_chain(m, meta_a) for cv, m in zip(convert, [meta_a] + [c["meta"] for c in cutaways])]
+        convert = [
+            cv or label_chain(m, meta_a)
+            for cv, m in zip(convert, [meta_a] + [c["meta"] for c in cutaways])
+        ]
     if convert[0]:
         parts.append(f"[0:v]{convert[0]}null[a709]")
         cur = "[a709]"
     pad = f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color="
     for i, c in enumerate(cutaways):
-        geo = (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
-               + drawn_chain(pad + args.pad_color, c["meta"], [args.pad_color], pad + "black", line_meta=meta_a,
-                             tag=f"pad{i}", labelled=True))
-        parts.append(f"[{i + 1}:v]trim=start={c['from']:.3f}:duration={c['length']:.3f},setpts=PTS-STARTPTS+{c['at']:.3f}/TB,"
-                     f"{convert[i + 1]}{geo},setsar=1,fps={fps:g},format={'yuv420p10le' if (meta_a.get('video') or {}).get('bt2020_or_hdr') else 'yuv420p'}[b{i}]")
-        parts.append(f"{cur}[b{i}]overlay=0:0:eof_action=pass:enable='between(t,{c['at']:.3f},{c['at'] + c['length']:.3f})'[v{i}]")
+        geo = f"scale={w}:{h}:force_original_aspect_ratio=decrease," + drawn_chain(
+            pad + args.pad_color,
+            c["meta"],
+            [args.pad_color],
+            pad + "black",
+            line_meta=meta_a,
+            tag=f"pad{i}",
+            labelled=True,
+        )
+        parts.append(
+            f"[{i + 1}:v]trim=start={c['from']:.3f}:duration={c['length']:.3f},setpts=PTS-STARTPTS+{c['at']:.3f}/TB,"
+            f"{convert[i + 1]}{geo},setsar=1,fps={fps:g},format={'yuv420p10le' if (meta_a.get('video') or {}).get('bt2020_or_hdr') else 'yuv420p'}[b{i}]"
+        )
+        parts.append(
+            f"{cur}[b{i}]overlay=0:0:eof_action=pass:enable='between(t,{c['at']:.3f},{c['at'] + c['length']:.3f})'[v{i}]"
+        )
         cur = f"[v{i}]"
     vout = cur
 
@@ -133,20 +235,35 @@ def main() -> int:
         else:
             layers: List[str] = []
             if has_audio_a:
-                gate = "".join(f",volume=0:enable='between(t,{c['at']:.3f},{c['at'] + c['length']:.3f})'" for c in cutaways) if args.audio == "b" else ""
-                parts.append(f"[0:a:0]aformat=sample_rates=48000:channel_layouts=stereo{gate}[a0]")
+                gate = (
+                    "".join(
+                        f",volume=0:enable='between(t,{c['at']:.3f},{c['at'] + c['length']:.3f})'"
+                        for c in cutaways
+                    )
+                    if args.audio == "b"
+                    else ""
+                )
+                parts.append(
+                    f"[0:a:0]aformat=sample_rates=48000:channel_layouts=stereo{gate}[a0]"
+                )
                 layers.append("[a0]")
             for i, c in enumerate(cutaways):
-                parts.append(f"[{i + 1}:a:0]atrim=start={c['from']:.3f}:duration={c['length']:.3f},asetpts=PTS-STARTPTS,"
-                             f"aformat=sample_rates=48000:channel_layouts=stereo,adelay={int(c['at'] * 1000)}|{int(c['at'] * 1000)}[ab{i}]")
+                parts.append(
+                    f"[{i + 1}:a:0]atrim=start={c['from']:.3f}:duration={c['length']:.3f},asetpts=PTS-STARTPTS,"
+                    f"aformat=sample_rates=48000:channel_layouts=stereo,adelay={int(c['at'] * 1000)}|{int(c['at'] * 1000)}[ab{i}]"
+                )
                 layers.append(f"[ab{i}]")
-            parts.append(f"{''.join(layers)}amix=inputs={len(layers)}:normalize=0:dropout_transition=0,atrim=duration={dur_a:.3f}[aout]")
+            parts.append(
+                f"{''.join(layers)}amix=inputs={len(layers)}:normalize=0:dropout_transition=0,atrim=duration={dur_a:.3f}[aout]"
+            )
             aout = "[aout]"
 
     cmd += ["-filter_complex", ";".join(parts), "-map", vout]
     if aout:
         cmd += ["-map", aout]
-    cmd += video_args(meta_a, args.crf, args.preset, convert_matrix=False) + cfr_args(meta_a, None)
+    cmd += video_args(meta_a, args.crf, args.preset, convert_matrix=False) + cfr_args(
+        meta_a, None
+    )
     if aout == "0:a:0":
         cmd += ["-c:a", "copy"]
     elif aout:
@@ -157,11 +274,34 @@ def main() -> int:
     run(cmd)
 
     result = probe(output, role="output")
-    if not STATE.dry_run and dur_a and abs((result.get("duration") or 0.0) - dur_a) > max(0.1, 1.5 / fps):
-        die(f"output is {fmt_secs(result.get('duration'))} but the A-roll is {dur_a:.3f}s -- a cutaway must not change the length", kind="output")
-    info(f"wrote {output} ({result.get('duration', 0):.3f}s, {len(cutaways)} cutaway(s), audio={args.audio})")
-    emit(output, cutaways=[{"insert": c["path"], "at": c["at"], "end": c["at"] + c["length"], "from": c["from"]} for c in cutaways], audio=args.audio,
-         dropped_non_av_streams=bool(meta_a.get("subtitle_streams") or meta_a.get("data_streams")))
+    if (
+        not STATE.dry_run
+        and dur_a
+        and abs((result.get("duration") or 0.0) - dur_a) > max(0.1, 1.5 / fps)
+    ):
+        die(
+            f"output is {fmt_secs(result.get('duration'))} but the A-roll is {dur_a:.3f}s -- a cutaway must not change the length",
+            kind="output",
+        )
+    info(
+        f"wrote {output} ({result.get('duration', 0):.3f}s, {len(cutaways)} cutaway(s), audio={args.audio})"
+    )
+    emit(
+        output,
+        cutaways=[
+            {
+                "insert": c["path"],
+                "at": c["at"],
+                "end": c["at"] + c["length"],
+                "from": c["from"],
+            }
+            for c in cutaways
+        ],
+        audio=args.audio,
+        dropped_non_av_streams=bool(
+            meta_a.get("subtitle_streams") or meta_a.get("data_streams")
+        ),
+    )
     return 0
 
 

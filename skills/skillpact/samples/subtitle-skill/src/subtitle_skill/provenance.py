@@ -6,6 +6,7 @@ version). Timestamps, temp paths and process ids are never included, so
 identical requests against an unchanged skill version produce an
 identical identity and therefore a stable, reusable output.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -26,7 +27,13 @@ def canonical_json(data: Any) -> str:
     return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def compute_identity(*, skill_version: str, contract_version: str, operation: str, payload: Mapping[str, Any]) -> str:
+def compute_identity(
+    *,
+    skill_version: str,
+    contract_version: str,
+    operation: str,
+    payload: Mapping[str, Any],
+) -> str:
     """`payload` must contain only deterministic, semantically relevant
     fields (subtitle content, format, parameters, input file hashes) --
     never timestamps or filesystem-specific temp paths.

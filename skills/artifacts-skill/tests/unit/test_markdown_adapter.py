@@ -6,7 +6,11 @@ import pytest
 
 from artifact_skill.adapters.markdown.adapter import MarkdownAdapter
 from artifact_skill.core.artifact import ArtifactRef, ArtifactType
-from artifact_skill.core.errors import ArtifactCapabilityError, ArtifactExecutionError, ArtifactInputError
+from artifact_skill.core.errors import (
+    ArtifactCapabilityError,
+    ArtifactExecutionError,
+    ArtifactInputError,
+)
 from artifact_skill.core.verification import CheckStatus
 
 
@@ -15,7 +19,9 @@ def adapter() -> MarkdownAdapter:
     return MarkdownAdapter()
 
 
-def _probe_markdown_render_works(adapter: MarkdownAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+def _probe_markdown_render_works(
+    adapter: MarkdownAdapter, ref: ArtifactRef, tmp_path: Path
+) -> bool:
     try:
         result = adapter.render(ref, tmp_path / "_probe")
         return len(result.files) > 0
@@ -23,7 +29,9 @@ def _probe_markdown_render_works(adapter: MarkdownAdapter, ref: ArtifactRef, tmp
         return False
 
 
-def test_type_detection_by_content_not_extension(good_markdown, mislabeled_pdf_as_markdown):
+def test_type_detection_by_content_not_extension(
+    good_markdown, mislabeled_pdf_as_markdown
+):
     assert ArtifactRef.from_path(good_markdown).type == ArtifactType.MARKDOWN
     assert ArtifactRef.from_path(mislabeled_pdf_as_markdown).type == ArtifactType.PDF
 
@@ -32,7 +40,9 @@ def test_plain_prose_with_no_markdown_signals_is_unknown_not_guessed(tmp_path):
     """spec #7-style honesty: a file that doesn't clear the Markdown
     heuristic bar must stay UNKNOWN, not be guessed at."""
     path = tmp_path / "prose.txt"
-    path.write_text("Just some ordinary prose. No headings, links, lists, or code fences here at all.\n")
+    path.write_text(
+        "Just some ordinary prose. No headings, links, lists, or code fences here at all.\n"
+    )
     assert ArtifactRef.from_path(path).type == ArtifactType.UNKNOWN
 
 
@@ -47,7 +57,9 @@ def test_a_leading_utf8_bom_does_not_defeat_markdown_type_detection(tmp_path):
     assert ArtifactRef.from_path(path).type == ArtifactType.MARKDOWN
 
 
-def test_inspect_strips_a_leading_utf8_bom_before_scanning_headings(good_markdown, adapter, tmp_path):
+def test_inspect_strips_a_leading_utf8_bom_before_scanning_headings(
+    good_markdown, adapter, tmp_path
+):
     path = tmp_path / "bom.md"
     path.write_bytes(b"\xef\xbb\xbf# Title\n\nSome text.\n\n- a\n- b\n")
     ref = ArtifactRef.from_path(path)
@@ -56,7 +68,9 @@ def test_inspect_strips_a_leading_utf8_bom_before_scanning_headings(good_markdow
     assert report.details["headings"][0] == (1, "Title")
 
 
-def test_inspect_good_markdown_reports_headings_and_fence_balance(good_markdown, adapter):
+def test_inspect_good_markdown_reports_headings_and_fence_balance(
+    good_markdown, adapter
+):
     ref = ArtifactRef.from_path(good_markdown)
     report = adapter.inspect(ref)
     assert report.details["heading_count"] == 1
@@ -101,7 +115,9 @@ def test_verify_external_resource_warns_by_default(external_resource_markdown, a
     assert check.status == CheckStatus.WARN
 
 
-def test_verify_external_resource_fails_under_strict_policy(external_resource_markdown, adapter):
+def test_verify_external_resource_fails_under_strict_policy(
+    external_resource_markdown, adapter
+):
     ref = ArtifactRef.from_path(external_resource_markdown)
     result = adapter.verify_structural(ref, {"forbid_external_resources": True})
     check = next(c for c in result.checks if c.id == "external_resources")
@@ -111,15 +127,27 @@ def test_verify_external_resource_fails_under_strict_policy(external_resource_ma
 def test_verify_require_heading(good_markdown, adapter, tmp_path):
     ref = ArtifactRef.from_path(good_markdown)
     ok = adapter.verify_structural(ref, {"require_heading": True})
-    assert next(c for c in ok.checks if c.id == "heading_presence").status == CheckStatus.PASS
+    assert (
+        next(c for c in ok.checks if c.id == "heading_presence").status
+        == CheckStatus.PASS
+    )
 
     no_heading = tmp_path / "no_heading.md"
-    no_heading.write_text("Just a [link](good.md) and a paragraph, no heading at all.\n\n- one\n- two\n")
-    mismatch = adapter.verify_structural(ArtifactRef.from_path(no_heading), {"require_heading": True})
-    assert next(c for c in mismatch.checks if c.id == "heading_presence").status == CheckStatus.FAIL
+    no_heading.write_text(
+        "Just a [link](good.md) and a paragraph, no heading at all.\n\n- one\n- two\n"
+    )
+    mismatch = adapter.verify_structural(
+        ArtifactRef.from_path(no_heading), {"require_heading": True}
+    )
+    assert (
+        next(c for c in mismatch.checks if c.id == "heading_presence").status
+        == CheckStatus.FAIL
+    )
 
 
-def test_verify_leftover_placeholder_markdown_warns_by_default(leftover_placeholder_markdown, adapter):
+def test_verify_leftover_placeholder_markdown_warns_by_default(
+    leftover_placeholder_markdown, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_markdown)
     result = adapter.verify_structural(ref, {})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -128,14 +156,18 @@ def test_verify_leftover_placeholder_markdown_warns_by_default(leftover_placehol
     assert "lorem ipsum" in check.evidence["markers"]
 
 
-def test_verify_leftover_placeholder_markdown_fails_under_strict_policy(leftover_placeholder_markdown, adapter):
+def test_verify_leftover_placeholder_markdown_fails_under_strict_policy(
+    leftover_placeholder_markdown, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_markdown)
     result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
     assert check.status == CheckStatus.FAIL
 
 
-def test_verify_leftover_text_inside_a_code_fence_is_not_flagged(leftover_in_code_fence_markdown, adapter):
+def test_verify_leftover_text_inside_a_code_fence_is_not_flagged(
+    leftover_in_code_fence_markdown, adapter
+):
     """A "TODO" that appears only inside a fenced code block's body is
     sample output, not an unreviewed generation artifact - it must not be
     flagged, the same "code is not document text" reasoning as HTML's
@@ -161,12 +193,19 @@ def test_capabilities_report_never_lies_about_probe_result(adapter):
 
     caps = {c.id: c for c in adapter.capabilities()}
     assert "markdown.structural" in caps
-    assert caps["markdown.structural"].status == CapabilityStatus.AVAILABLE  # stdlib-only, always available
+    assert (
+        caps["markdown.structural"].status == CapabilityStatus.AVAILABLE
+    )  # stdlib-only, always available
     assert "markdown.render" in caps
-    assert caps["markdown.render"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["markdown.render"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
 
 
-def test_render_raises_capability_missing_without_markdown_it(good_markdown, adapter, tmp_path, monkeypatch):
+def test_render_raises_capability_missing_without_markdown_it(
+    good_markdown, adapter, tmp_path, monkeypatch
+):
     import artifact_skill.adapters.markdown.adapter as adapter_module
 
     monkeypatch.setattr(adapter_module, "_has", lambda module: False)
@@ -176,7 +215,9 @@ def test_render_raises_capability_missing_without_markdown_it(good_markdown, ada
     assert exc_info.value.code == "ARTIFACT_CAPABILITY_MISSING"
 
 
-def test_render_propagates_backend_failure(good_markdown, adapter, tmp_path, monkeypatch):
+def test_render_propagates_backend_failure(
+    good_markdown, adapter, tmp_path, monkeypatch
+):
     pytest.importorskip("markdown_it")
     playwright_sync_api = pytest.importorskip("playwright.sync_api")
 
@@ -191,11 +232,15 @@ def test_render_propagates_backend_failure(good_markdown, adapter, tmp_path, mon
     assert exc_info.value.code == "ARTIFACT_RENDER_BACKEND_FAILED"
 
 
-def test_render_happy_path_when_backend_actually_works(good_markdown, adapter, tmp_path):
+def test_render_happy_path_when_backend_actually_works(
+    good_markdown, adapter, tmp_path
+):
     pytest.importorskip("markdown_it")
     ref = ArtifactRef.from_path(good_markdown)
     if not _probe_markdown_render_works(adapter, ref, tmp_path):
-        pytest.skip("markdown-it-py/Playwright/Chromium in this environment cannot render")
+        pytest.skip(
+            "markdown-it-py/Playwright/Chromium in this environment cannot render"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) == 1
     assert result.files[0].exists()

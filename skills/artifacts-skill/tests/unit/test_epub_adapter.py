@@ -16,7 +16,9 @@ def adapter() -> EpubAdapter:
     return EpubAdapter()
 
 
-def _probe_epub_render_works(adapter: EpubAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+def _probe_epub_render_works(
+    adapter: EpubAdapter, ref: ArtifactRef, tmp_path: Path
+) -> bool:
     """Same pattern as test_html_adapter.py's identical helper - Playwright
     being pip-installed doesn't guarantee a matching Chromium build."""
     try:
@@ -60,7 +62,9 @@ def _build_cross_directory_epub(path: Path) -> None:
     ch1 = b'<html><body><h1>Ch1</h1><img src="../images/pic.png" width="1" height="1"/></body></html>'
     ch2 = b"<html><body><h1>Ch2</h1></body></html>"
     with zipfile.ZipFile(path, "w") as zf:
-        zf.writestr(zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED)
+        zf.writestr(
+            zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED
+        )
         zf.writestr("META-INF/container.xml", container_xml)
         zf.writestr("OEBPS/content.opf", opf)
         zf.writestr("OEBPS/text/ch1.xhtml", ch1)
@@ -85,7 +89,9 @@ def test_inspect_good_epub_reports_metadata_and_spine(good_epub, adapter):
     assert report.details["mimetype_first_and_stored"] is True
 
 
-def test_inspect_missing_container_raises_structured_error(missing_container_epub, adapter):
+def test_inspect_missing_container_raises_structured_error(
+    missing_container_epub, adapter
+):
     ref = ArtifactRef.from_path(missing_container_epub)
     with pytest.raises(ArtifactInputError) as exc_info:
         adapter.inspect(ref)
@@ -123,7 +129,9 @@ def test_inspect_rejects_an_entity_declaration_in_a_member_over_10mb(adapter, tm
     padding = "A" * (11 * 1024 * 1024)
     opf = entity_decl + padding + " --></package>\n"
     with zipfile.ZipFile(path, "w") as zf:
-        zf.writestr(zipfile.ZipInfo("mimetype"), "application/epub+zip", zipfile.ZIP_STORED)
+        zf.writestr(
+            zipfile.ZipInfo("mimetype"), "application/epub+zip", zipfile.ZIP_STORED
+        )
         zf.writestr(
             "META-INF/container.xml",
             '<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" '
@@ -171,10 +179,16 @@ def test_verify_mimetype_not_first_warns_not_fails(mimetype_not_first_epub, adap
 def test_verify_good_epub_spine_count_requirement(good_epub, adapter):
     ref = ArtifactRef.from_path(good_epub)
     ok = adapter.verify_structural(ref, {"require_spine_count": 1})
-    assert next(c for c in ok.checks if c.id == "spine_count_requirement").status == CheckStatus.PASS
+    assert (
+        next(c for c in ok.checks if c.id == "spine_count_requirement").status
+        == CheckStatus.PASS
+    )
 
     mismatch = adapter.verify_structural(ref, {"require_spine_count": 5})
-    assert next(c for c in mismatch.checks if c.id == "spine_count_requirement").status == CheckStatus.FAIL
+    assert (
+        next(c for c in mismatch.checks if c.id == "spine_count_requirement").status
+        == CheckStatus.FAIL
+    )
 
 
 def test_verify_good_epub_has_no_leftover_placeholder_text(good_epub, adapter):
@@ -184,7 +198,9 @@ def test_verify_good_epub_has_no_leftover_placeholder_text(good_epub, adapter):
     assert check.status == CheckStatus.PASS
 
 
-def test_verify_leftover_placeholder_epub_warns_by_default(leftover_placeholder_epub, adapter):
+def test_verify_leftover_placeholder_epub_warns_by_default(
+    leftover_placeholder_epub, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_epub)
     result = adapter.verify_structural(ref, {})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -193,7 +209,9 @@ def test_verify_leftover_placeholder_epub_warns_by_default(leftover_placeholder_
     assert "lorem ipsum" in check.evidence["markers"]
 
 
-def test_verify_leftover_placeholder_epub_fails_under_strict_policy(leftover_placeholder_epub, adapter):
+def test_verify_leftover_placeholder_epub_fails_under_strict_policy(
+    leftover_placeholder_epub, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_epub)
     result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -205,7 +223,9 @@ def test_execute_metadata_set_preserves_input_and_spine(good_epub, adapter, tmp_
     before_hash = ref.sha256
     output_path = tmp_path / "out.epub"
 
-    result_ref = adapter.execute(ref, "metadata_set", {"title": "New Title", "author": "New Author"}, output_path)
+    result_ref = adapter.execute(
+        ref, "metadata_set", {"title": "New Title", "author": "New Author"}, output_path
+    )
 
     assert output_path.exists()
     assert result_ref.sha256 != before_hash
@@ -218,14 +238,20 @@ def test_execute_metadata_set_preserves_input_and_spine(good_epub, adapter, tmp_
     assert out_report.details["mimetype_first_and_stored"] is True
 
 
-def test_execute_metadata_set_output_is_still_a_readable_epub_by_type(good_epub, adapter, tmp_path):
+def test_execute_metadata_set_output_is_still_a_readable_epub_by_type(
+    good_epub, adapter, tmp_path
+):
     ref = ArtifactRef.from_path(good_epub)
     output_path = tmp_path / "out.epub"
-    result_ref = adapter.execute(ref, "metadata_set", {"title": "New Title"}, output_path)
+    result_ref = adapter.execute(
+        ref, "metadata_set", {"title": "New Title"}, output_path
+    )
     assert result_ref.type == ArtifactType.EPUB
 
 
-def test_execute_metadata_set_preserves_the_opf_default_namespace_prefix(good_epub, adapter, tmp_path):
+def test_execute_metadata_set_preserves_the_opf_default_namespace_prefix(
+    good_epub, adapter, tmp_path
+):
     """Self-audit finding: ET.tostring() auto-generates an 'ns0:' prefix
     for any namespace it has no registered mapping for. good_epub's OPF
     (like virtually every real-world EPUB) declares
@@ -270,19 +296,26 @@ def test_capabilities_report_never_lies_about_probe_result(adapter):
 
     caps = {c.id: c for c in adapter.capabilities()}
     assert "epub.structural" in caps
-    assert caps["epub.structural"].status == CapabilityStatus.AVAILABLE  # stdlib-only, always available
+    assert (
+        caps["epub.structural"].status == CapabilityStatus.AVAILABLE
+    )  # stdlib-only, always available
     assert "epub.render" in caps
     # Self-audit finding: render() is now implemented (was NOT_IMPLEMENTED) -
     # capabilities() reports the same playwright-availability pattern as
     # every other Chromium-backed adapter (HTML/SVG/CSV/Markdown), never a
     # permanently-stale "deferred" status.
-    assert caps["epub.render"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["epub.render"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
 
 
 def test_render_happy_path_when_backend_actually_works(good_epub, adapter, tmp_path):
     ref = ArtifactRef.from_path(good_epub)
     if not _probe_epub_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert result.backend == "playwright+chromium"
     assert len(result.files) == 1  # good_epub has one spine document
@@ -296,14 +329,18 @@ def test_render_produces_one_png_per_spine_document_in_order(adapter, tmp_path):
     _build_cross_directory_epub(epub_path)
     ref = ArtifactRef.from_path(epub_path)
     if not _probe_epub_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
 
     result = adapter.render(ref, tmp_path / "rendered")
     assert [f.name for f in result.files] == ["page-001.png", "page-002.png"]
     assert all(f.exists() and f.stat().st_size > 0 for f in result.files)
 
 
-def test_render_resolves_a_same_archive_cross_directory_resource_reference(adapter, tmp_path):
+def test_render_resolves_a_same_archive_cross_directory_resource_reference(
+    adapter, tmp_path
+):
     """This is the specific design gap that used to keep render()
     NOT_IMPLEMENTED (see this module's and the adapter's docstrings): a
     spine document under OEBPS/text/ referencing an image under a sibling
@@ -316,7 +353,9 @@ def test_render_resolves_a_same_archive_cross_directory_resource_reference(adapt
     _build_cross_directory_epub(epub_path)
     ref = ArtifactRef.from_path(epub_path)
     if not _probe_epub_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
 
     result = adapter.render(ref, tmp_path / "rendered")
     ch1_with_image, ch2_without_image = result.files
@@ -344,14 +383,18 @@ def test_render_still_blocks_a_file_url_escaping_the_staged_archive(adapter, tmp
     ch1 = b'<html><body><iframe src="file:///etc/passwd" id="leak"></iframe></body></html>'
     epub_path = tmp_path / "hostile.epub"
     with zipfile.ZipFile(epub_path, "w") as zf:
-        zf.writestr(zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED)
+        zf.writestr(
+            zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED
+        )
         zf.writestr("META-INF/container.xml", container_xml)
         zf.writestr("OEBPS/content.opf", opf)
         zf.writestr("OEBPS/text/ch1.xhtml", ch1)
 
     ref = ArtifactRef.from_path(epub_path)
     if not _probe_epub_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
 
     # Render succeeding without raising already proves the hostile file://
     # request was aborted rather than crashing the render; the request-
@@ -362,7 +405,9 @@ def test_render_still_blocks_a_file_url_escaping_the_staged_archive(adapter, tmp
     assert len(result.files) == 1
 
 
-def test_render_skips_a_manifest_href_that_resolves_outside_the_archive(adapter, tmp_path):
+def test_render_skips_a_manifest_href_that_resolves_outside_the_archive(
+    adapter, tmp_path
+):
     """Grok-review finding, verified by direct reproduction before this
     fix: a manifest item whose href traverses far enough
     ("../../../../../../etc/passwd") makes resolve_href() return a path
@@ -394,14 +439,18 @@ def test_render_skips_a_manifest_href_that_resolves_outside_the_archive(adapter,
     ch1 = b"<html><body><h1>Legit chapter</h1></body></html>"
     epub_path = tmp_path / "traversal.epub"
     with zipfile.ZipFile(epub_path, "w") as zf:
-        zf.writestr(zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED)
+        zf.writestr(
+            zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED
+        )
         zf.writestr("META-INF/container.xml", container_xml)
         zf.writestr("OEBPS/content.opf", opf)
         zf.writestr("OEBPS/text/ch1.xhtml", ch1)
 
     ref = ArtifactRef.from_path(epub_path)
     if not _probe_epub_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
 
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) == 1
@@ -409,7 +458,9 @@ def test_render_skips_a_manifest_href_that_resolves_outside_the_archive(adapter,
     assert any("outside the archive" in w for w in result.warnings)
 
 
-def test_render_rejects_more_spine_documents_than_max_pages(good_epub, adapter, tmp_path):
+def test_render_rejects_more_spine_documents_than_max_pages(
+    good_epub, adapter, tmp_path
+):
     from artifact_skill.security.limits import Limits
 
     ref = ArtifactRef.from_path(good_epub)  # 1 spine document

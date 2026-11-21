@@ -1,4 +1,5 @@
 """FakeAdapter: canned ffmpeg-skill responses so unit tests run without ffmpeg."""
+
 from __future__ import annotations
 
 import json
@@ -12,18 +13,55 @@ from video_agent.tools.base import ToolAdapter
 from video_agent.tools.ffmpeg_skill.catalog import CATALOG
 
 
-def probe_doc(path: str, duration: float = 16.0, audio: bool = True, vfr: bool = False, hdr: bool = False, video: bool = True, channels: int = 2, subtitle_streams: int = 0,
-              sample_rate: int = 48000) -> Dict[str, Any]:
-    return {"file": path, "format": "mov,mp4,m4a,3gp,3g2,mj2", "duration": duration, "size_bytes": 1000, "bitrate": 500, "subtitle_streams": subtitle_streams,
-            "video": {"codec": "h264", "width": 1280, "height": 720, "fps": 30.0, "pix_fmt": "yuv420p", "hdr": hdr, "hdr_format": "HLG" if hdr else None, "rotation": 0, "variable_frame_rate_suspected": vfr,
-                      "color_primaries": "bt709", "color_transfer": "bt709", "bit_depth": 8} if video else None,
-            "audio": {"codec": "aac", "channels": channels, "sample_rate": sample_rate} if audio else None}
+def probe_doc(
+    path: str,
+    duration: float = 16.0,
+    audio: bool = True,
+    vfr: bool = False,
+    hdr: bool = False,
+    video: bool = True,
+    channels: int = 2,
+    subtitle_streams: int = 0,
+    sample_rate: int = 48000,
+) -> Dict[str, Any]:
+    return {
+        "file": path,
+        "format": "mov,mp4,m4a,3gp,3g2,mj2",
+        "duration": duration,
+        "size_bytes": 1000,
+        "bitrate": 500,
+        "subtitle_streams": subtitle_streams,
+        "video": (
+            {
+                "codec": "h264",
+                "width": 1280,
+                "height": 720,
+                "fps": 30.0,
+                "pix_fmt": "yuv420p",
+                "hdr": hdr,
+                "hdr_format": "HLG" if hdr else None,
+                "rotation": 0,
+                "variable_frame_rate_suspected": vfr,
+                "color_primaries": "bt709",
+                "color_transfer": "bt709",
+                "bit_depth": 8,
+            }
+            if video
+            else None
+        ),
+        "audio": (
+            {"codec": "aac", "channels": channels, "sample_rate": sample_rate}
+            if audio
+            else None
+        ),
+    }
 
 
 def _read_fake(path: str) -> Optional[Dict[str, Any]]:
     """Fake outputs carry their own metadata so a fresh adapter instance (e.g. on resume) probes them consistently."""
     try:
         import json
+
         raw = Path(path).read_bytes()
         if raw.startswith(b'{"fake"'):
             return json.loads(raw.decode())
@@ -34,6 +72,7 @@ def _read_fake(path: str) -> Optional[Dict[str, Any]]:
 
 def _write_fake(path: str, meta: Dict[str, Any]) -> None:
     import json
+
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_bytes(json.dumps({"fake": True, **meta}).encode())
 
@@ -41,26 +80,58 @@ def _write_fake(path: str, meta: Dict[str, Any]) -> None:
 class FakeAdapter(ToolAdapter):
     name = "ffmpeg-skill"
     version = "0.8.4-fake"
-    ALIASES: Dict[str, str] = {}   # subclasses standing in for another engine map their tool names onto the fake scripts
+    ALIASES: Dict[str, str] = (
+        {}
+    )  # subclasses standing in for another engine map their tool names onto the fake scripts
 
-    def __init__(self, duration: float = 16.0, silences: Optional[List[List[Optional[float]]]] = None, lufs: float = -11.0, fail_tools: Optional[Dict[str, int]] = None, audio: bool = True, vfr: bool = False, hdr: bool = False,
-                 true_peak: float = -5.0):
+    def __init__(
+        self,
+        duration: float = 16.0,
+        silences: Optional[List[List[Optional[float]]]] = None,
+        lufs: float = -11.0,
+        fail_tools: Optional[Dict[str, int]] = None,
+        audio: bool = True,
+        vfr: bool = False,
+        hdr: bool = False,
+        true_peak: float = -5.0,
+    ):
         self.duration, self.audio, self.vfr, self.hdr = duration, audio, vfr, hdr
-        self.true_peak = true_peak   # reported by loudness --measure-only; > 0 dBTP makes QA FAIL (clipping)
+        self.true_peak = true_peak  # reported by loudness --measure-only; > 0 dBTP makes QA FAIL (clipping)
         self.silences = silences if silences is not None else [[0.0, 3.0], [13.7, None]]
         self.lufs = lufs
-        self.fail_tools = dict(fail_tools or {})   # tool -> number of failures before success
+        self.fail_tools = dict(
+            fail_tools or {}
+        )  # tool -> number of failures before success
         self.calls: List[Operation] = []
 
     def describe(self):
         return {"name": self.name, "version": self.version}
 
-    TOOLS: Optional[List[str]] = None   # tool names this fake package declares; default: the ffmpeg-skill catalog plus aliases
+    TOOLS: Optional[List[str]] = (
+        None  # tool names this fake package declares; default: the ffmpeg-skill catalog plus aliases
+    )
 
     def package(self) -> SkillPackage:
-        names = self.TOOLS if self.TOOLS is not None else list(CATALOG) + list(self.ALIASES)
-        return SkillPackage(skill_id=self.name, name=self.name, version=self.version, description="fake engine (tests only)",
-                            capabilities=[], tools=[ToolSpec(tool_id=f"{self.name}/{n}", skill_id=self.name, version=self.version, produces_output=n not in ("probe", "check", "silence", "cropdetect", "scenes")) for n in names])
+        names = (
+            self.TOOLS if self.TOOLS is not None else list(CATALOG) + list(self.ALIASES)
+        )
+        return SkillPackage(
+            skill_id=self.name,
+            name=self.name,
+            version=self.version,
+            description="fake engine (tests only)",
+            capabilities=[],
+            tools=[
+                ToolSpec(
+                    tool_id=f"{self.name}/{n}",
+                    skill_id=self.name,
+                    version=self.version,
+                    produces_output=n
+                    not in ("probe", "check", "silence", "cropdetect", "scenes"),
+                )
+                for n in names
+            ],
+        )
 
     def supports(self, tool: str) -> bool:
         return tool.startswith("ffmpeg-skill/")
@@ -68,79 +139,360 @@ class FakeAdapter(ToolAdapter):
     def preview(self, op: Operation, paths: Dict[str, str]) -> List[str]:
         return [f"fake {op.tool} {op.args}"]
 
-    def measure(self, tool: str, args: Dict[str, Any], paths=None, timeout=None) -> ToolResult:
-        return self.run(Operation(tool=tool, args=args, inputs=[], outputs=[], kind="measure"), paths or {})
+    def measure(
+        self, tool: str, args: Dict[str, Any], paths=None, timeout=None
+    ) -> ToolResult:
+        return self.run(
+            Operation(tool=tool, args=args, inputs=[], outputs=[], kind="measure"),
+            paths or {},
+        )
 
-    def run(self, op: Operation, paths: Dict[str, str], timeout=None, dry_run: bool = False, attempt: int = 1) -> ToolResult:
+    def run(
+        self,
+        op: Operation,
+        paths: Dict[str, str],
+        timeout=None,
+        dry_run: bool = False,
+        attempt: int = 1,
+    ) -> ToolResult:
         self.calls.append(op)
         script = self.ALIASES.get(op.tool.split("/")[1], op.tool.split("/")[1])
         if self.fail_tools.get(op.tool, 0) > 0:
             self.fail_tools[op.tool] -= 1
-            return ToolResult(op.id, op.tool, False, 1, None, {}, [], "error: command failed (1): ffmpeg\nConversion failed!", 0.1, attempt, dry_run)
-        out = paths.get(op.args.get("output", ""), op.args.get("output")) if op.args.get("output") else None
-        src = paths.get(op.args.get("input", ""), op.args.get("input")) if op.args.get("input") else None
+            return ToolResult(
+                op.id,
+                op.tool,
+                False,
+                1,
+                None,
+                {},
+                [],
+                "error: command failed (1): ffmpeg\nConversion failed!",
+                0.1,
+                attempt,
+                dry_run,
+            )
+        out = (
+            paths.get(op.args.get("output", ""), op.args.get("output"))
+            if op.args.get("output")
+            else None
+        )
+        src = (
+            paths.get(op.args.get("input", ""), op.args.get("input"))
+            if op.args.get("input")
+            else None
+        )
         in_meta = _read_fake(src) if src else None
         in_dur = in_meta["duration"] if in_meta else self.duration
         if script == "probe":
             meta = _read_fake(op.args["inputs"][0])
             dur = meta["duration"] if meta else self.duration
             # a self-describing fake file may declare itself audio-only ("video": false) and its channel count (audio-only fixtures, audio-production outputs)
-            return ToolResult(op.id, op.tool, True, 0, None, probe_doc(op.args["inputs"][0], dur, self.audio, self.vfr, self.hdr, video=bool((meta or {}).get("video", True)),
-                                                                        channels=int((meta or {}).get("channels", 2)), subtitle_streams=int((meta or {}).get("subtitle_streams", 0)),
-                                                                        sample_rate=int((meta or {}).get("sample_rate", 48000))),   # ADR-073: a fixture may declare its rate
-                              [], "", 0.1, attempt, dry_run)
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                None,
+                probe_doc(
+                    op.args["inputs"][0],
+                    dur,
+                    self.audio,
+                    self.vfr,
+                    self.hdr,
+                    video=bool((meta or {}).get("video", True)),
+                    channels=int((meta or {}).get("channels", 2)),
+                    subtitle_streams=int((meta or {}).get("subtitle_streams", 0)),
+                    sample_rate=int((meta or {}).get("sample_rate", 48000)),
+                ),  # ADR-073: a fixture may declare its rate
+                [],
+                "",
+                0.1,
+                attempt,
+                dry_run,
+            )
         if script == "silence":
-            silences = in_meta.get("silences", self.silences) if in_meta else self.silences   # a self-describing fake file may carry its own silences (ADR-053 takes)
-            keep = [[max(0.0, (s[1] or self.duration) - 0.15) if i == 0 and s[0] == 0 else 0.0, 0.0] for i, s in enumerate(self.silences[:1])]
-            data = {"silences": silences, "keep": [[2.85, 13.85]], "input_duration": self.duration, "kept_duration": 11.0, "removed_seconds": 5.0}
-            if in_meta and "silences" in in_meta:   # the file's own silences: a keep range consistent with them (lead-out of the first, lead-in of the last)
-                lead = next((float(x[1]) for x in silences if float(x[0]) == 0.0 and x[1] is not None), 0.0)
+            silences = (
+                in_meta.get("silences", self.silences) if in_meta else self.silences
+            )  # a self-describing fake file may carry its own silences (ADR-053 takes)
+            keep = [
+                [
+                    (
+                        max(0.0, (s[1] or self.duration) - 0.15)
+                        if i == 0 and s[0] == 0
+                        else 0.0
+                    ),
+                    0.0,
+                ]
+                for i, s in enumerate(self.silences[:1])
+            ]
+            data = {
+                "silences": silences,
+                "keep": [[2.85, 13.85]],
+                "input_duration": self.duration,
+                "kept_duration": 11.0,
+                "removed_seconds": 5.0,
+            }
+            if (
+                in_meta and "silences" in in_meta
+            ):  # the file's own silences: a keep range consistent with them (lead-out of the first, lead-in of the last)
+                lead = next(
+                    (
+                        float(x[1])
+                        for x in silences
+                        if float(x[0]) == 0.0 and x[1] is not None
+                    ),
+                    0.0,
+                )
                 tail = next((float(x[0]) for x in silences if x[1] is None), in_dur)
-                data.update({"keep": [[round(lead, 3), round(tail, 3)]], "input_duration": in_dur, "kept_duration": round(tail - lead, 3), "removed_seconds": round(in_dur - (tail - lead), 3)})
-            return ToolResult(op.id, op.tool, True, 0, out, data, [], "", 0.1, attempt, dry_run)
+                data.update(
+                    {
+                        "keep": [[round(lead, 3), round(tail, 3)]],
+                        "input_duration": in_dur,
+                        "kept_duration": round(tail - lead, 3),
+                        "removed_seconds": round(in_dur - (tail - lead), 3),
+                    }
+                )
+            return ToolResult(
+                op.id, op.tool, True, 0, out, data, [], "", 0.1, attempt, dry_run
+            )
         if script == "loudness":
             if op.args.get("measure_only"):
                 lufs = in_meta.get("lufs", self.lufs) if in_meta else self.lufs
-                tp = in_meta.get("true_peak", self.true_peak) if in_meta else self.true_peak
-                return ToolResult(op.id, op.tool, True, 0, None, {"input_i": str(lufs), "input_tp": str(tp), "input_lra": "6.0", "input_thresh": "-21", "target_offset": "0"}, [], "", 0.1, attempt, dry_run)
+                tp = (
+                    in_meta.get("true_peak", self.true_peak)
+                    if in_meta
+                    else self.true_peak
+                )
+                return ToolResult(
+                    op.id,
+                    op.tool,
+                    True,
+                    0,
+                    None,
+                    {
+                        "input_i": str(lufs),
+                        "input_tp": str(tp),
+                        "input_lra": "6.0",
+                        "input_thresh": "-21",
+                        "target_offset": "0",
+                    },
+                    [],
+                    "",
+                    0.1,
+                    attempt,
+                    dry_run,
+                )
             self.lufs = float(op.args["lufs"])
             if out and not dry_run:
                 # like the real loudness.py (run_keeping_subtitles): subtitle streams are copied; FAKE_DROPS_SUBS simulates a step that loses them
-                _write_fake(out, {"duration": in_dur, "lufs": self.lufs, "subtitle_streams": 0 if os.environ.get("FAKE_DROPS_SUBS") else (in_meta or {}).get("subtitle_streams", 0)})
-            return ToolResult(op.id, op.tool, True, 0, out, {"output": out, "commands": ["ffmpeg loudnorm"]}, ["ffmpeg loudnorm"], "", 0.2, attempt, dry_run)
+                _write_fake(
+                    out,
+                    {
+                        "duration": in_dur,
+                        "lufs": self.lufs,
+                        "subtitle_streams": (
+                            0
+                            if os.environ.get("FAKE_DROPS_SUBS")
+                            else (in_meta or {}).get("subtitle_streams", 0)
+                        ),
+                    },
+                )
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                out,
+                {"output": out, "commands": ["ffmpeg loudnorm"]},
+                ["ffmpeg loudnorm"],
+                "",
+                0.2,
+                attempt,
+                dry_run,
+            )
         if script in ("cut", "export", "fit"):
             dur = in_dur
             if script == "cut":
-                segs = [tuple(float(x) for x in s.split("-")) for s in op.args["segments"].split(",")]
+                segs = [
+                    tuple(float(x) for x in s.split("-"))
+                    for s in op.args["segments"].split(",")
+                ]
                 dur = sum(e - s for s, e in segs)
             self.duration = dur
             if out and not dry_run:
                 # no subtitle stream survives cut / fit / export: the real export.py writes the picture and the audio only (measured, ADR-063)
-                _write_fake(out, {"duration": dur, "lufs": in_meta.get("lufs", self.lufs) if in_meta else self.lufs})
-            return ToolResult(op.id, op.tool, True, 0, out, {"output": out, "commands": [f"ffmpeg {script}"], "probe": probe_doc(out or "", dur)}, [f"ffmpeg {script}"], "", 0.2, attempt, dry_run)
+                _write_fake(
+                    out,
+                    {
+                        "duration": dur,
+                        "lufs": (
+                            in_meta.get("lufs", self.lufs) if in_meta else self.lufs
+                        ),
+                    },
+                )
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                out,
+                {
+                    "output": out,
+                    "commands": [f"ffmpeg {script}"],
+                    "probe": probe_doc(out or "", dur),
+                },
+                [f"ffmpeg {script}"],
+                "",
+                0.2,
+                attempt,
+                dry_run,
+            )
         if script == "check":
-            rows = [{"check": "duration", "status": "PASS", "value": f"{in_dur}s", "expected": "any", "fix": "", "kind": "judgement"},
-                    {"check": "video codec", "status": "PASS", "value": "h264", "expected": "h264", "fix": "", "kind": "format"}]
-            return ToolResult(op.id, op.tool, True, 0, None, {"platform": op.args["platform"], "checks": rows, "failed": 0, "warnings": 0, "ok": True}, [], "", 0.1, attempt, dry_run)
+            rows = [
+                {
+                    "check": "duration",
+                    "status": "PASS",
+                    "value": f"{in_dur}s",
+                    "expected": "any",
+                    "fix": "",
+                    "kind": "judgement",
+                },
+                {
+                    "check": "video codec",
+                    "status": "PASS",
+                    "value": "h264",
+                    "expected": "h264",
+                    "fix": "",
+                    "kind": "format",
+                },
+            ]
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                None,
+                {
+                    "platform": op.args["platform"],
+                    "checks": rows,
+                    "failed": 0,
+                    "warnings": 0,
+                    "ok": True,
+                },
+                [],
+                "",
+                0.1,
+                attempt,
+                dry_run,
+            )
         if script == "sync":
             # a fake measurement (tests only): reference / second are positional paths; replace_audio / trim_second / output must never be sent for a measurement
-            assert "replace_audio" not in op.args and "trim_second" not in op.args and "output" not in op.args, op.args
+            assert (
+                "replace_audio" not in op.args
+                and "trim_second" not in op.args
+                and "output" not in op.args
+            ), op.args
             mode = os.environ.get("FAKE_SYNC_MODE", "")
             if mode == "no_audio":
-                return ToolResult(op.id, op.tool, False, 1, None, {"status": "failed", "error": {"kind": "input", "message": f"{op.args['second']} has no audio stream to correlate"}}, [], f"error: {op.args['second']} has no audio stream to correlate", 0.1, attempt, dry_run)
+                return ToolResult(
+                    op.id,
+                    op.tool,
+                    False,
+                    1,
+                    None,
+                    {
+                        "status": "failed",
+                        "error": {
+                            "kind": "input",
+                            "message": f"{op.args['second']} has no audio stream to correlate",
+                        },
+                    },
+                    [],
+                    f"error: {op.args['second']} has no audio stream to correlate",
+                    0.1,
+                    attempt,
+                    dry_run,
+                )
             if mode == "short":
-                return ToolResult(op.id, op.tool, False, 1, None, {"status": "failed", "error": {"kind": "input", "message": "not enough audio to analyse"}}, [], "error: not enough audio to analyse", 0.1, attempt, dry_run)
+                return ToolResult(
+                    op.id,
+                    op.tool,
+                    False,
+                    1,
+                    None,
+                    {
+                        "status": "failed",
+                        "error": {
+                            "kind": "input",
+                            "message": "not enough audio to analyse",
+                        },
+                    },
+                    [],
+                    "error: not enough audio to analyse",
+                    0.1,
+                    attempt,
+                    dry_run,
+                )
             if mode == "malformed":
-                return ToolResult(op.id, op.tool, True, 0, None, {"status": "completed", "output": None, "dry_run": False, "commands": []}, [], "", 0.1, attempt, dry_run)
+                return ToolResult(
+                    op.id,
+                    op.tool,
+                    True,
+                    0,
+                    None,
+                    {
+                        "status": "completed",
+                        "output": None,
+                        "dry_run": False,
+                        "commands": [],
+                    },
+                    [],
+                    "",
+                    0.1,
+                    attempt,
+                    dry_run,
+                )
             second = _read_fake(op.args["second"]) or {}
             offset = float(second.get("sync_offset", 1.25))
             conf = float(second.get("sync_confidence", 0.91))
-            doc = {"status": "completed", "output": None, "dry_run": False, "commands": ["ffmpeg -i ref -f s16le ...", "ffmpeg -i second -f s16le ..."], "reference": op.args["reference"], "second": op.args["second"],
-                   "offset_seconds": round(offset, 4), "confidence": round(conf, 3), "meaning": "second starts %.3fs %s than reference" % (abs(offset), "later" if offset > 0 else "earlier")}
+            doc = {
+                "status": "completed",
+                "output": None,
+                "dry_run": False,
+                "commands": [
+                    "ffmpeg -i ref -f s16le ...",
+                    "ffmpeg -i second -f s16le ...",
+                ],
+                "reference": op.args["reference"],
+                "second": op.args["second"],
+                "offset_seconds": round(offset, 4),
+                "confidence": round(conf, 3),
+                "meaning": "second starts %.3fs %s than reference"
+                % (abs(offset), "later" if offset > 0 else "earlier"),
+            }
             if op.args.get("fix_drift") and second.get("sync_drift_ppm") is not None:
                 ppm = float(second["sync_drift_ppm"])
-                doc["drift"] = {"residual_at_end_seconds": round(ppm / 1e6 * 100, 4), "measured_over_seconds": 100.0, "drift_ppm": ppm, "meaning": "second file runs %.1f ppm long/slow" % ppm, "confidence": 0.8}
-            return ToolResult(op.id, op.tool, True, 0, None, doc, doc["commands"], "", 0.3, attempt, dry_run)
+                doc["drift"] = {
+                    "residual_at_end_seconds": round(ppm / 1e6 * 100, 4),
+                    "measured_over_seconds": 100.0,
+                    "drift_ppm": ppm,
+                    "meaning": "second file runs %.1f ppm long/slow" % ppm,
+                    "confidence": 0.8,
+                }
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                None,
+                doc,
+                doc["commands"],
+                "",
+                0.3,
+                attempt,
+                dry_run,
+            )
         if script == "multicam":
             # a fake camera switch (tests only, ADR-045): output duration is the reference (first input)'s own duration,
             # never a sum of the inputs -- multicam cuts between already-aligned sources on the reference timeline
@@ -148,39 +500,153 @@ class FakeAdapter(ToolAdapter):
             ref_meta = _read_fake(inputs[0]) or {}
             ref_dur = ref_meta.get("duration", self.duration)
             if out and not dry_run:
-                _write_fake(out, {"duration": ref_dur, "lufs": ref_meta.get("lufs", self.lufs)})
-            doc = {"output": out, "offsets_seconds": [0.0] + [(_read_fake(p) or {}).get("sync_offset", 0.0) for p in inputs[1:]],
-                   "confidence": [1.0] + [(_read_fake(p) or {}).get("sync_confidence", 0.9) for p in inputs[1:]],
-                   "cuts": [{"start": 0.0, "end": ref_dur, "camera": 0}], "commands": ["ffmpeg multicam"], "probe": probe_doc(out or "", ref_dur)}
-            return ToolResult(op.id, op.tool, True, 0, out, doc, doc["commands"], "", 0.3, attempt, dry_run)
+                _write_fake(
+                    out, {"duration": ref_dur, "lufs": ref_meta.get("lufs", self.lufs)}
+                )
+            doc = {
+                "output": out,
+                "offsets_seconds": [0.0]
+                + [(_read_fake(p) or {}).get("sync_offset", 0.0) for p in inputs[1:]],
+                "confidence": [1.0]
+                + [
+                    (_read_fake(p) or {}).get("sync_confidence", 0.9)
+                    for p in inputs[1:]
+                ],
+                "cuts": [{"start": 0.0, "end": ref_dur, "camera": 0}],
+                "commands": ["ffmpeg multicam"],
+                "probe": probe_doc(out or "", ref_dur),
+            }
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                out,
+                doc,
+                doc["commands"],
+                "",
+                0.3,
+                attempt,
+                dry_run,
+            )
         if script == "audio":
             # a fake mux (tests only, ADR-054): only --replace is catalogued; the picture is stream-copied, so the output lasts as long as
             # the video input (the real audio.py pads / trims the new audio to the video's duration)
-            assert set(op.args) <= {"input", "replace", "output"} and op.args.get("replace"), op.args
+            assert set(op.args) <= {"input", "replace", "output"} and op.args.get(
+                "replace"
+            ), op.args
             rep = _read_fake(paths.get(op.args["replace"], op.args["replace"])) or {}
             if out and not dry_run:
-                _write_fake(out, {"duration": in_dur, "lufs": rep.get("lufs", in_meta.get("lufs", self.lufs) if in_meta else self.lufs)})
-            return ToolResult(op.id, op.tool, True, 0, out, {"output": out, "commands": ["ffmpeg audio --replace"], "probe": probe_doc(out or "", in_dur), "video": True},
-                              ["ffmpeg audio --replace"], "", 0.2, attempt, dry_run)
+                _write_fake(
+                    out,
+                    {
+                        "duration": in_dur,
+                        "lufs": rep.get(
+                            "lufs",
+                            in_meta.get("lufs", self.lufs) if in_meta else self.lufs,
+                        ),
+                    },
+                )
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                out,
+                {
+                    "output": out,
+                    "commands": ["ffmpeg audio --replace"],
+                    "probe": probe_doc(out or "", in_dur),
+                    "video": True,
+                },
+                ["ffmpeg audio --replace"],
+                "",
+                0.2,
+                attempt,
+                dry_run,
+            )
         if script == "look":
             if out and not dry_run:
                 Path(out).parent.mkdir(parents=True, exist_ok=True)
                 Path(out).write_bytes(b"png")
-            return ToolResult(op.id, op.tool, True, 0, out, {"outputs": [out]}, [], "", 0.1, attempt, dry_run)
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                out,
+                {"outputs": [out]},
+                [],
+                "",
+                0.1,
+                attempt,
+                dry_run,
+            )
         if script == "broll":
             # a fake cutaway composite (tests only, ADR-090): the output is exactly as long as A (broll.py's own contract); every insert must exist
-            assert len(op.args["insert"]) == len(op.args["at"]) == len(op.args["end"]) and op.args.get("audio") == "a", op.args
+            assert (
+                len(op.args["insert"]) == len(op.args["at"]) == len(op.args["end"])
+                and op.args.get("audio") == "a"
+            ), op.args
             for b in op.args["insert"]:
                 assert os.path.exists(paths.get(b, b)), b
             if out and not dry_run:
-                _write_fake(out, {"duration": in_dur, "lufs": in_meta.get("lufs", self.lufs) if in_meta else self.lufs})
-            return ToolResult(op.id, op.tool, True, 0, out, {"output": out, "commands": ["ffmpeg broll"], "probe": probe_doc(out or "", in_dur)}, ["ffmpeg broll"], "", 0.2, attempt, dry_run)
+                _write_fake(
+                    out,
+                    {
+                        "duration": in_dur,
+                        "lufs": (
+                            in_meta.get("lufs", self.lufs) if in_meta else self.lufs
+                        ),
+                    },
+                )
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                out,
+                {
+                    "output": out,
+                    "commands": ["ffmpeg broll"],
+                    "probe": probe_doc(out or "", in_dur),
+                },
+                ["ffmpeg broll"],
+                "",
+                0.2,
+                attempt,
+                dry_run,
+            )
         if script in ("redact", "deinterlace", "crop", "stabilize"):
             # ADR-046: single-source filter-style ops -- duration is unchanged (none of these re-time the clip)
             dur = in_dur
             if out and not dry_run:
-                _write_fake(out, {"duration": dur, "lufs": in_meta.get("lufs", self.lufs) if in_meta else self.lufs})
-            return ToolResult(op.id, op.tool, True, 0, out, {"output": out, "commands": [f"ffmpeg {script}"], "probe": probe_doc(out or "", dur)}, [f"ffmpeg {script}"], "", 0.2, attempt, dry_run)
+                _write_fake(
+                    out,
+                    {
+                        "duration": dur,
+                        "lufs": (
+                            in_meta.get("lufs", self.lufs) if in_meta else self.lufs
+                        ),
+                    },
+                )
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                out,
+                {
+                    "output": out,
+                    "commands": [f"ffmpeg {script}"],
+                    "probe": probe_doc(out or "", dur),
+                },
+                [f"ffmpeg {script}"],
+                "",
+                0.2,
+                attempt,
+                dry_run,
+            )
         if script == "cropdetect":
             # a fake measurement (tests only, ADR-046): no output file. Shape verified against a real --json capture
             # (synthetic letterboxed clip, ffmpeg-skill 0.16.2) -- see catalog.py's comment on the cropdetect entry.
@@ -190,37 +656,131 @@ class FakeAdapter(ToolAdapter):
             meta = _read_fake(op.args["input"]) or {}
             w, h = int(meta.get("width", 1280)), int(meta.get("height", 720))
             crop = meta.get("crop", {"width": w, "height": h, "x": 0, "y": 0})
-            doc = {"file": op.args["input"], "source_width": w, "source_height": h, "windows": int(op.args.get("samples", 5)),
-                   "windows_failed": int(meta.get("crop_windows_failed", 0)), "crop": crop, "commands": ["ffmpeg cropdetect"]}
+            doc = {
+                "file": op.args["input"],
+                "source_width": w,
+                "source_height": h,
+                "windows": int(op.args.get("samples", 5)),
+                "windows_failed": int(meta.get("crop_windows_failed", 0)),
+                "crop": crop,
+                "commands": ["ffmpeg cropdetect"],
+            }
             if crop is not None:
                 doc["confidence"] = float(meta.get("crop_confidence", 1.0))
-            return ToolResult(op.id, op.tool, True, 0, None, doc, doc["commands"], "", 0.2, attempt, dry_run)
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                None,
+                doc,
+                doc["commands"],
+                "",
+                0.2,
+                attempt,
+                dry_run,
+            )
         if script == "grid":
             # a fake comparison grid (tests only, ADR-046): duration follows grid.py's own contract -- the shortest
             # input by default, or the longest input with --pad (each shorter cell holds its last frame)
             inputs = op.args["inputs"]
-            durs = [(_read_fake(p) or {}).get("duration", self.duration) for p in inputs]
+            durs = [
+                (_read_fake(p) or {}).get("duration", self.duration) for p in inputs
+            ]
             total = max(durs) if op.args.get("pad") else min(durs)
             if out and not dry_run:
                 _write_fake(out, {"duration": total, "lufs": self.lufs})
-            doc = {"output": out, "commands": ["ffmpeg grid"], "probe": probe_doc(out or "", total)}
-            return ToolResult(op.id, op.tool, True, 0, out, doc, doc["commands"], "", 0.3, attempt, dry_run)
+            doc = {
+                "output": out,
+                "commands": ["ffmpeg grid"],
+                "probe": probe_doc(out or "", total),
+            }
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                out,
+                doc,
+                doc["commands"],
+                "",
+                0.3,
+                attempt,
+                dry_run,
+            )
         if script == "scenes":
             # a fake beat measurement (tests only, ADR-053): the grid a self-describing fake file declares ("beat_interval", "beat_phase",
             # "beat_confidence", "beat_usable"), shaped like a real ffmpeg-skill 2.21.0 scenes --beats --json capture. No video → refused, as the real script does.
             assert op.args.get("beats") and "output" not in op.args, op.args
             meta = _read_fake(op.args["input"]) or {}
             if not meta.get("video", True):
-                return ToolResult(op.id, op.tool, False, 1, None, {"status": "failed", "error": {"kind": "input", "message": "input has no video stream"}}, [], "error: input has no video stream", 0.1, attempt, dry_run)
+                return ToolResult(
+                    op.id,
+                    op.tool,
+                    False,
+                    1,
+                    None,
+                    {
+                        "status": "failed",
+                        "error": {
+                            "kind": "input",
+                            "message": "input has no video stream",
+                        },
+                    },
+                    [],
+                    "error: input has no video stream",
+                    0.1,
+                    attempt,
+                    dry_run,
+                )
             dur = float(meta.get("duration", self.duration))
-            step, phase = float(meta.get("beat_interval", 0.5)), float(meta.get("beat_phase", 0.0))
-            beats = [round(phase + i * step, 4) for i in range(int((dur - phase) / step) + 1)]
+            step, phase = float(meta.get("beat_interval", 0.5)), float(
+                meta.get("beat_phase", 0.0)
+            )
+            beats = [
+                round(phase + i * step, 4) for i in range(int((dur - phase) / step) + 1)
+            ]
             conf = float(meta.get("beat_confidence", 0.95))
-            grid = {"supported_beats": beats, "tempo_bpm": round(60.0 / step, 2), "interval": step, "confidence": conf, "phase": phase, "onsets": len(beats), "supported": len(beats),
-                    "unsupported": 0, "method": "rms-flux-autocorrelation", "step_s": 0.01, "range_bpm": [60.0, 200.0], "usable": bool(meta.get("beat_usable", conf >= 0.5))}
-            doc = {"status": "completed", "output": None, "dry_run": False, "commands": ["ffmpeg scdet", "ffmpeg -f s16le"], "file": op.args["input"], "duration": dur, "scene_count": 1,
-                   "scenes": [{"start": 0.0, "end": dur}], "audio_peaks": [], "beats": beats, "beat_grid": grid}
-            return ToolResult(op.id, op.tool, True, 0, None, doc, doc["commands"], "", 0.2, attempt, dry_run)
+            grid = {
+                "supported_beats": beats,
+                "tempo_bpm": round(60.0 / step, 2),
+                "interval": step,
+                "confidence": conf,
+                "phase": phase,
+                "onsets": len(beats),
+                "supported": len(beats),
+                "unsupported": 0,
+                "method": "rms-flux-autocorrelation",
+                "step_s": 0.01,
+                "range_bpm": [60.0, 200.0],
+                "usable": bool(meta.get("beat_usable", conf >= 0.5)),
+            }
+            doc = {
+                "status": "completed",
+                "output": None,
+                "dry_run": False,
+                "commands": ["ffmpeg scdet", "ffmpeg -f s16le"],
+                "file": op.args["input"],
+                "duration": dur,
+                "scene_count": 1,
+                "scenes": [{"start": 0.0, "end": dur}],
+                "audio_peaks": [],
+                "beats": beats,
+                "beat_grid": grid,
+            }
+            return ToolResult(
+                op.id,
+                op.tool,
+                True,
+                0,
+                None,
+                doc,
+                doc["commands"],
+                "",
+                0.2,
+                attempt,
+                dry_run,
+            )
         if script == "render":
             # a fake timeline export (tests only, ADR-052): only the --export-timeline use of render.py is catalogued. The typed clips
             # become a minimal document of the output's format (an OTIO Timeline with one Clip per cut-list range); the JSON shape
@@ -231,16 +791,78 @@ class FakeAdapter(ToolAdapter):
             if out and not dry_run:
                 Path(out).parent.mkdir(parents=True, exist_ok=True)
                 if fmt == "otio":
-                    items = [{"OTIO_SCHEMA": "Clip.2", "name": Path(paths.get(c["input"], c["input"])).name,
-                              "source_range": {"start": c["in"], "duration": round(c["out"] - c["in"], 3)}} for c in clips]
-                    Path(out).write_text(json.dumps({"OTIO_SCHEMA": "Timeline.1", "tracks": {"OTIO_SCHEMA": "Stack.1", "children": [{"OTIO_SCHEMA": "Track.1", "kind": "Video", "children": items}]}}))
+                    items = [
+                        {
+                            "OTIO_SCHEMA": "Clip.2",
+                            "name": Path(paths.get(c["input"], c["input"])).name,
+                            "source_range": {
+                                "start": c["in"],
+                                "duration": round(c["out"] - c["in"], 3),
+                            },
+                        }
+                        for c in clips
+                    ]
+                    Path(out).write_text(
+                        json.dumps(
+                            {
+                                "OTIO_SCHEMA": "Timeline.1",
+                                "tracks": {
+                                    "OTIO_SCHEMA": "Stack.1",
+                                    "children": [
+                                        {
+                                            "OTIO_SCHEMA": "Track.1",
+                                            "kind": "Video",
+                                            "children": items,
+                                        }
+                                    ],
+                                },
+                            }
+                        )
+                    )
                 elif fmt == "fcpxml":
-                    Path(out).write_text('<?xml version="1.0"?>\n<fcpxml version="1.10"/>\n')
+                    Path(out).write_text(
+                        '<?xml version="1.0"?>\n<fcpxml version="1.10"/>\n'
+                    )
                 else:
                     Path(out).write_text("TITLE: timeline\nFCM: NON-DROP FRAME\n")
             total = round(sum(c["out"] - c["in"] for c in clips), 3)
-            doc = {"status": "completed", "output": out, "dry_run": dry_run, "commands": [], "verified": True, "verification": [{"step": "exists", "ok": True}, {"step": "parse", "ok": True}],
-                   "timeline": {"format": fmt, "rate": "30", "duration": total, "frames": int(round(total * 30)), "clips": len(clips), "transition": "none", "transition_frames": 0,
-                                "music": False, "markers": 0, "notes": [], "not_exported": []}}
-            return ToolResult(op.id, op.tool, True, 0, out, doc, [], "", 0.1, attempt, dry_run)
-        return ToolResult(op.id, op.tool, False, 2, None, {}, [], f"error: unknown tool {script}", 0.0, attempt, dry_run)
+            doc = {
+                "status": "completed",
+                "output": out,
+                "dry_run": dry_run,
+                "commands": [],
+                "verified": True,
+                "verification": [
+                    {"step": "exists", "ok": True},
+                    {"step": "parse", "ok": True},
+                ],
+                "timeline": {
+                    "format": fmt,
+                    "rate": "30",
+                    "duration": total,
+                    "frames": int(round(total * 30)),
+                    "clips": len(clips),
+                    "transition": "none",
+                    "transition_frames": 0,
+                    "music": False,
+                    "markers": 0,
+                    "notes": [],
+                    "not_exported": [],
+                },
+            }
+            return ToolResult(
+                op.id, op.tool, True, 0, out, doc, [], "", 0.1, attempt, dry_run
+            )
+        return ToolResult(
+            op.id,
+            op.tool,
+            False,
+            2,
+            None,
+            {},
+            [],
+            f"error: unknown tool {script}",
+            0.0,
+            attempt,
+            dry_run,
+        )

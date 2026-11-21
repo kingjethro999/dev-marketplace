@@ -19,6 +19,7 @@ apart from whitespace, `normalized` when it equals it only after folding, and `a
 `fuzzy`) when a window of the folded text is at least `fuzzy` similar (difflib ratio) to the folded phrase.
 Hits do not overlap; every hit is returned, in time order within each transcript, transcripts in the order given.
 """
+
 from __future__ import annotations
 
 import difflib
@@ -33,14 +34,16 @@ from .words import needs_word_indices, with_word_indices
 TOOL = "transcription/find"
 MATCH_EXACT, MATCH_NORMALIZED, MATCH_APPROXIMATE = "exact", "normalized", "approximate"
 TIMING_WORD, TIMING_SEGMENT = "word", "segment"
-NORMALIZATION = ("NFKC per character cluster, casefold, a dash after kana -> ー, whitespace / punctuation (Unicode Z*, P*) "
-                 "and control characters removed; matched on the joined unit texts of the whole transcript")
+NORMALIZATION = (
+    "NFKC per character cluster, casefold, a dash after kana -> ー, whitespace / punctuation (Unicode Z*, P*) "
+    "and control characters removed; matched on the joined unit texts of the whole transcript"
+)
 MAX_PHRASE_CHARS = 500
 MAX_TRANSCRIPTS = 100
 MAX_CONTEXT = 10
 FUZZY_MIN, FUZZY_MAX = 0.5, 1.0
-FUZZY_LENGTH_SPAN = 0.2          # approximate windows are the folded phrase's length +-20 %
-MAX_FUZZY_PHRASE_CHARS = 64      # folded phrase length for approximate matching
+FUZZY_LENGTH_SPAN = 0.2  # approximate windows are the folded phrase's length +-20 %
+MAX_FUZZY_PHRASE_CHARS = 64  # folded phrase length for approximate matching
 # Work bound for approximate matching, per transcript: folded characters x window lengths x phrase length squared
 # (difflib's ratio is about quadratic in the window). 300 M is about 25 s on one core in the worst case (every window a
 # near match); real text is much faster because quick_ratio rejects most windows. An 8-hour transcript with a
@@ -64,8 +67,11 @@ def _clusters(text: str) -> List[Tuple[int, int]]:
     i, n = 0, len(text)
     while i < n:
         j = i + 1
-        while j < n and (unicodedata.combining(text[j]) or unicodedata.category(text[j]) in ("Mn", "Mc", "Me")
-                         or text[j] in HALFWIDTH_VOICED_MARKS):
+        while j < n and (
+            unicodedata.combining(text[j])
+            or unicodedata.category(text[j]) in ("Mn", "Mc", "Me")
+            or text[j] in HALFWIDTH_VOICED_MARKS
+        ):
             j += 1
         out.append((i, j))
         i = j
@@ -90,7 +96,7 @@ class _Folder:
             for ch in unicodedata.normalize("NFKC", text[a:b]).casefold():
                 if ch in DASHES:
                     if ch != LONG_VOWEL and not _is_kana(self.prev):
-                        continue               # a dash that is not a long vowel mark is punctuation
+                        continue  # a dash that is not a long vowel mark is punctuation
                     ch = LONG_VOWEL
                 elif _dropped(ch):
                     continue
@@ -108,9 +114,24 @@ def _strip_ws(text: str) -> str:
 
 
 class _Unit:
-    __slots__ = ("seg_pos", "seg_id", "text", "start", "end", "word_index", "speaker_id", "space_before")
+    __slots__ = (
+        "seg_pos",
+        "seg_id",
+        "text",
+        "start",
+        "end",
+        "word_index",
+        "speaker_id",
+        "space_before",
+    )
 
-    def __init__(self, seg_pos: int, seg: Dict[str, Any], word: Optional[Dict[str, Any]], space_before: bool) -> None:
+    def __init__(
+        self,
+        seg_pos: int,
+        seg: Dict[str, Any],
+        word: Optional[Dict[str, Any]],
+        space_before: bool,
+    ) -> None:
         self.seg_pos = seg_pos
         self.space_before = space_before
         self.seg_id = seg["id"]
@@ -118,7 +139,11 @@ class _Unit:
         self.text = str(src["text"])
         self.start, self.end = float(src["start"]), float(src["end"])
         self.word_index = word.get("index") if word is not None else None
-        self.speaker_id = word["speaker_id"] if word is not None and "speaker_id" in word else seg.get("speaker_id")
+        self.speaker_id = (
+            word["speaker_id"]
+            if word is not None and "speaker_id" in word
+            else seg.get("speaker_id")
+        )
 
 
 class _Stream:
@@ -127,7 +152,9 @@ class _Stream:
     def __init__(self, segments: Sequence[Dict[str, Any]]) -> None:
         self.units: List[_Unit] = []
         chars: List[str] = []
-        self.where: List[Tuple[int, int, int]] = []   # (unit, raw start, raw end) per folded char
+        self.where: List[Tuple[int, int, int]] = (
+            []
+        )  # (unit, raw start, raw end) per folded char
         folder = _Folder()
         for pos, seg in enumerate(segments):
             words = seg.get("words") or []
@@ -150,7 +177,8 @@ class _Stream:
 
     def raw(self, first: int, last: int) -> str:
         """The unit text from folded char `first` to folded char `last` (inclusive). Units are joined with a space
-        where the segment text has one between them, and between segments; otherwise without a separator."""
+        where the segment text has one between them, and between segments; otherwise without a separator.
+        """
         u0, a, _ = self.where[first]
         u1, _, b = self.where[last]
         if u0 == u1:
@@ -163,27 +191,38 @@ class _Stream:
 
 
 def _load(value: Any) -> Tuple[Dict[str, Any], Optional[str]]:
-    from .skill import load_transcript   # one loader for every tool
+    from .skill import load_transcript  # one loader for every tool
+
     doc = load_transcript(value)
     if not isinstance(doc, dict):
-        raise TranscriptionError("VERIFICATION_FAILED", "transcript is not a JSON object")
+        raise TranscriptionError(
+            "VERIFICATION_FAILED", "transcript is not a JSON object"
+        )
     rep = validate_transcript(doc)
     if not rep.ok:
-        raise TranscriptionError("VERIFICATION_FAILED", "transcript fails validation; run `transcription check`",
-                                 {"errors": rep.errors[:10]})
+        raise TranscriptionError(
+            "VERIFICATION_FAILED",
+            "transcript fails validation; run `transcription check`",
+            {"errors": rep.errors[:10]},
+        )
     path = value if isinstance(value, str) else None
     return doc, path
 
 
-def _approximate(stream: str, phrase: str, threshold: float, taken: List[Tuple[int, int]]) -> List[Tuple[int, int, float]]:
+def _approximate(
+    stream: str, phrase: str, threshold: float, taken: List[Tuple[int, int]]
+) -> List[Tuple[int, int, float]]:
     """Non-overlapping windows of `stream` whose difflib ratio to `phrase` is >= threshold and < 1.
 
     Each start position keeps only its best window (highest ratio, then shortest), so at most one candidate per
     character is held. Candidates are then taken best first, then earliest, then shortest, skipping any that
-    overlaps one already taken. Windows that touch a span in `taken` are never considered."""
+    overlaps one already taken. Windows that touch a span in `taken` are never considered.
+    """
     n, m = len(stream), len(phrase)
     lo, hi = _window_lengths(m)
-    blocked_at = [n] * (n + 1)          # blocked_at[i]: first blocked position >= i (n when none)
+    blocked_at = [n] * (
+        n + 1
+    )  # blocked_at[i]: first blocked position >= i (n when none)
     blocked = bytearray(n)
     for a, b in taken:
         blocked[a:b] = b"\x01" * (b - a)
@@ -223,8 +262,18 @@ def _window_lengths(m: int) -> Tuple[int, int]:
     return lo, max(lo, int(round(m * (1 + FUZZY_LENGTH_SPAN))))
 
 
-def _hit(st: _Stream, segments: Sequence[Dict[str, Any]], a: int, b: int, kind: str, ratio: float, phrase: str,
-         context: int, source: Optional[str], transcript_id: Any) -> Dict[str, Any]:
+def _hit(
+    st: _Stream,
+    segments: Sequence[Dict[str, Any]],
+    a: int,
+    b: int,
+    kind: str,
+    ratio: float,
+    phrase: str,
+    context: int,
+    source: Optional[str],
+    transcript_id: Any,
+) -> Dict[str, Any]:
     unit_ids = sorted({st.where[k][0] for k in range(a, b)})
     units = [st.units[k] for k in unit_ids]
     seg_positions = sorted({u.seg_pos for u in units})
@@ -233,7 +282,9 @@ def _hit(st: _Stream, segments: Sequence[Dict[str, Any]], a: int, b: int, kind: 
     if kind != MATCH_APPROXIMATE:
         # exact: the phrase as written (whitespace aside, punctuation kept) is in the text of the covered units
         covered = "".join(u.text for u in units)
-        kind = MATCH_EXACT if _strip_ws(phrase) in _strip_ws(covered) else MATCH_NORMALIZED
+        kind = (
+            MATCH_EXACT if _strip_ws(phrase) in _strip_ws(covered) else MATCH_NORMALIZED
+        )
     speakers: List[str] = []
     for u in units:
         if u.speaker_id is not None and u.speaker_id not in speakers:
@@ -241,7 +292,10 @@ def _hit(st: _Stream, segments: Sequence[Dict[str, Any]], a: int, b: int, kind: 
     all_speakers = {u.speaker_id for u in units}
     first, last = seg_positions[0], seg_positions[-1]
     before = [segments[k]["text"] for k in range(max(0, first - context), first)]
-    after = [segments[k]["text"] for k in range(last + 1, min(len(segments), last + 1 + context))]
+    after = [
+        segments[k]["text"]
+        for k in range(last + 1, min(len(segments), last + 1 + context))
+    ]
     timed_by_words = all(_is_word(segments, u) for u in units)
     indices = [u.word_index for u in word_units if u.word_index is not None]
     return {
@@ -266,8 +320,14 @@ def _is_word(segments: Sequence[Dict[str, Any]], u: _Unit) -> bool:
     return bool(segments[u.seg_pos].get("words"))
 
 
-def search_transcript(doc: Dict[str, Any], phrase: str, *, fuzzy: Optional[float] = None, context: int = 1,
-                      source: Optional[str] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+def search_transcript(
+    doc: Dict[str, Any],
+    phrase: str,
+    *,
+    fuzzy: Optional[float] = None,
+    context: int = 1,
+    source: Optional[str] = None,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """Hits of `phrase` in one validated Transcript, and a summary row for that transcript."""
     folded = normalize_phrase(phrase)
     segments = doc["segments"]
@@ -283,18 +343,38 @@ def search_transcript(doc: Dict[str, Any], phrase: str, *, fuzzy: Optional[float
         lo, hi = _window_lengths(len(folded))
         cost = len(st.text) * (hi - lo + 1) * len(folded) ** 2
         if cost > MAX_FUZZY_COST:
-            raise TranscriptionError("INVALID_INPUT", "approximate matching of this phrase over this transcript exceeds the "
-                                     "work bound; use a shorter phrase, or search without 'fuzzy'",
-                                     {"characters": len(st.text), "window_lengths": hi - lo + 1, "cost": cost,
-                                      "max_cost": MAX_FUZZY_COST})
-        for a, b, r in _approximate(st.text, folded, fuzzy, [(a, b) for a, b, _, _ in spans]):
+            raise TranscriptionError(
+                "INVALID_INPUT",
+                "approximate matching of this phrase over this transcript exceeds the "
+                "work bound; use a shorter phrase, or search without 'fuzzy'",
+                {
+                    "characters": len(st.text),
+                    "window_lengths": hi - lo + 1,
+                    "cost": cost,
+                    "max_cost": MAX_FUZZY_COST,
+                },
+            )
+        for a, b, r in _approximate(
+            st.text, folded, fuzzy, [(a, b) for a, b, _, _ in spans]
+        ):
             spans.append((a, b, MATCH_APPROXIMATE, r))
-    hits = [_hit(st, segments, a, b, kind, r, phrase, context, source, doc.get("id")) for a, b, kind, r in spans]
-    order = sorted(range(len(hits)), key=lambda i: (hits[i]["start"], hits[i]["end"], spans[i][0]))
+    hits = [
+        _hit(st, segments, a, b, kind, r, phrase, context, source, doc.get("id"))
+        for a, b, kind, r in spans
+    ]
+    order = sorted(
+        range(len(hits)), key=lambda i: (hits[i]["start"], hits[i]["end"], spans[i][0])
+    )
     hits = [hits[i] for i in order]
-    summary = {"source": source, "transcript_id": doc.get("id"), "language": doc.get("language"),
-               "segments": len(segments), "words": sum(len(s.get("words") or []) for s in segments),
-               "word_timed": bool(segments) and all(s.get("words") for s in segments), "hits": len(hits)}
+    summary = {
+        "source": source,
+        "transcript_id": doc.get("id"),
+        "language": doc.get("language"),
+        "segments": len(segments),
+        "words": sum(len(s.get("words") or []) for s in segments),
+        "word_timed": bool(segments) and all(s.get("words") for s in segments),
+        "hits": len(hits),
+    }
     return hits, summary
 
 
@@ -304,34 +384,83 @@ def find_tool(params: Dict[str, Any]) -> Dict[str, Any]:
     if extra:
         raise TranscriptionError("INVALID_INPUT", f"unknown keys {sorted(extra)}")
     if ("transcript" in params) == ("transcripts" in params):
-        raise TranscriptionError("INVALID_INPUT", "give exactly one of 'transcript' (document or path) or 'transcripts' (list)")
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            "give exactly one of 'transcript' (document or path) or 'transcripts' (list)",
+        )
     items = [params["transcript"]] if "transcript" in params else params["transcripts"]
     if not isinstance(items, list) or not items or len(items) > MAX_TRANSCRIPTS:
-        raise TranscriptionError("INVALID_INPUT", f"'transcripts' must be a list of 1..{MAX_TRANSCRIPTS} documents or paths")
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            f"'transcripts' must be a list of 1..{MAX_TRANSCRIPTS} documents or paths",
+        )
     phrase = params.get("phrase")
-    if not isinstance(phrase, str) or not phrase.strip() or len(phrase) > MAX_PHRASE_CHARS:
-        raise TranscriptionError("INVALID_INPUT", f"'phrase' must be a non-empty string of at most {MAX_PHRASE_CHARS} characters")
+    if (
+        not isinstance(phrase, str)
+        or not phrase.strip()
+        or len(phrase) > MAX_PHRASE_CHARS
+    ):
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            f"'phrase' must be a non-empty string of at most {MAX_PHRASE_CHARS} characters",
+        )
     folded = normalize_phrase(phrase)
     if not folded:
-        raise TranscriptionError("INVALID_INPUT", "'phrase' has nothing to match once whitespace and punctuation are removed")
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            "'phrase' has nothing to match once whitespace and punctuation are removed",
+        )
     fuzzy = params.get("fuzzy")
-    if fuzzy is not None and (isinstance(fuzzy, bool) or not isinstance(fuzzy, (int, float))
-                              or not FUZZY_MIN <= float(fuzzy) <= FUZZY_MAX):
-        raise TranscriptionError("INVALID_INPUT", f"'fuzzy' must be null or a number in [{FUZZY_MIN}, {FUZZY_MAX}]")
+    if fuzzy is not None and (
+        isinstance(fuzzy, bool)
+        or not isinstance(fuzzy, (int, float))
+        or not FUZZY_MIN <= float(fuzzy) <= FUZZY_MAX
+    ):
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            f"'fuzzy' must be null or a number in [{FUZZY_MIN}, {FUZZY_MAX}]",
+        )
     if fuzzy is not None and len(folded) > MAX_FUZZY_PHRASE_CHARS:
-        raise TranscriptionError("INVALID_INPUT", f"'fuzzy' needs a phrase of at most {MAX_FUZZY_PHRASE_CHARS} characters "
-                                 "once whitespace and punctuation are removed")
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            f"'fuzzy' needs a phrase of at most {MAX_FUZZY_PHRASE_CHARS} characters "
+            "once whitespace and punctuation are removed",
+        )
     context = params.get("context", 1)
-    if isinstance(context, bool) or not isinstance(context, int) or not 0 <= context <= MAX_CONTEXT:
-        raise TranscriptionError("INVALID_INPUT", f"'context' must be an integer in [0, {MAX_CONTEXT}] (segments each side)")
+    if (
+        isinstance(context, bool)
+        or not isinstance(context, int)
+        or not 0 <= context <= MAX_CONTEXT
+    ):
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            f"'context' must be an integer in [0, {MAX_CONTEXT}] (segments each side)",
+        )
     hits: List[Dict[str, Any]] = []
     summaries: List[Dict[str, Any]] = []
     for item in items:
         doc, path = _load(item)
-        name = os.path.basename(path) if path else (doc.get("source") or {}).get("filename")
-        h, s = search_transcript(doc, phrase, fuzzy=None if fuzzy is None else float(fuzzy), context=context, source=name)
+        name = (
+            os.path.basename(path)
+            if path
+            else (doc.get("source") or {}).get("filename")
+        )
+        h, s = search_transcript(
+            doc,
+            phrase,
+            fuzzy=None if fuzzy is None else float(fuzzy),
+            context=context,
+            source=name,
+        )
         hits.extend(h)
         summaries.append(s)
-    return {"phrase": phrase, "normalized_phrase": folded, "normalization": NORMALIZATION,
-            "fuzzy": None if fuzzy is None else float(fuzzy), "context": context,
-            "count": len(hits), "hits": hits, "transcripts": summaries}
+    return {
+        "phrase": phrase,
+        "normalized_phrase": folded,
+        "normalization": NORMALIZATION,
+        "fuzzy": None if fuzzy is None else float(fuzzy),
+        "context": context,
+        "count": len(hits),
+        "hits": hits,
+        "transcripts": summaries,
+    }

@@ -118,7 +118,9 @@ class QCFinding:
     stream: Optional[int] = None
     measurement_ids: List[str] = field(default_factory=list)
     rule_id: Optional[str] = None
-    artifact_id: Optional[str] = None  # which named artifact, for kind="delivery_package" only
+    artifact_id: Optional[str] = (
+        None  # which named artifact, for kind="delivery_package" only
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -151,7 +153,9 @@ class QCCheck:
     finding_codes: List[str] = field(default_factory=list)
     evidence: Dict[str, Any] = field(default_factory=dict)
     reason: Optional[str] = None  # required when status == UNKNOWN
-    artifact_id: Optional[str] = None  # which named artifact, for kind="delivery_package" only
+    artifact_id: Optional[str] = (
+        None  # which named artifact, for kind="delivery_package" only
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {

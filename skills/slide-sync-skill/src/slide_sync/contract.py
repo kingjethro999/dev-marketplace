@@ -1,5 +1,6 @@
 """Machine-readable contract (`slide-sync contract --json`), in the shape the AI Video Production OS registry reads
 (skill_id, version, contract_version, provides, dependencies, not_provided)."""
+
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -12,65 +13,195 @@ from .follow import DEFAULT_POLL, DEFAULT_SETTLE, GUARD_EXTRA
 from .deck import DECK_SCHEMA, DEFAULT_DPI, ENV_SOFFICE, OFFICE_EXTS, TEXT_NORMALISATION
 from .engine import ENV_DIRS, INSERT_TOOLS, REQUIRED_TOOLS
 from .insert import DEFAULT_STILL_DURATION, STILL_EXTS
-from .layout import (DEFAULT_PIP_POSITION, DEFAULT_PIP_WIDTH, LAYOUT_SCHEMA, LAYOUT_TOOLS, LAYOUTS, MIN_SIDE_BAND, RULES,
-                     SLIDE_MODES, UNMATCHED_MODES)
-from .match import (DEFAULT_MIN_MARGIN, DEFAULT_MIN_SCORE, DEFAULT_SAMPLES, FEAT_H, FEAT_W, FRAME_WIDTH, MATCH_SCHEMA,
-                    METHOD)
+from .layout import (
+    DEFAULT_PIP_POSITION,
+    DEFAULT_PIP_WIDTH,
+    LAYOUT_SCHEMA,
+    LAYOUT_TOOLS,
+    LAYOUTS,
+    MIN_SIDE_BAND,
+    RULES,
+    SLIDE_MODES,
+    UNMATCHED_MODES,
+)
+from .match import (
+    DEFAULT_MIN_MARGIN,
+    DEFAULT_MIN_SCORE,
+    DEFAULT_SAMPLES,
+    FEAT_H,
+    FEAT_W,
+    FRAME_WIDTH,
+    MATCH_SCHEMA,
+    METHOD,
+)
 
 SKILL_ID = "slide-sync"
 CONTRACT_VERSION = "1.0"
 
 TOOLS = [
-    {"tool_id": "slide-sync/detect", "role": "measurement", "writes_media": False, "mutates_input": False, "deterministic": True,
-     "description": "Slide changes of a talk recording: one entry per slide (start, end, duration), from ffmpeg-skill scenes. "
-                    "With --follow, of a recording still being written: slide changes as JSON lines as they are found, "
-                    "then the timeline once the file has settled",
-     "argv": ["detect", "<video>", f"[--threshold {DEFAULT_THRESHOLD:g}]", f"[--min-dwell {DEFAULT_MIN_DWELL:g}]", "[--sheet <png>]",
-              "[-o <timeline.json>]", "[--chapters-out <txt>]", "[--follow]", f"[--settle {DEFAULT_SETTLE:g}]",
-              f"[--poll {DEFAULT_POLL:g}]", "[--follow-for <s>]", "--json"]},
-    {"tool_id": "slide-sync/chapters", "role": "execution", "writes_media": True, "mutates_input": False, "deterministic": True,
-     "description": "Chapters from a slide timeline: chapter text (YouTube description format) and, with -o, a copy of the "
-                    "video carrying them as container chapters (ffmpeg-skill metadata, streams copied)",
-     "argv": ["chapters", "<video>", "[--timeline <timeline.json>]", "[--titles <titles.txt>]", "[--prefix Slide]",
-              "[--min-chapter <s>]", "[--chapters-out <txt>]", "[-o <video>]", "[--overwrite]", "--json"]},
-    {"tool_id": "slide-sync/import", "role": "measurement", "writes_media": True, "mutates_input": False, "deterministic": True,
-     "description": "Slide deck to one PNG and one text per page plus a deck.json manifest (slide-sync/deck@1). PDF through "
-                    "pypdfium2 (optional extra 'pdf'); pptx / ppt / key / odp converted to PDF by LibreOffice when installed",
-     "argv": ["import", "<deck.pdf|.pptx|.ppt|.key|.odp>", "-o <dir>", f"[--dpi {DEFAULT_DPI:g}]", "[--soffice <path>]",
-              "[--overwrite]", "--json"]},
-    {"tool_id": "slide-sync/match", "role": "measurement", "writes_media": False, "mutates_input": False, "deterministic": True,
-     "description": "Which page of an imported deck is on screen in each slide of a timeline (slide-sync/match@1): page, "
-                    "confidence and margin per segment by image correlation of frames (ffmpeg-skill look) with the page "
-                    "images, or page null with the reason when no page is clearly best. Order need not follow the deck",
-     "argv": ["match", "<video>", "--deck <dir>", "[--timeline <timeline.json>]", f"[--min-score {DEFAULT_MIN_SCORE:g}]",
-              f"[--min-margin {DEFAULT_MIN_MARGIN:g}]", f"[--samples {DEFAULT_SAMPLES}]", "[-o <match.json>]", "[--overwrite]",
-              "--json"]},
-    {"tool_id": "slide-sync/insert", "role": "execution", "writes_media": True, "mutates_input": False, "deterministic": True,
-     "description": "Splice clips into a recording at slide boundaries (a demo video as it is, an image as a still clip): "
-                    "ffmpeg-skill probe / insert / cut --accurate / join --transition none, then the shifted timeline's "
-                    "chapters through metadata. Every slide after an insertion moves later by the clip's measured "
-                    "length; the timeline (provenance DERIVED) records each edit",
-     "argv": ["insert", "<video>", "--insert N=<clip>", "[--insert N=<clip> ...]", "[--insert-title <title> ...]",
-              f"[--still-duration {DEFAULT_STILL_DURATION:g}]", "[--timeline <timeline.json>]", "[--titles <titles.txt>]",
-              "[--prefix Slide]", "[--min-chapter <s>]", "[--chapters-out <txt>]", "[--timeline-out <json>]", "-o <video>",
-              "[--overwrite]", "--json"]},
-    {"tool_id": "slide-sync/layout", "role": "execution", "writes_media": True, "mutates_input": False, "deterministic": True,
-     "description": "A layout per segment of a slide talk from match (slide full, the speaker camera picture-in-picture "
-                    "on the slide, side by side in the band beside a pillarboxed slide, the speaker full during Q&A), "
-                    "with the rule used per segment, written as a plan of ffmpeg-skill overlay / broll calls "
-                    "(slide-sync/layout@1); with -o the plan is rendered",
-     "argv": ["layout", "<video>", "--match <match.json> | --deck <dir> [--timeline <timeline.json>]", "[--camera <video>]",
-              "[--camera-offset 0]", "[--qa-from <s>]", "[--slides auto|pip|side|full]", "[--unmatched keep|speaker]",
-              f"[--pip-position {DEFAULT_PIP_POSITION}]", f"[--pip-width {DEFAULT_PIP_WIDTH:g}]", "[--plan-out <json>]",
-              "[-o <video>]", "[--overwrite]", "--json"]},
-    {"tool_id": "slide-sync/clean", "role": "execution", "writes_media": True, "mutates_input": False, "deterministic": True,
-     "description": "The deck page, sharp and at the recording's frame size, over the captured slide for the time match "
-                    "is confident about it (slide-sync/clean@1: replace or keep and the rule per segment, ffmpeg-skill "
-                    "insert per page then one broll); a low-confidence, mixed or unmatched segment keeps the capture; "
-                    "with -o the plan is rendered",
-     "argv": ["clean", "<video>", "--match <match.json> | --deck <dir> [--timeline <timeline.json>]", "[--deck <dir>]",
-              f"[--min-confidence {DEFAULT_MIN_CONFIDENCE:g}]", "[--pad-color black]", "[--plan-out <json>]", "[-o <video>]",
-              "[--overwrite]", "--json"]},
+    {
+        "tool_id": "slide-sync/detect",
+        "role": "measurement",
+        "writes_media": False,
+        "mutates_input": False,
+        "deterministic": True,
+        "description": "Slide changes of a talk recording: one entry per slide (start, end, duration), from ffmpeg-skill scenes. "
+        "With --follow, of a recording still being written: slide changes as JSON lines as they are found, "
+        "then the timeline once the file has settled",
+        "argv": [
+            "detect",
+            "<video>",
+            f"[--threshold {DEFAULT_THRESHOLD:g}]",
+            f"[--min-dwell {DEFAULT_MIN_DWELL:g}]",
+            "[--sheet <png>]",
+            "[-o <timeline.json>]",
+            "[--chapters-out <txt>]",
+            "[--follow]",
+            f"[--settle {DEFAULT_SETTLE:g}]",
+            f"[--poll {DEFAULT_POLL:g}]",
+            "[--follow-for <s>]",
+            "--json",
+        ],
+    },
+    {
+        "tool_id": "slide-sync/chapters",
+        "role": "execution",
+        "writes_media": True,
+        "mutates_input": False,
+        "deterministic": True,
+        "description": "Chapters from a slide timeline: chapter text (YouTube description format) and, with -o, a copy of the "
+        "video carrying them as container chapters (ffmpeg-skill metadata, streams copied)",
+        "argv": [
+            "chapters",
+            "<video>",
+            "[--timeline <timeline.json>]",
+            "[--titles <titles.txt>]",
+            "[--prefix Slide]",
+            "[--min-chapter <s>]",
+            "[--chapters-out <txt>]",
+            "[-o <video>]",
+            "[--overwrite]",
+            "--json",
+        ],
+    },
+    {
+        "tool_id": "slide-sync/import",
+        "role": "measurement",
+        "writes_media": True,
+        "mutates_input": False,
+        "deterministic": True,
+        "description": "Slide deck to one PNG and one text per page plus a deck.json manifest (slide-sync/deck@1). PDF through "
+        "pypdfium2 (optional extra 'pdf'); pptx / ppt / key / odp converted to PDF by LibreOffice when installed",
+        "argv": [
+            "import",
+            "<deck.pdf|.pptx|.ppt|.key|.odp>",
+            "-o <dir>",
+            f"[--dpi {DEFAULT_DPI:g}]",
+            "[--soffice <path>]",
+            "[--overwrite]",
+            "--json",
+        ],
+    },
+    {
+        "tool_id": "slide-sync/match",
+        "role": "measurement",
+        "writes_media": False,
+        "mutates_input": False,
+        "deterministic": True,
+        "description": "Which page of an imported deck is on screen in each slide of a timeline (slide-sync/match@1): page, "
+        "confidence and margin per segment by image correlation of frames (ffmpeg-skill look) with the page "
+        "images, or page null with the reason when no page is clearly best. Order need not follow the deck",
+        "argv": [
+            "match",
+            "<video>",
+            "--deck <dir>",
+            "[--timeline <timeline.json>]",
+            f"[--min-score {DEFAULT_MIN_SCORE:g}]",
+            f"[--min-margin {DEFAULT_MIN_MARGIN:g}]",
+            f"[--samples {DEFAULT_SAMPLES}]",
+            "[-o <match.json>]",
+            "[--overwrite]",
+            "--json",
+        ],
+    },
+    {
+        "tool_id": "slide-sync/insert",
+        "role": "execution",
+        "writes_media": True,
+        "mutates_input": False,
+        "deterministic": True,
+        "description": "Splice clips into a recording at slide boundaries (a demo video as it is, an image as a still clip): "
+        "ffmpeg-skill probe / insert / cut --accurate / join --transition none, then the shifted timeline's "
+        "chapters through metadata. Every slide after an insertion moves later by the clip's measured "
+        "length; the timeline (provenance DERIVED) records each edit",
+        "argv": [
+            "insert",
+            "<video>",
+            "--insert N=<clip>",
+            "[--insert N=<clip> ...]",
+            "[--insert-title <title> ...]",
+            f"[--still-duration {DEFAULT_STILL_DURATION:g}]",
+            "[--timeline <timeline.json>]",
+            "[--titles <titles.txt>]",
+            "[--prefix Slide]",
+            "[--min-chapter <s>]",
+            "[--chapters-out <txt>]",
+            "[--timeline-out <json>]",
+            "-o <video>",
+            "[--overwrite]",
+            "--json",
+        ],
+    },
+    {
+        "tool_id": "slide-sync/layout",
+        "role": "execution",
+        "writes_media": True,
+        "mutates_input": False,
+        "deterministic": True,
+        "description": "A layout per segment of a slide talk from match (slide full, the speaker camera picture-in-picture "
+        "on the slide, side by side in the band beside a pillarboxed slide, the speaker full during Q&A), "
+        "with the rule used per segment, written as a plan of ffmpeg-skill overlay / broll calls "
+        "(slide-sync/layout@1); with -o the plan is rendered",
+        "argv": [
+            "layout",
+            "<video>",
+            "--match <match.json> | --deck <dir> [--timeline <timeline.json>]",
+            "[--camera <video>]",
+            "[--camera-offset 0]",
+            "[--qa-from <s>]",
+            "[--slides auto|pip|side|full]",
+            "[--unmatched keep|speaker]",
+            f"[--pip-position {DEFAULT_PIP_POSITION}]",
+            f"[--pip-width {DEFAULT_PIP_WIDTH:g}]",
+            "[--plan-out <json>]",
+            "[-o <video>]",
+            "[--overwrite]",
+            "--json",
+        ],
+    },
+    {
+        "tool_id": "slide-sync/clean",
+        "role": "execution",
+        "writes_media": True,
+        "mutates_input": False,
+        "deterministic": True,
+        "description": "The deck page, sharp and at the recording's frame size, over the captured slide for the time match "
+        "is confident about it (slide-sync/clean@1: replace or keep and the rule per segment, ffmpeg-skill "
+        "insert per page then one broll); a low-confidence, mixed or unmatched segment keeps the capture; "
+        "with -o the plan is rendered",
+        "argv": [
+            "clean",
+            "<video>",
+            "--match <match.json> | --deck <dir> [--timeline <timeline.json>]",
+            "[--deck <dir>]",
+            f"[--min-confidence {DEFAULT_MIN_CONFIDENCE:g}]",
+            "[--pad-color black]",
+            "[--plan-out <json>]",
+            "[-o <video>]",
+            "[--overwrite]",
+            "--json",
+        ],
+    },
 ]
 
 ERRORS = {
@@ -97,61 +228,171 @@ def contract() -> Dict[str, Any]:
         "skill": "slide-sync-skill",
         "version": __version__,
         "contract_version": CONTRACT_VERSION,
-        "provides": [{"id": "slides.detect_changes", "lifecycle": "EXPERIMENTAL", "tool_id": "slide-sync/detect"},
-                     {"id": "slides.chapters", "lifecycle": "EXPERIMENTAL", "tool_id": "slide-sync/chapters"},
-                     {"id": "slides.import", "lifecycle": "EXPERIMENTAL", "tool_id": "slide-sync/import"},
-                     {"id": "slides.match", "lifecycle": "EXPERIMENTAL", "tool_id": "slide-sync/match"},
-                     {"id": "slides.insert_clips", "lifecycle": "EXPERIMENTAL", "tool_id": "slide-sync/insert"},
-                     {"id": "slides.layout_plan", "lifecycle": "EXPERIMENTAL", "tool_id": "slide-sync/layout"},
-                     {"id": "slides.clean_pages", "lifecycle": "EXPERIMENTAL", "tool_id": "slide-sync/clean"}],
-        "dependencies": [{"id": "ffmpeg-skill", "kind": "skill", "required": True, "version_range": ">=2.0.0 <4.0.0",
-                          "tools": list(dict.fromkeys(list(REQUIRED_TOOLS) + list(INSERT_TOOLS) + list(LAYOUT_TOOLS) + list(CLEAN_TOOLS))),
-                          "tools_for": {"slide-sync/insert": list(INSERT_TOOLS), "slide-sync/layout": list(LAYOUT_TOOLS),
-                                        "slide-sync/clean": list(CLEAN_TOOLS)}, "located_by": ["--ffmpeg-skill"] + [f"${e}" for e in ENV_DIRS]
-                          + ["~/.claude/skills/ffmpeg-skill", "./vendor/ffmpeg-skill", "../ffmpeg-skill"]},
-                         {"id": "pypdfium2", "kind": "python", "required": False, "extra": "pdf", "version_range": ">=4.30",
-                          "licence": "Apache-2.0 OR BSD-3-Clause", "for": ["slide-sync/import"]},
-                         {"id": "libreoffice", "kind": "binary", "required": False, "licence": "MPL-2.0",
-                          "for": ["slide-sync/import"],
-                          "formats": [e[1:] for e in OFFICE_EXTS],
-                          "located_by": ["--soffice", f"${ENV_SOFFICE}", "PATH (soffice, libreoffice)",
-                                         "/Applications/LibreOffice.app", "%ProgramFiles%\\LibreOffice"]}],
-        "not_provided": ["slide text from images or scanned pages (OCR: detection-skill)",
-                         "matching by slide text (OCR of the frames is detection-skill's; match compares pictures)",
-                         "running ffmpeg or ffprobe directly (only through ffmpeg-skill)",
-                         "editing the picture or cutting the talk beyond splicing clips in at slide boundaries and "
-                         "the slide / speaker layout (video-editing-skill)",
-                         "syncing the speaker camera to the recording (the offset is given; multicam sync is ffmpeg-skill's)",
-                         "live streaming or live switching (recorded files only)", "network access of any kind"],
+        "provides": [
+            {
+                "id": "slides.detect_changes",
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": "slide-sync/detect",
+            },
+            {
+                "id": "slides.chapters",
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": "slide-sync/chapters",
+            },
+            {
+                "id": "slides.import",
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": "slide-sync/import",
+            },
+            {
+                "id": "slides.match",
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": "slide-sync/match",
+            },
+            {
+                "id": "slides.insert_clips",
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": "slide-sync/insert",
+            },
+            {
+                "id": "slides.layout_plan",
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": "slide-sync/layout",
+            },
+            {
+                "id": "slides.clean_pages",
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": "slide-sync/clean",
+            },
+        ],
+        "dependencies": [
+            {
+                "id": "ffmpeg-skill",
+                "kind": "skill",
+                "required": True,
+                "version_range": ">=2.0.0 <4.0.0",
+                "tools": list(
+                    dict.fromkeys(
+                        list(REQUIRED_TOOLS)
+                        + list(INSERT_TOOLS)
+                        + list(LAYOUT_TOOLS)
+                        + list(CLEAN_TOOLS)
+                    )
+                ),
+                "tools_for": {
+                    "slide-sync/insert": list(INSERT_TOOLS),
+                    "slide-sync/layout": list(LAYOUT_TOOLS),
+                    "slide-sync/clean": list(CLEAN_TOOLS),
+                },
+                "located_by": ["--ffmpeg-skill"]
+                + [f"${e}" for e in ENV_DIRS]
+                + [
+                    "~/.claude/skills/ffmpeg-skill",
+                    "./vendor/ffmpeg-skill",
+                    "../ffmpeg-skill",
+                ],
+            },
+            {
+                "id": "pypdfium2",
+                "kind": "python",
+                "required": False,
+                "extra": "pdf",
+                "version_range": ">=4.30",
+                "licence": "Apache-2.0 OR BSD-3-Clause",
+                "for": ["slide-sync/import"],
+            },
+            {
+                "id": "libreoffice",
+                "kind": "binary",
+                "required": False,
+                "licence": "MPL-2.0",
+                "for": ["slide-sync/import"],
+                "formats": [e[1:] for e in OFFICE_EXTS],
+                "located_by": [
+                    "--soffice",
+                    f"${ENV_SOFFICE}",
+                    "PATH (soffice, libreoffice)",
+                    "/Applications/LibreOffice.app",
+                    "%ProgramFiles%\\LibreOffice",
+                ],
+            },
+        ],
+        "not_provided": [
+            "slide text from images or scanned pages (OCR: detection-skill)",
+            "matching by slide text (OCR of the frames is detection-skill's; match compares pictures)",
+            "running ffmpeg or ffprobe directly (only through ffmpeg-skill)",
+            "editing the picture or cutting the talk beyond splicing clips in at slide boundaries and "
+            "the slide / speaker layout (video-editing-skill)",
+            "syncing the speaker camera to the recording (the offset is given; multicam sync is ffmpeg-skill's)",
+            "live streaming or live switching (recorded files only)",
+            "network access of any kind",
+        ],
         "tools": TOOLS,
         "timeline": {"schema": TIMELINE_SCHEMA, "provenance": "OBSERVED"},
-        "follow": {"output": "JSON lines: start, pass, waiting, change, retract, done (done carries the timeline)",
-                   "settle": DEFAULT_SETTLE, "poll": DEFAULT_POLL,
-                   "final_when": f"at least min_dwell + {GUARD_EXTRA:g}s before the end of what could be read",
-                   "closed_when": "the file's size and mtime unchanged for --settle seconds",
-                   "readable_while_growing": "containers whose length ffmpeg-skill probe measures as they grow (MPEG-TS: "
-                                             ".ts, .m2ts, .mts); others report their changes when they close"},
-        "match": {"schema": MATCH_SCHEMA, "provenance": "OBSERVED", "method": METHOD, "min_score": DEFAULT_MIN_SCORE,
-                  "min_margin": DEFAULT_MIN_MARGIN, "samples": DEFAULT_SAMPLES, "frame_width": FRAME_WIDTH,
-                  "feature": [FEAT_W, FEAT_H], "unmatched": "page null with reason below_min_score or ambiguous"},
-        "insert": {"schema": TIMELINE_SCHEMA, "provenance": "DERIVED", "at": "slide boundaries (after slide N, 0 = start)",
-                   "still_extensions": list(STILL_EXTS), "default_still_duration": DEFAULT_STILL_DURATION,
-                   "shift": "every segment after an insertion moves later by the clip's measured duration",
-                   "records": ["derived_from", "edits", "render"]},
-        "layout": {"schema": LAYOUT_SCHEMA, "provenance": "DERIVED", "layouts": list(LAYOUTS), "rules": dict(RULES),
-                   "slides": list(SLIDE_MODES), "unmatched": list(UNMATCHED_MODES), "min_side_band": MIN_SIDE_BAND,
-                   "steps": "ffmpeg-skill overlay (--video --place) for PiP / side by side, broll for speaker full; "
-                            "overlay --place needs ffmpeg-skill 2.13.0 or later", "audio": "the recording's, throughout"},
-        "clean": {"schema": CLEAN_SCHEMA, "provenance": "DERIVED", "rules": dict(CLEAN_RULES),
-                  "min_confidence": DEFAULT_MIN_CONFIDENCE,
-                  "replaced_with": "the imported page image at the recording's frame size, page aspect kept, padded",
-                  "audio": "the recording's, throughout"},
-        "deck": {"schema": DECK_SCHEMA, "provenance": "OBSERVED", "default_dpi": DEFAULT_DPI,
-                 "text_normalisation": TEXT_NORMALISATION},
-        "execution": {"canonical_invocation": ["slide-sync", "<command>", "...", "--json"], "network": False, "shell": False,
-                      "engine": "ffmpeg-skill (scripts run with this Python, argv only)",
-                      "converter": "LibreOffice soffice for pptx / ppt / key / odp (argv only, a fresh temporary profile, "
-                                   "run on a copy of the deck)", "input_is_read_only": True,
-                      "overwrites": "never unless --overwrite; -o equal to the input is refused"},
+        "follow": {
+            "output": "JSON lines: start, pass, waiting, change, retract, done (done carries the timeline)",
+            "settle": DEFAULT_SETTLE,
+            "poll": DEFAULT_POLL,
+            "final_when": f"at least min_dwell + {GUARD_EXTRA:g}s before the end of what could be read",
+            "closed_when": "the file's size and mtime unchanged for --settle seconds",
+            "readable_while_growing": "containers whose length ffmpeg-skill probe measures as they grow (MPEG-TS: "
+            ".ts, .m2ts, .mts); others report their changes when they close",
+        },
+        "match": {
+            "schema": MATCH_SCHEMA,
+            "provenance": "OBSERVED",
+            "method": METHOD,
+            "min_score": DEFAULT_MIN_SCORE,
+            "min_margin": DEFAULT_MIN_MARGIN,
+            "samples": DEFAULT_SAMPLES,
+            "frame_width": FRAME_WIDTH,
+            "feature": [FEAT_W, FEAT_H],
+            "unmatched": "page null with reason below_min_score or ambiguous",
+        },
+        "insert": {
+            "schema": TIMELINE_SCHEMA,
+            "provenance": "DERIVED",
+            "at": "slide boundaries (after slide N, 0 = start)",
+            "still_extensions": list(STILL_EXTS),
+            "default_still_duration": DEFAULT_STILL_DURATION,
+            "shift": "every segment after an insertion moves later by the clip's measured duration",
+            "records": ["derived_from", "edits", "render"],
+        },
+        "layout": {
+            "schema": LAYOUT_SCHEMA,
+            "provenance": "DERIVED",
+            "layouts": list(LAYOUTS),
+            "rules": dict(RULES),
+            "slides": list(SLIDE_MODES),
+            "unmatched": list(UNMATCHED_MODES),
+            "min_side_band": MIN_SIDE_BAND,
+            "steps": "ffmpeg-skill overlay (--video --place) for PiP / side by side, broll for speaker full; "
+            "overlay --place needs ffmpeg-skill 2.13.0 or later",
+            "audio": "the recording's, throughout",
+        },
+        "clean": {
+            "schema": CLEAN_SCHEMA,
+            "provenance": "DERIVED",
+            "rules": dict(CLEAN_RULES),
+            "min_confidence": DEFAULT_MIN_CONFIDENCE,
+            "replaced_with": "the imported page image at the recording's frame size, page aspect kept, padded",
+            "audio": "the recording's, throughout",
+        },
+        "deck": {
+            "schema": DECK_SCHEMA,
+            "provenance": "OBSERVED",
+            "default_dpi": DEFAULT_DPI,
+            "text_normalisation": TEXT_NORMALISATION,
+        },
+        "execution": {
+            "canonical_invocation": ["slide-sync", "<command>", "...", "--json"],
+            "network": False,
+            "shell": False,
+            "engine": "ffmpeg-skill (scripts run with this Python, argv only)",
+            "converter": "LibreOffice soffice for pptx / ppt / key / odp (argv only, a fresh temporary profile, "
+            "run on a copy of the deck)",
+            "input_is_read_only": True,
+            "overwrites": "never unless --overwrite; -o equal to the input is refused",
+        },
         "errors": ERRORS,
     }

@@ -30,7 +30,11 @@ from artifact_skill.core.verification import Check, CheckStatus, VerificationRes
 from artifact_skill.security.limits import DEFAULT_LIMITS, Limits
 from artifact_skill.security.paths import atomic_copy, check_input_size
 
-_IMAGE_TYPES = {ArtifactType.IMAGE_PNG, ArtifactType.IMAGE_JPEG, ArtifactType.IMAGE_WEBP}
+_IMAGE_TYPES = {
+    ArtifactType.IMAGE_PNG,
+    ArtifactType.IMAGE_JPEG,
+    ArtifactType.IMAGE_WEBP,
+}
 _FORMAT_BY_TYPE = {
     ArtifactType.IMAGE_PNG: "PNG",
     ArtifactType.IMAGE_JPEG: "JPEG",
@@ -71,7 +75,9 @@ def _require_pillow():
 
 class ImageAdapter(ArtifactAdapter):
     id = "image"
-    artifact_type = ArtifactType.IMAGE_PNG  # nominal; also registered for JPEG/WebP, see registry.py
+    artifact_type = (
+        ArtifactType.IMAGE_PNG
+    )  # nominal; also registered for JPEG/WebP, see registry.py
 
     @classmethod
     def detect(cls, ref: ArtifactRef) -> bool:
@@ -95,14 +101,18 @@ class ImageAdapter(ArtifactAdapter):
                 structural_verification_required=True,
                 visual_verification_required=False,
                 render_required=False,
-                postconditions=["output dimensions match request (exactly, or within the fitted box)"],
+                postconditions=[
+                    "output dimensions match request (exactly, or within the fitted box)"
+                ],
             ),
             "convert_format": OperationSpec(
                 name="convert_format",
                 description="Re-save as a different image format (png, jpeg, or webp).",
                 args_schema={
                     "type": "object",
-                    "properties": {"format": {"type": "string", "enum": ["png", "jpeg", "webp"]}},
+                    "properties": {
+                        "format": {"type": "string", "enum": ["png", "jpeg", "webp"]}
+                    },
                     "required": ["format"],
                     "additionalProperties": False,
                 },
@@ -129,16 +139,30 @@ class ImageAdapter(ArtifactAdapter):
                 version = None
             detail = "Pillow importable: inspect/verify/resize/convert_format/render all available."
             structural = Capability(
-                id="image.structural", status=CapabilityStatus.AVAILABLE, detail=detail,
-                detected_via="import PIL", version=version,
+                id="image.structural",
+                status=CapabilityStatus.AVAILABLE,
+                detail=detail,
+                detected_via="import PIL",
+                version=version,
             )
             render = Capability(
-                id="image.render", status=CapabilityStatus.AVAILABLE, detail=detail,
-                detected_via="import PIL", version=version,
+                id="image.render",
+                status=CapabilityStatus.AVAILABLE,
+                detail=detail,
+                detected_via="import PIL",
+                version=version,
             )
         else:
-            structural = Capability(id="image.structural", status=CapabilityStatus.MISSING, detail="Pillow not importable.")
-            render = Capability(id="image.render", status=CapabilityStatus.MISSING, detail="Pillow not importable.")
+            structural = Capability(
+                id="image.structural",
+                status=CapabilityStatus.MISSING,
+                detail="Pillow not importable.",
+            )
+            render = Capability(
+                id="image.render",
+                status=CapabilityStatus.MISSING,
+                detail="Pillow not importable.",
+            )
         return [structural, render]
 
     def limitations(self) -> list[str]:
@@ -149,10 +173,17 @@ class ImageAdapter(ArtifactAdapter):
         ]
 
     def recognized_policy_keys(self) -> frozenset[str]:
-        return frozenset({
-            "require_width", "require_height", "min_width", "max_width", "min_height", "max_height",
-            "require_format",
-        })
+        return frozenset(
+            {
+                "require_width",
+                "require_height",
+                "min_width",
+                "max_width",
+                "min_height",
+                "max_height",
+                "require_format",
+            }
+        )
 
     # ---- inspect ---------------------------------------------------
 
@@ -193,7 +224,9 @@ class ImageAdapter(ArtifactAdapter):
 
     # ---- plan --------------------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         specs = self.operations()
         if operation not in specs:
             raise ArtifactInputError(
@@ -205,8 +238,14 @@ class ImageAdapter(ArtifactAdapter):
         spec = specs[operation]
         report = self.inspect(ref)
         risks: list[str] = []
-        if operation == "convert_format" and args.get("format") == "jpeg" and report.details["mode"] in ("RGBA", "LA", "P"):
-            risks.append("Source has an alpha channel; converting to JPEG will composite it onto white.")
+        if (
+            operation == "convert_format"
+            and args.get("format") == "jpeg"
+            and report.details["mode"] in ("RGBA", "LA", "P")
+        ):
+            risks.append(
+                "Source has an alpha channel; converting to JPEG will composite it onto white."
+            )
 
         return OperationPlan(
             operation=f"image.{operation}",
@@ -227,7 +266,9 @@ class ImageAdapter(ArtifactAdapter):
 
     # ---- execute -------------------------------------------------------
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         Image = _require_pillow()
         if operation not in self.operations():
             raise ArtifactInputError(
@@ -289,7 +330,9 @@ class ImageAdapter(ArtifactAdapter):
 
     # ---- render ----------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         """An image is already visual — "rendering" here means producing a
         normalized, upright PNG preview (EXIF-transposed) for evidence,
         the same role render() plays for every other adapter."""
@@ -305,20 +348,35 @@ class ImageAdapter(ArtifactAdapter):
             img.load()
             normalized = ImageOps.exif_transpose(img)
             out_path = out_dir / "page-001.png"
-            normalized.convert("RGBA" if normalized.mode in ("RGBA", "LA", "P") else "RGB").save(out_path, format="PNG")
+            normalized.convert(
+                "RGBA" if normalized.mode in ("RGBA", "LA", "P") else "RGB"
+            ).save(out_path, format="PNG")
         return RenderResult(kind="page_images", files=[out_path], backend="Pillow")
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="image_validity", name="Image is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="image_validity",
+                    name="Image is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="image_validity", name="Image is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(
+                id="image_validity", name="Image is readable", status=CheckStatus.PASS
+            )
+        )
 
         details = report.details
         width, height = details["width"], details["height"]
@@ -337,7 +395,8 @@ class ImageAdapter(ArtifactAdapter):
             ok = width == policy["require_width"]
             checks.append(
                 Check(
-                    id="width_requirement", name="Width matches requirement",
+                    id="width_requirement",
+                    name="Width matches requirement",
                     status=CheckStatus.PASS if ok else CheckStatus.FAIL,
                     message=f"expected {policy['require_width']}, got {width}.",
                 )
@@ -346,18 +405,26 @@ class ImageAdapter(ArtifactAdapter):
             ok = height == policy["require_height"]
             checks.append(
                 Check(
-                    id="height_requirement", name="Height matches requirement",
+                    id="height_requirement",
+                    name="Height matches requirement",
                     status=CheckStatus.PASS if ok else CheckStatus.FAIL,
                     message=f"expected {policy['require_height']}, got {height}.",
                 )
             )
-        if any(k in policy for k in ("min_width", "max_width", "min_height", "max_height")):
-            lo_w, hi_w = policy.get("min_width", 0), policy.get("max_width", float("inf"))
-            lo_h, hi_h = policy.get("min_height", 0), policy.get("max_height", float("inf"))
+        if any(
+            k in policy for k in ("min_width", "max_width", "min_height", "max_height")
+        ):
+            lo_w, hi_w = policy.get("min_width", 0), policy.get(
+                "max_width", float("inf")
+            )
+            lo_h, hi_h = policy.get("min_height", 0), policy.get(
+                "max_height", float("inf")
+            )
             ok = lo_w <= width <= hi_w and lo_h <= height <= hi_h
             checks.append(
                 Check(
-                    id="dimensions_range", name="Dimensions within range",
+                    id="dimensions_range",
+                    name="Dimensions within range",
                     status=CheckStatus.PASS if ok else CheckStatus.FAIL,
                     message=f"expected width [{lo_w}, {hi_w}], height [{lo_h}, {hi_h}]; got {width}x{height}.",
                 )
@@ -368,7 +435,8 @@ class ImageAdapter(ArtifactAdapter):
             ok = details["format"] == expected
             checks.append(
                 Check(
-                    id="format_requirement", name="Format matches requirement",
+                    id="format_requirement",
+                    name="Format matches requirement",
                     status=CheckStatus.PASS if ok else CheckStatus.FAIL,
                     message=f"expected {expected}, got {details['format']}.",
                 )
@@ -388,6 +456,12 @@ class ImageAdapter(ArtifactAdapter):
                 )
             )
         else:
-            checks.append(Check(id="exif_orientation", name="No pending EXIF rotation", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="exif_orientation",
+                    name="No pending EXIF rotation",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         return VerificationResult(kind="structural", checks=checks)

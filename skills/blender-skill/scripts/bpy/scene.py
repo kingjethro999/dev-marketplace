@@ -2,6 +2,7 @@
 lights, camera, background, render output) -- the equivalent of ffmpeg-skill's project.json,
 for composing more than one asset into a single shot instead of hand-scripting bpy.
 """
+
 import math
 import sys
 from pathlib import Path
@@ -20,13 +21,22 @@ def _place_asset(spec, base_dir: Path):
     file_path = spec["file"]
     if not Path(file_path).is_absolute():
         file_path = str(base_dir / file_path)
-    fmt = spec.get("format") or Path(file_path).suffix.lstrip(".").replace("glb", "gltf")
+    fmt = spec.get("format") or Path(file_path).suffix.lstrip(".").replace(
+        "glb", "gltf"
+    )
     before = set(bpy.data.objects.keys())
     _compat.import_file(file_path, fmt if fmt != "glb" else "gltf")
-    new_objs = [o for name, o in ((n, bpy.data.objects[n]) for n in bpy.data.objects.keys() if n not in before)]
+    new_objs = [
+        o
+        for name, o in (
+            (n, bpy.data.objects[n]) for n in bpy.data.objects.keys() if n not in before
+        )
+    ]
     roots = [o for o in new_objs if o.parent is None or o.parent not in new_objs]
 
-    anchor = bpy.data.objects.new(f"asset_{spec.get('name', Path(file_path).stem)}", None)
+    anchor = bpy.data.objects.new(
+        f"asset_{spec.get('name', Path(file_path).stem)}", None
+    )
     bpy.context.collection.objects.link(anchor)
     anchor.location = spec.get("position", [0, 0, 0])
     rot = spec.get("rotation", [0, 0, 0])
@@ -41,7 +51,9 @@ def _place_asset(spec, base_dir: Path):
 def _add_light(spec):
     kind = spec.get("type", "sun").lower()
     if kind not in _LIGHT_TYPES:
-        raise ValueError(f"unknown light type {kind!r} (expected one of {sorted(_LIGHT_TYPES)})")
+        raise ValueError(
+            f"unknown light type {kind!r} (expected one of {sorted(_LIGHT_TYPES)})"
+        )
     data = bpy.data.lights.new(spec.get("name", kind), type=kind.upper())
     data.energy = spec.get("energy", 3.0)
     obj = bpy.data.objects.new(spec.get("name", kind), data)
@@ -62,7 +74,9 @@ def _add_camera(spec):
         direction = mathutils.Vector(spec["look_at"]) - mathutils.Vector(obj.location)
         obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
     else:
-        obj.rotation_euler = [math.radians(v) for v in spec.get("rotation", [63, 0, 45])]
+        obj.rotation_euler = [
+            math.radians(v) for v in spec.get("rotation", [63, 0, 45])
+        ]
     bpy.context.scene.camera = obj
     return obj
 
@@ -94,7 +108,9 @@ def run(args):
 
     output = spec.get("output", {})
     scene = bpy.context.scene
-    scene.render.engine = "CYCLES" if output.get("engine") == "cycles" else _compat.eevee_engine_id()
+    scene.render.engine = (
+        "CYCLES" if output.get("engine") == "cycles" else _compat.eevee_engine_id()
+    )
     res = output.get("resolution", [512, 512])
     scene.render.resolution_x, scene.render.resolution_y = res
     scene.render.film_transparent = output.get("transparent", "background" not in spec)

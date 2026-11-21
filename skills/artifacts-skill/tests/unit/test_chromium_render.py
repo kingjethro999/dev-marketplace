@@ -81,20 +81,26 @@ class _FakePlaywrightContext:
 
 def _install_fake_playwright(monkeypatch, calls: list[tuple[str, dict]]) -> None:
     playwright_sync_api = pytest.importorskip("playwright.sync_api")
-    monkeypatch.setattr(playwright_sync_api, "sync_playwright", lambda: _FakePlaywrightContext(calls))
+    monkeypatch.setattr(
+        playwright_sync_api, "sync_playwright", lambda: _FakePlaywrightContext(calls)
+    )
 
 
 def test_default_limits_produce_the_documented_30s_timeout_in_ms(tmp_path, monkeypatch):
     calls: list[tuple[str, dict]] = []
     _install_fake_playwright(monkeypatch, calls)
 
-    chromium_render.render_local_file(tmp_path / "in.html", tmp_path / "out.png", capability_id="html.render")
+    chromium_render.render_local_file(
+        tmp_path / "in.html", tmp_path / "out.png", capability_id="html.render"
+    )
 
     assert ("goto", {"timeout": 30_000}) in calls
     assert ("screenshot", {"timeout": 30_000}) in calls
 
 
-def test_a_custom_limits_render_timeout_reaches_goto_and_screenshot(tmp_path, monkeypatch):
+def test_a_custom_limits_render_timeout_reaches_goto_and_screenshot(
+    tmp_path, monkeypatch
+):
     """The whole point of Issue #28's fix: a caller overriding
     Limits.render_timeout_seconds must actually change what Chromium does,
     not just change a dataclass field nothing reads."""
@@ -103,7 +109,10 @@ def test_a_custom_limits_render_timeout_reaches_goto_and_screenshot(tmp_path, mo
 
     custom_limits = Limits(render_timeout_seconds=5)
     chromium_render.render_local_file(
-        tmp_path / "in.html", tmp_path / "out.png", capability_id="html.render", limits=custom_limits
+        tmp_path / "in.html",
+        tmp_path / "out.png",
+        capability_id="html.render",
+        limits=custom_limits,
     )
 
     assert ("goto", {"timeout": 5_000}) in calls
@@ -119,7 +128,9 @@ def test_a_custom_limits_render_timeout_reaches_goto_and_screenshot(tmp_path, mo
 # way to build a Windows file:// URI ("file:///C:/...").)
 
 
-def test_goto_receives_a_properly_encoded_file_uri_not_a_naive_concatenation(tmp_path, monkeypatch):
+def test_goto_receives_a_properly_encoded_file_uri_not_a_naive_concatenation(
+    tmp_path, monkeypatch
+):
     calls: list[tuple[str, dict]] = []
     urls: list[str] = []
 
@@ -161,15 +172,23 @@ def test_goto_receives_a_properly_encoded_file_uri_not_a_naive_concatenation(tmp
             return False
 
     playwright_sync_api = pytest.importorskip("playwright.sync_api")
-    monkeypatch.setattr(playwright_sync_api, "sync_playwright", lambda: _RecordingContext())
+    monkeypatch.setattr(
+        playwright_sync_api, "sync_playwright", lambda: _RecordingContext()
+    )
 
     source = tmp_path / "report#1 (final).html"
     source.write_text("<html></html>")
-    chromium_render.render_local_file(source, tmp_path / "out.png", capability_id="html.render")
+    chromium_render.render_local_file(
+        source, tmp_path / "out.png", capability_id="html.render"
+    )
 
     assert urls == [source.resolve().as_uri()]
-    assert "%23" in urls[0]  # '#' is percent-encoded, not a literal URL-fragment separator
-    assert "#" not in urls[0].split("://", 1)[1]  # no literal '#' anywhere in the path portion
+    assert (
+        "%23" in urls[0]
+    )  # '#' is percent-encoded, not a literal URL-fragment separator
+    assert (
+        "#" not in urls[0].split("://", 1)[1]
+    )  # no literal '#' anywhere in the path portion
     assert " " not in urls[0]  # spaces must be percent-encoded, never literal
 
 
@@ -195,7 +214,9 @@ def test_file_url_in_a_subdirectory_of_the_allowed_directory_is_allowed(tmp_path
     from artifact_skill.rendering.chromium_render import _file_url_is_within
 
     (tmp_path / "assets").mkdir()
-    assert _file_url_is_within(f"file://{tmp_path / 'assets' / 'x.png'}", tmp_path) is True
+    assert (
+        _file_url_is_within(f"file://{tmp_path / 'assets' / 'x.png'}", tmp_path) is True
+    )
 
 
 def test_file_url_outside_the_allowed_directory_is_rejected(tmp_path):
@@ -227,7 +248,9 @@ def test_non_file_url_is_never_allowed_by_this_check(tmp_path):
     assert _file_url_is_within("data:image/png;base64,abc", tmp_path) is False
 
 
-def test_render_local_file_blocks_a_file_url_escaping_the_document_directory(tmp_path, monkeypatch):
+def test_render_local_file_blocks_a_file_url_escaping_the_document_directory(
+    tmp_path, monkeypatch
+):
     """End-to-end through render_local_file() itself (fake Playwright, no
     real browser needed) - proves the fix is actually wired into the real
     route handler, not just that the helper function works in isolation."""
@@ -247,9 +270,15 @@ def test_render_local_file_blocks_a_file_url_escaping_the_document_directory(tmp
     class _RecordingPage:
         def route(self, pattern, handler) -> None:
             doc_dir = tmp_path / "docroot"
-            handler(_RecordingRoute(f"file://{doc_dir / 'page.html'}"))  # the document itself
-            handler(_RecordingRoute(f"file://{doc_dir / 'sibling.png'}"))  # same dir - allowed
-            handler(_RecordingRoute(f"file://{tmp_path / 'outside.txt'}"))  # escapes - blocked
+            handler(
+                _RecordingRoute(f"file://{doc_dir / 'page.html'}")
+            )  # the document itself
+            handler(
+                _RecordingRoute(f"file://{doc_dir / 'sibling.png'}")
+            )  # same dir - allowed
+            handler(
+                _RecordingRoute(f"file://{tmp_path / 'outside.txt'}")
+            )  # escapes - blocked
             handler(_RecordingRoute("file:///etc/passwd"))  # blocked
             handler(_RecordingRoute("data:image/png;base64,abc"))  # allowed
 
@@ -285,14 +314,18 @@ def test_render_local_file_blocks_a_file_url_escaping_the_document_directory(tmp
             return False
 
     playwright_sync_api = pytest.importorskip("playwright.sync_api")
-    monkeypatch.setattr(playwright_sync_api, "sync_playwright", lambda: _RecordingPlaywrightContext())
+    monkeypatch.setattr(
+        playwright_sync_api, "sync_playwright", lambda: _RecordingPlaywrightContext()
+    )
 
     doc_dir = tmp_path / "docroot"
     doc_dir.mkdir()
     source = doc_dir / "page.html"
     source.write_text("<html></html>")
 
-    chromium_render.render_local_file(source, tmp_path / "out.png", capability_id="html.render")
+    chromium_render.render_local_file(
+        source, tmp_path / "out.png", capability_id="html.render"
+    )
 
     outcome = dict(routed)
     assert outcome[f"file://{doc_dir / 'page.html'}"] == "continue"

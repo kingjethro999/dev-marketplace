@@ -13,6 +13,7 @@ shared-tool-id granularity limit (`color-grading-skill`)
 found by `kajisho5/AI-video-production-OS`'s own exhaustive investigation
 (`docs/ecosystem/WORK_QUEUE.md` item 1, 2026-09-06).
 """
+
 from __future__ import annotations
 
 import sys
@@ -22,12 +23,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from video_agent.skills import SkillPackage, SkillSpec, ToolSpec  # noqa: E402
-from video_agent.skills.diagnostics import check_all, check_provides, extract_provides  # noqa: E402
+from video_agent.skills.diagnostics import (
+    check_all,
+    check_provides,
+    extract_provides,
+)  # noqa: E402
 
 
 def pkg(skill_id: str, tool_ids) -> SkillPackage:
-    return SkillPackage(skill_id=skill_id, name=skill_id, version="1.0", description="",
-                        tools=[ToolSpec(tool_id=t, skill_id=skill_id) for t in tool_ids])
+    return SkillPackage(
+        skill_id=skill_id,
+        name=skill_id,
+        version="1.0",
+        description="",
+        tools=[ToolSpec(tool_id=t, skill_id=skill_id) for t in tool_ids],
+    )
 
 
 def spec(name: str, tools) -> SkillSpec:
@@ -36,7 +46,16 @@ def spec(name: str, tools) -> SkillSpec:
 
 def provides(*entries) -> dict:
     """entries: (capability_id, tool_id[, lifecycle]) tuples -> a minimal Capability Contract dict."""
-    return {"provides": [{"id": e[0], "tool_id": e[1], "lifecycle": e[2] if len(e) > 2 else "EXPERIMENTAL"} for e in entries]}
+    return {
+        "provides": [
+            {
+                "id": e[0],
+                "tool_id": e[1],
+                "lifecycle": e[2] if len(e) > 2 else "EXPERIMENTAL",
+            }
+            for e in entries
+        ]
+    }
 
 
 class ExtractProvidesTests(unittest.TestCase):
@@ -69,7 +88,10 @@ class CheckProvidesStatusTests(unittest.TestCase):
         findings = check_provides(p, provides(("acme.trim", "acme/trim")), specs)
         self.assertEqual(len(findings), 1)
         f = findings[0]
-        self.assertEqual((f.status, f.capability_id, f.tool_id), ("PROVIDES_VALID", "acme.trim", "acme/trim"))
+        self.assertEqual(
+            (f.status, f.capability_id, f.tool_id),
+            ("PROVIDES_VALID", "acme.trim", "acme/trim"),
+        )
         self.assertNotIn("shared_tool_id_capabilities", f.evidence)
 
     def test_capability_unconsumed_when_no_skillspec_references_it(self):
@@ -80,9 +102,14 @@ class CheckProvidesStatusTests(unittest.TestCase):
 
     def test_provides_mismatch_when_agent_package_lacks_the_tool_id(self):
         """The real qc-skill / subtitle-skill shape, synthetically: the contract's tool_id is not
-        one this Agent's registered package declares at all (a self-declared tool id elsewhere)."""
-        p = pkg("acme", ["acme/check"])   # Agent invented "acme/check", not "acme/run"
-        findings = check_provides(p, provides(("acme.measure", "acme/run")), [spec("acme_measure", ["acme/check"])])
+        one this Agent's registered package declares at all (a self-declared tool id elsewhere).
+        """
+        p = pkg("acme", ["acme/check"])  # Agent invented "acme/check", not "acme/run"
+        findings = check_provides(
+            p,
+            provides(("acme.measure", "acme/run")),
+            [spec("acme_measure", ["acme/check"])],
+        )
         mismatch = [f for f in findings if f.status == "PROVIDES_MISMATCH"]
         self.assertEqual(len(mismatch), 1)
         self.assertEqual(mismatch[0].capability_id, "acme.measure")
@@ -90,7 +117,11 @@ class CheckProvidesStatusTests(unittest.TestCase):
 
     def test_capability_missing_when_skillspec_references_a_tool_id_nobody_knows(self):
         p = pkg("acme", ["acme/trim"])
-        findings = check_provides(p, provides(("acme.trim", "acme/trim")), [spec("acme_ghost", ["acme/ghost"])])
+        findings = check_provides(
+            p,
+            provides(("acme.trim", "acme/trim")),
+            [spec("acme_ghost", ["acme/ghost"])],
+        )
         missing = [f for f in findings if f.status == "CAPABILITY_MISSING"]
         self.assertEqual(len(missing), 1)
         self.assertEqual(missing[0].tool_id, "acme/ghost")
@@ -100,32 +131,52 @@ class CheckProvidesStatusTests(unittest.TestCase):
         """The Agent's package already knows about a real tool the contract just hasn't put under
         provides[] yet -- informational, not necessarily broken."""
         p = pkg("acme", ["acme/trim", "acme/fade"])
-        findings = check_provides(p, provides(("acme.trim", "acme/trim")), [spec("acme_fade", ["acme/fade"])])
-        unknown = [f for f in findings if f.status == "UNKNOWN" and f.tool_id == "acme/fade"]
+        findings = check_provides(
+            p, provides(("acme.trim", "acme/trim")), [spec("acme_fade", ["acme/fade"])]
+        )
+        unknown = [
+            f for f in findings if f.status == "UNKNOWN" and f.tool_id == "acme/fade"
+        ]
         self.assertEqual(len(unknown), 1)
 
     def test_shared_tool_id_is_annotated_not_silently_confident(self):
         """Two Capability ids behind one generic tool id (qc-skill / color-grading-skill's real
         shape): both are still PROVIDES_VALID at the tool-id level, but each finding must name its
-        siblings rather than implying the specific Capability id was individually confirmed."""
+        siblings rather than implying the specific Capability id was individually confirmed.
+        """
         p = pkg("acme", ["acme/run"])
         specs = [spec("acme_a", ["acme/run"])]
-        findings = check_provides(p, provides(("acme.a", "acme/run"), ("acme.b", "acme/run")), specs)
+        findings = check_provides(
+            p, provides(("acme.a", "acme/run"), ("acme.b", "acme/run")), specs
+        )
         self.assertEqual({f.status for f in findings}, {"PROVIDES_VALID"})
         for f in findings:
-            self.assertEqual(f.evidence["shared_tool_id_capabilities"], ["acme.a", "acme.b"])
+            self.assertEqual(
+                f.evidence["shared_tool_id_capabilities"], ["acme.a", "acme.b"]
+            )
             self.assertIn("shared", f.detail)
 
     def test_malformed_entries_are_skipped_not_crashed_on(self):
-        doc = {"provides": ["not-a-dict", {"id": "acme.trim"}, {"tool_id": "acme/trim"}, None]}
+        doc = {
+            "provides": [
+                "not-a-dict",
+                {"id": "acme.trim"},
+                {"tool_id": "acme/trim"},
+                None,
+            ]
+        }
         findings = check_provides(pkg("acme", ["acme/trim"]), doc, [])
-        self.assertEqual(findings, [])   # every entry is missing id or tool_id or is not a dict
+        self.assertEqual(
+            findings, []
+        )  # every entry is missing id or tool_id or is not a dict
 
 
 class CheckAllTests(unittest.TestCase):
     def test_dispatches_per_package_and_defaults_missing_contract_to_none(self):
         p1, p2 = pkg("acme", ["acme/trim"]), pkg("beta", ["beta/run"])
-        contracts = {"acme": provides(("acme.trim", "acme/trim"))}   # "beta" has no entry at all
+        contracts = {
+            "acme": provides(("acme.trim", "acme/trim"))
+        }  # "beta" has no entry at all
         findings = check_all([p1, p2], contracts, [spec("acme_trim", ["acme/trim"])])
         by_skill = {f.skill_id: f.status for f in findings}
         self.assertEqual(by_skill["acme"], "PROVIDES_VALID")
@@ -134,52 +185,92 @@ class CheckAllTests(unittest.TestCase):
 
 class RealDataRegressionTests(unittest.TestCase):
     """Real provides[] excerpts captured 2026-09-06 from each Skill's actual merged `main`,
-    combined with this Agent's real, currently-registered PACKAGE / default_registry() data."""
+    combined with this Agent's real, currently-registered PACKAGE / default_registry() data.
+    """
 
     def test_real_qc_skill_all_ten_capabilities_are_self_declared_mismatch(self):
         from video_agent.skills import default_registry
         from video_agent.tools.qc import PACKAGE as QC_PACKAGE
 
         qc_provides = provides(
-            ("measure.audio.channel_layout", "qc/run"), ("measure.audio.clipping_and_dynamics", "qc/run"),
-            ("measure.audio.integrity", "qc/run"), ("measure.audio.loudness", "qc/run"),
-            ("measure.audio.silence", "qc/run"), ("measure.delivery.integrity", "qc/run"),
-            ("measure.subtitle.timing", "qc/run"), ("measure.video.black_frame", "qc/run"),
-            ("measure.video.format", "qc/run"), ("measure.video.freeze", "qc/run"),
+            ("measure.audio.channel_layout", "qc/run"),
+            ("measure.audio.clipping_and_dynamics", "qc/run"),
+            ("measure.audio.integrity", "qc/run"),
+            ("measure.audio.loudness", "qc/run"),
+            ("measure.audio.silence", "qc/run"),
+            ("measure.delivery.integrity", "qc/run"),
+            ("measure.subtitle.timing", "qc/run"),
+            ("measure.video.black_frame", "qc/run"),
+            ("measure.video.format", "qc/run"),
+            ("measure.video.freeze", "qc/run"),
         )
         findings = check_provides(QC_PACKAGE, qc_provides, default_registry().all())
-        mismatches = {f.capability_id for f in findings if f.status == "PROVIDES_MISMATCH"}
+        mismatches = {
+            f.capability_id for f in findings if f.status == "PROVIDES_MISMATCH"
+        }
         self.assertEqual(len(mismatches), 10, findings)
         self.assertIn("measure.audio.loudness", mismatches)
         # confirms WORK_QUEUE item 1's finding: real tool_id is "qc/run" everywhere, never "qc/check"
-        self.assertTrue(all(f.evidence.get("agent_tool_ids") == ["qc/check", "qc/inspect"] for f in findings if f.status == "PROVIDES_MISMATCH"))
+        self.assertTrue(
+            all(
+                f.evidence.get("agent_tool_ids") == ["qc/check", "qc/inspect"]
+                for f in findings
+                if f.status == "PROVIDES_MISMATCH"
+            )
+        )
 
-    def test_real_subtitle_skill_generate_render_valid_translate_mux_not_registered(self):
+    def test_real_subtitle_skill_generate_render_valid_translate_mux_not_registered(
+        self,
+    ):
         """subtitle-skill #20 (0.2.1, its ADR-002) publishes provides[] tool ids as `subtitle/...`, the ids this Agent's adapter
         registers (before #20 they were `subtitle-skill/...` and both were PROVIDES_MISMATCH, the 2026-09-06 finding). Since 0.3.0
         (pinned from 0.4.0, ADR-078) the contract also publishes `subtitle.translate` (`subtitle/translate`) and `subtitle.mux`
         (`subtitle/mux`, several language-tagged tracks in one call). The Agent registers neither tool id: it does not translate, and
         its one-track soft subtitle (`subtitle_mux`, ADR-063) is the contract's `render` with `mode: "mux"`, i.e. `subtitle/render`.
-        Read from the pinned contract, generate / render are PROVIDES_VALID and translate / mux are PROVIDES_MISMATCH -- no more, no less."""
+        Read from the pinned contract, generate / render are PROVIDES_VALID and translate / mux are PROVIDES_MISMATCH -- no more, no less.
+        """
         from video_agent.skills import default_registry
         from video_agent.tools.subtitle import PACKAGE as SUBTITLE_PACKAGE
         from video_agent.tools.subtitle.adapter import pinned_contract
 
         contract = pinned_contract()
-        self.assertEqual(sorted((p["id"], p["tool_id"]) for p in contract["provides"]),
-                         [("subtitle.generate", "subtitle/generate"), ("subtitle.mux", "subtitle/mux"),
-                          ("subtitle.render", "subtitle/render"), ("subtitle.translate", "subtitle/translate")])
-        self.assertEqual(sorted(t.tool_id for t in SUBTITLE_PACKAGE.tools), ["subtitle/generate", "subtitle/render"])
+        self.assertEqual(
+            sorted((p["id"], p["tool_id"]) for p in contract["provides"]),
+            [
+                ("subtitle.generate", "subtitle/generate"),
+                ("subtitle.mux", "subtitle/mux"),
+                ("subtitle.render", "subtitle/render"),
+                ("subtitle.translate", "subtitle/translate"),
+            ],
+        )
+        self.assertEqual(
+            sorted(t.tool_id for t in SUBTITLE_PACKAGE.tools),
+            ["subtitle/generate", "subtitle/render"],
+        )
         specs = default_registry().all()
-        self.assertEqual(next(s for s in specs if s.name == "subtitle_mux").tools, ["subtitle/render"])   # the soft track goes through render
+        self.assertEqual(
+            next(s for s in specs if s.name == "subtitle_mux").tools,
+            ["subtitle/render"],
+        )  # the soft track goes through render
         findings = check_provides(SUBTITLE_PACKAGE, contract, specs)
-        self.assertEqual({(f.capability_id, f.tool_id, f.status) for f in findings},
-                         {("subtitle.generate", "subtitle/generate", "PROVIDES_VALID"), ("subtitle.render", "subtitle/render", "PROVIDES_VALID"),
-                          ("subtitle.translate", "subtitle/translate", "PROVIDES_MISMATCH"), ("subtitle.mux", "subtitle/mux", "PROVIDES_MISMATCH")})
-        self.assertEqual(len(findings), 4, findings)   # no CAPABILITY_MISSING / UNKNOWN: every SkillSpec tool id is published
+        self.assertEqual(
+            {(f.capability_id, f.tool_id, f.status) for f in findings},
+            {
+                ("subtitle.generate", "subtitle/generate", "PROVIDES_VALID"),
+                ("subtitle.render", "subtitle/render", "PROVIDES_VALID"),
+                ("subtitle.translate", "subtitle/translate", "PROVIDES_MISMATCH"),
+                ("subtitle.mux", "subtitle/mux", "PROVIDES_MISMATCH"),
+            },
+        )
+        self.assertEqual(
+            len(findings), 4, findings
+        )  # no CAPABILITY_MISSING / UNKNOWN: every SkillSpec tool id is published
         for f in findings:
             if f.status == "PROVIDES_MISMATCH":
-                self.assertEqual(f.evidence["agent_tool_ids"], ["subtitle/generate", "subtitle/render"])
+                self.assertEqual(
+                    f.evidence["agent_tool_ids"],
+                    ["subtitle/generate", "subtitle/render"],
+                )
                 self.assertNotIn("shared_tool_id_capabilities", f.evidence)
 
     def test_real_color_grading_skill_shared_tool_id_all_valid_but_annotated(self):
@@ -194,17 +285,26 @@ class RealDataRegressionTests(unittest.TestCase):
         from video_agent.tools.color_grading import PACKAGE as COLOR_GRADING_PACKAGE
 
         color_provides = provides(
-            ("color.hdr_to_sdr", "color-grading/run"), ("color.lut_apply", "color-grading/run"),
-            ("color.primary_correction", "color-grading/run"), ("color.retag", "color-grading/run"),
+            ("color.hdr_to_sdr", "color-grading/run"),
+            ("color.lut_apply", "color-grading/run"),
+            ("color.primary_correction", "color-grading/run"),
+            ("color.retag", "color-grading/run"),
             ("color.strip_dovi", "color-grading/run"),
         )
-        findings = check_provides(COLOR_GRADING_PACKAGE, color_provides, default_registry().all())
+        findings = check_provides(
+            COLOR_GRADING_PACKAGE, color_provides, default_registry().all()
+        )
         self.assertEqual({f.status for f in findings}, {"PROVIDES_VALID"})
         self.assertEqual(len(findings), 5)
         for f in findings:
             self.assertEqual(len(f.evidence["shared_tool_id_capabilities"]), 5)
-        primary = next(f for f in findings if f.capability_id == "color.primary_correction")
-        self.assertIn("not that this specific Capability id is separately requested", primary.detail)
+        primary = next(
+            f for f in findings if f.capability_id == "color.primary_correction"
+        )
+        self.assertIn(
+            "not that this specific Capability id is separately requested",
+            primary.detail,
+        )
 
 
 if __name__ == "__main__":

@@ -47,7 +47,10 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from artifact_skill.adapters.registry import get_adapter  # noqa: E402
 from artifact_skill.core.artifact import ArtifactRef  # noqa: E402
 from artifact_skill.core.errors import ArtifactError  # noqa: E402
-from artifact_skill.rendering.chromium_render import render_local_file, render_local_files  # noqa: E402
+from artifact_skill.rendering.chromium_render import (
+    render_local_file,
+    render_local_files,
+)  # noqa: E402
 
 _FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures"
 
@@ -154,9 +157,13 @@ def _large_image(tmp_dir: Path) -> tuple[Path, str]:
 
 
 def _large_html(tmp_dir: Path) -> tuple[Path, str]:
-    body = "".join(f"<p>Paragraph {i} — benchmark filler content.</p>\n" for i in range(5000))
+    body = "".join(
+        f"<p>Paragraph {i} — benchmark filler content.</p>\n" for i in range(5000)
+    )
     path = tmp_dir / "large.html"
-    path.write_text(f"<!DOCTYPE html><html><head><title>Large</title></head><body>{body}</body></html>")
+    path.write_text(
+        f"<!DOCTYPE html><html><head><title>Large</title></head><body>{body}</body></html>"
+    )
     return path, "5000 paragraphs"
 
 
@@ -166,7 +173,9 @@ def _large_svg(tmp_dir: Path) -> tuple[Path, str]:
         for i in range(3000)
     )
     path = tmp_dir / "large.svg"
-    path.write_text(f'<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000">{shapes}</svg>')
+    path.write_text(
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000">{shapes}</svg>'
+    )
     return path, "3000 rect elements"
 
 
@@ -185,7 +194,12 @@ def _large_markdown(tmp_dir: Path) -> tuple[Path, str]:
     # isn't mistaken for a shell/Python comment) - a list item line adds
     # the second signal, matching what a realistic Markdown document
     # actually looks like anyway.
-    parts = [f"## Section {i}\n\n- point one\n- point two\n\nParagraph text for section {i}. " * 4 + "\n" for i in range(1000)]
+    parts = [
+        f"## Section {i}\n\n- point one\n- point two\n\nParagraph text for section {i}. "
+        * 4
+        + "\n"
+        for i in range(1000)
+    ]
     path = tmp_dir / "large.md"
     path.write_text("# Large document\n\n" + "\n".join(parts))
     return path, "1000 sections"
@@ -200,7 +214,8 @@ def _large_epub(tmp_dir: Path) -> tuple[Path, str]:
         b'media-type="application/oebps-package+xml"/></rootfiles></container>'
     )
     items = "".join(
-        f'<item id="ch{i}" href="text/ch{i}.xhtml" media-type="application/xhtml+xml"/>' for i in range(n_docs)
+        f'<item id="ch{i}" href="text/ch{i}.xhtml" media-type="application/xhtml+xml"/>'
+        for i in range(n_docs)
     )
     spine = "".join(f'<itemref idref="ch{i}"/>' for i in range(n_docs))
     opf = (
@@ -211,7 +226,9 @@ def _large_epub(tmp_dir: Path) -> tuple[Path, str]:
     )
     path = tmp_dir / "large.epub"
     with zipfile.ZipFile(path, "w") as zf:
-        zf.writestr(zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED)
+        zf.writestr(
+            zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED
+        )
         zf.writestr("META-INF/container.xml", container_xml)
         zf.writestr("OEBPS/content.opf", opf)
         for i in range(n_docs):
@@ -275,7 +292,9 @@ def _bench_one(fmt: str, path: Path, size_label: str) -> dict:
     row["verify"] = _stats(durations) if err is None else f"ERROR {err}"
 
     reps = _REPS_EXPENSIVE if fmt in _SUBPROCESS_RENDER else _REPS_CHEAP
-    with tempfile.TemporaryDirectory(prefix="artifacts-skill-scalebench-render-") as tmp:
+    with tempfile.TemporaryDirectory(
+        prefix="artifacts-skill-scalebench-render-"
+    ) as tmp:
 
         def _render_call():
             adapter.render(ref, Path(tmp) / f"render-{time.time_ns()}")
@@ -286,10 +305,14 @@ def _bench_one(fmt: str, path: Path, size_label: str) -> dict:
     if fmt in _EXECUTE_OP:
         op, op_args = _EXECUTE_OP[fmt]
         reps = _REPS_EXPENSIVE if fmt in _SUBPROCESS_RENDER else _REPS_CHEAP
-        with tempfile.TemporaryDirectory(prefix="artifacts-skill-scalebench-exec-") as tmp:
+        with tempfile.TemporaryDirectory(
+            prefix="artifacts-skill-scalebench-exec-"
+        ) as tmp:
 
             def _execute_call():
-                adapter.execute(ref, op, op_args, Path(tmp) / f"out-{time.time_ns()}{path.suffix}")
+                adapter.execute(
+                    ref, op, op_args, Path(tmp) / f"out-{time.time_ns()}{path.suffix}"
+                )
 
             durations, err = _timed(_execute_call, reps=reps)
             row["execute"] = _stats(durations) if err is None else f"ERROR {err}"
@@ -300,12 +323,21 @@ def _bench_one(fmt: str, path: Path, size_label: str) -> dict:
 
 
 def _failed_row(fmt: str, size: str) -> dict:
-    return {"format": fmt, "size": size, "inspect": "n/a", "verify": "n/a", "render": "n/a", "execute": "n/a"}
+    return {
+        "format": fmt,
+        "size": size,
+        "inspect": "n/a",
+        "verify": "n/a",
+        "render": "n/a",
+        "execute": "n/a",
+    }
 
 
 def run_size_scaling() -> list[dict]:
     rows: list[dict] = []
-    with tempfile.TemporaryDirectory(prefix="artifacts-skill-scalebench-fixtures-") as tmp_str:
+    with tempfile.TemporaryDirectory(
+        prefix="artifacts-skill-scalebench-fixtures-"
+    ) as tmp_str:
         tmp_dir = Path(tmp_str)
         for fmt, rel in _SMALL_FIXTURES.items():
             small_path = _FIXTURES_DIR / rel
@@ -326,7 +358,9 @@ def run_batch_vs_loop_throughput(n_pages: int = 10) -> dict:
     K single-page render_local_file() calls (fresh Chromium launch each)
     vs. one render_local_files() batch call for the same K pages (one
     shared launch)."""
-    with tempfile.TemporaryDirectory(prefix="artifacts-skill-scalebench-batch-") as tmp_str:
+    with tempfile.TemporaryDirectory(
+        prefix="artifacts-skill-scalebench-batch-"
+    ) as tmp_str:
         tmp_dir = Path(tmp_str)
         source_paths = []
         out_paths_loop = []
@@ -359,7 +393,9 @@ def run_batch_vs_loop_throughput(n_pages: int = 10) -> dict:
 
 def main() -> int:
     print("=" * 100)
-    print("Artifact Skill — scaling & throughput benchmark (this machine, developer-run)")
+    print(
+        "Artifact Skill — scaling & throughput benchmark (this machine, developer-run)"
+    )
     print("=" * 100)
 
     print("\n--- Size scaling: small (correctness fixture) vs. synthetic large ---\n")
@@ -377,10 +413,14 @@ def main() -> int:
     try:
         result = run_batch_vs_loop_throughput()
         print(f"Pages: {result['n_pages']}")
-        print(f"  Loop  (fresh launch per page):  {result['loop_total_ms']:.1f}ms total, "
-              f"{result['loop_per_page_ms']:.1f}ms/page")
-        print(f"  Batch (one shared launch):      {result['batch_total_ms']:.1f}ms total, "
-              f"{result['batch_per_page_ms']:.1f}ms/page")
+        print(
+            f"  Loop  (fresh launch per page):  {result['loop_total_ms']:.1f}ms total, "
+            f"{result['loop_per_page_ms']:.1f}ms/page"
+        )
+        print(
+            f"  Batch (one shared launch):      {result['batch_total_ms']:.1f}ms total, "
+            f"{result['batch_per_page_ms']:.1f}ms/page"
+        )
         if result["speedup"] is not None:
             print(f"  Speedup from batching: {result['speedup']:.2f}x")
     except ArtifactError as exc:

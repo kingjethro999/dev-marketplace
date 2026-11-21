@@ -29,7 +29,10 @@ from typing import List, Optional, Sequence
 from .errors import error
 
 _WINDOWS_RESERVED = {
-    "CON", "PRN", "AUX", "NUL",
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
     *(f"COM{i}" for i in range(1, 10)),
     *(f"LPT{i}" for i in range(1, 10)),
 }
@@ -63,7 +66,9 @@ def _check_path_string(raw: str, *, code: str) -> None:
     if _CONTROL_CHARS.search(raw):
         raise error(code, "path contains control characters", path=raw)
     if len(raw) > MAX_PATH_LENGTH:
-        raise error(code, "path exceeds maximum length", path=raw, max_length=MAX_PATH_LENGTH)
+        raise error(
+            code, "path exceeds maximum length", path=raw, max_length=MAX_PATH_LENGTH
+        )
 
 
 def check_filename(name: str, *, code: str = "OUTPUT_ERROR") -> None:
@@ -72,19 +77,33 @@ def check_filename(name: str, *, code: str = "OUTPUT_ERROR") -> None:
     if not name or name in (".", ".."):
         raise error(code, "invalid filename", name=name)
     if len(name) > MAX_NAME_LENGTH:
-        raise error(code, "filename exceeds maximum length", name=name, max_length=MAX_NAME_LENGTH)
+        raise error(
+            code,
+            "filename exceeds maximum length",
+            name=name,
+            max_length=MAX_NAME_LENGTH,
+        )
     if _CONTROL_CHARS.search(name):
         raise error(code, "filename contains control characters", name=name)
     if name.startswith("-"):
         raise error(code, "filename must not look like an option flag", name=name)
     if name.endswith(" ") or name.endswith("."):
-        raise error(code, "filename must not end with a space or dot (Windows-unsafe)", name=name)
+        raise error(
+            code,
+            "filename must not end with a space or dot (Windows-unsafe)",
+            name=name,
+        )
     stem = PureWindowsPath(name).stem.upper()
     if stem in _WINDOWS_RESERVED:
         raise error(code, "filename is a reserved device name on Windows", name=name)
     for ch in '<>:"|?*':
         if ch in name:
-            raise error(code, "filename contains a character reserved on Windows", name=name, character=ch)
+            raise error(
+                code,
+                "filename contains a character reserved on Windows",
+                name=name,
+                character=ch,
+            )
 
 
 def _under(path: Path, root: Path) -> bool:
@@ -114,10 +133,14 @@ class PathPolicy:
     ) -> None:
         self.workspace = Path(workspace or os.getcwd()).resolve()
         self.allowed_input_roots: Optional[List[Path]] = (
-            [Path(r).resolve() for r in allowed_input_roots] if allowed_input_roots else None
+            [Path(r).resolve() for r in allowed_input_roots]
+            if allowed_input_roots
+            else None
         )
 
-    def resolve_input(self, raw_path: str, *, must_exist: bool = True) -> Optional[Path]:
+    def resolve_input(
+        self, raw_path: str, *, must_exist: bool = True
+    ) -> Optional[Path]:
         """Resolve and validate one input path.
 
         ``must_exist=False`` (used only for ``kind: "delivery_package"``
@@ -132,7 +155,11 @@ class PathPolicy:
 
         _check_path_string(raw_path, code="PATH_NOT_ALLOWED")
         if _has_traversal(raw_path):
-            raise error("PATH_NOT_ALLOWED", "path traversal ('..') is not allowed", path=raw_path)
+            raise error(
+                "PATH_NOT_ALLOWED",
+                "path traversal ('..') is not allowed",
+                path=raw_path,
+            )
 
         candidate = Path(raw_path)
         try:
@@ -142,10 +169,14 @@ class PathPolicy:
                 return None
             raise error("MISSING_INPUT", "input file does not exist", path=raw_path)
         except OSError as exc:
-            raise error("INVALID_INPUT", f"could not resolve input path: {exc}", path=raw_path)
+            raise error(
+                "INVALID_INPUT", f"could not resolve input path: {exc}", path=raw_path
+            )
 
         if not resolved.is_file():
-            raise error("INVALID_INPUT", "input path is not a regular file", path=raw_path)
+            raise error(
+                "INVALID_INPUT", "input path is not a regular file", path=raw_path
+            )
 
         if self.allowed_input_roots is not None:
             if not any(_under(resolved, root) for root in self.allowed_input_roots):
@@ -160,13 +191,17 @@ class PathPolicy:
     def resolve_output(self, raw_path: str) -> Path:
         _check_path_string(raw_path, code="OUTPUT_ERROR")
         if _has_traversal(raw_path):
-            raise error("OUTPUT_ERROR", "path traversal ('..') is not allowed", path=raw_path)
+            raise error(
+                "OUTPUT_ERROR", "path traversal ('..') is not allowed", path=raw_path
+            )
         if os.path.isabs(raw_path):
-            raise error("OUTPUT_ERROR", "absolute output paths are not allowed", path=raw_path)
+            raise error(
+                "OUTPUT_ERROR", "absolute output paths are not allowed", path=raw_path
+            )
 
         check_filename(Path(raw_path).name, code="OUTPUT_ERROR")
 
-        candidate = (self.workspace / raw_path)
+        candidate = self.workspace / raw_path
 
         # Resolve the parent directory (following any symlinks that exist
         # today), then re-append the leaf name, so a symlink cannot be used

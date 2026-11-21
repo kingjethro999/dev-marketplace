@@ -13,12 +13,24 @@ from artifact_skill.mcp.server import CAPABILITY_PREFIX, build_tools_list
 def test_contract_has_every_tool_exactly_once():
     names = [t.name for t in TOOLS]
     assert len(names) == len(set(names))
-    assert set(names) == {"doctor", "contract", "inspect", "plan", "execute", "render", "verify", "look", "receipt"}
+    assert set(names) == {
+        "doctor",
+        "contract",
+        "inspect",
+        "plan",
+        "execute",
+        "render",
+        "verify",
+        "look",
+        "receipt",
+    }
 
 
 def test_cli_subcommands_match_contract_tools():
     parser = build_parser()
-    subparsers_action = next(a for a in parser._subparsers._group_actions if a.dest == "command")
+    subparsers_action = next(
+        a for a in parser._subparsers._group_actions if a.dest == "command"
+    )
     cli_commands = set(subparsers_action.choices.keys())
     contract_names = {t.name for t in TOOLS}
     assert cli_commands == contract_names
@@ -73,7 +85,13 @@ def test_contract_carries_the_os_registry_shape():
     assert ids and len(ids) == len(set(ids))
     for entry in contract["provides"]:
         assert set(entry) == {"id", "lifecycle", "tool_id"}
-        assert entry["lifecycle"] in ("PROPOSED", "EXPERIMENTAL", "STABLE", "DEPRECATED", "RETIRED")
+        assert entry["lifecycle"] in (
+            "PROPOSED",
+            "EXPERIMENTAL",
+            "STABLE",
+            "DEPRECATED",
+            "RETIRED",
+        )
         prefix, _, tool = entry["tool_id"].partition("/")
         assert prefix == contract["skill_id"] and tool in tool_names
 
@@ -104,7 +122,9 @@ _CLI_ONLY_FLAGS = {"json", "help"}
 
 def test_cli_flags_match_input_schema_properties_in_both_directions():
     parser = build_parser()
-    subparsers_action = next(a for a in parser._subparsers._group_actions if a.dest == "command")
+    subparsers_action = next(
+        a for a in parser._subparsers._group_actions if a.dest == "command"
+    )
 
     for tool in TOOLS:
         subparser = subparsers_action.choices[tool.name]
@@ -115,21 +135,25 @@ def test_cli_flags_match_input_schema_properties_in_both_directions():
         # every schema property must be reachable from the CLI
         for prop_name in schema_props:
             if prop_name == "input":
-                assert "input" in actions_by_dest, f"{tool.name}: schema declares 'input' but CLI has no positional"
+                assert (
+                    "input" in actions_by_dest
+                ), f"{tool.name}: schema declares 'input' but CLI has no positional"
                 continue
             assert prop_name in actions_by_dest, (
                 f"{tool.name}: schema property '{prop_name}' has no matching CLI flag "
                 f"(expected --{prop_name.replace('_', '-')})"
             )
             if prop_name in required:
-                assert actions_by_dest[prop_name].required, (
-                    f"{tool.name}: schema requires '{prop_name}' but its CLI flag is not --required"
-                )
+                assert actions_by_dest[
+                    prop_name
+                ].required, f"{tool.name}: schema requires '{prop_name}' but its CLI flag is not --required"
 
         # every CLI flag must be a schema property or explicitly CLI-only
         for dest in actions_by_dest:
             if dest == "input":
-                assert "input" in schema_props, f"{tool.name}: CLI has positional 'input' but schema doesn't declare it"
+                assert (
+                    "input" in schema_props
+                ), f"{tool.name}: CLI has positional 'input' but schema doesn't declare it"
                 continue
             if dest in _CLI_ONLY_FLAGS:
                 continue

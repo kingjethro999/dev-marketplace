@@ -25,7 +25,7 @@ def read_version(pyproject_path: Path) -> str:
     text = pyproject_path.read_text(encoding="utf-8")
     match = _VERSION_LINE_RE.search(text)
     if match is None:
-        raise ValueError(f"no `version = \"...\"` line found in {pyproject_path}")
+        raise ValueError(f'no `version = "..."` line found in {pyproject_path}')
     return match.group(1)
 
 
@@ -33,7 +33,7 @@ def write_version(pyproject_path: Path, new_version: str) -> None:
     text = pyproject_path.read_text(encoding="utf-8")
     new_text, count = _VERSION_LINE_RE.subn(f'version = "{new_version}"', text, count=1)
     if count != 1:
-        raise ValueError(f"no `version = \"...\"` line found in {pyproject_path}")
+        raise ValueError(f'no `version = "..."` line found in {pyproject_path}')
     pyproject_path.write_text(new_text, encoding="utf-8")
 
 
@@ -62,10 +62,14 @@ def main(argv=None) -> int:
 
     sub.add_parser("get", help="print the current version")
 
-    bump = sub.add_parser("bump", help="bump the version by one semver level and write it back")
+    bump = sub.add_parser(
+        "bump", help="bump the version by one semver level and write it back"
+    )
     bump.add_argument("level", choices=["major", "minor", "patch"])
 
-    set_ = sub.add_parser("set", help="write an exact version (e.g. one release-drafter already resolved)")
+    set_ = sub.add_parser(
+        "set", help="write an exact version (e.g. one release-drafter already resolved)"
+    )
     set_.add_argument("version")
 
     args = parser.parse_args(argv)

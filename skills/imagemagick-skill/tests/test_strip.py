@@ -41,9 +41,13 @@ class TestStrip(unittest.TestCase):
 
     def test_strip_does_not_touch_input(self):
         dest = os.path.join(self.tmp.name, "clean2.jpg")
-        strip.run_strip(strip.build_parser().parse_args([self.gps_jpg, "-o", dest, "--json"]))
+        strip.run_strip(
+            strip.build_parser().parse_args([self.gps_jpg, "-o", dest, "--json"])
+        )
 
-        still_has_gps = probe.run_probe(probe.build_parser().parse_args([self.gps_jpg, "--json"]))
+        still_has_gps = probe.run_probe(
+            probe.build_parser().parse_args([self.gps_jpg, "--json"])
+        )
         self.assertTrue(still_has_gps["has_gps"])
 
 

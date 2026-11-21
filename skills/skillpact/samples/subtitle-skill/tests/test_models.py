@@ -64,7 +64,9 @@ def test_unknown_field_rejected():
 
 
 def test_unknown_style_field_rejected():
-    cues = [{"id": "c1", "start": 0, "end": 1, "text": "a", "style": {"filter": "blur"}}]
+    cues = [
+        {"id": "c1", "start": 0, "end": 1, "text": "a", "style": {"filter": "blur"}}
+    ]
     with pytest.raises(SubtitleSkillError) as exc:
         SubtitleDocument.from_dict(_doc(cues=cues))
     assert exc.value.code == "INVALID_INPUT"

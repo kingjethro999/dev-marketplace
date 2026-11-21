@@ -5,6 +5,7 @@ image doesn't end up sideways once the orientation tag is gone.
 magick only: sips has no reliable blanket metadata-strip flag, so this tool
 reports ok:false with a clear reason when only sips is available (see doctor).
 """
+
 import os
 import sys
 
@@ -29,10 +30,27 @@ from _common import (  # noqa: E402
 def build_parser():
     parser = JSONArgumentParser(description="Strip GPS/EXIF metadata from an image")
     parser.add_argument("input", help="image file to read (never modified)")
-    parser.add_argument("-o", "--output", required=True, help="file to write; must differ from the input, extension picks the format")
-    parser.add_argument("--overwrite", action="store_true", help="allow replacing an existing output file")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
-    parser.add_argument("--dry-run", action="store_true", help="print the backend command that would run, write nothing")
+    parser.add_argument(
+        "-o",
+        "--output",
+        required=True,
+        help="file to write; must differ from the input, extension picks the format",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow replacing an existing output file",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the backend command that would run, write nothing",
+    )
     add_timeout_arg(parser)
     return parser
 
@@ -60,9 +78,16 @@ def run_strip(args):
 
     if image_has_gps(magick, args.output) is not False:
         os.remove(args.output)
-        raise ImageSkillError("output still contains GPS data (or an unreadable EXIF block) after strip")
+        raise ImageSkillError(
+            "output still contains GPS data (or an unreadable EXIF block) after strip"
+        )
 
-    return {"input": args.input, "output": args.output, "has_gps": False, "backend": "magick"}
+    return {
+        "input": args.input,
+        "output": args.output,
+        "has_gps": False,
+        "backend": "magick",
+    }
 
 
 def main(argv=None):

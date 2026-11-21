@@ -15,14 +15,22 @@ import platform
 import shutil
 import subprocess
 
-from artifact_skill.core.capability import Capability, CapabilityReport, CapabilityStatus
+from artifact_skill.core.capability import (
+    Capability,
+    CapabilityReport,
+    CapabilityStatus,
+)
 
 
 def _module_capability(cap_id: str, module: str, required: bool) -> Capability:
     try:
         found = importlib.util.find_spec(module) is not None
     except (ImportError, ValueError):
-        return Capability(cap_id, CapabilityStatus.UNKNOWN, detail=f"probe for '{module}' raised an error.")
+        return Capability(
+            cap_id,
+            CapabilityStatus.UNKNOWN,
+            detail=f"probe for '{module}' raised an error.",
+        )
     if not found:
         status = CapabilityStatus.MISSING if required else CapabilityStatus.NOT_REQUIRED
         return Capability(
@@ -32,9 +40,12 @@ def _module_capability(cap_id: str, module: str, required: bool) -> Capability:
             detected_via=f"importlib.util.find_spec('{module}')",
         )
     try:
-        dist_name = {"fitz": "PyMuPDF", "pptx": "python-pptx", "docx": "python-docx", "PIL": "Pillow"}.get(
-            module, module
-        )
+        dist_name = {
+            "fitz": "PyMuPDF",
+            "pptx": "python-pptx",
+            "docx": "python-docx",
+            "PIL": "Pillow",
+        }.get(module, module)
         version = importlib.metadata.version(dist_name)
     except importlib.metadata.PackageNotFoundError:
         version = None
@@ -47,7 +58,9 @@ def _module_capability(cap_id: str, module: str, required: bool) -> Capability:
     )
 
 
-def _binary_capability(cap_id: str, names: list[str], required: bool = False) -> Capability:
+def _binary_capability(
+    cap_id: str, names: list[str], required: bool = False
+) -> Capability:
     for name in names:
         path = shutil.which(name)
         if path:
@@ -75,7 +88,11 @@ def _probe_version(path: str) -> str | None:
     for flag in ("--version", "-version", "--Version"):
         try:
             proc = subprocess.run(  # noqa: S603
-                [path, flag], capture_output=True, text=True, timeout=5, check=False,
+                [path, flag],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
             )
             out = (proc.stdout or proc.stderr).strip().splitlines()
             if out:

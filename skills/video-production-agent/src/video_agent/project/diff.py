@@ -2,6 +2,7 @@
 
 Decisions are keyed by (subject, asset) so a re-planned decision with a fresh id still matches its predecessor;
 video/audio operations by (type, asset); delivery targets by id."""
+
 from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
@@ -21,7 +22,12 @@ def _op_view(op: Dict[str, Any]) -> Dict[str, Any]:
 
 def _decision_view(d: Dict[str, Any]) -> Dict[str, Any]:
     # status is excluded: approvals are review state, not plan content (a re-plan resets them; rejections are reported from history)
-    return {"decision": d["decision"], "approval": d["approval"], "risk": d["risk"], "params": {k: v for k, v in (d.get("params") or {}).items() if k != "asset_id"}}
+    return {
+        "decision": d["decision"],
+        "approval": d["approval"],
+        "risk": d["risk"],
+        "params": {k: v for k, v in (d.get("params") or {}).items() if k != "asset_id"},
+    }
 
 
 def _diff_map(old: Dict[str, Any], new: Dict[str, Any], view) -> Dict[str, Any]:
@@ -45,29 +51,75 @@ def plan_diff(old: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
     ot = {t["id"]: t for t in old["delivery"]["targets"]}
     nt = {t["id"]: t for t in new["delivery"]["targets"]}
     fin = {}
-    for sec in ("captions", "graphics", "color", "speech"):   # finishing sections (ADR-031) and dubbing (ADR-085): the same key as the video / audio operations
+    for sec in (
+        "captions",
+        "graphics",
+        "color",
+        "speech",
+    ):  # finishing sections (ADR-031) and dubbing (ADR-085): the same key as the video / audio operations
         o_ = {_okey(o): o for o in (old.get(sec) or {}).get("operations") or []}
         n_ = {_okey(o): o for o in (new.get(sec) or {}).get("operations") or []}
         fin[sec] = _diff_map(o_, n_, _op_view)
-    oq = {"qc": (old.get("qa") or {}).get("qc")} if (old.get("qa") or {}).get("qc", {}).get("enabled") else {}
-    nq = {"qc": (new.get("qa") or {}).get("qc")} if (new.get("qa") or {}).get("qc", {}).get("enabled") else {}
-    for key in ("stinger_check", "loop_seam_check"):   # ADR-112: the opt-in qc-skill checks of a stinger join / a looped bed (written only when asked for)
+    oq = (
+        {"qc": (old.get("qa") or {}).get("qc")}
+        if (old.get("qa") or {}).get("qc", {}).get("enabled")
+        else {}
+    )
+    nq = (
+        {"qc": (new.get("qa") or {}).get("qc")}
+        if (new.get("qa") or {}).get("qc", {}).get("enabled")
+        else {}
+    )
+    for key in (
+        "stinger_check",
+        "loop_seam_check",
+    ):  # ADR-112: the opt-in qc-skill checks of a stinger join / a looped bed (written only when asked for)
         for side, q in ((old, oq), (new, nq)):
             if (side.get("qa") or {}).get(key):
                 q[key] = side["qa"][key]
     # ADR-110: the post-render transcript check (written only when asked for)
-    ov_ = {"transcript": (old.get("qa") or {}).get("transcript_verify")} if (old.get("qa") or {}).get("transcript_verify") else {}
-    nv_ = {"transcript": (new.get("qa") or {}).get("transcript_verify")} if (new.get("qa") or {}).get("transcript_verify") else {}
+    ov_ = (
+        {"transcript": (old.get("qa") or {}).get("transcript_verify")}
+        if (old.get("qa") or {}).get("transcript_verify")
+        else {}
+    )
+    nv_ = (
+        {"transcript": (new.get("qa") or {}).get("transcript_verify")}
+        if (new.get("qa") or {}).get("transcript_verify")
+        else {}
+    )
     out: Dict[str, Any] = {
-        "from_version": old["plan"]["version"], "to_version": new["plan"]["version"],
+        "from_version": old["plan"]["version"],
+        "to_version": new["plan"]["version"],
         "decisions": _diff_map(od, nd, _decision_view),
-        "video": _diff_map(ov, nv, _op_view), "audio": _diff_map(oa, na, _op_view),
-        "delivery": _diff_map(ot, nt, lambda t: {k: v for k, v in t.items() if k != "decision_ids"}),
-        **fin, "qc": _diff_map(oq, nq, lambda q: {k: v for k, v in q.items() if k != "decision_ids"}),
+        "video": _diff_map(ov, nv, _op_view),
+        "audio": _diff_map(oa, na, _op_view),
+        "delivery": _diff_map(
+            ot, nt, lambda t: {k: v for k, v in t.items() if k != "decision_ids"}
+        ),
+        **fin,
+        "qc": _diff_map(
+            oq, nq, lambda q: {k: v for k, v in q.items() if k != "decision_ids"}
+        ),
         "verify": _diff_map(ov_, nv_, lambda q: dict(q)),
     }
     out["summary"] = summarize(out)
-    out["empty"] = not any(sec[k] for sec in (out["decisions"], out["video"], out["audio"], out["delivery"], out["captions"], out["graphics"], out["color"], out["speech"], out["qc"], out["verify"]) for k in ("added", "removed", "changed"))
+    out["empty"] = not any(
+        sec[k]
+        for sec in (
+            out["decisions"],
+            out["video"],
+            out["audio"],
+            out["delivery"],
+            out["captions"],
+            out["graphics"],
+            out["color"],
+            out["speech"],
+            out["qc"],
+            out["verify"],
+        )
+        for k in ("added", "removed", "changed")
+    )
     return out
 
 
@@ -76,7 +128,9 @@ def _fmt_keep(keep: List[List[float]]) -> str:
 
 
 def _fmt_trim(op: Dict[str, Any]) -> str:
-    return _fmt_keep(op.get("keep", [])) + (" (frame-accurate)" if op.get("accurate") else "")
+    return _fmt_keep(op.get("keep", [])) + (
+        " (frame-accurate)" if op.get("accurate") else ""
+    )
 
 
 def summarize(diff: Dict[str, Any]) -> List[str]:
@@ -86,34 +140,53 @@ def summarize(diff: Dict[str, Any]) -> List[str]:
     for k, v in diff["video"]["added"].items():
         lines.append(f"VIDEO {k}: none → trim {_fmt_trim(v)}")
     for k, v in diff["video"]["changed"].items():
-        lines.append(f"VIDEO {k}: trim {_fmt_trim(v['before'])} → {_fmt_trim(v['after'])}")
+        lines.append(
+            f"VIDEO {k}: trim {_fmt_trim(v['before'])} → {_fmt_trim(v['after'])}"
+        )
     for k, v in diff["audio"]["removed"].items():
         lines.append(f"AUDIO {k}: {v.get('target_lufs')} LUFS → removed")
     for k, v in diff["audio"]["added"].items():
-        lines.append(f"AUDIO {k}: none → {v.get('target_lufs')} LUFS / {v.get('true_peak')} dBTP")
+        lines.append(
+            f"AUDIO {k}: none → {v.get('target_lufs')} LUFS / {v.get('true_peak')} dBTP"
+        )
     for k, v in diff["audio"]["changed"].items():
-        lines.append(f"AUDIO {k}: {v['before'].get('target_lufs')} → {v['after'].get('target_lufs')} LUFS, {v['before'].get('true_peak')} → {v['after'].get('true_peak')} dBTP")
+        lines.append(
+            f"AUDIO {k}: {v['before'].get('target_lufs')} → {v['after'].get('target_lufs')} LUFS, {v['before'].get('true_peak')} → {v['after'].get('true_peak')} dBTP"
+        )
     for k, v in diff["delivery"]["removed"].items():
         lines.append(f"DELIVERY {k}: {v.get('preset')} → removed")
     for k, v in diff["delivery"]["added"].items():
         lines.append(f"DELIVERY {k}: none → {v.get('preset')} ({v.get('platform')})")
     for k, v in diff["delivery"]["changed"].items():
-        lines.append(f"DELIVERY {k}: {v['before'].get('preset')}/{v['before'].get('platform')} → {v['after'].get('preset')}/{v['after'].get('platform')}")
-    for sec in ("captions", "graphics", "color"):   # finishing operations (ADR-031): type@subject, listed by presence
+        lines.append(
+            f"DELIVERY {k}: {v['before'].get('preset')}/{v['before'].get('platform')} → {v['after'].get('preset')}/{v['after'].get('platform')}"
+        )
+    for sec in (
+        "captions",
+        "graphics",
+        "color",
+    ):  # finishing operations (ADR-031): type@subject, listed by presence
         for k in (diff.get(sec) or {}).get("removed", {}):
             lines.append(f"{sec.upper()} {k}: removed")
         for k in (diff.get(sec) or {}).get("added", {}):
             lines.append(f"{sec.upper()} {k}: added")
         for k in (diff.get(sec) or {}).get("changed", {}):
             lines.append(f"{sec.upper()} {k}: parameters changed")
-    qc_names = {"qc": "QC gate", "stinger_check": "QC stinger check", "loop_seam_check": "QC loop-seam check"}
+    qc_names = {
+        "qc": "QC gate",
+        "stinger_check": "QC stinger check",
+        "loop_seam_check": "QC loop-seam check",
+    }
     for k in (diff.get("qc") or {}).get("removed", {}):
         lines.append(f"{qc_names.get(k, k)}: removed")
     for k in (diff.get("qc") or {}).get("added", {}):
         lines.append(f"{qc_names.get(k, k)}: added")
     for k in (diff.get("qc") or {}).get("changed", {}):
-        lines.append(f"{qc_names.get(k, k)}: " + ("rules changed" if k == "qc" else "limits changed"))
-    for verb in ("removed", "added", "changed"):   # ADR-110
+        lines.append(
+            f"{qc_names.get(k, k)}: "
+            + ("rules changed" if k == "qc" else "limits changed")
+        )
+    for verb in ("removed", "added", "changed"):  # ADR-110
         for k in (diff.get("verify") or {}).get(verb, {}):
             lines.append(f"VERIFY {k}: {verb}")
     for k, v in diff["decisions"]["removed"].items():

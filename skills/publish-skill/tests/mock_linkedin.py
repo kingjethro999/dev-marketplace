@@ -25,7 +25,9 @@ one entry per request, each one of
   ("lost",)                              (put, post) do the work, then drop the connection (the answer is lost)
   ("stall", seconds)                     wait, then drop the connection without answering (the client times out)
   ("call", fn)                           run fn() first (e.g. edit the file mid-upload), then answer normally
-  ("noetag",)                            (put) keep the part but answer without an ETag"""
+  ("noetag",)                            (put) keep the part but answer without an ETag
+"""
+
 from __future__ import annotations
 
 import json
@@ -49,17 +51,27 @@ def error(status: int, message: Optional[str] = None, code: str = "ERROR") -> by
 
 
 class MockLinkedIn:
-    def __init__(self, access_token: str, author: str, part_size: int = 256 * 1024,
-                 processing: Optional[List[str]] = None, failure_reason: str = "") -> None:
+    def __init__(
+        self,
+        access_token: str,
+        author: str,
+        part_size: int = 256 * 1024,
+        processing: Optional[List[str]] = None,
+        failure_reason: str = "",
+    ) -> None:
         self.token = access_token
         self.author = author
         self.part_size = part_size
         self.processing = processing or []
         self.failure_reason = failure_reason
         self.faults: Dict[str, List[Any]] = {}
-        self.videos: Dict[str, Dict[str, Any]] = {}  # video id -> {"owner", "total", "parts", "etags", "data", "state"}
-        self.requests: List[Dict[str, Any]] = []      # every request: kind, method, path, query, headers, length, part
-        self.posts: List[Dict[str, Any]] = []         # every post made: {"id", "body", "data"}
+        self.videos: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # video id -> {"owner", "total", "parts", "etags", "data", "state"}
+        self.requests: List[Dict[str, Any]] = (
+            []
+        )  # every request: kind, method, path, query, headers, length, part
+        self.posts: List[Dict[str, Any]] = []  # every post made: {"id", "body", "data"}
         self.inits: List[Dict[str, Any]] = []
         self.finalized: List[Dict[str, Any]] = []
         self.upload_urls: List[str] = []
@@ -94,7 +106,11 @@ class MockLinkedIn:
         self.url = f"http://127.0.0.1:{self.port}"
         self._allowed = allowed_ports
         allowed_ports.add(self.port)
-        threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
+        threading.Thread(
+            target=self.server.serve_forever,
+            kwargs={"poll_interval": 0.05},
+            daemon=True,
+        ).start()
         return self
 
     def stop(self) -> None:
@@ -122,11 +138,19 @@ class MockLinkedIn:
         headers = {k.lower(): v for k, v in h.headers.items()}
         length = int(headers.get("content-length") or 0)
         put, vid = _PUT.match(parts.path), _VIDEO.match(parts.path)
-        if method == "POST" and parts.path == "/rest/videos" and parts.query == "action=initializeUpload":
+        if (
+            method == "POST"
+            and parts.path == "/rest/videos"
+            and parts.query == "action=initializeUpload"
+        ):
             kind = "init"
         elif method == "PUT" and put:
             kind = "put"
-        elif method == "POST" and parts.path == "/rest/videos" and parts.query == "action=finalizeUpload":
+        elif (
+            method == "POST"
+            and parts.path == "/rest/videos"
+            and parts.query == "action=finalizeUpload"
+        ):
             kind = "finalize"
         elif method == "GET" and vid:
             kind = "status"
@@ -134,8 +158,14 @@ class MockLinkedIn:
             kind = "post"
         else:
             kind = "unknown"
-        record: Dict[str, Any] = {"kind": kind, "method": method, "path": parts.path, "query": parts.query,
-                                  "headers": headers, "length": length}
+        record: Dict[str, Any] = {
+            "kind": kind,
+            "method": method,
+            "path": parts.path,
+            "query": parts.query,
+            "headers": headers,
+            "length": length,
+        }
         if put:
             record["part"] = int(put.group(2))
         with self.lock:
@@ -150,15 +180,26 @@ class MockLinkedIn:
                 time.sleep(fault[1])
                 return self._drop(h)
             elif fault[0] == "status":
-                return self._send(h, fault[1], error(fault[1], fault[2]), fault[3] if len(fault) > 3 else {})
+                return self._send(
+                    h,
+                    fault[1],
+                    error(fault[1], fault[2]),
+                    fault[3] if len(fault) > 3 else {},
+                )
         if kind == "unknown":
             return self._send(h, 404, error(404, "not found", "NOT_FOUND"))
         if kind == "put":
-            return self._put(h, put.group(1), int(put.group(2)), parts.query, raw, fault)
+            return self._put(
+                h, put.group(1), int(put.group(2)), parts.query, raw, fault
+            )
         if headers.get("authorization") != "Bearer " + self.token:
-            return self._send(h, 401, error(401, "Invalid access token", "INVALID_ACCESS_TOKEN"))
-        if not re.match(r"^[0-9]{6}$", headers.get("linkedin-version", "")) \
-                or headers.get("x-restli-protocol-version") != "2.0.0":
+            return self._send(
+                h, 401, error(401, "Invalid access token", "INVALID_ACCESS_TOKEN")
+            )
+        if (
+            not re.match(r"^[0-9]{6}$", headers.get("linkedin-version", ""))
+            or headers.get("x-restli-protocol-version") != "2.0.0"
+        ):
             return self._send(h, 400, error(400, "missing version headers"))
         if kind == "init":
             return self._init(h, headers, raw)
@@ -177,11 +218,17 @@ class MockLinkedIn:
             return None
         return body if isinstance(body, dict) else None
 
-    def _init(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes) -> None:
+    def _init(
+        self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes
+    ) -> None:
         body = self._json(headers, raw)
         req = (body or {}).get("initializeUploadRequest")
-        if not isinstance(req, dict) or req.get("owner") != self.author or not isinstance(req.get("fileSizeBytes"), int) \
-                or req["fileSizeBytes"] <= 0:
+        if (
+            not isinstance(req, dict)
+            or req.get("owner") != self.author
+            or not isinstance(req.get("fileSizeBytes"), int)
+            or req["fileSizeBytes"] <= 0
+        ):
             return self._send(h, 400, error(400, "invalid initializeUploadRequest"))
         total = req["fileSizeBytes"]
         with self.lock:
@@ -189,25 +236,69 @@ class MockLinkedIn:
             self.inits.append(body)
             instructions = []
             for n, first in enumerate(range(0, total, self.part_size)):
-                url = f"{self.url}/dms-uploads/{vid}/part/{n}?sig=signed-{vid}-{n}-secret"
+                url = (
+                    f"{self.url}/dms-uploads/{vid}/part/{n}?sig=signed-{vid}-{n}-secret"
+                )
                 self.upload_urls.append(url)
-                instructions.append({"uploadUrl": url, "firstByte": first,
-                                     "lastByte": min(first + self.part_size, total) - 1})
-            self.videos[vid] = {"owner": req["owner"], "total": total, "ranges": instructions, "parts": {}, "etags": {},
-                                "data": None, "state": "WAITING_UPLOAD", "polls": 0, "puts": 0}
-        return self._send(h, 200, json.dumps({"value": {"uploadUrlsExpireAt": 1793000000000,
-                                                        "video": "urn:li:video:" + vid,
-                                                        "uploadInstructions": instructions,
-                                                        "uploadToken": ""}}).encode())
+                instructions.append(
+                    {
+                        "uploadUrl": url,
+                        "firstByte": first,
+                        "lastByte": min(first + self.part_size, total) - 1,
+                    }
+                )
+            self.videos[vid] = {
+                "owner": req["owner"],
+                "total": total,
+                "ranges": instructions,
+                "parts": {},
+                "etags": {},
+                "data": None,
+                "state": "WAITING_UPLOAD",
+                "polls": 0,
+                "puts": 0,
+            }
+        return self._send(
+            h,
+            200,
+            json.dumps(
+                {
+                    "value": {
+                        "uploadUrlsExpireAt": 1793000000000,
+                        "video": "urn:li:video:" + vid,
+                        "uploadInstructions": instructions,
+                        "uploadToken": "",
+                    }
+                }
+            ).encode(),
+        )
 
-    def _put(self, h: BaseHTTPRequestHandler, vid: str, n: int, query: str, raw: bytes, fault: Any) -> None:
+    def _put(
+        self,
+        h: BaseHTTPRequestHandler,
+        vid: str,
+        n: int,
+        query: str,
+        raw: bytes,
+        fault: Any,
+    ) -> None:
         with self.lock:
             v = self.videos.get(vid)
-        if v is None or n >= len(v["ranges"]) or query != f"sig=signed-{vid}-{n}-secret":
-            return self._send(h, 401, error(401, "upload URL is invalid or expired", "EXPIRED_UPLOAD_URL"))
+        if (
+            v is None
+            or n >= len(v["ranges"])
+            or query != f"sig=signed-{vid}-{n}-secret"
+        ):
+            return self._send(
+                h,
+                401,
+                error(401, "upload URL is invalid or expired", "EXPIRED_UPLOAD_URL"),
+            )
         r = v["ranges"][n]
         if len(raw) != r["lastByte"] - r["firstByte"] + 1:
-            return self._send(h, 400, error(400, "part length does not match its byte range"))
+            return self._send(
+                h, 400, error(400, "part length does not match its byte range")
+            )
         if fault is not None and fault[0] == "drop":
             return self._drop(h)
         with self.lock:
@@ -221,18 +312,26 @@ class MockLinkedIn:
             return self._send(h, 200, b"")
         return self._send(h, 200, b"", {"ETag": f'"{etag}"'})
 
-    def _finalize(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes) -> None:
+    def _finalize(
+        self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes
+    ) -> None:
         body = self._json(headers, raw)
         req = (body or {}).get("finalizeUploadRequest")
-        if not isinstance(req, dict) or not str(req.get("video", "")).startswith("urn:li:video:"):
+        if not isinstance(req, dict) or not str(req.get("video", "")).startswith(
+            "urn:li:video:"
+        ):
             return self._send(h, 400, error(400, "invalid finalizeUploadRequest"))
         with self.lock:
-            v = self.videos.get(req["video"][len("urn:li:video:"):])
+            v = self.videos.get(req["video"][len("urn:li:video:") :])
             if v is None or req.get("uploadToken") != "":
                 return self._send(h, 400, error(400, "INVALID_VIDEO_ID"))
             want = [v["etags"].get(n) for n in range(len(v["ranges"]))]
             if req.get("uploadedPartIds") != want:
-                return self._send(h, 400, error(400, "uploadedPartIds do not match the uploaded parts"))
+                return self._send(
+                    h,
+                    400,
+                    error(400, "uploadedPartIds do not match the uploaded parts"),
+                )
             v["data"] = b"".join(v["parts"][n] for n in range(len(v["ranges"])))
             v["state"] = "PROCESSING" if self.processing else "AVAILABLE"
             self.finalized.append(body)
@@ -240,9 +339,15 @@ class MockLinkedIn:
 
     def _status(self, h: BaseHTTPRequestHandler, urn: str) -> None:
         with self.lock:
-            v = self.videos.get(urn[len("urn:li:video:"):]) if urn.startswith("urn:li:video:") else None
+            v = (
+                self.videos.get(urn[len("urn:li:video:") :])
+                if urn.startswith("urn:li:video:")
+                else None
+            )
             if v is None:
-                return self._send(h, 404, error(404, "Could not find entity", "NOT_FOUND"))
+                return self._send(
+                    h, 404, error(404, "Could not find entity", "NOT_FOUND")
+                )
             if v["data"] is not None and self.processing:
                 v["state"] = self.processing[min(v["polls"], len(self.processing) - 1)]
                 v["polls"] += 1
@@ -251,16 +356,30 @@ class MockLinkedIn:
                 out["processingFailureReason"] = self.failure_reason
         return self._send(h, 200, json.dumps(out).encode())
 
-    def _post(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes, fault: Any) -> None:
+    def _post(
+        self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes, fault: Any
+    ) -> None:
         body = self._json(headers, raw)
         media = ((body or {}).get("content") or {}).get("media") or {}
         with self.lock:
             urn = str(media.get("id", ""))
-            v = self.videos.get(urn[len("urn:li:video:"):]) if urn.startswith("urn:li:video:") else None
-            if body is None or v is None or v["state"] != "AVAILABLE" or body.get("author") != v["owner"] \
-                    or body.get("visibility") not in ("PUBLIC", "CONNECTIONS", "LOGGED_IN") \
-                    or body.get("lifecycleState") != "PUBLISHED" or not isinstance(body.get("commentary"), str):
-                return self._send(h, 400, error(400, "MEDIA_ASSET_WAITING_UPLOAD or an invalid post"))
+            v = (
+                self.videos.get(urn[len("urn:li:video:") :])
+                if urn.startswith("urn:li:video:")
+                else None
+            )
+            if (
+                body is None
+                or v is None
+                or v["state"] != "AVAILABLE"
+                or body.get("author") != v["owner"]
+                or body.get("visibility") not in ("PUBLIC", "CONNECTIONS", "LOGGED_IN")
+                or body.get("lifecycleState") != "PUBLISHED"
+                or not isinstance(body.get("commentary"), str)
+            ):
+                return self._send(
+                    h, 400, error(400, "MEDIA_ASSET_WAITING_UPLOAD or an invalid post")
+                )
             post_id = f"urn:li:share:{7000000000000000000 + len(self.posts)}"
             self.posts.append({"id": post_id, "body": body, "data": v["data"]})
         if fault is not None and fault[0] == "lost":
@@ -268,7 +387,12 @@ class MockLinkedIn:
         return self._send(h, 201, b"", {"x-restli-id": post_id})
 
     @staticmethod
-    def _send(h: BaseHTTPRequestHandler, code: int, body: bytes, headers: Optional[Dict[str, str]] = None) -> None:
+    def _send(
+        h: BaseHTTPRequestHandler,
+        code: int,
+        body: bytes,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> None:
         try:
             h.send_response(code)
             for k, v in (headers or {}).items():

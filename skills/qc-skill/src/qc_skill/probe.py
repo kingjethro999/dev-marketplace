@@ -17,7 +17,9 @@ from .errors import error
 from .runner import ffprobe_argv, run_argv
 
 
-def probe_media(ffprobe_path: str, input_path: Path, timeout: float = 60.0) -> Dict[str, Any]:
+def probe_media(
+    ffprobe_path: str, input_path: Path, timeout: float = 60.0
+) -> Dict[str, Any]:
     """Run ffprobe -show_format -show_streams -show_error and parse it.
 
     Raises UNSUPPORTED_FORMAT if ffprobe cannot open/parse the container at
@@ -33,7 +35,11 @@ def probe_media(ffprobe_path: str, input_path: Path, timeout: float = 60.0) -> D
     try:
         result = run_argv(argv, timeout=timeout)
     except FileNotFoundError:
-        raise error("DEPENDENCY_ERROR", "ffprobe executable could not be run", executable=ffprobe_path)
+        raise error(
+            "DEPENDENCY_ERROR",
+            "ffprobe executable could not be run",
+            executable=ffprobe_path,
+        )
 
     if result.timed_out:
         raise error("TOOL_ERROR", "ffprobe timed out", argv=argv, timeout=timeout)

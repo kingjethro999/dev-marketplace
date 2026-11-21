@@ -45,7 +45,10 @@ from artifact_skill.core.run_dir import evidence_dir_for
 from artifact_skill.core.schema_validate import validate_against_schema
 from artifact_skill.doctor.detect import detect_environment
 from artifact_skill.policies import resolve_policy
-from artifact_skill.rendering.contact_sheet import build_before_after, build_contact_sheet
+from artifact_skill.rendering.contact_sheet import (
+    build_before_after,
+    build_contact_sheet,
+)
 from artifact_skill.security.subprocess_exec import treat_sigterm_as_interrupt
 from artifact_skill.text_checks import verify_structural_with_text_checks
 
@@ -84,7 +87,11 @@ def _negotiate_protocol_version(requested: Any) -> str:
     client didn't send one, sent something that isn't a plausible
     date-string version identifier, or asked for a post-legacy version.
     """
-    if isinstance(requested, str) and _VERSION_RE.match(requested) and requested <= _LAST_LEGACY_VERSION:
+    if (
+        isinstance(requested, str)
+        and _VERSION_RE.match(requested)
+        and requested <= _LAST_LEGACY_VERSION
+    ):
         return requested
     return PROTOCOL_VERSION
 
@@ -108,11 +115,18 @@ def build_tools_list() -> list[dict[str, Any]]:
 
 
 def _text_result(payload: dict[str, Any], is_error: bool = False) -> dict[str, Any]:
-    return {"content": [{"type": "text", "text": json.dumps(payload, indent=2)}], "isError": is_error}
+    return {
+        "content": [{"type": "text", "text": json.dumps(payload, indent=2)}],
+        "isError": is_error,
+    }
 
 
 def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    short_name = name[len(CAPABILITY_PREFIX) + 1 :] if name.startswith(CAPABILITY_PREFIX + ".") else name
+    short_name = (
+        name[len(CAPABILITY_PREFIX) + 1 :]
+        if name.startswith(CAPABILITY_PREFIX + ".")
+        else name
+    )
     try:
         handler = _HANDLERS.get(short_name)
         if handler is None:
@@ -143,7 +157,9 @@ def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return _text_result(result)
     except ArtifactError as exc:
         return _text_result({"error": exc.to_dict()}, is_error=True)
-    except Exception as exc:  # noqa: BLE001 - last-resort boundary: never let a tool call kill the stdio session
+    except (
+        Exception
+    ) as exc:  # noqa: BLE001 - last-resort boundary: never let a tool call kill the stdio session
         internal = ArtifactError(
             code="ARTIFACT_MCP_TOOL_INTERNAL_ERROR",
             category=ErrorCategory.INTERNAL,
@@ -171,15 +187,25 @@ def _h_inspect(args: dict[str, Any]) -> dict[str, Any]:
 def _h_plan(args: dict[str, Any]) -> dict[str, Any]:
     input_path = Path(args["input"])
     operation = args["operation"]
-    output_path = Path(args["output"]) if args.get("output") else default_output_path(input_path, operation)
-    _ref, _adapter, plan = build_plan(input_path, operation, args.get("args", {}), output_path)
+    output_path = (
+        Path(args["output"])
+        if args.get("output")
+        else default_output_path(input_path, operation)
+    )
+    _ref, _adapter, plan = build_plan(
+        input_path, operation, args.get("args", {}), output_path
+    )
     return plan.to_dict()
 
 
 def _h_execute(args: dict[str, Any]) -> dict[str, Any]:
     input_path = Path(args["input"])
     operation = args["operation"]
-    output_path = Path(args["output"]) if args.get("output") else default_output_path(input_path, operation)
+    output_path = (
+        Path(args["output"])
+        if args.get("output")
+        else default_output_path(input_path, operation)
+    )
     policy = _resolve_policy_arg(args)
     # FIX_PROMPT P2-4: the contract advertises dry_run_supported=true for
     # this tool, but until this fix the MCP input_schema had no "dry_run"
@@ -193,8 +219,13 @@ def _h_execute(args: dict[str, Any]) -> dict[str, Any]:
     # fresh ./reports/<run-id>/ - mirrors cli/main.py::_cmd_execute.
     with evidence_dir_for(args.get("evidence_dir"), dry_run=dry_run) as evidence_dir:
         result = run_lifecycle(
-            input_path, operation, args.get("args", {}), output_path,
-            policy=policy, evidence_dir=evidence_dir, dry_run=dry_run,
+            input_path,
+            operation,
+            args.get("args", {}),
+            output_path,
+            policy=policy,
+            evidence_dir=evidence_dir,
+            dry_run=dry_run,
         )
     if dry_run:
         return {"dry_run": True, "plan": result.plan.to_dict()}
@@ -216,7 +247,11 @@ def _h_render(args: dict[str, Any]) -> dict[str, Any]:
         if dry_run:
             report = adapter.inspect(ref)
             page_count = report.details.get("page_count", "unknown")
-            return {"dry_run": True, "would_render_to": str(out_dir), "estimated_files": page_count}
+            return {
+                "dry_run": True,
+                "would_render_to": str(out_dir),
+                "estimated_files": page_count,
+            }
         return adapter.render(ref, out_dir).to_dict()
 
 
@@ -235,15 +270,24 @@ def _h_look(args: dict[str, Any]) -> dict[str, Any]:
     # ./reports/<run-id>/ - mirrors cli/main.py::_cmd_look.
     with evidence_dir_for(args.get("out_dir"), dry_run=dry_run) as out_dir:
         if dry_run:
-            return {"dry_run": True, "would_write_to": str(out_dir / "contact-sheet.png")}
+            return {
+                "dry_run": True,
+                "would_write_to": str(out_dir / "contact-sheet.png"),
+            }
         rendered = adapter.render(ref, out_dir / "rendered")
         if args.get("compare_to"):
             other_ref = ArtifactRef.from_path(args["compare_to"])
             other_adapter = adapter_for(other_ref)
-            other_rendered = other_adapter.render(other_ref, out_dir / "rendered_compare")
-            sheet_path = build_before_after(rendered.files, other_rendered.files, out_dir / "before-after.png")
+            other_rendered = other_adapter.render(
+                other_ref, out_dir / "rendered_compare"
+            )
+            sheet_path = build_before_after(
+                rendered.files, other_rendered.files, out_dir / "before-after.png"
+            )
         else:
-            sheet_path = build_contact_sheet(rendered.files, out_dir / "contact-sheet.png")
+            sheet_path = build_contact_sheet(
+                rendered.files, out_dir / "contact-sheet.png"
+            )
     return {"contact_sheet": str(sheet_path), "source_pages": len(rendered.files)}
 
 
@@ -258,27 +302,42 @@ def _h_receipt(args: dict[str, Any]) -> dict[str, Any]:
             )
         output_path = None
     else:
-        output_path = Path(args["output"]) if args.get("output") else default_output_path(input_path, operation)
+        output_path = (
+            Path(args["output"])
+            if args.get("output")
+            else default_output_path(input_path, operation)
+        )
     policy = _resolve_policy_arg(args)
     dry_run = bool(args.get("dry_run"))
     # Issue #47: without evidence_dir, each call gets its own fresh
     # ./reports/<run-id>/ - mirrors cli/main.py::_cmd_receipt.
     with evidence_dir_for(args.get("evidence_dir"), dry_run=dry_run) as evidence_dir:
         result = run_lifecycle(
-            input_path, operation, args.get("args", {}), output_path,
-            policy=policy, evidence_dir=evidence_dir, dry_run=dry_run,
+            input_path,
+            operation,
+            args.get("args", {}),
+            output_path,
+            policy=policy,
+            evidence_dir=evidence_dir,
+            dry_run=dry_run,
             max_iterations=args.get("max_iterations"),
         )
     if dry_run:
         return {"dry_run": True, "plan": result.plan.to_dict()}
-    return result.receipt.to_dict() if result.receipt else {"status": "fail", "error": "execution did not complete"}
+    return (
+        result.receipt.to_dict()
+        if result.receipt
+        else {"status": "fail", "error": "execution did not complete"}
+    )
 
 
 def _resolve_policy_arg(args: dict[str, Any]) -> dict[str, Any]:
     try:
         return resolve_policy(args.get("policy_preset"), args.get("policy", {}))
     except KeyError as exc:
-        raise ArtifactInputError(code="ARTIFACT_INVALID_ARGS", message=str(exc)) from exc
+        raise ArtifactInputError(
+            code="ARTIFACT_INVALID_ARGS", message=str(exc)
+        ) from exc
 
 
 _HANDLERS = {
@@ -302,7 +361,9 @@ def _handle_request(msg: dict[str, Any]) -> dict[str, Any] | None:
     result: dict[str, Any]
     if method == "initialize":
         result = {
-            "protocolVersion": _negotiate_protocol_version(params.get("protocolVersion")),
+            "protocolVersion": _negotiate_protocol_version(
+                params.get("protocolVersion")
+            ),
             "capabilities": {"tools": {}},
             "serverInfo": {"name": SERVER_NAME, "version": __version__},
         }
@@ -317,7 +378,11 @@ def _handle_request(msg: dict[str, Any]) -> dict[str, Any] | None:
     else:
         if msg_id is None:
             return None
-        return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32601, "message": f"Method not found: {method}"}}
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "error": {"code": -32601, "message": f"Method not found: {method}"},
+        }
 
     if msg_id is None:
         return None
@@ -335,7 +400,16 @@ def serve(stdin=None, stdout=None) -> None:
         try:
             msg = json.loads(line)
         except json.JSONDecodeError:
-            stdout.write(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}) + "\n")
+            stdout.write(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": None,
+                        "error": {"code": -32700, "message": "Parse error"},
+                    }
+                )
+                + "\n"
+            )
             stdout.flush()
             continue
         response = _handle_request(msg)

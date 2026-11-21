@@ -75,7 +75,9 @@ class OperationRecord:
         }
 
 
-def default_output_path(input_path: Path, operation: str, suffix: str | None = None) -> Path:
+def default_output_path(
+    input_path: Path, operation: str, suffix: str | None = None
+) -> Path:
     """Original Protection: never default to overwriting the input (spec #28).
 
     `report.pptx` + operation "resize" -> `report_artifact_resize.pptx`

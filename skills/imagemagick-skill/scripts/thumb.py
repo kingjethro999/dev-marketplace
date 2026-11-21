@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """thumb.py - create a thumbnail sized by its longest edge, preserving aspect ratio.
 Never upscales past the source size."""
+
 import os
 import sys
 
@@ -24,14 +25,43 @@ from _common import (  # noqa: E402
 
 
 def build_parser():
-    parser = JSONArgumentParser(description="Create a thumbnail sized by its longest edge")
+    parser = JSONArgumentParser(
+        description="Create a thumbnail sized by its longest edge"
+    )
     parser.add_argument("input", help="image file to read (never modified)")
-    parser.add_argument("-o", "--output", required=True, help="file to write; must differ from the input, extension picks the format")
-    parser.add_argument("--long-edge", type=int, required=True, help="target size of the longer side, in pixels")
-    parser.add_argument("--quality", type=int, default=None, help="0-100 encoder quality for lossy formats (JPEG/WebP)")
-    parser.add_argument("--overwrite", action="store_true", help="allow replacing an existing output file")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
-    parser.add_argument("--dry-run", action="store_true", help="print the backend command that would run, write nothing")
+    parser.add_argument(
+        "-o",
+        "--output",
+        required=True,
+        help="file to write; must differ from the input, extension picks the format",
+    )
+    parser.add_argument(
+        "--long-edge",
+        type=int,
+        required=True,
+        help="target size of the longer side, in pixels",
+    )
+    parser.add_argument(
+        "--quality",
+        type=int,
+        default=None,
+        help="0-100 encoder quality for lossy formats (JPEG/WebP)",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow replacing an existing output file",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the backend command that would run, write nothing",
+    )
     add_timeout_arg(parser)
     return parser
 
@@ -58,7 +88,9 @@ def run_thumb(args):
         backend = "sips"
         cmd = [sips, "-Z", edge, args.input, "--out", args.output]
     else:
-        raise ImageSkillError("no usable backend: install ImageMagick (magick) or, on macOS, use sips")
+        raise ImageSkillError(
+            "no usable backend: install ImageMagick (magick) or, on macOS, use sips"
+        )
 
     run(cmd, dry_run=args.dry_run)
     if args.dry_run:

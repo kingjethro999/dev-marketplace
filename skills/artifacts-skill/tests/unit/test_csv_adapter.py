@@ -15,7 +15,9 @@ def adapter() -> CsvAdapter:
     return CsvAdapter()
 
 
-def _probe_csv_render_works(adapter: CsvAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+def _probe_csv_render_works(
+    adapter: CsvAdapter, ref: ArtifactRef, tmp_path: Path
+) -> bool:
     try:
         result = adapter.render(ref, tmp_path / "_probe")
         return len(result.files) > 0
@@ -84,11 +86,19 @@ def test_verify_ragged_csv_fails_column_count_consistency(ragged_csv, adapter):
 
 def test_verify_good_csv_row_count_requirement(good_csv, adapter):
     ref = ArtifactRef.from_path(good_csv)
-    ok = adapter.verify_structural(ref, {"require_row_count": 4})  # header + 3 data rows
-    assert next(c for c in ok.checks if c.id == "row_count_requirement").status == CheckStatus.PASS
+    ok = adapter.verify_structural(
+        ref, {"require_row_count": 4}
+    )  # header + 3 data rows
+    assert (
+        next(c for c in ok.checks if c.id == "row_count_requirement").status
+        == CheckStatus.PASS
+    )
 
     mismatch = adapter.verify_structural(ref, {"require_row_count": 10})
-    assert next(c for c in mismatch.checks if c.id == "row_count_requirement").status == CheckStatus.FAIL
+    assert (
+        next(c for c in mismatch.checks if c.id == "row_count_requirement").status
+        == CheckStatus.FAIL
+    )
 
 
 def test_verify_good_csv_has_no_leftover_placeholder_text(good_csv, adapter):
@@ -98,7 +108,9 @@ def test_verify_good_csv_has_no_leftover_placeholder_text(good_csv, adapter):
     assert check.status == CheckStatus.PASS
 
 
-def test_verify_leftover_placeholder_csv_warns_by_default(leftover_placeholder_csv, adapter):
+def test_verify_leftover_placeholder_csv_warns_by_default(
+    leftover_placeholder_csv, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_csv)
     result = adapter.verify_structural(ref, {})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -107,7 +119,9 @@ def test_verify_leftover_placeholder_csv_warns_by_default(leftover_placeholder_c
     assert "lorem ipsum" in check.evidence["markers"]
 
 
-def test_verify_leftover_placeholder_csv_fails_under_strict_policy(leftover_placeholder_csv, adapter):
+def test_verify_leftover_placeholder_csv_fails_under_strict_policy(
+    leftover_placeholder_csv, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_csv)
     result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -129,9 +143,14 @@ def test_capabilities_report_never_lies_about_probe_result(adapter):
 
     caps = {c.id: c for c in adapter.capabilities()}
     assert "csv.structural" in caps
-    assert caps["csv.structural"].status == CapabilityStatus.AVAILABLE  # stdlib-only, always available
+    assert (
+        caps["csv.structural"].status == CapabilityStatus.AVAILABLE
+    )  # stdlib-only, always available
     assert "csv.render" in caps
-    assert caps["csv.render"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["csv.render"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
 
 
 def test_render_propagates_backend_failure(good_csv, adapter, tmp_path, monkeypatch):

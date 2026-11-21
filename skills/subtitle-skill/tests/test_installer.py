@@ -1,6 +1,7 @@
 """Agent Skill installer: places SKILL.md for Claude Code / Cursor / Codex
 discovery, mirroring ffmpeg-skill's bin/install.js flag convention.
 """
+
 from pathlib import Path
 
 from subtitle_skill.installer import install
@@ -34,7 +35,9 @@ def test_all_installs_to_three_agents(tmp_path, monkeypatch):
     results = install(all_=True)
     assert {r.label for r in results} == {"Claude Code", "Cursor", "Codex"}
     for agent_dir in ("claude", "cursor", "codex"):
-        assert (tmp_path / f".{agent_dir}" / "skills" / "subtitle-skill" / "SKILL.md").exists()
+        assert (
+            tmp_path / f".{agent_dir}" / "skills" / "subtitle-skill" / "SKILL.md"
+        ).exists()
 
 
 def test_custom_dir(tmp_path):

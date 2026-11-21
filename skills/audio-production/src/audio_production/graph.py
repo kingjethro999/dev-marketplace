@@ -9,7 +9,9 @@ Node kinds:
                              itself has no node of its own
 Every node has: node_id, type, inputs (node ids), parameters, dependencies (transitive closure is not stored), and
 an identity: sha256 of canonical {type, parameters, inputs' identities, tool version, source fingerprints}, computed
-by the executor once source fingerprints are known (graph.identity()). Nothing here depends on time or randomness."""
+by the executor once source fingerprints are known (graph.identity()). Nothing here depends on time or randomness.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -23,15 +25,21 @@ from .model import AudioProject, AudioTrack
 @dataclass
 class Node:
     node_id: str
-    type: str                       # SOURCE_TRACK or an operation type
-    inputs: List[str]               # node ids
+    type: str  # SOURCE_TRACK or an operation type
+    inputs: List[str]  # node ids
     parameters: Dict[str, Any] = field(default_factory=dict)
     track: Optional[AudioTrack] = None
     implicit: bool = False
     consumers: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"node_id": self.node_id, "type": self.type, "inputs": list(self.inputs), "parameters": self.parameters, "implicit": self.implicit}
+        d: Dict[str, Any] = {
+            "node_id": self.node_id,
+            "type": self.type,
+            "inputs": list(self.inputs),
+            "parameters": self.parameters,
+            "implicit": self.implicit,
+        }
         if self.track is not None:
             d["track_id"] = self.track.track_id
             d["source_id"] = self.track.source_id
@@ -43,13 +51,17 @@ class OperationGraph:
         self.project = project
         self.nodes: Dict[str, Node] = {}
         self.order: List[str] = []
-        self.output_nodes: Dict[str, str] = {}     # output_id -> node id
+        self.output_nodes: Dict[str, str] = {}  # output_id -> node id
         self._build()
 
     # ---- construction
     def _add(self, node: Node) -> None:
         if node.node_id in self.nodes:
-            raise AudioError("DEPENDENCY_ERROR", f"duplicate node id {node.node_id!r} (an op_id collides with an implicit track node)", {"node_id": node.node_id})
+            raise AudioError(
+                "DEPENDENCY_ERROR",
+                f"duplicate node id {node.node_id!r} (an op_id collides with an implicit track node)",
+                {"node_id": node.node_id},
+            )
         self.nodes[node.node_id] = node
 
     def _build(self) -> None:
@@ -57,15 +69,43 @@ class OperationGraph:
         track_tail: Dict[str, str] = {}
         for t in p.tracks:
             base = f"track:{t.track_id}"
-            self._add(Node(base, "SOURCE_TRACK", [], {"source_id": t.source_id, "channel_layout": t.channel_layout, "label": t.label}, track=t))
+            self._add(
+                Node(
+                    base,
+                    "SOURCE_TRACK",
+                    [],
+                    {
+                        "source_id": t.source_id,
+                        "channel_layout": t.channel_layout,
+                        "label": t.label,
+                    },
+                    track=t,
+                )
+            )
             tail = base
             if t.range is not None:
                 nid = f"op:{t.track_id}.range"
-                self._add(Node(nid, "TRIM", [tail], {"start": t.range.start, "end": t.range.end}, implicit=True))
+                self._add(
+                    Node(
+                        nid,
+                        "TRIM",
+                        [tail],
+                        {"start": t.range.start, "end": t.range.end},
+                        implicit=True,
+                    )
+                )
                 tail = nid
             if t.gain_db:
                 nid = f"op:{t.track_id}.gain"
-                self._add(Node(nid, "GAIN", [tail], {"gain_db": t.gain_db, "audio_stream": 0}, implicit=True))
+                self._add(
+                    Node(
+                        nid,
+                        "GAIN",
+                        [tail],
+                        {"gain_db": t.gain_db, "audio_stream": 0},
+                        implicit=True,
+                    )
+                )
                 tail = nid
             track_tail[base] = tail
         for op in p.operations:
@@ -75,35 +115,90 @@ class OperationGraph:
                 # one node per version, "op:<op_id>.<version_id>": each is its own two-pass loudnorm of the same input;
                 # the set is a grouping (parameters loudness_set / version_id), not an artifact
                 for v in op.parameters["versions"]:
-                    params = {k: v[k] for k in ("target_lufs", "true_peak_db", "loudness_range_lu", "sample_rate", "profile") if k in v}
-                    params.update(tolerance_lufs=op.parameters["tolerance_lufs"], loudness_set=op.op_id, version_id=v["version_id"])
-                    self._add(Node(f"{nid}.{v['version_id']}", "LOUDNESS_VERSION", list(inputs), params, implicit=True))
+                    params = {
+                        k: v[k]
+                        for k in (
+                            "target_lufs",
+                            "true_peak_db",
+                            "loudness_range_lu",
+                            "sample_rate",
+                            "profile",
+                        )
+                        if k in v
+                    }
+                    params.update(
+                        tolerance_lufs=op.parameters["tolerance_lufs"],
+                        loudness_set=op.op_id,
+                        version_id=v["version_id"],
+                    )
+                    self._add(
+                        Node(
+                            f"{nid}.{v['version_id']}",
+                            "LOUDNESS_VERSION",
+                            list(inputs),
+                            params,
+                            implicit=True,
+                        )
+                    )
                 continue
             if op.type == "STEMS":
                 # one node per stem, "op:<op_id>.<stem_id>", reading every input: input 0 sets the programme's length
                 for stem in op.parameters["stems"]:
-                    params = {"stems_op": op.op_id, "stem_id": stem["stem_id"], "members": list(stem["inputs"]),
-                              "gains_db": [op.parameters["levels"][k]["gain_db"] for k in stem["inputs"]]}
+                    params = {
+                        "stems_op": op.op_id,
+                        "stem_id": stem["stem_id"],
+                        "members": list(stem["inputs"]),
+                        "gains_db": [
+                            op.parameters["levels"][k]["gain_db"]
+                            for k in stem["inputs"]
+                        ],
+                    }
                     if "role" in stem:
                         params["role"] = stem["role"]
-                    self._add(Node(f"{nid}.{stem['stem_id']}", "STEM", list(inputs), params, implicit=True))
+                    self._add(
+                        Node(
+                            f"{nid}.{stem['stem_id']}",
+                            "STEM",
+                            list(inputs),
+                            params,
+                            implicit=True,
+                        )
+                    )
                 continue
             self._add(Node(nid, op.type, inputs, dict(op.parameters)))
         for node in self.nodes.values():
             for i in node.inputs:
                 if i not in self.nodes:
-                    raise AudioError("MISSING_INPUT", f"node {node.node_id!r} depends on unknown node {i!r}", {"node_id": node.node_id, "ref": i})
+                    raise AudioError(
+                        "MISSING_INPUT",
+                        f"node {node.node_id!r} depends on unknown node {i!r}",
+                        {"node_id": node.node_id, "ref": i},
+                    )
                 self.nodes[i].consumers.append(node.node_id)
         for out in p.outputs:
-            self.output_nodes[out.output_id] = track_tail.get(out.operation, out.operation)
+            self.output_nodes[out.output_id] = track_tail.get(
+                out.operation, out.operation
+            )
         self.order = self._toposort()
         needed = self._reachable(list(self.output_nodes.values()))
-        unused = [n for n in self.order if n not in needed and not n.startswith("track:")]
+        unused = [
+            n for n in self.order if n not in needed and not n.startswith("track:")
+        ]
         if unused:
-            raise AudioError("DEPENDENCY_ERROR", f"operations not connected to any output: {unused}", {"unreachable": unused})
-        unused_tracks = [n for n in self.order if n.startswith("track:") and n not in needed]
+            raise AudioError(
+                "DEPENDENCY_ERROR",
+                f"operations not connected to any output: {unused}",
+                {"unreachable": unused},
+            )
+        unused_tracks = [
+            n for n in self.order if n.startswith("track:") and n not in needed
+        ]
         if unused_tracks:
-            raise AudioError("DEPENDENCY_ERROR", f"tracks not connected to any output: {unused_tracks}", {"unreachable": unused_tracks})
+            raise AudioError(
+                "DEPENDENCY_ERROR",
+                f"tracks not connected to any output: {unused_tracks}",
+                {"unreachable": unused_tracks},
+            )
 
     def _toposort(self) -> List[str]:
         """Deterministic Kahn ordering: among ready nodes, the smallest id first (stable across processes)."""
@@ -120,7 +215,11 @@ class OperationGraph:
                     ready.sort()
         if len(order) != len(self.nodes):
             cyc = sorted(n for n, d in indeg.items() if d > 0)
-            raise AudioError("DEPENDENCY_ERROR", f"operation graph has a cycle among {cyc}", {"cycle": cyc})
+            raise AudioError(
+                "DEPENDENCY_ERROR",
+                f"operation graph has a cycle among {cyc}",
+                {"cycle": cyc},
+            )
         return order
 
     def _reachable(self, starts: List[str]) -> set:
@@ -135,9 +234,12 @@ class OperationGraph:
         return seen
 
     # ---- identity
-    def identities(self, source_fingerprints: Dict[str, str], tool_versions: Dict[str, str]) -> Dict[str, str]:
+    def identities(
+        self, source_fingerprints: Dict[str, str], tool_versions: Dict[str, str]
+    ) -> Dict[str, str]:
         """Deterministic operation identity per node, in topological order. Sources contribute their sha256; each
-        operation contributes type + effective parameters + input identities + the tool version that will run it."""
+        operation contributes type + effective parameters + input identities + the tool version that will run it.
+        """
         ids: Dict[str, str] = {}
         for n in self.order:
             node = self.nodes[n]
@@ -145,13 +247,32 @@ class OperationGraph:
                 assert node.track is not None
                 fp = source_fingerprints.get(node.track.source_id)
                 if not fp:
-                    raise AudioError("INTERNAL_ERROR", f"no fingerprint for source {node.track.source_id!r}")
-                ids[n] = stable_hash({"kind": "source_track", "source_sha256": fp, "channel_layout": node.track.channel_layout})
+                    raise AudioError(
+                        "INTERNAL_ERROR",
+                        f"no fingerprint for source {node.track.source_id!r}",
+                    )
+                ids[n] = stable_hash(
+                    {
+                        "kind": "source_track",
+                        "source_sha256": fp,
+                        "channel_layout": node.track.channel_layout,
+                    }
+                )
             else:
-                ids[n] = stable_hash({"kind": "operation", "type": node.type, "parameters": node.parameters,
-                                      "inputs": [ids[i] for i in node.inputs], "tool_versions": tool_versions})
+                ids[n] = stable_hash(
+                    {
+                        "kind": "operation",
+                        "type": node.type,
+                        "parameters": node.parameters,
+                        "inputs": [ids[i] for i in node.inputs],
+                        "tool_versions": tool_versions,
+                    }
+                )
         return ids
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"order": list(self.order), "nodes": [self.nodes[n].to_dict() for n in self.order],
-                "outputs": dict(self.output_nodes)}
+        return {
+            "order": list(self.order),
+            "nodes": [self.nodes[n].to_dict() for n in self.order],
+            "outputs": dict(self.output_nodes),
+        }

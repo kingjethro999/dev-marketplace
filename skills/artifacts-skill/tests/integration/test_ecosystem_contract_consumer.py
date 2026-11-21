@@ -12,11 +12,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-SCRIPT = Path(__file__).parent.parent.parent / "examples" / "standalone_contract_consumer.py"
+SCRIPT = (
+    Path(__file__).parent.parent.parent / "examples" / "standalone_contract_consumer.py"
+)
 
 
 def _run_script(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, timeout=60)
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args], capture_output=True, text=True, timeout=60
+    )
 
 
 def test_script_imports_nothing_from_artifact_skill():
@@ -30,7 +34,10 @@ def test_script_imports_nothing_from_artifact_skill():
 def test_discovers_and_calls_a_tool_purely_from_the_contract(good_pdf):
     proc = _run_script(str(good_pdf))
     assert proc.returncode == 0, proc.stderr
-    assert "Discovered read-only, single-input tool(s) from the contract alone" in proc.stdout
+    assert (
+        "Discovered read-only, single-input tool(s) from the contract alone"
+        in proc.stdout
+    )
     assert "Success." in proc.stdout
     assert "type:    pdf" in proc.stdout
 

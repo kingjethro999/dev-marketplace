@@ -47,16 +47,33 @@ CREDITS_POLICY_KEYS = frozenset({"licence_records"})
 CHECK_ID = "credits_attribution"
 CHECK_NAME = "Every attribution the assets' licences ask for is in the document"
 
-_RECORD_FIELDS = ("licence", "attribution", "credit", "title", "author", "source", "licence_url")
+_RECORD_FIELDS = (
+    "licence",
+    "attribution",
+    "credit",
+    "title",
+    "author",
+    "source",
+    "licence_url",
+)
 _UNKNOWN_WORDS = frozenset({"", "unknown", "none", "n/a", "na", "tbd", "?", "-"})
 _MAX_RECORDS_FILE_BYTES = 10 * 1024 * 1024
 
 # ---- Creative Commons licence names ---------------------------------------
 
 _CC_ELEMENT_WORDS = {
-    "by": "by", "attribution": "by", "sa": "sa", "sharealike": "sa", "share-alike": "sa",
-    "nc": "nc", "noncommercial": "nc", "non-commercial": "nc", "nd": "nd", "noderivatives": "nd",
-    "noderivs": "nd", "no-derivatives": "nd",
+    "by": "by",
+    "attribution": "by",
+    "sa": "sa",
+    "sharealike": "sa",
+    "share-alike": "sa",
+    "nc": "nc",
+    "noncommercial": "nc",
+    "non-commercial": "nc",
+    "nd": "nd",
+    "noderivatives": "nd",
+    "noderivs": "nd",
+    "no-derivatives": "nd",
 }
 _CC_SHORT_RE = re.compile(
     r"(?<![a-z])cc[\s-]?(?P<els>(?:by|0|zero)(?:[\s-]?(?:sa|nc|nd))*)(?:[\s-]*(?P<ver>\d\.\d))?(?![a-z0-9])",
@@ -79,7 +96,9 @@ def _cc_elements(raw: str) -> frozenset[str]:
     joined = re.sub(r"non\s+commercial", "noncommercial", " ".join(words))
     joined = re.sub(r"share\s+alike", "sharealike", joined)
     joined = re.sub(r"no\s+deriv", "noderiv", joined)
-    return frozenset(_CC_ELEMENT_WORDS[w] for w in joined.split() if w in _CC_ELEMENT_WORDS)
+    return frozenset(
+        _CC_ELEMENT_WORDS[w] for w in joined.split() if w in _CC_ELEMENT_WORDS
+    )
 
 
 def parse_cc(text: str) -> list[tuple[frozenset[str], str | None]]:
@@ -97,10 +116,19 @@ def parse_cc(text: str) -> list[tuple[frozenset[str], str | None]]:
 
 # ---- text matching ---------------------------------------------------------
 
-_QUOTES = str.maketrans({
-    chr(0x201C): '"', chr(0x201D): '"', chr(0x201E): '"', chr(0x2018): "'", chr(0x2019): "'",
-    chr(0x00AB): '"', chr(0x00BB): '"', chr(0x300C): '"', chr(0x300D): '"',
-})
+_QUOTES = str.maketrans(
+    {
+        chr(0x201C): '"',
+        chr(0x201D): '"',
+        chr(0x201E): '"',
+        chr(0x2018): "'",
+        chr(0x2019): "'",
+        chr(0x00AB): '"',
+        chr(0x00BB): '"',
+        chr(0x300C): '"',
+        chr(0x300D): '"',
+    }
+)
 
 
 def _fold(text: str) -> str:
@@ -167,14 +195,18 @@ def _invalid(message: str) -> ArtifactInputError:
 
 def _check_record_list(records: Any, where: str) -> list[dict[str, Any]]:
     if not isinstance(records, list) or not records:
-        raise _invalid(f"licence_records {where} must be a non-empty list of asset records.")
+        raise _invalid(
+            f"licence_records {where} must be a non-empty list of asset records."
+        )
     out: list[dict[str, Any]] = []
     for i, raw in enumerate(records):
         if not isinstance(raw, dict):
             raise _invalid(f"licence_records {where}: entry {i} is not an object.")
         record = _normalise_record(raw)
         if _asset_name(record) is None:
-            raise _invalid(f"licence_records {where}: entry {i} names no asset (asset, file or title).")
+            raise _invalid(
+                f"licence_records {where}: entry {i} names no asset (asset, file or title)."
+            )
         out.append(record)
     return out
 
@@ -202,13 +234,22 @@ def load_records(value: Any) -> list[dict[str, Any]]:
     if not path.is_file():
         raise ValueError(f"licence records file not found: {value}")
     if path.stat().st_size > _MAX_RECORDS_FILE_BYTES:
-        raise ValueError(f"licence records file is larger than {_MAX_RECORDS_FILE_BYTES} bytes: {value}")
+        raise ValueError(
+            f"licence records file is larger than {_MAX_RECORDS_FILE_BYTES} bytes: {value}"
+        )
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError(f"licence records file is not valid JSON: {exc}") from exc
     if isinstance(data, dict):
-        data = next((data[k] for k in ("assets", "files", "records") if isinstance(data.get(k), list)), data)
+        data = next(
+            (
+                data[k]
+                for k in ("assets", "files", "records")
+                if isinstance(data.get(k), list)
+            ),
+            data,
+        )
     try:
         return _check_record_list(data, f"in {value}")
     except ArtifactInputError as exc:
@@ -218,21 +259,31 @@ def load_records(value: Any) -> list[dict[str, Any]]:
 # ---- the check -------------------------------------------------------------
 
 
-def _evaluate(record: dict[str, Any], document: str, cc_in_document: list[tuple[frozenset[str], str | None]]
-              ) -> dict[str, Any] | None:
+def _evaluate(
+    record: dict[str, Any],
+    document: str,
+    cc_in_document: list[tuple[frozenset[str], str | None]],
+) -> dict[str, Any] | None:
     """None when the record's licence is satisfied (or asks for nothing),
     else a finding."""
     asset = _asset_name(record)
     licence = _text_field(record, "licence")
     finding: dict[str, Any] = {"asset": asset, "licence": licence}
     if licence is None or licence.casefold() in _UNKNOWN_WORDS:
-        return {**finding, "kind": "licence_unknown",
-                "reason": "No licence is recorded for this asset, so what it asks for cannot be checked."}
+        return {
+            **finding,
+            "kind": "licence_unknown",
+            "reason": "No licence is recorded for this asset, so what it asks for cannot be checked.",
+        }
 
     required = _text_field(record, "attribution") or _text_field(record, "credit")
     record_cc = parse_cc(licence)
     cc_by = next((cc for cc in record_cc if "by" in cc[0]), None)
-    asks_for_attribution = required is not None or cc_by is not None or bool(_ATTRIBUTION_WORD_RE.search(licence))
+    asks_for_attribution = (
+        required is not None
+        or cc_by is not None
+        or bool(_ATTRIBUTION_WORD_RE.search(licence))
+    )
     if not asks_for_attribution:
         return None
 
@@ -241,22 +292,39 @@ def _evaluate(record: dict[str, Any], document: str, cc_in_document: list[tuple[
     if required is not None:
         if _contains(document, required):
             return None
-        partial = [part for part in (author, title) if part and _contains(document, part)]
+        partial = [
+            part for part in (author, title) if part and _contains(document, part)
+        ]
         if partial:
-            return {**finding, "kind": "worded_differently", "expected": required,
-                    "reason": "The asset is credited, but not with the line its licence record asks for."}
-        return {**finding, "kind": "missing", "expected": required,
-                "reason": "The attribution line this asset's licence asks for is not in the document."}
+            return {
+                **finding,
+                "kind": "worded_differently",
+                "expected": required,
+                "reason": "The asset is credited, but not with the line its licence record asks for.",
+            }
+        return {
+            **finding,
+            "kind": "missing",
+            "expected": required,
+            "reason": "The attribution line this asset's licence asks for is not in the document.",
+        }
 
     if author is None and title is None:
-        return {**finding, "kind": "record_incomplete",
-                "reason": "The licence asks for attribution, but the record has no attribution line, author or "
-                "title to look for."}
-    missing: list[str] = [name for name, part in (("author", author), ("title", title))
-                          if part and not _contains(document, part)]
+        return {
+            **finding,
+            "kind": "record_incomplete",
+            "reason": "The licence asks for attribution, but the record has no attribution line, author or "
+            "title to look for.",
+        }
+    missing: list[str] = [
+        name
+        for name, part in (("author", author), ("title", title))
+        if part and not _contains(document, part)
+    ]
     licence_url = _text_field(record, "licence_url")
     named = cc_by is not None and any(
-        elements == cc_by[0] and (cc_by[1] is None or version == cc_by[1]) for elements, version in cc_in_document
+        elements == cc_by[0] and (cc_by[1] is None or version == cc_by[1])
+        for elements, version in cc_in_document
     )
     if cc_by is None:
         named = _contains(document, licence)
@@ -264,13 +332,21 @@ def _evaluate(record: dict[str, Any], document: str, cc_in_document: list[tuple[
         missing.append("licence")
     if not missing:
         return None
-    present = [p for p in ("author", "title") if p not in missing and _text_field(record, p)]
+    present = [
+        p for p in ("author", "title") if p not in missing and _text_field(record, p)
+    ]
     kind = "missing" if not present else "incomplete"
-    return {**finding, "kind": kind, "missing_parts": missing,
-            "reason": f"The licence asks for attribution; not in the document: {', '.join(missing)}."}
+    return {
+        **finding,
+        "kind": kind,
+        "missing_parts": missing,
+        "reason": f"The licence asks for attribution; not in the document: {', '.join(missing)}.",
+    }
 
 
-def credits_check(adapter: ArtifactAdapter, ref: ArtifactRef, policy: dict[str, Any]) -> Check | None:
+def credits_check(
+    adapter: ArtifactAdapter, ref: ArtifactRef, policy: dict[str, Any]
+) -> Check | None:
     """The `credits_attribution` check, or None when the policy asks for none."""
     if "licence_records" not in policy:
         return None
@@ -278,36 +354,73 @@ def credits_check(adapter: ArtifactAdapter, ref: ArtifactRef, policy: dict[str, 
     try:
         records = load_records(policy["licence_records"])
     except (ValueError, OSError) as exc:
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.UNKNOWN,
-                     message=f"The licence records could not be read: {exc}", evidence={})
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.UNKNOWN,
+            message=f"The licence records could not be read: {exc}",
+            evidence={},
+        )
     try:
         text = adapter.inspect(ref).text
     except ArtifactError as exc:
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.UNKNOWN,
-                     message=f"Could not read the document's text: {exc}", evidence={"assets": len(records)})
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.UNKNOWN,
+            message=f"Could not read the document's text: {exc}",
+            evidence={"assets": len(records)},
+        )
     if text is None or not text.strip():
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.UNKNOWN,
-                     message="The document has no readable text, so its credits could not be checked.",
-                     evidence={"assets": len(records)})
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.UNKNOWN,
+            message="The document has no readable text, so its credits could not be checked.",
+            evidence={"assets": len(records)},
+        )
 
     document = _comparable(text)
     cc_in_document = parse_cc(text)
-    findings = [f for f in (_evaluate(r, document, cc_in_document) for r in records) if f is not None]
+    findings = [
+        f
+        for f in (_evaluate(r, document, cc_in_document) for r in records)
+        if f is not None
+    ]
     failure_kinds = {"missing", "incomplete", "worded_differently"}
     failures = [f for f in findings if f["kind"] in failure_kinds]
     unknown = [f for f in findings if f["kind"] not in failure_kinds]
     evidence = {"assets": len(records), "findings": findings}
     if failures:
-        listed = "; ".join(f"{f['asset']} ({f['licence']}): {f['kind'].replace('_', ' ')}" for f in failures[:10])
+        listed = "; ".join(
+            f"{f['asset']} ({f['licence']}): {f['kind'].replace('_', ' ')}"
+            for f in failures[:10]
+        )
         more = f"; and {len(failures) - 10} more" if len(failures) > 10 else ""
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.FAIL,
-                     message=f"{len(failures)} of {len(records)} asset(s) lack the attribution their licence asks for: "
-                     f"{listed}{more}. Nothing was changed.", evidence=evidence)
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.FAIL,
+            message=f"{len(failures)} of {len(records)} asset(s) lack the attribution their licence asks for: "
+            f"{listed}{more}. Nothing was changed.",
+            evidence=evidence,
+        )
     if unknown:
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.UNKNOWN,
-                     message=f"{len(unknown)} asset record(s) could not be checked: "
-                     + "; ".join(f"{f['asset']}: {f['kind'].replace('_', ' ')}" for f in unknown[:10]) + ".",
-                     evidence=evidence)
-    return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.PASS,
-                 message=f"Every attribution the {len(records)} asset(s)' licences ask for is in the document.",
-                 evidence=evidence)
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.UNKNOWN,
+            message=f"{len(unknown)} asset record(s) could not be checked: "
+            + "; ".join(
+                f"{f['asset']}: {f['kind'].replace('_', ' ')}" for f in unknown[:10]
+            )
+            + ".",
+            evidence=evidence,
+        )
+    return Check(
+        id=CHECK_ID,
+        name=CHECK_NAME,
+        status=CheckStatus.PASS,
+        message=f"Every attribution the {len(records)} asset(s)' licences ask for is in the document.",
+        evidence=evidence,
+    )

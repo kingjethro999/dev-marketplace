@@ -9,6 +9,7 @@ Usage:
 A transcript "passes" when every expected script name (or flag) appears in it.
 Pair with skill-creator's eval runner for automated, multi-run measurement.
 """
+
 import argparse
 import json
 import sys
@@ -24,8 +25,12 @@ def score(text: str, task: dict) -> tuple:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("target", nargs="?", help="transcript file or folder of <id>.txt files")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "target", nargs="?", help="transcript file or folder of <id>.txt files"
+    )
     ap.add_argument("--task", type=int, help="task id for a single transcript")
     ap.add_argument("--list", action="store_true")
     args = ap.parse_args()
@@ -53,7 +58,10 @@ def main() -> int:
         results.append((t, ok, missing))
     passed = sum(1 for _, ok, _ in results if ok)
     for t, ok, missing in results:
-        print(f"{'PASS' if ok else 'FAIL'} {t['id']:2d} {t['request'][:60]:60s}" + ("" if ok else f"  missing: {', '.join(missing)}"))
+        print(
+            f"{'PASS' if ok else 'FAIL'} {t['id']:2d} {t['request'][:60]:60s}"
+            + ("" if ok else f"  missing: {', '.join(missing)}")
+        )
     print(f"{passed}/{len(results)} passed")
     return 0 if passed == len(results) else 1
 

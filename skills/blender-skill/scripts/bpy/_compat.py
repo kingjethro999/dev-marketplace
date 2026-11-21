@@ -8,6 +8,7 @@ operators; since 4.2 is the floor here, only the native ones are used -- no vers
 needed for that. If a future Blender major renames an operator, add the branch here (guarded
 on `bpy.app.version`), not in the calling script.
 """
+
 from __future__ import annotations
 
 import bpy
@@ -20,7 +21,10 @@ _OPS = {
     "stl": (("wm", "stl_import"), ("wm", "stl_export")),
     "ply": (("wm", "ply_import"), ("wm", "ply_export")),
     "usd": (("wm", "usd_import"), ("wm", "usd_export")),
-    "usdz": (("wm", "usd_import"), ("wm", "usd_export")),  # same operators; extension picks the variant
+    "usdz": (
+        ("wm", "usd_import"),
+        ("wm", "usd_export"),
+    ),  # same operators; extension picks the variant
     "abc": (("wm", "alembic_import"), ("wm", "alembic_export")),
 }
 
@@ -83,7 +87,9 @@ def export_file(path: str, fmt: str, **kwargs) -> None:
         return
     if fmt == "gltf":
         # export_scene.gltf infers .glb vs .gltf from export_format, not the filepath extension.
-        kwargs.setdefault("export_format", "GLB" if path.lower().endswith(".glb") else "GLTF_SEPARATE")
+        kwargs.setdefault(
+            "export_format", "GLB" if path.lower().endswith(".glb") else "GLTF_SEPARATE"
+        )
     if fmt not in _OPS:
         raise ValueError(f"no exporter for format {fmt!r}")
     merged = dict(_EXPORT_DEFAULTS.get(fmt, {}))
@@ -154,7 +160,14 @@ _AXIS_PARAMS = {
     "ply": ("forward_axis", "up_axis", "word"),
 }
 
-_AXIS_WORD = {"X": "X", "Y": "Y", "Z": "Z", "-X": "NEGATIVE_X", "-Y": "NEGATIVE_Y", "-Z": "NEGATIVE_Z"}
+_AXIS_WORD = {
+    "X": "X",
+    "Y": "Y",
+    "Z": "Z",
+    "-X": "NEGATIVE_X",
+    "-Y": "NEGATIVE_Y",
+    "-Z": "NEGATIVE_Z",
+}
 
 
 def axis_export_kwargs(fmt: str, forward: str = None, up: str = None) -> dict:
@@ -184,9 +197,13 @@ def axis_export_kwargs(fmt: str, forward: str = None, up: str = None) -> dict:
         return {}
     if fmt == "gltf":
         if forward is not None:
-            raise ValueError("glTF's exporter has no forward-axis control, only up-axis Y or Z")
+            raise ValueError(
+                "glTF's exporter has no forward-axis control, only up-axis Y or Z"
+            )
         if up not in ("Y", "Z"):
-            raise ValueError(f"glTF's exporter only supports up-axis Y or Z (the glTF spec itself is fixed Y-up; Z is a non-compliant escape hatch) -- got {up!r}")
+            raise ValueError(
+                f"glTF's exporter only supports up-axis Y or Z (the glTF spec itself is fixed Y-up; Z is a non-compliant escape hatch) -- got {up!r}"
+            )
         return {"export_yup": up == "Y"}
     if fmt in ("usd", "usdz"):
         kwargs = {"convert_orientation": True}
@@ -219,7 +236,11 @@ def axis_export_kwargs(fmt: str, forward: str = None, up: str = None) -> dict:
 # export concept this skill has verified, or (blend) always saves everything already.
 _MULTI_ACTION_KWARGS = {
     "gltf": {"export_animation_mode": "ACTIONS"},
-    "fbx": {"bake_anim": True, "bake_anim_use_all_actions": True, "bake_anim_use_nla_strips": False},
+    "fbx": {
+        "bake_anim": True,
+        "bake_anim_use_all_actions": True,
+        "bake_anim_use_nla_strips": False,
+    },
 }
 
 
@@ -243,7 +264,10 @@ def eevee_engine_id() -> str:
     renamed it back to 'BLENDER_EEVEE' now that there is only one Eevee again. Confirmed on
     real Blender 4.2.23, 4.5.13 and 5.2.1 -- render.py and look.py call this instead of
     hardcoding either string."""
-    available = {e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items}
+    available = {
+        e.identifier
+        for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items
+    }
     if "BLENDER_EEVEE_NEXT" in available:
         return "BLENDER_EEVEE_NEXT"
     return "BLENDER_EEVEE"
@@ -252,8 +276,10 @@ def eevee_engine_id() -> str:
 def object_triangle_count(obj) -> int:
     """Triangle count as the renderer sees it (quads/ngons counted as their triangulation),
     without permanently triangulating the mesh. bmesh avoids the destructive
-    mesh.calc_loop_triangles() side effects on a mesh that might be shared by other objects."""
+    mesh.calc_loop_triangles() side effects on a mesh that might be shared by other objects.
+    """
     import bmesh
+
     if obj.type != "MESH":
         return 0
     bm = bmesh.new()

@@ -1,11 +1,14 @@
 """Stable serialisation and hashing. Identity never depends on dict order, floats' repr or locale."""
+
 import hashlib
 import json
 from typing import Any
 
 
 def canonical_json(obj: Any) -> str:
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    return json.dumps(
+        obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    )
 
 
 def stable_hash(obj: Any) -> str:

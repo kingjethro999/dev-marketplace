@@ -18,6 +18,7 @@ does not depend on network access to another repository. It runs on the
 
     python3 scripts/check_vendor_drift.py
 """
+
 from __future__ import annotations
 
 import json
@@ -46,16 +47,23 @@ def main() -> int:
             return 2
 
         head = subprocess.run(
-            ["git", "-C", str(tmp), "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+            ["git", "-C", str(tmp), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
         try:
-            version = json.loads((tmp / "package.json").read_text(encoding="utf-8")).get("version", "?")
+            version = json.loads(
+                (tmp / "package.json").read_text(encoding="utf-8")
+            ).get("version", "?")
         except (OSError, ValueError):
             version = "?"
         print(f"ffmpeg-skill main is at {head} (version {version})")
 
         env = dict(os.environ, SUBTITLE_SKILL_TEST_FFMPEG_SKILL_SRC=str(tmp))
-        result = subprocess.run([sys.executable, "-m", "pytest", "-q"], cwd=ROOT, env=env)
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q"], cwd=ROOT, env=env
+        )
         if result.returncode != 0:
             print(
                 f"\nINCOMPATIBLE: the test suite fails against ffmpeg-skill {version} ({head}). "

@@ -7,6 +7,7 @@ must either omit it or choose a format that supports it (WebVTT).
 Cue-level `metadata` is provenance/auxiliary data, not renderable text; it
 is intentionally never written into the subtitle body of any format.
 """
+
 from __future__ import annotations
 
 import re
@@ -27,7 +28,12 @@ def _format_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{ms:03d}"
 
 
-def _escape_text(cue: SubtitleCue, *, allow_style_fields: FrozenSet[str] = frozenset(), language: str = "und") -> str:
+def _escape_text(
+    cue: SubtitleCue,
+    *,
+    allow_style_fields: FrozenSet[str] = frozenset(),
+    language: str = "und",
+) -> str:
     # SRT has no ruby: a reading is written in brackets after its base (formats._text)
     text = plain_text(cue, language)
 
@@ -86,7 +92,11 @@ def generate_srt(
                     str(index),
                     f"{_format_timestamp(cue.start)} --> {_format_timestamp(cue.end)}",
                     ("{\\an8}" if cue.id in top_cue_ids else "")
-                    + _escape_text(cue, allow_style_fields=allow_style_fields, language=document.language),
+                    + _escape_text(
+                        cue,
+                        allow_style_fields=allow_style_fields,
+                        language=document.language,
+                    ),
                     "",
                 ]
             )
@@ -100,12 +110,21 @@ _SRT_TIME = re.compile(r"^(\d+):([0-5]\d):([0-5]\d)[,.](\d{1,3})$")
 def _parse_srt_time(value: str) -> float:
     m = _SRT_TIME.match(value.strip())
     if not m:
-        raise SubtitleSkillError("INVALID_INPUT", f"SRT time {value!r} is not hh:mm:ss,mmm")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"SRT time {value!r} is not hh:mm:ss,mmm"
+        )
     hours, minutes, secs, ms = m.groups()
-    return int(hours) * 3600 + int(minutes) * 60 + int(secs) + int(ms.ljust(3, "0")) / 1000.0
+    return (
+        int(hours) * 3600
+        + int(minutes) * 60
+        + int(secs)
+        + int(ms.ljust(3, "0")) / 1000.0
+    )
 
 
-def parse_srt(text: str, *, language: str, document_id: str = "srt") -> SubtitleDocument:
+def parse_srt(
+    text: str, *, language: str, document_id: str = "srt"
+) -> SubtitleDocument:
     """Read a SubRip file back into a document (used for format round trips).
 
     The block number becomes the cue id; a cue whose whole text is wrapped in
@@ -116,18 +135,29 @@ def parse_srt(text: str, *, language: str, document_id: str = "srt") -> Subtitle
     for block in blocks:
         lines = block.splitlines()
         if len(lines) < 2:
-            raise SubtitleSkillError("INVALID_INPUT", f"SRT block without a timing line: {block[:40]!r}")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"SRT block without a timing line: {block[:40]!r}"
+            )
         if "-->" not in lines[1]:
-            raise SubtitleSkillError("INVALID_INPUT", f"SRT block {lines[0]!r} has no timing line")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"SRT block {lines[0]!r} has no timing line"
+            )
         start, end = (part.strip().split(" ")[0] for part in lines[1].split("-->", 1))
         body = "\n".join(lines[2:])
         style = {}
         for tag, field in (("i", "italic"), ("b", "bold")):
             if body.startswith(f"<{tag}>") and body.endswith(f"</{tag}>"):
-                body = body[len(tag) + 2:-(len(tag) + 3)]
+                body = body[len(tag) + 2 : -(len(tag) + 3)]
                 style[field] = True
-        cue = {"id": lines[0].strip(), "start": _parse_srt_time(start), "end": _parse_srt_time(end), "text": body}
+        cue = {
+            "id": lines[0].strip(),
+            "start": _parse_srt_time(start),
+            "end": _parse_srt_time(end),
+            "text": body,
+        }
         if style:
             cue["style"] = style
         cues.append(cue)
-    return SubtitleDocument.from_dict({"id": document_id, "language": language, "cues": cues})
+    return SubtitleDocument.from_dict(
+        {"id": document_id, "language": language, "cues": cues}
+    )

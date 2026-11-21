@@ -14,12 +14,23 @@ Examples:
 --keyframe-window seconds of it, and the nearest one at or before it and at or after it -- the
 points a stream copy can start at, and where cut.py --smart's re-encode around a cut ends.
 """
+
 import argparse
 import json
 import math
 import sys
 
-from _common import STATE, add_common, analyze_levels, apply_common, die, keyframe_times, print_json, probe, time_arg
+from _common import (
+    STATE,
+    add_common,
+    analyze_levels,
+    apply_common,
+    die,
+    keyframe_times,
+    print_json,
+    probe,
+    time_arg,
+)
 
 
 def keyframe_candidates(result: dict, times: list, window: float) -> list:
@@ -31,45 +42,96 @@ def keyframe_candidates(result: dict, times: list, window: float) -> list:
     out = []
     for t in times:
         # keyframe_times() reads past hi (an interval's end is exclusive), so one on the edge is kept
-        read = keyframe_times(result["file"], origin + t - window, origin + t + window, "V:0")
+        read = keyframe_times(
+            result["file"], origin + t - window, origin + t + window, "V:0"
+        )
         if read is None:
-            die(f"ffprobe could not read the keyframes of {result['file']} around {t:g}s", kind="ffmpeg")
+            die(
+                f"ffprobe could not read the keyframes of {result['file']} around {t:g}s",
+                kind="ffmpeg",
+            )
         # the read starts at the keyframe at or before the window, which may lie outside it
-        keys = [k for k in (round(k - origin, 6) for k in read) if t - window - 1e-6 <= k <= t + window + 1e-6]
+        keys = [
+            k
+            for k in (round(k - origin, 6) for k in read)
+            if t - window - 1e-6 <= k <= t + window + 1e-6
+        ]
         before = [k for k in keys if k <= t + 1e-6]
         after = [k for k in keys if k >= t - 1e-6]
-        out.append({"at": t, "window": window, "keyframes": keys, "before": before[-1] if before else None,
-                    "after": after[0] if after else None})
+        out.append(
+            {
+                "at": t,
+                "window": window,
+                "keyframes": keys,
+                "before": before[-1] if before else None,
+                "after": after[0] if after else None,
+            }
+        )
     return out
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("inputs", nargs="+", help="media file(s) to inspect")
-    ap.add_argument("--compact", action="store_true", help="one human-readable line per file instead of JSON")
-    ap.add_argument("--field", help="print only this top-level field (e.g. duration) or dotted path (video.fps)")
-    ap.add_argument("--analyze", action="store_true", help="also sample picture levels (first 20 s) and flag Log-looking footage")
-    ap.add_argument("--keyframes-near", metavar="T[,T...]",
-                    help="also list the video keyframes around these times (seconds, mm:ss or hh:mm:ss.ms): the ones within "
-                         "--keyframe-window and the nearest before and after each, as `keyframes`")
-    ap.add_argument("--keyframe-window", type=float, default=5.0, metavar="S",
-                    help="--keyframes-near: seconds either side of each time to read (default 5)")
-    add_common(ap)  # --json / --dry-run / --fast / --progress accepted for uniformity; output is JSON already
+    ap.add_argument(
+        "--compact",
+        action="store_true",
+        help="one human-readable line per file instead of JSON",
+    )
+    ap.add_argument(
+        "--field",
+        help="print only this top-level field (e.g. duration) or dotted path (video.fps)",
+    )
+    ap.add_argument(
+        "--analyze",
+        action="store_true",
+        help="also sample picture levels (first 20 s) and flag Log-looking footage",
+    )
+    ap.add_argument(
+        "--keyframes-near",
+        metavar="T[,T...]",
+        help="also list the video keyframes around these times (seconds, mm:ss or hh:mm:ss.ms): the ones within "
+        "--keyframe-window and the nearest before and after each, as `keyframes`",
+    )
+    ap.add_argument(
+        "--keyframe-window",
+        type=float,
+        default=5.0,
+        metavar="S",
+        help="--keyframes-near: seconds either side of each time to read (default 5)",
+    )
+    add_common(
+        ap
+    )  # --json / --dry-run / --fast / --progress accepted for uniformity; output is JSON already
     args = ap.parse_args()
     apply_common(args)
 
     if not math.isfinite(args.keyframe_window) or args.keyframe_window <= 0:
-        die(f"--keyframe-window must be a positive, finite number of seconds, got {args.keyframe_window:g}")
-    if args.keyframes_near is not None and not any(t.strip() for t in args.keyframes_near.split(",")):
+        die(
+            f"--keyframe-window must be a positive, finite number of seconds, got {args.keyframe_window:g}"
+        )
+    if args.keyframes_near is not None and not any(
+        t.strip() for t in args.keyframes_near.split(",")
+    ):
         die("--keyframes-near takes one or more times (e.g. 12.4,47), got none")
     results = [probe(p) for p in args.inputs]
     if args.keyframes_near:
         for r in results:
             fps = (r.get("video") or {}).get("fps")
-            times = [time_arg(t.strip(), "--keyframes-near", fps) for t in args.keyframes_near.split(",") if t.strip()]
+            times = [
+                time_arg(t.strip(), "--keyframes-near", fps)
+                for t in args.keyframes_near.split(",")
+                if t.strip()
+            ]
             if any(not math.isfinite(t) or t < 0 for t in times):
                 die("--keyframes-near takes finite times at or after 0")
-            r["keyframes"] = keyframe_candidates(r, times, args.keyframe_window) if r.get("video") else []
+            r["keyframes"] = (
+                keyframe_candidates(r, times, args.keyframe_window)
+                if r.get("video")
+                else []
+            )
     if args.analyze:
         for r in results:
             if r.get("video"):
@@ -79,9 +141,15 @@ def main() -> int:
                     # the guess is "flat and desaturated, yet tagged SDR": a PQ/HLG stream is not
                     # tagged SDR, and its code values were read as if they were (#403)
                     r["levels"]["looks_like_log"] = None
-                    r["levels"]["reason"] = "not_measured: the stream is tagged HDR (%s), and the Log guess is made for an SDR-tagged picture" % (transfer or r["video"].get("hdr_format") or "HDR")
-                    r["levels"]["note"] = ("the stream is tagged HDR (%s): these are its code values on an 8-bit scale, not display-referred SDR levels, "
-                                           "and whether it looks like Log was not judged" % (transfer or r["video"].get("hdr_format") or "HDR"))
+                    r["levels"]["reason"] = (
+                        "not_measured: the stream is tagged HDR (%s), and the Log guess is made for an SDR-tagged picture"
+                        % (transfer or r["video"].get("hdr_format") or "HDR")
+                    )
+                    r["levels"]["note"] = (
+                        "the stream is tagged HDR (%s): these are its code values on an 8-bit scale, not display-referred SDR levels, "
+                        "and whether it looks like Log was not judged"
+                        % (transfer or r["video"].get("hdr_format") or "HDR")
+                    )
 
     if args.field:
         for r in results:
@@ -121,7 +189,9 @@ def main() -> int:
             else:
                 line += " | no audio"
             for k in r.get("keyframes") or []:
-                before, after = ("-" if x is None else f"{x:g}" for x in (k["before"], k["after"]))
+                before, after = (
+                    "-" if x is None else f"{x:g}" for x in (k["before"], k["after"])
+                )
                 line += f" | keyframes near {k['at']:g}s: {before}/{after} ({len(k['keyframes'])} within {k['window']:g}s)"
             print(line)
         return 0

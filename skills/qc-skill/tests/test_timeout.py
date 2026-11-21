@@ -25,11 +25,15 @@ def _alive(pid: int) -> bool:
         import ctypes
 
         kernel32 = ctypes.windll.kernel32
-        handle = kernel32.OpenProcess(0x00100000 | 0x1000, False, pid)  # SYNCHRONIZE | QUERY_LIMITED_INFORMATION
+        handle = kernel32.OpenProcess(
+            0x00100000 | 0x1000, False, pid
+        )  # SYNCHRONIZE | QUERY_LIMITED_INFORMATION
         if not handle:
             return False
         try:
-            return kernel32.WaitForSingleObject(handle, 0) != 0  # WAIT_OBJECT_0: it has exited
+            return (
+                kernel32.WaitForSingleObject(handle, 0) != 0
+            )  # WAIT_OBJECT_0: it has exited
         finally:
             kernel32.CloseHandle(handle)
     try:
@@ -71,7 +75,9 @@ def spawned(monkeypatch):
 
     def recording_popen(argv, *args, **kwargs):
         proc = real_popen(argv, *args, **kwargs)
-        if "taskkill" not in os.path.basename(str(argv[0])).lower():  # the Windows killer itself
+        if (
+            "taskkill" not in os.path.basename(str(argv[0])).lower()
+        ):  # the Windows killer itself
             procs.append(proc)
         return proc
 
@@ -92,8 +98,15 @@ def test_timeout_code_is_retryable_with_its_own_exit_code():
 
 
 @pytest.mark.parametrize("kind", ["video", "audio", "delivery"])
-def test_tiny_timeout_returns_timeout_and_leaves_no_child(media, workspace, spawned, kind):
-    doc = {"operation": "inspect", "kind": kind, "input": str(media["clean"]), "timeout": 0.01}
+def test_tiny_timeout_returns_timeout_and_leaves_no_child(
+    media, workspace, spawned, kind
+):
+    doc = {
+        "operation": "inspect",
+        "kind": kind,
+        "input": str(media["clean"]),
+        "timeout": 0.01,
+    }
     with pytest.raises(QCError) as excinfo:
         run(doc, workspace)
     err = excinfo.value
@@ -108,7 +121,19 @@ def test_running_ffmpeg_is_killed_when_the_budget_elapses(media, spawned):
     # -re paces a 10-minute synthetic source in real time, so ffmpeg is
     # certainly still running when the half-second budget elapses.
     ffmpeg = shutil.which("ffmpeg")
-    argv = [ffmpeg, "-hide_banner", "-nostdin", "-re", "-f", "lavfi", "-i", "testsrc=duration=600", "-f", "null", "-"]
+    argv = [
+        ffmpeg,
+        "-hide_banner",
+        "-nostdin",
+        "-re",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc=duration=600",
+        "-f",
+        "null",
+        "-",
+    ]
     start = time.monotonic()
     with request_deadline(0.5):
         with pytest.raises(QCError) as excinfo:
@@ -124,15 +149,13 @@ def test_whole_process_tree_is_killed(tmp_path):
     """The child starts a grandchild of its own; both must be gone."""
 
     pid_file = tmp_path / "grandchild.pid"
-    script = textwrap.dedent(
-        """
+    script = textwrap.dedent("""
         import subprocess, sys, time
         child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
         with open(sys.argv[1], "w") as fh:
             fh.write(str(child.pid))
         time.sleep(120)
-        """
-    )
+        """)
     start = time.monotonic()
     with request_deadline(5.0):
         with pytest.raises(QCError) as excinfo:
@@ -146,7 +169,9 @@ def test_whole_process_tree_is_killed(tmp_path):
 
 
 def test_per_call_timeout_without_a_request_budget_is_not_timeout():
-    result = run_argv([sys.executable, "-c", "import time; time.sleep(30)"], timeout=0.5)
+    result = run_argv(
+        [sys.executable, "-c", "import time; time.sleep(30)"], timeout=0.5
+    )
     assert result.timed_out is True
 
 
@@ -171,16 +196,30 @@ def test_nested_budget_never_extends_the_outer_one():
 
 
 def test_generous_timeout_completes_normally(media, workspace):
-    doc = {"operation": "inspect", "kind": "video", "input": str(media["clean"]), "timeout": 300}
+    doc = {
+        "operation": "inspect",
+        "kind": "video",
+        "input": str(media["clean"]),
+        "timeout": 300,
+    }
     response = run(doc, workspace)
     assert response["status"] == "completed"
 
 
 def test_cli_tiny_timeout_exit_code_and_error_shape(media, workspace):
-    doc = {"operation": "inspect", "kind": "video", "input": str(media["clean"]), "timeout": 0.01}
+    doc = {
+        "operation": "inspect",
+        "kind": "video",
+        "input": str(media["clean"]),
+        "timeout": 0.01,
+    }
     result = subprocess.run(
         CLI + ["run", "-", "--json", "--workspace", str(workspace), "--no-cache"],
-        input=json.dumps(doc), capture_output=True, text=True, cwd=str(workspace), timeout=120,
+        input=json.dumps(doc),
+        capture_output=True,
+        text=True,
+        cwd=str(workspace),
+        timeout=120,
     )
     assert result.returncode == 15, result.stderr
     resp = json.loads(result.stdout)

@@ -28,7 +28,11 @@ def test_inspect_reports_only_incidental_excursions_for_clean_video(media, works
 
 
 def test_inspect_detects_the_illegal_segment(media, workspace):
-    doc = {"operation": "inspect", "kind": "video", "input": str(media["illegal_luminance"])}
+    doc = {
+        "operation": "inspect",
+        "kind": "video",
+        "input": str(media["illegal_luminance"]),
+    }
     resp = run(doc, workspace)
     segments = measurements_by_id(resp)["video.luminance_excursions"]["value"]
     assert len(segments) == 1
@@ -41,7 +45,9 @@ def test_inspect_detects_the_illegal_segment(media, workspace):
 
 def test_check_fails_when_total_exceeds_tolerance(media, workspace):
     doc = {
-        "operation": "check", "kind": "video", "input": str(media["illegal_luminance"]),
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["illegal_luminance"]),
         "rules": {"video": {"max_total_luminance_excursion_sec": 0.1}},
     }
     resp = run(doc, workspace)
@@ -54,7 +60,9 @@ def test_check_fails_when_total_exceeds_tolerance(media, workspace):
 
 def test_check_passes_when_within_tolerance(media, workspace):
     doc = {
-        "operation": "check", "kind": "video", "input": str(media["illegal_luminance"]),
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["illegal_luminance"]),
         "rules": {"video": {"max_total_luminance_excursion_sec": 5.0}},
     }
     resp = run(doc, workspace)
@@ -64,8 +72,15 @@ def test_check_passes_when_within_tolerance(media, workspace):
 
 def test_clean_video_passes_with_a_reasonable_tolerance(media, workspace):
     doc = {
-        "operation": "check", "kind": "video", "input": str(media["clean"]),
-        "rules": {"video": {"max_single_luminance_excursion_sec": 0.5, "max_total_luminance_excursion_sec": 1.0}},
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["clean"]),
+        "rules": {
+            "video": {
+                "max_single_luminance_excursion_sec": 0.5,
+                "max_total_luminance_excursion_sec": 1.0,
+            }
+        },
     }
     resp = run(doc, workspace)
     checks = checks_by_id(resp)
@@ -77,7 +92,9 @@ def test_clean_video_fails_with_a_zero_tolerance(media, workspace):
     # correctly FAILs on the same incidental excursions - honest behavior,
     # not a bug, given the caller explicitly asked for zero tolerance.
     doc = {
-        "operation": "check", "kind": "video", "input": str(media["clean"]),
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["clean"]),
         "rules": {"video": {"max_total_luminance_excursion_sec": 0.0}},
     }
     resp = run(doc, workspace)
@@ -96,7 +113,9 @@ def test_custom_legal_range_parameters_change_detection(media, workspace):
     # Widen the legal range so far that even the illegal_luminance fixture's
     # forced Y=250 no longer counts as an excursion.
     doc = {
-        "operation": "inspect", "kind": "video", "input": str(media["illegal_luminance"]),
+        "operation": "inspect",
+        "kind": "video",
+        "input": str(media["illegal_luminance"]),
         "parameters": {"luminance_legal_max": 255},
     }
     resp = run(doc, workspace)

@@ -21,6 +21,7 @@ prompt in PROMPTS_JSON (default evals/agent_prompts_25.json):
 
 A missing run directory is MISSING, never a crash.
 """
+
 import json
 import re
 import sys
@@ -50,7 +51,9 @@ def load_run(d: Path):
                 elif c.get("type") == "tool_result":
                     body = c.get("content")
                     if isinstance(body, list):
-                        body = "\n".join(x.get("text", "") for x in body if isinstance(x, dict))
+                        body = "\n".join(
+                            x.get("text", "") for x in body if isinstance(x, dict)
+                        )
                     outs.append(body or "")
                 elif c.get("type") == "text" and ev.get("type") == "assistant":
                     final = c.get("text") or final
@@ -86,8 +89,11 @@ def result_docs(outs):
 
 
 def _names(doc, *keys):
-    return [Path(str(x.get("path", x) if isinstance(x, dict) else x)).name
-            for k in keys for x in (doc.get(k) or [])]
+    return [
+        Path(str(x.get("path", x) if isinstance(x, dict) else x)).name
+        for k in keys
+        for x in (doc.get(k) or [])
+    ]
 
 
 def grade(p, d: Path):
@@ -105,13 +111,20 @@ def grade(p, d: Path):
         if not re.search(rx, cmdtext):
             fails.append("grader_expect %r" % rx)
     for rx in p.get("grader_not", []):
-        if re.search(re.escape(rx) if rx.startswith("--") else rx, alltext if rx == "Traceback" else cmdtext):
+        if re.search(
+            re.escape(rx) if rx.startswith("--") else rx,
+            alltext if rx == "Traceback" else cmdtext,
+        ):
             fails.append("grader_not %r matched" % rx)
     re_exp = p.get("result_expect")
     doc = None
     if re_exp:
         tool = re_exp.get("tool")
-        tool_outs = [o for c, o in zip(cmds, outs) if tool + ".py" in c and "--json" in c] if len(cmds) == len(outs) else outs
+        tool_outs = (
+            [o for c, o in zip(cmds, outs) if tool + ".py" in c and "--json" in c]
+            if len(cmds) == len(outs)
+            else outs
+        )
         docs = result_docs(tool_outs)
         doc = docs[-1] if docs else None
         if doc is None:
@@ -119,19 +132,31 @@ def grade(p, d: Path):
         else:
             if re_exp.get("ok") and doc.get("status") != "completed":
                 fails.append("result status %r" % doc.get("status"))
-            if "skipped_names" in re_exp and re_exp["skipped_names"] not in _names(doc, "skipped"):
+            if "skipped_names" in re_exp and re_exp["skipped_names"] not in _names(
+                doc, "skipped"
+            ):
                 fails.append("%s not in skipped[]" % re_exp["skipped_names"])
-            if "names" in re_exp and re_exp["names"] not in _names(doc, "skipped", "pending", "problems"):
+            if "names" in re_exp and re_exp["names"] not in _names(
+                doc, "skipped", "pending", "problems"
+            ):
                 fails.append("%s not in skipped/pending/problems" % re_exp["names"])
     if p.get("report_expect") and p["report_expect"] not in final:
         fails.append("report does not name %r" % p["report_expect"])
     after = d / ".after"
-    if p.get("must_not_write") and after.exists() and p["must_not_write"] in after.read_text().split():
+    if (
+        p.get("must_not_write")
+        and after.exists()
+        and p["must_not_write"] in after.read_text().split()
+    ):
         fails.append("%s was written" % p["must_not_write"])
     verdict = "recorded" if p.get("record_only") else ("pass" if not fails else "fail")
-    return {"id": p["id"], "verdict": verdict, "failures": fails,
-            "commands": [c for c in cmds if ".py" in c],
-            "result_status": doc.get("status") if doc else None}
+    return {
+        "id": p["id"],
+        "verdict": verdict,
+        "failures": fails,
+        "commands": [c for c in cmds if ".py" in c],
+        "result_status": doc.get("status") if doc else None,
+    }
 
 
 def main(argv):
@@ -140,13 +165,20 @@ def main(argv):
     if not args:
         raise SystemExit(__doc__)
     root = Path(args[0])
-    prompts = json.loads(Path(args[1] if len(args) > 1 else W / "agent_prompts_25.json").read_text(encoding="utf-8"))
+    prompts = json.loads(
+        Path(args[1] if len(args) > 1 else W / "agent_prompts_25.json").read_text(
+            encoding="utf-8"
+        )
+    )
     rows = [grade(p, root / p["id"]) for p in prompts]
     if as_json:
         print(json.dumps(rows, indent=2, ensure_ascii=False))
     else:
         for r in rows:
-            print("%-4s %-8s %s" % (r["id"], r["verdict"], "; ".join(r.get("failures") or [])))
+            print(
+                "%-4s %-8s %s"
+                % (r["id"], r["verdict"], "; ".join(r.get("failures") or []))
+            )
     return 0 if all(r["verdict"] in ("pass", "recorded") for r in rows) else 1
 
 

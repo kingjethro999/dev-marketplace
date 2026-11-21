@@ -3,6 +3,7 @@
 skill ships no HDRI asset to preset against, so claiming one would be untested. See
 references/pitfalls.md.
 """
+
 import math
 import sys
 from pathlib import Path
@@ -37,7 +38,9 @@ def _add_camera(center, size, azimuth_deg=45.0, elevation=0.7):
     cam_obj = bpy.data.objects.new("render_camera", cam_data)
     bpy.context.collection.objects.link(cam_obj)
     cam_obj.location = center + offset
-    cam_obj.rotation_euler = (center - cam_obj.location).to_track_quat("-Z", "Y").to_euler()
+    cam_obj.rotation_euler = (
+        (center - cam_obj.location).to_track_quat("-Z", "Y").to_euler()
+    )
     bpy.context.scene.camera = cam_obj
     return cam_obj
 
@@ -59,7 +62,9 @@ def _add_lighting(preset: str):
         bpy.context.collection.objects.link(obj)
         obj.rotation_euler = (0.7, 0.2, 0.5)
     else:
-        raise ValueError(f"lighting preset {preset!r} is not implemented (studio, outdoor are)")
+        raise ValueError(
+            f"lighting preset {preset!r} is not implemented (studio, outdoor are)"
+        )
 
 
 def _setup_scene(engine: str, resolution, samples):
@@ -118,9 +123,14 @@ def _apply_video(scene, settings):
             continue
         if choice is settings["ffmpeg"]:
             return None
-        return (f"this Blender build has no {settings['ffmpeg']['codec']} encoder; wrote "
-                f"{choice['codec']} in {choice['format']} instead (alpha kept)")
-    raise RuntimeError("this Blender build accepts none of the alpha-capable video codecs: " + "; ".join(errors))
+        return (
+            f"this Blender build has no {settings['ffmpeg']['codec']} encoder; wrote "
+            f"{choice['codec']} in {choice['format']} instead (alpha kept)"
+        )
+    raise RuntimeError(
+        "this Blender build accepts none of the alpha-capable video codecs: "
+        + "; ".join(errors)
+    )
 
 
 def _mode_thumbnail(args, scene):
@@ -168,8 +178,10 @@ def _mode_turntable(args, scene):
             # No FFMPEG support in this Blender build -- fall back to a PNG sequence next to the
             # requested path rather than failing the whole render.
             fallback = settings["fallback"]
-            warning = ("this Blender build has no FFMPEG video output support; wrote a PNG "
-                       f"sequence instead: {fallback['filepath']}")
+            warning = (
+                "this Blender build has no FFMPEG video output support; wrote a PNG "
+                f"sequence instead: {fallback['filepath']}"
+            )
             settings = {**settings, "kind": "image_sequence", **fallback}
             _apply_image_settings(scene, settings["image_settings"])
         else:
@@ -178,8 +190,12 @@ def _mode_turntable(args, scene):
         _apply_image_settings(scene, settings["image_settings"])
     scene.render.filepath = settings["filepath"]
     bpy.ops.render.render(animation=True)
-    result = {"kind": settings["kind"], "frames": frames, "output_path": settings["filepath"],
-              "color_mode": scene.render.image_settings.color_mode}
+    result = {
+        "kind": settings["kind"],
+        "frames": frames,
+        "output_path": settings["filepath"],
+        "color_mode": scene.render.image_settings.color_mode,
+    }
     if settings["kind"] == "video":
         result["codec"] = scene.render.ffmpeg.codec
     if settings["kind"] == "image_sequence":
@@ -191,6 +207,7 @@ def _mode_turntable(args, scene):
 
 def _mode_sheet(args, scene):
     import numpy as np
+
     center, size = _scene_bounds()
     _add_lighting(args.get("light", "outdoor"))
     tiles = []
@@ -203,7 +220,9 @@ def _mode_sheet(args, scene):
         _apply_still(args, scene)
         bpy.ops.render.render(write_still=True)
         img = bpy.data.images.load(frame_path)
-        px = np.array(img.pixels[:], dtype="float32").reshape(img.size[1], img.size[0], img.channels)
+        px = np.array(img.pixels[:], dtype="float32").reshape(
+            img.size[1], img.size[0], img.channels
+        )
         tiles.append(np.flipud(px))
         bpy.data.images.remove(img)
         Path(frame_path).unlink(missing_ok=True)
@@ -214,7 +233,7 @@ def _mode_sheet(args, scene):
     canvas[..., 3] = 1.0
     positions = [(0, 0), (0, 1), (1, 0), (1, 1)]
     for tile, (r, c) in zip(tiles, positions):
-        canvas[r * h:(r + 1) * h, c * w:(c + 1) * w] = tile
+        canvas[r * h : (r + 1) * h, c * w : (c + 1) * w] = tile
     out_img = bpy.data.images.new("render_sheet", width=w * 2, height=h * 2, alpha=True)
     out_img.pixels.foreach_set(np.flipud(canvas).ravel())
     out_img.filepath_raw = args["output"]
@@ -224,7 +243,11 @@ def _mode_sheet(args, scene):
     return {"kind": "still", "tiles": 4}
 
 
-_MODES = {"thumbnail": _mode_thumbnail, "turntable": _mode_turntable, "sheet": _mode_sheet}
+_MODES = {
+    "thumbnail": _mode_thumbnail,
+    "turntable": _mode_turntable,
+    "sheet": _mode_sheet,
+}
 
 
 def run(args):

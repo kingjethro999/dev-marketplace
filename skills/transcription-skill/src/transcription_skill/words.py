@@ -18,6 +18,7 @@ Whitespace is not part of any word: the comparison runs on the segment text with
 character removed. When the engine words, or the dictionary words, do not reproduce that text exactly,
 the segment keeps its engine words and the transcript carries a warning. Nothing here edits the text.
 """
+
 from __future__ import annotations
 
 import re
@@ -37,30 +38,47 @@ TIMING_INTERPOLATED = "interpolated"
 TIMING_VALUES = (TIMING_MEASURED, TIMING_INTERPOLATED)
 
 # The fixed, documented coarse part-of-speech set. Nothing outside it is ever written.
-POS_VALUES = ("noun", "pronoun", "verb", "adjective", "adverb", "particle", "auxiliary", "conjunction", "interjection",
-              "prefix", "suffix", "symbol", "other")
+POS_VALUES = (
+    "noun",
+    "pronoun",
+    "verb",
+    "adjective",
+    "adverb",
+    "particle",
+    "auxiliary",
+    "conjunction",
+    "interjection",
+    "prefix",
+    "suffix",
+    "symbol",
+    "other",
+)
 # Sudachi's top-level part of speech (part_of_speech()[0]) -> coarse pos. Anything not listed -> "other".
 SUDACHI_POS = {
     "名詞": "noun",
     "代名詞": "pronoun",
     "動詞": "verb",
     "形容詞": "adjective",
-    "形状詞": "adjective",      # adjectival noun stem (静か, 綺麗): an adjective in a coarse set
+    "形状詞": "adjective",  # adjectival noun stem (静か, 綺麗): an adjective in a coarse set
     "副詞": "adverb",
     "助詞": "particle",
     "助動詞": "auxiliary",
     "接続詞": "conjunction",
-    "感動詞": "interjection",   # includes fillers (えー, あの)
+    "感動詞": "interjection",  # includes fillers (えー, あの)
     "接頭辞": "prefix",
     "接尾辞": "suffix",
-    "補助記号": "symbol",       # punctuation, brackets
+    "補助記号": "symbol",  # punctuation, brackets
     "記号": "symbol",
-    "空白": "symbol",           # whitespace tokens never become words; listed for completeness
+    "空白": "symbol",  # whitespace tokens never become words; listed for completeness
 }
 # 連体詞 (adnominal: この, その, 大きな) and anything a future dictionary adds map to "other".
 
-SPLIT_MODE = "C"             # Sudachi's longest units: compounds and named entities stay one word
-DICTIONARY_EDITIONS = ("core", "small", "full")   # first one installed wins; recorded in provenance
+SPLIT_MODE = "C"  # Sudachi's longest units: compounds and named entities stay one word
+DICTIONARY_EDITIONS = (
+    "core",
+    "small",
+    "full",
+)  # first one installed wins; recorded in provenance
 INSTALL_HINT = 'pip install "transcription-skill[ja]"   (SudachiPy and the SudachiDict core dictionary)'
 TIME_DECIMALS = 6
 
@@ -79,7 +97,8 @@ def _strip_ws(text: str) -> str:
 # ---- word index --------------------------------------------------------------------------------
 def with_word_indices(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Return segments whose words carry ``index`` 0..N-1 over the whole list, in order. Segments with
-    ``words: null`` contribute nothing. Deterministic: the index depends only on the order of the words."""
+    ``words: null`` contribute nothing. Deterministic: the index depends only on the order of the words.
+    """
     n = 0
     out: List[Dict[str, Any]] = []
     for seg in segments:
@@ -97,26 +116,38 @@ def with_word_indices(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def needs_word_indices(doc: Dict[str, Any]) -> bool:
     """True when some word of a transcript lacks ``index`` (a document stored by a version before ADR-039)."""
-    return any("index" not in w for seg in doc.get("segments") or [] for w in (seg.get("words") or []))
+    return any(
+        "index" not in w
+        for seg in doc.get("segments") or []
+        for w in (seg.get("words") or [])
+    )
 
 
 # ---- mapping engine timings onto dictionary words ---------------------------------------------
-def map_dictionary_words(segment_text: str, engine_words: List[Dict[str, Any]],
-                         tokens: List[Tuple[str, str]]) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
+def map_dictionary_words(
+    segment_text: str, engine_words: List[Dict[str, Any]], tokens: List[Tuple[str, str]]
+) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
     """Map engine word timings onto dictionary tokens.
 
     engine_words: the segment's engine words ({start, end, text, confidence}), ordered.
     tokens: (surface, coarse pos) from the dictionary tokenizer, in text order.
-    Returns (dictionary words, None) or (None, reason) when the mapping cannot be made faithfully."""
+    Returns (dictionary words, None) or (None, reason) when the mapping cannot be made faithfully.
+    """
     target = _strip_ws(segment_text)
-    units: List[Tuple[int, int, float, float, Optional[float]]] = []   # (char offset, length, start, end, confidence)
-    estimated: List[bool] = []      # the engine marked this word's times as its own estimate (timing "interpolated")
+    units: List[Tuple[int, int, float, float, Optional[float]]] = (
+        []
+    )  # (char offset, length, start, end, confidence)
+    estimated: List[bool] = (
+        []
+    )  # the engine marked this word's times as its own estimate (timing "interpolated")
     offset = 0
     for w in engine_words:
         t = _strip_ws(str(w["text"]))
         if not t:
             return None, "an engine word has no text"
-        units.append((offset, len(t), float(w["start"]), float(w["end"]), w.get("confidence")))
+        units.append(
+            (offset, len(t), float(w["start"]), float(w["end"]), w.get("confidence"))
+        )
         estimated.append(w.get("timing") == TIMING_INTERPOLATED)
         offset += len(t)
     if "".join(_strip_ws(str(w["text"])) for w in engine_words) != target:
@@ -153,11 +184,26 @@ def map_dictionary_words(segment_text: str, engine_words: List[Dict[str, Any]],
         start, start_measured = at(pos_char, first)
         end, end_measured = at(pos_char + len(surface), last)
         confs = [units[i][4] for i in range(first, last + 1)]
-        conf = None if any(c is None for c in confs) else float(min(confs))   # type: ignore[type-var]
+        conf = None if any(c is None for c in confs) else float(min(confs))  # type: ignore[type-var]
         if end <= start:
-            return None, f"dictionary word {surface!r} would get a non-positive duration"
-        out.append({"start": start, "end": end, "text": surface, "confidence": conf,
-                    "timing": TIMING_MEASURED if (start_measured and end_measured) else TIMING_INTERPOLATED, "pos": pos})
+            return (
+                None,
+                f"dictionary word {surface!r} would get a non-positive duration",
+            )
+        out.append(
+            {
+                "start": start,
+                "end": end,
+                "text": surface,
+                "confidence": conf,
+                "timing": (
+                    TIMING_MEASURED
+                    if (start_measured and end_measured)
+                    else TIMING_INTERPOLATED
+                ),
+                "pos": pos,
+            }
+        )
         pos_char += len(surface)
     return out, None
 
@@ -174,8 +220,12 @@ def _dist_version(module: Any, dist: str) -> str:
         # dist-info names are not case- or separator-stable across wheel builds
         # (``SudachiDict_core-...``, ``sudachidict-core-...``): compare normalised names.
         wanted = _normalise_dist(dist)
-        metas = sorted(m for m in base.glob("*.dist-info/METADATA")
-                       if _normalise_dist(m.parent.name[: -len(".dist-info")].rsplit("-", 1)[0]) == wanted)
+        metas = sorted(
+            m
+            for m in base.glob("*.dist-info/METADATA")
+            if _normalise_dist(m.parent.name[: -len(".dist-info")].rsplit("-", 1)[0])
+            == wanted
+        )
         for meta in metas:
             for line in meta.read_text(encoding="utf-8", errors="replace").splitlines():
                 if line.startswith("Version:"):
@@ -188,11 +238,14 @@ def _dist_version(module: Any, dist: str) -> str:
 def _dictionary_module(edition: str) -> Any:
     if edition == "core":
         import sudachidict_core  # type: ignore
+
         return sudachidict_core
     if edition == "small":
         import sudachidict_small  # type: ignore
+
         return sudachidict_small
     import sudachidict_full  # type: ignore
+
     return sudachidict_full
 
 
@@ -214,24 +267,52 @@ class DictionarySegmenter:
             edition = name
             break
         if module is None or edition is None:
-            raise unavailable("SudachiPy is installed but no SudachiDict dictionary (sudachidict_core, _small or _full) is")
+            raise unavailable(
+                "SudachiPy is installed but no SudachiDict dictionary (sudachidict_core, _small or _full) is"
+            )
         try:
             dictionary = Dictionary(dict=edition)
             mode = getattr(SplitMode, SPLIT_MODE)
-            self._tokenizer = dictionary.tokenizer(mode=mode) if hasattr(dictionary, "tokenizer") else dictionary.create(mode=mode)
-        except Exception as exc:   # sudachipy raises its own error types for a broken install
-            raise unavailable(f"SudachiPy could not load the {edition} dictionary ({type(exc).__name__}: {exc})")
-        self.identity = {"segmenter": "sudachipy", "segmenter_version": str(getattr(sudachipy, "__version__", None) or _dist_version(sudachipy, "sudachipy")),
-                         "dictionary": edition, "dictionary_version": _dist_version(module, f"sudachidict_{edition}"), "split_mode": SPLIT_MODE}
+            self._tokenizer = (
+                dictionary.tokenizer(mode=mode)
+                if hasattr(dictionary, "tokenizer")
+                else dictionary.create(mode=mode)
+            )
+        except (
+            Exception
+        ) as exc:  # sudachipy raises its own error types for a broken install
+            raise unavailable(
+                f"SudachiPy could not load the {edition} dictionary ({type(exc).__name__}: {exc})"
+            )
+        self.identity = {
+            "segmenter": "sudachipy",
+            "segmenter_version": str(
+                getattr(sudachipy, "__version__", None)
+                or _dist_version(sudachipy, "sudachipy")
+            ),
+            "dictionary": edition,
+            "dictionary_version": _dist_version(module, f"sudachidict_{edition}"),
+            "split_mode": SPLIT_MODE,
+        }
 
     def tokenize(self, text: str) -> List[Tuple[str, str]]:
-        return [(m.surface(), coarse_pos(m.part_of_speech())) for m in self._tokenizer.tokenize(text)]
+        return [
+            (m.surface(), coarse_pos(m.part_of_speech()))
+            for m in self._tokenizer.tokenize(text)
+        ]
 
 
 def unavailable(why: str) -> TranscriptionError:
-    return TranscriptionError("INVALID_INPUT", f"word_segmentation 'dictionary' needs SudachiPy with a dictionary: {why}. Install it with: {INSTALL_HINT}; "
-                              "or use word_segmentation 'engine' (the default)",
-                              {"reason": "dictionary_segmentation_unavailable", "install": INSTALL_HINT, "python": sys.version.split()[0]})
+    return TranscriptionError(
+        "INVALID_INPUT",
+        f"word_segmentation 'dictionary' needs SudachiPy with a dictionary: {why}. Install it with: {INSTALL_HINT}; "
+        "or use word_segmentation 'engine' (the default)",
+        {
+            "reason": "dictionary_segmentation_unavailable",
+            "install": INSTALL_HINT,
+            "python": sys.version.split()[0],
+        },
+    )
 
 
 _SEGMENTER: Optional[DictionarySegmenter] = None
@@ -239,16 +320,20 @@ _SEGMENTER: Optional[DictionarySegmenter] = None
 
 def get_segmenter() -> DictionarySegmenter:
     """The process-wide segmenter (the dictionary loads once). Raises INVALID_INPUT
-    (reason dictionary_segmentation_unavailable) when SudachiPy or its dictionary is missing."""
+    (reason dictionary_segmentation_unavailable) when SudachiPy or its dictionary is missing.
+    """
     global _SEGMENTER
     if _SEGMENTER is None:
         _SEGMENTER = DictionarySegmenter()
     return _SEGMENTER
 
 
-def segment_dictionary_words(segments: List[Dict[str, Any]], segmenter: Any) -> Tuple[List[Dict[str, Any]], List[str]]:
+def segment_dictionary_words(
+    segments: List[Dict[str, Any]], segmenter: Any
+) -> Tuple[List[Dict[str, Any]], List[str]]:
     """Replace each segment's engine words with dictionary words. A segment whose words cannot be mapped
-    faithfully keeps its engine words; one warning per such segment. Segments without words are unchanged."""
+    faithfully keeps its engine words; one warning per such segment. Segments without words are unchanged.
+    """
     out: List[Dict[str, Any]] = []
     warnings: List[str] = []
     for seg in segments:
@@ -258,12 +343,16 @@ def segment_dictionary_words(segments: List[Dict[str, Any]], segmenter: Any) -> 
             continue
         try:
             tokens = segmenter.tokenize(seg["text"])
-        except Exception as exc:   # a tokenizer failure on one segment must not lose the transcript
+        except (
+            Exception
+        ) as exc:  # a tokenizer failure on one segment must not lose the transcript
             mapped, why = None, f"tokenizer failed: {type(exc).__name__}"
         else:
             mapped, why = map_dictionary_words(seg["text"], words, tokens)
         if mapped is None:
-            warnings.append(f"{seg['id']}: dictionary word segmentation skipped ({why}); engine words kept")
+            warnings.append(
+                f"{seg['id']}: dictionary word segmentation skipped ({why}); engine words kept"
+            )
             out.append(seg)
         else:
             out.append(dict(seg, words=mapped))

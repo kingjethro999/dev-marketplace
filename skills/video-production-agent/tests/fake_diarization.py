@@ -9,7 +9,9 @@ Controlled via:
   FAKE_DIA_READY: all (default) | none (pyannote.audio, torch and the pipeline missing) | pipeline (only the pipeline directory missing)
   FAKE_DIA_MODE: ok | fail:<CODE> | bad_fingerprint | overlap | wrong_params | not_written | bad_json
   FAKE_DIA_CONTRACT: pinned | drift_version (0.3.9: non-fatal) | drift_fatal (diarize argv changed) | incompatible (0.4.0)
-  FAKE_DIA_CALLS: a file every invocation's argv is appended to (one JSON list per line). Test double only."""
+  FAKE_DIA_CALLS: a file every invocation's argv is appended to (one JSON list per line). Test double only.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -22,7 +24,14 @@ MODE = os.environ.get("FAKE_DIA_MODE", "ok")
 READY = os.environ.get("FAKE_DIA_READY", "all")
 CONTRACT_MODE = os.environ.get("FAKE_DIA_CONTRACT", "pinned")
 CALLS_LOG = os.environ.get("FAKE_DIA_CALLS")
-PINNED = Path(__file__).resolve().parents[1] / "src" / "video_agent" / "tools" / "diarization" / "contract_0.3.0.json"
+PINNED = (
+    Path(__file__).resolve().parents[1]
+    / "src"
+    / "video_agent"
+    / "tools"
+    / "diarization"
+    / "contract_0.3.0.json"
+)
 
 
 def _emit(doc) -> None:
@@ -34,7 +43,9 @@ def _contract() -> dict:
     if CONTRACT_MODE == "drift_version":
         c["version"] = "0.3.9"
     elif CONTRACT_MODE == "drift_fatal":
-        next(t for t in c["tools"] if t["tool_id"] == "diarization/diarize")["argv"].append("--strict")
+        next(t for t in c["tools"] if t["tool_id"] == "diarization/diarize")[
+            "argv"
+        ].append("--strict")
     elif CONTRACT_MODE == "incompatible":
         c["version"] = "0.4.0"
     return c
@@ -48,14 +59,42 @@ def _fail(code: str, message: str) -> int:
 def _doctor() -> int:
     eng_ok = READY in ("all", "pipeline")
     pipe_ok = READY == "all"
-    checks = {"python": {"status": "OK"}, "ffmpeg": {"status": "OK", "install": None},
-              "pyannote_audio": {"status": "OK" if eng_ok else "MISSING", "install": None if eng_ok else "pip install 'diarization-skill[pyannote]'"},
-              "torch": {"status": "OK" if eng_ok else "MISSING", "install": None if eng_ok else "installed with pyannote.audio"},
-              "pipeline": {"status": "OK" if pipe_ok else "MISSING", "install": None if pipe_ok else ["1. accept the conditions", "3. export DIARIZATION_PIPELINE_DIR=..."]}}
+    checks = {
+        "python": {"status": "OK"},
+        "ffmpeg": {"status": "OK", "install": None},
+        "pyannote_audio": {
+            "status": "OK" if eng_ok else "MISSING",
+            "install": None if eng_ok else "pip install 'diarization-skill[pyannote]'",
+        },
+        "torch": {
+            "status": "OK" if eng_ok else "MISSING",
+            "install": None if eng_ok else "installed with pyannote.audio",
+        },
+        "pipeline": {
+            "status": "OK" if pipe_ok else "MISSING",
+            "install": (
+                None
+                if pipe_ok
+                else [
+                    "1. accept the conditions",
+                    "3. export DIARIZATION_PIPELINE_DIR=...",
+                ]
+            ),
+        },
+    }
     problems = [f"{k}: MISSING" for k, v in checks.items() if v["status"] != "OK"]
     ok = not problems
-    _emit({"ok": ok, "skill": "diarization-skill", "version": _contract()["version"], "ready": {"diarize": ok, "assign": True, "check": True}, "checks": checks,
-           "problems": problems, "network": "never used at run time"})
+    _emit(
+        {
+            "ok": ok,
+            "skill": "diarization-skill",
+            "version": _contract()["version"],
+            "ready": {"diarize": ok, "assign": True, "check": True},
+            "checks": checks,
+            "problems": problems,
+            "network": "never used at run time",
+        }
+    )
     return 0 if ok else 3
 
 
@@ -79,7 +118,10 @@ def _opts(argv):
 def _diarize(argv) -> int:
     opts, pos = _opts(argv)
     if READY != "all":
-        return _fail("PIPELINE_NOT_FOUND" if READY == "pipeline" else "ENGINE_UNAVAILABLE", "not ready (fake)")
+        return _fail(
+            "PIPELINE_NOT_FOUND" if READY == "pipeline" else "ENGINE_UNAVAILABLE",
+            "not ready (fake)",
+        )
     if MODE.startswith("fail:"):
         return _fail(MODE.split(":", 1)[1], "refused (fake)")
     if MODE == "bad_json":
@@ -92,7 +134,11 @@ def _diarize(argv) -> int:
     except ValueError:
         facts = {}
     dur = float(facts.get("duration") or 10.0)
-    turns = [{"start": float(s), "end": float(e), "speaker": str(sp)} for s, e, sp in facts.get("turns") or [[0.0, dur / 2, "SPEAKER_00"], [dur / 2, dur, "SPEAKER_01"]]]
+    turns = [
+        {"start": float(s), "end": float(e), "speaker": str(sp)}
+        for s, e, sp in facts.get("turns")
+        or [[0.0, dur / 2, "SPEAKER_00"], [dur / 2, dur, "SPEAKER_01"]]
+    ]
     if MODE == "overlap" and len(turns) > 1:
         turns[1]["start"] = turns[0]["end"] - 1.0
     speakers = []
@@ -100,21 +146,66 @@ def _diarize(argv) -> int:
         if t["speaker"] not in speakers:
             speakers.append(t["speaker"])
     n = lambda k: int(opts[k]) if k in opts else None  # noqa: E731
-    params = {"num_speakers": n("num-speakers"), "min_speakers": n("min-speakers"), "max_speakers": n("max-speakers")}
+    params = {
+        "num_speakers": n("num-speakers"),
+        "min_speakers": n("min-speakers"),
+        "max_speakers": n("max-speakers"),
+    }
     if MODE == "wrong_params":
         params["num_speakers"] = 7
-    fp = "sha256:" + (("0" * 64) if MODE == "bad_fingerprint" else hashlib.sha256(raw).hexdigest())
-    doc = {"schema": "diarization-skill/turns@1",
-           "source": {"filename": os.path.basename(media), "fingerprint": fp, "size_bytes": len(raw), "media_duration": dur, "has_video": bool(facts.get("video", True)),
-                      "audio_stream": int(opts.get("audio-stream", 0))},
-           "engine": {"id": "pyannote", "version": "4.0.1", "model": "pyannote/speaker-diarization-community-1", "revision": "abc123", "license": "CC-BY-4.0",
-                      "attribution": "pyannote/speaker-diarization-community-1 by pyannoteAI, licensed CC-BY-4.0; run with pyannote.audio (MIT)", "execution_mode": "local", "device": "cpu"},
-           "parameters": params, "speakers": speakers, "speaker_count": len(speakers), "speech_seconds": round(sum(t["end"] - t["start"] for t in turns), 3), "turns": turns,
-           "overlap": {"available": True, "turns": turns, "regions": [], "total_seconds": 0.0},
-           "audio_extraction": {"tool": "ffmpeg", "recipe": {"channels": 1, "sample_rate": 16000, "codec": "pcm_s16le", "container": "wav"}, "audio_stream_index": 0,
-                                "stream": "0:a:0", "engine_seconds": 0.1},
-           "skill": "diarization-skill", "skill_version": _contract()["version"], "tool": "diarization/diarize", "created_at": "2026-10-31T00:00:00Z",
-           "processing_seconds": 0.1, "warnings": []}
+    fp = "sha256:" + (
+        ("0" * 64) if MODE == "bad_fingerprint" else hashlib.sha256(raw).hexdigest()
+    )
+    doc = {
+        "schema": "diarization-skill/turns@1",
+        "source": {
+            "filename": os.path.basename(media),
+            "fingerprint": fp,
+            "size_bytes": len(raw),
+            "media_duration": dur,
+            "has_video": bool(facts.get("video", True)),
+            "audio_stream": int(opts.get("audio-stream", 0)),
+        },
+        "engine": {
+            "id": "pyannote",
+            "version": "4.0.1",
+            "model": "pyannote/speaker-diarization-community-1",
+            "revision": "abc123",
+            "license": "CC-BY-4.0",
+            "attribution": "pyannote/speaker-diarization-community-1 by pyannoteAI, licensed CC-BY-4.0; run with pyannote.audio (MIT)",
+            "execution_mode": "local",
+            "device": "cpu",
+        },
+        "parameters": params,
+        "speakers": speakers,
+        "speaker_count": len(speakers),
+        "speech_seconds": round(sum(t["end"] - t["start"] for t in turns), 3),
+        "turns": turns,
+        "overlap": {
+            "available": True,
+            "turns": turns,
+            "regions": [],
+            "total_seconds": 0.0,
+        },
+        "audio_extraction": {
+            "tool": "ffmpeg",
+            "recipe": {
+                "channels": 1,
+                "sample_rate": 16000,
+                "codec": "pcm_s16le",
+                "container": "wav",
+            },
+            "audio_stream_index": 0,
+            "stream": "0:a:0",
+            "engine_seconds": 0.1,
+        },
+        "skill": "diarization-skill",
+        "skill_version": _contract()["version"],
+        "tool": "diarization/diarize",
+        "created_at": "2026-10-31T00:00:00Z",
+        "processing_seconds": 0.1,
+        "warnings": [],
+    }
     out = opts.get("output")
     if out and MODE != "not_written":
         Path(out).write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")

@@ -8,6 +8,7 @@ derivable from the live contract. Run before a release and after any ToolSpec ch
 The agent half (README.md here) gives a model the contract JSON and questions.json and
 records its answers; grade them with --grade.
 """
+
 import json
 import re
 import subprocess
@@ -20,7 +21,14 @@ QUESTIONS = json.loads((HERE / "questions.json").read_text(encoding="utf-8"))
 
 
 def contract():
-    out = subprocess.run([sys.executable, str(ROOT / "scripts" / "_contract.py"), "--json", "--static"], stdout=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", check=True).stdout
+    out = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "_contract.py"), "--json", "--static"],
+        stdout=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=True,
+    ).stdout
     return json.loads(out)
 
 
@@ -30,14 +38,20 @@ def derive(doc):
     yn = lambda b: "yes" if b else "no"  # noqa: E731
     return {
         "q1-tool-for-task": tools["silence"]["id"],
-        "q2-required-capability": [c for c in tools["loudness"]["capabilities"]["required"] if c not in ("ffmpeg", "ffprobe", "encoder:aac")][0],
+        "q2-required-capability": [
+            c
+            for c in tools["loudness"]["capabilities"]["required"]
+            if c not in ("ffmpeg", "ffprobe", "encoder:aac")
+        ][0],
         "q3-visual-verification": yn(tools["caption"]["requires_visual_verification"]),
         "q4-no-visual-for-audio": yn(tools["loudness"]["requires_visual_verification"]),
         "q5-input-preserved": yn(tools["cut"]["mutates_input"]),
         "q6-dry-run": yn(tools["export"]["supports_dry_run"]),
         "q7-roles": f"probe={tools['probe']['role']}, cut={tools['cut']['role']}, check={tools['check']['role']}",
         "q8-no-shell-needed": "clip.mp4 --start 0:10 --end 0:20 -o out.mp4 --json",
-        "q9-stable-ids": ", ".join(tools[n]["id"] for n in ("probe", "loudness", "export", "look")),
+        "q9-stable-ids": ", ".join(
+            tools[n]["id"] for n in ("probe", "loudness", "export", "look")
+        ),
         "q10-verification-tools": ", ".join(tools["export"]["verification"]["tools"]),
     }
 
@@ -52,11 +66,15 @@ def main():
     bad = [q["id"] for q in QUESTIONS if norm(derived[q["id"]]) != norm(q["expected"])]
     if bad:
         for b in bad:
-            print(f"MISMATCH {b}: contract says {derived[b]!r}, questions.json expects {[q for q in QUESTIONS if q['id']==b][0]['expected']!r}")
+            print(
+                f"MISMATCH {b}: contract says {derived[b]!r}, questions.json expects {[q for q in QUESTIONS if q['id']==b][0]['expected']!r}"
+            )
         return 1
     print(f"contract evals: {len(QUESTIONS)} expected answers agree with the contract")
     if "--grade" in sys.argv:
-        answers = json.loads(Path(sys.argv[sys.argv.index("--grade") + 1]).read_text(encoding="utf-8"))
+        answers = json.loads(
+            Path(sys.argv[sys.argv.index("--grade") + 1]).read_text(encoding="utf-8")
+        )
         score = 0
         for q in QUESTIONS:
             got = norm(answers.get(q["id"], ""))

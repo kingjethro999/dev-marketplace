@@ -9,6 +9,7 @@ Linux with CUDA and Python 3.11+, so engines that run elsewhere cannot import it
 plain Python over the 16-bit samples of the prepared WAV (no numpy), and the chunks cover the audio without gaps or
 overlaps.
 """
+
 from __future__ import annotations
 
 from typing import List, Sequence, Tuple
@@ -27,15 +28,22 @@ def _quietest_window(samples: Sequence[float], low: int, high: int, window: int)
         energy += float(samples[i]) * float(samples[i])
     for k in range(0, high - low + 1):
         if k:
-            out_v, in_v = float(samples[low + k - 1]), float(samples[low + k + window - 1])
+            out_v, in_v = float(samples[low + k - 1]), float(
+                samples[low + k + window - 1]
+            )
             energy += in_v * in_v - out_v * out_v
         if best is None or energy < best:
             best, best_at = energy, k
     return best_at
 
 
-def split_at_quiet_points(samples: Sequence[float], sample_rate: int = SAMPLE_RATE, chunk_seconds: float = CHUNK_SECONDS,
-                          search_seconds: float = SEARCH_SECONDS, window_seconds: float = WINDOW_SECONDS) -> List[Tuple[int, int]]:
+def split_at_quiet_points(
+    samples: Sequence[float],
+    sample_rate: int = SAMPLE_RATE,
+    chunk_seconds: float = CHUNK_SECONDS,
+    search_seconds: float = SEARCH_SECONDS,
+    window_seconds: float = WINDOW_SECONDS,
+) -> List[Tuple[int, int]]:
     """`(start, end)` sample ranges that cover `samples` without gaps, cut at quiet points (the haas-asr rule above).
     Audio no longer than one chunk is a single range; empty audio gives none."""
     size = len(samples)

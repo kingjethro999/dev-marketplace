@@ -23,7 +23,9 @@ one entry per request, each one of
   ("cut", n)                             (upload) read n bytes of the body, keep none, drop the connection
   ("lost",)                              (upload, publish) do the work, then drop the connection (the answer is lost)
   ("stall", seconds)                     wait, then drop the connection without answering (the client times out)
-  ("call", fn)                           run fn() first (e.g. edit the file mid-upload), then answer normally"""
+  ("call", fn)                           run fn() first (e.g. edit the file mid-upload), then answer normally
+"""
+
 from __future__ import annotations
 
 import json
@@ -51,13 +53,21 @@ def error(status: int, code: Optional[int], message: Optional[str] = None) -> by
 
 
 class MockReels:
-    def __init__(self, ig_id: str, token: str, processing: Optional[List[str]] = None) -> None:
+    def __init__(
+        self, ig_id: str, token: str, processing: Optional[List[str]] = None
+    ) -> None:
         self.ig_id, self.token = ig_id, token
         self.processing = processing or []
         self.faults: Dict[str, List[Any]] = {}
-        self.containers: Dict[str, Dict[str, Any]] = {}  # container -> {"fields", "data", "polls", "state"}
-        self.requests: List[Dict[str, Any]] = []         # every request: kind, method, path, query, headers, length
-        self.media: List[Dict[str, Any]] = []            # every reel published: {"id", "fields", "data"}
+        self.containers: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # container -> {"fields", "data", "polls", "state"}
+        self.requests: List[Dict[str, Any]] = (
+            []
+        )  # every request: kind, method, path, query, headers, length
+        self.media: List[Dict[str, Any]] = (
+            []
+        )  # every reel published: {"id", "fields", "data"}
         self.lock = threading.Lock()
         self.server: Optional[ThreadingHTTPServer] = None
 
@@ -86,7 +96,11 @@ class MockReels:
         self.url = f"http://127.0.0.1:{self.port}"
         self._allowed = allowed_ports
         allowed_ports.add(self.port)
-        threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
+        threading.Thread(
+            target=self.server.serve_forever,
+            kwargs={"poll_interval": 0.05},
+            daemon=True,
+        ).start()
         return self
 
     def stop(self) -> None:
@@ -110,12 +124,33 @@ class MockReels:
         parts = urlsplit(h.path)
         headers = {k.lower(): v for k, v in h.headers.items()}
         length = int(headers.get("content-length") or 0)
-        m, p, u, s = (_MEDIA.match(parts.path), _PUBLISH.match(parts.path), _UPLOAD.match(parts.path),
-                      _STATUS.match(parts.path))
-        kind = ("container" if method == "POST" and m else "publish" if method == "POST" and p else
-                "upload" if method == "POST" and u else "status" if method == "GET" and s else "unknown")
-        record: Dict[str, Any] = {"kind": kind, "method": method, "path": parts.path, "query": parts.query,
-                                  "headers": headers, "length": length}
+        m, p, u, s = (
+            _MEDIA.match(parts.path),
+            _PUBLISH.match(parts.path),
+            _UPLOAD.match(parts.path),
+            _STATUS.match(parts.path),
+        )
+        kind = (
+            "container"
+            if method == "POST" and m
+            else (
+                "publish"
+                if method == "POST" and p
+                else (
+                    "upload"
+                    if method == "POST" and u
+                    else "status" if method == "GET" and s else "unknown"
+                )
+            )
+        )
+        record: Dict[str, Any] = {
+            "kind": kind,
+            "method": method,
+            "path": parts.path,
+            "query": parts.query,
+            "headers": headers,
+            "length": length,
+        }
         with self.lock:
             self.requests.append(record)
         fault = self._fault(kind)
@@ -130,11 +165,21 @@ class MockReels:
                 time.sleep(fault[1])
                 return self._drop(h)
             elif fault[0] == "status":
-                return self._send(h, fault[1], error(fault[1], fault[2], fault[3]), fault[4] if len(fault) > 4 else {})
+                return self._send(
+                    h,
+                    fault[1],
+                    error(fault[1], fault[2], fault[3]),
+                    fault[4] if len(fault) > 4 else {},
+                )
         if kind == "unknown":
             return self._send(h, 404, error(404, 100, "Unknown path"))
-        form = {k: v[0] for k, v in parse_qs(raw.decode("utf-8") if method == "POST" else parts.query,
-                                              keep_blank_values=True).items()}
+        form = {
+            k: v[0]
+            for k, v in parse_qs(
+                raw.decode("utf-8") if method == "POST" else parts.query,
+                keep_blank_values=True,
+            ).items()
+        }
         record["form"] = {k: v for k, v in form.items() if k != "access_token"}
         if form.get("access_token") != self.token:
             return self._send(h, 400, error(400, 190, "Invalid OAuth access token."))
@@ -144,18 +189,44 @@ class MockReels:
             return self._status(h, s.group(1), form)
         return self._publish(h, p.group(1), form, fault)
 
-    def _container(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], ig: str, form: Dict[str, str]) -> None:
-        if headers.get("content-type") != "application/x-www-form-urlencoded" or ig != self.ig_id:
+    def _container(
+        self,
+        h: BaseHTTPRequestHandler,
+        headers: Dict[str, str],
+        ig: str,
+        form: Dict[str, str],
+    ) -> None:
+        if (
+            headers.get("content-type") != "application/x-www-form-urlencoded"
+            or ig != self.ig_id
+        ):
             return self._send(h, 400, error(400, 100, "Invalid parameter"))
         if form.get("media_type") != "REELS" or form.get("upload_type") != "resumable":
-            return self._send(h, 400, error(400, 100, "media_type REELS and upload_type resumable are expected"))
+            return self._send(
+                h,
+                400,
+                error(
+                    400, 100, "media_type REELS and upload_type resumable are expected"
+                ),
+            )
         with self.lock:
             cid = str(17900000000000000 + len(self.containers))
-            self.containers[cid] = {"fields": {k: v for k, v in form.items() if k != "access_token"}, "data": None,
-                                    "polls": 0, "state": "IN_PROGRESS"}
+            self.containers[cid] = {
+                "fields": {k: v for k, v in form.items() if k != "access_token"},
+                "data": None,
+                "polls": 0,
+                "state": "IN_PROGRESS",
+            }
         return self._send(h, 200, json.dumps({"id": cid}).encode())
 
-    def _upload(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], cid: str, length: int, fault: Any) -> None:
+    def _upload(
+        self,
+        h: BaseHTTPRequestHandler,
+        headers: Dict[str, str],
+        cid: str,
+        length: int,
+        fault: Any,
+    ) -> None:
         if fault is not None and fault[0] == "call":
             fault[1]()
             fault = None
@@ -169,54 +240,117 @@ class MockReels:
                 break
             raw += buf
         if len(raw) < length:
-            return self._drop(h)                          # the client stopped sending (its file changed)
+            return self._drop(h)  # the client stopped sending (its file changed)
         if fault is not None and fault[0] == "stall":
             time.sleep(fault[1])
             return self._drop(h)
         if fault is not None and fault[0] == "status":
-            return self._send(h, fault[1], error(fault[1], fault[2], fault[3]), fault[4] if len(fault) > 4 else {})
+            return self._send(
+                h,
+                fault[1],
+                error(fault[1], fault[2], fault[3]),
+                fault[4] if len(fault) > 4 else {},
+            )
         if fault is not None and fault[0] == "debug":
-            return self._send(h, fault[1], json.dumps({"debug_info": {"retriable": fault[2], "type": "ProcessingFailedError",
-                                                                      "message": fault[3]}}).encode())
+            return self._send(
+                h,
+                fault[1],
+                json.dumps(
+                    {
+                        "debug_info": {
+                            "retriable": fault[2],
+                            "type": "ProcessingFailedError",
+                            "message": fault[3],
+                        }
+                    }
+                ).encode(),
+            )
         if headers.get("authorization") != "OAuth " + self.token:
-            return self._send(h, 400, json.dumps({"debug_info": {"retriable": False, "type": "ProcessingFailedError",
-                                                                 "message": "unauthorized user request"}}).encode())
+            return self._send(
+                h,
+                400,
+                json.dumps(
+                    {
+                        "debug_info": {
+                            "retriable": False,
+                            "type": "ProcessingFailedError",
+                            "message": "unauthorized user request",
+                        }
+                    }
+                ).encode(),
+            )
         with self.lock:
             c = self.containers.get(cid)
-        if c is None or headers.get("offset") != "0" or headers.get("file_size") != str(length):
-            return self._send(h, 400, json.dumps({"debug_info": {"retriable": False, "type": "BadRequest",
-                                                                 "message": "bad upload headers"}}).encode())
+        if (
+            c is None
+            or headers.get("offset") != "0"
+            or headers.get("file_size") != str(length)
+        ):
+            return self._send(
+                h,
+                400,
+                json.dumps(
+                    {
+                        "debug_info": {
+                            "retriable": False,
+                            "type": "BadRequest",
+                            "message": "bad upload headers",
+                        }
+                    }
+                ).encode(),
+            )
         with self.lock:
             c["data"] = raw
         if fault is not None and fault[0] == "lost":
             return self._drop(h)
-        return self._send(h, 200, json.dumps({"success": True, "message": "Upload successful."}).encode())
+        return self._send(
+            h,
+            200,
+            json.dumps({"success": True, "message": "Upload successful."}).encode(),
+        )
 
-    def _status(self, h: BaseHTTPRequestHandler, cid: str, form: Dict[str, str]) -> None:
+    def _status(
+        self, h: BaseHTTPRequestHandler, cid: str, form: Dict[str, str]
+    ) -> None:
         with self.lock:
             c = self.containers.get(cid)
             if c is None or form.get("fields") != "status_code":
                 return self._send(h, 400, error(400, 100, "Invalid parameter"))
             if c["data"] is not None:
-                c["state"] = self.processing[min(c["polls"], len(self.processing) - 1)] if self.processing else "FINISHED"
+                c["state"] = (
+                    self.processing[min(c["polls"], len(self.processing) - 1)]
+                    if self.processing
+                    else "FINISHED"
+                )
                 c["polls"] += 1
             state = c["state"]
-        return self._send(h, 200, json.dumps({"status_code": state, "id": cid}).encode())
+        return self._send(
+            h, 200, json.dumps({"status_code": state, "id": cid}).encode()
+        )
 
-    def _publish(self, h: BaseHTTPRequestHandler, ig: str, form: Dict[str, str], fault: Any) -> None:
+    def _publish(
+        self, h: BaseHTTPRequestHandler, ig: str, form: Dict[str, str], fault: Any
+    ) -> None:
         with self.lock:
             c = self.containers.get(form.get("creation_id", ""))
             if ig != self.ig_id or c is None or c["state"] != "FINISHED":
                 return self._send(h, 400, error(400, 9007, "Media ID is not available"))
             media_id = str(17800000000000000 + len(self.media) + 3)
             c["state"] = "PUBLISHED"
-            self.media.append({"id": media_id, "fields": c["fields"], "data": c["data"]})
+            self.media.append(
+                {"id": media_id, "fields": c["fields"], "data": c["data"]}
+            )
         if fault is not None and fault[0] == "lost":
             return self._drop(h)
         return self._send(h, 200, json.dumps({"id": media_id}).encode())
 
     @staticmethod
-    def _send(h: BaseHTTPRequestHandler, code: int, body: bytes, headers: Optional[Dict[str, str]] = None) -> None:
+    def _send(
+        h: BaseHTTPRequestHandler,
+        code: int,
+        body: bytes,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> None:
         try:
             h.send_response(code)
             for k, v in (headers or {}).items():

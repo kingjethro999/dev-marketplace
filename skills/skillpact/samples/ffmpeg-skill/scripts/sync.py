@@ -24,6 +24,7 @@ Examples:
   python3 sync.py cam.mp4 mic.wav --max-offset 60 --json
   python3 sync.py cam.mp4 recorder.wav --fix-drift --replace-audio   # long takes: fix clock drift too
 """
+
 import argparse
 import cmath
 import json
@@ -32,7 +33,25 @@ import os
 import sys
 from typing import Dict, List
 
-from _common import video_args, add_common, apply_common, emit, aac_args, audio_codec_for, default_output, die, ffmpeg_base, info, probe, require_tool, run, run_analysis, x264_args, decode_pcm_mono, rms_envelope
+from _common import (
+    video_args,
+    add_common,
+    apply_common,
+    emit,
+    aac_args,
+    audio_codec_for,
+    default_output,
+    die,
+    ffmpeg_base,
+    info,
+    probe,
+    require_tool,
+    run,
+    run_analysis,
+    x264_args,
+    decode_pcm_mono,
+    rms_envelope,
+)
 
 SR = 8000  # decode sample rate
 
@@ -45,7 +64,11 @@ def sync_meaning(offset: float) -> str:
     recordings start together; anything larger keeps later/earlier."""
     if abs(offset) < 5e-4:
         return "second starts together with the reference"
-    return "second starts %.3fs %s than reference" % (abs(offset), "later" if offset > 0 else "earlier")
+    return "second starts %.3fs %s than reference" % (
+        abs(offset),
+        "later" if offset > 0 else "earlier",
+    )
+
 
 # Scoring constants for coarse alignment. Both come from tests/bench_sync.py on real dialogue and
 # music with +/-30 s offsets, gain, noise and EQ (see evals/results and CHANGELOG 0.8.0):
@@ -126,6 +149,7 @@ def cross_correlate(ref: List[float], other: List[float], max_lag: int):
     fb = fft([complex(x) for x in other] + [0j] * (n - len(other)))
     prod = [x * y.conjugate() for x, y in zip(fa, fb)]
     corr = ifft(prod)
+
     # prefix sums of squares for overlap energy
     def prefix(v: List[float]) -> List[float]:
         out = [0.0]
@@ -134,11 +158,14 @@ def cross_correlate(ref: List[float], other: List[float], max_lag: int):
             acc += x * x
             out.append(acc)
         return out
+
     pr, po = prefix(ref), prefix(other)
     lr, lo = len(ref), len(other)
     max_lag = min(max_lag, n // 2 - 1)
     best_lag, best_val, second = 0, -float("inf"), -float("inf")
-    min_overlap = max(10, int(MIN_OVERLAP_FRACTION * min(lr, lo)))  # see constants above
+    min_overlap = max(
+        10, int(MIN_OVERLAP_FRACTION * min(lr, lo))
+    )  # see constants above
     scores = []
     for lag in range(-max_lag, max_lag + 1):
         # corr[lag] = sum_i ref[i] * other[i - lag]  -> ref index range and other index range overlap:
@@ -151,7 +178,9 @@ def cross_correlate(ref: List[float], other: List[float], max_lag: int):
         if denom <= 0:
             continue
         val = corr[lag % n].real / denom
-        val *= ((r1 - r0) / min(lr, lo)) ** OVERLAP_WEIGHT_EXP  # longer overlap wins ties
+        val *= (
+            (r1 - r0) / min(lr, lo)
+        ) ** OVERLAP_WEIGHT_EXP  # longer overlap wins ties
 
         scores.append((val, lag))
         if val > best_val:
@@ -167,7 +196,13 @@ def cross_correlate(ref: List[float], other: List[float], max_lag: int):
     return best_lag, conf
 
 
-def refine(ref_s: List[float], oth_s: List[float], coarse_offset: float, fine_step: int, window_s: float) -> float:
+def refine(
+    ref_s: List[float],
+    oth_s: List[float],
+    coarse_offset: float,
+    fine_step: int,
+    window_s: float,
+) -> float:
     """Direct correlation at fine resolution around a coarse estimate (+/- window_s)."""
     ref_e = envelope(ref_s, fine_step)
     oth_e = envelope(oth_s, fine_step)
@@ -183,13 +218,21 @@ def refine(ref_s: List[float], oth_s: List[float], coarse_offset: float, fine_st
         val = 0.0
         for i in range(lo, hi):
             val += ref_e[i] * oth_e[i - lag]
-        val /= (hi - lo)
+        val /= hi - lo
         if val > best_val:
             best_val, best_lag = val, lag
     return best_lag * fine_step / SR
 
 
-def measure_offset(ref_path: str, oth_path: str, start: float, seconds: float, step_ms: float, max_offset: float, fine_ms: float):
+def measure_offset(
+    ref_path: str,
+    oth_path: str,
+    start: float,
+    seconds: float,
+    step_ms: float,
+    max_offset: float,
+    fine_ms: float,
+):
     """Return (offset_seconds, confidence) for a window starting at `start` in both files."""
     ref_s = decode_mono(ref_path, seconds, start)
     oth_s = decode_mono(oth_path, seconds, start)
@@ -200,13 +243,18 @@ def measure_offset(ref_path: str, oth_path: str, start: float, seconds: float, s
         # name the file (or both): sync.py and multicam.py measure several sources, and a bare
         # "not enough audio" left the caller to guess which one was too short
         short = [p for p, env in ((ref_path, ref), (oth_path, oth)) if len(env) < 10]
-        die(f"not enough audio to analyse in {' and '.join(short)} "
-            f"(needs at least {10 * step_ms / 1000:g} s of audio from {start:g} s)", kind="input")
+        die(
+            f"not enough audio to analyse in {' and '.join(short)} "
+            f"(needs at least {10 * step_ms / 1000:g} s of audio from {start:g} s)",
+            kind="input",
+        )
     max_lag = int(max_offset * SR / step)
     lag, score = cross_correlate(ref, oth, max_lag)
     offset = lag * step / SR
     if fine_ms and fine_ms < step_ms:
-        offset = refine(ref_s, oth_s, offset, max(1, int(SR * fine_ms / 1000)), step_ms / 1000 * 2)
+        offset = refine(
+            ref_s, oth_s, offset, max(1, int(SR * fine_ms / 1000)), step_ms / 1000 * 2
+        )
     return offset, max(0.0, min(1.0, score))
 
 
@@ -215,7 +263,15 @@ def measure_one(reference: str, path: str, args) -> Dict:
     confidence and (with --fix-drift) the same end-of-file drift measurement main() has always
     made for a single pair. Used for every source when N>1, and for the historical single-pair
     CLI shape when N==1 -- one measurement, so the two shapes cannot disagree."""
-    offset, score = measure_offset(reference, path, 0.0, args.analyze_seconds, args.step_ms, args.max_offset, args.fine_ms)
+    offset, score = measure_offset(
+        reference,
+        path,
+        0.0,
+        args.analyze_seconds,
+        args.step_ms,
+        args.max_offset,
+        args.fine_ms,
+    )
     drift_ratio = 1.0
     drift_info = None
     if args.fix_drift:
@@ -225,7 +281,9 @@ def measure_one(reference: str, path: str, args) -> Dict:
         head_len = min(args.analyze_seconds, overlap_end)
         tail_start = overlap_end - args.drift_window
         if tail_start <= head_len / 2 + 5:
-            info(f"warning: {path} too short to measure drift reliably; skipping drift correction")
+            info(
+                f"warning: {path} too short to measure drift reliably; skipping drift correction"
+            )
         else:
             ref_start = tail_start
             sec_start = tail_start - offset
@@ -235,57 +293,133 @@ def measure_one(reference: str, path: str, args) -> Dict:
             ref_s = decode_mono(reference, args.drift_window, ref_start)
             oth_s = decode_mono(path, args.drift_window, sec_start)
             step = max(1, int(SR * args.step_ms / 1000))
-            lag, end_score = cross_correlate(envelope(ref_s, step), envelope(oth_s, step), int(2.0 * SR / step))
+            lag, end_score = cross_correlate(
+                envelope(ref_s, step), envelope(oth_s, step), int(2.0 * SR / step)
+            )
             residual = lag * step / SR
             if args.fine_ms:
-                residual = refine(ref_s, oth_s, residual, max(1, int(SR * args.fine_ms / 1000)), args.step_ms / 1000 * 2)
+                residual = refine(
+                    ref_s,
+                    oth_s,
+                    residual,
+                    max(1, int(SR * args.fine_ms / 1000)),
+                    args.step_ms / 1000 * 2,
+                )
             head_mid = head_len / 2
             tail_mid = ref_start + args.drift_window / 2
             elapsed = tail_mid - head_mid
             if elapsed > 0 and end_score > 0.1:
                 drift_ratio = 1.0 - residual / elapsed
                 offset = offset + (drift_ratio - 1.0) * head_mid
-                drift_info = {"residual_at_end_seconds": round(residual, 4), "measured_over_seconds": round(elapsed, 2),
-                              "drift_ppm": round((drift_ratio - 1) * 1e6, 1),
-                              "meaning": "second file runs %.1f ppm %s (%.3fs over %.0fs); it will be resampled to match" % (
-                                  abs(drift_ratio - 1) * 1e6, "long/slow" if drift_ratio > 1 else "short/fast", abs(residual), elapsed),
-                              "confidence": round(end_score, 3)}
+                drift_info = {
+                    "residual_at_end_seconds": round(residual, 4),
+                    "measured_over_seconds": round(elapsed, 2),
+                    "drift_ppm": round((drift_ratio - 1) * 1e6, 1),
+                    "meaning": "second file runs %.1f ppm %s (%.3fs over %.0fs); it will be resampled to match"
+                    % (
+                        abs(drift_ratio - 1) * 1e6,
+                        "long/slow" if drift_ratio > 1 else "short/fast",
+                        abs(residual),
+                        elapsed,
+                    ),
+                    "confidence": round(end_score, 3),
+                }
             else:
-                info(f"warning: could not measure drift with confidence for {path}; skipping drift correction")
-    return {"path": path, "offset_seconds": round(offset, 4), "offset_s": round(offset, 4),
-            "confidence": round(max(0.0, min(1.0, score)), 3), "drift_ratio": drift_ratio, "drift": drift_info,
-            "drift_ppm": (drift_info["drift_ppm"] if drift_info else None)}
+                info(
+                    f"warning: could not measure drift with confidence for {path}; skipping drift correction"
+                )
+    return {
+        "path": path,
+        "offset_seconds": round(offset, 4),
+        "offset_s": round(offset, 4),
+        "confidence": round(max(0.0, min(1.0, score)), 3),
+        "drift_ratio": drift_ratio,
+        "drift": drift_info,
+        "drift_ppm": (drift_info["drift_ppm"] if drift_info else None),
+    }
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("reference", help="reference recording (usually the camera video)")
-    ap.add_argument("second", help="recording to align (external audio or second camera)")
-    ap.add_argument("more_sources", nargs="*", metavar="SOURCE3...", default=[],
-                    help="(1.18) additional recordings beyond `second` to align to the same "
-                         "reference -- a third camera, a second external recorder. With none of "
-                         "these, sync.py keeps its original 2-source shape (offset_seconds/"
-                         "confidence/drift at the top level, --replace-audio/--trim-second "
-                         "available). With 1+, all sources (second plus these) are measured and "
-                         "reported as one offsets JSON {reference, sources: [{path, offset_s, "
-                         "confidence, drift_ppm}]}, and --replace-audio/--trim-second refuse: "
-                         "each writes ONE synced output and there is more than one source")
-    ap.add_argument("-o", "--output", help="output file when writing a synced result (one-source runs only)")
-    ap.add_argument("--max-offset", type=float, default=30.0, help="largest offset to search in seconds (default 30)")
-    ap.add_argument("--analyze-seconds", type=float, default=120.0, help="how much audio to analyse from each file (default 120)")
-    ap.add_argument("--step-ms", type=float, default=20.0, help="coarse envelope resolution in ms for the FFT search (default 20)")
-    ap.add_argument("--fine-ms", type=float, default=1.0, help="fine resolution in ms for the refinement pass, 0 to skip (default 1)")
-    ap.add_argument("--fix-drift", action="store_true", help="also measure the offset near the END and correct clock drift by resampling the second file")
-    ap.add_argument("--drift-window", type=float, default=60.0, help="seconds of audio analysed at each end for drift (default 60)")
+    ap.add_argument(
+        "second", help="recording to align (external audio or second camera)"
+    )
+    ap.add_argument(
+        "more_sources",
+        nargs="*",
+        metavar="SOURCE3...",
+        default=[],
+        help="(1.18) additional recordings beyond `second` to align to the same "
+        "reference -- a third camera, a second external recorder. With none of "
+        "these, sync.py keeps its original 2-source shape (offset_seconds/"
+        "confidence/drift at the top level, --replace-audio/--trim-second "
+        "available). With 1+, all sources (second plus these) are measured and "
+        "reported as one offsets JSON {reference, sources: [{path, offset_s, "
+        "confidence, drift_ppm}]}, and --replace-audio/--trim-second refuse: "
+        "each writes ONE synced output and there is more than one source",
+    )
+    ap.add_argument(
+        "-o",
+        "--output",
+        help="output file when writing a synced result (one-source runs only)",
+    )
+    ap.add_argument(
+        "--max-offset",
+        type=float,
+        default=30.0,
+        help="largest offset to search in seconds (default 30)",
+    )
+    ap.add_argument(
+        "--analyze-seconds",
+        type=float,
+        default=120.0,
+        help="how much audio to analyse from each file (default 120)",
+    )
+    ap.add_argument(
+        "--step-ms",
+        type=float,
+        default=20.0,
+        help="coarse envelope resolution in ms for the FFT search (default 20)",
+    )
+    ap.add_argument(
+        "--fine-ms",
+        type=float,
+        default=1.0,
+        help="fine resolution in ms for the refinement pass, 0 to skip (default 1)",
+    )
+    ap.add_argument(
+        "--fix-drift",
+        action="store_true",
+        help="also measure the offset near the END and correct clock drift by resampling the second file",
+    )
+    ap.add_argument(
+        "--drift-window",
+        type=float,
+        default=60.0,
+        help="seconds of audio analysed at each end for drift (default 60)",
+    )
     mode = ap.add_mutually_exclusive_group()
-    mode.add_argument("--replace-audio", action="store_true", help="write reference video with the second file's audio, aligned")
-    mode.add_argument("--trim-second", action="store_true", help="write the second file shifted so it lines up with the reference")
+    mode.add_argument(
+        "--replace-audio",
+        action="store_true",
+        help="write reference video with the second file's audio, aligned",
+    )
+    mode.add_argument(
+        "--trim-second",
+        action="store_true",
+        help="write the second file shifted so it lines up with the reference",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
     if args.analyze_seconds > 900:
-        die(f"--analyze-seconds {args.analyze_seconds:g}: the window is decoded into memory; 900 s is the ceiling")
+        die(
+            f"--analyze-seconds {args.analyze_seconds:g}: the window is decoded into memory; 900 s is the ceiling"
+        )
     args.sources = [args.second] + list(args.more_sources)
 
     for p in (args.reference,) + tuple(args.sources):
@@ -294,25 +428,41 @@ def main() -> int:
 
     n_sources = len(args.sources)
     if (args.replace_audio or args.trim_second) and n_sources > 1:
-        die("--replace-audio/--trim-second write ONE synced output and need exactly one SOURCE; "
+        die(
+            "--replace-audio/--trim-second write ONE synced output and need exactly one SOURCE; "
             f"{n_sources} were given. Run sync.py once per source, or drop the flag and read the "
-            "offsets JSON.", kind="input")
+            "offsets JSON.",
+            kind="input",
+        )
 
     measured = [measure_one(args.reference, p, args) for p in args.sources]
     for p, m in zip(args.sources, measured):
         if m["confidence"] < 0.1:
-            info(f"warning: {p}: low correlation confidence; check that it shares an audio event with the reference")
+            info(
+                f"warning: {p}: low correlation confidence; check that it shares an audio event with the reference"
+            )
 
-    sources_block = [{"path": p, "offset_s": m["offset_s"], "confidence": m["confidence"],
-                      **({"drift_ppm": m["drift_ppm"]} if args.fix_drift else {})}
-                     for p, m in zip(args.sources, measured)]
+    sources_block = [
+        {
+            "path": p,
+            "offset_s": m["offset_s"],
+            "confidence": m["confidence"],
+            **({"drift_ppm": m["drift_ppm"]} if args.fix_drift else {}),
+        }
+        for p, m in zip(args.sources, measured)
+    ]
 
     if n_sources == 1:
         # The original 2-source shape, unchanged, plus (additively) the same measurement under
         # `sources` so a caller reading the new key gets the same numbers for a single source.
         args.second = args.sources[0]
         m = measured[0]
-        offset, score, drift_ratio, drift_info = m["offset_seconds"], m["confidence"], m["drift_ratio"], m["drift"]
+        offset, score, drift_ratio, drift_info = (
+            m["offset_seconds"],
+            m["confidence"],
+            m["drift_ratio"],
+            m["drift"],
+        )
         result = {
             "reference": args.reference,
             "second": args.second,
@@ -324,15 +474,26 @@ def main() -> int:
         if drift_info:
             result["drift"] = drift_info
         if score < 0.1:
-            info("warning: low correlation confidence; check that both files contain the same audio event")
+            info(
+                "warning: low correlation confidence; check that both files contain the same audio event"
+            )
     else:
-        offset = drift_ratio = drift_info = None  # not used below; output writing is 1-source only
+        offset = drift_ratio = drift_info = (
+            None  # not used below; output writing is 1-source only
+        )
         result = {"reference": args.reference, "sources": sources_block}
-        info(f"measured {n_sources} sources against {args.reference}: " +
-             ", ".join(f"{s['path']}: {s['offset_s']:+.3f}s (confidence {s['confidence']:.2f})" for s in sources_block))
+        info(
+            f"measured {n_sources} sources against {args.reference}: "
+            + ", ".join(
+                f"{s['path']}: {s['offset_s']:+.3f}s (confidence {s['confidence']:.2f})"
+                for s in sources_block
+            )
+        )
 
     if args.replace_audio or args.trim_second:
-        output = args.output or default_output(args.reference if args.replace_audio else args.second, "synced", "mp4")
+        output = args.output or default_output(
+            args.reference if args.replace_audio else args.second, "synced", "mp4"
+        )
         # second started later (offset > 0)  -> delay it by `offset` (pad the head)
         # second started earlier (offset < 0) -> drop its first `-offset` seconds
         delay_ms = int(round(offset * 1000))
@@ -356,24 +517,68 @@ def main() -> int:
             # its length instead of -shortest, which cut the reference's tail whenever the second
             # file started earlier (head_trim > 0) or was simply shorter
             ref_dur = probe(args.reference).get("duration")
-            af_parts = drift_af + ([f"adelay={delay_ms}:all=1"] if delay_ms > 0 else []) + ["apad"]
+            af_parts = (
+                drift_af
+                + ([f"adelay={delay_ms}:all=1"] if delay_ms > 0 else [])
+                + ["apad"]
+            )
             cmd += ["-af", ",".join(af_parts)]
-            cmd += aac_args() + (["-t", f"{ref_dur:.3f}"] if ref_dur else ["-shortest"]) + [output]
+            cmd += (
+                aac_args()
+                + (["-t", f"{ref_dur:.3f}"] if ref_dur else ["-shortest"])
+                + [output]
+            )
             proc = run(cmd, check=False)
             if proc.returncode != 0:
                 cmd = [c for c in cmd if c != "copy"]
-                idx = cmd.index("-c:v"); del cmd[idx]
-                cmd = cmd[:-1] + video_args(probe(args.reference) if args.replace_audio else probe(args.second), args.crf) + [output]
+                idx = cmd.index("-c:v")
+                del cmd[idx]
+                cmd = (
+                    cmd[:-1]
+                    + video_args(
+                        (
+                            probe(args.reference)
+                            if args.replace_audio
+                            else probe(args.second)
+                        ),
+                        args.crf,
+                    )
+                    + [output]
+                )
                 run(cmd)
         else:
             if head_trim > 0 and not drift_af:
-                cmd = ffmpeg_base() + ["-ss", f"{head_trim:.4f}", "-i", args.second, "-c", "copy"]
+                cmd = ffmpeg_base() + [
+                    "-ss",
+                    f"{head_trim:.4f}",
+                    "-i",
+                    args.second,
+                    "-c",
+                    "copy",
+                ]
                 if os.path.splitext(output)[1].lower() in (".mp4", ".mov", ".m4v"):
                     cmd += ["-movflags", "+faststart"]
                 cmd += ["-avoid_negative_ts", "make_zero", output]
                 proc = run(cmd, check=False)
                 if proc.returncode != 0:
-                    cmd = ffmpeg_base() + ["-ss", f"{head_trim:.4f}", "-i", args.second] + (video_args(probe(args.reference) if args.replace_audio else probe(args.second), args.crf) if has_video else []) + audio_codec_for(output) + [output]
+                    cmd = (
+                        ffmpeg_base()
+                        + ["-ss", f"{head_trim:.4f}", "-i", args.second]
+                        + (
+                            video_args(
+                                (
+                                    probe(args.reference)
+                                    if args.replace_audio
+                                    else probe(args.second)
+                                ),
+                                args.crf,
+                            )
+                            if has_video
+                            else []
+                        )
+                        + audio_codec_for(output)
+                        + [output]
+                    )
                     run(cmd)
             else:
                 cmd = ffmpeg_base()
@@ -391,7 +596,14 @@ def main() -> int:
                         vf.append(f"setpts=PTS/{drift_ratio:.9f}")
                     if vf:
                         cmd += ["-vf", ",".join(vf)]
-                    cmd += video_args(probe(args.reference) if args.replace_audio else probe(args.second), args.crf)
+                    cmd += video_args(
+                        (
+                            probe(args.reference)
+                            if args.replace_audio
+                            else probe(args.second)
+                        ),
+                        args.crf,
+                    )
                 if af_parts:
                     cmd += ["-af", ",".join(af_parts)]
                 cmd += audio_codec_for(output) + [output]
@@ -402,16 +614,26 @@ def main() -> int:
     if args.json:
         emit(result.get("output"), **{k: v for k, v in result.items() if k != "output"})
     elif n_sources == 1:
-        print(f"offset: {result['offset_seconds']:+.3f}s ({result['meaning']}), confidence {result['confidence']:.2f}")
+        print(
+            f"offset: {result['offset_seconds']:+.3f}s ({result['meaning']}), confidence {result['confidence']:.2f}"
+        )
         if drift_info:
-            print(f"drift: {drift_info['drift_ppm']:+.1f} ppm ({drift_info['residual_at_end_seconds']:+.3f}s over {drift_info['measured_over_seconds']:.0f}s), confidence {drift_info['confidence']:.2f}")
+            print(
+                f"drift: {drift_info['drift_ppm']:+.1f} ppm ({drift_info['residual_at_end_seconds']:+.3f}s over {drift_info['measured_over_seconds']:.0f}s), confidence {drift_info['confidence']:.2f}"
+            )
         if "output" in result:
             print(result["output"])
     else:
         for s in sources_block:
-            line = f"{s['path']}: {s['offset_s']:+.3f}s, confidence {s['confidence']:.2f}"
+            line = (
+                f"{s['path']}: {s['offset_s']:+.3f}s, confidence {s['confidence']:.2f}"
+            )
             if args.fix_drift:
-                line += f", drift {s['drift_ppm']:+.1f} ppm" if s["drift_ppm"] is not None else ""
+                line += (
+                    f", drift {s['drift_ppm']:+.1f} ppm"
+                    if s["drift_ppm"] is not None
+                    else ""
+                )
             print(line)
     return 0
 

@@ -13,11 +13,15 @@ from artifact_skill.security.xml_safety import (
 
 
 def test_clean_xml_passes():
-    reject_xml_entity_declaration(b'<?xml version="1.0"?><root>hello</root>', "test.xml")
+    reject_xml_entity_declaration(
+        b'<?xml version="1.0"?><root>hello</root>', "test.xml"
+    )
 
 
 def test_rejects_entity_declaration():
-    payload = b'<?xml version="1.0"?><!DOCTYPE root [<!ENTITY lol "lol">]><root>&lol;</root>'
+    payload = (
+        b'<?xml version="1.0"?><!DOCTYPE root [<!ENTITY lol "lol">]><root>&lol;</root>'
+    )
     with pytest.raises(ArtifactSecurityError) as exc_info:
         reject_xml_entity_declaration(payload, "test.xml")
     assert exc_info.value.code == "ARTIFACT_XML_ENTITY_DECLARATION_REJECTED"
@@ -41,7 +45,9 @@ def test_doctype_without_a_bracketed_entity_block_is_not_rejected():
 
 def test_reject_xml_entities_in_file(tmp_path):
     path = tmp_path / "bad.xml"
-    path.write_bytes(b'<?xml version="1.0"?><!DOCTYPE root [<!ENTITY lol "lol">]><root>&lol;</root>')
+    path.write_bytes(
+        b'<?xml version="1.0"?><!DOCTYPE root [<!ENTITY lol "lol">]><root>&lol;</root>'
+    )
     with pytest.raises(ArtifactSecurityError):
         reject_xml_entities_in_file(path)
 
@@ -80,7 +86,9 @@ def test_reject_xml_entities_in_zip_scans_a_large_but_clean_member(tmp_path):
     rather than skipped, so this also proves that's still fast enough not
     to matter (~0.2s for 200MB, measured directly - see the fix commit)."""
     path = tmp_path / "big.zip"
-    huge_but_clean = b'<?xml version="1.0"?><root>' + b"x" * (11 * 1024 * 1024) + b"</root>"
+    huge_but_clean = (
+        b'<?xml version="1.0"?><root>' + b"x" * (11 * 1024 * 1024) + b"</root>"
+    )
     with zipfile.ZipFile(path, "w") as zf:
         zf.writestr("huge.xml", huge_but_clean)
     reject_xml_entities_in_zip(path)  # must not raise
@@ -98,9 +106,15 @@ def test_reject_xml_entities_in_zip_scans_a_large_but_clean_member(tmp_path):
 #     confirmed each).
 
 
-def test_an_entity_declaration_pushed_past_the_old_64kb_window_is_still_caught(tmp_path):
+def test_an_entity_declaration_pushed_past_the_old_64kb_window_is_still_caught(
+    tmp_path,
+):
     padding = b"<!-- " + b"A" * 70_000 + b" -->"
-    payload = b'<?xml version="1.0"?>' + padding + b'<!DOCTYPE root [<!ENTITY xxe "pwned">]><root>&xxe;</root>'
+    payload = (
+        b'<?xml version="1.0"?>'
+        + padding
+        + b'<!DOCTYPE root [<!ENTITY xxe "pwned">]><root>&xxe;</root>'
+    )
     with pytest.raises(ArtifactSecurityError) as exc_info:
         reject_xml_entity_declaration(payload, "test.xml")
     assert exc_info.value.code == "ARTIFACT_XML_ENTITY_DECLARATION_REJECTED"
@@ -127,7 +141,9 @@ def test_a_rels_member_with_an_entity_declaration_is_still_caught(tmp_path):
     workbook.xml.rels` was let through unmodified by this function, and
     `openpyxl.load_workbook()` then parsed the file without raising."""
     path = tmp_path / "hostile.xlsx"
-    payload = b'<?xml version="1.0"?><!DOCTYPE root [<!ENTITY xxe "pwned">]><Relationships/>'
+    payload = (
+        b'<?xml version="1.0"?><!DOCTYPE root [<!ENTITY xxe "pwned">]><Relationships/>'
+    )
     with zipfile.ZipFile(path, "w") as zf:
         zf.writestr("xl/_rels/workbook.xml.rels", payload)
     with pytest.raises(ArtifactSecurityError) as exc_info:
@@ -136,13 +152,21 @@ def test_a_rels_member_with_an_entity_declaration_is_still_caught(tmp_path):
     assert "workbook.xml.rels" in exc_info.value.evidence["source"]
 
 
-def test_doctype_internal_subset_marker_far_from_the_doctype_keyword_is_still_caught(tmp_path):
+def test_doctype_internal_subset_marker_far_from_the_doctype_keyword_is_still_caught(
+    tmp_path,
+):
     """The internal-subset '[' search previously only looked 2048 bytes
     past '<!DOCTYPE' - exercised here directly (rather than as an
     independent bypass: in practice a '[' pushed this far out usually
     means '<!ENTITY' itself also falls outside the outer window, so this
     mostly collapses into the same 64KB case above once that's fixed)."""
-    padding = b" " + b"A" * 3000  # a syntactically-tolerated stretch after the DOCTYPE keyword
-    payload = b'<?xml version="1.0"?><!DOCTYPE root' + padding + b'[<!ENTITY xxe "pwned">]><root>&xxe;</root>'
+    padding = (
+        b" " + b"A" * 3000
+    )  # a syntactically-tolerated stretch after the DOCTYPE keyword
+    payload = (
+        b'<?xml version="1.0"?><!DOCTYPE root'
+        + padding
+        + b'[<!ENTITY xxe "pwned">]><root>&xxe;</root>'
+    )
     with pytest.raises(ArtifactSecurityError):
         reject_xml_entity_declaration(payload, "test.xml")

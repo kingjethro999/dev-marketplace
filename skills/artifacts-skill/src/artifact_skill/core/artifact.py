@@ -62,9 +62,29 @@ _EBML_MAGIC = b"\x1a\x45\xdf\xa3"
 # instead of MEDIA - not a security problem, just a detection gap to
 # widen this list for if it's ever actually hit in practice.
 _FTYP_MEDIA_BRANDS = {
-    b"isom", b"iso2", b"iso3", b"iso4", b"iso5", b"iso6", b"mp41", b"mp42", b"avc1", b"dash",
-    b"M4A ", b"M4V ", b"M4P ", b"M4B ", b"qt  ",
-    b"3gp1", b"3gp2", b"3gp3", b"3gp4", b"3gp5", b"3gp6", b"3g2a", b"3g2b",
+    b"isom",
+    b"iso2",
+    b"iso3",
+    b"iso4",
+    b"iso5",
+    b"iso6",
+    b"mp41",
+    b"mp42",
+    b"avc1",
+    b"dash",
+    b"M4A ",
+    b"M4V ",
+    b"M4P ",
+    b"M4B ",
+    b"qt  ",
+    b"3gp1",
+    b"3gp2",
+    b"3gp3",
+    b"3gp4",
+    b"3gp5",
+    b"3gp6",
+    b"3g2a",
+    b"3g2b",
 }
 
 
@@ -120,13 +140,17 @@ def _sniff_zip_container(path: Path) -> ArtifactType:
             names = set(zf.namelist())
             if "mimetype" in names:
                 try:
-                    mimetype = zf.read("mimetype").decode("ascii", errors="replace").strip()
+                    mimetype = (
+                        zf.read("mimetype").decode("ascii", errors="replace").strip()
+                    )
                 except (KeyError, OSError):
                     mimetype = ""
                 if mimetype == "application/epub+zip":
                     return ArtifactType.EPUB
             try:
-                content_types = zf.read("[Content_Types].xml").decode("utf-8", errors="replace")
+                content_types = zf.read("[Content_Types].xml").decode(
+                    "utf-8", errors="replace"
+                )
             except KeyError:
                 return ArtifactType.ZIP
             for marker, atype in _OOXML_CONTENT_TYPE_MARKERS.items():
@@ -157,7 +181,9 @@ _MD_FENCED_CODE = re.compile(r"^ {0,3}(```|~~~)", re.MULTILINE)
 _MD_LINK_OR_IMAGE = re.compile(r"!?\[[^\]\n]+\]\([^)\s]+\)")
 _MD_LIST_ITEM = re.compile(r"^ {0,3}(?:[-*+]|\d+\.)\s+\S", re.MULTILINE)
 _MD_SETEXT_HEADING = re.compile(r"^\S.*\n {0,3}(=+|-+) *$", re.MULTILINE)
-_MD_TABLE_SEPARATOR = re.compile(r"^ {0,3}\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$", re.MULTILINE)
+_MD_TABLE_SEPARATOR = re.compile(
+    r"^ {0,3}\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$", re.MULTILINE
+)
 _MD_BLOCKQUOTE = re.compile(r"^ {0,3}>\s?\S", re.MULTILINE)
 
 
@@ -186,11 +212,19 @@ def _looks_like_markdown(text: str) -> bool:
     single ATX-heading-shaped line alone is indistinguishable from a shell
     ('# comment') or Python/YAML comment, so it can't count on its own.
     """
-    strong = bool(_MD_FENCED_CODE.search(text)) or bool(_MD_TABLE_SEPARATOR.search(text))
+    strong = bool(_MD_FENCED_CODE.search(text)) or bool(
+        _MD_TABLE_SEPARATOR.search(text)
+    )
     if strong:
         return True
     signals = 0
-    for pattern in (_MD_ATX_HEADING, _MD_LINK_OR_IMAGE, _MD_LIST_ITEM, _MD_SETEXT_HEADING, _MD_BLOCKQUOTE):
+    for pattern in (
+        _MD_ATX_HEADING,
+        _MD_LINK_OR_IMAGE,
+        _MD_LIST_ITEM,
+        _MD_SETEXT_HEADING,
+        _MD_BLOCKQUOTE,
+    ):
         if pattern.search(text):
             signals += 1
             if signals >= 2:
@@ -212,7 +246,9 @@ def _sniff_csv_dialect(lines: list[str]) -> Any:
         if not sample.strip():
             continue
         try:
-            return csv.Sniffer().sniff(sample, delimiters="".join(_CSV_ALLOWED_DELIMITERS))
+            return csv.Sniffer().sniff(
+                sample, delimiters="".join(_CSV_ALLOWED_DELIMITERS)
+            )
         except csv.Error:
             continue
     return None

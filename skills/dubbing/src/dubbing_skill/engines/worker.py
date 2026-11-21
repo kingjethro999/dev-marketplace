@@ -8,6 +8,7 @@ real and an engine crash cannot take the caller down (transcription-skill ADR-00
 file paths in a private temporary directory vary. The Hugging Face libraries are switched offline before any
 engine import. Errors go to the result file as structured JSON, never as free text on stdout.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,7 +17,11 @@ import sys
 import traceback
 from typing import List, Optional
 
-OFFLINE_ENV = {"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "HF_DATASETS_OFFLINE": "1"}
+OFFLINE_ENV = {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "HF_DATASETS_OFFLINE": "1",
+}
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -24,7 +29,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     from ..errors import DubbingError
     from . import get_engine
     from .base import WORKER_ENV, EngineRequest
-    os.environ[WORKER_ENV] = "1"      # engine code (Chatterbox, ...) refuses to load in any other process
+
+    os.environ[WORKER_ENV] = (
+        "1"  # engine code (Chatterbox, ...) refuses to load in any other process
+    )
 
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 2:
@@ -35,10 +43,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         with open(req_path, encoding="utf-8") as fh:
             doc = json.load(fh)
         engine = get_engine(str(doc["engine_id"]))
-        if "detect" in doc:           # a watermark read back from a file (dubbing watermark, ADR-017)
-            payload = {"ok": True, "detection": engine.detect_watermark(str(doc["detect"]["path"]))}
-        elif "requests" in doc:         # several lines in one run, so a model is loaded once (NARRATE, ADR-005)
-            results = engine.process_batch([EngineRequest.from_dict(r) for r in doc["requests"]])
+        if (
+            "detect" in doc
+        ):  # a watermark read back from a file (dubbing watermark, ADR-017)
+            payload = {
+                "ok": True,
+                "detection": engine.detect_watermark(str(doc["detect"]["path"])),
+            }
+        elif (
+            "requests" in doc
+        ):  # several lines in one run, so a model is loaded once (NARRATE, ADR-005)
+            results = engine.process_batch(
+                [EngineRequest.from_dict(r) for r in doc["requests"]]
+            )
             payload = {"ok": True, "results": [r.to_dict() for r in results]}
         else:
             result = engine.process(EngineRequest.from_dict(doc["request"]))
@@ -47,9 +64,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     except DubbingError as exc:
         payload = {"ok": False, "error": exc.to_dict()}
         code = 1
-    except Exception as exc:  # anything else is an engine failure, reported structurally
-        payload = {"ok": False, "error": {"code": "ENGINE_FAILED", "message": f"{type(exc).__name__}: {exc}", "retryable": False,
-                                          "details": {"traceback": traceback.format_exc().splitlines()[-6:]}}}
+    except (
+        Exception
+    ) as exc:  # anything else is an engine failure, reported structurally
+        payload = {
+            "ok": False,
+            "error": {
+                "code": "ENGINE_FAILED",
+                "message": f"{type(exc).__name__}: {exc}",
+                "retryable": False,
+                "details": {"traceback": traceback.format_exc().splitlines()[-6:]},
+            },
+        }
         code = 1
     tmp = out_path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:

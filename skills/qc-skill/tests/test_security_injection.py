@@ -36,7 +36,11 @@ def test_forbidden_keys_are_rejected(media, workspace, payload):
 
 
 def test_shell_metacharacters_in_input_are_treated_as_a_literal_filename(workspace):
-    doc = {"operation": "inspect", "kind": "video", "input": "; touch /tmp/qc-pwned ; echo"}
+    doc = {
+        "operation": "inspect",
+        "kind": "video",
+        "input": "; touch /tmp/qc-pwned ; echo",
+    }
     with pytest.raises(QCError) as exc:
         run(doc, workspace)
     assert exc.value.code == "MISSING_INPUT"
@@ -74,7 +78,9 @@ def test_input_outside_allowed_root_is_rejected_even_if_it_exists(media, workspa
 
 def test_rule_payload_cannot_carry_forbidden_keys_either(media, workspace):
     doc = {
-        "operation": "check", "kind": "video", "input": str(media["clean"]),
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["clean"]),
         "rules": {"video": {"expected_width": 1, "shell": True}},
     }
     with pytest.raises(QCError) as exc:

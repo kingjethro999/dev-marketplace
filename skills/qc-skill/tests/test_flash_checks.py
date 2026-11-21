@@ -13,7 +13,9 @@ from tests.helpers import checks_by_id, measurements_by_id, run
 
 def _check(media, workspace, name, **rule):
     doc = {
-        "operation": "check", "kind": "video", "input": str(media[name]),
+        "operation": "check",
+        "kind": "video",
+        "input": str(media[name]),
         "rules": {"video": {"check_photosensitivity": True, **rule}},
     }
     resp = run(doc, workspace)
@@ -27,7 +29,9 @@ def test_full_screen_10hz_flash_fails(media, workspace):
     assert worst["flashes"] == 10.0
     assert worst["changes"] == 20
     assert worst["area_fraction"] == 1.0
-    finding = next(f for f in resp["report"]["findings"] if f["code"] == "VIDEO_FLASH_RISK")
+    finding = next(
+        f for f in resp["report"]["findings"] if f["code"] == "VIDEO_FLASH_RISK"
+    )
     assert finding["severity"] == "FAIL"
     assert finding["evidence"]["max_flashes_per_second"] == 3.0
     assert resp["report"]["overall_status"] == "FAIL"
@@ -36,14 +40,18 @@ def test_full_screen_10hz_flash_fails(media, workspace):
 def test_full_screen_2hz_flash_passes(media, workspace):
     resp, check = _check(media, workspace, "flash_2hz")
     assert check["status"] == "PASS"
-    assert measurements_by_id(resp)["video.flash_worst_window"]["value"]["flashes"] == 2.0
+    assert (
+        measurements_by_id(resp)["video.flash_worst_window"]["value"]["flashes"] == 2.0
+    )
 
 
 def test_small_area_flash_passes(media, workspace):
     # 9% of the screen flashing at 10 Hz: below BT.1702's 25% area condition.
     resp, check = _check(media, workspace, "flash_small_area")
     assert check["status"] == "PASS"
-    assert measurements_by_id(resp)["video.flash_worst_window"]["value"]["flashes"] == 0.0
+    assert (
+        measurements_by_id(resp)["video.flash_worst_window"]["value"]["flashes"] == 0.0
+    )
 
 
 def test_half_screen_flash_fails(media, workspace):
@@ -72,11 +80,18 @@ def test_caller_can_tighten_the_limit(media, workspace):
 
 def test_area_fraction_is_a_detection_parameter(media, workspace):
     doc = {
-        "operation": "check", "kind": "video", "input": str(media["flash_small_area"]),
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["flash_small_area"]),
         "parameters": {"flash_area_fraction": 0.05},
         "rules": {"video": {"check_photosensitivity": True}},
     }
-    assert checks_by_id(run(doc, workspace))["video.photosensitive_flash_within_limit"]["status"] == "FAIL"
+    assert (
+        checks_by_id(run(doc, workspace))["video.photosensitive_flash_within_limit"][
+            "status"
+        ]
+        == "FAIL"
+    )
 
 
 def test_per_second_counts_and_red_flash_unknown(media, workspace):
@@ -99,9 +114,22 @@ def test_not_measured_or_checked_unless_requested(media, workspace):
 
 def test_flash_check_runs_inside_delivery_package_video_rule(media, workspace):
     doc = {
-        "operation": "check", "kind": "delivery_package",
-        "artifacts": [{"artifact_id": "main", "artifact_type": "video", "path": str(media["flash_10hz"])}],
-        "rules": {"delivery_package": {"artifacts": [{"artifact_id": "main", "video": {"check_photosensitivity": True}}]}},
+        "operation": "check",
+        "kind": "delivery_package",
+        "artifacts": [
+            {
+                "artifact_id": "main",
+                "artifact_type": "video",
+                "path": str(media["flash_10hz"]),
+            }
+        ],
+        "rules": {
+            "delivery_package": {
+                "artifacts": [
+                    {"artifact_id": "main", "video": {"check_photosensitivity": True}}
+                ]
+            }
+        },
     }
     resp = run(doc, workspace)
     assert any(f["code"] == "VIDEO_FLASH_RISK" for f in resp["report"]["findings"])
@@ -141,6 +169,9 @@ def test_counter_area_threshold_is_strictly_more_than(fraction, expected):
     # exactly 25% of the cells flash: not "more than 25%"
     n = FLASH_GRID * FLASH_GRID
     quarter = n // 4
-    frames = [bytes([235 if (i % 2 == 0 and c < quarter) else 16 for c in range(n)]) for i in range(20)]
+    frames = [
+        bytes([235 if (i % 2 == 0 and c < quarter) else 16 for c in range(n)])
+        for i in range(20)
+    ]
     out = analyze_flashes(frames, [i / 20 for i in range(20)], fraction)
     assert out["worst_window"]["flashes"] == pytest.approx(expected, abs=0.5)

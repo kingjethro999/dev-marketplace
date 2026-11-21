@@ -27,13 +27,26 @@ Examples:
   python3 cropdetect.py input.mp4
   python3 cropdetect.py input.mp4 --seconds 30 --limit 0.15
 """
+
 import argparse
 import re
 import sys
 from collections import Counter
 from typing import Dict, List, Tuple
 
-from _common import add_common, apply_common, die, emit, info, print_json, probe, require_tool, run_analysis, decode_gray_frames, frame_flow
+from _common import (
+    add_common,
+    apply_common,
+    die,
+    emit,
+    info,
+    print_json,
+    probe,
+    require_tool,
+    run_analysis,
+    decode_gray_frames,
+    frame_flow,
+)
 
 MOTION_CENTRE_FPS = 2.0
 MOTION_CENTRE_W, MOTION_CENTRE_H = 64, 36
@@ -41,16 +54,45 @@ MOTION_CENTRE_W, MOTION_CENTRE_H = 64, 36
 CROP_RE = re.compile(r"crop=(\d+):(\d+):(\d+):(\d+)")
 
 
-def detect(path: str, seconds: float, samples: int, limit: float, round_to: int, duration: float) -> List[Tuple[int, int, int, int]]:
+def detect(
+    path: str,
+    seconds: float,
+    samples: int,
+    limit: float,
+    round_to: int,
+    duration: float,
+) -> List[Tuple[int, int, int, int]]:
     ffmpeg = require_tool("ffmpeg")
     per_window = max(0.5, seconds / max(1, samples))
     rects: List[Tuple[int, int, int, int]] = []
     failures: List[List[str]] = []
     for i in range(samples):
-        start = 0.0 if duration <= 0 else (duration - per_window) * i / max(1, samples - 1) if samples > 1 else 0.0
+        start = (
+            0.0
+            if duration <= 0
+            else (
+                (duration - per_window) * i / max(1, samples - 1)
+                if samples > 1
+                else 0.0
+            )
+        )
         start = max(0.0, start)
-        cmd = [ffmpeg, "-hide_banner", "-nostdin", "-ss", f"{start:.3f}", "-i", path, "-t", f"{per_window:.3f}",
-               "-vf", f"cropdetect=limit={limit:g}:round={round_to}:reset=1", "-f", "null", "-"]
+        cmd = [
+            ffmpeg,
+            "-hide_banner",
+            "-nostdin",
+            "-ss",
+            f"{start:.3f}",
+            "-i",
+            path,
+            "-t",
+            f"{per_window:.3f}",
+            "-vf",
+            f"cropdetect=limit={limit:g}:round={round_to}:reset=1",
+            "-f",
+            "null",
+            "-",
+        ]
         proc = run_analysis(cmd, check=False)
         if proc.returncode != 0:
             # One window ffmpeg cannot decode (a damaged stretch) is skipped; the other windows
@@ -58,13 +100,20 @@ def detect(path: str, seconds: float, samples: int, limit: float, round_to: int,
             failures.append(proc.stderr.strip().splitlines()[-1:] or ["?"])
             continue
         for m in CROP_RE.finditer(proc.stderr):
-            rects.append((int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4))))
+            rects.append(
+                (int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)))
+            )
     if failures and len(failures) == samples:
-        die(f"cropdetect could not decode any of the {samples} sampled windows: {failures[-1][0][:300]}", kind="ffmpeg")
+        die(
+            f"cropdetect could not decode any of the {samples} sampled windows: {failures[-1][0][:300]}",
+            kind="ffmpeg",
+        )
     return rects
 
 
-def motion_centre(path: str, seconds: float, samples: int, duration: float, sw: int, sh: int) -> List[Dict]:
+def motion_centre(
+    path: str, seconds: float, samples: int, duration: float, sw: int, sh: int
+) -> List[Dict]:
     """Per-second motion centroid: {time, x, y, x_frac, y_frac} -- a report-only measurement,
     the same sampled-window approach as detect() above. x/y are pixel coordinates in the SOURCE
     frame (consistent with the --round crop rectangle this tool already reports in source
@@ -78,10 +127,25 @@ def motion_centre(path: str, seconds: float, samples: int, duration: float, sw: 
     cw, ch = MOTION_CENTRE_W / cell, MOTION_CENTRE_H / cell
     out: List[Dict] = []
     for i in range(samples):
-        start = 0.0 if duration <= 0 else (duration - per_window) * i / max(1, samples - 1) if samples > 1 else 0.0
+        start = (
+            0.0
+            if duration <= 0
+            else (
+                (duration - per_window) * i / max(1, samples - 1)
+                if samples > 1
+                else 0.0
+            )
+        )
         start = max(0.0, start)
-        frames = decode_gray_frames(path, MOTION_CENTRE_FPS, MOTION_CENTRE_W, MOTION_CENTRE_H,
-                                     start=start, seconds=per_window, check=False)
+        frames = decode_gray_frames(
+            path,
+            MOTION_CENTRE_FPS,
+            MOTION_CENTRE_W,
+            MOTION_CENTRE_H,
+            start=start,
+            seconds=per_window,
+            check=False,
+        )
         for k in range(len(frames) - 1):
             prev, cur = frames[k], frames[k + 1]
             wsum = wx = wy = 0.0
@@ -101,26 +165,69 @@ def motion_centre(path: str, seconds: float, samples: int, duration: float, sw: 
                     wy += diff * cy
             t = start + (k + 1) / MOTION_CENTRE_FPS
             if wsum <= 0:
-                out.append({"time": round(t, 2), "x": None, "y": None, "x_frac": None, "y_frac": None, "motion": 0.0})
+                out.append(
+                    {
+                        "time": round(t, 2),
+                        "x": None,
+                        "y": None,
+                        "x_frac": None,
+                        "y_frac": None,
+                        "motion": 0.0,
+                    }
+                )
                 continue
             xf, yf = wx / wsum, wy / wsum
-            out.append({"time": round(t, 2), "x": round(xf * sw), "y": round(yf * sh),
-                        "x_frac": round(xf, 3), "y_frac": round(yf, 3), "motion": round(wsum / (MOTION_CENTRE_W * MOTION_CENTRE_H), 2)})
+            out.append(
+                {
+                    "time": round(t, 2),
+                    "x": round(xf * sw),
+                    "y": round(yf * sh),
+                    "x_frac": round(xf, 3),
+                    "y_frac": round(yf, 3),
+                    "motion": round(wsum / (MOTION_CENTRE_W * MOTION_CENTRE_H), 2),
+                }
+            )
     out.sort(key=lambda r: r["time"])
     return out
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("--seconds", type=float, default=10.0, help="total seconds of footage to sample across the file (default 10)")
-    ap.add_argument("--samples", type=int, default=5, help="number of windows spread across the file (default 5)")
-    ap.add_argument("--limit", type=float, default=0.0941176, help="black-pixel threshold, 0..1 (default ~0.094, cropdetect's own default)")
-    ap.add_argument("--round", type=int, default=16, dest="round_to", help="the reported width/height are rounded to a multiple of this (default 16)")
-    ap.add_argument("--motion-centre", action="store_true",
-                    help="report the motion centroid per second, sampled the same way as the crop "
-                         "detection above (report only -- this tool never picks a reframe, it hands "
-                         "the calling agent numbers to reframe with)")
+    ap.add_argument(
+        "--seconds",
+        type=float,
+        default=10.0,
+        help="total seconds of footage to sample across the file (default 10)",
+    )
+    ap.add_argument(
+        "--samples",
+        type=int,
+        default=5,
+        help="number of windows spread across the file (default 5)",
+    )
+    ap.add_argument(
+        "--limit",
+        type=float,
+        default=0.0941176,
+        help="black-pixel threshold, 0..1 (default ~0.094, cropdetect's own default)",
+    )
+    ap.add_argument(
+        "--round",
+        type=int,
+        default=16,
+        dest="round_to",
+        help="the reported width/height are rounded to a multiple of this (default 16)",
+    )
+    ap.add_argument(
+        "--motion-centre",
+        action="store_true",
+        help="report the motion centroid per second, sampled the same way as the crop "
+        "detection above (report only -- this tool never picks a reframe, it hands "
+        "the calling agent numbers to reframe with)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -145,20 +252,28 @@ def main() -> int:
         sw, sh = sh, sw
     duration = meta.get("duration") or 0.0
 
-    rects = detect(args.input, args.seconds, args.samples, args.limit, args.round_to, duration)
+    rects = detect(
+        args.input, args.seconds, args.samples, args.limit, args.round_to, duration
+    )
     result: Dict = {"file": args.input, "source_width": sw, "source_height": sh}
     if not rects:
         result["crop"] = None
-        info("no crop bars detected (cropdetect produced no readings -- try --limit higher, or the source may already be full-frame)")
+        info(
+            "no crop bars detected (cropdetect produced no readings -- try --limit higher, or the source may already be full-frame)"
+        )
     else:
         w, h, x, y = Counter(rects).most_common(1)[0][0]
         result["crop"] = {"width": w, "height": h, "x": x, "y": y}
-        result["confidence"] = round(Counter(rects).most_common(1)[0][1] / len(rects), 3)
+        result["confidence"] = round(
+            Counter(rects).most_common(1)[0][1] / len(rects), 3
+        )
         if (w, h) == (sw, sh):
             info(f"no bars detected: full {sw}x{sh} frame is already content")
         else:
-            info(f"detected crop={w}:{h}:{x}:{y} (source {sw}x{sh}, confidence {result['confidence']:.0%}) -- "
-                 f"crop.py {args.input} --x {x} --y {y} --width {w} --height {h}")
+            info(
+                f"detected crop={w}:{h}:{x}:{y} (source {sw}x{sh}, confidence {result['confidence']:.0%}) -- "
+                f"crop.py {args.input} --x {x} --y {y} --width {w} --height {h}"
+            )
 
     if args.motion_centre:
         centre = motion_centre(args.input, args.seconds, args.samples, duration, sw, sh)

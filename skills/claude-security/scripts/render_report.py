@@ -117,7 +117,9 @@ class Rendered(NamedTuple):
     asked_for_max: bool
 
 
-STAMP_ONLY = frozenset({"duration_s", "verification_runs", "reason_kind", "pruned_buckets"})
+STAMP_ONLY = frozenset(
+    {"duration_s", "verification_runs", "reason_kind", "pruned_buckets"}
+)
 SARIF_NAME = "CLAUDE-SECURITY-RESULTS.sarif"
 SANITIZED_REMOTE_RE = re.compile(
     r"https://[a-z0-9.-]+(?::[0-9]+)?/(?:[A-Za-z0-9._~/-]|%[0-9A-F]{2})+\Z"
@@ -289,7 +291,8 @@ def research_coverage(raw: object) -> ResearchCoverage | None:
     if not is_map(raw) or not is_map(tree):
         return None
     files, read, not_reached, unaccounted, outside = (
-        tree.get(key) for key in ("files", "read", "notReached", "unaccounted", "outsideComponents")
+        tree.get(key)
+        for key in ("files", "read", "notReached", "unaccounted", "outsideComponents")
     )
     if not (
         is_int(files)
@@ -317,7 +320,11 @@ def run_shape(
     research: ResearchCoverage | None,
 ) -> dict[str, object]:
     """What shape actually ran, distinct from the effort tier that was recorded."""
-    shape: dict[str, object] = {"requested_effort": effort, "collapsed": None, "source": source}
+    shape: dict[str, object] = {
+        "requested_effort": effort,
+        "collapsed": None,
+        "source": source,
+    }
     if coverage is None:
         return shape
     return {
@@ -331,7 +338,9 @@ def run_shape(
         "empty_scope": bool(coverage.get("emptyScope")),
         "researchers_dispatched": coverage_count(coverage.get("researchersDispatched")),
         "verification_runs": coverage_count(coverage.get("verificationRun")),
-        "skipped_components": skipped_components(coverage.get("skippedComponents"), scan_root),
+        "skipped_components": skipped_components(
+            coverage.get("skippedComponents"), scan_root
+        ),
         "pruned_buckets": pruned_buckets(coverage.get("prunedBuckets")),
         "completeness_check_outcome": coverage_enum(
             coverage.get("completenessCheckOutcome"),
@@ -408,8 +417,14 @@ def verification_summary(
         return raw
 
     candidates = as_count("candidates")
-    dispatched = as_count("researchers_dispatched") if "researchers_dispatched" in votes else None
-    returned = as_count("researchers_returned") if "researchers_returned" in votes else None
+    dispatched = (
+        as_count("researchers_dispatched")
+        if "researchers_dispatched" in votes
+        else None
+    )
+    returned = (
+        as_count("researchers_returned") if "researchers_returned" in votes else None
+    )
 
     kind: str | None = None
     reason: str | None = None
@@ -504,7 +519,9 @@ def revision_tag(revision: object) -> str:
     if not is_str(sha) or not plugin.SHA_RE.match(sha):
         msg = f"the run's revision {sha!r} is not a hex commit id, so it cannot name the stamp file"
         raise RenderError(msg)
-    return sha[: plugin.SHORT_ID_CHARS] + ("" if revision.get("dirty") is False else "-dirty")
+    return sha[: plugin.SHORT_ID_CHARS] + (
+        "" if revision.get("dirty") is False else "-dirty"
+    )
 
 
 def scan_of(meta: JsonMap) -> Meta:
@@ -522,7 +539,9 @@ def scan_of(meta: JsonMap) -> Meta:
         raise RenderError(msg)
     mode = meta.get("mode")
     if not is_str(mode) or mode not in plugin.MODES:
-        msg = f"scan-meta.json mode {mode!r} is not a scan mode; rerun write_scan_meta.py"
+        msg = (
+            f"scan-meta.json mode {mode!r} is not a scan mode; rerun write_scan_meta.py"
+        )
         raise RenderError(msg)
     scan_root = meta.get("scan_root")
     if not is_str(scan_root) or not scan_root.strip():
@@ -532,9 +551,7 @@ def scan_of(meta: JsonMap) -> Meta:
     if prefix is None:
         prefix = ""
     if not is_str(prefix) or not scan_prefix_shaped(prefix):
-        msg = (
-            f"scan-meta.json scan_prefix {prefix!r} is not a path prefix; rerun write_scan_meta.py"
-        )
+        msg = f"scan-meta.json scan_prefix {prefix!r} is not a path prefix; rerun write_scan_meta.py"
         raise RenderError(msg)
     try:
         os.path.realpath(scan_root)
@@ -548,7 +565,9 @@ def scan_of(meta: JsonMap) -> Meta:
         )
         raise RenderError(msg)
     remote = meta.get("remote")
-    if remote is not None and (not is_str(remote) or not SANITIZED_REMOTE_RE.match(remote)):
+    if remote is not None and (
+        not is_str(remote) or not SANITIZED_REMOTE_RE.match(remote)
+    ):
         msg = (
             f"scan-meta.json remote {remote!r} is not a sanitized repository URL; "
             "rerun write_scan_meta.py"
@@ -575,7 +594,9 @@ def scan_of(meta: JsonMap) -> Meta:
     clean_commit: str | None = None
     if is_map(revision) and revision.get("dirty") is False:
         commit = revision.get("commit")
-        clean_commit = commit if is_str(commit) and plugin.SHA_RE.match(commit) else None
+        clean_commit = (
+            commit if is_str(commit) and plugin.SHA_RE.match(commit) else None
+        )
     scan = sarif.Scan(
         id=value,
         mode=mode,
@@ -619,7 +640,9 @@ def strength(finding: Finding) -> tuple[Severity, Confidence]:
     return Severity[finding["severity"]], Confidence[finding["confidence"]]
 
 
-def one_per_site(findings: Sequence[Record], scan: sarif.Scan) -> tuple[list[Record], list[str]]:
+def one_per_site(
+    findings: Sequence[Record], scan: sarif.Scan
+) -> tuple[list[Record], list[str]]:
     """The findings reduced to one per site, and one disclosure sentence per finding merged away.
 
     A site is a rule at a line of a file (sarif.site), which is what a result
@@ -642,7 +665,9 @@ def one_per_site(findings: Sequence[Record], scan: sarif.Scan) -> tuple[list[Rec
         for other in group
         if other is not strongest[where]
     ]
-    kept = {where: with_cwes_of(strongest[where], group) for where, group in by_site.items()}
+    kept = {
+        where: with_cwes_of(strongest[where], group) for where, group in by_site.items()
+    }
     unmerged = [
         item if where is None else kept[where]
         for item, where in zip(findings, sites)
@@ -659,7 +684,10 @@ def with_cwes_of(kept: Record, group: Sequence[Record]) -> Record:
         for cwe_id in (item["cwe_id"], *item["other_cwe_ids"])
         if cwe_id != kept["cwe_id"]
     ]
-    return {**kept, "other_cwe_ids": list(dict.fromkeys([*kept["other_cwe_ids"], *others]))}
+    return {
+        **kept,
+        "other_cwe_ids": list(dict.fromkeys([*kept["other_cwe_ids"], *others])),
+    }
 
 
 def unrecognized_cwes(findings: Sequence[Finding]) -> list[str]:
@@ -700,14 +728,20 @@ def notifications_of(
     note = sarif.notification
     skipped = shape.get("skipped_components")
     notes = [
-        note("coverage/skipped-component", "note", f"Skipped component {s['name']}: {s['reason']}")
+        note(
+            "coverage/skipped-component",
+            "note",
+            f"Skipped component {s['name']}: {s['reason']}",
+        )
         for s in (skipped if is_list(skipped) else [])
         if is_map(s)
     ]
     if is_map(revision) and revision.get("sparse") is True:
         absent = revision.get("not_checked_out_dirs")
         names = ", ".join(d for d in (absent if is_list(absent) else []) if is_str(d))
-        text = "Sparse checkout: only the checked-out part of the repository was scanned"
+        text = (
+            "Sparse checkout: only the checked-out part of the repository was scanned"
+        )
         if names:
             text += f"; tracked top-level directories not checked out: {names}"
         notes.append(note("coverage/sparse-checkout", "note", text))
@@ -754,7 +788,9 @@ def notifications_of(
         for record in refused
     ]
     if verification["status"] == "unverified":
-        notes.append(note("verification/unverified", "error", verification["reason"] or ""))
+        notes.append(
+            note("verification/unverified", "error", verification["reason"] or "")
+        )
     return notes
 
 
@@ -768,7 +804,9 @@ def built_or_refused(
 ) -> Finding | FindingPathError:
     """One finding carried, or the named path refusal that kept it out of the report."""
     try:
-        return build_finding(raw, index, rounds_by_id, scan_root, scan_prefix, must_exist)
+        return build_finding(
+            raw, index, rounds_by_id, scan_root, scan_prefix, must_exist
+        )
     except FindingPathError as error:
         return error
 
@@ -791,20 +829,27 @@ def render(run_dir: Path, products_dir: Path) -> Rendered:
     if rounds_raw is not None:
         if not is_map(rounds_raw):
             kind = type(rounds_raw).__name__
-            msg = f"votes.json 'rounds' must be an object keyed by finding id, not {kind}"
+            msg = (
+                f"votes.json 'rounds' must be an object keyed by finding id, not {kind}"
+            )
             raise RenderError(msg)
         rounds_by_id = rounds_raw
-    scan, scan_root, revision, revision_source, model, effort, asked_for_max = scan_of(meta)
+    scan, scan_root, revision, revision_source, model, effort, asked_for_max = scan_of(
+        meta
+    )
     tag = revision_tag(revision)
 
     outcomes = [
-        built_or_refused(raw, i, rounds_by_id, scan_root, scan.prefix, scan.mode == "scan")
+        built_or_refused(
+            raw, i, rounds_by_id, scan_root, scan.prefix, scan.mode == "scan"
+        )
         for i, raw in enumerate(findings_in)
     ]
     built = [item for item in outcomes if not isinstance(item, FindingPathError)]
     path_errors = [item for item in outcomes if isinstance(item, FindingPathError)]
     refused: list[_RefusalRecord] = [
-        {"id": item.finding_id, "reason": f"its file {item.wrong}"} for item in path_errors
+        {"id": item.finding_id, "reason": f"its file {item.wrong}"}
+        for item in path_errors
     ]
     counted = Counter([f["id"] for f in built] + [record["id"] for record in refused])
     repeated = sorted(finding_id for finding_id, count in counted.items() if count > 1)
@@ -816,7 +861,9 @@ def render(run_dir: Path, products_dir: Path) -> Rendered:
         for path in {f["file"] for f in built}
         if (text := source.read(scan_root, path)) is not None
     }
-    refused_secrets = [e.snippet for e in path_errors if any(map(secret.is_credential_cwe, e.cwes))]
+    refused_secrets = [
+        e.snippet for e in path_errors if any(map(secret.is_credential_cwe, e.cwes))
+    ]
     records = sarif.placed(built, scan, sources, refused_secrets=refused_secrets)
     findings, merged = one_per_site(records, scan)
 
@@ -870,12 +917,18 @@ def render(run_dir: Path, products_dir: Path) -> Rendered:
 
     jsonl = jsonl_text(findings)
     run_properties = {
-        key: {k: v for k, v in value.items() if k not in STAMP_ONLY} if is_map(value) else value
+        key: (
+            {k: v for k, v in value.items() if k not in STAMP_ONLY}
+            if is_map(value)
+            else value
+        )
         for key, value in stamp.items()
         if key not in STAMP_ONLY and (key != "model" or value is not None)
     }
     panels = {
-        f["id"]: panel for f in findings if (panel := panel_complete(rounds_by_id.get(f["id"])))
+        f["id"]: panel
+        for f in findings
+        if (panel := panel_complete(rounds_by_id.get(f["id"])))
     }
     unrecognized = unrecognized_cwes(findings)
     unfinished = [continuation_text(continuing)] if continuing else []
@@ -884,9 +937,19 @@ def render(run_dir: Path, products_dir: Path) -> Rendered:
         sys.stderr.write(f"render_report.py: {text}\n")
     symlinks = coverage_texts(meta.get("unfollowed_symlinks"), COVERAGE_LIST_ITEM_CAP)
     notifications = notifications_of(
-        shape, research, verification, merged, unrecognized, symlinks, revision, continuing, refused
+        shape,
+        research,
+        verification,
+        merged,
+        unrecognized,
+        symlinks,
+        revision,
+        continuing,
+        refused,
     )
-    sarif_log = sarif.log(findings, scan, plugin.version(), run_properties, panels, notifications)
+    sarif_log = sarif.log(
+        findings, scan, plugin.version(), run_properties, panels, notifications
+    )
     sarif_doc = strictjson.text(sarif_log, indent=2) + "\n"
     for stale in products_dir.iterdir():
         if plugin.is_revision_stamp(stale):
@@ -936,7 +999,8 @@ def argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("run_dir", help="the run directory holding the scan's records")
     parser.add_argument(
-        "--products-dir", help="where the products are written (default: the run directory)"
+        "--products-dir",
+        help="where the products are written (default: the run directory)",
     )
     return parser
 
@@ -956,7 +1020,9 @@ def main(argv: list[str]) -> int:
         sys.stderr.write(f"render_report.py: {error}\n")
         return 1
     except OSError as error:
-        sys.stderr.write(f"render_report.py: could not read or write the report's files: {error}\n")
+        sys.stderr.write(
+            f"render_report.py: could not read or write the report's files: {error}\n"
+        )
         return 1
     removal = remove_run_dir(run_dir, products_dir)
     count = len(rendered.findings)

@@ -42,7 +42,9 @@ def require_soffice_binary(capability_id: str) -> str:
     return binary
 
 
-def convert_to_pdf(input_path: Path, pdf_out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> Path:
+def convert_to_pdf(
+    input_path: Path, pdf_out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+) -> Path:
     """Convert `input_path` to PDF via LibreOffice headless, returning the
     produced PDF's path (inside a fresh, per-call `pdf_out_dir`).
 
@@ -74,7 +76,9 @@ def convert_to_pdf(input_path: Path, pdf_out_dir: Path, *, limits: Limits = DEFA
     # already resolves its own source_path for the identical reason.
     input_path = input_path.resolve()
     pdf_out_dir.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="artifacts-skill-soffice-profile-") as profile_dir:
+    with tempfile.TemporaryDirectory(
+        prefix="artifacts-skill-soffice-profile-"
+    ) as profile_dir:
         # Path.as_uri() (self-audit finding, FIX_PROMPT P1-3): naive
         # f"file://{profile_dir}" string concatenation is wrong on Windows
         # (needs "file:///C:/..." — an extra slash plus backslash-to-slash
@@ -88,9 +92,17 @@ def convert_to_pdf(input_path: Path, pdf_out_dir: Path, *, limits: Limits = DEFA
         profile_uri = Path(profile_dir).as_uri()
         result = run_subprocess(
             [
-                soffice, "--headless", "--norestore", "--nolockcheck", "--nodefault",
+                soffice,
+                "--headless",
+                "--norestore",
+                "--nolockcheck",
+                "--nodefault",
                 f"-env:UserInstallation={profile_uri}",
-                "--convert-to", "pdf", "--outdir", str(pdf_out_dir), str(input_path),
+                "--convert-to",
+                "pdf",
+                "--outdir",
+                str(pdf_out_dir),
+                str(input_path),
             ],
             allowlist=SOFFICE_ALLOWLIST,
             limits=limits,
@@ -119,6 +131,10 @@ def convert_to_pdf(input_path: Path, pdf_out_dir: Path, *, limits: Limits = DEFA
                 remediation="See evidence.stdout/stderr for LibreOffice's own diagnostic. This can mean "
                 "a missing import filter, a broken LibreOffice profile, or an unsupported feature in the "
                 "source file — not necessarily a problem with this adapter.",
-                evidence={"returncode": result.returncode, "stdout": result.stdout, "stderr": result.stderr},
+                evidence={
+                    "returncode": result.returncode,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                },
             )
         return expected

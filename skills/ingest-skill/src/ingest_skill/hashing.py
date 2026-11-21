@@ -6,6 +6,7 @@
 - xxh64 / xxh3 / xxh128 need the optional `xxhash` package (`pip install 'ingest-skill[xxhash]'`). Without it they
   are UNAVAILABLE: a run that needs one is refused before anything is written; sha256, c4, md5 and sha1 are stdlib.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -41,9 +42,15 @@ def require(algorithms: Iterable[str]) -> None:
     """Refuse (HASH_UNAVAILABLE) when an algorithm cannot be computed here."""
     for a in sorted(set(algorithms)):
         if a not in ("sha256",) + MHL_FORMATS:
-            raise IngestError("HASH_UNAVAILABLE", f"unknown hash algorithm {a!r}; offload accepts {', '.join(OFFLOAD_HASHES)}")
+            raise IngestError(
+                "HASH_UNAVAILABLE",
+                f"unknown hash algorithm {a!r}; offload accepts {', '.join(OFFLOAD_HASHES)}",
+            )
         if not available(a):
-            raise IngestError("HASH_UNAVAILABLE", f"{a} needs the optional xxhash package, which is not installed: {INSTALL_HINT}")
+            raise IngestError(
+                "HASH_UNAVAILABLE",
+                f"{a} needs the optional xxhash package, which is not installed: {INSTALL_HINT}",
+            )
 
 
 def _factory(algorithm: str) -> Callable:
@@ -55,7 +62,9 @@ def _factory(algorithm: str) -> Callable:
         # Integrity checksums, not security: allowed on FIPS-restricted builds too.
         return lambda: hashlib.new(algorithm, usedforsecurity=False)
     require([algorithm])
-    return {"xxh64": xxhash.xxh64, "xxh3": xxhash.xxh3_64, "xxh128": xxhash.xxh3_128}[algorithm]
+    return {"xxh64": xxhash.xxh64, "xxh3": xxhash.xxh3_64, "xxh128": xxhash.xxh3_128}[
+        algorithm
+    ]
 
 
 def c4_encode(sha512_digest: bytes) -> str:
@@ -80,7 +89,10 @@ class MultiHash:
             h.update(data)
 
     def digests(self) -> Dict[str, str]:
-        return {a: c4_encode(h.digest()) if a == "c4" else h.hexdigest() for a, h in self._h.items()}
+        return {
+            a: c4_encode(h.digest()) if a == "c4" else h.hexdigest()
+            for a, h in self._h.items()
+        }
 
     def copy(self) -> "MultiHash":
         """An independent copy of the running state (hashlib and xxhash objects copy their state)."""
@@ -97,7 +109,9 @@ def hash_file(path: Path, algorithms: Iterable[str]) -> Dict[str, str]:
     return m.digests()
 
 
-def hash_range(path: Path, start: int, end: int, algorithms: Iterable[str]) -> Dict[str, str]:
+def hash_range(
+    path: Path, start: int, end: int, algorithms: Iterable[str]
+) -> Dict[str, str]:
     """Digests of the bytes [start, end) of path; raises when the file is shorter than end."""
     m = MultiHash(algorithms)
     with open(path, "rb") as f:

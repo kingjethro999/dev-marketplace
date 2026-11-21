@@ -31,6 +31,7 @@ Usage:
 Prints one JSON object: {"releasable": bool, "changed": [...], "releasing": [...]}; with --github-output
 also appends `releasable=true|false` to that file.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -51,7 +52,11 @@ def is_releasing(path: str) -> bool:
     path = path.strip().replace("\\", "/")
     if path.startswith(NON_RELEASING_PREFIXES):
         return False
-    if path.lower().endswith(".md") and not path.startswith("src/") and path not in RELEASING_MARKDOWN:
+    if (
+        path.lower().endswith(".md")
+        and not path.startswith("src/")
+        and path not in RELEASING_MARKDOWN
+    ):
         return False
     return True
 
@@ -75,18 +80,53 @@ def changed_paths(repo: Path, since: str) -> List[str]:
     if not TAG_RE.match(since):
         raise SystemExit(f"--since {since!r} is not a vX.Y.Z tag; refusing to use it")
     proc = subprocess.run(
-        ["git", "-C", str(repo), "diff", "--name-only", "--no-renames", "-z", since, "HEAD", "--"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True,
+        [
+            "git",
+            "-C",
+            str(repo),
+            "diff",
+            "--name-only",
+            "--no-renames",
+            "-z",
+            since,
+            "HEAD",
+            "--",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
     )
     return [p for p in proc.stdout.split("\0") if p]
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--repo", type=Path, default=None, help="read changed files from this repo via `git diff`")
-    ap.add_argument("--since", default=None, help="the latest release tag (vX.Y.Z); required with --repo")
-    ap.add_argument("--paths", nargs="*", default=None, help="explicit changed-file list (overrides --repo; mainly for tests)")
-    ap.add_argument("--github-output", type=Path, default=None, help="append releasable=true|false to this file")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--repo",
+        type=Path,
+        default=None,
+        help="read changed files from this repo via `git diff`",
+    )
+    ap.add_argument(
+        "--since",
+        default=None,
+        help="the latest release tag (vX.Y.Z); required with --repo",
+    )
+    ap.add_argument(
+        "--paths",
+        nargs="*",
+        default=None,
+        help="explicit changed-file list (overrides --repo; mainly for tests)",
+    )
+    ap.add_argument(
+        "--github-output",
+        type=Path,
+        default=None,
+        help="append releasable=true|false to this file",
+    )
     args = ap.parse_args(argv)
     if args.paths is None:
         if args.repo is None or not args.since:
@@ -97,7 +137,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     releasing = releasing_paths(paths)
     releasable = decide_release("auto", paths)
-    print(json.dumps({"releasable": releasable, "changed": paths, "releasing": releasing}))
+    print(
+        json.dumps({"releasable": releasable, "changed": paths, "releasing": releasing})
+    )
     if args.github_output is not None:
         with open(args.github_output, "a", encoding="utf-8") as f:
             f.write(f"releasable={'true' if releasable else 'false'}\n")

@@ -1,5 +1,7 @@
 """Canonical JSON and hashing. Every identity (element operation id, work-dir name) derives from canonical JSON so
-key order, whitespace and float formatting never change an identity. No timestamps, no random values."""
+key order, whitespace and float formatting never change an identity. No timestamps, no random values.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -8,7 +10,9 @@ from typing import Any
 
 
 def canonical_json(obj: Any) -> str:
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    return json.dumps(
+        obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    )
 
 
 def sha256_text(text: str) -> str:

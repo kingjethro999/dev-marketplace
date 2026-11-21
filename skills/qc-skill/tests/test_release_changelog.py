@@ -4,12 +4,18 @@ shell run: block - see the module docstring for why)."""
 
 import subprocess
 
-from scripts.release_changelog import commit_subjects_since, prepend_to_changelog, render_entry
+from scripts.release_changelog import (
+    commit_subjects_since,
+    prepend_to_changelog,
+    render_entry,
+)
 
 
 def _init_repo(tmp_path):
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True
+    )
     subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
 
 
@@ -50,7 +56,9 @@ def test_commit_subjects_since_handles_shell_metacharacters_safely(tmp_path):
 
 
 def test_render_entry_with_commits():
-    text = render_entry("1.2.3", "2026-01-01", [("Add feature X", "abc1234"), ("Fix bug Y", "def5678")])
+    text = render_entry(
+        "1.2.3", "2026-01-01", [("Add feature X", "abc1234"), ("Fix bug Y", "def5678")]
+    )
     assert text.startswith("## v1.2.3 - 2026-01-01")
     assert "- Add feature X (abc1234)" in text
     assert "- Fix bug Y (def5678)" in text

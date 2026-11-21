@@ -16,6 +16,7 @@ actually contains for some objects (see references/pitfalls.md and issue #111) -
 of Blender's own Decimate-then-export interaction on some multi-object scenes, not something
 this script special-cases around.
 """
+
 import sys
 from pathlib import Path
 
@@ -40,8 +41,15 @@ def run(args):
     lod0_tris = sum(_compat.object_triangle_count(o) for o in mesh_objs)
     lod0_path = out_dir / f"LOD0{ext}"
     _compat.export_file(str(lod0_path), out_fmt)
-    levels = [{"name": "LOD0", "ratio": 1.0, "triangles_before": lod0_tris,
-               "triangles_after": lod0_tris, "output": str(lod0_path)}]
+    levels = [
+        {
+            "name": "LOD0",
+            "ratio": 1.0,
+            "triangles_before": lod0_tris,
+            "triangles_after": lod0_tris,
+            "output": str(lod0_path),
+        }
+    ]
 
     ratios = args.get("ratios")
     if ratios is None:
@@ -63,10 +71,15 @@ def run(args):
         tris_after = sum(_compat.object_triangle_count(o) for o in mesh_objs)
         out_path = out_dir / f"LOD{i}{ext}"
         _compat.export_file(str(out_path), out_fmt)
-        levels.append({
-            "name": f"LOD{i}", "ratio": ratio, "triangles_before": lod0_tris,
-            "triangles_after": tris_after, "output": str(out_path),
-        })
+        levels.append(
+            {
+                "name": f"LOD{i}",
+                "ratio": ratio,
+                "triangles_before": lod0_tris,
+                "triangles_after": tris_after,
+                "output": str(out_path),
+            }
+        )
 
     return {
         "input": args["path"],

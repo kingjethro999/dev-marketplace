@@ -286,7 +286,10 @@ def build_attack_paths(raw: object, unit_id: str, status: str) -> list[AttackPat
     if not is_list(raw):
         msg = f"{unit_id}: attack_paths must be a list"
         raise PatchError(msg)
-    paths = [build_attack_path(item, f"{unit_id} attack_paths[{i}]") for i, item in enumerate(raw)]
+    paths = [
+        build_attack_path(item, f"{unit_id} attack_paths[{i}]")
+        for i, item in enumerate(raw)
+    ]
     blocking = next((path for path in paths if path["kind"].blocks_patch), None)
     if written and blocking is not None:
         msg = (
@@ -352,7 +355,9 @@ def build_unit(item: object, index: int) -> Unit:
         raise PatchError(msg)
     attack_paths = build_attack_paths(item.get("attack_paths"), unit_id, status)
     confirmed = build_confirmed(item.get("confirmed"), unit_id, status)
-    reachable = next((p for p in attack_paths if p["kind"] is PathKind.STILL_REACHABLE), None)
+    reachable = next(
+        (p for p in attack_paths if p["kind"] is PathKind.STILL_REACHABLE), None
+    )
     if confirmed is False and reachable is not None:
         msg = (
             f'{unit_id}: "confirmed": false cannot sit beside a still_reachable path '
@@ -380,7 +385,9 @@ def build_unit(item: object, index: int) -> Unit:
         claims=claims,
         untested=untested is True,
         tests_run=line_field(item.get("tests_run"), f"{unit_id} tests_run"),
-        reviewed_paths=field_list(item.get("reviewed_paths"), f"{unit_id} reviewed_paths"),
+        reviewed_paths=field_list(
+            item.get("reviewed_paths"), f"{unit_id} reviewed_paths"
+        ),
         attack_paths=attack_paths,
         attempts=build_attempts(item.get("attempts"), unit_id, status),
         confirmed=confirmed,
@@ -418,7 +425,11 @@ def load_units(patch_dir: Path) -> list[Unit]:
     if not os.path.isdir(findings_dir):
         msg = f"the patch dir has no {FINDINGS_DIR_NAME}/ folder; run --prepare first"
         raise PatchError(msg)
-    prepared = {path.stem for path in findings_dir.glob("*.json") if FINDING_ID_RE.match(path.stem)}
+    prepared = {
+        path.stem
+        for path in findings_dir.glob("*.json")
+        if FINDING_ID_RE.match(path.stem)
+    }
     unprepared = [unit["id"] for unit in units if unit["id"] not in prepared]
     if unprepared:
         msg = (
@@ -488,7 +499,13 @@ def section_stat(lines: list[str]) -> DiffStat:
             for key in ("--- ", "+++ "):
                 if line.startswith(key):
                     names[key.strip()] = line[4:]
-            for key in ("old mode", "new mode", "new file mode", "rename from", "rename to"):
+            for key in (
+                "old mode",
+                "new mode",
+                "new file mode",
+                "rename from",
+                "rename to",
+            ):
                 if line.startswith(key + " "):
                     modes[key] = line[len(key) + 1 :].strip()
     if modes.get("rename from") and modes.get("rename to"):
@@ -497,13 +514,17 @@ def section_stat(lines: list[str]) -> DiffStat:
         header = lines[0][len(DIFF_HEADER) :].rstrip("\r")
         cut = header.rfind(" b/")
         fallback = header[cut + 3 :] if cut >= 0 else header
-        path = display_name(names.get("+++")) or display_name(names.get("---")) or fallback
+        path = (
+            display_name(names.get("+++")) or display_name(names.get("---")) or fallback
+        )
     old_mode, new_mode = modes.get("old mode"), modes.get("new mode")
     if old_mode and new_mode and old_mode != new_mode:
         path += f" (mode {old_mode} -> {new_mode})"
     elif modes.get("new file mode") not in {None, REGULAR_FILE_MODE}:
         path += f" (new file, mode {modes['new file mode']})"
-    return DiffStat(path=path, added="-" if binary else added, deleted="-" if binary else deleted)
+    return DiffStat(
+        path=path, added="-" if binary else added, deleted="-" if binary else deleted
+    )
 
 
 def numstat(diff: bytes) -> list[DiffStat]:
@@ -568,7 +589,9 @@ def attack_path_lines(paths: list[AttackPath]) -> list[str]:
     """The fresh reviewer's attack paths as a note section; no lines when it reported none."""
     if not paths:
         return []
-    bullets = [f"- **{PATH_KIND_LABELS[path['kind']]}** -- {path['text']}" for path in paths]
+    bullets = [
+        f"- **{PATH_KIND_LABELS[path['kind']]}** -- {path['text']}" for path in paths
+    ]
     return ["## What the fresh reviewer reported", "", *bullets, ""]
 
 
@@ -587,7 +610,9 @@ def header_comment(unit: Unit, base: str, report_ref: str) -> str:
     ]
     for key in CLAIM_KEYS:
         claim = unit["claims"][key]
-        lines.append(f"#   - {CLAIM_LABELS[key]}: {claim['evidence'] or claim['state']}")
+        lines.append(
+            f"#   - {CLAIM_LABELS[key]}: {claim['evidence'] or claim['state']}"
+        )
     if unit["untested"]:
         lines += [
             "#",
@@ -601,14 +626,18 @@ def header_comment(unit: Unit, base: str, report_ref: str) -> str:
         lines += [f"# Tests run: {unit['tests_run']}"]
     lines += [
         "#",
-        (f"# Apply, from the repository root:  git apply {report_ref}/patches/{unit['id']}.patch"),
+        (
+            f"# Apply, from the repository root:  git apply {report_ref}/patches/{unit['id']}.patch"
+        ),
         "#",
         "",
     ]
     return "\n".join(lines)
 
 
-def note_written(unit: Unit, stats: list[DiffStat] | None, check: str, report_ref: str) -> str:
+def note_written(
+    unit: Unit, stats: list[DiffStat] | None, check: str, report_ref: str
+) -> str:
     """The F<n>.md note for a finding that earned a patch."""
     lines = [
         f"# {unit['id']}: {unit['title']}",
@@ -630,7 +659,9 @@ def note_written(unit: Unit, stats: list[DiffStat] | None, check: str, report_re
     lines += ["## Confidence", ""]
     for key in CLAIM_KEYS:
         claim = unit["claims"][key]
-        lines.append(f"- **{CLAIM_LABELS[key]}** -- {claim['state']}: {claim['evidence']}")
+        lines.append(
+            f"- **{CLAIM_LABELS[key]}** -- {claim['state']}: {claim['evidence']}"
+        )
     if unit["untested"]:
         lines += [
             "",
@@ -644,9 +675,13 @@ def note_written(unit: Unit, stats: list[DiffStat] | None, check: str, report_re
     lines += diffstat_lines(stats)
     lines += ["", *attack_path_lines(unit["attack_paths"]), "## Applying it", ""]
     if check == "clean":
-        lines.append("Applies cleanly to the working tree (checked with `git apply --check`).")
+        lines.append(
+            "Applies cleanly to the working tree (checked with `git apply --check`)."
+        )
     elif check == "not_run":
-        lines.append("The clean-apply check could not run here (git unavailable); try it yourself.")
+        lines.append(
+            "The clean-apply check could not run here (git unavailable); try it yourself."
+        )
     else:
         detail = check.split(": ", 1)[-1]
         lines.append(
@@ -675,7 +710,9 @@ def decline_wording(unit: Unit) -> tuple[str, str] | None:
     if unit["confirmed"] is False:
         return NOT_CONFIRMED, "finding not confirmed at this revision"
     if count == 0:
-        sentence = "No fix for this finding could be attempted, so no patch was written."
+        sentence = (
+            "No fix for this finding could be attempted, so no patch was written."
+        )
         return sentence, "no attempt possible"
     made = "1 attempt" if count == 1 else f"{count} attempts"
     sentence = (
@@ -700,7 +737,9 @@ def note_declined(unit: Unit, stats: list[DiffStat] | None) -> str:
     if blocking:
         lines += ["## What could not be claimed with confidence", ""]
         for key, claim in blocking:
-            lines.append(f"- **{CLAIM_LABELS[key]}** -- {claim['state']}: {claim['evidence']}")
+            lines.append(
+                f"- **{CLAIM_LABELS[key]}** -- {claim['state']}: {claim['evidence']}"
+            )
         lines.append("")
     lines += attack_path_lines(unit["attack_paths"])
     if stats is not None:
@@ -708,11 +747,18 @@ def note_declined(unit: Unit, stats: list[DiffStat] | None) -> str:
         lines += diffstat_lines(stats)
         lines.append("")
     if unit["recommendation"]:
-        lines += ["## The report's original recommendation", "", unit["recommendation"], ""]
+        lines += [
+            "## The report's original recommendation",
+            "",
+            unit["recommendation"],
+            "",
+        ]
     return "\n".join(lines)
 
 
-def index_markdown(units: list[Unit], base: str, report_dir_name: str, report_ref: str) -> str:
+def index_markdown(
+    units: list[Unit], base: str, report_dir_name: str, report_ref: str
+) -> str:
     """PATCHES.md: the one-page index of every unit's outcome."""
     patched = [u for u in units if u["status"] == "patch_written"]
     declined = [u for u in units if u["status"] != "patch_written"]
@@ -732,14 +778,18 @@ def index_markdown(units: list[Unit], base: str, report_dir_name: str, report_re
         lines += ["## Patches written", ""]
         for unit in patched:
             caveat = f" _({UNTESTED_NOTICE})_" if unit["untested"] else ""
-            lines.append(f"- **{unit['id']}** -- {unit['title']}: `{unit['id']}.patch`{caveat}")
+            lines.append(
+                f"- **{unit['id']}** -- {unit['title']}: `{unit['id']}.patch`{caveat}"
+            )
         lines.append("")
     if declined:
         lines += ["## No patch produced", ""]
         for unit in declined:
             wording = decline_wording(unit)
             suffix = f" ({wording[1]})" if wording else ""
-            lines.append(f"- **{unit['id']}** -- {unit['title']}{suffix}: {unit['decline_reason']}")
+            lines.append(
+                f"- **{unit['id']}** -- {unit['title']}{suffix}: {unit['decline_reason']}"
+            )
         lines.append("")
     aside = [
         (unit["id"], path)
@@ -749,7 +799,10 @@ def index_markdown(units: list[Unit], base: str, report_dir_name: str, report_re
     ]
     if aside:
         lines += ["## Set aside by the reviewers", ""]
-        lines += [f"- while reviewing **{unit_id}** -- {path['text']}" for unit_id, path in aside]
+        lines += [
+            f"- while reviewing **{unit_id}** -- {path['text']}"
+            for unit_id, path in aside
+        ]
         lines += [
             "",
             (
@@ -788,23 +841,27 @@ def jsonl(
 ) -> str:
     """patches.jsonl: one record per unit, machine-readable for tooling."""
     return "".join(
-        strictjson.text({
-            "id": unit["id"],
-            "status": unit["status"],
-            "base": base,
-            "patch": f"{unit['id']}.patch" if unit["status"] == "patch_written" else None,
-            "note": f"{unit['id']}.md",
-            "claims": unit["claims"],
-            "untested": unit["untested"],
-            "tests_run": unit["tests_run"] or None,
-            "reviewed_paths": unit["reviewed_paths"],
-            "attack_paths": unit["attack_paths"],
-            "attempts": unit["attempts"],
-            "confirmed": unit["confirmed"],
-            "diffstat": stats_by_id.get(unit["id"]),
-            "apply_check": checks.get(unit["id"]),
-            "decline_reason": unit["decline_reason"] or None,
-        })
+        strictjson.text(
+            {
+                "id": unit["id"],
+                "status": unit["status"],
+                "base": base,
+                "patch": (
+                    f"{unit['id']}.patch" if unit["status"] == "patch_written" else None
+                ),
+                "note": f"{unit['id']}.md",
+                "claims": unit["claims"],
+                "untested": unit["untested"],
+                "tests_run": unit["tests_run"] or None,
+                "reviewed_paths": unit["reviewed_paths"],
+                "attack_paths": unit["attack_paths"],
+                "attempts": unit["attempts"],
+                "confirmed": unit["confirmed"],
+                "diffstat": stats_by_id.get(unit["id"]),
+                "apply_check": checks.get(unit["id"]),
+                "decline_reason": unit["decline_reason"] or None,
+            }
+        )
         + "\n"
         for unit in units
     )
@@ -840,7 +897,11 @@ def ensure_gitignore(report_dir: Path) -> str:
             existing = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             return "open"
-        return "present" if "*" in (line.strip() for line in existing.splitlines()) else "open"
+        return (
+            "present"
+            if "*" in (line.strip() for line in existing.splitlines())
+            else "open"
+        )
     path.write_bytes(b"*\n")
     return "written"
 
@@ -853,7 +914,10 @@ def report_path_from_root(report_dir: Path, top: str | None, fallback: str) -> s
     """
     if top is None:
         return fallback
-    return absolute.relative(os.path.realpath(report_dir), os.path.realpath(top)) or fallback
+    return (
+        absolute.relative(os.path.realpath(report_dir), os.path.realpath(top))
+        or fallback
+    )
 
 
 def resolve_report_dir(patches_dir: Path) -> Path:
@@ -938,7 +1002,9 @@ def report_findings(report_dir: Path, scan_prefix: str) -> dict[str, ReportFindi
         if off_shape or file.split("/")[0] in {".", ".."}:
             msg = f"{name} line {number}: {finding_id} file {declared!r} is not a repository path"
             raise PatchError(msg)
-        findings[finding_id] = ReportFinding(Severity[severity], {**record, "file": file})
+        findings[finding_id] = ReportFinding(
+            Severity[severity], {**record, "file": file}
+        )
     return findings
 
 
@@ -947,7 +1013,9 @@ def select_units(findings: dict[str, ReportFinding], selection: str) -> list[str
     if selection == "all":
         chosen = set(findings)
     elif selection == "high":
-        chosen = {i for i, finding in findings.items() if finding.severity >= Severity.HIGH}
+        chosen = {
+            i for i, finding in findings.items() if finding.severity >= Severity.HIGH
+        }
     else:
         chosen = {part.strip() for part in selection.split(",")}
         malformed = sorted(i for i in chosen if not FINDING_ID_RE.match(i))
@@ -972,7 +1040,9 @@ def prepare(report_dir: Path, *, selection: str, repo_root: str, base: str) -> i
     """Lay out a patch run for the selected findings; print its directories and unit ids."""
     report_dir = Path(os.path.abspath(report_dir))
     if not plugin.REPORT_DIR_RE.match(report_dir.name):
-        msg = f"{report_dir.name!r} is not a CLAUDE-SECURITY-<timestamp> report directory"
+        msg = (
+            f"{report_dir.name!r} is not a CLAUDE-SECURITY-<timestamp> report directory"
+        )
         raise PatchError(msg)
     top = git_toplevel(repo_root)
     if top is None:
@@ -981,7 +1051,10 @@ def prepare(report_dir: Path, *, selection: str, repo_root: str, base: str) -> i
     if not Path(repo_root).samefile(top):
         msg = f"--repo-root {repo_root!r} is not the top level of its repository; git names {top}"
         raise PatchError(msg)
-    if git.run(repo_root, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}") is None:
+    if (
+        git.run(repo_root, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}")
+        is None
+    ):
         msg = f"--base {base}: git cannot resolve it to a commit in {repo_root}"
         raise PatchError(msg)
     findings = report_findings(report_dir, stamp_scan_prefix(report_dir))
@@ -1031,11 +1104,15 @@ def render(patch_dir: Path, patches_dir: Path, scan_root: str, base: str) -> int
         else:
             note = note_declined(unit, stats)
             print(f"{unit['id']}: no patch ({unit['status']}) -> {unit['id']}.md")
-        (patches_dir / f"{unit['id']}.md").write_bytes(note.encode("utf-8", "surrogateescape"))
+        (patches_dir / f"{unit['id']}.md").write_bytes(
+            note.encode("utf-8", "surrogateescape")
+        )
         produced.add(f"{unit['id']}.md")
     index = index_markdown(units, base, report_dir.name, report_ref)
     (patches_dir / "PATCHES.md").write_bytes(index.encode("utf-8", "surrogateescape"))
-    (patches_dir / "patches.jsonl").write_bytes(jsonl(units, base, stats_by_id, checks).encode())
+    (patches_dir / "patches.jsonl").write_bytes(
+        jsonl(units, base, stats_by_id, checks).encode()
+    )
     for name in clear_stale_products(patches_dir, produced):
         print(f"removed stale {name} (not produced by this run)")
     swept, warnings = remove_workspaces_in(patch_dir)
@@ -1073,7 +1150,9 @@ def misplaced_patch_run_reason(patch_dir: Path) -> str | None:
     if run_dir.name != plugin.RUN_DIR_NAME:
         return f"'{patch_dir.name}' is not inside {plugin.RUN_DIR_NAME}/"
     if not plugin.REPORT_DIR_RE.match(report_dir.name):
-        return f"'{report_dir.name}' is not a CLAUDE-SECURITY-<timestamp> report directory"
+        return (
+            f"'{report_dir.name}' is not a CLAUDE-SECURITY-<timestamp> report directory"
+        )
     for directory in (patch_dir, run_dir, report_dir):
         if is_link(directory):
             return f"'{directory}' is a symbolic link"
@@ -1210,10 +1289,16 @@ def prepare_args(argv: list[str]) -> PrepareArgs:
         description="Lay out a patch run for a report's selected findings.",
         allow_abbrev=False,
     )
-    parser.add_argument("report_dir", help="the CLAUDE-SECURITY-<timestamp> report directory")
+    parser.add_argument(
+        "report_dir", help="the CLAUDE-SECURITY-<timestamp> report directory"
+    )
     parser.add_argument("selection", help="all, high, or finding ids such as F1,F3")
-    parser.add_argument("--repo-root", required=True, help="the repository's top-level directory")
-    parser.add_argument("--base", required=True, help="the revision every patch is built against")
+    parser.add_argument(
+        "--repo-root", required=True, help="the repository's top-level directory"
+    )
+    parser.add_argument(
+        "--base", required=True, help="the revision every patch is built against"
+    )
     args = parser.parse_args(argv, namespace=PrepareArgs())
     if not os.path.isdir(args.report_dir):
         parser.error(f"report dir is not a directory: {args.report_dir}")
@@ -1233,12 +1318,23 @@ def render_args(argv: list[str]) -> RenderArgs:
         ),
         allow_abbrev=False,
     )
-    parser.add_argument("patch_dir", help="the patch run dir holding patches.json and F<n>.diff")
-    parser.add_argument("patches_dir", help="the report's patches/ directory to write into")
-    parser.add_argument("scan_root", help="the user's repository root (for git apply --check)")
-    parser.add_argument("--base", required=True, help="the revision every patch applies to")
+    parser.add_argument(
+        "patch_dir", help="the patch run dir holding patches.json and F<n>.diff"
+    )
+    parser.add_argument(
+        "patches_dir", help="the report's patches/ directory to write into"
+    )
+    parser.add_argument(
+        "scan_root", help="the user's repository root (for git apply --check)"
+    )
+    parser.add_argument(
+        "--base", required=True, help="the revision every patch applies to"
+    )
     args = parser.parse_args(argv, namespace=RenderArgs())
-    for label, path in (("patch dir", args.patch_dir), ("patches dir", args.patches_dir)):
+    for label, path in (
+        ("patch dir", args.patch_dir),
+        ("patches dir", args.patches_dir),
+    ):
         if not os.path.isdir(path):
             parser.error(f"{label} is not a directory: {path}")
     if not plugin.SHA_RE.match(args.base):
@@ -1262,7 +1358,9 @@ def dispatch(argv: list[str]) -> int:
             base=wanted.base,
         )
     args = render_args(argv)
-    return render(Path(args.patch_dir), Path(args.patches_dir), args.scan_root, args.base)
+    return render(
+        Path(args.patch_dir), Path(args.patches_dir), args.scan_root, args.base
+    )
 
 
 def main(argv: list[str]) -> int:

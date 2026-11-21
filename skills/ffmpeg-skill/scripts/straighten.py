@@ -18,28 +18,74 @@ Examples:
   python3 straighten.py tilted.mp4 --degrees -2.5
   python3 straighten.py handheld.mp4 --degrees 1.2 --fit pad --fill-color 0x101010
 """
+
 import argparse
 import math
 import sys
 
-from _common import add_common, apply_common, aac_args, cfr_args, with_cfr, default_output, die, drawn_chain, emit, ffmpeg_base, info, probe, run_keeping_subtitles, validate_color, video_args, X264_PRESETS, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    with_cfr,
+    default_output,
+    die,
+    drawn_chain,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    validate_color,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+)
 from _common.emit import note
 from _common.probe import display_size, square_pixels, square_pixels_note
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="output file (default: <name>_straighten.<ext>)")
-    ap.add_argument("--degrees", type=float, required=True, help="rotation angle in degrees, -45..45, positive = clockwise")
-    ap.add_argument("--fit", choices=["crop", "pad"], default="crop",
-                     help="crop (default): scale up to fill the frame, no visible corner gap; pad: keep the full picture, fill the corner gaps with --fill-color")
-    ap.add_argument("--fill-color", default="black", help="corner fill colour with --fit pad (default black)")
-    ap.add_argument("--audio-stream", type=int, default=0,
-                     help="which audio stream of the input to keep, 0-based in file order (default 0)")
+    ap.add_argument(
+        "-o", "--output", help="output file (default: <name>_straighten.<ext>)"
+    )
+    ap.add_argument(
+        "--degrees",
+        type=float,
+        required=True,
+        help="rotation angle in degrees, -45..45, positive = clockwise",
+    )
+    ap.add_argument(
+        "--fit",
+        choices=["crop", "pad"],
+        default="crop",
+        help="crop (default): scale up to fill the frame, no visible corner gap; pad: keep the full picture, fill the corner gaps with --fill-color",
+    )
+    ap.add_argument(
+        "--fill-color",
+        default="black",
+        help="corner fill colour with --fit pad (default black)",
+    )
+    ap.add_argument(
+        "--audio-stream",
+        type=int,
+        default=0,
+        help="which audio stream of the input to keep, 0-based in file order (default 0)",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
-    ap.add_argument("--fps", type=float, help="force a constant output frame rate (recommended for VFR sources)")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
+    ap.add_argument(
+        "--fps",
+        type=float,
+        help="force a constant output frame rate (recommended for VFR sources)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -58,17 +104,25 @@ def main() -> int:
     has_audio = bool(meta.get("audio"))
     audio_streams = meta.get("audio_streams") or []
     if audio_streams and not (0 <= args.audio_stream < len(audio_streams)):
-        die(f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}")
+        die(
+            f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}"
+        )
     if args.audio_stream and not audio_streams:
         die("--audio-stream needs an input with audio streams")
     output = args.output or default_output(args.input, "straighten")
 
     radians = math.radians(args.degrees)
     if args.fit == "pad":
-        geometry = f"ow=trunc(rotw({radians:.8f})/2)*2:oh=trunc(roth({radians:.8f})/2)*2"
+        geometry = (
+            f"ow=trunc(rotw({radians:.8f})/2)*2:oh=trunc(roth({radians:.8f})/2)*2"
+        )
         # a --fill-color with chroma lands in the BT.709 the output is tagged with (drawn_chain)
-        rotate = drawn_chain(f"rotate={radians:.8f}:fillcolor={args.fill_color}:{geometry}", meta, [args.fill_color],
-                             f"rotate={radians:.8f}:fillcolor=black:{geometry}")
+        rotate = drawn_chain(
+            f"rotate={radians:.8f}:fillcolor={args.fill_color}:{geometry}",
+            meta,
+            [args.fill_color],
+            f"rotate={radians:.8f}:fillcolor=black:{geometry}",
+        )
     else:
         # Pre-scale the frame up so the rotated content fully covers the original W:H window with
         # no black corner, then rotate in place (canvas stays at the scaled size) and crop back
@@ -90,8 +144,10 @@ def main() -> int:
             # crop floors an odd one to the chroma grid, which moved the window a pixel up and
             # left and could bring the fill into the top-left corner
             sw, sh = (c + math.ceil(max(0.0, c * s - c) / 4) * 4 for c in (cw, ch))
-            rotate = (f"scale={sw}:{sh},setsar=1,"
-                      f"rotate={radians:.8f},crop={cw}:{ch},setsar=1")
+            rotate = (
+                f"scale={sw}:{sh},setsar=1,"
+                f"rotate={radians:.8f},crop={cw}:{ch},setsar=1"
+            )
         else:  # a dry run's pending input has no size yet: the old expression, planned only
             rotate = f"scale=iw*{s:.8f}:ih*{s:.8f},rotate={radians:.8f},crop=trunc(iw/{s:.8f}/2)*2:trunc(ih/{s:.8f}/2)*2"
 
@@ -100,7 +156,14 @@ def main() -> int:
     if square_pixels(meta["video"]):
         rotate = square_pixels(meta["video"]) + "," + rotate
         note(square_pixels_note(meta["video"]))
-    cmd = ffmpeg_base() + ["-i", args.input, "-vf", with_cfr(rotate, meta, args.fps), "-map", "0:v:0"]
+    cmd = ffmpeg_base() + [
+        "-i",
+        args.input,
+        "-vf",
+        with_cfr(rotate, meta, args.fps),
+        "-map",
+        "0:v:0",
+    ]
     if has_audio:
         cmd += ["-map", f"0:a:{args.audio_stream}?"]
     cmd += video_args(meta, args.crf, args.preset)
@@ -113,7 +176,9 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, degrees={args.degrees:g}, fit={args.fit})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, degrees={args.degrees:g}, fit={args.fit})"
+    )
     emit(output, dropped_non_av_streams=dropped_streams)
     return 0
 

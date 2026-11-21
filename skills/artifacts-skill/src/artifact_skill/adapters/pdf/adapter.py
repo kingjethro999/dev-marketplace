@@ -17,7 +17,11 @@ from typing import Any
 from artifact_skill.adapters.base import ArtifactAdapter, OperationSpec, RenderResult
 from artifact_skill.core.artifact import ArtifactRef, ArtifactType, InspectionReport
 from artifact_skill.core.capability import Capability, CapabilityStatus
-from artifact_skill.core.errors import ArtifactCapabilityError, ArtifactExecutionError, ArtifactInputError
+from artifact_skill.core.errors import (
+    ArtifactCapabilityError,
+    ArtifactExecutionError,
+    ArtifactInputError,
+)
 from artifact_skill.core.operation import OperationPlan
 from artifact_skill.core.verification import Check, CheckStatus, VerificationResult
 from artifact_skill.leftover_text import find_leftover_markers
@@ -33,10 +37,20 @@ _PT_PER_INCH = 72.0
 # everything else is, because there is no guarantee the viewer has a
 # matching font to substitute.
 _STANDARD_14_FONTS = {
-    "Courier", "Courier-Bold", "Courier-BoldOblique", "Courier-Oblique",
-    "Helvetica", "Helvetica-Bold", "Helvetica-BoldOblique", "Helvetica-Oblique",
-    "Times-Roman", "Times-Bold", "Times-BoldItalic", "Times-Italic",
-    "Symbol", "ZapfDingbats",
+    "Courier",
+    "Courier-Bold",
+    "Courier-BoldOblique",
+    "Courier-Oblique",
+    "Helvetica",
+    "Helvetica-Bold",
+    "Helvetica-BoldOblique",
+    "Helvetica-Oblique",
+    "Times-Roman",
+    "Times-Bold",
+    "Times-BoldItalic",
+    "Times-Italic",
+    "Symbol",
+    "ZapfDingbats",
 }
 
 
@@ -124,15 +138,23 @@ def _collect_font_info(reader: Any) -> list[dict[str, Any]]:
                 if descendants:
                     try:
                         descriptor = descendants[0].get_object().get("/FontDescriptor")
-                    except Exception:  # noqa: BLE001 - malformed descendant, treat as no descriptor
+                    except (
+                        Exception
+                    ):  # noqa: BLE001 - malformed descendant, treat as no descriptor
                         descriptor = None
 
             embedded = False
             if descriptor is not None:
                 desc_obj = descriptor.get_object()
-                embedded = any(key in desc_obj for key in ("/FontFile", "/FontFile2", "/FontFile3"))
+                embedded = any(
+                    key in desc_obj for key in ("/FontFile", "/FontFile2", "/FontFile3")
+                )
 
-            base_name = base_font.split("+", 1)[1] if "+" in base_font and len(base_font.split("+", 1)[0]) == 6 else base_font
+            base_name = (
+                base_font.split("+", 1)[1]
+                if "+" in base_font and len(base_font.split("+", 1)[0]) == 6
+                else base_font
+            )
             fonts.append(
                 {
                     "name": base_font,
@@ -154,18 +176,29 @@ def _font_embedding_check(fonts: list[dict[str, Any]], policy: dict[str, Any]) -
     intended glyphs, so it's a real but not always fatal problem.
     """
     if not fonts:
-        return Check(id="font_embedding", name="Font embedding", status=CheckStatus.PASS, message="No fonts referenced.")
+        return Check(
+            id="font_embedding",
+            name="Font embedding",
+            status=CheckStatus.PASS,
+            message="No fonts referenced.",
+        )
 
     missing = [f for f in fonts if not f["embedded"] and not f["is_standard14"]]
     if not missing:
         return Check(
-            id="font_embedding", name="Font embedding", status=CheckStatus.PASS,
+            id="font_embedding",
+            name="Font embedding",
+            status=CheckStatus.PASS,
             message=f"{len(fonts)} font(s) referenced; all embedded or standard-14.",
         )
-    status = CheckStatus.FAIL if policy.get("forbid_unembedded_fonts") else CheckStatus.WARN
+    status = (
+        CheckStatus.FAIL if policy.get("forbid_unembedded_fonts") else CheckStatus.WARN
+    )
     names = [f["name"] for f in missing]
     return Check(
-        id="font_embedding", name="Font embedding", status=status,
+        id="font_embedding",
+        name="Font embedding",
+        status=status,
         message=f"{len(missing)} non-standard font(s) not embedded: {names}. Rendering may substitute a "
         "different font on a viewer without a matching one installed.",
         evidence={"unembedded_fonts": names},
@@ -191,7 +224,9 @@ def _require_positive_page_size(args: dict[str, Any]) -> tuple[float, float]:
     return width_pt, height_pt
 
 
-def _resolve_page_indices(pages_1indexed: Any, page_count: int, operation: str) -> list[int]:
+def _resolve_page_indices(
+    pages_1indexed: Any, page_count: int, operation: str
+) -> list[int]:
     """Validate a 1-indexed 'pages' arg against the document's real page
     count and convert it to 0-indexed positions, preserving the caller's
     order (so extract_pages can reorder/repeat pages, not just subset
@@ -210,7 +245,11 @@ def _resolve_page_indices(pages_1indexed: Any, page_count: int, operation: str) 
                 code="ARTIFACT_INVALID_ARGS",
                 message=f"{operation}: page {p!r} is out of range — this document has {page_count} "
                 "page(s), 1-indexed.",
-                evidence={"pages": pages_1indexed, "page_count": page_count, "invalid_page": p},
+                evidence={
+                    "pages": pages_1indexed,
+                    "page_count": page_count,
+                    "invalid_page": p,
+                },
             )
         zero_indexed.append(p - 1)
     return zero_indexed
@@ -242,7 +281,10 @@ class PdfAdapter(ArtifactAdapter):
                 structural_verification_required=True,
                 visual_verification_required=False,
                 render_required=False,
-                postconditions=["output page count == input page count", "requested metadata fields match"],
+                postconditions=[
+                    "output page count == input page count",
+                    "requested metadata fields match",
+                ],
             ),
             "merge": OperationSpec(
                 name="merge",
@@ -250,7 +292,11 @@ class PdfAdapter(ArtifactAdapter):
                 args_schema={
                     "type": "object",
                     "properties": {
-                        "additional_inputs": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                        "additional_inputs": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "minItems": 1,
+                        },
                     },
                     "required": ["additional_inputs"],
                     "additionalProperties": False,
@@ -259,7 +305,9 @@ class PdfAdapter(ArtifactAdapter):
                 visual_verification_required=True,
                 render_required=True,
                 postconditions=["output page count == sum of input page counts"],
-                known_limitations=["Does not attempt to de-duplicate shared fonts across inputs."],
+                known_limitations=[
+                    "Does not attempt to de-duplicate shared fonts across inputs."
+                ],
             ),
             "fit_page_size": OperationSpec(
                 name="fit_page_size",
@@ -290,7 +338,11 @@ class PdfAdapter(ArtifactAdapter):
                 args_schema={
                     "type": "object",
                     "properties": {
-                        "pages": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1},
+                        "pages": {
+                            "type": "array",
+                            "items": {"type": "integer", "minimum": 1},
+                            "minItems": 1,
+                        },
                     },
                     "required": ["pages"],
                     "additionalProperties": False,
@@ -307,7 +359,11 @@ class PdfAdapter(ArtifactAdapter):
                 args_schema={
                     "type": "object",
                     "properties": {
-                        "pages": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1},
+                        "pages": {
+                            "type": "array",
+                            "items": {"type": "integer", "minimum": 1},
+                            "minItems": 1,
+                        },
                     },
                     "required": ["pages"],
                     "additionalProperties": False,
@@ -315,7 +371,9 @@ class PdfAdapter(ArtifactAdapter):
                 structural_verification_required=True,
                 visual_verification_required=False,
                 render_required=False,
-                postconditions=["output page count == input page count - len(set(pages))"],
+                postconditions=[
+                    "output page count == input page count - len(set(pages))"
+                ],
             ),
             "rotate_pages": OperationSpec(
                 name="rotate_pages",
@@ -324,8 +382,15 @@ class PdfAdapter(ArtifactAdapter):
                 args_schema={
                     "type": "object",
                     "properties": {
-                        "pages": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1},
-                        "degrees": {"type": "integer", "enum": [90, 180, 270, -90, -180, -270]},
+                        "pages": {
+                            "type": "array",
+                            "items": {"type": "integer", "minimum": 1},
+                            "minItems": 1,
+                        },
+                        "degrees": {
+                            "type": "integer",
+                            "enum": [90, 180, 270, -90, -180, -270],
+                        },
                     },
                     "required": ["degrees"],
                     "additionalProperties": False,
@@ -400,11 +465,22 @@ class PdfAdapter(ArtifactAdapter):
         ]
 
     def recognized_policy_keys(self) -> frozenset[str]:
-        return frozenset({
-            "forbid_unembedded_fonts", "require_no_encryption", "require_page_count", "min_pages", "max_pages",
-            "allow_mixed_page_sizes", "require_page_size_pt", "page_size_tolerance_pt", "forbid_javascript",
-            "forbid_blank_pages", "forbid_placeholder_text", "require_metadata",
-        })
+        return frozenset(
+            {
+                "forbid_unembedded_fonts",
+                "require_no_encryption",
+                "require_page_count",
+                "min_pages",
+                "max_pages",
+                "allow_mixed_page_sizes",
+                "require_page_size_pt",
+                "page_size_tolerance_pt",
+                "forbid_javascript",
+                "forbid_blank_pages",
+                "forbid_placeholder_text",
+                "require_metadata",
+            }
+        )
 
     # ---- inspect ---------------------------------------------------
 
@@ -472,18 +548,26 @@ class PdfAdapter(ArtifactAdapter):
                         has_javascript = True
                     else:
                         catalog_aa = root.get("/AA")
-                        if catalog_aa and any(_action_is_javascript(a) for a in catalog_aa.values()):
+                        if catalog_aa and any(
+                            _action_is_javascript(a) for a in catalog_aa.values()
+                        ):
                             has_javascript = True
-                except Exception:  # noqa: BLE001, S110 - best-effort detection, never fatal
+                except (
+                    Exception
+                ):  # noqa: BLE001, S110 - best-effort detection, never fatal
                     pass
             if not has_javascript:
                 try:
                     for page in reader.pages:
                         page_aa = page.get("/AA")
-                        if page_aa and any(_action_is_javascript(a) for a in page_aa.values()):
+                        if page_aa and any(
+                            _action_is_javascript(a) for a in page_aa.values()
+                        ):
                             has_javascript = True
                             break
-                except Exception:  # noqa: BLE001, S110 - best-effort detection, never fatal
+                except (
+                    Exception
+                ):  # noqa: BLE001, S110 - best-effort detection, never fatal
                     pass
             try:
                 has_forms = "/AcroForm" in reader.trailer["/Root"]
@@ -502,7 +586,9 @@ class PdfAdapter(ArtifactAdapter):
                 page_text = ""
                 try:
                     page_text = page.extract_text()
-                except Exception:  # noqa: BLE001 - a single bad page must not abort inspect
+                except (
+                    Exception
+                ):  # noqa: BLE001 - a single bad page must not abort inspect
                     text_extraction_failed = True
                 has_text = bool(page_text.strip())
                 if has_text:
@@ -511,7 +597,9 @@ class PdfAdapter(ArtifactAdapter):
                 has_images = False
                 try:
                     has_images = len(page.images) > 0
-                except Exception:  # noqa: BLE001, S110 - same: a bad page's image list must not abort inspect
+                except (
+                    Exception
+                ):  # noqa: BLE001, S110 - same: a bad page's image list must not abort inspect
                     pass
                 if not has_text and not has_images:
                     blank_pages.append(i + 1)
@@ -534,13 +622,21 @@ class PdfAdapter(ArtifactAdapter):
             "leftover_markers": find_leftover_markers("\n".join(all_text_parts)),
         }
         return InspectionReport(
-            artifact=ref, details=details, warnings=warnings,
-            text=None if is_encrypted or text_extraction_failed else "\n".join(all_text_parts),
+            artifact=ref,
+            details=details,
+            warnings=warnings,
+            text=(
+                None
+                if is_encrypted or text_extraction_failed
+                else "\n".join(all_text_parts)
+            ),
         )
 
     # ---- plan --------------------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         specs = self.operations()
         if operation not in specs:
             raise ArtifactInputError(
@@ -555,7 +651,9 @@ class PdfAdapter(ArtifactAdapter):
         risks: list[str] = []
         warnings: list[str] = list(report.warnings)
         if report.details["is_encrypted"]:
-            risks.append("Input PDF is encrypted; this operation may fail or produce an incomplete result.")
+            risks.append(
+                "Input PDF is encrypted; this operation may fail or produce an incomplete result."
+            )
 
         files_touched: list[str] = []
         if operation == "merge":
@@ -598,25 +696,34 @@ class PdfAdapter(ArtifactAdapter):
                         evidence={"path": str(extra_path)},
                     ) from exc
                 if extra_reader.is_encrypted:
-                    risks.append(f"Additional merge input is encrypted and will fail: {extra_path}")
+                    risks.append(
+                        f"Additional merge input is encrypted and will fail: {extra_path}"
+                    )
                 files_touched.append(str(extra_path))
         elif operation == "fit_page_size":
             _require_positive_page_size(args)
         elif operation in ("extract_pages", "delete_pages"):
-            _resolve_page_indices(args.get("pages"), report.details["page_count"], operation)
+            _resolve_page_indices(
+                args.get("pages"), report.details["page_count"], operation
+            )
         elif operation == "rotate_pages":
             if args.get("pages") is not None:
-                _resolve_page_indices(args["pages"], report.details["page_count"], operation)
+                _resolve_page_indices(
+                    args["pages"], report.details["page_count"], operation
+                )
 
         return OperationPlan(
             operation=f"pdf.{operation}",
             adapter=self.id,
             input=ref.to_dict(),
             output_path=str(output_path),
-            required_capabilities=["pdf.structural"] + (["pdf.render"] if spec.render_required else []),
+            required_capabilities=["pdf.structural"]
+            + (["pdf.render"] if spec.render_required else []),
             files_touched=files_touched,
             files_created=[str(output_path)],
-            rendering_strategy="pypdfium2 page images" if spec.render_required else None,
+            rendering_strategy=(
+                "pypdfium2 page images" if spec.render_required else None
+            ),
             verification_strategy={
                 "structural_required": spec.structural_verification_required,
                 "visual_required": spec.visual_verification_required,
@@ -641,7 +748,12 @@ class PdfAdapter(ArtifactAdapter):
                 )
             writer = pypdf.PdfWriter()
             writer.append(reader)
-            field_map = {"title": "/Title", "author": "/Author", "subject": "/Subject", "keywords": "/Keywords"}
+            field_map = {
+                "title": "/Title",
+                "author": "/Author",
+                "subject": "/Subject",
+                "keywords": "/Keywords",
+            }
             update = {field_map[k]: v for k, v in args.items() if k in field_map}
             writer.add_metadata(update)
             _write_pdf(writer, output_path)
@@ -688,7 +800,9 @@ class PdfAdapter(ArtifactAdapter):
                     message="Cannot extract pages from an encrypted PDF without decrypting it first.",
                     evidence={"path": str(ref.path)},
                 )
-            indices = _resolve_page_indices(args.get("pages"), len(reader.pages), operation)
+            indices = _resolve_page_indices(
+                args.get("pages"), len(reader.pages), operation
+            )
             writer = pypdf.PdfWriter()
             for i in indices:
                 writer.add_page(reader.pages[i])
@@ -702,7 +816,9 @@ class PdfAdapter(ArtifactAdapter):
                     evidence={"path": str(ref.path)},
                 )
             page_count = len(reader.pages)
-            to_remove = set(_resolve_page_indices(args.get("pages"), page_count, operation))
+            to_remove = set(
+                _resolve_page_indices(args.get("pages"), page_count, operation)
+            )
             if len(to_remove) == page_count:
                 raise ArtifactInputError(
                     code="ARTIFACT_INVALID_ARGS",
@@ -751,20 +867,33 @@ class PdfAdapter(ArtifactAdapter):
 
     # ---- render ----------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         return render_pdf_pages(ref.path, out_dir, limits=limits)
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="pdf_validity", name="PDF is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="pdf_validity",
+                    name="PDF is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="pdf_validity", name="PDF is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(id="pdf_validity", name="PDF is readable", status=CheckStatus.PASS)
+        )
 
         details = report.details
         page_count = details["page_count"]
@@ -774,7 +903,11 @@ class PdfAdapter(ArtifactAdapter):
                 Check(
                     id="encryption",
                     name="Document encryption",
-                    status=CheckStatus.FAIL if policy.get("require_no_encryption") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("require_no_encryption")
+                        else CheckStatus.WARN
+                    ),
                     message="Document is encrypted; most structural checks were skipped.",
                 )
             )
@@ -829,7 +962,13 @@ class PdfAdapter(ArtifactAdapter):
                 )
             )
         else:
-            checks.append(Check(id="page_size_consistency", name="Page sizes are consistent", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="page_size_consistency",
+                    name="Page sizes are consistent",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         if "require_page_size_pt" in policy and details["page_sizes"]:
             size_pt = policy["require_page_size_pt"]
@@ -841,7 +980,10 @@ class PdfAdapter(ArtifactAdapter):
             if (
                 not isinstance(size_pt, (list, tuple))
                 or len(size_pt) != 2
-                or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in size_pt)
+                or not all(
+                    isinstance(v, (int, float)) and not isinstance(v, bool)
+                    for v in size_pt
+                )
             ):
                 raise ArtifactInputError(
                     code="ARTIFACT_INVALID_ARGS",
@@ -877,11 +1019,13 @@ class PdfAdapter(ArtifactAdapter):
                     # instead of leaving it indistinguishable from any other
                     # mismatch.
                     "orientation_swapped": (
-                        abs(s["width_pt"] - expected_h) <= tolerance and abs(s["height_pt"] - expected_w) <= tolerance
+                        abs(s["width_pt"] - expected_h) <= tolerance
+                        and abs(s["height_pt"] - expected_w) <= tolerance
                     ),
                 }
                 for i, s in enumerate(details["page_sizes"])
-                if abs(s["width_pt"] - expected_w) > tolerance or abs(s["height_pt"] - expected_h) > tolerance
+                if abs(s["width_pt"] - expected_w) > tolerance
+                or abs(s["height_pt"] - expected_h) > tolerance
             ]
             first = details["page_sizes"][0]
             checks.append(
@@ -889,17 +1033,21 @@ class PdfAdapter(ArtifactAdapter):
                     id="page_size_requirement",
                     name="Page size matches requirement",
                     status=CheckStatus.FAIL if mismatched else CheckStatus.PASS,
-                    message=f"expected every page at ({expected_w}, {expected_h})pt; "
-                    f"{len(mismatched)}/{len(details['page_sizes'])} page(s) did not match."
-                    + (
-                        " Some mismatched page(s) are the requirement's width/height swapped (landscape vs. "
-                        "portrait) rather than a different size — if that orientation should be accepted, "
-                        "pass require_page_size_pt as (height, width) instead, or check both orientations "
-                        "explicitly; this policy does not infer that on its own (see docs/architecture.md)."
-                        if mismatched and any(m["orientation_swapped"] for m in mismatched)
-                        else ""
-                    )
-                    if mismatched else f"All {len(details['page_sizes'])} page(s) match ({expected_w}, {expected_h})pt.",
+                    message=(
+                        f"expected every page at ({expected_w}, {expected_h})pt; "
+                        f"{len(mismatched)}/{len(details['page_sizes'])} page(s) did not match."
+                        + (
+                            " Some mismatched page(s) are the requirement's width/height swapped (landscape vs. "
+                            "portrait) rather than a different size — if that orientation should be accepted, "
+                            "pass require_page_size_pt as (height, width) instead, or check both orientations "
+                            "explicitly; this policy does not infer that on its own (see docs/architecture.md)."
+                            if mismatched
+                            and any(m["orientation_swapped"] for m in mismatched)
+                            else ""
+                        )
+                        if mismatched
+                        else f"All {len(details['page_sizes'])} page(s) match ({expected_w}, {expected_h})pt."
+                    ),
                     # width_pt/height_pt here (not a nested pair) is what
                     # PdfAdapter.fix() reads to build corrected fit_page_size
                     # args — keep this shape stable, it's a fixer contract.
@@ -923,12 +1071,22 @@ class PdfAdapter(ArtifactAdapter):
                 Check(
                     id="javascript",
                     name="No embedded JavaScript",
-                    status=CheckStatus.FAIL if policy.get("forbid_javascript", True) else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_javascript", True)
+                        else CheckStatus.WARN
+                    ),
                     message="Document contains embedded JavaScript actions.",
                 )
             )
         else:
-            checks.append(Check(id="javascript", name="No embedded JavaScript", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="javascript",
+                    name="No embedded JavaScript",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         if page_count > 0:
             extractable_ratio = details["text_extractable_pages"] / page_count
@@ -957,7 +1115,11 @@ class PdfAdapter(ArtifactAdapter):
                     Check(
                         id="blank_pages",
                         name="No structurally blank pages",
-                        status=CheckStatus.FAIL if policy.get("forbid_blank_pages") else CheckStatus.WARN,
+                        status=(
+                            CheckStatus.FAIL
+                            if policy.get("forbid_blank_pages")
+                            else CheckStatus.WARN
+                        ),
                         message=f"{len(blank_pages)}/{page_count} page(s) have neither extractable text nor "
                         f"an embedded image (page(s) {blank_pages}). A page of pure vector graphics (lines/"
                         "shapes with no text or raster image) is a known false positive this check can't "
@@ -966,7 +1128,13 @@ class PdfAdapter(ArtifactAdapter):
                     )
                 )
             else:
-                checks.append(Check(id="blank_pages", name="No structurally blank pages", status=CheckStatus.PASS))
+                checks.append(
+                    Check(
+                        id="blank_pages",
+                        name="No structurally blank pages",
+                        status=CheckStatus.PASS,
+                    )
+                )
 
             leftover_markers = details.get("leftover_markers", [])
             if leftover_markers:
@@ -974,14 +1142,22 @@ class PdfAdapter(ArtifactAdapter):
                     Check(
                         id="leftover_placeholder_text",
                         name="No leftover generation placeholder text",
-                        status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                        status=(
+                            CheckStatus.FAIL
+                            if policy.get("forbid_placeholder_text")
+                            else CheckStatus.WARN
+                        ),
                         message=f"Found likely-unreviewed placeholder text: {leftover_markers}.",
                         evidence={"markers": leftover_markers},
                     )
                 )
             else:
                 checks.append(
-                    Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                    Check(
+                        id="leftover_placeholder_text",
+                        name="No leftover generation placeholder text",
+                        status=CheckStatus.PASS,
+                    )
                 )
 
         if "require_metadata" in policy:
@@ -1021,7 +1197,11 @@ class PdfAdapter(ArtifactAdapter):
     # ---- fix -----------------------------------------------------------
 
     def fix(
-        self, ref: ArtifactRef, operation: str, args: dict[str, Any], failed_result: VerificationResult
+        self,
+        ref: ArtifactRef,
+        operation: str,
+        args: dict[str, Any],
+        failed_result: VerificationResult,
     ) -> dict[str, Any] | None:
         """The one real fixer this adapter has: `fit_page_size` re-run at
         whatever size `verify_structural`'s `page_size_requirement` check
@@ -1037,7 +1217,9 @@ class PdfAdapter(ArtifactAdapter):
         """
         if operation != "fit_page_size":
             return None
-        check = next((c for c in failed_result.checks if c.id == "page_size_requirement"), None)
+        check = next(
+            (c for c in failed_result.checks if c.id == "page_size_requirement"), None
+        )
         if check is None or check.status != CheckStatus.FAIL or not check.evidence:
             return None
         expected_w = check.evidence.get("expected_width_pt")

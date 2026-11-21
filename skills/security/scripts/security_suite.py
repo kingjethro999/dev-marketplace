@@ -16,7 +16,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_PATH = "/usr/bin:/bin:/usr/sbin:/sbin"
 
 
@@ -51,7 +50,13 @@ def _truncate(text: str, limit: int = 20000) -> str:
     return text[:limit] + f"\n... [truncated {len(text) - limit} bytes]"
 
 
-def _run(cmd: list[str], *, timeout: int = 10, cwd: Path | None = None, env: dict[str, str] | None = None) -> CmdResult:
+def _run(
+    cmd: list[str],
+    *,
+    timeout: int = 10,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> CmdResult:
     try:
         p = subprocess.run(
             cmd,
@@ -65,8 +70,16 @@ def _run(cmd: list[str], *, timeout: int = 10, cwd: Path | None = None, env: dic
         )
         return CmdResult(p.returncode, p.stdout, p.stderr)
     except subprocess.TimeoutExpired as e:
-        out = e.stdout if isinstance(e.stdout, str) else (e.stdout.decode("utf-8", "replace") if e.stdout else "")
-        err = e.stderr if isinstance(e.stderr, str) else (e.stderr.decode("utf-8", "replace") if e.stderr else "")
+        out = (
+            e.stdout
+            if isinstance(e.stdout, str)
+            else (e.stdout.decode("utf-8", "replace") if e.stdout else "")
+        )
+        err = (
+            e.stderr
+            if isinstance(e.stderr, str)
+            else (e.stderr.decode("utf-8", "replace") if e.stderr else "")
+        )
         return CmdResult(124, out, err + "\n[timeout]")
     except FileNotFoundError as e:
         return CmdResult(127, "", f"{e}\n[missing tool]")
@@ -138,7 +151,11 @@ def _collect_static(binary: Path, out_dir: Path) -> dict[str, Any]:
     static_dir = out_dir / "static"
     _ensure_dir(static_dir)
 
-    file_info = _run(["file", str(binary)], timeout=10).stdout.strip() if shutil_which("file") else ""
+    file_info = (
+        _run(["file", str(binary)], timeout=10).stdout.strip()
+        if shutil_which("file")
+        else ""
+    )
 
     linked = ""
     if shutil_which("otool"):
@@ -149,7 +166,15 @@ def _collect_static(binary: Path, out_dir: Path) -> dict[str, Any]:
     strings_all, strings_blob = _extract_strings(binary)
     strings_lines = strings_all[:5000]
 
-    ai_terms = ["mcp", "modelcontextprotocol", "openai", "anthropic", "claude", "system prompt", "tool call"]
+    ai_terms = [
+        "mcp",
+        "modelcontextprotocol",
+        "openai",
+        "anthropic",
+        "claude",
+        "system prompt",
+        "tool call",
+    ]
     ai_hits: list[str] = []
     for ln in strings_lines:
         low = ln.lower()
@@ -224,7 +249,9 @@ def _snapshot_tree(root: Path) -> dict[str, dict[str, int]]:
     return out
 
 
-def _diff_snapshots(before: dict[str, dict[str, int]], after: dict[str, dict[str, int]]) -> dict[str, list[str]]:
+def _diff_snapshots(
+    before: dict[str, dict[str, int]], after: dict[str, dict[str, int]]
+) -> dict[str, list[str]]:
     b = set(before.keys())
     a = set(after.keys())
     created = sorted(a - b)
@@ -279,7 +306,9 @@ def _collect_network_endpoints(pids: set[int]) -> list[str]:
     return sorted(eps)
 
 
-def _collect_dynamic(binary: Path, out_dir: Path, run_args: list[str], timeout_s: int) -> dict[str, Any]:
+def _collect_dynamic(
+    binary: Path, out_dir: Path, run_args: list[str], timeout_s: int
+) -> dict[str, Any]:
     dynamic_dir = out_dir / "dynamic"
     sandbox = dynamic_dir / "sandbox"
     home = sandbox / "home"
@@ -368,7 +397,9 @@ def _collect_dynamic(binary: Path, out_dir: Path, run_args: list[str], timeout_s
 
     _write_json(dynamic_dir / "dynamic-analysis.json", data)
 
-    files_created = len(data["file_changes"]["home"]["created"]) + len(data["file_changes"]["work"]["created"])
+    files_created = len(data["file_changes"]["home"]["created"]) + len(
+        data["file_changes"]["work"]["created"]
+    )
     md = [
         "# Dynamic Analysis",
         "",
@@ -417,13 +448,17 @@ def _normalize_cmd_token(token: str) -> str | None:
     return token
 
 
-_COMMAND_HEADING = re.compile(r"^\s*(Available\s+Commands|Commands|Subcommands)\s*:", re.IGNORECASE)
+_COMMAND_HEADING = re.compile(
+    r"^\s*(Available\s+Commands|Commands|Subcommands)\s*:", re.IGNORECASE
+)
 _TITLED_COMMAND_HEADING = re.compile(r"^\s*(?:[A-Z][\w-]*\s+)+Commands\s*:\s*$")
 _END_HEADING = re.compile(
     r"^\s*(Flags|Global Flags|Options|Arguments|Examples|Environment|Usage|USAGE|Aliases|Additional help topics)\s*:"
 )
 _GROUP_HEADING = re.compile(r"^[A-Z][^:]*:\s*$")
-_COBRA_FOOTER = re.compile(r'^Use "[^"]*\[command\] --help" for more information', re.MULTILINE)
+_COBRA_FOOTER = re.compile(
+    r'^Use "[^"]*\[command\] --help" for more information', re.MULTILINE
+)
 
 
 def _parse_subcommands(help_text: str) -> list[str]:
@@ -469,7 +504,9 @@ def _parse_subcommands(help_text: str) -> list[str]:
     return dedup
 
 
-def _probe_help(binary: Path, path: tuple[str, ...], timeout_s: int) -> tuple[bool, str, str]:
+def _probe_help(
+    binary: Path, path: tuple[str, ...], timeout_s: int
+) -> tuple[bool, str, str]:
     probes: list[tuple[str, list[str]]] = []
     if path:
         p = list(path)
@@ -494,7 +531,9 @@ def _probe_help(binary: Path, path: tuple[str, ...], timeout_s: int) -> tuple[bo
     return False, "", ""
 
 
-def _capture_command_surface(binary: Path, max_depth: int, per_cmd_timeout: int, total_timeout: int) -> dict[str, Any]:
+def _capture_command_surface(
+    binary: Path, max_depth: int, per_cmd_timeout: int, total_timeout: int
+) -> dict[str, Any]:
     started = time.time()
     queue: list[tuple[str, ...]] = [tuple()]
     visited: set[tuple[str, ...]] = set()
@@ -516,7 +555,13 @@ def _capture_command_surface(binary: Path, max_depth: int, per_cmd_timeout: int,
             continue
 
         probes.add(probe)
-        sections.append({"path": " ".join(path), "probe": probe, "line_count": len(output.splitlines())})
+        sections.append(
+            {
+                "path": " ".join(path),
+                "probe": probe,
+                "line_count": len(output.splitlines()),
+            }
+        )
 
         if path:
             commands.add(" ".join(path))
@@ -542,17 +587,37 @@ def _capture_command_surface(binary: Path, max_depth: int, per_cmd_timeout: int,
     }
 
 
-def _collect_contract(binary: Path, out_dir: Path, *, max_depth: int, per_cmd_timeout: int, total_timeout: int) -> dict[str, Any]:
+def _collect_contract(
+    binary: Path,
+    out_dir: Path,
+    *,
+    max_depth: int,
+    per_cmd_timeout: int,
+    total_timeout: int,
+) -> dict[str, Any]:
     contract_dir = out_dir / "contract"
     _ensure_dir(contract_dir)
 
-    surface = _capture_command_surface(binary, max_depth=max_depth, per_cmd_timeout=per_cmd_timeout, total_timeout=total_timeout)
+    surface = _capture_command_surface(
+        binary,
+        max_depth=max_depth,
+        per_cmd_timeout=per_cmd_timeout,
+        total_timeout=total_timeout,
+    )
 
     static_json = out_dir / "static" / "static-analysis.json"
     dynamic_json = out_dir / "dynamic" / "dynamic-analysis.json"
 
-    static_data: dict[str, Any] = json.loads(static_json.read_text(encoding="utf-8")) if static_json.exists() else {}
-    dynamic_data: dict[str, Any] = json.loads(dynamic_json.read_text(encoding="utf-8")) if dynamic_json.exists() else {}
+    static_data: dict[str, Any] = (
+        json.loads(static_json.read_text(encoding="utf-8"))
+        if static_json.exists()
+        else {}
+    )
+    dynamic_data: dict[str, Any] = (
+        json.loads(dynamic_json.read_text(encoding="utf-8"))
+        if dynamic_json.exists()
+        else {}
+    )
 
     contract = {
         "schema_version": 1,
@@ -568,9 +633,15 @@ def _collect_contract(binary: Path, out_dir: Path, *, max_depth: int, per_cmd_ti
         "dynamic_summary": {
             "exit_code": dynamic_data.get("exit_code"),
             "timed_out": dynamic_data.get("timed_out"),
-            "network_endpoint_count": len(dynamic_data.get("network_endpoints_observed", [])),
-            "sandbox_file_creates": len(dynamic_data.get("file_changes", {}).get("home", {}).get("created", []))
-            + len(dynamic_data.get("file_changes", {}).get("work", {}).get("created", [])),
+            "network_endpoint_count": len(
+                dynamic_data.get("network_endpoints_observed", [])
+            ),
+            "sandbox_file_creates": len(
+                dynamic_data.get("file_changes", {}).get("home", {}).get("created", [])
+            )
+            + len(
+                dynamic_data.get("file_changes", {}).get("work", {}).get("created", [])
+            ),
         },
     }
 
@@ -597,7 +668,9 @@ def _collect_contract(binary: Path, out_dir: Path, *, max_depth: int, per_cmd_ti
         md.append("- _No commands discovered._")
 
     _write_text(contract_dir / "contract.md", "\n".join(md).rstrip() + "\n")
-    _write_json(contract_dir / "help-sections.json", {"sections": surface["help_sections"]})
+    _write_json(
+        contract_dir / "help-sections.json", {"sections": surface["help_sections"]}
+    )
     return contract
 
 
@@ -610,7 +683,9 @@ def _load_contract(path: Path) -> dict[str, Any]:
     return json.loads(target.read_text(encoding="utf-8"))
 
 
-def _compare_baseline(current_dir: Path, baseline_dir: Path, out_dir: Path) -> dict[str, Any]:
+def _compare_baseline(
+    current_dir: Path, baseline_dir: Path, out_dir: Path
+) -> dict[str, Any]:
     compare_dir = out_dir / "compare"
     _ensure_dir(compare_dir)
 
@@ -675,7 +750,9 @@ def _match_any(patterns: list[str], value: str) -> bool:
     return False
 
 
-def _enforce_policy(run_dir: Path, policy_file: Path, out_dir: Path) -> tuple[str, list[dict[str, Any]]]:
+def _enforce_policy(
+    run_dir: Path, policy_file: Path, out_dir: Path
+) -> tuple[str, list[dict[str, Any]]]:
     policy_dir = out_dir / "policy"
     _ensure_dir(policy_dir)
 
@@ -683,10 +760,18 @@ def _enforce_policy(run_dir: Path, policy_file: Path, out_dir: Path) -> tuple[st
     contract = _load_contract(run_dir)
 
     dynamic_path = run_dir / "dynamic" / "dynamic-analysis.json"
-    dynamic = json.loads(dynamic_path.read_text(encoding="utf-8")) if dynamic_path.exists() else {}
+    dynamic = (
+        json.loads(dynamic_path.read_text(encoding="utf-8"))
+        if dynamic_path.exists()
+        else {}
+    )
 
     compare_path = run_dir / "compare" / "baseline-diff.json"
-    compare = json.loads(compare_path.read_text(encoding="utf-8")) if compare_path.exists() else {}
+    compare = (
+        json.loads(compare_path.read_text(encoding="utf-8"))
+        if compare_path.exists()
+        else {}
+    )
 
     findings: list[dict[str, Any]] = []
 
@@ -694,22 +779,48 @@ def _enforce_policy(run_dir: Path, policy_file: Path, out_dir: Path) -> tuple[st
     top = set(contract.get("top_level_commands", []))
     missing = sorted([c for c in req_top if c not in top])
     if missing:
-        findings.append({"severity": "fail", "code": "missing_required_commands", "message": f"missing required top-level commands: {', '.join(missing)}"})
+        findings.append(
+            {
+                "severity": "fail",
+                "code": "missing_required_commands",
+                "message": f"missing required top-level commands: {', '.join(missing)}",
+            }
+        )
 
     deny_cmd_patterns = policy.get("deny_command_patterns", [])
     for cmd in contract.get("command_paths", []):
         if _match_any(deny_cmd_patterns, cmd):
-            findings.append({"severity": "fail", "code": "denied_command_pattern", "message": f"denied command pattern matched: {cmd}"})
+            findings.append(
+                {
+                    "severity": "fail",
+                    "code": "denied_command_pattern",
+                    "message": f"denied command pattern matched: {cmd}",
+                }
+            )
 
     max_created = int(policy.get("max_created_files", 999999))
-    created_files = dynamic.get("file_changes", {}).get("home", {}).get("created", []) + dynamic.get("file_changes", {}).get("work", {}).get("created", [])
+    created_files = dynamic.get("file_changes", {}).get("home", {}).get(
+        "created", []
+    ) + dynamic.get("file_changes", {}).get("work", {}).get("created", [])
     if len(created_files) > max_created:
-        findings.append({"severity": "fail", "code": "too_many_created_files", "message": f"created files {len(created_files)} exceeds max {max_created}"})
+        findings.append(
+            {
+                "severity": "fail",
+                "code": "too_many_created_files",
+                "message": f"created files {len(created_files)} exceeds max {max_created}",
+            }
+        )
 
     forbid_path_patterns = policy.get("forbid_file_path_patterns", [])
     for p in created_files:
         if _match_any(forbid_path_patterns, p):
-            findings.append({"severity": "fail", "code": "forbidden_file_path", "message": f"forbidden created path: {p}"})
+            findings.append(
+                {
+                    "severity": "fail",
+                    "code": "forbidden_file_path",
+                    "message": f"forbidden created path: {p}",
+                }
+            )
 
     endpoints = dynamic.get("network_endpoints_observed", [])
     allow_net = policy.get("allow_network_endpoint_patterns", [])
@@ -718,22 +829,52 @@ def _enforce_policy(run_dir: Path, policy_file: Path, out_dir: Path) -> tuple[st
     if allow_net:
         for ep in endpoints:
             if not _match_any(allow_net, ep):
-                findings.append({"severity": "fail", "code": "network_not_allowlisted", "message": f"network endpoint not allowlisted: {ep}"})
+                findings.append(
+                    {
+                        "severity": "fail",
+                        "code": "network_not_allowlisted",
+                        "message": f"network endpoint not allowlisted: {ep}",
+                    }
+                )
 
     for ep in endpoints:
         if _match_any(deny_net, ep):
-            findings.append({"severity": "fail", "code": "network_denylisted", "message": f"denylisted network endpoint observed: {ep}"})
+            findings.append(
+                {
+                    "severity": "fail",
+                    "code": "network_denylisted",
+                    "message": f"denylisted network endpoint observed: {ep}",
+                }
+            )
 
     if bool(policy.get("block_if_removed_commands", False)) and compare.get("removed"):
-        findings.append({"severity": "fail", "code": "removed_commands", "message": f"commands removed vs baseline: {len(compare.get('removed', []))}"})
+        findings.append(
+            {
+                "severity": "fail",
+                "code": "removed_commands",
+                "message": f"commands removed vs baseline: {len(compare.get('removed', []))}",
+            }
+        )
 
     min_cmds = int(policy.get("min_command_count", 0))
     cmd_count = len(contract.get("command_paths", []))
     if cmd_count == 0 and min_cmds > 0:
         # An empty contract makes every command-based check above vacuous.
-        findings.append({"severity": "fail", "code": "no_commands_captured", "message": "no commands captured from the help interface; command checks could not run"})
+        findings.append(
+            {
+                "severity": "fail",
+                "code": "no_commands_captured",
+                "message": "no commands captured from the help interface; command checks could not run",
+            }
+        )
     elif cmd_count < min_cmds:
-        findings.append({"severity": "warn", "code": "low_command_count", "message": f"command count {cmd_count} below expected minimum {min_cmds}"})
+        findings.append(
+            {
+                "severity": "warn",
+                "code": "low_command_count",
+                "message": f"command count {cmd_count} below expected minimum {min_cmds}",
+            }
+        )
 
     verdict = "PASS"
     if any(f["severity"] == "fail" for f in findings):
@@ -834,7 +975,11 @@ def main() -> int:
 
     _p_static = sub.add_parser("collect-static", parents=[common])
     p_dynamic = sub.add_parser("collect-dynamic", parents=[common])
-    p_dynamic.add_argument("--run-args", default="--help", help="Arguments passed to the binary during dynamic run")
+    p_dynamic.add_argument(
+        "--run-args",
+        default="--help",
+        help="Arguments passed to the binary during dynamic run",
+    )
     p_dynamic.add_argument("--timeout", type=int, default=8)
 
     p_contract = sub.add_parser("collect-contract", parents=[common])
@@ -860,8 +1005,16 @@ def main() -> int:
     p_run.add_argument("--total-timeout", type=int, default=120)
     p_run.add_argument("--baseline-dir", default=None)
     p_run.add_argument("--policy-file", default=None)
-    p_run.add_argument("--fail-on-removed", action="store_true", help="Exit non-zero if compare-baseline reports removed commands")
-    p_run.add_argument("--fail-on-policy-fail", action="store_true", help="Exit non-zero if policy verdict is FAIL")
+    p_run.add_argument(
+        "--fail-on-removed",
+        action="store_true",
+        help="Exit non-zero if compare-baseline reports removed commands",
+    )
+    p_run.add_argument(
+        "--fail-on-policy-fail",
+        action="store_true",
+        help="Exit non-zero if policy verdict is FAIL",
+    )
 
     args = ap.parse_args()
 
@@ -873,32 +1026,60 @@ def main() -> int:
             return 2
     else:
         binary = Path("/")
-        out_dir = Path(args.out_dir).expanduser().resolve() if hasattr(args, "out_dir") else Path.cwd()
+        out_dir = (
+            Path(args.out_dir).expanduser().resolve()
+            if hasattr(args, "out_dir")
+            else Path.cwd()
+        )
 
     if args.cmd == "collect-static":
         _collect_static(binary, out_dir)
         return 0
 
     if args.cmd == "collect-dynamic":
-        _collect_dynamic(binary, out_dir, _parse_run_args(args.run_args), timeout_s=args.timeout)
+        _collect_dynamic(
+            binary, out_dir, _parse_run_args(args.run_args), timeout_s=args.timeout
+        )
         return 0
 
     if args.cmd == "collect-contract":
-        _collect_contract(binary, out_dir, max_depth=args.max_depth, per_cmd_timeout=args.per_cmd_timeout, total_timeout=args.total_timeout)
+        _collect_contract(
+            binary,
+            out_dir,
+            max_depth=args.max_depth,
+            per_cmd_timeout=args.per_cmd_timeout,
+            total_timeout=args.total_timeout,
+        )
         return 0
 
     if args.cmd == "compare-baseline":
-        _compare_baseline(Path(args.current_dir).resolve(), Path(args.baseline_dir).resolve(), Path(args.out_dir).resolve())
+        _compare_baseline(
+            Path(args.current_dir).resolve(),
+            Path(args.baseline_dir).resolve(),
+            Path(args.out_dir).resolve(),
+        )
         return 0
 
     if args.cmd == "enforce-policy":
-        verdict, _ = _enforce_policy(Path(args.run_dir).resolve(), Path(args.policy_file).resolve(), Path(args.out_dir).resolve())
+        verdict, _ = _enforce_policy(
+            Path(args.run_dir).resolve(),
+            Path(args.policy_file).resolve(),
+            Path(args.out_dir).resolve(),
+        )
         return 3 if verdict == "FAIL" else 0
 
     # run
     _collect_static(binary, out_dir)
-    _collect_dynamic(binary, out_dir, _parse_run_args(args.run_args), timeout_s=args.timeout)
-    _collect_contract(binary, out_dir, max_depth=args.max_depth, per_cmd_timeout=args.per_cmd_timeout, total_timeout=args.total_timeout)
+    _collect_dynamic(
+        binary, out_dir, _parse_run_args(args.run_args), timeout_s=args.timeout
+    )
+    _collect_contract(
+        binary,
+        out_dir,
+        max_depth=args.max_depth,
+        per_cmd_timeout=args.per_cmd_timeout,
+        total_timeout=args.total_timeout,
+    )
 
     baseline_failed = False
     if args.baseline_dir:

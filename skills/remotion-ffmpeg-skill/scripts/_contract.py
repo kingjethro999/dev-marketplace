@@ -9,6 +9,7 @@ source of truth; the facts a parser cannot express (role, what it writes, how it
 which ffmpeg-skill scripts it calls) live in TOOL_META and are checked by tests/test_contract.py.
 The MCP server (mcp/server.py) is built from this contract and nothing else.
 """
+
 import argparse
 import importlib
 import json
@@ -38,10 +39,17 @@ TOOL_META: Dict[str, Dict[str, Any]] = {
         "summary": "Measure a source with ffmpeg-skill and write timeline.json (+ captions from a file).",
         "writes": "timeline.json (+ the joined source for several inputs, the conformed copy with --conform)",
         "verification": "every number comes from ffmpeg-skill probe/scenes/silence; a VFR or HDR source is refused, "
-                        "or with --conform conformed and re-measured (CFR at the asked rate, SDR BT.709) before use; "
-                        "warnings for rotation and odd frame rates",
-        "ffmpeg_skill": ["probe", "scenes", "silence", "join (several inputs)", "sync (--pip)",
-                         "fit (--conform: VFR -> CFR)", "color (--conform: HDR -> SDR)"],
+        "or with --conform conformed and re-measured (CFR at the asked rate, SDR BT.709) before use; "
+        "warnings for rotation and odd frame rates",
+        "ffmpeg_skill": [
+            "probe",
+            "scenes",
+            "silence",
+            "join (several inputs)",
+            "sync (--pip)",
+            "fit (--conform: VFR -> CFR)",
+            "color (--conform: HDR -> SDR)",
+        ],
         "dry_run": True,
         "deterministic": True,
         "idempotency_hint": "content_equivalent",
@@ -71,7 +79,12 @@ TOOL_META: Dict[str, Dict[str, Any]] = {
         "summary": "Render a composition from a timeline, verify it (frames, fps, size, audio) and write a contact sheet.",
         "writes": "video file (+ contact sheet PNG)",
         "verification": "exact frame count / fps / size / audio against the timeline; non-zero exit on mismatch",
-        "ffmpeg_skill": ["probe", "look", "overlay (--overlay; --place with --sparse)", "_contract doctor (CJK font lookup)"],
+        "ffmpeg_skill": [
+            "probe",
+            "look",
+            "overlay (--overlay; --place with --sparse)",
+            "_contract doctor (CJK font lookup)",
+        ],
         "dry_run": True,
         "deterministic": True,
         "idempotency_hint": "bit_exact",
@@ -91,8 +104,16 @@ TOOL_META: Dict[str, Dict[str, Any]] = {
         "summary": "analyze -> render -> deliver in one call, stopping at the first failed step.",
         "writes": "timeline.json, render, deliverable",
         "verification": "each step's own verification",
-        "ffmpeg_skill": ["probe", "scenes", "silence", "fit (--conform)", "color (--conform)", "look",
-                         "render --template", "check"],
+        "ffmpeg_skill": [
+            "probe",
+            "scenes",
+            "silence",
+            "fit (--conform)",
+            "color (--conform)",
+            "look",
+            "render --template",
+            "check",
+        ],
         "dry_run": True,
         "deterministic": True,
         "idempotency_hint": "content_equivalent",
@@ -114,48 +135,99 @@ TOOL_META: Dict[str, Dict[str, Any]] = {
 # outputs against these, so the contract cannot promise a key a script stopped writing.
 OUTPUTS: Dict[str, Dict[str, Dict[str, str]]] = {
     "analyze": {
-        "result": {"commands": "list[str]", "verified": "bool", "summary": "object: duration, fps, size, scenes, "
-                   "silences, speech_seconds, peaks, captions, chapters, beats, tempo_bpm, highlights, clips, words, emphasis, "
-                   "conformed (list: vfr / hdr)",
-                   "warnings": "list[str]"},
+        "result": {
+            "commands": "list[str]",
+            "verified": "bool",
+            "summary": "object: duration, fps, size, scenes, "
+            "silences, speech_seconds, peaks, captions, chapters, beats, tempo_bpm, highlights, clips, words, emphasis, "
+            "conformed (list: vfr / hdr)",
+            "warnings": "list[str]",
+        },
         "dry_run": {"commands": "list[str]"},
     },
     "init": {
-        "result": {"commands": "list[str]", "installed": "bool", "entry": "str", "compositions": "list[str]"},
+        "result": {
+            "commands": "list[str]",
+            "installed": "bool",
+            "entry": "str",
+            "compositions": "list[str]",
+        },
         "dry_run": {"commands": "list[str]"},
     },
     "still": {
-        "result": {"outputs": "list[str] (PNG paths)", "frames": "list[int]", "commands": "list[str]",
-                   "verified": "bool", "frame": "object|null {width, height, fit}", "font": "str|null"},
-        "dry_run": {"outputs": "list[str]", "frames": "list[int]", "commands": "list[str]"},
+        "result": {
+            "outputs": "list[str] (PNG paths)",
+            "frames": "list[int]",
+            "commands": "list[str]",
+            "verified": "bool",
+            "frame": "object|null {width, height, fit}",
+            "font": "str|null",
+        },
+        "dry_run": {
+            "outputs": "list[str]",
+            "frames": "list[int]",
+            "commands": "list[str]",
+        },
     },
     "render": {
-        "result": {"verified": "bool", "verification": "list[{check, status, value, expected}]",
-                   "commands": "list[str]", "look": "str|null (contact sheet PNG)", "look_error": "str|null",
-                   "summary": "str", "frame": "object|null", "font": "str|null", "mode": "full|overlay",
-                   "graphics": "str|null (kept ProRes 4444 layer)",
-                   "sparse": "null|{used, reason, stretches, drawn_frames, source_frames} (--sparse)",
-                   "kind": "null|failed",
-                   "error": "null|str (which verification rows failed)"},
-        "dry_run": {"commands": "list[str]", "props": "str", "expected_frames": "int|null", "frame": "object|null",
-                    "font": "str|null", "sparse": "null|object (--sparse)"},
+        "result": {
+            "verified": "bool",
+            "verification": "list[{check, status, value, expected}]",
+            "commands": "list[str]",
+            "look": "str|null (contact sheet PNG)",
+            "look_error": "str|null",
+            "summary": "str",
+            "frame": "object|null",
+            "font": "str|null",
+            "mode": "full|overlay",
+            "graphics": "str|null (kept ProRes 4444 layer)",
+            "sparse": "null|{used, reason, stretches, drawn_frames, source_frames} (--sparse)",
+            "kind": "null|failed",
+            "error": "null|str (which verification rows failed)",
+        },
+        "dry_run": {
+            "commands": "list[str]",
+            "props": "str",
+            "expected_frames": "int|null",
+            "frame": "object|null",
+            "font": "str|null",
+            "sparse": "null|object (--sparse)",
+        },
     },
     "deliver": {
-        "result": {"checked": "str", "platform": "str|null", "verified": "bool",
-                   "description": "str|null (YouTube description block with the chapters, --chapters)",
-                   "checks": "list[{check, status, value, expected, ...}] (ffmpeg-skill check.py rows)",
-                   "failed": "list[str]", "warnings": "list[str]", "commands": "list[str]",
-                   "kind": "null|failed", "error": "null|str"},
+        "result": {
+            "checked": "str",
+            "platform": "str|null",
+            "verified": "bool",
+            "description": "str|null (YouTube description block with the chapters, --chapters)",
+            "checks": "list[{check, status, value, expected, ...}] (ffmpeg-skill check.py rows)",
+            "failed": "list[str]",
+            "warnings": "list[str]",
+            "commands": "list[str]",
+            "kind": "null|failed",
+            "error": "null|str",
+        },
         "dry_run": {"commands": "list[str]"},
     },
     "pipeline": {
-        "result": {"timeline": "str", "render": "str", "deliverable": "str|null", "look": "str|null",
-                   "verified": "bool", "warnings": "list[str]", "steps": "list[{step, status, output, command}]"},
+        "result": {
+            "timeline": "str",
+            "render": "str",
+            "deliverable": "str|null",
+            "look": "str|null",
+            "verified": "bool",
+            "warnings": "list[str]",
+            "steps": "list[{step, status, output, command}]",
+        },
         "dry_run": {"steps": "list[{step, status, output, command}]"},
     },
     "doctor": {
-        "result": {"ok": "bool", "version": "str", "checks": "list[{check, ok, value, fix}]",
-                   "ffmpeg_skill_doctor": "object|null"},
+        "result": {
+            "ok": "bool",
+            "version": "str",
+            "checks": "list[{check, ok, value, fix}]",
+            "ffmpeg_skill_doctor": "object|null",
+        },
         "dry_run": {},
     },
 }
@@ -167,7 +239,7 @@ OUTPUTS: Dict[str, Dict[str, Dict[str, str]]] = {
 IDEMPOTENCY_HINTS = ("bit_exact", "content_equivalent", "environment_dependent")
 DETERMINISM = {
     "scope": "same machine, same inputs (same paths, same options), same Remotion version, same Chromium "
-             "(chrome-headless-shell) build and GL backend, same FFmpeg and ffmpeg-skill, same fonts",
+    "(chrome-headless-shell) build and GL backend, same FFmpeg and ffmpeg-skill, same fonts",
     "holds": [
         "every built-in composition renders twice to byte-identical files: per-frame md5 of the video, md5 of the "
         "audio and the file's sha256 match (render.py H.264, --fast, --codec prores, --overlay), in two separate runs",
@@ -198,8 +270,17 @@ DETERMINISM = {
     ],
     "not_reproducible_compositions": [],
 }
-SHARED_OUTPUT = {"status": "completed|failed", "dry_run": "bool", "output": "str|null (main artifact)"}
-FAILURE_OUTPUT = {"status": "failed", "error": "str", "kind": "input|missing_tool|timeout|failed", "dry_run": "bool"}
+SHARED_OUTPUT = {
+    "status": "completed|failed",
+    "dry_run": "bool",
+    "output": "str|null (main artifact)",
+}
+FAILURE_OUTPUT = {
+    "status": "failed",
+    "error": "str",
+    "kind": "input|missing_tool|timeout|failed",
+    "dry_run": "bool",
+}
 
 
 def missing_output_keys(tool: str, doc: Dict[str, Any]) -> List[str]:
@@ -207,7 +288,9 @@ def missing_output_keys(tool: str, doc: Dict[str, Any]) -> List[str]:
     if doc.get("status") == "failed":
         return [k for k in FAILURE_OUTPUT if k not in doc]
     which = "dry_run" if doc.get("dry_run") else "result"
-    want = list(OUTPUTS[tool][which]) + [k for k in SHARED_OUTPUT if not (tool == "doctor" and k == "output")]
+    want = list(OUTPUTS[tool][which]) + [
+        k for k in SHARED_OUTPUT if not (tool == "doctor" and k == "output")
+    ]
     return [k for k in want if k not in doc]
 
 
@@ -248,7 +331,9 @@ def input_schema(parser: argparse.ArgumentParser) -> Dict[str, Any]:
         schema = _json_type(a)
         if a.help and a.help is not argparse.SUPPRESS:
             schema["description"] = a.help.replace("%%", "%")
-        if a.default not in (None, False, argparse.SUPPRESS) and not isinstance(a, argparse._AppendAction):
+        if a.default not in (None, False, argparse.SUPPRESS) and not isinstance(
+            a, argparse._AppendAction
+        ):
             schema["default"] = a.default
         props[a.dest] = schema
         if not a.option_strings:
@@ -256,11 +341,25 @@ def input_schema(parser: argparse.ArgumentParser) -> Dict[str, Any]:
             required.append(a.dest)
         elif a.required:
             required.append(a.dest)
-    props["dry_run"] = {"type": "boolean", "description": "plan only: return the commands, write nothing"}
-    props["overwrite"] = {"type": "boolean", "description": "allow replacing an existing output file"}
-    props["timeout"] = {"type": "number", "description": "wall-clock limit per external step in seconds (default 1800)"}
-    return {"type": "object", "properties": props, "required": required, "x-positional": positional,
-            "additionalProperties": False}
+    props["dry_run"] = {
+        "type": "boolean",
+        "description": "plan only: return the commands, write nothing",
+    }
+    props["overwrite"] = {
+        "type": "boolean",
+        "description": "allow replacing an existing output file",
+    }
+    props["timeout"] = {
+        "type": "number",
+        "description": "wall-clock limit per external step in seconds (default 1800)",
+    }
+    return {
+        "type": "object",
+        "properties": props,
+        "required": required,
+        "x-positional": positional,
+        "additionalProperties": False,
+    }
 
 
 def flag_for(parser: argparse.ArgumentParser) -> Dict[str, str]:
@@ -304,14 +403,28 @@ FFMPEG_SKILL_RANGE = ">=2.0.0 <4.0.0"
 
 
 def provides() -> List[Dict[str, str]]:
-    return [{"id": f"remotion.{n}", "lifecycle": "EXPERIMENTAL", "tool_id": f"{SKILL_ID}/{n}"}
-            for n in TOOL_META if n not in PROVIDES_EXCLUDE]
+    return [
+        {
+            "id": f"remotion.{n}",
+            "lifecycle": "EXPERIMENTAL",
+            "tool_id": f"{SKILL_ID}/{n}",
+        }
+        for n in TOOL_META
+        if n not in PROVIDES_EXCLUDE
+    ]
 
 
 def dependencies() -> List[Dict[str, Any]]:
     used = sorted({s.split()[0] for m in TOOL_META.values() for s in m["ffmpeg_skill"]})
-    return [{"skill_id": "ffmpeg-skill", "version_range": FFMPEG_SKILL_RANGE, "required": True,
-             "url": "https://github.com/kajisho5/ffmpeg-skill", "scripts": used}]
+    return [
+        {
+            "skill_id": "ffmpeg-skill",
+            "version_range": FFMPEG_SKILL_RANGE,
+            "required": True,
+            "url": "https://github.com/kajisho5/ffmpeg-skill",
+            "scripts": used,
+        }
+    ]
 
 
 def build() -> Dict[str, Any]:
@@ -323,8 +436,11 @@ def build() -> Dict[str, Any]:
         "provides": provides(),
         "dependencies": dependencies(),
         "timeline_schema": TIMELINE_SCHEMA,
-        "depends_on": {"ffmpeg-skill": "https://github.com/kajisho5/ffmpeg-skill", "node": ">=18",
-                       "python": ">=3.10"},
+        "depends_on": {
+            "ffmpeg-skill": "https://github.com/kajisho5/ffmpeg-skill",
+            "node": ">=18",
+            "python": ">=3.10",
+        },
         "roles": ROLES,
         "output_shared": SHARED_OUTPUT,
         "output_failure": FAILURE_OUTPUT,
@@ -340,9 +456,15 @@ def build() -> Dict[str, Any]:
 
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "doctor":
-        sys.exit(subprocess.call([sys.executable, str(HERE / "doctor.py"), *sys.argv[2:]]))
+        sys.exit(
+            subprocess.call([sys.executable, str(HERE / "doctor.py"), *sys.argv[2:]])
+        )
     p = argparse.ArgumentParser(description="remotion-ffmpeg-skill execution contract")
-    p.add_argument("--json", action="store_true", help="print the contract as JSON (the default output)")
+    p.add_argument(
+        "--json",
+        action="store_true",
+        help="print the contract as JSON (the default output)",
+    )
     p.parse_args()
     print(json.dumps(build(), ensure_ascii=False, indent=2))
 

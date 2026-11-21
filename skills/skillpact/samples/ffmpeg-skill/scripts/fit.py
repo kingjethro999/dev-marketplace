@@ -33,14 +33,43 @@ Examples:
   python3 fit.py input.mp4 --rotate 90                           # rotate 90 degrees clockwise
   python3 fit.py input.mp4 --flip h                              # mirror horizontally
 """
+
 import argparse
 import math
 import sys
 from fractions import Fraction
 from typing import List
 
-from _common import video_args, STATE, add_common, apply_common, emit, aac_args, aspect_ratio, cfr_args, default_output, die, ffmpeg_base, info, parse_time, probe, run, run_keeping_subtitles, validate_color, x264_args, pad_filters, add_pad_fill_args, X264_PRESETS, time_arg, fmt_secs, frame_size
-BLUR_DARKEN = 0.15  # how much --fit blur dims the blurred background copy (eq brightness)
+from _common import (
+    video_args,
+    STATE,
+    add_common,
+    apply_common,
+    emit,
+    aac_args,
+    aspect_ratio,
+    cfr_args,
+    default_output,
+    die,
+    ffmpeg_base,
+    info,
+    parse_time,
+    probe,
+    run,
+    run_keeping_subtitles,
+    validate_color,
+    x264_args,
+    pad_filters,
+    add_pad_fill_args,
+    X264_PRESETS,
+    time_arg,
+    fmt_secs,
+    frame_size,
+)
+
+BLUR_DARKEN = (
+    0.15  # how much --fit blur dims the blurred background copy (eq brightness)
+)
 
 
 def parse_aspect(value: str) -> Fraction:
@@ -66,48 +95,121 @@ def atempo_chain(factor: float) -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_fit.<ext>)")
-    ap.add_argument("--audio-stream", type=int, default=0,
-                     help="which audio stream of the input to keep, 0-based in file order (probe.py lists them under "
-                          "audio_streams) -- matters on a multi-track input (dubbed languages, M&E stems); default 0, "
-                          "the first track, same as leaving it unset always did")
+    ap.add_argument(
+        "--audio-stream",
+        type=int,
+        default=0,
+        help="which audio stream of the input to keep, 0-based in file order (probe.py lists them under "
+        "audio_streams) -- matters on a multi-track input (dubbed languages, M&E stems); default 0, "
+        "the first track, same as leaving it unset always did",
+    )
     d = ap.add_argument_group("duration")
     d.add_argument("--duration", help="target duration (seconds or mm:ss)")
-    d.add_argument("--method", choices=["speed", "trim"], default="speed", help="how to reach the duration (default speed)")
-    d.add_argument("--from-center", action="store_true", help="with --method trim, keep the middle instead of the start")
-    d.add_argument("--max-speed", type=float, default=4.0, help="refuse speed factors above this (default 4x)")
-    d.add_argument("--smooth", choices=["none", "blend", "interpolate"], default="none",
-                   help="slow-motion quality: blend (frame blending) or interpolate (motion-compensated, slow but fluid). default none = duplicate frames")
+    d.add_argument(
+        "--method",
+        choices=["speed", "trim"],
+        default="speed",
+        help="how to reach the duration (default speed)",
+    )
+    d.add_argument(
+        "--from-center",
+        action="store_true",
+        help="with --method trim, keep the middle instead of the start",
+    )
+    d.add_argument(
+        "--max-speed",
+        type=float,
+        default=4.0,
+        help="refuse speed factors above this (default 4x)",
+    )
+    d.add_argument(
+        "--smooth",
+        choices=["none", "blend", "interpolate"],
+        default="none",
+        help="slow-motion quality: blend (frame blending) or interpolate (motion-compensated, slow but fluid). default none = duplicate frames",
+    )
     a = ap.add_argument_group("aspect")
     a.add_argument("--aspect", help="target aspect ratio, e.g. 16:9, 9:16, 1:1, 4:5")
-    a.add_argument("--fit", choices=["pad", "crop", "blur"], default="pad",
-                   help="how to reach the aspect: pad (letterbox), crop, or blur -- the whole picture centred on a "
-                        "blurred, darkened copy of itself filling the rest (the phone-editor vertical, 1.14). "
-                        "The darkening is applied to SDR sources only: on an HDR source the background is blurred "
-                        "but left at its own levels, since an eq on PQ/HLG code values is not a -15%% perceptual dim")
-    a.add_argument("--width", type=int, help="output width in px (default: keep source width or the width implied by the aspect); with --height also given, both are used directly")
-    a.add_argument("--height", type=int, help="output height in px (default: keep source height or the height implied by the aspect); with --width also given, both are used directly")
-    a.add_argument("--pad-color", default="black", help="pad colour, e.g. black, white, 0x101010 (default black)")
+    a.add_argument(
+        "--fit",
+        choices=["pad", "crop", "blur"],
+        default="pad",
+        help="how to reach the aspect: pad (letterbox), crop, or blur -- the whole picture centred on a "
+        "blurred, darkened copy of itself filling the rest (the phone-editor vertical, 1.14). "
+        "The darkening is applied to SDR sources only: on an HDR source the background is blurred "
+        "but left at its own levels, since an eq on PQ/HLG code values is not a -15%% perceptual dim",
+    )
+    a.add_argument(
+        "--width",
+        type=int,
+        help="output width in px (default: keep source width or the width implied by the aspect); with --height also given, both are used directly",
+    )
+    a.add_argument(
+        "--height",
+        type=int,
+        help="output height in px (default: keep source height or the height implied by the aspect); with --width also given, both are used directly",
+    )
+    a.add_argument(
+        "--pad-color",
+        default="black",
+        help="pad colour, e.g. black, white, 0x101010 (default black)",
+    )
     add_pad_fill_args(a)
-    a.add_argument("--crop-x", type=float, default=0.5, help="with --fit crop, horizontal anchor 0=left, 0.5=centre (default), 1=right")
-    a.add_argument("--crop-y", type=float, default=0.5, help="with --fit crop, vertical anchor 0=top, 0.5=centre (default), 1=bottom")
+    a.add_argument(
+        "--crop-x",
+        type=float,
+        default=0.5,
+        help="with --fit crop, horizontal anchor 0=left, 0.5=centre (default), 1=right",
+    )
+    a.add_argument(
+        "--crop-y",
+        type=float,
+        default=0.5,
+        help="with --fit crop, vertical anchor 0=top, 0.5=centre (default), 1=bottom",
+    )
     r = ap.add_argument_group("rotate / flip")
-    r.add_argument("--rotate", type=int, choices=[90, 180, 270], help="rotate the picture clockwise by this many degrees")
-    r.add_argument("--flip", choices=["h", "v"], help="mirror the picture horizontally (h) or vertically (v)")
+    r.add_argument(
+        "--rotate",
+        type=int,
+        choices=[90, 180, 270],
+        help="rotate the picture clockwise by this many degrees",
+    )
+    r.add_argument(
+        "--flip",
+        choices=["h", "v"],
+        help="mirror the picture horizontally (h) or vertically (v)",
+    )
     e = ap.add_argument_group("encoding")
     e.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
     e.add_argument("--preset", default="medium", choices=X264_PRESETS)
-    e.add_argument("--fps", type=float, help="force a constant output frame rate (recommended for VFR sources)")
+    e.add_argument(
+        "--fps",
+        type=float,
+        help="force a constant output frame rate (recommended for VFR sources)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
 
     if args.fps is not None and args.fps <= 0:
         die(f"--fps must be positive, got {args.fps:g}")
-    if not args.duration and not args.aspect and not args.width and not args.height and not args.fps and not args.rotate and not args.flip:
-        die("nothing to do: give --duration, --aspect, --width/--height, --rotate/--flip and/or --fps")
+    if (
+        not args.duration
+        and not args.aspect
+        and not args.width
+        and not args.height
+        and not args.fps
+        and not args.rotate
+        and not args.flip
+    ):
+        die(
+            "nothing to do: give --duration, --aspect, --width/--height, --rotate/--flip and/or --fps"
+        )
     if not 0.0 <= args.crop_x <= 1.0:
         die(f"--crop-x must be 0..1, got {args.crop_x}")
     if not 0.0 <= args.crop_y <= 1.0:
@@ -121,7 +223,9 @@ def main() -> int:
         die("input has no video stream")
     audio_streams = meta.get("audio_streams") or []
     if audio_streams and not (0 <= args.audio_stream < len(audio_streams)):
-        die(f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}")
+        die(
+            f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}"
+        )
     if args.audio_stream and not audio_streams:
         die("--audio-stream needs an input with audio streams")
     src_dur = meta["duration"] or 0.0
@@ -152,20 +256,30 @@ def main() -> int:
 
     # ---- duration
     if args.duration:
-        target = time_arg(args.duration, "--duration", meta["video"].get("fps") if meta.get("video") else None)
+        target = time_arg(
+            args.duration,
+            "--duration",
+            meta["video"].get("fps") if meta.get("video") else None,
+        )
         if target <= 0:
             die("target duration must be > 0")
         if args.method == "speed":
             if src_dur <= 0 and STATE.dry_run:
-                src_dur = target  # planning against an intermediate that does not exist yet
+                src_dur = (
+                    target  # planning against an intermediate that does not exist yet
+                )
             factor = src_dur / target  # >1 = speed up
             if factor > args.max_speed or factor < 1 / args.max_speed:
-                die(f"required speed factor {factor:.2f}x exceeds --max-speed {args.max_speed}x; use --method trim or raise the limit")
+                die(
+                    f"required speed factor {factor:.2f}x exceeds --max-speed {args.max_speed}x; use --method trim or raise the limit"
+                )
             if abs(factor - 1.0) > 1e-4:
                 vf.append(f"setpts={1/factor:.8f}*PTS")
                 src_fps = meta["video"].get("fps") or 30.0
                 if factor < 1.0 and args.smooth == "interpolate":
-                    vf.append(f"minterpolate=fps={src_fps:g}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1")
+                    vf.append(
+                        f"minterpolate=fps={src_fps:g}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"
+                    )
                 elif factor < 1.0 and args.smooth == "blend":
                     vf.append(f"fps={src_fps:g}")
                     vf.append("tblend=all_mode=average")
@@ -179,15 +293,25 @@ def main() -> int:
                 pre_input += ["-ss", f"{start:.3f}"]
                 post += ["-t", f"{target:.3f}"]
             else:
-                info(f"source ({src_dur:.2f}s) is already shorter than {target:.2f}s; trim does nothing")
+                info(
+                    f"source ({src_dur:.2f}s) is already shorter than {target:.2f}s; trim does nothing"
+                )
 
     # ---- aspect / size
     if args.aspect or args.width or args.height:
         # the one sizing rule, shared with render.py --export-timeline's sequence frame
-        out_w, out_h = frame_size(parse_aspect(args.aspect) if args.aspect else None, args.width, args.height, sw, sh)
+        out_w, out_h = frame_size(
+            parse_aspect(args.aspect) if args.aspect else None,
+            args.width,
+            args.height,
+            sw,
+            sh,
+        )
         if args.fit == "crop":
             vf.append(f"scale={out_w}:{out_h}:force_original_aspect_ratio=increase")
-            vf.append(f"crop={out_w}:{out_h}:(in_w-out_w)*{args.crop_x:g}:(in_h-out_h)*{args.crop_y:g}")
+            vf.append(
+                f"crop={out_w}:{out_h}:(in_w-out_w)*{args.crop_x:g}:(in_h-out_h)*{args.crop_y:g}"
+            )
         elif args.fit == "blur":
             # nothing is cropped and nothing is a black bar: the picture keeps its own aspect in
             # the middle of a blurred, dimmed copy of itself (BLUR_DARKEN) filling the frame.
@@ -197,18 +321,33 @@ def main() -> int:
             # (review 12). The blur itself is neutral either way, and no tone mapping happens.
             darken = 0.0 if meta["video"].get("bt2020_or_hdr") else BLUR_DARKEN
             if not darken:
-                info("--fit blur: HDR source, so the blurred background is not dimmed "
-                     "(an eq on PQ/HLG code values is not the -15% dim it is on SDR); "
-                     "run color.py --to-sdr first for the SDR look")
-            vf.append(pad_filters(out_w, out_h, "blur", args.pad_color, args.pad_blur, darken))
+                info(
+                    "--fit blur: HDR source, so the blurred background is not dimmed "
+                    "(an eq on PQ/HLG code values is not the -15% dim it is on SDR); "
+                    "run color.py --to-sdr first for the SDR look"
+                )
+            vf.append(
+                pad_filters(out_w, out_h, "blur", args.pad_color, args.pad_blur, darken)
+            )
         else:
-            vf.append(pad_filters(out_w, out_h, args.pad_fill, args.pad_color, args.pad_blur, meta=meta))
+            vf.append(
+                pad_filters(
+                    out_w,
+                    out_h,
+                    args.pad_fill,
+                    args.pad_color,
+                    args.pad_blur,
+                    meta=meta,
+                )
+            )
         vf.append("setsar=1")
 
     if args.fps:
         vf.append(f"fps={args.fps:g}")
     elif meta["video"].get("variable_frame_rate_suspected"):
-        info("source looks variable-frame-rate; conforming to constant fps automatically")
+        info(
+            "source looks variable-frame-rate; conforming to constant fps automatically"
+        )
 
     output = args.output or default_output(args.input, "fit")
     cmd = ffmpeg_base() + pre_input + ["-i", args.input]

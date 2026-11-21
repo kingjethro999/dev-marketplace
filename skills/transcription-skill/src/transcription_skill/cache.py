@@ -9,6 +9,7 @@ different thing: it names one result document; the cache key names the computati
 Entries live at <workspace>/transcripts/<key>.json. An entry that cannot be read or fails validation
 is reported as CACHE_INVALID and treated as a miss; it is overwritten by the next good result.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -24,26 +25,61 @@ from .validate import validate_transcript
 KEY_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
-def cache_identity(fingerprint: str, engine_id: str, engine_version: str, execution_mode: str, model: str, model_version: Optional[str],
-                   parameters: Dict[str, Any]) -> Dict[str, Any]:
-    return {"input": fingerprint, "engine": {"id": engine_id, "version": engine_version, "execution_mode": execution_mode},
-            "model": {"name": model, "version": model_version}, "parameters": parameters}
+def cache_identity(
+    fingerprint: str,
+    engine_id: str,
+    engine_version: str,
+    execution_mode: str,
+    model: str,
+    model_version: Optional[str],
+    parameters: Dict[str, Any],
+) -> Dict[str, Any]:
+    return {
+        "input": fingerprint,
+        "engine": {
+            "id": engine_id,
+            "version": engine_version,
+            "execution_mode": execution_mode,
+        },
+        "model": {"name": model, "version": model_version},
+        "parameters": parameters,
+    }
 
 
-def cache_key(fingerprint: str, engine_id: str, engine_version: str, execution_mode: str, model: str, model_version: Optional[str],
-              parameters: Dict[str, Any]) -> str:
-    identity = cache_identity(fingerprint, engine_id, engine_version, execution_mode, model, model_version, parameters)
-    return hashlib.sha256(json.dumps(identity, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+def cache_key(
+    fingerprint: str,
+    engine_id: str,
+    engine_version: str,
+    execution_mode: str,
+    model: str,
+    model_version: Optional[str],
+    parameters: Dict[str, Any],
+) -> str:
+    identity = cache_identity(
+        fingerprint,
+        engine_id,
+        engine_version,
+        execution_mode,
+        model,
+        model_version,
+        parameters,
+    )
+    return hashlib.sha256(
+        json.dumps(identity, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
 
 
 class TranscriptCache:
     def __init__(self, workspace: str):
         from .paths import resolve_workspace
+
         self.root = os.path.join(resolve_workspace(workspace), "transcripts")
 
     def path(self, key: str) -> str:
         if not KEY_RE.match(key):
-            raise TranscriptionError("CACHE_INVALID", "cache key must be a sha256 hex string")
+            raise TranscriptionError(
+                "CACHE_INVALID", "cache key must be a sha256 hex string"
+            )
         return os.path.join(self.root, key + ".json")
 
     def exists(self, key: str) -> bool:
@@ -58,12 +94,20 @@ class TranscriptCache:
             with open(p, encoding="utf-8") as fh:
                 doc = json.load(fh)
         except (OSError, ValueError) as exc:
-            raise TranscriptionError("CACHE_INVALID", f"cache entry unreadable: {exc}", {"path": p})
+            raise TranscriptionError(
+                "CACHE_INVALID", f"cache entry unreadable: {exc}", {"path": p}
+            )
         rep = validate_transcript(doc, expected_fingerprint=expected_fingerprint)
         if not rep.ok:
-            raise TranscriptionError("CACHE_INVALID", "cache entry failed validation", {"path": p, "errors": rep.errors[:5]})
+            raise TranscriptionError(
+                "CACHE_INVALID",
+                "cache entry failed validation",
+                {"path": p, "errors": rep.errors[:5]},
+            )
         if (doc.get("provenance") or {}).get("cache_key") != key:
-            raise TranscriptionError("CACHE_INVALID", "cache entry does not carry its own key", {"path": p})
+            raise TranscriptionError(
+                "CACHE_INVALID", "cache entry does not carry its own key", {"path": p}
+            )
         return doc
 
     def put(self, key: str, doc: Dict[str, Any]) -> str:
@@ -71,7 +115,9 @@ class TranscriptCache:
         p = self.path(key)
         # a unique temporary file per writer: two processes writing the same key
         # (e.g. both adding word indexes to one pre-0.9 entry) must not share one
-        fd, tmp = tempfile.mkstemp(prefix=os.path.basename(p) + ".", suffix=".tmp", dir=self.root)
+        fd, tmp = tempfile.mkstemp(
+            prefix=os.path.basename(p) + ".", suffix=".tmp", dir=self.root
+        )
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
                 json.dump(doc, fh, ensure_ascii=False, indent=2)
@@ -87,12 +133,20 @@ class TranscriptCache:
     def count(self) -> int:
         if not os.path.isdir(self.root):
             return 0
-        return sum(1 for n in os.listdir(self.root) if n.endswith(".json") and KEY_RE.match(n[:-5]))
+        return sum(
+            1
+            for n in os.listdir(self.root)
+            if n.endswith(".json") and KEY_RE.match(n[:-5])
+        )
 
     def _entry_files(self) -> List[str]:
         if not os.path.isdir(self.root):
             return []
-        return [n for n in os.listdir(self.root) if n.endswith(".json") and KEY_RE.match(n[:-5])]
+        return [
+            n
+            for n in os.listdir(self.root)
+            if n.endswith(".json") and KEY_RE.match(n[:-5])
+        ]
 
     def size_bytes(self) -> int:
         """Total size of every valid cache entry file, in bytes."""
@@ -106,7 +160,8 @@ class TranscriptCache:
 
     def list_entries(self) -> List[Dict[str, Any]]:
         """One row per cache entry: key, size in bytes, and created_at read from the entry's own
-        provenance when present (an unreadable/corrupt entry still gets a row, with created_at None)."""
+        provenance when present (an unreadable/corrupt entry still gets a row, with created_at None).
+        """
         entries = []
         for n in sorted(self._entry_files()):
             key = n[:-5]

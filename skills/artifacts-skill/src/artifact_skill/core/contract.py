@@ -168,17 +168,26 @@ def _capability_ids(suffix: str) -> list[str]:
     return [f"{a}.{suffix}" for a in _registered_adapter_ids()]
 
 
-_INPUT_PATH_PROPERTY = {"input": {"type": "string", "description": "Path to the input artifact."}}
+_INPUT_PATH_PROPERTY = {
+    "input": {"type": "string", "description": "Path to the input artifact."}
+}
 
 TOOLS: list[ToolContract] = [
     ToolContract(
         name="doctor",
         description="Detect local capabilities (libraries, renderers, external tools) and report "
         "AVAILABLE/MISSING/UNKNOWN/NOT_REQUIRED/NOT_IMPLEMENTED for each. Never mutates anything.",
-        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        input_schema={
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
         output_schema={
             "type": "object",
-            "properties": {"capabilities": {"type": "object"}, "tool_version": {"type": "string"}},
+            "properties": {
+                "capabilities": {"type": "object"},
+                "tool_version": {"type": "string"},
+            },
         },
         artifact_types=["any"],
         capabilities=[],
@@ -194,8 +203,15 @@ TOOLS: list[ToolContract] = [
         name="contract",
         description="Emit this machine-readable contract — the single source of truth CLI and MCP "
         "are both generated from.",
-        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
-        output_schema={"type": "object", "properties": {"schema": {"type": "string"}, "tools": {"type": "array"}}},
+        input_schema={
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
+        output_schema={
+            "type": "object",
+            "properties": {"schema": {"type": "string"}, "tools": {"type": "array"}},
+        },
         artifact_types=["any"],
         capabilities=[],
         mutates_input=False,
@@ -216,7 +232,13 @@ TOOLS: list[ToolContract] = [
             "required": ["input"],
             "additionalProperties": False,
         },
-        output_schema={"type": "object", "properties": {"artifact": _ARTIFACT_REF_SCHEMA, "details": {"type": "object"}}},
+        output_schema={
+            "type": "object",
+            "properties": {
+                "artifact": _ARTIFACT_REF_SCHEMA,
+                "details": {"type": "object"},
+            },
+        },
         artifact_types=_registered_type_values(),
         capabilities=_capability_ids("structural"),
         mutates_input=False,
@@ -225,7 +247,11 @@ TOOLS: list[ToolContract] = [
         verification_policy={"structural_required": False, "visual_required": False},
         visual_requirement="not_applicable",
         evidence="inspection report (JSON)",
-        errors=["ARTIFACT_INPUT_NOT_FOUND", "ARTIFACT_PDF_UNREADABLE", "ARTIFACT_CAPABILITY_MISSING"],
+        errors=[
+            "ARTIFACT_INPUT_NOT_FOUND",
+            "ARTIFACT_PDF_UNREADABLE",
+            "ARTIFACT_CAPABILITY_MISSING",
+        ],
     ),
     ToolContract(
         name="plan",
@@ -243,7 +269,10 @@ TOOLS: list[ToolContract] = [
             "required": ["input", "operation"],
             "additionalProperties": False,
         },
-        output_schema={"type": "object", "properties": {"operation": {"type": "string"}, "risks": {"type": "array"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"operation": {"type": "string"}, "risks": {"type": "array"}},
+        },
         artifact_types=_registered_type_values(),
         capabilities=_capability_ids("structural"),
         mutates_input=False,
@@ -252,7 +281,11 @@ TOOLS: list[ToolContract] = [
         verification_policy={"structural_required": False, "visual_required": False},
         visual_requirement="not_applicable",
         evidence="operation plan (JSON)",
-        errors=["ARTIFACT_OPERATION_UNKNOWN", "ARTIFACT_INPUT_NOT_FOUND", "ARTIFACT_OUTPUT_OVERWRITES_INPUT"],
+        errors=[
+            "ARTIFACT_OPERATION_UNKNOWN",
+            "ARTIFACT_INPUT_NOT_FOUND",
+            "ARTIFACT_OUTPUT_OVERWRITES_INPUT",
+        ],
     ),
     ToolContract(
         name="execute",
@@ -272,13 +305,13 @@ TOOLS: list[ToolContract] = [
                 "policy": {"type": "object"},
                 "policy_preset": {
                     "type": "string",
-                    "description": "Named starting policy from policies.py (e.g. \"print-a4\", "
+                    "description": 'Named starting policy from policies.py (e.g. "print-a4", '
                     "\"web-no-external\"); 'policy' fields override it on conflict. See docs/verification.md.",
                 },
                 "evidence_dir": {
                     "type": "string",
                     "description": "Directory for execute's own receipt.json (default: a fresh "
-                    "\"./reports/<run-id>/\" per call, same default as `receipt` — FIX_PROMPT P2-5, "
+                    '"./reports/<run-id>/" per call, same default as `receipt` — FIX_PROMPT P2-5, '
                     "Issue #47). An explicit directory is used as given.",
                 },
                 "dry_run": {
@@ -292,13 +325,22 @@ TOOLS: list[ToolContract] = [
             "required": ["input", "operation"],
             "additionalProperties": False,
         },
-        output_schema={"type": "object", "properties": {"output": _ARTIFACT_REF_SCHEMA, "operation": {"type": "object"}}},
+        output_schema={
+            "type": "object",
+            "properties": {
+                "output": _ARTIFACT_REF_SCHEMA,
+                "operation": {"type": "object"},
+            },
+        },
         artifact_types=_registered_type_values(),
         capabilities=_capability_ids("structural"),
         mutates_input=False,
         side_effects=True,
         dry_run_supported=True,
-        verification_policy={"structural_required": "operation-dependent", "visual_required": "operation-dependent"},
+        verification_policy={
+            "structural_required": "operation-dependent",
+            "visual_required": "operation-dependent",
+        },
         visual_requirement="operation-dependent (see per-operation OperationSpec in contract output)",
         evidence="operation record (JSON) + new output artifact",
         errors=[
@@ -321,7 +363,7 @@ TOOLS: list[ToolContract] = [
                 "out_dir": {
                     "type": "string",
                     "description": "Directory for rendered images (default: a fresh "
-                    "\"./reports/<run-id>/rendered\" per call, Issue #47).",
+                    '"./reports/<run-id>/rendered" per call, Issue #47).',
                 },
                 "dry_run": {
                     "type": "boolean",
@@ -332,7 +374,10 @@ TOOLS: list[ToolContract] = [
             "required": ["input"],
             "additionalProperties": False,
         },
-        output_schema={"type": "object", "properties": {"files": {"type": "array"}, "backend": {"type": "string"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"files": {"type": "array"}, "backend": {"type": "string"}},
+        },
         artifact_types=_registered_type_values(),
         capabilities=_capability_ids("render"),
         mutates_input=False,
@@ -341,7 +386,11 @@ TOOLS: list[ToolContract] = [
         verification_policy={"structural_required": False, "visual_required": False},
         visual_requirement="produces_evidence_for_agent_to_inspect",
         evidence="page images (PNG)",
-        errors=["ARTIFACT_CAPABILITY_MISSING", "ARTIFACT_RENDER_NOT_IMPLEMENTED", "ARTIFACT_TOO_MANY_PAGES"],
+        errors=[
+            "ARTIFACT_CAPABILITY_MISSING",
+            "ARTIFACT_RENDER_NOT_IMPLEMENTED",
+            "ARTIFACT_TOO_MANY_PAGES",
+        ],
     ),
     ToolContract(
         name="verify",
@@ -362,14 +411,17 @@ TOOLS: list[ToolContract] = [
                 "policy": {"type": "object"},
                 "policy_preset": {
                     "type": "string",
-                    "description": "Named starting policy from policies.py (e.g. \"print-a4\", "
+                    "description": 'Named starting policy from policies.py (e.g. "print-a4", '
                     "\"web-no-external\"); 'policy' fields override it on conflict. See docs/verification.md.",
                 },
             },
             "required": ["input"],
             "additionalProperties": False,
         },
-        output_schema={"type": "object", "properties": {"status": {"type": "string"}, "checks": {"type": "array"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"status": {"type": "string"}, "checks": {"type": "array"}},
+        },
         artifact_types=_registered_type_values(),
         capabilities=_capability_ids("structural"),
         mutates_input=False,
@@ -394,7 +446,7 @@ TOOLS: list[ToolContract] = [
                 "out_dir": {
                     "type": "string",
                     "description": "Directory for the contact sheet and rendered images (default: a "
-                    "fresh \"./reports/<run-id>/\" per call, Issue #47).",
+                    'fresh "./reports/<run-id>/" per call, Issue #47).',
                 },
                 "dry_run": {
                     "type": "boolean",
@@ -405,7 +457,10 @@ TOOLS: list[ToolContract] = [
             "required": ["input"],
             "additionalProperties": False,
         },
-        output_schema={"type": "object", "properties": {"contact_sheet": {"type": "string"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"contact_sheet": {"type": "string"}},
+        },
         artifact_types=_registered_type_values(),
         capabilities=_capability_ids("render"),
         mutates_input=False,
@@ -414,7 +469,11 @@ TOOLS: list[ToolContract] = [
         verification_policy={"structural_required": False, "visual_required": False},
         visual_requirement="produces_evidence_for_agent_to_inspect",
         evidence="contact sheet image (PNG)",
-        errors=["ARTIFACT_CAPABILITY_MISSING", "ARTIFACT_RENDER_NOT_IMPLEMENTED", "ARTIFACT_TOO_MANY_PAGES"],
+        errors=[
+            "ARTIFACT_CAPABILITY_MISSING",
+            "ARTIFACT_RENDER_NOT_IMPLEMENTED",
+            "ARTIFACT_TOO_MANY_PAGES",
+        ],
     ),
     ToolContract(
         name="receipt",
@@ -434,7 +493,7 @@ TOOLS: list[ToolContract] = [
                 "policy": {"type": "object"},
                 "policy_preset": {
                     "type": "string",
-                    "description": "Named starting policy from policies.py (e.g. \"print-a4\", "
+                    "description": 'Named starting policy from policies.py (e.g. "print-a4", '
                     "\"web-no-external\"); 'policy' fields override it on conflict. See docs/verification.md.",
                 },
                 "max_iterations": {
@@ -449,7 +508,9 @@ TOOLS: list[ToolContract] = [
                     # of a second hardcoded literal, and run_lifecycle() now
                     # rejects (ARTIFACT_INVALID_ARGS) rather than clamps, so
                     # this bound is always the truth, not a stale promise.
-                    "type": "integer", "minimum": 1, "maximum": DEFAULT_LIMITS.max_fix_iterations,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": DEFAULT_LIMITS.max_fix_iterations,
                     "description": f"Fix-loop retry cap, in [1, {DEFAULT_LIMITS.max_fix_iterations}]. Default "
                     f"(when omitted): {DEFAULT_LIMITS.max_fix_iterations} - omitting this does NOT mean "
                     "'don't retry.' Meaningless without 'operation' (there is no fix loop for a "
@@ -458,7 +519,7 @@ TOOLS: list[ToolContract] = [
                 "evidence_dir": {
                     "type": "string",
                     "description": "Directory for the receipt and evidence (default: a fresh "
-                    "\"./reports/<run-id>/\" per call, Issue #47). "
+                    '"./reports/<run-id>/" per call, Issue #47). '
                     "FIX_PROMPT P2-5/self-audit: this was already read by the MCP handler but was never a "
                     "declared schema property, so additionalProperties:false silently rejected every real "
                     "MCP caller that tried to pass it — dead code in practice, now reachable.",
@@ -472,13 +533,19 @@ TOOLS: list[ToolContract] = [
             "required": ["input"],
             "additionalProperties": False,
         },
-        output_schema={"type": "object", "properties": {"schema": {"type": "string"}, "status": {"type": "string"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"schema": {"type": "string"}, "status": {"type": "string"}},
+        },
         artifact_types=_registered_type_values(),
         capabilities=_capability_ids("structural"),
         mutates_input=False,
         side_effects=True,
         dry_run_supported=True,
-        verification_policy={"structural_required": True, "visual_required": "operation-dependent"},
+        verification_policy={
+            "structural_required": True,
+            "visual_required": "operation-dependent",
+        },
         visual_requirement="operation-dependent; evidence files always produced when pdf.render is available",
         evidence="reports/receipt.json + reports/rendered/*.png",
         errors=[

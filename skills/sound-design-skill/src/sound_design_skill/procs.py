@@ -1,5 +1,6 @@
 """Child processes: the only place this skill starts one. Always a list argv (never a shell), stdin closed, a
 minimal environment, its own process group, and a timeout that kills the whole group."""
+
 from __future__ import annotations
 
 import os
@@ -12,14 +13,39 @@ from .errors import SoundDesignError
 TIMEOUT_EXIT = 124
 # Environment kept for children. SOUND_DESIGN_* carries engine locations into the worker, HF_HOME / HF_HUB_CACHE say
 # where the user put the weights, CUDA_VISIBLE_DEVICES picks the GPU; nothing else (no tokens, no proxies) is passed on.
-_ENV_KEEP = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "TERM", "SYSTEMROOT", "SYSTEMDRIVE", "PATHEXT",
-             "COMSPEC", "USERPROFILE", "LOCALAPPDATA", "APPDATA", "PROGRAMDATA", "PYTHONPATH", "VIRTUAL_ENV",
-             "HF_HOME", "HF_HUB_CACHE", "XDG_CACHE_HOME", "CUDA_VISIBLE_DEVICES")
+_ENV_KEEP = (
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "PATHEXT",
+    "COMSPEC",
+    "USERPROFILE",
+    "LOCALAPPDATA",
+    "APPDATA",
+    "PROGRAMDATA",
+    "PYTHONPATH",
+    "VIRTUAL_ENV",
+    "HF_HOME",
+    "HF_HUB_CACHE",
+    "XDG_CACHE_HOME",
+    "CUDA_VISIBLE_DEVICES",
+)
 _ENV_PREFIX = "SOUND_DESIGN_"
 
 
 def child_env(extra: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    env = {k: v for k, v in os.environ.items() if k.upper() in _ENV_KEEP or k.upper().startswith(_ENV_PREFIX)}
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k.upper() in _ENV_KEEP or k.upper().startswith(_ENV_PREFIX)
+    }
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     if extra:
@@ -35,7 +61,11 @@ def _group_kwargs() -> Dict[str, Any]:
 
 def kill_tree(proc: "subprocess.Popen[str]") -> None:
     if os.name == "nt":
-        subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         proc.kill()
     else:
         try:
@@ -48,16 +78,32 @@ def kill_tree(proc: "subprocess.Popen[str]") -> None:
         pass
 
 
-def run_process_group(argv: Sequence[str], timeout: float, cwd: Optional[str] = None,
-                      env: Optional[Dict[str, str]] = None) -> Tuple[int, str, str]:
+def run_process_group(
+    argv: Sequence[str],
+    timeout: float,
+    cwd: Optional[str] = None,
+    env: Optional[Dict[str, str]] = None,
+) -> Tuple[int, str, str]:
     """Run argv to completion. Returns (exit code, stdout, stderr); exit code TIMEOUT_EXIT when the timeout killed
-    the process group. Raises SoundDesignError CANCELLED on Ctrl-C (after killing the group)."""
+    the process group. Raises SoundDesignError CANCELLED on Ctrl-C (after killing the group).
+    """
     argv = list(argv)
     if not argv or any(not isinstance(a, str) or "\x00" in a for a in argv):
-        raise SoundDesignError("INTERNAL_ERROR", "argv must be a non-empty list of clean strings")
+        raise SoundDesignError(
+            "INTERNAL_ERROR", "argv must be a non-empty list of clean strings"
+        )
     try:
-        proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                errors="replace", cwd=cwd, env=child_env() if env is None else env, **_group_kwargs())
+        proc = subprocess.Popen(
+            argv,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            errors="replace",
+            cwd=cwd,
+            env=child_env() if env is None else env,
+            **_group_kwargs(),
+        )
     except OSError as e:
         return 127, "", f"cannot start {os.path.basename(argv[0])}: {e}"
     try:
@@ -67,5 +113,9 @@ def run_process_group(argv: Sequence[str], timeout: float, cwd: Optional[str] = 
         return TIMEOUT_EXIT, "", f"timed out after {timeout}s"
     except KeyboardInterrupt:
         kill_tree(proc)
-        raise SoundDesignError("CANCELLED", "interrupted while a child process was running", {"reason": "signal"})
+        raise SoundDesignError(
+            "CANCELLED",
+            "interrupted while a child process was running",
+            {"reason": "signal"},
+        )
     return proc.returncode, out or "", err or ""

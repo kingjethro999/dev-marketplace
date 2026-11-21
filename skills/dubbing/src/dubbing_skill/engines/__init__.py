@@ -1,6 +1,7 @@
 """Engine registry. Only engines listed here can be selected or run by the worker; test engines are never
 registered. Four engines are the ones ADR-001 verified; Chatterbox Multilingual V3 is the default for every op. The fifth,
 Qwen3-TTS (ADR-018), is optional and experimental, and never a default."""
+
 from __future__ import annotations
 
 from typing import Dict, List, Optional, Type
@@ -13,10 +14,21 @@ from .qwen3_tts import Qwen3TtsEngine
 from .style_bert_vits2 import StyleBertVits2Engine
 from .voicevox import VoicevoxEngine
 
-ENGINES: Dict[str, Type[Engine]] = {cls.spec.id: cls for cls in (ChatterboxEngine, VoicevoxEngine, StyleBertVits2Engine, KokoroEngine,
-                                                                   Qwen3TtsEngine)}
-DEFAULT_ENGINE: Dict[str, Optional[str]] = {"narrate": ChatterboxEngine.spec.id, "dub": ChatterboxEngine.spec.id,
-                                            "audio_description": ChatterboxEngine.spec.id}
+ENGINES: Dict[str, Type[Engine]] = {
+    cls.spec.id: cls
+    for cls in (
+        ChatterboxEngine,
+        VoicevoxEngine,
+        StyleBertVits2Engine,
+        KokoroEngine,
+        Qwen3TtsEngine,
+    )
+}
+DEFAULT_ENGINE: Dict[str, Optional[str]] = {
+    "narrate": ChatterboxEngine.spec.id,
+    "dub": ChatterboxEngine.spec.id,
+    "audio_description": ChatterboxEngine.spec.id,
+}
 
 
 def engine_ids() -> List[str]:
@@ -26,7 +38,11 @@ def engine_ids() -> List[str]:
 def get_engine(engine_id: str) -> Engine:
     cls = ENGINES.get(engine_id)
     if cls is None:
-        raise DubbingError("ENGINE_UNAVAILABLE", f"unknown engine {engine_id!r}", {"engines": engine_ids()})
+        raise DubbingError(
+            "ENGINE_UNAVAILABLE",
+            f"unknown engine {engine_id!r}",
+            {"engines": engine_ids()},
+        )
     return cls()
 
 

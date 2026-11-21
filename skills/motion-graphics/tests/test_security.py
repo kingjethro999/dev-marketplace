@@ -1,6 +1,7 @@
 """Security boundary tests (docs/security.md). Pure / structural tests run always; the payload-as-content test at
 the bottom needs real ffmpeg-skill + ffmpeg and is skipped-by-failure like the rest of the integration suite via
 the `workspace`/`skill_dir` fixtures (see conftest.py: nothing here silently skips)."""
+
 import inspect
 import json
 
@@ -11,13 +12,28 @@ from motion_graphics.errors import MotionGraphicsError
 from motion_graphics.model import FORBIDDEN_KEYS, parse_request
 from motion_graphics.security import PathPolicy
 
-from conftest import bug_element, chapter_element, countdown_element, hook_element, meme_element, progress_element, sticker_element, request_doc, run_cli, text_overlay_element, title_element, video_overlay_element, one_json
+from conftest import (
+    bug_element,
+    chapter_element,
+    countdown_element,
+    hook_element,
+    meme_element,
+    progress_element,
+    sticker_element,
+    request_doc,
+    run_cli,
+    text_overlay_element,
+    title_element,
+    video_overlay_element,
+    one_json,
+)
 
 
 # ---- no shell, ever
 def test_no_shell_true_anywhere_in_source():
     import motion_graphics
     import pathlib
+
     pkg_dir = pathlib.Path(motion_graphics.__file__).parent
     for py in pkg_dir.glob("*.py"):
         text = py.read_text(encoding="utf-8")
@@ -32,11 +48,17 @@ def test_popen_called_with_a_list_not_a_string():
 # ---- executable allowlist
 def test_tool_allowlist_is_closed():
     assert adapter.TOOLS_USED == ("probe", "graphics", "overlay")
-    assert tuple(adapter.GENERATOR_TOOLS) == ("background",)          # shape and the layer canvas, detected per checkout (ADR-22)
-    assert adapter.LAYER_TOOLS == ("color",)                          # --retag of the layer canvas only (ADR-30)
+    assert tuple(adapter.GENERATOR_TOOLS) == (
+        "background",
+    )  # shape and the layer canvas, detected per checkout (ADR-22)
+    assert adapter.LAYER_TOOLS == (
+        "color",
+    )  # --retag of the layer canvas only (ADR-30)
     skill = adapter.FfmpegSkill.__new__(adapter.FfmpegSkill)
     with pytest.raises(MotionGraphicsError) as e:
-        skill.script("cut")  # not on the allowlist, even though ffmpeg-skill itself has this tool
+        skill.script(
+            "cut"
+        )  # not on the allowlist, even though ffmpeg-skill itself has this tool
     assert e.value.code == "INTERNAL_ERROR"
 
 
@@ -53,13 +75,36 @@ def test_forbidden_keys_rejected_at_top_level(key):
 
 @pytest.mark.parametrize("key", sorted(FORBIDDEN_KEYS))
 def test_forbidden_keys_rejected_nested_in_element_parameters(key):
-    d = request_doc([{"id": "t1", "type": "title", "start": 0, "end": 1, "parameters": {"title": "x", key: "y"}}])
+    d = request_doc(
+        [
+            {
+                "id": "t1",
+                "type": "title",
+                "start": 0,
+                "end": 1,
+                "parameters": {"title": "x", key: "y"},
+            }
+        ]
+    )
     with pytest.raises(MotionGraphicsError) as e:
         parse_request(d)
     assert e.value.code in ("INVALID_REQUEST",)
 
 
-@pytest.mark.parametrize("make_element", [title_element, bug_element, chapter_element, progress_element, countdown_element, sticker_element, hook_element, meme_element, video_overlay_element])
+@pytest.mark.parametrize(
+    "make_element",
+    [
+        title_element,
+        bug_element,
+        chapter_element,
+        progress_element,
+        countdown_element,
+        sticker_element,
+        hook_element,
+        meme_element,
+        video_overlay_element,
+    ],
+)
 def test_forbidden_field_rejected_for_every_element_type(make_element):
     # _reject_forbidden() runs on the raw document before any type-specific parameter parsing, so it should catch
     # a forbidden field identically regardless of which element type carries it -- this pins that generality down
@@ -74,7 +119,18 @@ def test_forbidden_field_rejected_for_every_element_type(make_element):
 
 @pytest.mark.parametrize("key", sorted(FORBIDDEN_KEYS))
 def test_forbidden_keys_rejected_nested_in_animation(key):
-    d = request_doc([{**text_overlay_element(start=0, end=4), "animation": {"kind": "fade", "parameters": {"duration": 0.5}, key: "y"}}])
+    d = request_doc(
+        [
+            {
+                **text_overlay_element(start=0, end=4),
+                "animation": {
+                    "kind": "fade",
+                    "parameters": {"duration": 0.5},
+                    key: "y",
+                },
+            }
+        ]
+    )
     with pytest.raises(MotionGraphicsError):
         parse_request(d)
 
@@ -135,7 +191,9 @@ def test_output_cannot_be_input(tmp_path):
     policy = PathPolicy(str(tmp_path))
     video = policy.resolve_input(str(f))
     output = policy.resolve_write_path(str(f))
-    assert video == output  # this is exactly what executor.response() checks and rejects as OUTPUT_ERROR
+    assert (
+        video == output
+    )  # this is exactly what executor.response() checks and rejects as OUTPUT_ERROR
 
 
 # ---- environment allowlist
@@ -165,8 +223,17 @@ def test_argv_with_null_byte_rejected():
 def test_no_html_css_js_engine_in_source():
     import motion_graphics
     import pathlib
+
     pkg_dir = pathlib.Path(motion_graphics.__file__).parent
-    banned = ("BeautifulSoup", "selenium", "playwright", "puppeteer", "eval(", "exec(", "__import__(")
+    banned = (
+        "BeautifulSoup",
+        "selenium",
+        "playwright",
+        "puppeteer",
+        "eval(",
+        "exec(",
+        "__import__(",
+    )
     for py in pkg_dir.glob("*.py"):
         text = py.read_text(encoding="utf-8")
         for token in banned:
@@ -177,7 +244,9 @@ def test_no_html_css_js_engine_in_source():
 def test_cli_run_rejects_forbidden_field(tmp_path):
     doc = request_doc([title_element()])
     doc["shell"] = "rm -rf /"
-    code, out, err = run_cli(["run", "-", "--json", "--workspace", str(tmp_path)], stdin_text=json.dumps(doc))
+    code, out, err = run_cli(
+        ["run", "-", "--json", "--workspace", str(tmp_path)], stdin_text=json.dumps(doc)
+    )
     result = one_json(out)
     assert result["ok"] is False
     assert result["error"]["code"] == "INVALID_REQUEST"
@@ -187,7 +256,9 @@ def test_cli_run_rejects_forbidden_field(tmp_path):
 def test_cli_validate_rejects_shell_injection_in_filter_field(tmp_path):
     doc = request_doc([title_element()])
     doc["elements"][0]["parameters"]["filter"] = "x=1[out]"
-    code, out, err = run_cli(["validate", "-", "--json"], stdin_text=json.dumps(doc), cwd=str(tmp_path))
+    code, out, err = run_cli(
+        ["validate", "-", "--json"], stdin_text=json.dumps(doc), cwd=str(tmp_path)
+    )
     result = one_json(out)
     assert result["ok"] is False
     assert result["error"]["code"] == "INVALID_REQUEST"

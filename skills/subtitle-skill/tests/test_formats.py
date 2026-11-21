@@ -40,7 +40,9 @@ def test_srt_basic():
 
 
 def test_srt_speaker_prefix_and_multiline():
-    doc = _doc([{"id": "c1", "start": 0, "end": 1, "text": "line1\nline2", "speaker": "Alice"}])
+    doc = _doc(
+        [{"id": "c1", "start": 0, "end": 1, "text": "line1\nline2", "speaker": "Alice"}]
+    )
     out = generate_srt(doc)
     assert "Alice: line1" in out
     assert "line2" in out
@@ -53,7 +55,9 @@ def test_srt_unicode():
 
 
 def test_srt_rejects_unsupported_style():
-    doc = _doc([{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"position": 50}}])
+    doc = _doc(
+        [{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"position": 50}}]
+    )
     with pytest.raises(SubtitleSkillError) as exc:
         generate_srt(doc)
     assert exc.value.code == "UNSUPPORTED_FORMAT"
@@ -68,12 +72,16 @@ def test_srt_rejects_unsupported_style():
 
 
 def test_srt_color_and_size_still_rejected_by_default():
-    doc = _doc([{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"color": "FF0000"}}])
+    doc = _doc(
+        [{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"color": "FF0000"}}]
+    )
     with pytest.raises(SubtitleSkillError) as exc:
         generate_srt(doc)
     assert exc.value.code == "UNSUPPORTED_FORMAT"
 
-    doc2 = _doc([{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"size": 10}}])
+    doc2 = _doc(
+        [{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"size": 10}}]
+    )
     with pytest.raises(SubtitleSkillError) as exc2:
         generate_srt(doc2)
     assert exc2.value.code == "UNSUPPORTED_FORMAT"
@@ -81,7 +89,15 @@ def test_srt_color_and_size_still_rejected_by_default():
 
 def test_srt_color_and_size_accepted_when_explicitly_allowed():
     doc = _doc(
-        [{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"color": "FF0000", "size": 10, "bold": True}}]
+        [
+            {
+                "id": "c1",
+                "start": 0,
+                "end": 1,
+                "text": "x",
+                "style": {"color": "FF0000", "size": 10, "bold": True},
+            }
+        ]
     )
     out = generate_srt(doc, allow_style_fields=frozenset({"color", "size"}))
     assert "<b>x</b>" in out
@@ -92,7 +108,9 @@ def test_srt_allow_style_fields_is_per_field_not_all_or_nothing():
     "color" must not also silently exempt "position". (operations._run_render,
     the only real caller, never passes "align"/"position"/"line" for exactly
     this reason -- see the render-side tests in test_engine_render.py.)"""
-    doc = _doc([{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"position": 50}}])
+    doc = _doc(
+        [{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"position": 50}}]
+    )
     with pytest.raises(SubtitleSkillError) as exc:
         generate_srt(doc, allow_style_fields=frozenset({"color", "size"}))
     assert exc.value.code == "UNSUPPORTED_FORMAT"
@@ -106,7 +124,17 @@ def test_vtt_basic_header_and_timestamp():
 
 
 def test_vtt_cue_settings():
-    doc = _doc([{"id": "c1", "start": 0, "end": 1, "text": "hi", "style": {"align": "center", "position": 50}}])
+    doc = _doc(
+        [
+            {
+                "id": "c1",
+                "start": 0,
+                "end": 1,
+                "text": "hi",
+                "style": {"align": "center", "position": 50},
+            }
+        ]
+    )
     out = generate_vtt(doc)
     assert "align:center" in out
     assert "position:50%" in out
@@ -119,7 +147,9 @@ def test_vtt_escapes_html_like_chars():
 
 
 def test_vtt_rejects_color_style():
-    doc = _doc([{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"color": "red"}}])
+    doc = _doc(
+        [{"id": "c1", "start": 0, "end": 1, "text": "x", "style": {"color": "red"}}]
+    )
     with pytest.raises(SubtitleSkillError) as exc:
         generate_vtt(doc)
     assert exc.value.code == "UNSUPPORTED_FORMAT"

@@ -24,7 +24,18 @@ class TestResizeFit(unittest.TestCase):
     def test_fit_does_not_distort(self):
         dest = os.path.join(self.tmp.name, "out.png")
         args = resize.build_parser().parse_args(
-            [self.src, "-o", dest, "--width", "100", "--height", "100", "--mode", "fit", "--json"]
+            [
+                self.src,
+                "-o",
+                dest,
+                "--width",
+                "100",
+                "--height",
+                "100",
+                "--mode",
+                "fit",
+                "--json",
+            ]
         )
         payload = resize.run_resize(args)
 
@@ -40,7 +51,18 @@ class TestResizeFit(unittest.TestCase):
     def test_fill_produces_exact_box(self):
         dest = os.path.join(self.tmp.name, "out-fill.png")
         args = resize.build_parser().parse_args(
-            [self.src, "-o", dest, "--width", "50", "--height", "50", "--mode", "fill", "--json"]
+            [
+                self.src,
+                "-o",
+                dest,
+                "--width",
+                "50",
+                "--height",
+                "50",
+                "--mode",
+                "fill",
+                "--json",
+            ]
         )
         payload = resize.run_resize(args)
         self.assertEqual(payload["actual"], {"width": 50, "height": 50})
@@ -83,7 +105,18 @@ class TestSipsFitIntegration(unittest.TestCase):
                 dest = os.path.join(self.tmp.name, f"{name}-out.png")
 
                 args = resize.build_parser().parse_args(
-                    [src, "-o", dest, "--width", "800", "--height", "200", "--mode", "fit", "--json"]
+                    [
+                        src,
+                        "-o",
+                        dest,
+                        "--width",
+                        "800",
+                        "--height",
+                        "200",
+                        "--mode",
+                        "fit",
+                        "--json",
+                    ]
                 )
                 payload = resize.run_resize(args)
 

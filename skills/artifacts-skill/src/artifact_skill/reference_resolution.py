@@ -63,7 +63,9 @@ class LocalReferenceOutcome(NamedTuple):
     exists: bool
 
 
-def resolve_local_reference(base_dir: Path, url: str, *, strip_query: bool = False) -> LocalReferenceOutcome:
+def resolve_local_reference(
+    base_dir: Path, url: str, *, strip_query: bool = False
+) -> LocalReferenceOutcome:
     """Resolve a local reference string against `base_dir`, the same way
     the HTML, SVG, and Markdown adapters each did independently before
     this consolidation: strip a trailing `#fragment` (and, only when

@@ -4,6 +4,7 @@ interpreter, the engine's own virtual environment:
 
     <engine python> -I pkgprobe.py <dist,dist,...> <module,module,...>   -> one JSON document on stdout
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -32,8 +33,11 @@ def module_found(name: str) -> bool:
 
 
 def probe(dists: List[str], modules: List[str]) -> Dict[str, Any]:
-    return {"python": platform.python_version(), "dists": {d: dist_version(d) for d in dists},
-            "modules": {m: module_found(m) for m in modules}}
+    return {
+        "python": platform.python_version(),
+        "dists": {d: dist_version(d) for d in dists},
+        "modules": {m: module_found(m) for m in modules},
+    }
 
 
 def main(argv: List[str]) -> int:

@@ -1,4 +1,5 @@
 """The one exception every command raises for a refusal or a failure; `code` is a key of contract.ERRORS."""
+
 from __future__ import annotations
 
 

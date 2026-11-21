@@ -4,6 +4,7 @@
 Reads NEW_VERSION from the environment (set via the workflow step's `env:` block), never spliced as
 literal `${{ }}` text into this script.
 """
+
 from __future__ import annotations
 
 import os

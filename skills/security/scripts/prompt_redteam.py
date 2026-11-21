@@ -10,7 +10,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-
 FAIL_EXIT_CODE = 3
 SCHEMA_VERSION = 1
 
@@ -42,7 +41,9 @@ def _load_pack(path: Path) -> dict[str, Any]:
         raise ValueError(f"pack file is not valid JSON: {path}: {exc}") from exc
 
     if data.get("schema_version") != SCHEMA_VERSION:
-        raise ValueError(f"unsupported schema_version in {path}: {data.get('schema_version')!r}")
+        raise ValueError(
+            f"unsupported schema_version in {path}: {data.get('schema_version')!r}"
+        )
 
     cases = data.get("cases")
     if not isinstance(cases, list) or not cases:
@@ -55,7 +56,9 @@ def _load_pack(path: Path) -> dict[str, Any]:
             if not case.get(field):
                 raise ValueError(f"case #{idx} missing required field: {field}")
         if case["severity"] not in {"fail", "warn"}:
-            raise ValueError(f"case {case['id']} has unsupported severity: {case['severity']}")
+            raise ValueError(
+                f"case {case['id']} has unsupported severity: {case['severity']}"
+            )
         if not isinstance(case["targets"], list) or not case["targets"]:
             raise ValueError(f"case {case['id']} must define at least one target")
         for target in case["targets"]:
@@ -98,7 +101,9 @@ def _expand_globs(repo_root: Path, patterns: list[str]) -> list[str]:
 
 def _evaluate_file(rel_path: str, text: str, target: dict[str, Any]) -> dict[str, Any]:
     applies_if_any = target.get("applies_if_any", [])
-    if applies_if_any and not any(_match_excerpt(text, pattern) for pattern in applies_if_any):
+    if applies_if_any and not any(
+        _match_excerpt(text, pattern) for pattern in applies_if_any
+    ):
         return {
             "path": rel_path,
             "status": "SKIP",
@@ -121,7 +126,9 @@ def _evaluate_file(rel_path: str, text: str, target: dict[str, Any]) -> dict[str
         if matched:
             evidence.append(matched)
         else:
-            missing_groups.append({"label": label, "patterns": group.get("patterns", [])})
+            missing_groups.append(
+                {"label": label, "patterns": group.get("patterns", [])}
+            )
 
     forbidden_matches: list[dict[str, str]] = []
     for pattern in target.get("forbidden_any", []):
@@ -206,7 +213,9 @@ def _evaluate_case(repo_root: Path, case: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _build_report(repo_root: Path, pack_path: Path, pack: dict[str, Any]) -> dict[str, Any]:
+def _build_report(
+    repo_root: Path, pack_path: Path, pack: dict[str, Any]
+) -> dict[str, Any]:
     case_results = [_evaluate_case(repo_root, case) for case in pack["cases"]]
     verdict = "PASS"
     if any(case["status"] == "FAIL" for case in case_results):
@@ -231,7 +240,9 @@ def _build_report(repo_root: Path, pack_path: Path, pack: dict[str, Any]) -> dic
         "verdict": verdict,
         "case_count": len(case_results),
         "files_scanned": matched_files,
-        "failed_cases": [case["id"] for case in case_results if case["status"] == "FAIL"],
+        "failed_cases": [
+            case["id"] for case in case_results if case["status"] == "FAIL"
+        ],
         "warn_cases": [case["id"] for case in case_results if case["status"] == "WARN"],
         "results": case_results,
     }
@@ -269,11 +280,15 @@ def _write_report(out_dir: Path, report: dict[str, Any]) -> None:
             if target.get("reason"):
                 lines.append(f"  reason: {target['reason']}")
             for file_result in target.get("files", []):
-                lines.append(f"  file `{file_result['path']}`: `{file_result['status']}`")
+                lines.append(
+                    f"  file `{file_result['path']}`: `{file_result['status']}`"
+                )
                 for missing in file_result.get("missing_groups", []):
                     lines.append(f"    missing `{missing['label']}`")
                 for forbidden in file_result.get("forbidden_matches", []):
-                    lines.append(f"    forbidden `{forbidden['pattern']}` -> `{forbidden['excerpt']}`")
+                    lines.append(
+                        f"    forbidden `{forbidden['pattern']}` -> `{forbidden['excerpt']}`"
+                    )
         lines.append("")
 
     _write_text(redteam_dir / "redteam-results.md", "\n".join(lines).rstrip() + "\n")
@@ -291,9 +306,13 @@ def main() -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     scan_parser = sub.add_parser("scan")
-    scan_parser.add_argument("--repo-root", required=True, help="Repository root to scan")
+    scan_parser.add_argument(
+        "--repo-root", required=True, help="Repository root to scan"
+    )
     scan_parser.add_argument("--pack-file", required=True, help="JSON attack pack file")
-    scan_parser.add_argument("--out-dir", required=True, help="Directory to write artifacts to")
+    scan_parser.add_argument(
+        "--out-dir", required=True, help="Directory to write artifacts to"
+    )
 
     args = parser.parse_args()
 

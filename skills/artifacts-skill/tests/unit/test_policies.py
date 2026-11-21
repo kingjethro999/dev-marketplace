@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 
 from artifact_skill.adapters.registry import all_adapter_classes
-from artifact_skill.policies import PRESETS, known_policy_keys, resolve_policy, unknown_policy_keys
+from artifact_skill.policies import (
+    PRESETS,
+    known_policy_keys,
+    resolve_policy,
+    unknown_policy_keys,
+)
 from artifact_skill.text_checks import TEXT_CHECK_POLICY_KEYS
 
 
@@ -66,7 +71,9 @@ def test_every_preset_forbids_leftover_placeholder_text():
     preset wasn't written for (each adapter's verify_structural() only
     ever does policy.get(...), never assumes every key applies)."""
     for name, p in PRESETS.items():
-        assert p.get("forbid_placeholder_text") is True, f"preset '{name}' doesn't forbid placeholder text"
+        assert (
+            p.get("forbid_placeholder_text") is True
+        ), f"preset '{name}' doesn't forbid placeholder text"
 
 
 def test_print_presets_are_a_real_submission_gate_not_just_page_size():
@@ -114,7 +121,9 @@ def test_a_real_key_from_one_adapter_is_accepted_even_alone():
 
 def test_every_named_preset_only_uses_real_policy_keys():
     for name in PRESETS:
-        assert unknown_policy_keys(PRESETS[name]) == [], f"preset '{name}' references an unrecognized policy key"
+        assert (
+            unknown_policy_keys(PRESETS[name]) == []
+        ), f"preset '{name}' references an unrecognized policy key"
 
 
 def test_a_key_valid_for_a_different_adapter_is_not_flagged_as_unknown():
@@ -141,4 +150,6 @@ def test_known_policy_keys_is_the_union_across_every_registered_adapter():
     for adapter_cls in all_adapter_classes():
         expected |= adapter_cls().recognized_policy_keys()
     assert known_policy_keys() == frozenset(expected)
-    assert "forbid_placeholder_text" in known_policy_keys()  # sanity: a real, widely-shared key is present
+    assert (
+        "forbid_placeholder_text" in known_policy_keys()
+    )  # sanity: a real, widely-shared key is present

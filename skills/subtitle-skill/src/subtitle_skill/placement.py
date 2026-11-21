@@ -17,6 +17,7 @@ top-left origin. The caption boxes follow the burn layout `formats.ass` writes,
 which reproduces ffmpeg-skill caption.py's own defaults (24 pt type and a 30
 unit vertical margin on a 288-line script, 5 % side margins).
 """
+
 from __future__ import annotations
 
 import json
@@ -43,7 +44,9 @@ SIDE_MARGIN = 0.05
 DEFAULT_MIN_HOLD = 1.0
 DEFAULT_MIN_SCORE = 0.0
 
-PLACEMENT_FIELDS = frozenset({"faces", "reframe", "avoid", "min_hold", "max_lines", "min_score"})
+PLACEMENT_FIELDS = frozenset(
+    {"faces", "reframe", "avoid", "min_hold", "max_lines", "min_score"}
+)
 _REGION_KEYS = frozenset({"name", "box", "start", "end"})
 
 
@@ -66,8 +69,12 @@ class Box:
         return [round(self.x, 5), round(self.y, 5), round(self.w, 5), round(self.h, 5)]
 
 
-def caption_boxes(max_lines: int = 2, *, font_points: float = DEFAULT_FONT_POINTS,
-                  margin_points: float = DEFAULT_MARGIN_POINTS) -> dict:
+def caption_boxes(
+    max_lines: int = 2,
+    *,
+    font_points: float = DEFAULT_FONT_POINTS,
+    margin_points: float = DEFAULT_MARGIN_POINTS,
+) -> dict:
     """The bottom and top caption boxes, as fractions of the frame."""
     height = max_lines * LINE_ADVANCE * font_points / SCRIPT_HEIGHT
     margin = margin_points / SCRIPT_HEIGHT
@@ -121,21 +128,32 @@ class PlacementPlan:
         }
 
 
-def _number(value: Any, what: str, *, low: Optional[float] = None, high: Optional[float] = None) -> float:
+def _number(
+    value: Any, what: str, *, low: Optional[float] = None, high: Optional[float] = None
+) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise SubtitleSkillError("INVALID_INPUT", f"{what} must be a number, got {value!r}")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"{what} must be a number, got {value!r}"
+        )
     value = float(value)
     if (low is not None and value < low) or (high is not None and value > high):
-        raise SubtitleSkillError("INVALID_INPUT", f"{what} must be in [{low}, {high}], got {value!r}")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"{what} must be in [{low}, {high}], got {value!r}"
+        )
     return value
 
 
 def _norm_box(raw: Any, what: str) -> Box:
     if not isinstance(raw, list) or len(raw) != 4:
-        raise SubtitleSkillError("INVALID_INPUT", f"{what} must be [x, y, w, h] as fractions of the frame")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"{what} must be [x, y, w, h] as fractions of the frame"
+        )
     x, y, w, h = (_number(v, what, low=0.0, high=1.0) for v in raw)
     if w <= 0 or h <= 0 or x + w > 1.0 + 1e-9 or y + h > 1.0 + 1e-9:
-        raise SubtitleSkillError("INVALID_INPUT", f"{what} must lie inside the frame with positive size, got {raw!r}")
+        raise SubtitleSkillError(
+            "INVALID_INPUT",
+            f"{what} must lie inside the frame with positive size, got {raw!r}",
+        )
     return Box(x, y, w, h)
 
 
@@ -145,58 +163,110 @@ def parse_placement(raw: Any, policy) -> PlacementSpec:
         raise SubtitleSkillError("INVALID_INPUT", "request.placement must be an object")
     unknown = set(raw) - PLACEMENT_FIELDS
     if unknown:
-        raise SubtitleSkillError("INVALID_INPUT", f"unknown placement field(s): {sorted(unknown)}")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"unknown placement field(s): {sorted(unknown)}"
+        )
 
     faces_path = None
     if raw.get("faces") is not None:
         if not isinstance(raw["faces"], str) or not raw["faces"]:
-            raise SubtitleSkillError("INVALID_INPUT", "placement.faces must be a workspace-relative path")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", "placement.faces must be a workspace-relative path"
+            )
         faces_path = policy.resolve_input(raw["faces"])
     reframe_path = None
     if raw.get("reframe") is not None:
         if faces_path is None:
-            raise SubtitleSkillError("INVALID_INPUT", "placement.reframe needs placement.faces (it maps their boxes)")
+            raise SubtitleSkillError(
+                "INVALID_INPUT",
+                "placement.reframe needs placement.faces (it maps their boxes)",
+            )
         if not isinstance(raw["reframe"], str) or not raw["reframe"]:
-            raise SubtitleSkillError("INVALID_INPUT", "placement.reframe must be a workspace-relative path")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", "placement.reframe must be a workspace-relative path"
+            )
         reframe_path = policy.resolve_input(raw["reframe"])
 
     regions = []
     avoid = raw.get("avoid", [])
     if not isinstance(avoid, list):
-        raise SubtitleSkillError("INVALID_INPUT", "placement.avoid must be an array of regions")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", "placement.avoid must be an array of regions"
+        )
     for i, region in enumerate(avoid):
         if not isinstance(region, Mapping):
-            raise SubtitleSkillError("INVALID_INPUT", f"placement.avoid[{i}] must be an object")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"placement.avoid[{i}] must be an object"
+            )
         unknown = set(region) - _REGION_KEYS
         if unknown:
-            raise SubtitleSkillError("INVALID_INPUT", f"placement.avoid[{i}]: unknown field(s) {sorted(unknown)}")
+            raise SubtitleSkillError(
+                "INVALID_INPUT",
+                f"placement.avoid[{i}]: unknown field(s) {sorted(unknown)}",
+            )
         name = region.get("name")
         if not isinstance(name, str) or not name.strip():
-            raise SubtitleSkillError("INVALID_INPUT", f"placement.avoid[{i}].name must be a non-empty string")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"placement.avoid[{i}].name must be a non-empty string"
+            )
         box = _norm_box(region.get("box"), f"placement.avoid[{i}].box")
-        start = _number(region.get("start", 0.0), f"placement.avoid[{i}].start", low=0.0)
+        start = _number(
+            region.get("start", 0.0), f"placement.avoid[{i}].start", low=0.0
+        )
         end = region.get("end")
-        end = float("inf") if end is None else _number(end, f"placement.avoid[{i}].end", low=0.0)
+        end = (
+            float("inf")
+            if end is None
+            else _number(end, f"placement.avoid[{i}].end", low=0.0)
+        )
         if end <= start:
-            raise SubtitleSkillError("INVALID_INPUT", f"placement.avoid[{i}]: end must be after start")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"placement.avoid[{i}]: end must be after start"
+            )
         regions.append(Obstacle("region", box, start, end, name=name))
 
     if faces_path is None and not regions:
-        raise SubtitleSkillError("MISSING_INPUT", "request.placement needs placement.faces or placement.avoid")
+        raise SubtitleSkillError(
+            "MISSING_INPUT",
+            "request.placement needs placement.faces or placement.avoid",
+        )
 
-    min_hold = _number(raw.get("min_hold", DEFAULT_MIN_HOLD), "placement.min_hold", low=0.0, high=60.0)
+    min_hold = _number(
+        raw.get("min_hold", DEFAULT_MIN_HOLD), "placement.min_hold", low=0.0, high=60.0
+    )
     max_lines = raw.get("max_lines", 2)
-    if isinstance(max_lines, bool) or not isinstance(max_lines, int) or not 1 <= max_lines <= 4:
-        raise SubtitleSkillError("INVALID_INPUT", "placement.max_lines must be an integer from 1 to 4")
-    min_score = _number(raw.get("min_score", DEFAULT_MIN_SCORE), "placement.min_score", low=0.0, high=1.0)
-    return PlacementSpec(faces_path, reframe_path, tuple(regions), min_hold, max_lines, min_score, dict(raw))
+    if (
+        isinstance(max_lines, bool)
+        or not isinstance(max_lines, int)
+        or not 1 <= max_lines <= 4
+    ):
+        raise SubtitleSkillError(
+            "INVALID_INPUT", "placement.max_lines must be an integer from 1 to 4"
+        )
+    min_score = _number(
+        raw.get("min_score", DEFAULT_MIN_SCORE),
+        "placement.min_score",
+        low=0.0,
+        high=1.0,
+    )
+    return PlacementSpec(
+        faces_path,
+        reframe_path,
+        tuple(regions),
+        min_hold,
+        max_lines,
+        min_score,
+        dict(raw),
+    )
 
 
 def _load_json(path: Path, what: str) -> dict:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise SubtitleSkillError("INVALID_INPUT", f"{what} is not a readable JSON document: {exc}") from None
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"{what} is not a readable JSON document: {exc}"
+        ) from None
     if not isinstance(data, Mapping):
         raise SubtitleSkillError("INVALID_INPUT", f"{what} must be a JSON object")
     return data
@@ -207,9 +277,13 @@ def _frame_size(doc: Mapping[str, Any], what: str) -> tuple:
     try:
         width, height = float(size["width"]), float(size["height"])
     except (TypeError, KeyError, ValueError):
-        raise SubtitleSkillError("INVALID_INPUT", f"{what}: frame_size {{width, height}} is required") from None
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"{what}: frame_size {{width, height}} is required"
+        ) from None
     if width <= 0 or height <= 0:
-        raise SubtitleSkillError("INVALID_INPUT", f"{what}: frame_size must be positive")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"{what}: frame_size must be positive"
+        )
     return width, height
 
 
@@ -217,21 +291,42 @@ def _reframe_windows(doc: Mapping[str, Any]) -> list:
     """(start, end, x, y, w, h) crop windows in source pixels: one per shot (what an
     engine without a time-varying crop applies), else one per sample time."""
     if doc.get("schema") != REFRAME_SCHEMA:
-        raise SubtitleSkillError("INVALID_INPUT", f"placement.reframe must be a {REFRAME_SCHEMA} document")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"placement.reframe must be a {REFRAME_SCHEMA} document"
+        )
     out = []
     shots = doc.get("shots") or []
     if shots:
         for s in shots:
-            out.append((float(s["start"]), float(s["end"]), float(s["x"]), float(s["y"]),
-                        float(s["width"]), float(s["height"])))
+            out.append(
+                (
+                    float(s["start"]),
+                    float(s["end"]),
+                    float(s["x"]),
+                    float(s["y"]),
+                    float(s["width"]),
+                    float(s["height"]),
+                )
+            )
         return out
     windows = sorted(doc.get("windows") or [], key=lambda w: float(w["t"]))
     if not windows:
-        raise SubtitleSkillError("INVALID_INPUT", "placement.reframe has neither shots nor windows")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", "placement.reframe has neither shots nor windows"
+        )
     for i, w in enumerate(windows):
         start = float(w["t"]) if i else 0.0
         end = float(windows[i + 1]["t"]) if i + 1 < len(windows) else float("inf")
-        out.append((start, end, float(w["x"]), float(w["y"]), float(w["width"]), float(w["height"])))
+        out.append(
+            (
+                start,
+                end,
+                float(w["x"]),
+                float(w["y"]),
+                float(w["width"]),
+                float(w["height"]),
+            )
+        )
     return out
 
 
@@ -251,27 +346,41 @@ def load_face_obstacles(spec: PlacementSpec) -> tuple:
     doc = _load_json(spec.faces_path, "placement.faces")
     if doc.get("schema") != DETECTIONS_SCHEMA or doc.get("kind") != "face":
         raise SubtitleSkillError(
-            "INVALID_INPUT", f"placement.faces must be a {DETECTIONS_SCHEMA} document of kind 'face'"
+            "INVALID_INPUT",
+            f"placement.faces must be a {DETECTIONS_SCHEMA} document of kind 'face'",
         )
     src_w, src_h = _frame_size(doc, "placement.faces")
     frames = doc.get("frames")
     if not isinstance(frames, list):
-        raise SubtitleSkillError("INVALID_INPUT", "placement.faces: frames must be an array (a video's detections)")
+        raise SubtitleSkillError(
+            "INVALID_INPUT",
+            "placement.faces: frames must be an array (a video's detections)",
+        )
     windows = None
-    inputs = {"faces": {"file": spec.faces_path.name, "sha256": sha256_file(spec.faces_path),
-                        "frames": len(frames)}}
+    inputs = {
+        "faces": {
+            "file": spec.faces_path.name,
+            "sha256": sha256_file(spec.faces_path),
+            "frames": len(frames),
+        }
+    }
     if spec.reframe_path is not None:
         reframe = _load_json(spec.reframe_path, "placement.reframe")
         windows = _reframe_windows(reframe)
-        inputs["reframe"] = {"file": spec.reframe_path.name, "sha256": sha256_file(spec.reframe_path),
-                             "windows": len(windows)}
+        inputs["reframe"] = {
+            "file": spec.reframe_path.name,
+            "sha256": sha256_file(spec.reframe_path),
+            "windows": len(windows),
+        }
 
     times = []
     obstacles = []
     for frame in frames:
         t = frame.get("t") if isinstance(frame, Mapping) else None
         if isinstance(t, bool) or not isinstance(t, (int, float)):
-            raise SubtitleSkillError("INVALID_INPUT", "placement.faces: every frame needs a numeric t")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", "placement.faces: every frame needs a numeric t"
+            )
         t = float(t)
         times.append(t)
         for det in frame.get("detections") or []:
@@ -281,7 +390,9 @@ def load_face_obstacles(spec: PlacementSpec) -> tuple:
             try:
                 x, y, w, h = (float(v) for v in det["box"])
             except (TypeError, KeyError, ValueError):
-                raise SubtitleSkillError("INVALID_INPUT", f"placement.faces: a detection at t={t} has no box") from None
+                raise SubtitleSkillError(
+                    "INVALID_INPUT", f"placement.faces: a detection at t={t} has no box"
+                ) from None
             if windows is not None:
                 win = next((wd for wd in windows if wd[0] <= t < wd[1]), None)
                 if win is None:
@@ -291,17 +402,31 @@ def load_face_obstacles(spec: PlacementSpec) -> tuple:
                 x1, y1 = min(x + w, wx + ww), min(y + h, wy + wh)
                 if x1 <= x0 or y1 <= y0:
                     continue  # the face is cropped away
-                box = Box((x0 - wx) / ww, (y0 - wy) / wh, (x1 - x0) / ww, (y1 - y0) / wh)
+                box = Box(
+                    (x0 - wx) / ww, (y0 - wy) / wh, (x1 - x0) / ww, (y1 - y0) / wh
+                )
             else:
                 box = Box(x / src_w, y / src_h, w / src_w, h / src_h)
-            obstacles.append(Obstacle("face", box, t, t, t=t, source_box=[round(v, 2) for v in (x, y, w, h)]))
+            obstacles.append(
+                Obstacle(
+                    "face",
+                    box,
+                    t,
+                    t,
+                    t=t,
+                    source_box=[round(v, 2) for v in (x, y, w, h)],
+                )
+            )
     times.sort()
     return obstacles, inputs, _sampling_step(doc, times)
 
 
-def _faces_during(obstacles: Sequence[Obstacle], start: float, end: float, step: float) -> list:
+def _faces_during(
+    obstacles: Sequence[Obstacle], start: float, end: float, step: float
+) -> list:
     """Face samples taken while the cue is on screen; for a cue shorter than the
-    sampling step that holds no sample, the samples nearest its middle (within one step)."""
+    sampling step that holds no sample, the samples nearest its middle (within one step).
+    """
     inside = [o for o in obstacles if start <= o.t < end]
     if inside or step <= 0:
         return inside
@@ -319,21 +444,44 @@ def _blocking(obstacles: Sequence[Obstacle], box: Box) -> list:
 
 def _describe(o: Obstacle) -> dict:
     if o.kind == "face":
-        return {"kind": "face", "t": o.t, "box_norm": o.box.as_list(), "box": o.source_box}
+        return {
+            "kind": "face",
+            "t": o.t,
+            "box_norm": o.box.as_list(),
+            "box": o.source_box,
+        }
     return {"kind": "region", "name": o.name, "box_norm": o.box.as_list()}
 
 
-def plan_placement(document: SubtitleDocument, spec: PlacementSpec, *, boxes: Optional[dict] = None) -> PlacementPlan:
+def plan_placement(
+    document: SubtitleDocument, spec: PlacementSpec, *, boxes: Optional[dict] = None
+) -> PlacementPlan:
     """`boxes` replaces the default caption boxes (the `shorts` profile has its own)."""
     faces, inputs, step = load_face_obstacles(spec)
     inputs["regions"] = [o.name for o in spec.regions]
-    return plan_from_obstacles(document, faces, spec.regions, step=step, min_hold=spec.min_hold,
-                               max_lines=spec.max_lines, inputs=inputs, boxes=boxes)
+    return plan_from_obstacles(
+        document,
+        faces,
+        spec.regions,
+        step=step,
+        min_hold=spec.min_hold,
+        max_lines=spec.max_lines,
+        inputs=inputs,
+        boxes=boxes,
+    )
 
 
-def plan_from_obstacles(document: SubtitleDocument, faces: Sequence[Obstacle], regions: Sequence[Obstacle], *,
-                        step: float, min_hold: float, max_lines: int = 2, inputs: Optional[dict] = None,
-                        boxes: Optional[dict] = None) -> PlacementPlan:
+def plan_from_obstacles(
+    document: SubtitleDocument,
+    faces: Sequence[Obstacle],
+    regions: Sequence[Obstacle],
+    *,
+    step: float,
+    min_hold: float,
+    max_lines: int = 2,
+    inputs: Optional[dict] = None,
+    boxes: Optional[dict] = None,
+) -> PlacementPlan:
     boxes = boxes or caption_boxes(max_lines)
     bottom, top = boxes["bottom"], boxes["top"]
     cues = sorted(document.cues, key=lambda c: (c.start, c.end, c.id))
@@ -353,8 +501,15 @@ def plan_from_obstacles(document: SubtitleDocument, faces: Sequence[Obstacle], r
         else:
             positions[cue.id] = "bottom"
             if at_bottom:
-                unavoidable.append({"cue_id": cue.id, "start": cue.start, "end": cue.end,
-                                    "bottom": _describe(at_bottom[0]), "top": _describe(at_top[0])})
+                unavoidable.append(
+                    {
+                        "cue_id": cue.id,
+                        "start": cue.start,
+                        "end": cue.end,
+                        "bottom": _describe(at_bottom[0]),
+                        "top": _describe(at_top[0]),
+                    }
+                )
 
     # minimum hold: a run of bottom cues between two moved cues that would be on
     # screen (from the previous moved cue's end to the next one's start) for less

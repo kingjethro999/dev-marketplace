@@ -4,6 +4,7 @@ Only whitespace and control characters are touched. The engine text is kept verb
 ``raw_text``; ``text`` is the normalized form. Nothing here corrects spelling, punctuation,
 full-width/half-width forms or "proper Japanese": an ASR result is evidence, not an edited script.
 """
+
 from __future__ import annotations
 
 import re

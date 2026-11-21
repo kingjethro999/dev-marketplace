@@ -3,6 +3,7 @@
 Every script ends in exactly one of these: emit() on success, die() on failure. Both print a
 single JSON document when --json is on and record the Context the caller passed.
 """
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,14 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from _common.runner import Context, ERROR_CODE, ERROR_RETRYABLE, STATE
 
 
-def die(msg: str, code: int = 1, kind: str = "input", *, ctx: "Optional[Context]" = None, **extra: Any) -> "None":
+def die(
+    msg: str,
+    code: int = 1,
+    kind: str = "input",
+    *,
+    ctx: "Optional[Context]" = None,
+    **extra: Any,
+) -> "None":
     """Exit with a message. Under --json also print a machine-readable failure document
     (status: failed) on stdout so callers get the same shape as a success; exit codes are unchanged.
 
@@ -23,12 +31,22 @@ def die(msg: str, code: int = 1, kind: str = "input", *, ctx: "Optional[Context]
     `status: "completed"` next to a non-zero exit code, so a caller keying on the status alone
     read a failed delivery as a success."""
     hint = extra.pop("hint", None)
-    ctx = ctx or STATE  # 1.10: the optional per-request Context (2.0 makes it required); STATE is the default instance
-    _set_current_ctx(ctx)  # the atexit hook has no argument: it reads the ctx emit()/die() last used
-    ctx.plan = None  # a failed run plans nothing (the exit hook must not write a plan for it)
+    ctx = (
+        ctx or STATE
+    )  # 1.10: the optional per-request Context (2.0 makes it required); STATE is the default instance
+    _set_current_ctx(
+        ctx
+    )  # the atexit hook has no argument: it reads the ctx emit()/die() last used
+    ctx.plan = (
+        None  # a failed run plans nothing (the exit hook must not write a plan for it)
+    )
     STATE.plan = None  # the hook falls back to STATE when nothing passed a ctx; a failed run plans nothing there either
     sys.stderr.write(f"error: {msg}\n" + (f"hint: {hint}\n" if hint else ""))
-    if kind == "ffmpeg" and "hw" not in extra and (ctx.hw or ctx.hw_stages or ctx.hw_env_ignored or ctx.hw_auto):
+    if (
+        kind == "ffmpeg"
+        and "hw" not in extra
+        and (ctx.hw or ctx.hw_stages or ctx.hw_env_ignored or ctx.hw_auto)
+    ):
         # a tool's own ffmpeg failure (cut.py runs run(check=False) and dies itself; render.py
         # re-raises a stage's) carries `encoder` and `hw` as run()'s _fail() does: under --hw /
         # $FFMPEG_SKILL_HW two encoders may have run, and a caller must know whose failure it is
@@ -38,9 +56,11 @@ def die(msg: str, code: int = 1, kind: str = "input", *, ctx: "Optional[Context]
         extra["hw"] = hw_report(ctx, enc)
     if ctx.json:
         doc: Dict[str, Any] = {
-            "status": "failed", "exit_code": code,
+            "status": "failed",
+            "exit_code": code,
             "error": {
-                "kind": kind, "message": msg,
+                "kind": kind,
+                "message": msg,
                 "code": ERROR_CODE.get(kind, "INTERNAL_ERROR"),
                 "retryable": ERROR_RETRYABLE,
             },
@@ -57,7 +77,7 @@ def info(msg: str, ctx: "Optional[Context]" = None) -> None:
     # under --dry-run nothing is written; do not let scripts claim otherwise
     ctx = ctx or STATE
     if msg.startswith("wrote ") and ctx.dry_run:
-        msg = "[dry-run] would write " + msg[len("wrote "):]
+        msg = "[dry-run] would write " + msg[len("wrote ") :]
     sys.stderr.write(f"{msg}\n")
 
 
@@ -71,25 +91,40 @@ def _set_current_ctx(ctx: "Context") -> None:
     _CURRENT_CTX = ctx
 
 
-ENV_HW_NOTE = ("VideoToolbox chosen by FFMPEG_SKILL_HW=1 (machine default; ~1.1-3.5x the bytes of x264/x265 "
-               "at matched quality); rerun with --no-hw for a final deliverable")
-ENV_NOT_FOR_DELIVERY_BASE = ("FFMPEG_SKILL_HW=1 is not applied to export.py's delivery presets (a delivered file is where "
-                             "VideoToolbox's larger files cost most)")
-ENV_NOT_FOR_DELIVERY_NOTE = ENV_NOT_FOR_DELIVERY_BASE + "; pass --hw to put this export on the GPU"
+ENV_HW_NOTE = (
+    "VideoToolbox chosen by FFMPEG_SKILL_HW=1 (machine default; ~1.1-3.5x the bytes of x264/x265 "
+    "at matched quality); rerun with --no-hw for a final deliverable"
+)
+ENV_NOT_FOR_DELIVERY_BASE = (
+    "FFMPEG_SKILL_HW=1 is not applied to export.py's delivery presets (a delivered file is where "
+    "VideoToolbox's larger files cost most)"
+)
+ENV_NOT_FOR_DELIVERY_NOTE = (
+    ENV_NOT_FOR_DELIVERY_BASE + "; pass --hw to put this export on the GPU"
+)
 
 
 def env_not_for_delivery_note() -> str:
     """The note for an export the variable left on the CPU: the advice to pass --hw only on a
     machine that can take it (the same advice on a Linux box would send the caller to a flag that
     then reports the CPU encode)."""
-    from _common import decision  # the same name the --hw decisions (and their tests) stand the platform in on
-    return ENV_NOT_FOR_DELIVERY_NOTE if decision.hw_platform_reason() is None else ENV_NOT_FOR_DELIVERY_BASE
+    from _common import (
+        decision,
+    )  # the same name the --hw decisions (and their tests) stand the platform in on
+
+    return (
+        ENV_NOT_FOR_DELIVERY_NOTE
+        if decision.hw_platform_reason() is None
+        else ENV_NOT_FOR_DELIVERY_BASE
+    )
 
 
 def _video_encoders(commands: Sequence[str]) -> "Tuple[Optional[str], Optional[str]]":
     """(the last video encoder the command lines name, or `copy` for a stream copy; that encoder's
-    command line). A later copy (loudness.py after export's encode) keeps the encode before it."""
+    command line). A later copy (loudness.py after export's encode) keeps the encode before it.
+    """
     import re as _re
+
     enc, line, copied = None, None, False
     for c in commands:
         for name in _re.findall(r"(?:^|\s)-(?:c:v|vcodec|codec:v)\s+(\S+)", c):
@@ -113,14 +148,20 @@ def hw_report(ctx: "Context", enc: Optional[str]) -> Dict[str, Any]:
     --dry-run `used` is null and `fallback` false: nothing ran."""
     stages = list(ctx.hw_stages)
     requested = bool(ctx.hw) or any(st.get("requested") for st in stages)
-    source = ctx.hw_source if ctx.hw else next((st.get("source") for st in stages if st.get("requested")), None)
+    source = (
+        ctx.hw_source
+        if ctx.hw
+        else next((st.get("source") for st in stages if st.get("requested")), None)
+    )
     if not requested and ctx.hw_env_ignored:
         source = "env"
     if not requested and ctx.hw_auto:
         source = "auto"  # nobody asked: this build has no libx264/libx265, so VideoToolbox was the only encoder
     # a stage that reported its source without asking (export.py under the variable: requested
     # false, source env) still names where the request came from
-    source = source or next((st.get("source") for st in stages if st.get("source")), None)
+    source = source or next(
+        (st.get("source") for st in stages if st.get("source")), None
+    )
     vt = enc is not None and enc.endswith("_videotoolbox")
     # `used` is what ran; a dry run ran nothing (the planned encoder is `encoder`), so null --
     # as waveform.py's `silent` is null when nothing was measured
@@ -132,25 +173,39 @@ def hw_report(ctx: "Context", enc: Optional[str]) -> Dict[str, Any]:
         notes.append(ENV_HW_NOTE)
     if ctx.hw_env_ignored and enc not in (None, "copy") and not vt:
         notes.append(env_not_for_delivery_note())
-    return {"requested": requested, "source": source, "used": used,
-            "fallback": bool(ctx.hw_fallback) or any(st.get("fallback") for st in stages), "notes": notes}
+    return {
+        "requested": requested,
+        "source": source,
+        "used": used,
+        "fallback": bool(ctx.hw_fallback) or any(st.get("fallback") for st in stages),
+        "notes": notes,
+    }
 
 
-def hw_quality_note(enc: Optional[str], line: Optional[str], no_cpu_encoder: bool = False) -> Optional[str]:
+def hw_quality_note(
+    enc: Optional[str], line: Optional[str], no_cpu_encoder: bool = False
+) -> Optional[str]:
     """The `notes` line every VideoToolbox encode carries: its quality is not the CRF encode's.
-    `no_cpu_encoder`: the build has no libx264/libx265, so `--no-hw` is no remedy and is not offered."""
+    `no_cpu_encoder`: the build has no libx264/libx265, so `--no-hw` is no remedy and is not offered.
+    """
     import re as _re
+
     if not enc or not enc.endswith("_videotoolbox"):
         return None
     if enc == "prores_videotoolbox":
-        return ("prores_videotoolbox is not prores_ks: the same 422 HQ profile from a different encoder, so size and detail "
-                "differ from the CPU encode; `verified` covers the output's measured properties, not parity with the CPU "
-                "encode; --no-hw for prores_ks")
+        return (
+            "prores_videotoolbox is not prores_ks: the same 422 HQ profile from a different encoder, so size and detail "
+            "differ from the CPU encode; `verified` covers the output's measured properties, not parity with the CPU "
+            "encode; --no-hw for prores_ks"
+        )
     m = _re.search(r"(?:^|\s)-q:v\s+(\d+)", line or "")
-    return (f"{enc}{' -q:v ' + m.group(1) if m else ''} is not CRF-equivalent: --quality (or the preset's CRF) is mapped "
-            "to -q:v by an approximate SSIM fit (docs/design-decisions.md), so size and detail differ from the x264/x265 "
-            "encode (~1.1-3.5x the bytes at matched SSIM); `verified` covers the output's measured properties, not quality "
-            "parity with the CPU encode" + ("" if no_cpu_encoder else "; --no-hw for the CRF encode"))
+    return (
+        f"{enc}{' -q:v ' + m.group(1) if m else ''} is not CRF-equivalent: --quality (or the preset's CRF) is mapped "
+        "to -q:v by an approximate SSIM fit (docs/design-decisions.md), so size and detail differ from the x264/x265 "
+        "encode (~1.1-3.5x the bytes at matched SSIM); `verified` covers the output's measured properties, not quality "
+        "parity with the CPU encode"
+        + ("" if no_cpu_encoder else "; --no-hw for the CRF encode")
+    )
 
 
 def _encoder_report(ctx: "Context") -> Dict[str, Any]:
@@ -170,8 +225,12 @@ def _hw_notes_for(ctx: "Context") -> List[str]:
     and (render.py) every stage that ran on VideoToolbox."""
     enc, line = _video_encoders(ctx.commands)
     out: List[str] = []
-    cpu = {"h264_videotoolbox": "libx264", "hevc_videotoolbox": "libx265"}.get(enc or "")
-    for note in [hw_quality_note(enc, line, cpu in ctx.hw_auto)] + [st.get("quality_note") for st in ctx.hw_stages]:
+    cpu = {"h264_videotoolbox": "libx264", "hevc_videotoolbox": "libx265"}.get(
+        enc or ""
+    )
+    for note in [hw_quality_note(enc, line, cpu in ctx.hw_auto)] + [
+        st.get("quality_note") for st in ctx.hw_stages
+    ]:
         if note and note not in out:
             out.append(note)
     return out
@@ -187,18 +246,33 @@ def absorb_stage_hw(stage: str, doc: Any, ctx: "Optional[Context]" = None) -> No
         return
     for n in hw.get("notes") or []:
         # once: this process may have said it already (waveform.py's own encode), or another stage
-        if n not in ctx.hw_notes and not any(existing.endswith(": " + n) for existing in ctx.hw_notes):
+        if n not in ctx.hw_notes and not any(
+            existing.endswith(": " + n) for existing in ctx.hw_notes
+        ):
             ctx.hw_notes.append(f"{stage}: {n}")
     enc, line = _video_encoders([str(c) for c in (doc.get("commands") or [])])
-    quality = hw_quality_note(enc, line, hw.get("source") == "auto") if hw.get("used") else None
-    ctx.hw_stages.append({"stage": stage, "requested": bool(hw.get("requested")), "source": hw.get("source"),
-                          "used": hw.get("used"), "fallback": bool(hw.get("fallback")), "quality_note": quality})
+    quality = (
+        hw_quality_note(enc, line, hw.get("source") == "auto")
+        if hw.get("used")
+        else None
+    )
+    ctx.hw_stages.append(
+        {
+            "stage": stage,
+            "requested": bool(hw.get("requested")),
+            "source": hw.get("source"),
+            "used": hw.get("used"),
+            "fallback": bool(hw.get("fallback")),
+            "quality_note": quality,
+        }
+    )
 
 
 def steps_encoder_report(steps: Sequence["Tuple[str, Any]"]) -> Dict[str, Any]:
     """batch.py's per-item `encoder`, `hw` and `notes`, from the --json documents of the steps
     (child processes) that made the item: the last encoder a step ran (a later stream copy keeps
-    the encode before it), and their GPU facts as render.py's result carries its stages'."""
+    the encode before it), and their GPU facts as render.py's result carries its stages'.
+    """
     ctx = Context()
     ctx.dry_run = STATE.dry_run
     enc: Optional[str] = None
@@ -216,18 +290,29 @@ def steps_encoder_report(steps: Sequence["Tuple[str, Any]"]) -> Dict[str, Any]:
     return out
 
 
-def emit(output: Optional[str], *, ctx: "Optional[Context]" = None, **extra: Any) -> None:
+def emit(
+    output: Optional[str], *, ctx: "Optional[Context]" = None, **extra: Any
+) -> None:
     """Final stdout line: the output path, or a JSON document with --json.
 
     `ctx` is the optional per-request Context added in 1.10 (2.0 makes it required, issue #189 B);
     omitted, every read falls back to the process-global STATE as before."""
     ctx = ctx or STATE
-    _set_current_ctx(ctx)  # so the atexit hook writes (or skips) this ctx's plan, not STATE's
+    _set_current_ctx(
+        ctx
+    )  # so the atexit hook writes (or skips) this ctx's plan, not STATE's
     meta: Dict[str, Any] = {}
     if output and not ctx.dry_run:
-        meta = verify_output(output)  # dies (status: failed, kind: output) if the artifact is unusable
+        meta = verify_output(
+            output
+        )  # dies (status: failed, kind: output) if the artifact is unusable
     if ctx.json:
-        doc: Dict[str, Any] = {"status": "completed", "output": output, "dry_run": ctx.dry_run, "commands": list(ctx.commands)}
+        doc: Dict[str, Any] = {
+            "status": "completed",
+            "output": output,
+            "dry_run": ctx.dry_run,
+            "commands": list(ctx.commands),
+        }
         if meta:
             doc["probe"] = meta
         # What this tool itself verified about its artifact (issue #189 C, "verify as part of the
@@ -236,10 +321,18 @@ def emit(output: Optional[str], *, ctx: "Optional[Context]" = None, **extra: Any
         # only when the file was written, probed, and every self-check met its target; a dry run
         # verified nothing. Spec failures the tool cannot fix on its own (export's loudness gap)
         # keep status completed and say verified: false, so a caller keys on one field.
-        steps: List[Dict[str, Any]] = ([{"step": "probe", "ok": True}] if meta else []) + list(extra.pop("verification", None) or [])
-        if output and not ctx.dry_run and os.path.splitext(output)[1].lower() not in MEDIA_EXT:
+        steps: List[Dict[str, Any]] = (
+            [{"step": "probe", "ok": True}] if meta else []
+        ) + list(extra.pop("verification", None) or [])
+        if (
+            output
+            and not ctx.dry_run
+            and os.path.splitext(output)[1].lower() not in MEDIA_EXT
+        ):
             steps.insert(0, {"step": "exists", "ok": True})
-        doc["verified"] = not ctx.dry_run and bool(steps) and all(s.get("ok") for s in steps)
+        doc["verified"] = (
+            not ctx.dry_run and bool(steps) and all(s.get("ok") for s in steps)
+        )
         doc["verification"] = steps
         doc.update(_encoder_report(ctx))
         doc.update(extra)
@@ -270,12 +363,21 @@ def _brief_summary(meta: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, Any
     duration = (meta or {}).get("duration")
     if duration is not None:
         summary["duration_s"] = round(float(duration), 3)
-    for key, value in (("width", video.get("width")), ("height", video.get("height")), ("fps", video.get("fps")),
-                       ("vcodec", video.get("codec")), ("acodec", audio.get("codec")), ("channels", audio.get("channels"))):
+    for key, value in (
+        ("width", video.get("width")),
+        ("height", video.get("height")),
+        ("fps", video.get("fps")),
+        ("vcodec", video.get("codec")),
+        ("acodec", audio.get("codec")),
+        ("channels", audio.get("channels")),
+    ):
         if value is not None:
             summary[key] = value
     lufs = None
-    for source, key in ((extra.get("result"), "input_i"), (extra.get("measured"), "input_i")):
+    for source, key in (
+        (extra.get("result"), "input_i"),
+        (extra.get("measured"), "input_i"),
+    ):
         if lufs is None and isinstance(source, dict):
             lufs = _to_float(source.get(key))
     for step in extra.get("verification") or []:
@@ -294,8 +396,12 @@ def _brief(doc: Dict[str, Any], meta: Dict[str, Any]) -> Dict[str, Any]:
     acts on. Same keys, same meanings -- `commands` becomes the count of the command lines,
     `probe` becomes `summary` -- plus every tool-specific key the tool itself passed to emit().
     Failures are untouched: die() prints the full failure document either way."""
-    brief: Dict[str, Any] = {"status": doc["status"], "output": doc["output"], "dry_run": doc["dry_run"],
-                             "verified": doc.get("verified", False)}
+    brief: Dict[str, Any] = {
+        "status": doc["status"],
+        "output": doc["output"],
+        "dry_run": doc["dry_run"],
+        "verified": doc.get("verified", False),
+    }
     summary = _brief_summary(meta, doc)
     if summary:
         brief["summary"] = summary
@@ -306,7 +412,9 @@ def _brief(doc: Dict[str, Any], meta: Dict[str, Any]) -> Dict[str, Any]:
     # the emoji report is a full inventory in the long document; brief keeps the two fields a
     # caller branches on (did colour happen, and how many)
     if isinstance(brief.get("emoji"), dict):
-        brief["emoji"] = {k: v for k, v in brief["emoji"].items() if k in ("mode", "count")}
+        brief["emoji"] = {
+            k: v for k, v in brief["emoji"].items() if k in ("mode", "count")
+        }
     return brief
 
 
@@ -325,18 +433,24 @@ def _plan_at_exit() -> None:
             pass
 
 
-def _plan_inputs(commands: Sequence[str], argv: Sequence[str] = (), ctx: "Optional[Context]" = None) -> List[str]:
+def _plan_inputs(
+    commands: Sequence[str], argv: Sequence[str] = (), ctx: "Optional[Context]" = None
+) -> List[str]:
     """Every existing file the plan depends on: the `-i` inputs of the planned commands, any
     existing file named in argv (a recipe, a project, an SRT, a LUT, a still), and the side
-    inputs tools register through escape_filter_path() (review 6: only `-i` files were bound)."""
+    inputs tools register through escape_filter_path() (review 6: only `-i` files were bound).
+    """
     import shlex
+
     seen: List[str] = []
     for a in list(argv) + list((ctx or STATE).plan_inputs):
         if a and not a.startswith("-") and os.path.isfile(a) and a not in seen:
             seen.append(a)
     for line in commands:
         try:
-            toks = shlex.split(line.split("] ", 1)[1] if line.startswith("[dry-run] ") else line)
+            toks = shlex.split(
+                line.split("] ", 1)[1] if line.startswith("[dry-run] ") else line
+            )
         except ValueError:
             continue
         for i, tok in enumerate(toks[:-1]):
@@ -345,13 +459,19 @@ def _plan_inputs(commands: Sequence[str], argv: Sequence[str] = (), ctx: "Option
     return seen
 
 
-def write_plan(path: str, output: Optional[str], extra: Dict[str, Any], ctx: "Optional[Context]" = None) -> str:
+def write_plan(
+    path: str,
+    output: Optional[str],
+    extra: Dict[str, Any],
+    ctx: "Optional[Context]" = None,
+) -> str:
     """The dry run as an artifact: what will run, on which exact inputs, producing what, checked
     how. `render.py PLAN` executes it after re-fingerprinting the inputs (issue #189 C).
 
     `ctx` is the Context whose commands and inputs the plan describes (emit()/die() pass the one
     they were given); omitted, it is the process-global STATE as before."""
     import datetime
+
     ctx = ctx or STATE
     argv = [a for a in sys.argv[1:]]
     cleaned: List[str] = []
@@ -372,12 +492,19 @@ def write_plan(path: str, output: Optional[str], extra: Dict[str, Any], ctx: "Op
     if "--platform" in cleaned:
         platform = cleaned[cleaned.index("--platform") + 1]
     elif tool == "export" and "--preset" in cleaned:
-        platform = {"youtube": "youtube", "youtube4k": "youtube", "reels": "reels", "x": "x"}.get(cleaned[cleaned.index("--preset") + 1])
+        platform = {
+            "youtube": "youtube",
+            "youtube4k": "youtube",
+            "reels": "reels",
+            "x": "x",
+        }.get(cleaned[cleaned.index("--preset") + 1])
     if platform and output and tool != "check":
         verify.append({"tool": "check", "platform": platform})
     doc = {
         "plan_version": PLAN_VERSION,
-        "created": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "created": datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ),
         "tool": tool,
         "argv": cleaned,
         "cwd": os.getcwd(),
@@ -396,7 +523,10 @@ def write_plan(path: str, output: Optional[str], extra: Dict[str, Any], ctx: "Op
     except OSError as exc:
         die(f"cannot write plan {path}: {exc}", kind="output")
     ctx.plan_written = True
-    info(f"plan written: {path} ({len(doc['commands'])} command(s), {len(doc['inputs'])} input(s)); run it with render.py {path}", ctx)
+    info(
+        f"plan written: {path} ({len(doc['commands'])} command(s), {len(doc['inputs'])} input(s)); run it with render.py {path}",
+        ctx,
+    )
     return path
 
 
@@ -414,7 +544,9 @@ def json_safe(obj: Any) -> Any:
 
 
 def print_json(obj: Any) -> None:
-    sys.stdout.write(json.dumps(json_safe(obj), indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+    sys.stdout.write(
+        json.dumps(json_safe(obj), indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    )
 
 
 # Deferred for the same reason as runner's import of this module: probe needs die() from here, and

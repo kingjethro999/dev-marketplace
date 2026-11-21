@@ -31,6 +31,7 @@ Every clip and the timeline carry a provenance block: engine, version, model, li
 for the voice (VOICEVOX: speaker, character, "VOICEVOX:<character>"), the declared watermark and the one read back, the
 text hash, the translation note, and the ffmpeg-skill version. `obligations` lists the credits and the watermark.
 """
+
 from __future__ import annotations
 
 import os
@@ -52,11 +53,13 @@ from .provenance import build_provenance, sha256_text
 from .service import DEFAULT_TIMEOUT, run_engine_batch
 
 NARRATE_SCHEMA = f"{SKILL_ID}/narrate@1"
-DURATION_TOLERANCE = 0.1            # seconds, or 1 % of the duration when that is larger
+DURATION_TOLERANCE = 0.1  # seconds, or 1 % of the duration when that is larger
 MIN_CLIP_SECONDS = 0.05
 OVERFLOW_POLICIES = ("fail", "shift")
 TIMELINE_CHANNELS = 1
-EPSILON = 1e-3                      # seconds; placement arithmetic is done in milliseconds by ffmpeg-skill/pad
+EPSILON = (
+    1e-3  # seconds; placement arithmetic is done in milliseconds by ffmpeg-skill/pad
+)
 
 
 @dataclass
@@ -66,36 +69,58 @@ class NarrateRequest:
     lang: str
     engine: Optional[str] = None
     voice: Optional[str] = None
-    reference_path: Optional[str] = None      # a reference voice (cloning): only with its consent record (ADR-009)
+    reference_path: Optional[str] = (
+        None  # a reference voice (cloning): only with its consent record (ADR-009)
+    )
     consent_path: Optional[str] = None
     translation_note: Optional[Dict[str, Any]] = None
     seed: int = 0
-    accept_unverified_terms: bool = False     # use a voice whose terms were not verified (VOICEVOX, ADR-006)
+    accept_unverified_terms: bool = (
+        False  # use a voice whose terms were not verified (VOICEVOX, ADR-006)
+    )
     on_overflow: str = "fail"
     timeout: float = DEFAULT_TIMEOUT
     overwrite: bool = False
     ffmpeg_skill_dir: Optional[str] = None
     offline: bool = False
-    pronunciation_path: Optional[str] = None  # a dubbing/pronunciation@1 dictionary (ADR-015)
-    profile_path: Optional[str] = None        # a dubbing/voice-profile@1 voice profile (ADR-016)
+    pronunciation_path: Optional[str] = (
+        None  # a dubbing/pronunciation@1 dictionary (ADR-015)
+    )
+    profile_path: Optional[str] = (
+        None  # a dubbing/voice-profile@1 voice profile (ADR-016)
+    )
 
 
-MIN_REFERENCE_SECONDS = 1.0         # a reference voice shorter than this cannot carry a voice
+MIN_REFERENCE_SECONDS = 1.0  # a reference voice shorter than this cannot carry a voice
 
 
-def voice_request_fields(reference: Optional[str], consent: Optional[str]) -> Tuple[Optional[str], Dict[str, Any]]:
+def voice_request_fields(
+    reference: Optional[str], consent: Optional[str]
+) -> Tuple[Optional[str], Dict[str, Any]]:
     """(reference_audio, params) for an engine request with an optional reference voice. A reference without a consent
     record, or a record without a reference, is refused here, before anything is read; the record itself is verified
     by the engine's checks (Engine.check_consent, ADR-009)."""
     if consent and not reference:
-        raise DubbingError("INVALID_ARGUMENT", "--consent was given without a reference voice (--reference)", {})
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            "--consent was given without a reference voice (--reference)",
+            {},
+        )
     if not reference:
         return None, {}
     if not consent:
-        raise DubbingError("CONSENT_REQUIRED", "a reference voice (voice cloning) needs the consent record of the person whose "
-                           "voice it is (--consent: who consented, when, for what, and the evidence files; ADR-009). There is "
-                           "no way to skip this", {"reason": "no_record", "policy": "voice_cloning", "reference_read": False,
-                                                   "adr": "docs/decisions.md ADR-009"})
+        raise DubbingError(
+            "CONSENT_REQUIRED",
+            "a reference voice (voice cloning) needs the consent record of the person whose "
+            "voice it is (--consent: who consented, when, for what, and the evidence files; ADR-009). There is "
+            "no way to skip this",
+            {
+                "reason": "no_record",
+                "policy": "voice_cloning",
+                "reference_read": False,
+                "adr": "docs/decisions.md ADR-009",
+            },
+        )
     return os.path.abspath(reference), {CONSENT_PARAM: os.path.abspath(consent)}
 
 
@@ -104,33 +129,73 @@ def check_reference(skill: Any, path: str) -> Dict[str, Any]:
     try:
         facts = skill.probe(path)
     except DubbingError as e:
-        raise DubbingError("UNSUPPORTED_MEDIA", f"the reference voice cannot be read: {e.message}", {"reference": path})
+        raise DubbingError(
+            "UNSUPPORTED_MEDIA",
+            f"the reference voice cannot be read: {e.message}",
+            {"reference": path},
+        )
     a = facts.get("audio") if isinstance(facts.get("audio"), dict) else {}
     if not a or float(facts.get("duration") or 0.0) < MIN_REFERENCE_SECONDS:
-        raise DubbingError("UNSUPPORTED_MEDIA", f"the reference voice needs audio of at least {MIN_REFERENCE_SECONDS:g}s",
-                           {"reference": path, "duration": facts.get("duration")})
+        raise DubbingError(
+            "UNSUPPORTED_MEDIA",
+            f"the reference voice needs audio of at least {MIN_REFERENCE_SECONDS:g}s",
+            {"reference": path, "duration": facts.get("duration")},
+        )
     return facts
 
 
 def not_an_output(dst: str, *inputs: Optional[str]) -> None:
     for p in inputs:
-        if p and (os.path.realpath(dst) == os.path.realpath(p) or (os.path.exists(dst) and os.path.exists(p) and os.path.samefile(dst, p))):
-            raise DubbingError("OUTPUT_IS_INPUT", "the output path is an input; inputs are never modified", {"output": dst})
+        if p and (
+            os.path.realpath(dst) == os.path.realpath(p)
+            or (os.path.exists(dst) and os.path.exists(p) and os.path.samefile(dst, p))
+        ):
+            raise DubbingError(
+                "OUTPUT_IS_INPUT",
+                "the output path is an input; inputs are never modified",
+                {"output": dst},
+            )
 
 
 def _check_numbers(req: NarrateRequest) -> None:
-    if isinstance(req.timeout, bool) or not isinstance(req.timeout, (int, float)) or req.timeout <= 0:
-        raise DubbingError("INVALID_ARGUMENT", "--timeout must be > 0", {"timeout": req.timeout})
-    if isinstance(req.seed, bool) or not isinstance(req.seed, int) or not 0 <= req.seed < 2 ** 32:
-        raise DubbingError("INVALID_ARGUMENT", "--seed must be an integer from 0 to 2**32-1", {"seed": req.seed})
+    if (
+        isinstance(req.timeout, bool)
+        or not isinstance(req.timeout, (int, float))
+        or req.timeout <= 0
+    ):
+        raise DubbingError(
+            "INVALID_ARGUMENT", "--timeout must be > 0", {"timeout": req.timeout}
+        )
+    if (
+        isinstance(req.seed, bool)
+        or not isinstance(req.seed, int)
+        or not 0 <= req.seed < 2**32
+    ):
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            "--seed must be an integer from 0 to 2**32-1",
+            {"seed": req.seed},
+        )
     if req.on_overflow not in OVERFLOW_POLICIES:
-        raise DubbingError("INVALID_ARGUMENT", f"--on-overflow must be one of {list(OVERFLOW_POLICIES)}", {"on_overflow": req.on_overflow})
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            f"--on-overflow must be one of {list(OVERFLOW_POLICIES)}",
+            {"on_overflow": req.on_overflow},
+        )
     if not isinstance(req.lang, str) or not req.lang.strip():
-        raise DubbingError("INVALID_ARGUMENT", "--lang is required (the language the text is already in)", {"lang": req.lang})
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            "--lang is required (the language the text is already in)",
+            {"lang": req.lang},
+        )
     if not isinstance(req.accept_unverified_terms, bool):
-        raise DubbingError("INVALID_ARGUMENT", "accept_unverified_terms must be true or false", {})
+        raise DubbingError(
+            "INVALID_ARGUMENT", "accept_unverified_terms must be true or false", {}
+        )
     if req.translation_note is not None and not isinstance(req.translation_note, dict):
-        raise DubbingError("INVALID_ARGUMENT", "--translation-note must be a JSON object", {})
+        raise DubbingError(
+            "INVALID_ARGUMENT", "--translation-note must be a JSON object", {}
+        )
 
 
 def check_paths(input_path: str, output_path: str, overwrite: bool) -> Tuple[str, str]:
@@ -138,53 +203,103 @@ def check_paths(input_path: str, output_path: str, overwrite: bool) -> Tuple[str
     src = os.path.abspath(input_path)
     dst = os.path.abspath(output_path)
     if not os.path.isfile(src):
-        raise DubbingError("INPUT_NOT_FOUND", f"{input_path} is not a file", {"input": input_path})
-    if os.path.realpath(dst) == os.path.realpath(src) or (os.path.exists(dst) and os.path.samefile(dst, src)):
-        raise DubbingError("OUTPUT_IS_INPUT", "the output path is the input; the input is never modified", {"output": output_path})
+        raise DubbingError(
+            "INPUT_NOT_FOUND", f"{input_path} is not a file", {"input": input_path}
+        )
+    if os.path.realpath(dst) == os.path.realpath(src) or (
+        os.path.exists(dst) and os.path.samefile(dst, src)
+    ):
+        raise DubbingError(
+            "OUTPUT_IS_INPUT",
+            "the output path is the input; the input is never modified",
+            {"output": output_path},
+        )
     if not dst.lower().endswith(".wav"):
-        raise DubbingError("INVALID_ARGUMENT", "the output must be a .wav file (the timeline is PCM WAV)", {"output": output_path})
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            "the output must be a .wav file (the timeline is PCM WAV)",
+            {"output": output_path},
+        )
     if os.path.isdir(dst):
-        raise DubbingError("INVALID_ARGUMENT", f"{output_path} is a directory", {"output": output_path})
+        raise DubbingError(
+            "INVALID_ARGUMENT", f"{output_path} is a directory", {"output": output_path}
+        )
     if os.path.lexists(dst) and not overwrite:
-        raise DubbingError("OUTPUT_EXISTS", f"{output_path} exists; pass --overwrite to replace it", {"output": output_path})
+        raise DubbingError(
+            "OUTPUT_EXISTS",
+            f"{output_path} exists; pass --overwrite to replace it",
+            {"output": output_path},
+        )
     if not os.path.isdir(os.path.dirname(dst)):
-        raise DubbingError("INVALID_ARGUMENT", f"the output directory {os.path.dirname(dst)} does not exist", {"output": output_path})
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            f"the output directory {os.path.dirname(dst)} does not exist",
+            {"output": output_path},
+        )
     return src, dst
 
 
-def select_engine(op: str, engine_id: Optional[str], offline: bool = False) -> Tuple[Engine, Dict[str, Any]]:
+def select_engine(
+    op: str, engine_id: Optional[str], offline: bool = False
+) -> Tuple[Engine, Dict[str, Any]]:
     """The engine for `op` and its report; refuses an engine that is not OK before any media work."""
     eid = engine_id or DEFAULT_ENGINE.get(op)
     if eid is None:
-        raise DubbingError("ENGINE_UNAVAILABLE", f"no engine is registered for {op}", {"op": op})
+        raise DubbingError(
+            "ENGINE_UNAVAILABLE", f"no engine is registered for {op}", {"op": op}
+        )
     engine = get_engine(eid)
     if op not in engine.spec.ops:
-        raise DubbingError("INVALID_ARGUMENT", f"engine {eid!r} does not do {op}; engines for {op}: {engines_for(op)}",
-                           {"engine": eid, "op": op, "engines": engines_for(op)})
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            f"engine {eid!r} does not do {op}; engines for {op}: {engines_for(op)}",
+            {"engine": eid, "op": op, "engines": engines_for(op)},
+        )
     report = engine.report(offline=offline)
     if report["status"] != OK:
-        code = "MODEL_NOT_FOUND" if report.get("missing") == "model" else "ENGINE_UNAVAILABLE"
-        details = {"engine": eid, "status": report["status"], "install": engine.spec.install}
-        if report.get("download"):                # the one command that fetches the missing weights (ADR-018)
+        code = (
+            "MODEL_NOT_FOUND"
+            if report.get("missing") == "model"
+            else "ENGINE_UNAVAILABLE"
+        )
+        details = {
+            "engine": eid,
+            "status": report["status"],
+            "install": engine.spec.install,
+        }
+        if report.get(
+            "download"
+        ):  # the one command that fetches the missing weights (ADR-018)
             details["download"] = report["download"]
-        raise DubbingError(code, f"engine {eid!r} is {report['status']}: {report.get('detail')}", details)
+        raise DubbingError(
+            code,
+            f"engine {eid!r} is {report['status']}: {report.get('detail')}",
+            details,
+        )
     return engine, report
 
 
 def engine_warnings(engine: Engine) -> List[str]:
     """What every op says about the engine it ran: an experimental engine (ADR-018) is named with its reason."""
     if engine.spec.experimental:
-        return [f"engine {engine.id!r} is experimental: {engine.spec.experimental_reason}"]
+        return [
+            f"engine {engine.id!r} is experimental: {engine.spec.experimental_reason}"
+        ]
     return []
 
 
-def _usable_skill(skill: Optional[FfmpegSkill], directory: Optional[str], timeout: float) -> Tuple[FfmpegSkill, SkillInfo]:
+def _usable_skill(
+    skill: Optional[FfmpegSkill], directory: Optional[str], timeout: float
+) -> Tuple[FfmpegSkill, SkillInfo]:
     if skill is None:
         skill = FfmpegSkill.locate(directory, timeout=timeout)
     info = skill.info()
     if not info.supported:
-        raise DubbingError("FFMPEG_SKILL_UNAVAILABLE", "ffmpeg-skill is not usable: " + "; ".join(info.problems),
-                           {"directory": str(info.directory), "problems": info.problems})
+        raise DubbingError(
+            "FFMPEG_SKILL_UNAVAILABLE",
+            "ffmpeg-skill is not usable: " + "; ".join(info.problems),
+            {"directory": str(info.directory), "problems": info.problems},
+        )
     return skill, info
 
 
@@ -192,14 +307,24 @@ def require_cue_placement(info: SkillInfo) -> None:
     """Timed cues are placed with silence from ffmpeg-skill/pad; refused before any work when this checkout cannot."""
     problem = info.optional_problem("pad")
     if problem:
-        raise DubbingError("FFMPEG_SKILL_UNAVAILABLE", "timed cues need silence before and after each clip, and this ffmpeg-skill "
-                           f"cannot make it on audio-only input: {problem}. Narrate plain text (.txt, lines back to back), or "
-                           "use an ffmpeg-skill whose pad declares audio_only (ADR-005)",
-                           {"tool": "ffmpeg-skill/pad", "needs": "pad --start/--end on audio-only input (audio_only: true)",
-                            "problem": problem, "ffmpeg_skill_version": info.version, "adr": "docs/decisions.md ADR-005"})
+        raise DubbingError(
+            "FFMPEG_SKILL_UNAVAILABLE",
+            "timed cues need silence before and after each clip, and this ffmpeg-skill "
+            f"cannot make it on audio-only input: {problem}. Narrate plain text (.txt, lines back to back), or "
+            "use an ffmpeg-skill whose pad declares audio_only (ADR-005)",
+            {
+                "tool": "ffmpeg-skill/pad",
+                "needs": "pad --start/--end on audio-only input (audio_only: true)",
+                "problem": problem,
+                "ffmpeg_skill_version": info.version,
+                "adr": "docs/decisions.md ADR-005",
+            },
+        )
 
 
-def plan_timeline(script: Script, durations: List[float], on_overflow: str = "fail") -> Dict[str, Any]:
+def plan_timeline(
+    script: Script, durations: List[float], on_overflow: str = "fail"
+) -> Dict[str, Any]:
     """Where each clip goes. Pure: no media. Plain text: back to back from 0. Cues: each clip at its cue's start; a clip
     still playing when the next cue starts is an overflow (TIMING_OVERFLOW, or with `shift` the next clip waits for
     it and the delay is carried on as drift). A clip longer than its own cue that still ends before the next cue is
@@ -213,30 +338,58 @@ def plan_timeline(script: Script, durations: List[float], on_overflow: str = "fa
     for line, dur in zip(script.lines, durations):
         if not script.timed:
             start = cursor
-            seg = {"index": line.index, "start": round(start, 3), "end": round(start + dur, 3), "duration": round(dur, 3), "lead": 0.0}
+            seg = {
+                "index": line.index,
+                "start": round(start, 3),
+                "end": round(start + dur, 3),
+                "duration": round(dur, 3),
+                "lead": 0.0,
+            }
         else:
             assert line.start is not None and line.end is not None
             start = line.start
             if cursor > start + EPSILON:
-                overflows.append({"index": line.index, "cue_start": line.start, "previous_clip_ends": round(cursor, 3),
-                                  "overlap": round(cursor - start, 3)})
+                overflows.append(
+                    {
+                        "index": line.index,
+                        "cue_start": line.start,
+                        "previous_clip_ends": round(cursor, 3),
+                        "overlap": round(cursor - start, 3),
+                    }
+                )
                 start = cursor
-            seg = {"index": line.index, "start": round(start, 3), "end": round(start + dur, 3), "duration": round(dur, 3),
-                   "lead": round(max(0.0, start - cursor), 3), "cue_start": line.start, "cue_end": line.end,
-                   "drift": round(start - line.start, 3), "overrun": round(max(0.0, dur - (line.end - line.start)), 3)}
+            seg = {
+                "index": line.index,
+                "start": round(start, 3),
+                "end": round(start + dur, 3),
+                "duration": round(dur, 3),
+                "lead": round(max(0.0, start - cursor), 3),
+                "cue_start": line.start,
+                "cue_end": line.end,
+                "drift": round(start - line.start, 3),
+                "overrun": round(max(0.0, dur - (line.end - line.start)), 3),
+            }
         segments.append(seg)
         cursor = start + dur
     if overflows and on_overflow == "fail":
-        raise DubbingError("TIMING_OVERFLOW", f"{len(overflows)} line(s) start while the previous line is still being spoken; "
-                           "shorten them, give them more time, or pass --on-overflow shift (later lines move back)",
-                           {"overflows": overflows, "policy": on_overflow})
+        raise DubbingError(
+            "TIMING_OVERFLOW",
+            f"{len(overflows)} line(s) start while the previous line is still being spoken; "
+            "shorten them, give them more time, or pass --on-overflow shift (later lines move back)",
+            {"overflows": overflows, "policy": on_overflow},
+        )
     last_end = script.lines[-1].end if script.timed else None
     total = max(cursor, float(last_end)) if last_end is not None else cursor
     if segments:
         segments[-1]["tail"] = round(max(0.0, total - cursor), 3)
-    return {"mode": script.mode, "total": round(total, 3), "segments": segments, "overflows": overflows,
-            "overflow_policy": on_overflow if script.timed else None,
-            "overruns": [s["index"] for s in segments if s.get("overrun")]}
+    return {
+        "mode": script.mode,
+        "total": round(total, 3),
+        "segments": segments,
+        "overflows": overflows,
+        "overflow_policy": on_overflow if script.timed else None,
+        "overruns": [s["index"] for s in segments if s.get("overrun")],
+    }
 
 
 def _float_or_none(value: Any) -> Optional[float]:
@@ -250,27 +403,44 @@ def _tolerance(expected: float) -> float:
     return max(DURATION_TOLERANCE, 0.01 * expected)
 
 
-def validate_clip(skill: FfmpegSkill, path: str, index: int, engine_id: str) -> Dict[str, Any]:
+def validate_clip(
+    skill: FfmpegSkill, path: str, index: int, engine_id: str
+) -> Dict[str, Any]:
     try:
         facts = skill.probe(path)
     except DubbingError as e:
-        raise DubbingError("INVALID_RESULT", f"engine {engine_id!r} wrote a clip for line {index} that ffmpeg-skill cannot read: "
-                           f"{e.message}", {"engine": engine_id, "line": index})
+        raise DubbingError(
+            "INVALID_RESULT",
+            f"engine {engine_id!r} wrote a clip for line {index} that ffmpeg-skill cannot read: "
+            f"{e.message}",
+            {"engine": engine_id, "line": index},
+        )
     a = facts.get("audio") if isinstance(facts.get("audio"), dict) else {}
     duration = float(facts.get("duration") or 0.0)
     if not a or not a.get("sample_rate"):
-        raise DubbingError("INVALID_RESULT", f"engine {engine_id!r}: the clip for line {index} has no audio", {"engine": engine_id, "line": index})
+        raise DubbingError(
+            "INVALID_RESULT",
+            f"engine {engine_id!r}: the clip for line {index} has no audio",
+            {"engine": engine_id, "line": index},
+        )
     if duration < MIN_CLIP_SECONDS:
-        raise DubbingError("INVALID_RESULT", f"engine {engine_id!r}: the clip for line {index} lasts {duration:.3f}s",
-                           {"engine": engine_id, "line": index, "duration": duration})
+        raise DubbingError(
+            "INVALID_RESULT",
+            f"engine {engine_id!r}: the clip for line {index} lasts {duration:.3f}s",
+            {"engine": engine_id, "line": index, "duration": duration},
+        )
     return facts
 
 
-def validate_timeline(skill: FfmpegSkill, path: str, rate: int, expected: float) -> Dict[str, Any]:
+def validate_timeline(
+    skill: FfmpegSkill, path: str, rate: int, expected: float
+) -> Dict[str, Any]:
     try:
         facts = skill.probe(path)
     except DubbingError as e:
-        raise DubbingError("INVALID_RESULT", f"the timeline cannot be read back: {e.message}", {})
+        raise DubbingError(
+            "INVALID_RESULT", f"the timeline cannot be read back: {e.message}", {}
+        )
     a = facts.get("audio") if isinstance(facts.get("audio"), dict) else {}
     problems = []
     if int(a.get("sample_rate") or 0) != rate:
@@ -279,9 +449,15 @@ def validate_timeline(skill: FfmpegSkill, path: str, rate: int, expected: float)
         problems.append(f"{a.get('channels')} channels, expected {TIMELINE_CHANNELS}")
     duration = float(facts.get("duration") or 0.0)
     if abs(duration - expected) > _tolerance(expected):
-        problems.append(f"duration {duration:.3f}s, expected {expected:.3f}s (+/- {_tolerance(expected):.3f}s)")
+        problems.append(
+            f"duration {duration:.3f}s, expected {expected:.3f}s (+/- {_tolerance(expected):.3f}s)"
+        )
     if problems:
-        raise DubbingError("INVALID_RESULT", "the timeline failed validation: " + "; ".join(problems), {"problems": problems})
+        raise DubbingError(
+            "INVALID_RESULT",
+            "the timeline failed validation: " + "; ".join(problems),
+            {"problems": problems},
+        )
     return facts
 
 
@@ -290,17 +466,31 @@ def _run_dir(directory: str, output_path: str) -> str:
     try:
         return tempfile.mkdtemp(prefix=".dubbing-", dir=directory)
     except OSError as e:
-        raise DubbingError("INVALID_ARGUMENT", f"cannot write to the output directory: {e}", {"output": output_path})
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            f"cannot write to the output directory: {e}",
+            {"output": output_path},
+        )
 
 
 def _place(path: str, dst: str, overwrite: bool) -> None:
-    if os.path.lexists(dst) and not overwrite:      # appeared while the engine ran
-        raise DubbingError("OUTPUT_EXISTS", f"{dst} appeared while the engine ran; pass --overwrite to replace it", {"output": dst})
+    if os.path.lexists(dst) and not overwrite:  # appeared while the engine ran
+        raise DubbingError(
+            "OUTPUT_EXISTS",
+            f"{dst} appeared while the engine ran; pass --overwrite to replace it",
+            {"output": dst},
+        )
     os.replace(path, dst)
 
 
-def _lay_out(skill: FfmpegSkill, clips: List[str], plan: Dict[str, Any], rate: int, run_dir: str,
-             timeout: float) -> Tuple[str, List[Dict[str, Any]]]:
+def _lay_out(
+    skill: FfmpegSkill,
+    clips: List[str],
+    plan: Dict[str, Any],
+    rate: int,
+    run_dir: str,
+    timeout: float,
+) -> Tuple[str, List[Dict[str, Any]]]:
     """The timeline WAV in `run_dir` from the clips and the plan, through ffmpeg-skill/pad and ffmpeg-skill/join only.
     Returns (its path, the ffmpeg-skill steps taken)."""
     steps: List[Dict[str, Any]] = []
@@ -316,24 +506,56 @@ def _lay_out(skill: FfmpegSkill, clips: List[str], plan: Dict[str, Any], rate: i
         else:
             segments.append(clip)
     if padded:
-        steps.append({"tool": "ffmpeg-skill/pad", "flags": ["--start", "--end"], "segments": padded})
+        steps.append(
+            {
+                "tool": "ffmpeg-skill/pad",
+                "flags": ["--start", "--end"],
+                "segments": padded,
+            }
+        )
     if len(segments) == 1:
         return segments[0], steps
     timeline = os.path.join(run_dir, "timeline.wav")
-    skill.join(segments, timeline, sample_rate=rate, channels=TIMELINE_CHANNELS, timeout=timeout)
-    steps.append({"tool": "ffmpeg-skill/join", "flags": ["--transition", "none", "--sample-rate", str(rate), "--channels",
-                                                         str(TIMELINE_CHANNELS)], "segments": len(segments)})
+    skill.join(
+        segments,
+        timeline,
+        sample_rate=rate,
+        channels=TIMELINE_CHANNELS,
+        timeout=timeout,
+    )
+    steps.append(
+        {
+            "tool": "ffmpeg-skill/join",
+            "flags": [
+                "--transition",
+                "none",
+                "--sample-rate",
+                str(rate),
+                "--channels",
+                str(TIMELINE_CHANNELS),
+            ],
+            "segments": len(segments),
+        }
+    )
     return timeline, steps
 
 
 def clip_credits(engine: Engine, res: Any) -> List[Dict[str, Any]]:
     """The credits one clip must carry: the one the engine resolved for its voice (VOICEVOX: "VOICEVOX:<character>" with
-    the speaker and the terms, ADR-006), else the engine's declared credit, else none."""
+    the speaker and the terms, ADR-006), else the engine's declared credit, else none.
+    """
     resolved = res.extra.get("credit")
     if isinstance(resolved, dict) and resolved.get("credit"):
         return [dict(resolved)]
     if engine.spec.credit_required and engine.spec.credit:
-        return [{"credit": engine.spec.credit, "character": None, "speaker": res.extra.get("voice"), "terms_verified": None}]
+        return [
+            {
+                "credit": engine.spec.credit,
+                "character": None,
+                "speaker": res.extra.get("voice"),
+                "terms_verified": None,
+            }
+        ]
     return []
 
 
@@ -357,25 +579,50 @@ def unique_consents(per_clip: Any) -> Optional[List[Dict[str, Any]]]:
 
 def narrate(req: NarrateRequest, skill: Optional[FfmpegSkill] = None) -> Dict[str, Any]:
     """NARRATE: the script at `req.script_path` spoken in `req.lang` and laid on one mono WAV at `req.output_path`.
-    `skill` is the ffmpeg-skill handle (located from `req.ffmpeg_skill_dir` when None)."""
+    `skill` is the ffmpeg-skill handle (located from `req.ffmpeg_skill_dir` when None).
+    """
     _check_numbers(req)
     req, profile = with_profile(req)
     reference, voice_params = voice_request_fields(req.reference_path, req.consent_path)
     src, dst = check_paths(req.script_path, req.output_path, req.overwrite)
-    not_an_output(dst, req.reference_path, req.consent_path, req.pronunciation_path, req.profile_path)
+    not_an_output(
+        dst,
+        req.reference_path,
+        req.consent_path,
+        req.pronunciation_path,
+        req.profile_path,
+    )
     script = parse_script(src, req.lang)
     engine, report = select_engine("narrate", req.engine, req.offline)
-    params: Dict[str, Any] = dict(voice_params, seed=req.seed, **(profile.engine_params() if profile else {}))
+    params: Dict[str, Any] = dict(
+        voice_params, seed=req.seed, **(profile.engine_params() if profile else {})
+    )
     if req.accept_unverified_terms:
         params["accept_unverified_terms"] = True
-    pron = prepare_pronunciation(req.pronunciation_path, engine, req.lang, [line.text for line in script.lines])
-    probe_reqs = [EngineRequest(op="narrate", text=pron.texts[k], lang=req.lang, output_path="", voice=req.voice,
-                                reference_audio=reference, params=dict(params, **pron.params[k])) for k, line in enumerate(script.lines)]
+    pron = prepare_pronunciation(
+        req.pronunciation_path, engine, req.lang, [line.text for line in script.lines]
+    )
+    probe_reqs = [
+        EngineRequest(
+            op="narrate",
+            text=pron.texts[k],
+            lang=req.lang,
+            output_path="",
+            voice=req.voice,
+            reference_audio=reference,
+            params=dict(params, **pron.params[k]),
+        )
+        for k, line in enumerate(script.lines)
+    ]
     for r in probe_reqs:
-        engine.check_request(r)                   # the consent record and the reference clip's hash, before any work
+        engine.check_request(
+            r
+        )  # the consent record and the reference clip's hash, before any work
     timeout = float(req.timeout)
     skill, info = _usable_skill(skill, req.ffmpeg_skill_dir, timeout)
-    if reference and engine.spec.reference_kind == "audio":          # a model file (Style-Bert-VITS2) is not probed
+    if (
+        reference and engine.spec.reference_kind == "audio"
+    ):  # a model file (Style-Bert-VITS2) is not probed
         check_reference(skill, reference)
     if script.timed:
         require_cue_placement(info)
@@ -383,28 +630,59 @@ def narrate(req: NarrateRequest, skill: Optional[FfmpegSkill] = None) -> Dict[st
     try:
         clip_dir = os.path.join(run_dir, "clips")
         os.mkdir(clip_dir)
-        reqs = [EngineRequest(op="narrate", text=r.text, lang=r.lang, output_path=os.path.join(clip_dir, f"{k:04d}.wav"),
-                              voice=r.voice, reference_audio=r.reference_audio, params=dict(r.params)) for k, r in enumerate(probe_reqs)]
+        reqs = [
+            EngineRequest(
+                op="narrate",
+                text=r.text,
+                lang=r.lang,
+                output_path=os.path.join(clip_dir, f"{k:04d}.wav"),
+                voice=r.voice,
+                reference_audio=r.reference_audio,
+                params=dict(r.params),
+            )
+            for k, r in enumerate(probe_reqs)
+        ]
         results = run_engine_batch(engine.id, reqs, timeout, run_dir)
         clip_facts = []
         for k, (r, res) in enumerate(zip(reqs, results)):
             if os.path.abspath(res.output_path) != os.path.abspath(r.output_path):
-                raise DubbingError("INVALID_RESULT", f"engine {engine.id!r} wrote line {k} somewhere else", {"engine": engine.id, "line": k})
+                raise DubbingError(
+                    "INVALID_RESULT",
+                    f"engine {engine.id!r} wrote line {k} somewhere else",
+                    {"engine": engine.id, "line": k},
+                )
             clip_facts.append(validate_clip(skill, r.output_path, k, engine.id))
         durations = [float(f.get("duration") or 0.0) for f in clip_facts]
         plan = plan_timeline(script, durations, req.on_overflow)
         rate = int(clip_facts[0]["audio"]["sample_rate"])
-        steps: List[Dict[str, Any]] = [{"tool": "ffmpeg-skill/probe", "for": "clips", "count": len(clip_facts)}]
-        timeline, lay_steps = _lay_out(skill, [r.output_path for r in reqs], plan, rate, run_dir, timeout)
+        steps: List[Dict[str, Any]] = [
+            {"tool": "ffmpeg-skill/probe", "for": "clips", "count": len(clip_facts)}
+        ]
+        timeline, lay_steps = _lay_out(
+            skill, [r.output_path for r in reqs], plan, rate, run_dir, timeout
+        )
         steps += lay_steps
         loudness = None
-        if profile is not None and profile.loudness_target is not None:      # the profile's level (ADR-016)
+        if (
+            profile is not None and profile.loudness_target is not None
+        ):  # the profile's level (ADR-016)
             levelled = os.path.join(run_dir, "timeline-loudness.wav")
-            doc = skill.loudness(timeline, levelled, profile.loudness_target, timeout=timeout)
+            doc = skill.loudness(
+                timeline, levelled, profile.loudness_target, timeout=timeout
+            )
             result = doc.get("result") if isinstance(doc.get("result"), dict) else {}
-            loudness = {"target_lufs": profile.loudness_target, "measured_lufs": _float_or_none(result.get("input_i")),
-                        "true_peak": _float_or_none(result.get("input_tp"))}
-            steps.append({"tool": "ffmpeg-skill/loudness", "flags": ["--lufs", f"{profile.loudness_target:.1f}"], "for": "timeline"})
+            loudness = {
+                "target_lufs": profile.loudness_target,
+                "measured_lufs": _float_or_none(result.get("input_i")),
+                "true_peak": _float_or_none(result.get("input_tp")),
+            }
+            steps.append(
+                {
+                    "tool": "ffmpeg-skill/loudness",
+                    "flags": ["--lufs", f"{profile.loudness_target:.1f}"],
+                    "for": "timeline",
+                }
+            )
             timeline = levelled
         out_facts = validate_timeline(skill, timeline, rate, float(plan["total"]))
         steps.append({"tool": "ffmpeg-skill/probe", "for": "timeline"})
@@ -415,38 +693,91 @@ def narrate(req: NarrateRequest, skill: Optional[FfmpegSkill] = None) -> Dict[st
         clips = []
         for line, r, res, facts in zip(script.lines, reqs, results, clip_facts):
             a = facts["audio"]
-            parameters = {"lang": req.lang, "seed": res.extra.get("seed", req.seed), "engine_parameters": res.extra.get("parameters"),
-                          "sample_rate": a.get("sample_rate"), "duration": facts.get("duration"), "line": line.index}
+            parameters = {
+                "lang": req.lang,
+                "seed": res.extra.get("seed", req.seed),
+                "engine_parameters": res.extra.get("parameters"),
+                "sample_rate": a.get("sample_rate"),
+                "duration": facts.get("duration"),
+                "line": line.index,
+            }
             if pron.dictionary is not None:
                 parameters["pronunciation"] = pron.provenance(line.index)
-            clips.append({"index": line.index, "duration": facts.get("duration"), "sample_rate": a.get("sample_rate"),
-                          "channels": a.get("channels"), "start": plan["segments"][line.index]["start"],
-                          "provenance": build_provenance(op="narrate", engine=engine_doc, text=line.text, output_path=r.output_path,
-                                                         parameters=parameters, voice=res.extra.get("voice") or req.voice,
-                                                         translation=req.translation_note, ffmpeg_skill=info.to_dict(),
-                                                         watermark=res.extra.get("watermark"), credits=clip_credits(engine, res),
-                                                         consent=res.extra.get("consent"), voice_profile=voice_profile)})
+            clips.append(
+                {
+                    "index": line.index,
+                    "duration": facts.get("duration"),
+                    "sample_rate": a.get("sample_rate"),
+                    "channels": a.get("channels"),
+                    "start": plan["segments"][line.index]["start"],
+                    "provenance": build_provenance(
+                        op="narrate",
+                        engine=engine_doc,
+                        text=line.text,
+                        output_path=r.output_path,
+                        parameters=parameters,
+                        voice=res.extra.get("voice") or req.voice,
+                        translation=req.translation_note,
+                        ffmpeg_skill=info.to_dict(),
+                        watermark=res.extra.get("watermark"),
+                        credits=clip_credits(engine, res),
+                        consent=res.extra.get("consent"),
+                        voice_profile=voice_profile,
+                    ),
+                }
+            )
         marks = [c["provenance"]["watermark"] for c in clips]
         watermark = None
         if engine.spec.watermark:
             detected = [m.get("detected") for m in marks if isinstance(m, dict)]
-            watermark = {"name": engine.spec.watermark, "clips": len(clips), "detected": sum(1 for d in detected if d is True),
-                         "not_checked": sum(1 for d in detected if d is None) + (len(clips) - len(detected)),
-                         "all_detected": bool(detected) and len(detected) == len(clips) and all(d is True for d in detected)}
-        parameters = {"lang": req.lang, "seed": req.seed, "mode": script.mode, "lines": len(script.lines),
-                      "overflow_policy": plan["overflow_policy"], "sample_rate": rate, "channels": TIMELINE_CHANNELS,
-                      "engine_parameters": first.extra.get("parameters"), "clips_sha256": [c["provenance"]["output"]["sha256"] for c in clips]}
+            watermark = {
+                "name": engine.spec.watermark,
+                "clips": len(clips),
+                "detected": sum(1 for d in detected if d is True),
+                "not_checked": sum(1 for d in detected if d is None)
+                + (len(clips) - len(detected)),
+                "all_detected": bool(detected)
+                and len(detected) == len(clips)
+                and all(d is True for d in detected),
+            }
+        parameters = {
+            "lang": req.lang,
+            "seed": req.seed,
+            "mode": script.mode,
+            "lines": len(script.lines),
+            "overflow_policy": plan["overflow_policy"],
+            "sample_rate": rate,
+            "channels": TIMELINE_CHANNELS,
+            "engine_parameters": first.extra.get("parameters"),
+            "clips_sha256": [c["provenance"]["output"]["sha256"] for c in clips],
+        }
         if pron.dictionary is not None:
             parameters["pronunciation"] = pron.provenance()
         full_text = "\n".join(line.text for line in script.lines)
         credits = unique_credits(c["provenance"]["credits"] for c in clips)
-        provenance = build_provenance(op="narrate", engine=engine_doc, text=full_text, output_path=timeline, parameters=parameters,
-                                      voice=first.extra.get("voice") or req.voice, translation=req.translation_note,
-                                      ffmpeg_skill=info.to_dict(), watermark=watermark, credits=credits,
-                                      consent=unique_consents(c["provenance"]["consent"] for c in clips),
-                                      voice_profile=profile_receipt(profile, loudness=loudness))
-        disclosure = build_disclosure("narrate", engine_doc, clips, watermark, credits, provenance["consent"],
-                                      profile_receipt(profile, loudness=loudness))
+        provenance = build_provenance(
+            op="narrate",
+            engine=engine_doc,
+            text=full_text,
+            output_path=timeline,
+            parameters=parameters,
+            voice=first.extra.get("voice") or req.voice,
+            translation=req.translation_note,
+            ffmpeg_skill=info.to_dict(),
+            watermark=watermark,
+            credits=credits,
+            consent=unique_consents(c["provenance"]["consent"] for c in clips),
+            voice_profile=profile_receipt(profile, loudness=loudness),
+        )
+        disclosure = build_disclosure(
+            "narrate",
+            engine_doc,
+            clips,
+            watermark,
+            credits,
+            provenance["consent"],
+            profile_receipt(profile, loudness=loudness),
+        )
         _place(timeline, dst, req.overwrite)
     finally:
         shutil.rmtree(run_dir, ignore_errors=True)
@@ -454,35 +785,72 @@ def narrate(req: NarrateRequest, skill: Optional[FfmpegSkill] = None) -> Dict[st
     pronunciation = pron.report(results)
     warnings = engine_warnings(engine) + pron.warnings(pronunciation)
     if plan["overflows"]:
-        warnings.append(f"{len(plan['overflows'])} line(s) were pushed back (--on-overflow shift); the last drift is "
-                        f"{plan['segments'][-1].get('drift', 0.0):.3f}s")
+        warnings.append(
+            f"{len(plan['overflows'])} line(s) were pushed back (--on-overflow shift); the last drift is "
+            f"{plan['segments'][-1].get('drift', 0.0):.3f}s"
+        )
     if plan["overruns"]:
-        warnings.append(f"{len(plan['overruns'])} line(s) run longer than their cue: {plan['overruns']}; `dubbing fit` reports the "
-                        "tempo each needs (ADR-007), which NARRATE cannot apply until ffmpeg-skill changes tempo on audio-only input")
-    unverified = sorted({c["credit"] for c in credits if c.get("terms_verified") is False})
+        warnings.append(
+            f"{len(plan['overruns'])} line(s) run longer than their cue: {plan['overruns']}; `dubbing fit` reports the "
+            "tempo each needs (ADR-007), which NARRATE cannot apply until ffmpeg-skill changes tempo on audio-only input"
+        )
+    unverified = sorted(
+        {c["credit"] for c in credits if c.get("terms_verified") is False}
+    )
     if unverified:
-        warnings.append(f"voice terms not verified, used on the caller's acknowledgement: {unverified}; the credit is derived "
-                        "from the character name, so check each character's own terms for the exact credit and the allowed "
-                        "uses (ADR-006)")
+        warnings.append(
+            f"voice terms not verified, used on the caller's acknowledgement: {unverified}; the credit is derived "
+            "from the character name, so check each character's own terms for the exact credit and the allowed "
+            "uses (ADR-006)"
+        )
     return {
         "schema": NARRATE_SCHEMA,
         "ok": True,
         "op": "narrate",
         "capability": "speech.narrate",
         "skill": {"id": SKILL_ID, "version": __version__},
-        "output": {"path": dst, "format": "wav", "codec": out_audio.get("codec"), "sample_rate": out_audio.get("sample_rate"),
-                   "channels": out_audio.get("channels"), "duration": out_facts.get("duration"),
-                   "expected_duration": plan["total"], "tolerance": round(_tolerance(float(plan["total"])), 3)},
-        "input": {"path": src, "mode": script.mode, "format": script.source_format, "lines": len(script.lines), "lang": req.lang,
-                  "text_sha256": sha256_text(full_text)},
-        "engine": {k: engine_doc.get(k) for k in ("id", "version", "model", "code_license", "weights_license", "credit",
-                                                   "credit_required", "watermark")},
+        "output": {
+            "path": dst,
+            "format": "wav",
+            "codec": out_audio.get("codec"),
+            "sample_rate": out_audio.get("sample_rate"),
+            "channels": out_audio.get("channels"),
+            "duration": out_facts.get("duration"),
+            "expected_duration": plan["total"],
+            "tolerance": round(_tolerance(float(plan["total"])), 3),
+        },
+        "input": {
+            "path": src,
+            "mode": script.mode,
+            "format": script.source_format,
+            "lines": len(script.lines),
+            "lang": req.lang,
+            "text_sha256": sha256_text(full_text),
+        },
+        "engine": {
+            k: engine_doc.get(k)
+            for k in (
+                "id",
+                "version",
+                "model",
+                "code_license",
+                "weights_license",
+                "credit",
+                "credit_required",
+                "watermark",
+            )
+        },
         "timeline": plan,
         "clips": clips,
         "pronunciation": pronunciation,
         "voice_profile": profile_receipt(profile, loudness=loudness),
-        "obligations": {"credit": [c["credit"] for c in credits], "credit_required": engine.spec.credit_required,
-                        "credits": credits, "watermark": watermark, "disclosure": disclosure["line"]},
+        "obligations": {
+            "credit": [c["credit"] for c in credits],
+            "credit_required": engine.spec.credit_required,
+            "credits": credits,
+            "watermark": watermark,
+            "disclosure": disclosure["line"],
+        },
         "disclosure": disclosure,
         "steps": steps,
         "provenance": provenance,

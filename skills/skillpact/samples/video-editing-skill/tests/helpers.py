@@ -30,7 +30,15 @@ def write_fake_media(path: str, size: int = 1024) -> str:
 
 
 def request(sources, operations, outputs, options=None, project_id="p"):
-    doc = {"schema": "video-editing/request@1", "project": {"id": project_id, "sources": sources, "operations": operations, "outputs": outputs}}
+    doc = {
+        "schema": "video-editing/request@1",
+        "project": {
+            "id": project_id,
+            "sources": sources,
+            "operations": operations,
+            "outputs": outputs,
+        },
+    }
     if options is not None:
         doc["options"] = options
     return doc
@@ -41,8 +49,12 @@ def cli(args, stdin=None, env=None):
     e = dict(os.environ)
     if env:
         e.update(env)
-    proc = subprocess.run([sys.executable, "-m", "video_editing_skill", *args], input=stdin, capture_output=True,
-                          env=dict(e, PYTHONPATH=SRC + os.pathsep + e.get("PYTHONPATH", "")))
+    proc = subprocess.run(
+        [sys.executable, "-m", "video_editing_skill", *args],
+        input=stdin,
+        capture_output=True,
+        env=dict(e, PYTHONPATH=SRC + os.pathsep + e.get("PYTHONPATH", "")),
+    )
     out = proc.stdout.decode("utf-8", errors="replace")
     try:
         doc = json.loads(out) if out.strip() else None

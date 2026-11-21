@@ -18,9 +18,7 @@ if TYPE_CHECKING:
 
     from .finding import Finding, Panel, Record
 
-SCHEMA_ID = (
-    "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json"
-)
+SCHEMA_ID = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json"
 # The driver name GitHub keys alert identity on; renaming it orphans every open alert.
 TOOL_NAME = "Claude Security Plugin for Claude Code"
 TOOL_URI = "https://claude.com/product/claude-security"
@@ -108,7 +106,9 @@ def automation_id(scan: Scan) -> str:
     """The run's automation id: the plugin prefix, the mode, the scan's extent if any, its id."""
     category = f"{ID_PREFIX}/{scan.mode}"
     if scan.scope:
-        extent = ",".join(scan.prefix + entry.strip("/") for entry in sorted(scan.scope))
+        extent = ",".join(
+            scan.prefix + entry.strip("/") for entry in sorted(scan.scope)
+        )
     else:
         extent = scan.prefix.rstrip("/")
     if extent:
@@ -173,7 +173,9 @@ def placed(
     `sources` is the text of each scanned file by the finding's `file`; a
     finding whose file is absent from it keeps its line and hashes the number.
     """
-    texts = {repository_file(scan.prefix, file=file): text for file, text in sources.items()}
+    texts = {
+        repository_file(scan.prefix, file=file): text for file, text in sources.items()
+    }
     secrets = {
         (path, line)
         for f in findings
@@ -212,7 +214,11 @@ def placed_one(
         row = source.placing_row(lines, finding["line"], finding["snippet"])
         if row is not None:
             moved = {**finding, "line": row + 1}
-            code = None if near(Span(path, row + 1, row + 1), secrets) else code_at(lines, row)
+            code = (
+                None
+                if near(Span(path, row + 1, row + 1), secrets)
+                else code_at(lines, row)
+            )
     anchor = Span(path, moved["line"], moved["line"])
     link = link_site(scan, moved["via_change"])
     if near(anchor, secrets) or (link is not None and near(link, secrets)):
@@ -237,7 +243,9 @@ def link_site(scan: Scan, via_change: str | None) -> Span | None:
     return Span(repository_file(scan.prefix, file=matched[1]), first, last)
 
 
-def secret_lines(home: str, credential: Finding, texts: Mapping[str, str]) -> set[tuple[str, int]]:
+def secret_lines(
+    home: str, credential: Finding, texts: Mapping[str, str]
+) -> set[tuple[str, int]]:
     """Every (repository path, line) of `texts` on which the `credential` finding's quote occurs.
 
     `home` is the credential's own repository path and `texts` the scanned
@@ -287,7 +295,9 @@ def site(finding: Record, scan: Scan) -> Site | None:
     """The finding's site: its rule id, repository path and placed line; None for a line below 1."""
     if finding["line"] < 1:
         return None
-    return Site(rule_id(category_of(finding)), repository_path(scan, finding), finding["line"])
+    return Site(
+        rule_id(category_of(finding)), repository_path(scan, finding), finding["line"]
+    )
 
 
 def result(
@@ -351,7 +361,11 @@ def uri_bytes(text: str) -> bytes:
 
 def notification(descriptor_id: str, level: str, text: str) -> dict[str, object]:
     """One invocation notification: its namespaced descriptor id, its level, and its message."""
-    return {"descriptor": {"id": descriptor_id}, "level": level, "message": {"text": text}}
+    return {
+        "descriptor": {"id": descriptor_id},
+        "level": level,
+        "message": {"text": text},
+    }
 
 
 def message(finding: Finding) -> str:
@@ -363,7 +377,9 @@ def message(finding: Finding) -> str:
         ("Preconditions", "; ".join(finding["preconditions"])),
         ("Recommendation", finding["recommendation"]),
     )
-    parts += [f"{label}: {text}" for label, value in labeled if (text := sentence(value))]
+    parts += [
+        f"{label}: {text}" for label, value in labeled if (text := sentence(value))
+    ]
     if finding["line"] < 1:
         parts.append("The exact line was not determined; see the description.")
     if secret.is_credential(finding):
@@ -376,7 +392,9 @@ def message(finding: Finding) -> str:
 
 def rule_name(category: str) -> str:
     """A category's common name in PascalCase, for a rule name: `SQLInjection`."""
-    return "".join(word[:1].upper() + word[1:] for word in re.split(r"[^A-Za-z0-9]+", category))
+    return "".join(
+        word[:1].upper() + word[1:] for word in re.split(r"[^A-Za-z0-9]+", category)
+    )
 
 
 def sentence(text: str) -> str:

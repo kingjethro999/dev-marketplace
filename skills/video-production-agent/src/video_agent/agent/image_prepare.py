@@ -14,7 +14,9 @@ Everything here is vocabulary and arithmetic, no execution:
   `image_prepare` → `imagemagick-skill/resize`, `image_pad`), each on the previous one's output; the overlay composites the last.
 - **IR**: the `video.overlay` record carries `prepare` ({width, height, mode, pad?, gravity?, strip?}); `image` stays the user's file.
 
-A request without `edit.overlay.prepare.*` plans exactly what it planned before (no step, no IR key)."""
+A request without `edit.overlay.prepare.*` plans exactly what it planned before (no step, no IR key).
+"""
+
 from __future__ import annotations
 
 import json
@@ -22,28 +24,45 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-CONTRACT_PATH = Path(__file__).resolve().parents[1] / "tools" / "imagemagick" / "contract_0.10.0.json"
+CONTRACT_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "tools"
+    / "imagemagick"
+    / "contract_0.10.0.json"
+)
 _CONTRACT: Dict[str, Any] = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
-_TOOLS: Dict[str, Dict[str, Any]] = {str(t.get("name")): t for t in _CONTRACT.get("tools") or [] if isinstance(t, dict)}
-PACKAGE = str((_CONTRACT.get("skill") or {}).get("id"))   # imagemagick-skill
+_TOOLS: Dict[str, Dict[str, Any]] = {
+    str(t.get("name")): t for t in _CONTRACT.get("tools") or [] if isinstance(t, dict)
+}
+PACKAGE = str((_CONTRACT.get("skill") or {}).get("id"))  # imagemagick-skill
 
 
 def contract_parameter(tool: str, name: str) -> Dict[str, Any]:
     """One input_schema property of a pinned imagemagick-skill tool (`resize`, `pad`, `strip`)."""
-    return dict(((_TOOLS[tool].get("input_schema") or {}).get("properties") or {})[name])
+    return dict(
+        ((_TOOLS[tool].get("input_schema") or {}).get("properties") or {})[name]
+    )
 
 
 PREFIX = "edit.overlay.prepare."
 # requirement key suffix → (imagemagick-skill tool, its parameter); the parameter's type / enum / default come from the pinned contract
-KEY_PARAMETERS: Dict[str, Tuple[str, str]] = {"width": ("resize", "width"), "height": ("resize", "height"), "mode": ("resize", "mode"),
-                                              "pad": ("pad", "color"), "gravity": ("pad", "gravity")}
+KEY_PARAMETERS: Dict[str, Tuple[str, str]] = {
+    "width": ("resize", "width"),
+    "height": ("resize", "height"),
+    "mode": ("resize", "mode"),
+    "pad": ("pad", "color"),
+    "gravity": ("pad", "gravity"),
+}
 STRIP_KEY = PREFIX + "strip"
 KEYS: Tuple[str, ...] = tuple(PREFIX + k for k in KEY_PARAMETERS) + (STRIP_KEY,)
 RESIZE_MODES: Tuple[str, ...] = tuple(contract_parameter("resize", "mode")["enum"])
 RESIZE_MODE_DEFAULT: str = contract_parameter("resize", "mode")["default"]
 GRAVITIES: Tuple[str, ...] = tuple(contract_parameter("pad", "gravity")["enum"])
 GRAVITY_DEFAULT: str = contract_parameter("pad", "gravity")["default"]
-SIDE_RANGE = (1, 16384)   # the agent's bound (the contract states none; resize.py itself refuses anything not positive)
+SIDE_RANGE = (
+    1,
+    16384,
+)  # the agent's bound (the contract states none; resize.py itself refuses anything not positive)
 # pad's colour: the subset of the contract's syntax (a name, #RRGGBB, #RRGGBBAA, rgb()/rgba(), none) the agent sends; rgb() / rgba() are not taken
 COLOR_PATTERN = r"^(none|[a-z]{1,32}|#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8})$"
 
@@ -60,9 +79,30 @@ def prepare_chain(prep: Dict[str, Any]) -> List[Tuple[str, str, Dict[str, Any]]]
     if prep.get("strip"):
         out.append((STRIP_SKILL, "strip", {}))
     if prep.get("width") is not None:
-        out.append((RESIZE_SKILL, "resize", {"width": prep["width"], "height": prep.get("height"), "mode": prep.get("mode") or RESIZE_MODE_DEFAULT}))
+        out.append(
+            (
+                RESIZE_SKILL,
+                "resize",
+                {
+                    "width": prep["width"],
+                    "height": prep.get("height"),
+                    "mode": prep.get("mode") or RESIZE_MODE_DEFAULT,
+                },
+            )
+        )
         if prep.get("pad") is not None:
-            out.append((PAD_SKILL, "pad", {"width": prep["width"], "height": prep.get("height"), "color": prep["pad"], "gravity": prep.get("gravity") or GRAVITY_DEFAULT}))
+            out.append(
+                (
+                    PAD_SKILL,
+                    "pad",
+                    {
+                        "width": prep["width"],
+                        "height": prep.get("height"),
+                        "color": prep["pad"],
+                        "gravity": prep.get("gravity") or GRAVITY_DEFAULT,
+                    },
+                )
+            )
     return out
 
 
@@ -76,9 +116,13 @@ def describe(prep: Dict[str, Any]) -> str:
     if prep.get("strip"):
         parts.append("GPS / EXIF stripped")
     if prep.get("width") is not None:
-        parts.append(f"resized to {prep['width']}x{prep['height']} ({prep.get('mode') or RESIZE_MODE_DEFAULT})")
+        parts.append(
+            f"resized to {prep['width']}x{prep['height']} ({prep.get('mode') or RESIZE_MODE_DEFAULT})"
+        )
         if prep.get("pad") is not None:
-            parts.append(f"padded to {prep['width']}x{prep['height']} with {prep['pad']} ({prep.get('gravity') or GRAVITY_DEFAULT})")
+            parts.append(
+                f"padded to {prep['width']}x{prep['height']} with {prep['pad']} ({prep.get('gravity') or GRAVITY_DEFAULT})"
+            )
     return ", ".join(parts)
 
 
@@ -86,24 +130,42 @@ def prepare_problems(prep: Any) -> List[str]:
     """What is wrong with an IR `prepare` record (the validator's re-check of what the parser produced)."""
     if not isinstance(prep, dict):
         return ["prepare must be an object"]
-    errs = [f"prepare.{k} is not in the vocabulary" for k in sorted(prep) if k not in PREPARE_FIELDS]
+    errs = [
+        f"prepare.{k} is not in the vocabulary"
+        for k in sorted(prep)
+        if k not in PREPARE_FIELDS
+    ]
     w, h = prep.get("width"), prep.get("height")
     if (w is None) != (h is None):
         errs.append("prepare needs both width and height")
     for k, v in (("width", w), ("height", h)):
-        if v is not None and (isinstance(v, bool) or not isinstance(v, int) or not SIDE_RANGE[0] <= v <= SIDE_RANGE[1]):
-            errs.append(f"prepare.{k} {v!r} must be an integer within {SIDE_RANGE[0]}..{SIDE_RANGE[1]}")
+        if v is not None and (
+            isinstance(v, bool)
+            or not isinstance(v, int)
+            or not SIDE_RANGE[0] <= v <= SIDE_RANGE[1]
+        ):
+            errs.append(
+                f"prepare.{k} {v!r} must be an integer within {SIDE_RANGE[0]}..{SIDE_RANGE[1]}"
+            )
     if prep.get("mode") is not None and prep["mode"] not in RESIZE_MODES:
-        errs.append(f"prepare.mode {prep['mode']!r} must be one of {', '.join(RESIZE_MODES)}")
+        errs.append(
+            f"prepare.mode {prep['mode']!r} must be one of {', '.join(RESIZE_MODES)}"
+        )
     if prep.get("mode") is not None and w is None:
         errs.append("prepare.mode needs width and height")
     if prep.get("pad") is not None:
         if not isinstance(prep["pad"], str) or not re.match(COLOR_PATTERN, prep["pad"]):
             errs.append(f"prepare.pad {prep['pad']!r} is not a colour this agent sends")
         if w is None or (prep.get("mode") or RESIZE_MODE_DEFAULT) != "fit":
-            errs.append("prepare.pad pads a fit result to the width x height canvas (fill / exact already have that size)")
-    if prep.get("gravity") is not None and (prep["gravity"] not in GRAVITIES or prep.get("pad") is None):
-        errs.append(f"prepare.gravity must be one of {', '.join(GRAVITIES)} and needs pad")
+            errs.append(
+                "prepare.pad pads a fit result to the width x height canvas (fill / exact already have that size)"
+            )
+    if prep.get("gravity") is not None and (
+        prep["gravity"] not in GRAVITIES or prep.get("pad") is None
+    ):
+        errs.append(
+            f"prepare.gravity must be one of {', '.join(GRAVITIES)} and needs pad"
+        )
     if prep.get("strip") not in (None, True):
         errs.append("prepare.strip is true or absent")
     if not prepare_chain(prep):

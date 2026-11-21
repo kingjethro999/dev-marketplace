@@ -3,6 +3,7 @@
 Run:  python3 -m unittest discover -s plugins/code-modernization/scripts/tests
 The template's JavaScript is exercised with Node when it is installed (those tests are skipped otherwise).
 """
+
 import base64
 import contextlib
 import hashlib
@@ -81,45 +82,80 @@ def page_data(html):
     return json.loads(block[0]["text"])
 
 
-HOSTILE_MD = "\n".join([
-    "# Assessment <script>window.__pwned=1</script>",
-    '<img src=x onerror="window.__pwned=2">',
-    "</script><script>window.__pwned=3</script> <!-- and <!--",
-    "[a](javascript:window.__pwned=4) [b](JavaScript:alert(1)) [c](java\tscript:alert(1)) [d](" + chr(1) + "javascript:alert(1))",
-    "[e](data:text/html,<script>1</script>) [f](//evil.example/x) [g](/\\evil.example) ![t](https://evil.example/pixel.png)",
-    '<a href="javascript:alert(1)">raw anchor</a> <iframe src="https://evil.example"></iframe>',
-    "| a | b |", "|---|---|", "| <b onmouseover=alert(1)>x</b> | <img src=x onerror=window.__pwned=5> |",
-    "`<script>` and **<img src=x onerror=1>** " + LS + PS,
-    "```mermaid", 'graph TD; A["<img src=x onerror=window.__pwned=7>"]-->B', "```",
-    "x" * 1000000, "*" * 200000, "[" * 50000, "|" * 50000,
-])
-HOSTILE_RULES = "\n".join([
-    "# Rules", "",
-    "### RULE-001: Title with `backticks` and <angle> <script>x</script> & ampersand",
-    "**Category:** Validation  ", "**Priority:** P0  ", "**Source:** `evil/../../etc/passwd:1-2` and `a.cbl:10`  ",
-    "**Confidence:** High  ", "**Suspected defect:** <img src=x onerror=window.__pwned=6>", "",
-    "### P1-002 \u00b7 Second card, other id style", "P1 \u00b7 Policy \u00b7 confidence Low \u00b7 `b.cbl:5-9`", "",
-])
+HOSTILE_MD = "\n".join(
+    [
+        "# Assessment <script>window.__pwned=1</script>",
+        '<img src=x onerror="window.__pwned=2">',
+        "</script><script>window.__pwned=3</script> <!-- and <!--",
+        "[a](javascript:window.__pwned=4) [b](JavaScript:alert(1)) [c](java\tscript:alert(1)) [d]("
+        + chr(1)
+        + "javascript:alert(1))",
+        "[e](data:text/html,<script>1</script>) [f](//evil.example/x) [g](/\\evil.example) ![t](https://evil.example/pixel.png)",
+        '<a href="javascript:alert(1)">raw anchor</a> <iframe src="https://evil.example"></iframe>',
+        "| a | b |",
+        "|---|---|",
+        "| <b onmouseover=alert(1)>x</b> | <img src=x onerror=window.__pwned=5> |",
+        "`<script>` and **<img src=x onerror=1>** " + LS + PS,
+        "```mermaid",
+        'graph TD; A["<img src=x onerror=window.__pwned=7>"]-->B',
+        "```",
+        "x" * 1000000,
+        "*" * 200000,
+        "[" * 50000,
+        "|" * 50000,
+    ]
+)
+HOSTILE_RULES = "\n".join(
+    [
+        "# Rules",
+        "",
+        "### RULE-001: Title with `backticks` and <angle> <script>x</script> & ampersand",
+        "**Category:** Validation  ",
+        "**Priority:** P0  ",
+        "**Source:** `evil/../../etc/passwd:1-2` and `a.cbl:10`  ",
+        "**Confidence:** High  ",
+        "**Suspected defect:** <img src=x onerror=window.__pwned=6>",
+        "",
+        "### P1-002 \u00b7 Second card, other id style",
+        "P1 \u00b7 Policy \u00b7 confidence Low \u00b7 `b.cbl:5-9`",
+        "",
+    ]
+)
 
 
 def hostile_workspace(root, system="evil"):
     a = "analysis/" + system
     put(root, a + "/ASSESSMENT.md", HOSTILE_MD)
     put(root, a + "/BUSINESS_RULES.md", HOSTILE_RULES)
-    put(root, a + "/MODERNIZATION_BRIEF.md", "# Brief\n\n```mermaid\n%%{init: {\"themeCSS\": \".x{background:url(https://evil.example/t.gif)}\"}}%%\ngraph TD; A-->B\n```\n")
+    put(
+        root,
+        a + "/MODERNIZATION_BRIEF.md",
+        '# Brief\n\n```mermaid\n%%{init: {"themeCSS": ".x{background:url(https://evil.example/t.gif)}"}}%%\ngraph TD; A-->B\n```\n',
+    )
     put(root, a + "/good.mmd", "graph TD\n  A[Start] --> B[End]\n")
     put(root, a + "/bad.mmd", "graph TD\n  A --> --> ((\n")
     put(root, a + "/topology.json", '{"root": {"id": ')
     put(root, a + "/RULE_REVIEWS.json", "not json at all")
     put(root, a + "/SECRETS.local.md", SECRET)
     put(root, a + "/security_remediation.local.patch", SECRET)
-    put(root, a + "/SECURITY_FINDINGS.md", "# Findings\n\n| ID | Severity | Title |\n|---|---|---|\n| SEC-1 | Critical | <script>x</script> |\n| SEC-2 | High | y |\n| SEC-3 | high | z |\n")
+    put(
+        root,
+        a + "/SECURITY_FINDINGS.md",
+        "# Findings\n\n| ID | Severity | Title |\n|---|---|---|\n| SEC-1 | Critical | <script>x</script> |\n| SEC-2 | High | y |\n| SEC-3 | high | z |\n",
+    )
     put(root, "modernized/%s/README.md" % system, "# Module <img src=x onerror=1>\n")
-    put(root, "modernized/%s/mod1/TRANSFORMATION_NOTES.md" % system, "# Notes\n</script>\n")
+    put(
+        root,
+        "modernized/%s/mod1/TRANSFORMATION_NOTES.md" % system,
+        "# Notes\n</script>\n",
+    )
     outside = tempfile.mkdtemp()
     put(outside, "secret.txt", "OUTSIDE-MARKER")
     try:
-        os.symlink(os.path.join(outside, "secret.txt"), os.path.join(root, *(a + "/PLAYBOOK.md").split("/")))
+        os.symlink(
+            os.path.join(outside, "secret.txt"),
+            os.path.join(root, *(a + "/PLAYBOOK.md").split("/")),
+        )
     except (OSError, NotImplementedError, AttributeError):
         pass
     return outside
@@ -131,14 +167,21 @@ class CompareTests(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.tmp, True)
 
     def cases(self, cases, **extra):
-        path = put(self.tmp, "cases.json", json.dumps({"system": "s", "cases": cases, **extra}))
+        path = put(
+            self.tmp, "cases.json", json.dumps({"system": "s", "cases": cases, **extra})
+        )
         return path
 
     def files(self, name, legacy, new):
         put(self.tmp, "legacy/%s" % name, legacy)
         if new is not None:
             put(self.tmp, "new/%s" % name, new)
-        return {"id": name, "title": "case " + name, "legacy": "legacy/" + name, "new": "new/" + name}
+        return {
+            "id": name,
+            "title": "case " + name,
+            "legacy": "legacy/" + name,
+            "new": "new/" + name,
+        }
 
     def result(self, cases, **extra):
         out = os.path.join(self.tmp, "analysis", "EQUIVALENCE.json")
@@ -147,17 +190,35 @@ class CompareTests(unittest.TestCase):
             return code, stdout, json.load(fh)
 
     def test_same_differs_missing_approved_and_exit_codes(self):
-        same, diff, miss = self.files("a", b"one\ntwo\n", b"one\ntwo\n"), self.files("b", b"one\ntwo\n", b"one\ntw0\n"), self.files("c", b"x", None)
+        same, diff, miss = (
+            self.files("a", b"one\ntwo\n", b"one\ntwo\n"),
+            self.files("b", b"one\ntwo\n", b"one\ntw0\n"),
+            self.files("c", b"x", None),
+        )
         code, out, res = self.result([same, diff, miss])
         self.assertEqual(code, 1)
-        self.assertEqual([c["verdict"] for c in res["cases"]], ["same", "differs", "missing"])
-        self.assertEqual(res["totals"], {"cases": 3, "executed": 2, "same": 1, "differs": 1, "differsApproved": 0, "missing": 1})
+        self.assertEqual(
+            [c["verdict"] for c in res["cases"]], ["same", "differs", "missing"]
+        )
+        self.assertEqual(
+            res["totals"],
+            {
+                "cases": 3,
+                "executed": 2,
+                "same": 1,
+                "differs": 1,
+                "differsApproved": 0,
+                "missing": 1,
+            },
+        )
         self.assertIn("equivalence cases executed: 2", out)
         self.assertIn("NOT PROVEN", out)
         d = res["cases"][1]["firstDiff"]
         self.assertEqual((d["offset"], d["line"]), (6, 2))
         self.assertIn("legacy", res["cases"][2]["reason"].lower() + "legacy")
-        self.assertEqual(res["cases"][0]["legacySha256"], hashlib.sha256(b"one\ntwo\n").hexdigest())
+        self.assertEqual(
+            res["cases"][0]["legacySha256"], hashlib.sha256(b"one\ntwo\n").hexdigest()
+        )
         approved = dict(diff, id="b2", approvedDifference="fixed on purpose")
         code, _, res = self.result([same, approved])
         self.assertEqual(code, 0)
@@ -172,10 +233,19 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(res["selfCheck"]["passed"], True)
 
     def test_missing_alone_is_never_a_pass(self):
-        code, out, res = self.result([self.files("a", b"x", b"x"), self.files("m", b"x", None)])
+        code, out, res = self.result(
+            [self.files("a", b"x", b"x"), self.files("m", b"x", None)]
+        )
         self.assertEqual(code, 1)
         self.assertIn("missing", out)
-        self.assertEqual((res["totals"]["executed"], res["totals"]["missing"], res["totals"]["differs"]), (1, 1, 0))
+        self.assertEqual(
+            (
+                res["totals"]["executed"],
+                res["totals"]["missing"],
+                res["totals"]["differs"],
+            ),
+            (1, 1, 0),
+        )
 
     def test_no_case_executed_is_not_proven(self):
         for cases in ([], [self.files("m", b"x", None)]):
@@ -193,17 +263,28 @@ class CompareTests(unittest.TestCase):
         self.assertTrue(res["cases"][0]["empty"])
 
     def test_masks_hide_only_what_they_name(self):
-        legacy, new = b"id=12 at 2026-09-01 10:11:12 total=5\n", b"id=1234 at 2026-09-24 03:04:05 total=5\n"
-        case = dict(self.files("t", legacy, new), mask=[{"regex": r"id=\d+"}, {"regex": r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d"}])
+        legacy, new = (
+            b"id=12 at 2026-09-01 10:11:12 total=5\n",
+            b"id=1234 at 2026-09-24 03:04:05 total=5\n",
+        )
+        case = dict(
+            self.files("t", legacy, new),
+            mask=[{"regex": r"id=\d+"}, {"regex": r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d"}],
+        )
         code, _, res = self.result([case])
         self.assertEqual((code, res["cases"][0]["verdict"]), (0, "same"))
-        case["new"] = self.files("t2", legacy, new.replace(b"total=5", b"total=6"))["new"]
+        case["new"] = self.files("t2", legacy, new.replace(b"total=5", b"total=6"))[
+            "new"
+        ]
         _, _, res = self.result([case])
         self.assertEqual(res["cases"][0]["verdict"], "differs")
         self.assertEqual(res["cases"][0]["firstDiff"]["offset"], legacy.index(b"5"))
         ranged = dict(self.files("r", b"aaXXbb", b"aaYYbb"), mask=[{"bytes": "2-3"}])
         self.assertEqual(self.result([ranged])[2]["cases"][0]["verdict"], "same")
-        beyond = dict(self.files("r2", b"aaXXbb", b"aaYYbc"), mask=[{"bytes": "2-3"}, {"bytes": "50-60"}])
+        beyond = dict(
+            self.files("r2", b"aaXXbb", b"aaYYbc"),
+            mask=[{"bytes": "2-3"}, {"bytes": "50-60"}],
+        )
         self.assertEqual(self.result([beyond])[2]["cases"][0]["verdict"], "differs")
 
     def test_a_mask_that_hides_everything_fails_the_self_check(self):
@@ -216,9 +297,14 @@ class CompareTests(unittest.TestCase):
 
     def test_bad_input_is_exit_2_and_writes_nothing(self):
         out = os.path.join(self.tmp, "EQ.json")
-        bad = [put(self.tmp, "a.json", "{not json"), put(self.tmp, "b.json", json.dumps({"cases": "x"})),
-               self.cases([dict(self.files("z", b"a", b"a"), mask=[{"regex": "("}])]), self.cases([dict(self.files("y", b"a", b"a"), mask=[{"bytes": "9-2"}])]),
-               self.cases([self.files("d", b"a", b"a"), self.files("d", b"a", b"a")]), os.path.join(self.tmp, "missing.json")]
+        bad = [
+            put(self.tmp, "a.json", "{not json"),
+            put(self.tmp, "b.json", json.dumps({"cases": "x"})),
+            self.cases([dict(self.files("z", b"a", b"a"), mask=[{"regex": "("}])]),
+            self.cases([dict(self.files("y", b"a", b"a"), mask=[{"bytes": "9-2"}])]),
+            self.cases([self.files("d", b"a", b"a"), self.files("d", b"a", b"a")]),
+            os.path.join(self.tmp, "missing.json"),
+        ]
         for path in bad:
             code, _, err = run_main(cmp.main, [path, "--out", out])
             self.assertEqual(code, 2, path)
@@ -237,10 +323,20 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(run_main(cmp.main, [path, "--out", out, "--quiet"])[0], 1)
         with open(out) as fh:
             self.assertEqual(json.load(fh)["cases"][0]["verdict"], "missing")
-        self.assertEqual(run_main(cmp.main, [path, "--out", out, "--quiet", "--allow-outside"])[0], 0)
+        self.assertEqual(
+            run_main(cmp.main, [path, "--out", out, "--quiet", "--allow-outside"])[0], 0
+        )
 
     def test_first_difference_context_is_escaped_and_bounded(self):
-        _, _, res = self.result([self.files("c", b"a\x00\x1b[31m\tb" + b"z" * 200, b"a\x00\x1b[31m\tc" + b"z" * 200)])
+        _, _, res = self.result(
+            [
+                self.files(
+                    "c",
+                    b"a\x00\x1b[31m\tb" + b"z" * 200,
+                    b"a\x00\x1b[31m\tc" + b"z" * 200,
+                )
+            ]
+        )
         d = res["cases"][0]["firstDiff"]
         self.assertLessEqual(len(d["legacy"]), 40)
         self.assertNotRegex(d["legacy"] + d["new"], r"[\x00-\x1f\x7f]")
@@ -251,21 +347,34 @@ class CompareTests(unittest.TestCase):
 
     def test_summary_neutralises_terminal_escapes_and_quiet_is_quiet(self):
         case = dict(self.files("q", b"a", b"b"), id="q\x1b[2J")
-        code, out, _ = run_main(cmp.main, [self.cases([case]), "--out", os.path.join(self.tmp, "E.json")])
+        code, out, _ = run_main(
+            cmp.main, [self.cases([case]), "--out", os.path.join(self.tmp, "E.json")]
+        )
         self.assertNotIn("\x1b", out)
-        code, out, _ = run_main(cmp.main, [self.cases([case]), "--out", os.path.join(self.tmp, "E.json"), "--quiet"])
+        code, out, _ = run_main(
+            cmp.main,
+            [self.cases([case]), "--out", os.path.join(self.tmp, "E.json"), "--quiet"],
+        )
         self.assertEqual((code, out), (1, ""))
 
     def test_default_output_and_atomic_write(self):
-        code, _, _ = run_main(cmp.main, [self.cases([self.files("a", b"x", b"x")]), "--quiet"])
+        code, _, _ = run_main(
+            cmp.main, [self.cases([self.files("a", b"x", b"x")]), "--quiet"]
+        )
         self.assertEqual(code, 0)
-        self.assertEqual(sorted(f for f in os.listdir(self.tmp) if "equivalence" in f.lower()), ["EQUIVALENCE.json"])
+        self.assertEqual(
+            sorted(f for f in os.listdir(self.tmp) if "equivalence" in f.lower()),
+            ["EQUIVALENCE.json"],
+        )
 
     def test_a_symlinked_output_is_refused(self):
         real = put(self.tmp, "elsewhere/E.json", "ORIGINAL")
         link = os.path.join(self.tmp, "E.json")
         make_symlink(self, real, link)
-        code, _, err = run_main(cmp.main, [self.cases([self.files("a", b"x", b"x")]), "--out", link, "--quiet"])
+        code, _, err = run_main(
+            cmp.main,
+            [self.cases([self.files("a", b"x", b"x")]), "--out", link, "--quiet"],
+        )
         self.assertEqual(code, 2)
         self.assertIn("symbolic link", err)
         with open(real) as fh:
@@ -274,15 +383,36 @@ class CompareTests(unittest.TestCase):
 
 class BuildFacts(unittest.TestCase):
     def test_rule_cards_in_several_layouts(self):
-        text = "\n".join([
-            "## Rules", "### RULE-012: Interest is truncated", "**Priority:** P0", "**Confidence:** High \u2014 checked", "**Category:** Calculation",
-            "**Source:** `a/B.cbl:10-20,30` and `C.cbl:5`", "**Suspected defect:** rounds down", "```", "### not a heading in a fence", "```", "",
-            "### P1-001 \u00b7 Header line style", "`P1` \u00b7 Validation \u00b7 confidence Medium \u00b7 `d/E.cbl:1-2`", "",
-            "#### R-12: Short id", "Priority: P2", "**Suspected defect:** none", "", "### BR-D7-09 \u2014 Domain coded", "### Plain heading", "text",
-        ])
+        text = "\n".join(
+            [
+                "## Rules",
+                "### RULE-012: Interest is truncated",
+                "**Priority:** P0",
+                "**Confidence:** High \u2014 checked",
+                "**Category:** Calculation",
+                "**Source:** `a/B.cbl:10-20,30` and `C.cbl:5`",
+                "**Suspected defect:** rounds down",
+                "```",
+                "### not a heading in a fence",
+                "```",
+                "",
+                "### P1-001 \u00b7 Header line style",
+                "`P1` \u00b7 Validation \u00b7 confidence Medium \u00b7 `d/E.cbl:1-2`",
+                "",
+                "#### R-12: Short id",
+                "Priority: P2",
+                "**Suspected defect:** none",
+                "",
+                "### BR-D7-09 \u2014 Domain coded",
+                "### Plain heading",
+                "text",
+            ]
+        )
         blocks = br.parse_rules(text)
         cards = [b for b in blocks if b["k"] == "rule"]
-        self.assertEqual([c["id"] for c in cards], ["RULE-012", "P1-001", "R-12", "BR-D7-09"])
+        self.assertEqual(
+            [c["id"] for c in cards], ["RULE-012", "P1-001", "R-12", "BR-D7-09"]
+        )
         self.assertEqual([c["p"] for c in cards], ["P0", "P1", "P2", ""])
         self.assertEqual([c["conf"] for c in cards], ["High", "Medium", "", ""])
         self.assertEqual([c["defect"] for c in cards], [True, False, False, False])
@@ -293,10 +423,16 @@ class BuildFacts(unittest.TestCase):
         self.assertEqual(blocks[0]["k"], "md")
         self.assertEqual(br.parse_rules("just text\n\n## Heading")[0]["k"], "md")
 
-    def test_headings_and_fields_padded_with_thousands_of_spaces_are_parsed_in_a_moment(self):
+    def test_headings_and_fields_padded_with_thousands_of_spaces_are_parsed_in_a_moment(
+        self,
+    ):
         import time
+
         pad = " " * 6000
-        text = "### RULE-001 - Title%s#%sx\n**Priority:** P0%s\n**Suspected defect:**%s\n\n### RULE-002: Closed ###   \n**Priority:**   P1  \n" % (pad, pad, pad, pad)
+        text = (
+            "### RULE-001 - Title%s#%sx\n**Priority:** P0%s\n**Suspected defect:**%s\n\n### RULE-002: Closed ###   \n**Priority:**   P1  \n"
+            % (pad, pad, pad, pad)
+        )
         started = time.time()
         cards = [c for c in br.parse_rules(text) if c["k"] == "rule"]
         self.assertLess(time.time() - started, 2)
@@ -309,48 +445,141 @@ class BuildFacts(unittest.TestCase):
         text = "| ID | Name | Priority |\n|---|---|---|\n| [RULE-007](#x) | Merged | P0 |\n\n### RULE-007: Merged\n**Merged into:** RULE-006\n\n### RULE-008: Real\n**Priority:** P1\n"
         cards = [b for b in br.parse_rules(text) if b["k"] == "rule"]
         facts = br.rule_facts(text, cards, {"RULE-008": {"verdict": "confirmed"}})
-        self.assertEqual((facts["total"], facts["byPriority"], facts["unrated"]), (2, {"P0": 1, "P1": 1}, 0))
+        self.assertEqual(
+            (facts["total"], facts["byPriority"], facts["unrated"]),
+            (2, {"P0": 1, "P1": 1}, 0),
+        )
         self.assertEqual(facts["reviews"], {"confirmed": 1})
 
     def test_security_tally(self):
         findings = "## Summary scorecard\n| Severity | Count |\n|---|---|\n| Critical | 9 |\n\n## Findings\n| ID | Severity | Title |\n|---|---|---|\n| S1 | **Critical** | a |\n| S2 | High | b |\n| S3 | high | c |\n| S4 | Low | d |\n\n## Dependency CVEs\n| Package | Installed | CVE | Severity |\n|---|---|---|---|\n| x | 1 | CVE-1 | High |\n\n## Coverage gaps\n| Finding | Severity |\n|---|---|\n| n | Medium |\n"
-        self.assertEqual(br.security_facts(findings), {"Critical": 1, "High": 2, "Low": 1})
-        self.assertEqual(br.security_facts("| Severity | Count |\n|---|---|\n| Critical | 2 |\n| High | 3 |\n"), {"Critical": 2, "High": 3})
+        self.assertEqual(
+            br.security_facts(findings), {"Critical": 1, "High": 2, "Low": 1}
+        )
+        self.assertEqual(
+            br.security_facts(
+                "| Severity | Count |\n|---|---|\n| Critical | 2 |\n| High | 3 |\n"
+            ),
+            {"Critical": 2, "High": 3},
+        )
         self.assertIsNone(br.security_facts("Nothing recognisable here."))
 
     def test_baseline_facts(self):
         table = "| Test | Result |\n|---|---|\n| a | pass |\n| b | PASS |\n| c | fail |\n| d | skipped |\n"
-        self.assertEqual(br.baseline_facts(table), {"pass": 2, "fail": 1, "skip": 1, "targetOnly": False})
-        self.assertEqual(br.baseline_facts("Run: 12 tests passed, 1 failed"), {"pass": 12, "fail": 1, "targetOnly": False})
-        self.assertEqual(br.baseline_facts("target-only: the source runtime is not available")["targetOnly"], True)
-        self.assertIsNone(br.baseline_facts("| Fixture | RC |\n|---|---|\n| seed | 0 |\n"))
+        self.assertEqual(
+            br.baseline_facts(table),
+            {"pass": 2, "fail": 1, "skip": 1, "targetOnly": False},
+        )
+        self.assertEqual(
+            br.baseline_facts("Run: 12 tests passed, 1 failed"),
+            {"pass": 12, "fail": 1, "targetOnly": False},
+        )
+        self.assertEqual(
+            br.baseline_facts("target-only: the source runtime is not available")[
+                "targetOnly"
+            ],
+            True,
+        )
+        self.assertIsNone(
+            br.baseline_facts("| Fixture | RC |\n|---|---|\n| seed | 0 |\n")
+        )
 
     def test_topology_facts(self):
-        topo = {"root": {"id": "s", "kind": "system", "children": [{"id": "d", "kind": "domain", "children": [
-            {"id": "A", "kind": "module", "loc": 100, "language": "cobol", "file": "a.cbl"}, {"id": "B", "kind": "module", "loc": 50, "file": "b.cbl"},
-            {"id": "F", "kind": "datastore"}]}]}, "edges": [{}, {}]}
-        self.assertEqual(br.topology_facts(topo), {"modules": 2, "loc": 150, "languages": ["cobol"], "edges": 2, "observations": []})
+        topo = {
+            "root": {
+                "id": "s",
+                "kind": "system",
+                "children": [
+                    {
+                        "id": "d",
+                        "kind": "domain",
+                        "children": [
+                            {
+                                "id": "A",
+                                "kind": "module",
+                                "loc": 100,
+                                "language": "cobol",
+                                "file": "a.cbl",
+                            },
+                            {"id": "B", "kind": "module", "loc": 50, "file": "b.cbl"},
+                            {"id": "F", "kind": "datastore"},
+                        ],
+                    }
+                ],
+            },
+            "edges": [{}, {}],
+        }
+        self.assertEqual(
+            br.topology_facts(topo),
+            {
+                "modules": 2,
+                "loc": 150,
+                "languages": ["cobol"],
+                "edges": 2,
+                "observations": [],
+            },
+        )
         self.assertIsNone(br.topology_facts([1, 2]))
         self.assertIsNone(br.topology_facts({"root": {"id": "x", "children": "oops"}}))
 
     def test_equivalence_view_never_trusts_the_files_own_words(self):
         digest = "a" * 64
-        good = {"cases": [{"id": "1", "verdict": "same", "legacySha256": digest, "newSha256": digest}, {"id": "2", "verdict": "differs-approved", "approvedDifference": "ok"}],
-                "selfCheck": {"passed": True, "detail": "d"}, "totals": {"cases": 2, "executed": 2}}
+        good = {
+            "cases": [
+                {
+                    "id": "1",
+                    "verdict": "same",
+                    "legacySha256": digest,
+                    "newSha256": digest,
+                },
+                {"id": "2", "verdict": "differs-approved", "approvedDifference": "ok"},
+            ],
+            "selfCheck": {"passed": True, "detail": "d"},
+            "totals": {"cases": 2, "executed": 2},
+        }
         view = br.equivalence_view(good)
         self.assertEqual((view["state"], view["problems"]), ("green", []))
-        self.assertEqual(br.equivalence_view(dict(good, cases=[dict(good["cases"][0], newSha256="b" * 64)]))["state"], "red")
-        for bad_case in ({"id": "x", "verdict": "differs"}, {"id": "x", "verdict": "missing"}, {"id": "x", "verdict": "pass"},
-                         {"id": "x", "verdict": "differs-approved"}, {"id": "x", "verdict": "same", "firstDiff": {"offset": 1}}):
-            view = br.equivalence_view(dict(good, cases=good["cases"] + [bad_case], totals={}))
+        self.assertEqual(
+            br.equivalence_view(
+                dict(good, cases=[dict(good["cases"][0], newSha256="b" * 64)])
+            )["state"],
+            "red",
+        )
+        for bad_case in (
+            {"id": "x", "verdict": "differs"},
+            {"id": "x", "verdict": "missing"},
+            {"id": "x", "verdict": "pass"},
+            {"id": "x", "verdict": "differs-approved"},
+            {"id": "x", "verdict": "same", "firstDiff": {"offset": 1}},
+        ):
+            view = br.equivalence_view(
+                dict(good, cases=good["cases"] + [bad_case], totals={})
+            )
             self.assertEqual(view["state"], "red", bad_case)
         self.assertEqual(br.equivalence_view(dict(good, cases=[]))["state"], "red")
-        self.assertEqual(br.equivalence_view(dict(good, selfCheck={"passed": False, "detail": "x"}))["state"], "red")
-        self.assertEqual(br.equivalence_view(dict(good, cases=[dict(good["cases"][0], empty=True)]))["state"], "red")
+        self.assertEqual(
+            br.equivalence_view(dict(good, selfCheck={"passed": False, "detail": "x"}))[
+                "state"
+            ],
+            "red",
+        )
+        self.assertEqual(
+            br.equivalence_view(dict(good, cases=[dict(good["cases"][0], empty=True)]))[
+                "state"
+            ],
+            "red",
+        )
         no_check = br.equivalence_view({"cases": good["cases"]})
         self.assertEqual(no_check["state"], "green")
         self.assertTrue(any("self-check" in p for p in no_check["problems"]))
-        self.assertTrue(any("disagree" in p for p in br.equivalence_view(dict(good, totals={"cases": 9, "executed": 9}))["problems"]))
+        self.assertTrue(
+            any(
+                "disagree" in p
+                for p in br.equivalence_view(
+                    dict(good, totals={"cases": 9, "executed": 9})
+                )["problems"]
+            )
+        )
         self.assertIsNone(br.equivalence_view({"cases": "x"}))
         self.assertIsNone(br.equivalence_view([]))
 
@@ -362,7 +591,9 @@ class BuildReport(unittest.TestCase):
         self.out = os.path.join(self.tmp, "out", "REPORT.html")
 
     def build(self, system="s", extra=()):
-        code, out, err = run_main(br.main, [system, "--workspace", self.tmp, "--out", self.out, *extra])
+        code, out, err = run_main(
+            br.main, [system, "--workspace", self.tmp, "--out", self.out, *extra]
+        )
         return code, out, err
 
     def html(self):
@@ -386,10 +617,14 @@ class BuildReport(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertRegex(out.strip(), r"REPORT\.html: 1 section, \d+ KB$")
         html = self.html()
-        self.assertEqual([s["attrs"].get("id") for s in Scripts(html).found], ["report-data", "app"])
+        self.assertEqual(
+            [s["attrs"].get("id") for s in Scripts(html).found], ["report-data", "app"]
+        )
         data = page_data(html)
         self.assertEqual([s["id"] for s in data["sections"]], ["overview"])
-        self.assertFalse(any(x["done"] for x in data["glance"]["steps"] if x["key"] != "preflight"))
+        self.assertFalse(
+            any(x["done"] for x in data["glance"]["steps"] if x["key"] != "preflight")
+        )
         self.assertIsNone(data["glance"]["track"])
         self.assertIsNone(data["glance"]["equivalence"])
 
@@ -397,15 +632,28 @@ class BuildReport(unittest.TestCase):
         put(self.tmp, "analysis/s/PREFLIGHT.md", "x")
         code, out, _ = run_main(br.main, ["s", "--workspace", self.tmp])
         self.assertEqual(code, 0)
-        self.assertTrue(os.path.isfile(os.path.join(self.tmp, "analysis", "s", "REPORT.html")))
-        self.assertEqual([f for f in os.listdir(os.path.join(self.tmp, "analysis", "s")) if f.endswith(".tmp")], [])
+        self.assertTrue(
+            os.path.isfile(os.path.join(self.tmp, "analysis", "s", "REPORT.html"))
+        )
+        self.assertEqual(
+            [
+                f
+                for f in os.listdir(os.path.join(self.tmp, "analysis", "s"))
+                if f.endswith(".tmp")
+            ],
+            [],
+        )
 
     def test_malformed_files_are_reported_in_the_page_not_raised(self):
         a = "analysis/s/"
         put(self.tmp, a + "topology.json", "{broken")
         put(self.tmp, a + "EQUIVALENCE.json", "[1, 2")
         put(self.tmp, a + "RULE_REVIEWS.json", '{"reviews": 5}')
-        put(self.tmp, a + "BUSINESS_RULES.md", b"\xff\xfe\x00binary\x00\x01### RULE-001: x\n")
+        put(
+            self.tmp,
+            a + "BUSINESS_RULES.md",
+            b"\xff\xfe\x00binary\x00\x01### RULE-001: x\n",
+        )
         put(self.tmp, a + "ASSESSMENT.md", b"")
         put(self.tmp, a + "BASELINE.md", "| a |\n|---")
         put(self.tmp, a + "SECURITY_FINDINGS.md", "|||\n|||\n")
@@ -437,7 +685,9 @@ class BuildReport(unittest.TestCase):
         self.assertNotIn("<!--", scripts[1]["text"])
         page = html.replace(scripts[0]["text"], "").replace(scripts[1]["text"], "")
         for needle in ("__pwned=", "onerror", "evil.example", "javascript:"):
-            self.assertNotIn(needle, page.split('<script id="app">')[0].split("</style>")[1], needle)
+            self.assertNotIn(
+                needle, page.split('<script id="app">')[0].split("</style>")[1], needle
+            )
         text = json.dumps(page_data(html))
         self.assertIn("window.__pwned=1", text)
         self.assertNotIn(SECRET, html)
@@ -450,11 +700,24 @@ class BuildReport(unittest.TestCase):
         data = page_data(html)
         self.assertEqual(data["glance"]["security"], {"Critical": 1, "High": 2})
         self.assertEqual(data["glance"]["rules"]["total"], 2)
-        titles = [b["title"] for s in data["sections"] for p in s["parts"] for b in p.get("blocks", []) if b["k"] == "rule"]
-        self.assertIn("Title with `backticks` and <angle> <script>x</script> & ampersand", titles)
+        titles = [
+            b["title"]
+            for s in data["sections"]
+            for p in s["parts"]
+            for b in p.get("blocks", [])
+            if b["k"] == "rule"
+        ]
+        self.assertIn(
+            "Title with `backticks` and <angle> <script>x</script> & ampersand", titles
+        )
 
     def test_secret_and_local_files_are_never_read_even_when_asked_for_by_name(self):
-        for name in ("SECRETS.local.md", "secrets.txt", "security_remediation.local.patch", "notes.LOCAL.md"):
+        for name in (
+            "SECRETS.local.md",
+            "secrets.txt",
+            "security_remediation.local.patch",
+            "notes.LOCAL.md",
+        ):
             path = put(self.tmp, "analysis/s/" + name, SECRET)
             src = br.Source(self.tmp, "s")
             self.assertIsNone(src.read(path, name), name)
@@ -464,13 +727,26 @@ class BuildReport(unittest.TestCase):
         put(self.tmp, "analysis/s/good.mmd", "graph TD\n A-->B\n")
         self.build()
         html = self.html()
-        policy = re.search(r'http-equiv="Content-Security-Policy" content="([^"]*)"', html).group(1)
+        policy = re.search(
+            r'http-equiv="Content-Security-Policy" content="([^"]*)"', html
+        ).group(1)
         self.assertIn("default-src 'none'", policy)
         self.assertNotIn("unsafe-eval", policy)
         self.assertNotRegex(policy, r"script-src[^;]*unsafe-inline")
-        hashes = re.findall(r"'sha256-([^']+)'", policy.split("script-src")[1].split(";")[0])
-        code_scripts = [s for s in Scripts(html).found if s["attrs"].get("type") != "application/json"]
-        expected = [base64.b64encode(hashlib.sha256(s["text"].encode("utf-8")).digest()).decode() for s in code_scripts]
+        hashes = re.findall(
+            r"'sha256-([^']+)'", policy.split("script-src")[1].split(";")[0]
+        )
+        code_scripts = [
+            s
+            for s in Scripts(html).found
+            if s["attrs"].get("type") != "application/json"
+        ]
+        expected = [
+            base64.b64encode(
+                hashlib.sha256(s["text"].encode("utf-8")).digest()
+            ).decode()
+            for s in code_scripts
+        ]
         self.assertEqual(sorted(hashes), sorted(expected))
         self.assertEqual(len(expected), 2)
 
@@ -479,13 +755,20 @@ class BuildReport(unittest.TestCase):
         self.build()
         self.assertNotIn("mermaid-lib", self.html())
         self.assertLess(len(self.html()), 300000)
-        put(self.tmp, "analysis/s/ASSESSMENT.md", "# A\n\n```mermaid\ngraph TD\n A-->B\n```\n")
+        put(
+            self.tmp,
+            "analysis/s/ASSESSMENT.md",
+            "# A\n\n```mermaid\ngraph TD\n A-->B\n```\n",
+        )
         self.build()
         scripts = Scripts(self.html()).found
         lib = next(s for s in scripts if s["attrs"].get("id") == "mermaid-lib")
         with open(MERMAID, encoding="utf-8") as fh:
             original = fh.read()
-        self.assertEqual(lib["text"].replace("<\\/script", "</script").replace("<\\!--", "<!--"), original)
+        self.assertEqual(
+            lib["text"].replace("<\\/script", "</script").replace("<\\!--", "<!--"),
+            original,
+        )
         os.remove(os.path.join(self.tmp, "analysis", "s", "ASSESSMENT.md"))
         put(self.tmp, "analysis/s/x.mmd", "graph TD\n A-->B\n")
         self.build()
@@ -493,24 +776,64 @@ class BuildReport(unittest.TestCase):
 
     def test_size_cap_says_what_was_left_out(self):
         for name in ("ASSESSMENT.md", "MODERNIZATION_BRIEF.md", "DATA_OBJECTS.md"):
-            put(self.tmp, "analysis/s/" + name, ("line of text that is long enough to count\n" * 80000))
+            put(
+                self.tmp,
+                "analysis/s/" + name,
+                ("line of text that is long enough to count\n" * 80000),
+            )
         self.build()
         data = page_data(self.html())
         notes = "\n".join(json.dumps(p) for p in data["sections"][0]["parts"])
         self.assertIn("report size limit", notes)
-        embedded = sum(len(p["text"]) for s in data["sections"] for p in s["parts"] if p["t"] == "md")
+        embedded = sum(
+            len(p["text"])
+            for s in data["sections"]
+            for p in s["parts"]
+            if p["t"] == "md"
+        )
         self.assertLessEqual(embedded, br.TOTAL_CAP)
 
     def test_sections_follow_the_workflow_order_and_only_exist_when_found(self):
         a = "analysis/s/"
-        for name in ("EQUIVALENCE.json", "SECURITY_FINDINGS.md", "MODERNIZATION_BRIEF.md", "ASSESSMENT.md", "PREFLIGHT.md", "DELTA_CATALOG.md", "AI_NATIVE_SPEC.md"):
+        for name in (
+            "EQUIVALENCE.json",
+            "SECURITY_FINDINGS.md",
+            "MODERNIZATION_BRIEF.md",
+            "ASSESSMENT.md",
+            "PREFLIGHT.md",
+            "DELTA_CATALOG.md",
+            "AI_NATIVE_SPEC.md",
+        ):
             put(self.tmp, a + name, "{}" if name.endswith(".json") else "# " + name)
         put(self.tmp, "modernized/s-reimagined/svc/README.md", "# svc")
         self.build()
         data = page_data(self.html())
-        self.assertEqual([s["id"] for s in data["sections"]], ["overview", "assessment", "brief", "security", "delta", "spec", "build", "equivalence"])
+        self.assertEqual(
+            [s["id"] for s in data["sections"]],
+            [
+                "overview",
+                "assessment",
+                "brief",
+                "security",
+                "delta",
+                "spec",
+                "build",
+                "equivalence",
+            ],
+        )
         steps = {x["key"]: x["done"] for x in data["glance"]["steps"]}
-        self.assertEqual(steps, {"preflight": True, "assess": True, "map": False, "rules": False, "brief": True, "build": True, "harden": True})
+        self.assertEqual(
+            steps,
+            {
+                "preflight": True,
+                "assess": True,
+                "map": False,
+                "rules": False,
+                "brief": True,
+                "build": True,
+                "harden": True,
+            },
+        )
         self.assertEqual(data["glance"]["track"]["label"], "reimagine")
 
     def test_track_follows_the_newest_track_artifact(self):
@@ -520,18 +843,32 @@ class BuildReport(unittest.TestCase):
         put(self.tmp, "modernized/s/mod/TRANSFORMATION_NOTES.md", "x")
         self.build()
         self.assertEqual(page_data(self.html())["glance"]["track"]["label"], "rewrite")
-        past = os.path.getmtime(os.path.join(self.tmp, "modernized", "s", "mod", "TRANSFORMATION_NOTES.md")) + 50
+        past = (
+            os.path.getmtime(
+                os.path.join(
+                    self.tmp, "modernized", "s", "mod", "TRANSFORMATION_NOTES.md"
+                )
+            )
+            + 50
+        )
         put(self.tmp, a + "DELTA_CATALOG.md", "x")
-        os.utime(os.path.join(self.tmp, "analysis", "s", "DELTA_CATALOG.md"), (past, past))
+        os.utime(
+            os.path.join(self.tmp, "analysis", "s", "DELTA_CATALOG.md"), (past, past)
+        )
         self.build()
-        self.assertEqual(page_data(self.html())["glance"]["track"]["label"], "same-stack uplift")
+        self.assertEqual(
+            page_data(self.html())["glance"]["track"]["label"], "same-stack uplift"
+        )
 
     def test_topology_link_is_relative_and_the_map_is_not_embedded(self):
         put(self.tmp, "analysis/s/TOPOLOGY.html", "<html>" + "x" * 5000 + "</html>")
         self.build()
         data = page_data(self.html())
         link = next(p for s in data["sections"] for p in s["parts"] if p["t"] == "link")
-        self.assertEqual(os.path.normpath(os.path.join(os.path.dirname(self.out), link["href"])), os.path.join(self.tmp, "analysis", "s", "TOPOLOGY.html"))
+        self.assertEqual(
+            os.path.normpath(os.path.join(os.path.dirname(self.out), link["href"])),
+            os.path.join(self.tmp, "analysis", "s", "TOPOLOGY.html"),
+        )
         self.assertNotIn("xxxxxxxxxx", self.html())
 
     def test_report_shows_what_compare_py_wrote(self):
@@ -540,7 +877,13 @@ class BuildReport(unittest.TestCase):
         put(eq_dir, "new/a.out", "same")
         put(eq_dir, "legacy/b.out", "one")
         put(eq_dir, "new/b.out", "two")
-        cases = {"system": "s", "cases": [{"id": "A", "legacy": "legacy/a.out", "new": "new/a.out"}, {"id": "B", "legacy": "legacy/b.out", "new": "new/b.out"}]}
+        cases = {
+            "system": "s",
+            "cases": [
+                {"id": "A", "legacy": "legacy/a.out", "new": "new/a.out"},
+                {"id": "B", "legacy": "legacy/b.out", "new": "new/b.out"},
+            ],
+        }
         put(eq_dir, "cases.json", json.dumps(cases))
         target = os.path.join(self.tmp, "analysis", "s", "EQUIVALENCE.json")
         cmp.main([os.path.join(eq_dir, "cases.json"), "--out", target, "--quiet"])
@@ -548,15 +891,22 @@ class BuildReport(unittest.TestCase):
         data = page_data(self.html())
         eq = data["glance"]["equivalence"]
         self.assertEqual(eq["state"], "red")
-        self.assertEqual((eq["tally"]["same"], eq["tally"]["differs"], eq["tally"]["executed"]), (1, 1, 2))
-        section = next(s for s in data["sections"] if s["id"] == "equivalence")["parts"][0]["eq"]
+        self.assertEqual(
+            (eq["tally"]["same"], eq["tally"]["differs"], eq["tally"]["executed"]),
+            (1, 1, 2),
+        )
+        section = next(s for s in data["sections"] if s["id"] == "equivalence")[
+            "parts"
+        ][0]["eq"]
         self.assertEqual(section["cases"][1]["firstDiff"]["line"], 1)
         self.assertEqual(section["cases"][1]["legacyPath"], "equivalence/legacy/b.out")
         cases["cases"].pop()
         put(eq_dir, "cases.json", json.dumps(cases))
         cmp.main([os.path.join(eq_dir, "cases.json"), "--out", target, "--quiet"])
         self.build()
-        self.assertEqual(page_data(self.html())["glance"]["equivalence"]["state"], "green")
+        self.assertEqual(
+            page_data(self.html())["glance"]["equivalence"]["state"], "green"
+        )
 
     def test_a_symlinked_output_path_is_refused_and_nothing_is_written_through_it(self):
         put(self.tmp, "analysis/s/PREFLIGHT.md", "x")
@@ -577,7 +927,16 @@ class BuildReport(unittest.TestCase):
         real = os.path.join(self.tmp, "real")
         os.makedirs(real)
         make_symlink(self, real, os.path.join(self.tmp, "linked"))
-        code, _, err = run_main(br.main, ["s", "--workspace", self.tmp, "--out", os.path.join(self.tmp, "linked", "REPORT.html")])
+        code, _, err = run_main(
+            br.main,
+            [
+                "s",
+                "--workspace",
+                self.tmp,
+                "--out",
+                os.path.join(self.tmp, "linked", "REPORT.html"),
+            ],
+        )
         self.assertEqual(code, 1)
         self.assertIn("symbolic link", err)
         self.assertEqual(os.listdir(real), [])
@@ -611,7 +970,18 @@ class Template(unittest.TestCase):
         self.assertNotRegex(self.text, r"https?://")
         self.assertNotRegex(self.text, r"(?i)(?:src|href|action)\s*=\s*[\"']?\s*//")
         self.assertNotRegex(self.css, r"@import|url\(")
-        for word in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function", "setTimeout(\"", "fetch(", "XMLHttpRequest", "WebSocket"):
+        for word in (
+            "innerHTML",
+            "outerHTML",
+            "insertAdjacentHTML",
+            "document.write",
+            "eval(",
+            "new Function",
+            'setTimeout("',
+            "fetch(",
+            "XMLHttpRequest",
+            "WebSocket",
+        ):
             self.assertNotIn(word, self.app, word)
         self.assertNotRegex(self.text, r"(?i)\son[a-z]+\s*=")
         self.assertEqual(len(re.findall(r"@@(CSP|DATA|MERMAID)@@", self.text)), 3)
@@ -620,11 +990,22 @@ class Template(unittest.TestCase):
     def test_theme_and_layout_contract(self):
         root = re.search(r":root\{(.*?)\}", self.css, re.S).group(1)
         tokens = set(re.findall(r"--([a-z-]+):", root))
-        media = re.search(r"@media \(prefers-color-scheme:dark\)\{:root:not\(\[data-theme=\"light\"\]\)\{(.*?)\}\}", self.css, re.S).group(1)
-        forced = re.search(r":root\[data-theme=\"dark\"\]\{(.*?)\}", self.css, re.S).group(1)
+        media = re.search(
+            r"@media \(prefers-color-scheme:dark\)\{:root:not\(\[data-theme=\"light\"\]\)\{(.*?)\}\}",
+            self.css,
+            re.S,
+        ).group(1)
+        forced = re.search(
+            r":root\[data-theme=\"dark\"\]\{(.*?)\}", self.css, re.S
+        ).group(1)
         self.assertEqual(set(re.findall(r"--([a-z-]+):", media)) - tokens, set())
-        self.assertEqual(re.findall(r"--([a-z-]+):[^;]*", media), re.findall(r"--([a-z-]+):[^;]*", forced))
-        self.assertRegex(re.search(r"body\{([^}]*)\}", self.css).group(1), r"background:var\(--bg\)")
+        self.assertEqual(
+            re.findall(r"--([a-z-]+):[^;]*", media),
+            re.findall(r"--([a-z-]+):[^;]*", forced),
+        )
+        self.assertRegex(
+            re.search(r"body\{([^}]*)\}", self.css).group(1), r"background:var\(--bg\)"
+        )
         self.assertIn("system-ui", self.css)
         self.assertIn("width=device-width", self.text)
         self.assertIn("@media print", self.css)
@@ -638,8 +1019,11 @@ class Template(unittest.TestCase):
         def lum(hexcolor):
             h = hexcolor.lstrip("#")
             h = "".join(c * 2 for c in h) if len(h) == 3 else h
-            chan = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
-            lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in chan]
+            chan = [int(h[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+            lin = [
+                c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+                for c in chan
+            ]
             return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
 
         def ratio(a, b):
@@ -647,40 +1031,155 @@ class Template(unittest.TestCase):
             return (hi + 0.05) / (lo + 0.05)
 
         light = parse(re.search(r":root\{(.*?)\}", self.css, re.S).group(1))
-        dark = dict(light, **parse(re.search(r":root\[data-theme=\"dark\"\]\{(.*?)\}", self.css, re.S).group(1)))
-        pairs = [("text", "bg"), ("text", "surface"), ("muted", "bg"), ("muted", "surface"), ("muted", "code"), ("text", "code"), ("link", "surface"), ("link", "bg"),
-                 ("link", "code"), ("ok", "ok-bg"), ("bad", "bad-bg"), ("warn", "warn-bg"), ("info", "info-bg"), ("flat", "flat-bg"), ("hit-text", "hit"),
-                 ("text", "flat-bg"), ("text", "info-bg"), ("muted", "flat-bg")]
+        dark = dict(
+            light,
+            **parse(
+                re.search(
+                    r":root\[data-theme=\"dark\"\]\{(.*?)\}", self.css, re.S
+                ).group(1)
+            )
+        )
+        pairs = [
+            ("text", "bg"),
+            ("text", "surface"),
+            ("muted", "bg"),
+            ("muted", "surface"),
+            ("muted", "code"),
+            ("text", "code"),
+            ("link", "surface"),
+            ("link", "bg"),
+            ("link", "code"),
+            ("ok", "ok-bg"),
+            ("bad", "bad-bg"),
+            ("warn", "warn-bg"),
+            ("info", "info-bg"),
+            ("flat", "flat-bg"),
+            ("hit-text", "hit"),
+            ("text", "flat-bg"),
+            ("text", "info-bg"),
+            ("muted", "flat-bg"),
+        ]
         for name, palette in (("light", light), ("dark", dark)):
             for fg, bg in pairs:
-                self.assertGreaterEqual(ratio(palette[fg], palette[bg]), 4.5, "%s: %s on %s" % (name, fg, bg))
+                self.assertGreaterEqual(
+                    ratio(palette[fg], palette[bg]),
+                    4.5,
+                    "%s: %s on %s" % (name, fg, bg),
+                )
         self.assertGreaterEqual(ratio("#1a1f27", light["paper"]), 4.5)
         for name, palette in (("light", light), ("dark", dark)):
             self.assertGreaterEqual(ratio(palette["focus"], palette["bg"]), 3, name)
-            self.assertGreaterEqual(ratio(palette["focus"], palette["surface"]), 3, name)
+            self.assertGreaterEqual(
+                ratio(palette["focus"], palette["surface"]), 3, name
+            )
 
 
 NODE = shutil.which("node")
-LINK_CASES = {  # markdown -> the href it must produce, or None when it must stay plain text
-    "[x](javascript:alert(1))": None, "[x](data:text/html,x)": None, "[x](file:///etc/passwd)": None, "[x](JaVaScRiPt:x)": None, "[x](java&#10;script:x)": None, "[x](javascript&colon;alert(1))": None, "[x](&#x6A;avascript:alert(1))": None,
-    "[x](https://example.com/a?b=1)": "https://example.com/a?b=1", "[x](mailto:a@b.c)": "mailto:a@b.c", "[x](#anchor)": "#anchor",
-    "[x](./relative/path.md)": "./relative/path.md", "[x](../up/README.md#top)": "../up/README.md#top",
-}
+LINK_CASES = (
+    {  # markdown -> the href it must produce, or None when it must stay plain text
+        "[x](javascript:alert(1))": None,
+        "[x](data:text/html,x)": None,
+        "[x](file:///etc/passwd)": None,
+        "[x](JaVaScRiPt:x)": None,
+        "[x](java&#10;script:x)": None,
+        "[x](javascript&colon;alert(1))": None,
+        "[x](&#x6A;avascript:alert(1))": None,
+        "[x](https://example.com/a?b=1)": "https://example.com/a?b=1",
+        "[x](mailto:a@b.c)": "mailto:a@b.c",
+        "[x](#anchor)": "#anchor",
+        "[x](./relative/path.md)": "./relative/path.md",
+        "[x](../up/README.md#top)": "../up/README.md#top",
+    }
+)
 JS_INPUTS = [
-    "<script>alert(1)</script>", "</script><script>alert(1)</script>", "<img src=x onerror=alert(1)>", "<!-- <!--", '<a href="javascript:alert(1)">x</a>',
-    "[x](javascript:alert(1))", "[x](JavaScript:alert(1))", "[x](java\tscript:alert(1))", "[x](" + chr(1) + "javascript:alert(1))", "[x]( javascript:alert(1))",
-    "[x](data:text/html;base64,PHNjcmlwdD4=)", "[x](//evil.example)", "[x](/\\evil.example)", "[x](vbscript:msgbox(1))", "[x](file:///etc/passwd)",
-    "[x](&#106;avascript:alert(1))", "[x](%6Aavascript:alert(1))", "[x](" + LS + "javascript:alert(1))", "[x](\u00a0javascript:alert(1))", "![x](javascript:alert(1))",
-    "| <b onmouseover=alert(1)>x</b> | y |\n|---|---|\n| <img src=x onerror=alert(2)> | z |", "### RULE-001: `<b>title</b>` <img src=x>",
-    "`<script>`", "**<img src=x onerror=1>** _<b>_", "- [ ] <b>a</b>\n- [x] *b*\n  - nested <i>c</i>", "> <script>\n> x",
-    "```js\n<script>alert(1)</script>\n```", "~~~\n</script>\n~~~", "```mermaid\ngraph TD; A-->B\n```", "a" * 200000, "*" * 200000, "[" * 100000, "`" * 100000,
-    "_" * 100000, "|" * 100000, "- " * 50000, "> " * 20000 + "x", "\n".join(" " * (i * 2) + "- x" for i in range(300)), "#" * 100000, "[a](" + "b" * 100000 + ")",
-    "\n".join("| " + "c | " * 200 for _ in range(50)), "*a " * 60000, "**a " * 60000, "[a " * 60000, "`a " * 60000,
+    "<script>alert(1)</script>",
+    "</script><script>alert(1)</script>",
+    "<img src=x onerror=alert(1)>",
+    "<!-- <!--",
+    '<a href="javascript:alert(1)">x</a>',
+    "[x](javascript:alert(1))",
+    "[x](JavaScript:alert(1))",
+    "[x](java\tscript:alert(1))",
+    "[x](" + chr(1) + "javascript:alert(1))",
+    "[x]( javascript:alert(1))",
+    "[x](data:text/html;base64,PHNjcmlwdD4=)",
+    "[x](//evil.example)",
+    "[x](/\\evil.example)",
+    "[x](vbscript:msgbox(1))",
+    "[x](file:///etc/passwd)",
+    "[x](&#106;avascript:alert(1))",
+    "[x](%6Aavascript:alert(1))",
+    "[x](" + LS + "javascript:alert(1))",
+    "[x](\u00a0javascript:alert(1))",
+    "![x](javascript:alert(1))",
+    "| <b onmouseover=alert(1)>x</b> | y |\n|---|---|\n| <img src=x onerror=alert(2)> | z |",
+    "### RULE-001: `<b>title</b>` <img src=x>",
+    "`<script>`",
+    "**<img src=x onerror=1>** _<b>_",
+    "- [ ] <b>a</b>\n- [x] *b*\n  - nested <i>c</i>",
+    "> <script>\n> x",
+    "```js\n<script>alert(1)</script>\n```",
+    "~~~\n</script>\n~~~",
+    "```mermaid\ngraph TD; A-->B\n```",
+    "a" * 200000,
+    "*" * 200000,
+    "[" * 100000,
+    "`" * 100000,
+    "_" * 100000,
+    "|" * 100000,
+    "- " * 50000,
+    "> " * 20000 + "x",
+    "\n".join(" " * (i * 2) + "- x" for i in range(300)),
+    "#" * 100000,
+    "[a](" + "b" * 100000 + ")",
+    "\n".join("| " + "c | " * 200 for _ in range(50)),
+    "*a " * 60000,
+    "**a " * 60000,
+    "[a " * 60000,
+    "`a " * 60000,
 ] + list(LINK_CASES)
-SAFE_URLS = ["https://example.com/a?b=1&c=2", "https://example.com/?q=a&b=c#frag", "http://x.y", "HTTPS://X.Y", "mailto:a@b.c", "../x/y.md#z", "#anchor", "README.md", "a/b:c", "TOPOLOGY.html", "./p:q", "x.md#a:b"]
-BAD_URLS = ["java&#10;script:x", "javascript&colon;alert(1)", "&#106;avascript:1", "a&#x3a;b", "x&amp;y", "javascript:alert(1)", "JavaScript:alert(1)", " javascript:alert(1)", "java\tscript:alert(1)", "java\nscript:alert(1)", chr(1) + "javascript:alert(1)", "data:text/html,x",
-            "//evil.example", "/\\evil.example", "\\\\evil", "/abs/path", "vbscript:x", "file:///etc/passwd", "C:\\x", "a:b", chr(0xA0) + "javascript:1", LS + "javascript:1",
-            chr(0xFEFF) + "javascript:1", "jav" + chr(0x200B) + "ascript:1", "", "x" * 3000]
+SAFE_URLS = [
+    "https://example.com/a?b=1&c=2",
+    "https://example.com/?q=a&b=c#frag",
+    "http://x.y",
+    "HTTPS://X.Y",
+    "mailto:a@b.c",
+    "../x/y.md#z",
+    "#anchor",
+    "README.md",
+    "a/b:c",
+    "TOPOLOGY.html",
+    "./p:q",
+    "x.md#a:b",
+]
+BAD_URLS = [
+    "java&#10;script:x",
+    "javascript&colon;alert(1)",
+    "&#106;avascript:1",
+    "a&#x3a;b",
+    "x&amp;y",
+    "javascript:alert(1)",
+    "JavaScript:alert(1)",
+    " javascript:alert(1)",
+    "java\tscript:alert(1)",
+    "java\nscript:alert(1)",
+    chr(1) + "javascript:alert(1)",
+    "data:text/html,x",
+    "//evil.example",
+    "/\\evil.example",
+    "\\\\evil",
+    "/abs/path",
+    "vbscript:x",
+    "file:///etc/passwd",
+    "C:\\x",
+    "a:b",
+    chr(0xA0) + "javascript:1",
+    LS + "javascript:1",
+    chr(0xFEFF) + "javascript:1",
+    "jav" + chr(0x200B) + "ascript:1",
+    "",
+    "x" * 3000,
+]
 NODE_HARNESS = r"""
 const fs = require('fs'), vm = require('vm');
 const tpl = fs.readFileSync(process.env.TEMPLATE, 'utf8');
@@ -714,28 +1213,79 @@ process.stdout.write(JSON.stringify(out));
 class TemplateScript(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        proc = subprocess.run([NODE, "-e", NODE_HARNESS], input=json.dumps({"urls": SAFE_URLS + BAD_URLS, "docs": JS_INPUTS}), capture_output=True, text=True,
-                              env=dict(os.environ, TEMPLATE=TEMPLATE), timeout=300)
+        proc = subprocess.run(
+            [NODE, "-e", NODE_HARNESS],
+            input=json.dumps({"urls": SAFE_URLS + BAD_URLS, "docs": JS_INPUTS}),
+            capture_output=True,
+            text=True,
+            env=dict(os.environ, TEMPLATE=TEMPLATE),
+            timeout=300,
+        )
         assert proc.returncode == 0, proc.stderr
         cls.out = json.loads(proc.stdout)
 
     def test_the_page_script_parses(self):
-        with open(TEMPLATE, encoding="utf-8") as src, tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as fh:
-            fh.write(re.search(r'<script id="app">(.*?)</script>', src.read(), re.S).group(1))
+        with open(TEMPLATE, encoding="utf-8") as src, tempfile.NamedTemporaryFile(
+            "w", suffix=".js", delete=False, encoding="utf-8"
+        ) as fh:
+            fh.write(
+                re.search(r'<script id="app">(.*?)</script>', src.read(), re.S).group(1)
+            )
         self.addCleanup(os.unlink, fh.name)
-        self.assertEqual(subprocess.run([NODE, "--check", fh.name], capture_output=True, text=True).returncode, 0)
+        self.assertEqual(
+            subprocess.run(
+                [NODE, "--check", fh.name], capture_output=True, text=True
+            ).returncode,
+            0,
+        )
 
     def test_link_allowlist(self):
         urls = self.out["urls"]
-        for url, got in zip(SAFE_URLS, urls[:len(SAFE_URLS)]):
+        for url, got in zip(SAFE_URLS, urls[: len(SAFE_URLS)]):
             self.assertIsNotNone(got, url)
-        for url, got in zip(BAD_URLS, urls[len(SAFE_URLS):]):
+        for url, got in zip(BAD_URLS, urls[len(SAFE_URLS) :]):
             self.assertIsNone(got, repr(url))
 
     def test_hostile_markdown_becomes_text_never_elements(self):
-        allowed_tags = {"p", "h3", "h4", "h5", "h6", "ul", "ol", "li", "code", "pre", "strong", "em", "del", "a", "br", "hr", "blockquote", "table", "thead", "tbody", "tr",
-                        "th", "td", "div", "span"}
-        allowed_attrs = {"href", "rel", "target", "referrerpolicy", "id", "class", "role", "tabindex", "aria-label", "scope"}
+        allowed_tags = {
+            "p",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "ul",
+            "ol",
+            "li",
+            "code",
+            "pre",
+            "strong",
+            "em",
+            "del",
+            "a",
+            "br",
+            "hr",
+            "blockquote",
+            "table",
+            "thead",
+            "tbody",
+            "tr",
+            "th",
+            "td",
+            "div",
+            "span",
+        }
+        allowed_attrs = {
+            "href",
+            "rel",
+            "target",
+            "referrerpolicy",
+            "id",
+            "class",
+            "role",
+            "tabindex",
+            "aria-label",
+            "scope",
+        }
         for src, doc in zip(JS_INPUTS, self.out["docs"]):
             label = src[:50]
             self.assertLessEqual(set(doc["tags"]), allowed_tags, label)
@@ -743,7 +1293,9 @@ class TemplateScript(unittest.TestCase):
             self.assertLess(doc["ms"], 5000, label)
             for href in doc["hrefs"]:
                 stripped = re.sub(r"[\x00-\x20]", "", href).lower()
-                self.assertRegex(stripped, r"^(https?://|mailto:|#|[^:/?#\\]*(?:[/?#]|$))", href)
+                self.assertRegex(
+                    stripped, r"^(https?://|mailto:|#|[^:/?#\\]*(?:[/?#]|$))", href
+                )
         first = self.out["docs"][0]
         self.assertIn("<script>alert(1)</script>", first["text"])
         self.assertEqual(self.out["docs"][2]["tags"], ["p"])
@@ -768,15 +1320,22 @@ class TemplateScript(unittest.TestCase):
 
     def test_rule_card_renders_hostile_fields_as_text(self):
         card = self.out["card"]
-        self.assertLessEqual(set(card["tags"]), {"article", "span", "h4", "div", "p", "strong"})
-        self.assertLessEqual(set(card["attrs"]), {"class", "id", "data-p", "data-d", "aria-label"})
+        self.assertLessEqual(
+            set(card["tags"]), {"article", "span", "h4", "div", "p", "strong"}
+        )
+        self.assertLessEqual(
+            set(card["attrs"]), {"class", "id", "data-p", "data-d", "aria-label"}
+        )
         self.assertIn("<img src=x onerror=1>`a`", card["text"])
         self.assertIn("<b>a.cbl:1</b>", card["text"])
 
 
 class Vendored(unittest.TestCase):
     def test_mermaid_matches_the_recorded_digest_and_license(self):
-        with open(os.path.join(PLUGIN, "assets", "vendor", "LICENSE-mermaid.txt"), encoding="utf-8") as fh:
+        with open(
+            os.path.join(PLUGIN, "assets", "vendor", "LICENSE-mermaid.txt"),
+            encoding="utf-8",
+        ) as fh:
             lic = fh.read()
         with open(MERMAID, "rb") as fh:
             raw = fh.read()

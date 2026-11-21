@@ -15,10 +15,26 @@ Examples:
   python3 denoise.py grainy_scan.mov --strength high
   python3 denoise.py source.mp4 --luma-spatial 6 --chroma-spatial 4 --luma-temporal 8 --chroma-temporal 6
 """
+
 import argparse
 import sys
 
-from _common import add_common, apply_common, aac_args, cfr_args, default_output, die, emit, ffmpeg_base, info, probe, run_keeping_subtitles, video_args, X264_PRESETS, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+)
 
 # hqdn3d's own AVOptions default to 0 (off); these tested presets are the light/medium/heavy
 # starting points its own documentation and common usage recommend (spatial then temporal,
@@ -31,20 +47,54 @@ STRENGTH_PRESETS = {
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="output file (default: <name>_denoise.<ext>)")
-    ap.add_argument("--strength", choices=list(STRENGTH_PRESETS), default="medium",
-                     help="preset denoising amount (default medium); overridden per-parameter by the flags below")
-    ap.add_argument("--luma-spatial", type=float, help="spatial luma denoising strength (default from --strength)")
-    ap.add_argument("--chroma-spatial", type=float, help="spatial chroma denoising strength (default from --strength)")
-    ap.add_argument("--luma-temporal", type=float, help="temporal luma denoising strength (default from --strength)")
-    ap.add_argument("--chroma-temporal", type=float, help="temporal chroma denoising strength (default from --strength)")
-    ap.add_argument("--audio-stream", type=int, default=0,
-                     help="which audio stream of the input to keep, 0-based in file order (default 0)")
+    ap.add_argument(
+        "-o", "--output", help="output file (default: <name>_denoise.<ext>)"
+    )
+    ap.add_argument(
+        "--strength",
+        choices=list(STRENGTH_PRESETS),
+        default="medium",
+        help="preset denoising amount (default medium); overridden per-parameter by the flags below",
+    )
+    ap.add_argument(
+        "--luma-spatial",
+        type=float,
+        help="spatial luma denoising strength (default from --strength)",
+    )
+    ap.add_argument(
+        "--chroma-spatial",
+        type=float,
+        help="spatial chroma denoising strength (default from --strength)",
+    )
+    ap.add_argument(
+        "--luma-temporal",
+        type=float,
+        help="temporal luma denoising strength (default from --strength)",
+    )
+    ap.add_argument(
+        "--chroma-temporal",
+        type=float,
+        help="temporal chroma denoising strength (default from --strength)",
+    )
+    ap.add_argument(
+        "--audio-stream",
+        type=int,
+        default=0,
+        help="which audio stream of the input to keep, 0-based in file order (default 0)",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
-    ap.add_argument("--fps", type=float, help="force a constant output frame rate (recommended for VFR sources)")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
+    ap.add_argument(
+        "--fps",
+        type=float,
+        help="force a constant output frame rate (recommended for VFR sources)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -56,7 +106,12 @@ def main() -> int:
     cs = args.chroma_spatial if args.chroma_spatial is not None else cs
     lt = args.luma_temporal if args.luma_temporal is not None else lt
     ct = args.chroma_temporal if args.chroma_temporal is not None else ct
-    for name, val in (("--luma-spatial", ls), ("--chroma-spatial", cs), ("--luma-temporal", lt), ("--chroma-temporal", ct)):
+    for name, val in (
+        ("--luma-spatial", ls),
+        ("--chroma-spatial", cs),
+        ("--luma-temporal", lt),
+        ("--chroma-temporal", ct),
+    ):
         if val < 0:
             die(f"{name} must be >= 0, got {val:g}")
 
@@ -66,7 +121,9 @@ def main() -> int:
     has_audio = bool(meta.get("audio"))
     audio_streams = meta.get("audio_streams") or []
     if audio_streams and not (0 <= args.audio_stream < len(audio_streams)):
-        die(f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}")
+        die(
+            f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}"
+        )
     if args.audio_stream and not audio_streams:
         die("--audio-stream needs an input with audio streams")
     output = args.output or default_output(args.input, "denoise")
@@ -85,7 +142,9 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, strength={args.strength})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, strength={args.strength})"
+    )
     emit(output, dropped_non_av_streams=dropped_streams)
     return 0
 

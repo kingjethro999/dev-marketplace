@@ -1,6 +1,7 @@
 """The release automation's decision logic (.github/scripts), exercised without GitHub:
 label -> version rules, the doc bump helpers, and auto_bump.py end to end inside a
 throwaway git repository (never this checkout)."""
+
 import json
 import os
 import shutil
@@ -34,7 +35,11 @@ class ResolveVersionTests(unittest.TestCase):
         self.assertEqual(bump_for_labels(["breaking"]), "major")
 
     def test_minor_wins_over_patch(self):
-        v, _ = resolve("0.3.0", ["feat: a (#5)", "fix: b (#6)"], self.labels({5: ["feature"], 6: ["fix"]}))
+        v, _ = resolve(
+            "0.3.0",
+            ["feat: a (#5)", "fix: b (#6)"],
+            self.labels({5: ["feature"], 6: ["fix"]}),
+        )
         self.assertEqual(v, "0.4.0")
 
     def test_patch_only(self):
@@ -44,7 +49,11 @@ class ResolveVersionTests(unittest.TestCase):
     def test_nothing_releasable(self):
         v, decisions = resolve(
             "0.3.0",
-            ["chore: tidy (#7)", "build(deps): bump x (#8)", "chore(release): bump version to 0.3.0 [skip ci]"],
+            [
+                "chore: tidy (#7)",
+                "build(deps): bump x (#8)",
+                "chore(release): bump version to 0.3.0 [skip ci]",
+            ],
             self.labels({7: ["chore", "ci"], 8: ["dependencies", "major"]}),
         )
         self.assertIsNone(v)
@@ -61,8 +70,10 @@ class ResolveVersionTests(unittest.TestCase):
 
 class DocBumpTests(unittest.TestCase):
     def test_contract_md_moves_only_the_two_anchors(self):
-        text = ('the npm / package.json version (`0.3.0`)\n"added in 0.3.0"\n'
-                '"skill": {"id": "imagemagick-skill", "version": "0.3.0", ...')
+        text = (
+            'the npm / package.json version (`0.3.0`)\n"added in 0.3.0"\n'
+            '"skill": {"id": "imagemagick-skill", "version": "0.3.0", ...'
+        )
         out = bump_contract_md(text, "0.3.0", "0.4.0")
         self.assertIn("(`0.4.0`)", out)
         self.assertIn('"version": "0.4.0"', out)
@@ -73,8 +84,10 @@ class DocBumpTests(unittest.TestCase):
             bump_contract_md("nothing here", "0.3.0", "0.4.0")
 
     def test_roadmap_rows_merged_since_the_last_release_get_the_new_version(self):
-        text = ("The released version today is **0.6.2**.\n"
-                "| RM-047 | done | 0.6.1 | a |\n| RM-048 | done | main | b |\n| RM-049 | planned | | c |\n")
+        text = (
+            "The released version today is **0.6.2**.\n"
+            "| RM-047 | done | 0.6.1 | a |\n| RM-048 | done | main | b |\n| RM-049 | planned | | c |\n"
+        )
         out = bump_roadmap_md(text, "0.6.2", "0.7.0")
         self.assertIn("| RM-048 | done | 0.7.0 | b |", out)
         self.assertIn("| RM-047 | done | 0.6.1 | a |", out)
@@ -102,7 +115,14 @@ class AutoBumpInFixtureRepoTests(unittest.TestCase):
         self.assertNotEqual(os.path.realpath(self.repo), os.path.realpath(ROOT))
         os.makedirs(os.path.join(self.repo, ".claude-plugin"))
         os.makedirs(os.path.join(self.repo, "docs"))
-        for rel in ("package.json", ".claude-plugin/plugin.json", "skill.contract.json", "docs/contract.md", "docs/roadmap.md", "CHANGELOG.md"):
+        for rel in (
+            "package.json",
+            ".claude-plugin/plugin.json",
+            "skill.contract.json",
+            "docs/contract.md",
+            "docs/roadmap.md",
+            "CHANGELOG.md",
+        ):
             shutil.copy(os.path.join(ROOT, rel), os.path.join(self.repo, rel))
         with open(os.path.join(ROOT, "package.json")) as f:
             self.old = json.load(f)["version"]
@@ -112,18 +132,40 @@ class AutoBumpInFixtureRepoTests(unittest.TestCase):
         self.git("add", "-A")
         self.git("commit", "-q", "-m", "base")
         self.git("tag", f"v{self.old}")
-        self.git("commit", "-q", "--allow-empty", "-m", "feat: add look.py (#20)", "-m", "Closes #3")
-        self.git("commit", "-q", "--allow-empty", "-m", "fix: `$(touch pwned)` title (#21)")
+        self.git(
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "feat: add look.py (#20)",
+            "-m",
+            "Closes #3",
+        )
+        self.git(
+            "commit", "-q", "--allow-empty", "-m", "fix: `$(touch pwned)` title (#21)"
+        )
 
     def git(self, *args):
-        env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
-                   GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com")
-        subprocess.run([GIT, *args], cwd=self.repo, check=True, capture_output=True, env=env)
+        env = dict(
+            os.environ,
+            GIT_AUTHOR_NAME="t",
+            GIT_AUTHOR_EMAIL="t@example.com",
+            GIT_COMMITTER_NAME="t",
+            GIT_COMMITTER_EMAIL="t@example.com",
+        )
+        subprocess.run(
+            [GIT, *args], cwd=self.repo, check=True, capture_output=True, env=env
+        )
 
     def run_bump(self, new):
         env = dict(os.environ, OLD_VERSION=self.old, NEW_VERSION=new)
-        return subprocess.run([sys.executable, os.path.join(RELEASE_SCRIPTS, "auto_bump.py")],
-                              cwd=self.repo, env=env, capture_output=True, text=True)
+        return subprocess.run(
+            [sys.executable, os.path.join(RELEASE_SCRIPTS, "auto_bump.py")],
+            cwd=self.repo,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
 
     def read(self, rel):
         with open(os.path.join(self.repo, rel), encoding="utf-8") as f:
@@ -133,16 +175,25 @@ class AutoBumpInFixtureRepoTests(unittest.TestCase):
         proc = self.run_bump(self.new)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(json.loads(self.read("package.json"))["version"], self.new)
-        self.assertEqual(json.loads(self.read(".claude-plugin/plugin.json"))["version"], self.new)
+        self.assertEqual(
+            json.loads(self.read(".claude-plugin/plugin.json"))["version"], self.new
+        )
         skillpact = json.loads(self.read("skill.contract.json"))
         self.assertEqual(skillpact["skill"]["version"], self.new)
         before = json.loads(_root_file("skill.contract.json"))
         before["skill"]["version"] = self.new
-        self.assertEqual(skillpact, before)   # requirement ranges and everything else untouched
+        self.assertEqual(
+            skillpact, before
+        )  # requirement ranges and everything else untouched
         self.assertIn(f"(`{self.new}`)", self.read("docs/contract.md"))
-        self.assertIn(f"The released version today is **{self.new}**", self.read("docs/roadmap.md"))
+        self.assertIn(
+            f"The released version today is **{self.new}**",
+            self.read("docs/roadmap.md"),
+        )
         changelog = self.read("CHANGELOG.md")
-        self.assertTrue(changelog.index("## Unreleased") < changelog.index(f"## {self.new}"))
+        self.assertTrue(
+            changelog.index("## Unreleased") < changelog.index(f"## {self.new}")
+        )
         self.assertIn("- feat: add look.py (#20)", changelog)
         self.assertIn("Closes: #3", changelog)
         self.assertIn("- fix: `$(touch pwned)` title (#21)", changelog)

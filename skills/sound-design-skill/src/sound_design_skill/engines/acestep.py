@@ -29,6 +29,7 @@ same components with the same rule before anything is imported, (2) points ACE-S
 ACESTEP_CHECKPOINTS_DIR, (3) replaces ACE-Step's download functions in the worker with ones that refuse, and (4) the
 worker blocks every non-loopback socket (engines/netguard.py). The 5 Hz language model is never loaded: it is off
 until the Qwen3 base-model licences are verified (LM_STATUS)."""
+
 from __future__ import annotations
 
 import importlib
@@ -38,8 +39,19 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from ..errors import SoundDesignError
-from .base import (INCOMPATIBLE, MISSING, OK, Engine, EngineRequest, EngineResult, EngineSpec, ModelSpec, in_range, missing,
-                   parse_version)
+from .base import (
+    INCOMPATIBLE,
+    MISSING,
+    OK,
+    Engine,
+    EngineRequest,
+    EngineResult,
+    EngineSpec,
+    ModelSpec,
+    in_range,
+    missing,
+    parse_version,
+)
 from .lookup import python_packages, weights_dir
 
 ENV_PYTHON = "SOUND_DESIGN_ACESTEP_PYTHON"
@@ -48,36 +60,73 @@ DIST = "ace-step"
 MODULE = "acestep"
 HF_REPO = "ACE-Step/Ace-Step1.5"
 DIT_MODEL = "acestep-v15-turbo"
-REQUIRED_FILES = (f"{DIT_MODEL}/config.json", f"{DIT_MODEL}/model.safetensors", "vae/diffusion_pytorch_model.safetensors",
-                  "Qwen3-Embedding-0.6B/model.safetensors")
+REQUIRED_FILES = (
+    f"{DIT_MODEL}/config.json",
+    f"{DIT_MODEL}/model.safetensors",
+    "vae/diffusion_pytorch_model.safetensors",
+    "Qwen3-Embedding-0.6B/model.safetensors",
+)
 LM_MODELS = ("acestep-5Hz-lm-0.6B", "acestep-5Hz-lm-1.7B", "acestep-5Hz-lm-4B")
 # acestep/model_downloader.py MAIN_MODEL_COMPONENTS (ca1e85fe): initialize_service downloads the main repository when
 # any of these has no weights file, the 1.7B LM included, although this skill never loads it.
-MAIN_MODEL_COMPONENTS = (DIT_MODEL, "vae", "Qwen3-Embedding-0.6B", "acestep-5Hz-lm-1.7B")
+MAIN_MODEL_COMPONENTS = (
+    DIT_MODEL,
+    "vae",
+    "Qwen3-Embedding-0.6B",
+    "acestep-5Hz-lm-1.7B",
+)
 # acestep/model_downloader.py _contains_model_weights: a component "exists" when one of these files is in its directory
-WEIGHT_FILENAMES = ("model.safetensors", "model.safetensors.index.json", "pytorch_model.bin", "pytorch_model.bin.index.json",
-                    "diffusion_pytorch_model.safetensors", "diffusion_pytorch_model.safetensors.index.json",
-                    "diffusion_pytorch_model.bin", "diffusion_pytorch_model.bin.index.json")
-VAE_VARIANT = "official"                         # model_downloader.DEFAULT_VAE_VARIANT: the VAE inside the main repo
-DEVICES = ("auto", "cuda", "mps", "xpu", "cpu")  # values initialize_service resolves (_resolve_initialize_device)
-SAMPLE_RATE = 48000                              # AceStepHandler.sample_rate
-MAX_CAPTION = 512                                # GenerationParams docstring: caption < 512 characters
-MAX_LYRICS = 4096                                # GenerationParams docstring: lyrics < 4096 characters
-INSTRUMENTAL_LYRICS = "[Instrumental]"           # GenerationParams docstring: "[Instrumental]" for instrumental songs
-LM_STATUS = ("off: the 5 Hz LM (fine-tuned from Qwen3-0.6B / 1.7B / 4B) is never loaded until the Qwen3 base-model "
-             "licences are verified (docs/decisions.md ADR-001 follow-up, ADR-004); generation is DiT-only")
+WEIGHT_FILENAMES = (
+    "model.safetensors",
+    "model.safetensors.index.json",
+    "pytorch_model.bin",
+    "pytorch_model.bin.index.json",
+    "diffusion_pytorch_model.safetensors",
+    "diffusion_pytorch_model.safetensors.index.json",
+    "diffusion_pytorch_model.bin",
+    "diffusion_pytorch_model.bin.index.json",
+)
+VAE_VARIANT = (
+    "official"  # model_downloader.DEFAULT_VAE_VARIANT: the VAE inside the main repo
+)
+DEVICES = (
+    "auto",
+    "cuda",
+    "mps",
+    "xpu",
+    "cpu",
+)  # values initialize_service resolves (_resolve_initialize_device)
+SAMPLE_RATE = 48000  # AceStepHandler.sample_rate
+MAX_CAPTION = 512  # GenerationParams docstring: caption < 512 characters
+MAX_LYRICS = 4096  # GenerationParams docstring: lyrics < 4096 characters
+INSTRUMENTAL_LYRICS = "[Instrumental]"  # GenerationParams docstring: "[Instrumental]" for instrumental songs
+LM_STATUS = (
+    "off: the 5 Hz LM (fine-tuned from Qwen3-0.6B / 1.7B / 4B) is never loaded until the Qwen3 base-model "
+    "licences are verified (docs/decisions.md ADR-001 follow-up, ADR-004); generation is DiT-only"
+)
 API_SOURCE = "ace-step/ACE-Step-1.5@ca1e85fe9430179831e6bc6be790c332190a3866"
-SUPPORTED = ((1, 5, 0), (1, 6, 0))               # >=1.5.0 <1.6.0: the release this ADR checked (pyproject 1.5.0)
-INSTALL = (f"git clone https://github.com/ace-step/ACE-Step-1.5 ~/ACE-Step-1.5 && cd ~/ACE-Step-1.5 && uv sync "
-           f"(Python 3.11-3.12), then fetch the weights once: uv run acestep-download (or huggingface-cli download "
-           f"{HF_REPO} --local-dir ~/ACE-Step-1.5/checkpoints); set {ENV_PYTHON}=~/ACE-Step-1.5/.venv/bin/python and "
-           f"{ENV_CHECKPOINTS}=~/ACE-Step-1.5/checkpoints")
-WEIGHTS_LICENSE = ("MIT (Hugging Face ACE-Step/Ace-Step1.5 and the acestep-v15-* / acestep-5Hz-lm-* model cards); "
-                   "bundled text encoder Qwen3-Embedding-0.6B Apache-2.0")
-OUTPUT_USE = ("commercial use of generated music stated by the model card (\"You can strictly use the generated music "
-              "for commercial purposes\"); the README asks users to check originality and disclose AI involvement")
-TRAINING_DATA = ("model card claim: licensed tracks, royalty-free / public-domain music and MIDI-rendered synthetic "
-                 "audio; the dataset itself is not published (unverified)")
+SUPPORTED = (
+    (1, 5, 0),
+    (1, 6, 0),
+)  # >=1.5.0 <1.6.0: the release this ADR checked (pyproject 1.5.0)
+INSTALL = (
+    f"git clone https://github.com/ace-step/ACE-Step-1.5 ~/ACE-Step-1.5 && cd ~/ACE-Step-1.5 && uv sync "
+    f"(Python 3.11-3.12), then fetch the weights once: uv run acestep-download (or huggingface-cli download "
+    f"{HF_REPO} --local-dir ~/ACE-Step-1.5/checkpoints); set {ENV_PYTHON}=~/ACE-Step-1.5/.venv/bin/python and "
+    f"{ENV_CHECKPOINTS}=~/ACE-Step-1.5/checkpoints"
+)
+WEIGHTS_LICENSE = (
+    "MIT (Hugging Face ACE-Step/Ace-Step1.5 and the acestep-v15-* / acestep-5Hz-lm-* model cards); "
+    "bundled text encoder Qwen3-Embedding-0.6B Apache-2.0"
+)
+OUTPUT_USE = (
+    'commercial use of generated music stated by the model card ("You can strictly use the generated music '
+    'for commercial purposes"); the README asks users to check originality and disclose AI involvement'
+)
+TRAINING_DATA = (
+    "model card claim: licensed tracks, royalty-free / public-domain music and MIDI-rendered synthetic "
+    "audio; the dataset itself is not published (unverified)"
+)
 
 # ADR-016: ACE-Step 1.5 XL turbo, read on Hugging Face at d4a0b288 (2026-04-07) and in ace-step/ACE-Step-1.5 at
 # ca1e85fe (model_downloader.SUBMODEL_REGISTRY, _CHECKPOINT_TO_VARIANT; docs/en/INFERENCE.md lists it as a turbo
@@ -85,52 +134,81 @@ TRAINING_DATA = ("model card claim: licensed tracks, royalty-free / public-domai
 # (_load_main_model_from_checkpoint raises without it). The .py model code is copied in by ACE-Step itself.
 XL_MODEL = "acestep-v15-xl-turbo"
 XL_REPO = "ACE-Step/acestep-v15-xl-turbo"
-XL_FILES = (f"{XL_MODEL}/config.json", f"{XL_MODEL}/model.safetensors.index.json",
-            *(f"{XL_MODEL}/model-0000{i}-of-00004.safetensors" for i in range(1, 5)), f"{XL_MODEL}/silence_latent.pt")
+XL_FILES = (
+    f"{XL_MODEL}/config.json",
+    f"{XL_MODEL}/model.safetensors.index.json",
+    *(f"{XL_MODEL}/model-0000{i}-of-00004.safetensors" for i in range(1, 5)),
+    f"{XL_MODEL}/silence_latent.pt",
+)
 
 MODELS = (
     ModelSpec(
-        id=DIT_MODEL, default=True,
+        id=DIT_MODEL,
+        default=True,
         description="ACE-Step 1.5 turbo: 2B DiT, 8 steps, no CFG; shipped in the main repository with the VAE, the text "
-                    "encoder and the 1.7B LM",
-        parameters="2B DiT", repository=HF_REPO, revision=None,
-        weights_license=WEIGHTS_LICENSE, output_use=OUTPUT_USE, training_data=TRAINING_DATA,
-        min_vram_gb=4.0, vram_check="warn",
-        vram_note="the model card's \"less than 4GB of VRAM\"; CPU documented, so less only warns",
-        vram_documented=("model card: runs locally with less than 4 GB of VRAM",
-                         "README: <= 6 GB DiT only with INT8 quantization + CPU offload, 6-16 GB with a 5 Hz LM"),
-        download_gb=10.09, required_files=(f"{DIT_MODEL}/config.json", f"{DIT_MODEL}/model.safetensors"),
+        "encoder and the 1.7B LM",
+        parameters="2B DiT",
+        repository=HF_REPO,
+        revision=None,
+        weights_license=WEIGHTS_LICENSE,
+        output_use=OUTPUT_USE,
+        training_data=TRAINING_DATA,
+        min_vram_gb=4.0,
+        vram_check="warn",
+        vram_note='the model card\'s "less than 4GB of VRAM"; CPU documented, so less only warns',
+        vram_documented=(
+            "model card: runs locally with less than 4 GB of VRAM",
+            "README: <= 6 GB DiT only with INT8 quantization + CPU offload, 6-16 GB with a 5 Hz LM",
+        ),
+        download_gb=10.09,
+        required_files=(f"{DIT_MODEL}/config.json", f"{DIT_MODEL}/model.safetensors"),
         install=INSTALL,
-        sources=("https://huggingface.co/ACE-Step/Ace-Step1.5", "https://github.com/ace-step/ACE-Step-1.5")),
+        sources=(
+            "https://huggingface.co/ACE-Step/Ace-Step1.5",
+            "https://github.com/ace-step/ACE-Step-1.5",
+        ),
+    ),
     ModelSpec(
         id=XL_MODEL,
         description="ACE-Step 1.5 XL turbo: 4B DiT (about 4B parameters), 8 steps, no CFG; higher audio quality than "
-                    "the 2B turbo by its model card; loaded with the main repository's VAE and text encoder",
-        parameters="4B DiT", repository=XL_REPO, revision="d4a0b288b83ebb7e25a8c0b32c573c22e134e8ee",
+        "the 2B turbo by its model card; loaded with the main repository's VAE and text encoder",
+        parameters="4B DiT",
+        repository=XL_REPO,
+        revision="d4a0b288b83ebb7e25a8c0b32c573c22e134e8ee",
         weights_license="MIT (Hugging Face ACE-Step/acestep-v15-xl-turbo model card, license: mit); with the VAE and "
-                        "text encoder of ACE-Step/Ace-Step1.5 (MIT), text encoder Qwen3-Embedding-0.6B Apache-2.0",
-        output_use="commercial use of generated music stated by the acestep-v15-xl-turbo model card (\"Generated "
-                   "music can be used for commercial purposes\"); the README asks users to check originality and "
-                   "disclose AI involvement",
+        "text encoder of ACE-Step/Ace-Step1.5 (MIT), text encoder Qwen3-Embedding-0.6B Apache-2.0",
+        output_use='commercial use of generated music stated by the acestep-v15-xl-turbo model card ("Generated '
+        'music can be used for commercial purposes"); the README asks users to check originality and '
+        "disclose AI involvement",
         training_data="model card claim: licensed music, royalty-free / public-domain and synthetic (MIDI-to-Audio) "
-                      "data; the dataset itself is not published (unverified)",
-        min_vram_gb=20.0, vram_check="refuse",
+        "data; the dataset itself is not published (unverified)",
+        min_vram_gb=20.0,
+        vram_check="refuse",
         vram_note="the model card's figure without CPU offload; this skill passes no offload or quantization",
-        vram_documented=("model card: >= 12 GB with CPU offload + INT8 quantization",
-                         "model card: >= 16 GB with CPU offload",
-                         "model card: >= 20 GB without offload (recommended)",
-                         "model card: >= 24 GB for full quality (XL + the 4B LM)",
-                         "ACE-Step gpu_config: about 9 GB for the XL DiT weights (bf16)"),
-        download_gb=19.95, required_files=XL_FILES,
-        install=(f"with {ENV_CHECKPOINTS} set to the checkpoints directory that holds the main model (normally "
-                 f"~/ACE-Step-1.5/checkpoints): cd ~/ACE-Step-1.5 && uv run acestep-download --model {XL_MODEL} --dir "
-                 f"\"${ENV_CHECKPOINTS}\" (about 20 GB more, into ${ENV_CHECKPOINTS}/{XL_MODEL}; or huggingface-cli "
-                 f"download {XL_REPO} --local-dir \"${ENV_CHECKPOINTS}/{XL_MODEL}\")"),
+        vram_documented=(
+            "model card: >= 12 GB with CPU offload + INT8 quantization",
+            "model card: >= 16 GB with CPU offload",
+            "model card: >= 20 GB without offload (recommended)",
+            "model card: >= 24 GB for full quality (XL + the 4B LM)",
+            "ACE-Step gpu_config: about 9 GB for the XL DiT weights (bf16)",
+        ),
+        download_gb=19.95,
+        required_files=XL_FILES,
+        install=(
+            f"with {ENV_CHECKPOINTS} set to the checkpoints directory that holds the main model (normally "
+            f"~/ACE-Step-1.5/checkpoints): cd ~/ACE-Step-1.5 && uv run acestep-download --model {XL_MODEL} --dir "
+            f'"${ENV_CHECKPOINTS}" (about 20 GB more, into ${ENV_CHECKPOINTS}/{XL_MODEL}; or huggingface-cli '
+            f'download {XL_REPO} --local-dir "${ENV_CHECKPOINTS}/{XL_MODEL}")'
+        ),
         licence_checked="2026-11-12 (docs/decisions.md ADR-016)",
-        sources=(f"https://huggingface.co/{XL_REPO}", f"https://huggingface.co/api/models/{XL_REPO}",
-                 "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/acestep/model_downloader.py",
-                 "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/docs/en/GPU_COMPATIBILITY.md",
-                 "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/docs/en/INFERENCE.md")),
+        sources=(
+            f"https://huggingface.co/{XL_REPO}",
+            f"https://huggingface.co/api/models/{XL_REPO}",
+            "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/acestep/model_downloader.py",
+            "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/docs/en/GPU_COMPATIBILITY.md",
+            "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/docs/en/INFERENCE.md",
+        ),
+    ),
 )
 MODEL_IDS = tuple(m.id for m in MODELS)
 DEFAULT_MODEL = DIT_MODEL
@@ -151,10 +229,13 @@ SPEC = EngineSpec(
     devices=("cuda", "mps", "rocm", "xpu", "cpu"),
     min_vram_gb=4.0,
     isolation="worker subprocess under ACE-Step's own environment (SOUND_DESIGN_ACESTEP_PYTHON): it pins torch builds "
-              "per platform, gradio, transformers <4.58 and needs Python 3.11-3.12; this package never imports it",
+    "per platform, gradio, transformers <4.58 and needs Python 3.11-3.12; this package never imports it",
     version_range=">=1.5.0 <1.6.0",
     install=INSTALL,
-    located_by=(f"${ENV_PYTHON} (else this Python)", f"${ENV_CHECKPOINTS} (else the Hugging Face cache, {HF_REPO})"),
+    located_by=(
+        f"${ENV_PYTHON} (else this Python)",
+        f"${ENV_CHECKPOINTS} (else the Hugging Face cache, {HF_REPO})",
+    ),
     roadmap_step=2,
     lm_status=LM_STATUS,
     licence_notes=(
@@ -166,10 +247,14 @@ SPEC = EngineSpec(
         f"XL turbo (4B DiT, {XL_REPO}, MIT) is selectable with --model {XL_MODEL}: its own ~20 GB download into the "
         "checkpoints directory, and >= 20 GB GPU memory as run here (no offload); not the default (ADR-016)",
     ),
-    sources=("https://github.com/ace-step/ACE-Step-1.5", "https://github.com/ace-step/ACE-Step-1.5/blob/main/LICENSE",
-             "https://github.com/ace-step/ACE-Step-1.5/blob/main/pyproject.toml",
-             "https://huggingface.co/ACE-Step/Ace-Step1.5", "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
-             "https://github.com/ace-step/ACE-Step-1.5/blob/main/docs/en/INSTALL.md"),
+    sources=(
+        "https://github.com/ace-step/ACE-Step-1.5",
+        "https://github.com/ace-step/ACE-Step-1.5/blob/main/LICENSE",
+        "https://github.com/ace-step/ACE-Step-1.5/blob/main/pyproject.toml",
+        "https://huggingface.co/ACE-Step/Ace-Step1.5",
+        "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+        "https://github.com/ace-step/ACE-Step-1.5/blob/main/docs/en/INSTALL.md",
+    ),
     models=MODELS,
 )
 
@@ -184,143 +269,287 @@ class AceStepEngine(Engine):
             return missing(found["error"], "package", interpreter=where)
         vstr = found["dists"].get(DIST)
         if not vstr or not found["modules"].get(MODULE):
-            return missing(f"{DIST} is not installed in {where}", "package", interpreter=where)
+            return missing(
+                f"{DIST} is not installed in {where}", "package", interpreter=where
+            )
         version = parse_version(vstr)
         if version is None or not in_range(version, *SUPPORTED):
-            return {"status": INCOMPATIBLE, "version": vstr, "detail": f"{DIST} {vstr} is outside {SPEC.version_range}",
-                    "model": None, "interpreter": where}
+            return {
+                "status": INCOMPATIBLE,
+                "version": vstr,
+                "detail": f"{DIST} {vstr} is outside {SPEC.version_range}",
+                "model": None,
+                "interpreter": where,
+            }
         weights = weights_dir(HF_REPO, REQUIRED_FILES, ENV_CHECKPOINTS)
         if weights["dir"] is None:
-            return dict(missing(f"weights missing in {weights['source']}: {', '.join(weights['missing'])}", "model",
-                                interpreter=where), version=vstr)
+            return dict(
+                missing(
+                    f"weights missing in {weights['source']}: {', '.join(weights['missing'])}",
+                    "model",
+                    interpreter=where,
+                ),
+                version=vstr,
+            )
         absent = missing_components(weights["dir"])
         if absent:
-            return dict(missing(f"ACE-Step would download the main model: no weights for {', '.join(absent)} in "
-                                f"{weights['source']} (initialize_service needs every one of {', '.join(MAIN_MODEL_COMPONENTS)})",
-                                "model", interpreter=where), version=vstr)
+            return dict(
+                missing(
+                    f"ACE-Step would download the main model: no weights for {', '.join(absent)} in "
+                    f"{weights['source']} (initialize_service needs every one of {', '.join(MAIN_MODEL_COMPONENTS)})",
+                    "model",
+                    interpreter=where,
+                ),
+                version=vstr,
+            )
         lms: List[str] = [m for m in LM_MODELS if has_weights(weights["dir"] / m)]
-        return {"status": OK, "version": vstr, "detail": f"{DIST} {vstr}, {DIT_MODEL} ({weights['source']})", "model": DIT_MODEL,
-                "lm_models": lms, "lm_note": "present on disk, not used: " + LM_STATUS, "interpreter": where,
-                "model_status": {m.id: model_files(m, weights) for m in MODELS}}
+        return {
+            "status": OK,
+            "version": vstr,
+            "detail": f"{DIST} {vstr}, {DIT_MODEL} ({weights['source']})",
+            "model": DIT_MODEL,
+            "lm_models": lms,
+            "lm_note": "present on disk, not used: " + LM_STATUS,
+            "interpreter": where,
+            "model_status": {m.id: model_files(m, weights) for m in MODELS},
+        }
 
     def model_status(self, model_id: Optional[str] = None) -> Dict[str, Any]:
         """A model's files in the checkpoints directory doctor uses (ADR-016). File checks only: nothing is imported."""
-        return model_files(self.spec.model(model_id), weights_dir(HF_REPO, REQUIRED_FILES, ENV_CHECKPOINTS))
+        return model_files(
+            self.spec.model(model_id),
+            weights_dir(HF_REPO, REQUIRED_FILES, ENV_CHECKPOINTS),
+        )
 
     def process(self, req: EngineRequest) -> EngineResult:
         """Runs in the worker only (under SOUND_DESIGN_ACESTEP_PYTHON). Checks first, imports ACE-Step last."""
         self.validate(req)
         caption = req.prompt.strip()
         if len(caption) > MAX_CAPTION:
-            raise SoundDesignError("INVALID_ARGUMENT", f"the prompt is {len(caption)} characters; ACE-Step takes < {MAX_CAPTION}",
-                                   {"engine": self.id, "length": len(caption)})
-        if req.lyrics is not None and (not req.lyrics.strip() or len(req.lyrics) > MAX_LYRICS):
-            raise SoundDesignError("INVALID_ARGUMENT", f"lyrics must be non-empty and < {MAX_LYRICS} characters",
-                                   {"engine": self.id})
+            raise SoundDesignError(
+                "INVALID_ARGUMENT",
+                f"the prompt is {len(caption)} characters; ACE-Step takes < {MAX_CAPTION}",
+                {"engine": self.id, "length": len(caption)},
+            )
+        if req.lyrics is not None and (
+            not req.lyrics.strip() or len(req.lyrics) > MAX_LYRICS
+        ):
+            raise SoundDesignError(
+                "INVALID_ARGUMENT",
+                f"lyrics must be non-empty and < {MAX_LYRICS} characters",
+                {"engine": self.id},
+            )
         device = req.params.get("device", "auto")
         if device not in DEVICES:
-            raise SoundDesignError("INVALID_ARGUMENT", f"device must be one of {', '.join(DEVICES)}", {"device": device})
+            raise SoundDesignError(
+                "INVALID_ARGUMENT",
+                f"device must be one of {', '.join(DEVICES)}",
+                {"device": device},
+            )
         model = self.spec.model(req.params.get("model"))
         info = self.require()
         weights = weights_dir(HF_REPO, REQUIRED_FILES, ENV_CHECKPOINTS)
         ckpt: Path = weights["dir"]
         files = model_files(model, weights)
         if files["status"] != OK:
-            raise SoundDesignError("MODEL_NOT_FOUND", f"model {model.id!r} is not on disk: {files['detail']}",
-                                   {"engine": self.id, "model": model.id, "missing": files["missing"], "install": files["install"]})
-        seed = req.seed if req.seed is not None else random.SystemRandom().randrange(2 ** 32)
-        out_dir = os.path.join(os.path.dirname(os.path.abspath(req.output_path)), "acestep-out")
+            raise SoundDesignError(
+                "MODEL_NOT_FOUND",
+                f"model {model.id!r} is not on disk: {files['detail']}",
+                {
+                    "engine": self.id,
+                    "model": model.id,
+                    "missing": files["missing"],
+                    "install": files["install"],
+                },
+            )
+        seed = (
+            req.seed if req.seed is not None else random.SystemRandom().randrange(2**32)
+        )
+        out_dir = os.path.join(
+            os.path.dirname(os.path.abspath(req.output_path)), "acestep-out"
+        )
 
         # ACE-Step reads its checkpoints from ACESTEP_CHECKPOINTS_DIR first (initialize_service, get_checkpoints_dir).
         os.environ["ACESTEP_CHECKPOINTS_DIR"] = str(ckpt)
         os.environ.pop("ACESTEP_VAE_CHECKPOINT", None)
         downloader = importlib.import_module("acestep.model_downloader")
         attempts = refuse_downloads(downloader)
-        if not (downloader.check_main_model_exists(ckpt) and downloader.check_model_exists(model.id, ckpt)):
-            raise SoundDesignError("MODEL_NOT_FOUND", f"ACE-Step's own check finds the checkpoints in {weights['source']} "
-                                   "incomplete; it would download them, so nothing was run", {"engine": self.id,
-                                                                                               "install": self.spec.install})
+        if not (
+            downloader.check_main_model_exists(ckpt)
+            and downloader.check_model_exists(model.id, ckpt)
+        ):
+            raise SoundDesignError(
+                "MODEL_NOT_FOUND",
+                f"ACE-Step's own check finds the checkpoints in {weights['source']} "
+                "incomplete; it would download them, so nothing was run",
+                {"engine": self.id, "install": self.spec.install},
+            )
         handler_mod = importlib.import_module("acestep.handler")
         inference = importlib.import_module("acestep.inference")
         dit = handler_mod.AceStepHandler()
         try:
-            status, ok = dit.initialize_service(project_root=str(ckpt.parent), config_path=model.id, device=device,
-                                                vae_checkpoint=VAE_VARIANT)
-        except Exception as exc:     # upstream returns (message, False); a raise is treated the same way
+            status, ok = dit.initialize_service(
+                project_root=str(ckpt.parent),
+                config_path=model.id,
+                device=device,
+                vae_checkpoint=VAE_VARIANT,
+            )
+        except (
+            Exception
+        ) as exc:  # upstream returns (message, False); a raise is treated the same way
             status, ok = f"{type(exc).__name__}: {exc}", False
         if attempts:
-            raise SoundDesignError("MODEL_NOT_FOUND", f"ACE-Step tried to download ({attempts[0]}); refused, nothing was run",
-                                   {"engine": self.id, "install": self.spec.install, "attempts": attempts})
+            raise SoundDesignError(
+                "MODEL_NOT_FOUND",
+                f"ACE-Step tried to download ({attempts[0]}); refused, nothing was run",
+                {"engine": self.id, "install": self.spec.install, "attempts": attempts},
+            )
         if not ok:
-            raise SoundDesignError("ENGINE_FAILED", "ACE-Step initialize_service failed: " + _tail(status), {"engine": self.id})
-        gen = generation_kwargs(caption, req.lyrics, float(req.duration), seed, bpm=req.params.get("bpm"),
-                                timesignature=req.params.get("timesignature"))
+            raise SoundDesignError(
+                "ENGINE_FAILED",
+                "ACE-Step initialize_service failed: " + _tail(status),
+                {"engine": self.id},
+            )
+        gen = generation_kwargs(
+            caption,
+            req.lyrics,
+            float(req.duration),
+            seed,
+            bpm=req.params.get("bpm"),
+            timesignature=req.params.get("timesignature"),
+        )
         params = inference.GenerationParams(**gen)
-        config = inference.GenerationConfig(batch_size=1, use_random_seed=False, seeds=[seed], audio_format="wav")
+        config = inference.GenerationConfig(
+            batch_size=1, use_random_seed=False, seeds=[seed], audio_format="wav"
+        )
         result = inference.generate_music(dit, None, params, config, save_dir=out_dir)
         if attempts:
-            raise SoundDesignError("MODEL_NOT_FOUND", f"ACE-Step tried to download ({attempts[0]}); refused",
-                                   {"engine": self.id, "attempts": attempts})
+            raise SoundDesignError(
+                "MODEL_NOT_FOUND",
+                f"ACE-Step tried to download ({attempts[0]}); refused",
+                {"engine": self.id, "attempts": attempts},
+            )
         if not getattr(result, "success", False):
-            raise SoundDesignError("ENGINE_FAILED", "ACE-Step generate_music failed: " + _tail(str(getattr(result, "error", ""))),
-                                   {"engine": self.id})
+            raise SoundDesignError(
+                "ENGINE_FAILED",
+                "ACE-Step generate_music failed: "
+                + _tail(str(getattr(result, "error", ""))),
+                {"engine": self.id},
+            )
         audios = list(getattr(result, "audios", None) or [])
         path = str(audios[0].get("path") or "") if len(audios) == 1 else ""
         if not path or not os.path.isfile(path):
-            raise SoundDesignError("INVALID_RESULT", f"ACE-Step returned {len(audios)} audio item(s) and no saved file",
-                                   {"engine": self.id})
+            raise SoundDesignError(
+                "INVALID_RESULT",
+                f"ACE-Step returned {len(audios)} audio item(s) and no saved file",
+                {"engine": self.id},
+            )
         used_seed = (audios[0].get("params") or {}).get("seed")
         if used_seed != seed:
-            raise SoundDesignError("INVALID_RESULT", f"ACE-Step used seed {used_seed!r}, not the requested {seed}",
-                                   {"engine": self.id, "seed": seed, "used_seed": used_seed})
+            raise SoundDesignError(
+                "INVALID_RESULT",
+                f"ACE-Step used seed {used_seed!r}, not the requested {seed}",
+                {"engine": self.id, "seed": seed, "used_seed": used_seed},
+            )
         os.replace(path, req.output_path)
-        return EngineResult(output_path=req.output_path, engine_version=str(info.get("version")), model=model.id,
-                            sample_rate=int(audios[0].get("sample_rate") or SAMPLE_RATE), seed=seed, duration=float(req.duration),
-                            extra={"device": getattr(dit, "device", device), "requested_device": device,
-                                   "lm": {"enabled": False, "status": LM_STATUS}, "api": API_SOURCE,
-                                   "generation_params": gen,
-                                   "generation_config": {"batch_size": 1, "use_random_seed": False, "seeds": [seed],
-                                                         "audio_format": "wav"},
-                                   "vae": VAE_VARIANT})
+        return EngineResult(
+            output_path=req.output_path,
+            engine_version=str(info.get("version")),
+            model=model.id,
+            sample_rate=int(audios[0].get("sample_rate") or SAMPLE_RATE),
+            seed=seed,
+            duration=float(req.duration),
+            extra={
+                "device": getattr(dit, "device", device),
+                "requested_device": device,
+                "lm": {"enabled": False, "status": LM_STATUS},
+                "api": API_SOURCE,
+                "generation_params": gen,
+                "generation_config": {
+                    "batch_size": 1,
+                    "use_random_seed": False,
+                    "seeds": [seed],
+                    "audio_format": "wav",
+                },
+                "vae": VAE_VARIANT,
+            },
+        )
 
 
 def model_files(model: ModelSpec, weights: Dict[str, Any]) -> Dict[str, Any]:
     """Whether `model`'s files are in the checkpoints directory `weights` names (lookup.weights_dir). ACE-Step reads
     every model from that one directory (`<checkpoints>/<model id>/`), so a model from its own repository has to be
-    downloaded into it: a Hugging Face cache snapshot of the main repository never holds it."""
-    if weights.get("dir") is None:      # the main model comes first; the model's own files are not looked at yet
+    downloaded into it: a Hugging Face cache snapshot of the main repository never holds it.
+    """
+    if (
+        weights.get("dir") is None
+    ):  # the main model comes first; the model's own files are not looked at yet
         absent = list(weights.get("missing") or [])
-        return {"status": MISSING, "missing": absent, "install": INSTALL,
-                "detail": f"the main model is not complete in {weights.get('source')} (missing {', '.join(absent)}), so "
-                          f"{model.id} cannot run; its own files were not checked"}
+        return {
+            "status": MISSING,
+            "missing": absent,
+            "install": INSTALL,
+            "detail": f"the main model is not complete in {weights.get('source')} (missing {', '.join(absent)}), so "
+            f"{model.id} cannot run; its own files were not checked",
+        }
     root = Path(weights["dir"])
     absent = [r for r in model.required_files if not (root / r).is_file()]
     if not absent:
-        return {"status": OK, "missing": [], "install": None, "detail": f"{model.id} ({weights['source']})"}
+        return {
+            "status": OK,
+            "missing": [],
+            "install": None,
+            "detail": f"{model.id} ({weights['source']})",
+        }
     detail = f"{len(absent)} of {len(model.required_files)} files of {model.id} missing in {weights['source']} ({', '.join(absent)})"
     if model.repository != HF_REPO and weights.get("source") != f"${ENV_CHECKPOINTS}":
-        detail += (f"; ACE-Step reads every model from one checkpoints directory, so set {ENV_CHECKPOINTS} to a directory "
-                   f"holding the main model and {model.id}/")
-    return {"status": MISSING, "missing": absent, "install": model.install, "detail": detail}
+        detail += (
+            f"; ACE-Step reads every model from one checkpoints directory, so set {ENV_CHECKPOINTS} to a directory "
+            f"holding the main model and {model.id}/"
+        )
+    return {
+        "status": MISSING,
+        "missing": absent,
+        "install": model.install,
+        "detail": detail,
+    }
 
 
 def has_weights(directory: Path) -> bool:
     """acestep/model_downloader.py _contains_model_weights, without importing it."""
-    return directory.is_dir() and any((directory / f).exists() for f in WEIGHT_FILENAMES)
+    return directory.is_dir() and any(
+        (directory / f).exists() for f in WEIGHT_FILENAMES
+    )
 
 
 def missing_components(ckpt: Path) -> List[str]:
     return [c for c in MAIN_MODEL_COMPONENTS if not has_weights(ckpt / c)]
 
 
-def generation_kwargs(caption: str, lyrics: Optional[str], duration: float, seed: int, bpm: Optional[int] = None,
-                      timesignature: Optional[str] = None) -> Dict[str, Any]:
+def generation_kwargs(
+    caption: str,
+    lyrics: Optional[str],
+    duration: float,
+    seed: int,
+    bpm: Optional[int] = None,
+    timesignature: Optional[str] = None,
+) -> Dict[str, Any]:
     """GenerationParams for a text2music bed, DiT only: no LM chain-of-thought (thinking and every use_cot_* off). A
     requested tempo goes in `bpm` (int, 30-300) and `timesignature` ("2" / "3" / "4" / "6"), which generate_music hands
-    to the DiT with the LM off (acestep/inference.py at ca1e85fe; ADR-012); without one both stay unset."""
-    gen = {"task_type": "text2music", "caption": caption, "lyrics": INSTRUMENTAL_LYRICS if lyrics is None else lyrics,
-           "instrumental": lyrics is None, "duration": duration, "seed": seed, "thinking": False, "use_cot_metas": False,
-           "use_cot_caption": False, "use_cot_language": False}
+    to the DiT with the LM off (acestep/inference.py at ca1e85fe; ADR-012); without one both stay unset.
+    """
+    gen = {
+        "task_type": "text2music",
+        "caption": caption,
+        "lyrics": INSTRUMENTAL_LYRICS if lyrics is None else lyrics,
+        "instrumental": lyrics is None,
+        "duration": duration,
+        "seed": seed,
+        "thinking": False,
+        "use_cot_metas": False,
+        "use_cot_caption": False,
+        "use_cot_language": False,
+    }
     if bpm is not None:
         gen["bpm"] = int(bpm)
         gen["timesignature"] = str(timesignature or "4")
@@ -329,16 +558,24 @@ def generation_kwargs(caption: str, lyrics: Optional[str], duration: float, seed
 
 def refuse_downloads(downloader: Any) -> List[str]:
     """Replace ACE-Step's download entry points (acestep/model_downloader.py) with ones that refuse and record the
-    attempt. ensure_main_model / ensure_dit_model / ensure_vae_model reach the network only through these."""
+    attempt. ensure_main_model / ensure_dit_model / ensure_vae_model reach the network only through these.
+    """
     attempts: List[str] = []
 
     def refuse(name: str) -> Callable[..., Any]:
         def _refused(*args: Any, **kwargs: Any) -> Any:
             attempts.append(f"{name}{tuple(str(a) for a in args)}")
-            raise RuntimeError(f"sound-design-skill: {name} refused (no Hugging Face or ModelScope access at run time)")
+            raise RuntimeError(
+                f"sound-design-skill: {name} refused (no Hugging Face or ModelScope access at run time)"
+            )
+
         return _refused
 
-    for name in ("_smart_download", "_download_from_huggingface_internal", "_download_from_modelscope_internal"):
+    for name in (
+        "_smart_download",
+        "_download_from_huggingface_internal",
+        "_download_from_modelscope_internal",
+    ):
         if hasattr(downloader, name):
             setattr(downloader, name, refuse(name))
     if hasattr(downloader, "_can_access_google"):

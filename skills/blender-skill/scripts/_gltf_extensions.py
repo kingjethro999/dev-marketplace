@@ -7,6 +7,7 @@ declared, so this parses the file's own JSON directly instead (stdlib only: `jso
 Only meaningful for the gltf/glb format; callers should skip this entirely for every other
 format info.py supports.
 """
+
 from __future__ import annotations
 
 import json

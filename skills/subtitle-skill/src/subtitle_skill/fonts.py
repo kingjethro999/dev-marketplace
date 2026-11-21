@@ -15,6 +15,7 @@ and `cmap` tables of TrueType / OpenType files and collections -- with the
 standard library only. It never renders, never calls fontconfig, and never
 looks outside the directory it is given.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -95,7 +96,9 @@ def _tables(handle, offset: int) -> dict:
     records = _read_at(handle, offset + 12, 16 * count)
     tables = {}
     for i in range(count):
-        tag, _checksum, table_offset, length = struct.unpack(">4sIII", records[16 * i:16 * i + 16])
+        tag, _checksum, table_offset, length = struct.unpack(
+            ">4sIII", records[16 * i : 16 * i + 16]
+        )
         tables[tag] = (table_offset, length)
     return tables
 
@@ -112,13 +115,15 @@ def _family(handle, tables: dict) -> Optional[str]:
     _format, count, strings = struct.unpack(">HHH", data[:6])
     best = None
     for i in range(count):
-        record = data[6 + 12 * i:18 + 12 * i]
+        record = data[6 + 12 * i : 18 + 12 * i]
         if len(record) != 12:
             raise _Unreadable()
-        platform, _encoding, language, name_id, length, offset = struct.unpack(">HHHHHH", record)
+        platform, _encoding, language, name_id, length, offset = struct.unpack(
+            ">HHHHHH", record
+        )
         if name_id != _NAME_FAMILY or platform != _PLATFORM_MICROSOFT:
             continue
-        raw = data[strings + offset:strings + offset + length]
+        raw = data[strings + offset : strings + offset + length]
         if len(raw) != length:
             raise _Unreadable()
         text = raw.decode("utf-16-be", errors="replace").strip("\x00 ")
@@ -140,18 +145,23 @@ def _cmap_ranges(handle, tables: dict) -> list:
     count = struct.unpack(">H", data[2:4])[0]
     subtables = {}
     for i in range(count):
-        record = data[4 + 8 * i:12 + 8 * i]
+        record = data[4 + 8 * i : 12 + 8 * i]
         if len(record) != 8:
             raise _Unreadable()
         platform, encoding, offset = struct.unpack(">HHI", record)
         subtables[(platform, encoding)] = offset
     # full Unicode first, then the Basic Multilingual Plane
-    for key in ((_PLATFORM_MICROSOFT, 10), (_PLATFORM_UNICODE, 6), (_PLATFORM_UNICODE, 4),
-                (_PLATFORM_MICROSOFT, 1), (_PLATFORM_UNICODE, 3)):
+    for key in (
+        (_PLATFORM_MICROSOFT, 10),
+        (_PLATFORM_UNICODE, 6),
+        (_PLATFORM_UNICODE, 4),
+        (_PLATFORM_MICROSOFT, 1),
+        (_PLATFORM_UNICODE, 3),
+    ):
         offset = subtables.get(key)
         if offset is None or offset + 2 > len(data):
             continue
-        fmt = struct.unpack(">H", data[offset:offset + 2])[0]
+        fmt = struct.unpack(">H", data[offset : offset + 2])[0]
         if fmt == 12:
             return _format12(data, offset)
         if fmt == 4:
@@ -162,13 +172,13 @@ def _cmap_ranges(handle, tables: dict) -> list:
 def _format12(data: bytes, offset: int) -> list:
     if offset + 16 > len(data):
         raise _Unreadable()
-    groups = struct.unpack(">I", data[offset + 12:offset + 16])[0]
-    body = data[offset + 16:offset + 16 + 12 * groups]
+    groups = struct.unpack(">I", data[offset + 12 : offset + 16])[0]
+    body = data[offset + 16 : offset + 16 + 12 * groups]
     if len(body) != 12 * groups:
         raise _Unreadable()
     ranges = []
     for i in range(groups):
-        start, end, _glyph = struct.unpack(">III", body[12 * i:12 * i + 12])
+        start, end, _glyph = struct.unpack(">III", body[12 * i : 12 * i + 12])
         if start <= end:
             ranges.append((start, end))
     return ranges
@@ -177,13 +187,13 @@ def _format12(data: bytes, offset: int) -> list:
 def _format4(data: bytes, offset: int) -> list:
     if offset + 14 > len(data):
         raise _Unreadable()
-    segments = struct.unpack(">H", data[offset + 6:offset + 8])[0] // 2
+    segments = struct.unpack(">H", data[offset + 6 : offset + 8])[0] // 2
     ends_at = offset + 14
     starts_at = ends_at + 2 * segments + 2
     if starts_at + 2 * segments > len(data):
         raise _Unreadable()
-    ends = struct.unpack(f">{segments}H", data[ends_at:ends_at + 2 * segments])
-    starts = struct.unpack(f">{segments}H", data[starts_at:starts_at + 2 * segments])
+    ends = struct.unpack(f">{segments}H", data[ends_at : ends_at + 2 * segments])
+    starts = struct.unpack(f">{segments}H", data[starts_at : starts_at + 2 * segments])
     # the closing 0xFFFF segment maps nothing
     return [(s, e) for s, e in zip(starts, ends) if s <= e and s != 0xFFFF]
 
@@ -230,11 +240,19 @@ def font_files(fonts_dir: Path) -> list:
     """The font files directly inside `fonts_dir` (libass does not look into
     subdirectories either), by name."""
     try:
-        entries = sorted(p for p in fonts_dir.iterdir() if p.suffix.lower() in FONT_SUFFIXES and p.is_file())
+        entries = sorted(
+            p
+            for p in fonts_dir.iterdir()
+            if p.suffix.lower() in FONT_SUFFIXES and p.is_file()
+        )
     except OSError as exc:
-        raise SubtitleSkillError("INVALID_INPUT", f"fonts_dir could not be read: {exc}") from exc
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"fonts_dir could not be read: {exc}"
+        ) from exc
     if len(entries) > _MAX_FILES:
-        raise SubtitleSkillError("INVALID_INPUT", f"fonts_dir holds more than {_MAX_FILES} font files")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"fonts_dir holds more than {_MAX_FILES} font files"
+        )
     return entries
 
 
@@ -256,7 +274,12 @@ def digest(fonts_dir: Path) -> str:
     replaced. libass may draw from any of them (a bold face of the family)."""
     h = hashlib.sha256()
     for path in font_files(fonts_dir):
-        h.update(path.name.encode("utf-8") + b"\x00" + sha256_file(path).encode("ascii") + b"\n")
+        h.update(
+            path.name.encode("utf-8")
+            + b"\x00"
+            + sha256_file(path).encode("ascii")
+            + b"\n"
+        )
     return h.hexdigest()
 
 
@@ -272,7 +295,9 @@ def text_characters(texts: Iterable[str]) -> list:
     return list(seen)
 
 
-def choose(faces: list, characters: list, *, preferred: Optional[str] = None) -> FontChoice:
+def choose(
+    faces: list, characters: list, *, preferred: Optional[str] = None
+) -> FontChoice:
     """The face that has the most of `characters`; between equals the family
     named `preferred`, then the first by file name. Refused when the directory
     has nothing to offer for the text: a family that draws none of its

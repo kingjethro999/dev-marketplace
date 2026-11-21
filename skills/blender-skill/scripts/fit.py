@@ -33,6 +33,7 @@ Usage:
   python3 scripts/fit.py model.glb -o model_fit.glb --target ios-ar
   python3 scripts/fit.py model.glb -o model_fit.glb --target webxr --max-stages 3
 """
+
 import argparse
 import json
 import shutil
@@ -63,8 +64,22 @@ def _next_stage_params(row_status: dict, texture_max, decimate_ratio):
     return texture_max, decimate_ratio
 
 
-def _optimize_argv(input_path: str, output_path: str, texture_max, decimate_ratio, try_compress: bool, out_fmt: str) -> list:
-    argv = [sys.executable, str(HERE / "optimize.py"), input_path, "-o", output_path, "--json"]
+def _optimize_argv(
+    input_path: str,
+    output_path: str,
+    texture_max,
+    decimate_ratio,
+    try_compress: bool,
+    out_fmt: str,
+) -> list:
+    argv = [
+        sys.executable,
+        str(HERE / "optimize.py"),
+        input_path,
+        "-o",
+        output_path,
+        "--json",
+    ]
     if texture_max:
         argv += ["--texture-max", str(texture_max)]
     if decimate_ratio is not None:
@@ -84,22 +99,39 @@ def _stage_rows(tris_after: int, tri_budget, size_mb_budget, stage_out: str) -> 
     applied it cannot fail, and is not worth a row that could only ever read PASS."""
     rows = []
     if tri_budget:
-        rows.append({"check": "triangle budget", "status": "PASS" if tris_after <= tri_budget else "WARN",
-                      "detail": f"{tris_after} {'<=' if tris_after <= tri_budget else '>'} {tri_budget}"})
+        rows.append(
+            {
+                "check": "triangle budget",
+                "status": "PASS" if tris_after <= tri_budget else "WARN",
+                "detail": f"{tris_after} {'<=' if tris_after <= tri_budget else '>'} {tri_budget}",
+            }
+        )
     if size_mb_budget:
         size_mb = Path(stage_out).stat().st_size / (1024 * 1024)
-        rows.append({"check": "transmission size", "status": "PASS" if size_mb <= size_mb_budget else "WARN",
-                      "detail": f"{size_mb:.1f} MB {'<=' if size_mb <= size_mb_budget else '>'} {size_mb_budget} MB"})
+        rows.append(
+            {
+                "check": "transmission size",
+                "status": "PASS" if size_mb <= size_mb_budget else "WARN",
+                "detail": f"{size_mb:.1f} MB {'<=' if size_mb <= size_mb_budget else '>'} {size_mb_budget} MB",
+            }
+        )
     return rows
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("file")
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--target", required=True, choices=check.TARGETS)
-    ap.add_argument("--max-stages", type=int, default=_DEFAULT_MAX_STAGES, metavar="N",
-                     help=f"maximum optimization attempts before giving up honestly (default {_DEFAULT_MAX_STAGES})")
+    ap.add_argument(
+        "--max-stages",
+        type=int,
+        default=_DEFAULT_MAX_STAGES,
+        metavar="N",
+        help=f"maximum optimization attempts before giving up honestly (default {_DEFAULT_MAX_STAGES})",
+    )
     _common.add_common_args(ap, dry_run=False, fast=False, progress=False)
     args = ap.parse_args()
 
@@ -108,11 +140,15 @@ def main() -> int:
         in_fmt = _formats.detect_format(str(in_path))
         out_fmt = _formats.detect_format(args.out)
         if in_fmt is None or out_fmt is None:
-            raise SkillError("unrecognized file extension on input or output", kind="input")
+            raise SkillError(
+                "unrecognized file extension on input or output", kind="input"
+            )
         if args.max_stages < 1:
             raise SkillError("--max-stages must be at least 1", kind="input")
 
-        _fmts, tri_budget, tex_budget, _need_uv, _need_manifold, size_mb_budget = check._SPEC[args.target]
+        _fmts, tri_budget, tex_budget, _need_uv, _need_manifold, size_mb_budget = (
+            check._SPEC[args.target]
+        )
         blender_bin = _run.find_blender(args.blender)
         out_path = Path(args.out).resolve()
         in_resolved = str(in_path.resolve())
@@ -123,34 +159,73 @@ def main() -> int:
         # help/references/pitfalls.md for why: an uncapped O(n^2) scan this tool never reads
         # the result of anyway) purely to plan stage 0's own decimate ratio; never re-run on a
         # stage's own output afterward.
-        info_result = _run.run_bpy("info.py", {"path": in_resolved, "format": in_fmt, "skip_uv_overlap_check": True},
-                                    blender_bin=blender_bin, timeout=args.timeout)
+        info_result = _run.run_bpy(
+            "info.py",
+            {"path": in_resolved, "format": in_fmt, "skip_uv_overlap_check": True},
+            blender_bin=blender_bin,
+            timeout=args.timeout,
+        )
         if not info_result.get("ok"):
-            raise SkillError(info_result["error"]["message"], kind=info_result["error"].get("kind", "internal"))
+            raise SkillError(
+                info_result["error"]["message"],
+                kind=info_result["error"].get("kind", "internal"),
+            )
         tris = info_result["data"]["meshes"]["triangles"]
 
-        decimate_ratio = tri_budget / tris if (tri_budget and tris > tri_budget) else None
+        decimate_ratio = (
+            tri_budget / tris if (tri_budget and tris > tri_budget) else None
+        )
         texture_max = tex_budget
 
         stages = []
         for stage_index in range(args.max_stages):
-            stage_out = str(out_path) if stage_index == args.max_stages - 1 else str(
-                out_path.with_name(f"{out_path.stem}_fitstage{stage_index}{out_path.suffix}"))
-            argv = _optimize_argv(in_resolved, stage_out, texture_max, decimate_ratio,
-                                   try_compress=bool(size_mb_budget), out_fmt=out_fmt)
+            stage_out = (
+                str(out_path)
+                if stage_index == args.max_stages - 1
+                else str(
+                    out_path.with_name(
+                        f"{out_path.stem}_fitstage{stage_index}{out_path.suffix}"
+                    )
+                )
+            )
+            argv = _optimize_argv(
+                in_resolved,
+                stage_out,
+                texture_max,
+                decimate_ratio,
+                try_compress=bool(size_mb_budget),
+                out_fmt=out_fmt,
+            )
             try:
-                proc = subprocess.run(argv, capture_output=True, text=True, timeout=args.timeout)
+                proc = subprocess.run(
+                    argv, capture_output=True, text=True, timeout=args.timeout
+                )
             except subprocess.TimeoutExpired as exc:
-                raise SkillError(f"optimize.py did not finish within {args.timeout:.0f}s at stage {stage_index}", kind="timeout") from exc
+                raise SkillError(
+                    f"optimize.py did not finish within {args.timeout:.0f}s at stage {stage_index}",
+                    kind="timeout",
+                ) from exc
             if proc.returncode != 0:
-                raise SkillError(f"optimize.py failed at stage {stage_index}: {(proc.stderr or proc.stdout).strip()[-500:]}", kind="internal")
+                raise SkillError(
+                    f"optimize.py failed at stage {stage_index}: {(proc.stderr or proc.stdout).strip()[-500:]}",
+                    kind="internal",
+                )
             stage_result = json.loads(proc.stdout)
 
-            rows = _stage_rows(stage_result["triangles_after"], tri_budget, size_mb_budget, stage_out)
+            rows = _stage_rows(
+                stage_result["triangles_after"], tri_budget, size_mb_budget, stage_out
+            )
             row_status = {r["check"]: r["status"] for r in rows}
             met = all(status == "PASS" for status in row_status.values())
-            stages.append({"stage": stage_index, "texture_max": texture_max, "decimate_ratio": decimate_ratio,
-                            "met_budget": met, "checks": rows})
+            stages.append(
+                {
+                    "stage": stage_index,
+                    "texture_max": texture_max,
+                    "decimate_ratio": decimate_ratio,
+                    "met_budget": met,
+                    "checks": rows,
+                }
+            )
 
             if stage_out != str(out_path):
                 if met or stage_index == args.max_stages - 1:
@@ -160,23 +235,33 @@ def main() -> int:
 
             if met:
                 break
-            texture_max, decimate_ratio = _next_stage_params(row_status, texture_max, decimate_ratio)
+            texture_max, decimate_ratio = _next_stage_params(
+                row_status, texture_max, decimate_ratio
+            )
     except SkillError as err:
         return _common.fail(err, args.json)
 
     final = stages[-1]
     data = {
-        "target": args.target, "stages_used": len(stages), "met_budget": final["met_budget"],
-        "checks": final["checks"], "history": stages, "output_path": str(out_path),
+        "target": args.target,
+        "stages_used": len(stages),
+        "met_budget": final["met_budget"],
+        "checks": final["checks"],
+        "history": stages,
+        "output_path": str(out_path),
     }
     if args.json:
         print(json.dumps(data, indent=2, sort_keys=True))
     else:
         verdict = "fits" if final["met_budget"] else "still exceeds"
-        print(f"{args.file} -> {args.out}: {verdict} the {args.target} budget after {len(stages)} stage(s)")
+        print(
+            f"{args.file} -> {args.out}: {verdict} the {args.target} budget after {len(stages)} stage(s)"
+        )
         for r in final["checks"]:
             print(f"  {r['status']:4s} {r['check']}: {r['detail']}")
-        print(f"  (run check.py on {args.out} --target {args.target} for the full PASS/WARN/FAIL report, including rows this tool can't fix)")
+        print(
+            f"  (run check.py on {args.out} --target {args.target} for the full PASS/WARN/FAIL report, including rows this tool can't fix)"
+        )
     return 0 if final["met_budget"] else 1
 
 

@@ -10,6 +10,7 @@ Hardware encoding: ffmpeg-skill's tools take `--hw` (VideoToolbox, Apple Silicon
 ffmpeg-skill's own doctor says it can run here (`hw.platform_ok`); its `gpu_encoders` (NVENC, QSV, ...) are only
 listed in the report, because no ffmpeg-skill tool uses them.
 """
+
 from __future__ import annotations
 
 import json
@@ -31,8 +32,22 @@ INDEX = "proxies.json"
 INDEX_SCHEMA = "ingest/proxies@1"
 ENV_DIR = "INGEST_FFMPEG_SKILL_DIR"
 DEFAULT_DIR = Path("~/.claude/skills/ffmpeg-skill")
-VIDEO_EXTENSIONS = {".mp4", ".mov", ".mxf", ".mts", ".m2ts", ".avi", ".mkv", ".mpg", ".mpeg"}
-NOT_DECODABLE = {".braw": "Blackmagic RAW", ".r3d": "RED R3D", ".crm": "Canon Cinema RAW Light"}
+VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".mxf",
+    ".mts",
+    ".m2ts",
+    ".avi",
+    ".mkv",
+    ".mpg",
+    ".mpeg",
+}
+NOT_DECODABLE = {
+    ".braw": "Blackmagic RAW",
+    ".r3d": "RED R3D",
+    ".crm": "Canon Cinema RAW Light",
+}
 DOCTOR_TIMEOUT_S = 120
 
 
@@ -49,7 +64,7 @@ def find_skill(skill_dir: Optional[str] = None) -> Optional[Path]:
             if (p / "scripts" / "proxy.py").is_file():
                 return p.resolve()
             if skill_dir and cand == skill_dir:
-                return None   # an explicit folder that is not ffmpeg-skill is not silently replaced by another one
+                return None  # an explicit folder that is not ffmpeg-skill is not silently replaced by another one
     return None
 
 
@@ -57,15 +72,28 @@ def require_skill(skill_dir: Optional[str] = None) -> Path:
     p = find_skill(skill_dir)
     if p is None:
         where = skill_dir or os.environ.get(ENV_DIR) or str(DEFAULT_DIR)
-        raise IngestError("PROXY_UNAVAILABLE", f"--proxy needs ffmpeg-skill (scripts/proxy.py), not found at {where}: install it (npx ffmpeg-skill) "
-                                               f"or pass --ffmpeg-skill DIR / set {ENV_DIR}")
+        raise IngestError(
+            "PROXY_UNAVAILABLE",
+            f"--proxy needs ffmpeg-skill (scripts/proxy.py), not found at {where}: install it (npx ffmpeg-skill) "
+            f"or pass --ffmpeg-skill DIR / set {ENV_DIR}",
+        )
     return p
 
 
 def skill_doctor(skill: Path) -> Dict:
     """ffmpeg-skill's own doctor (scripts/_contract.py doctor --json): its version, hw and gpu_encoders, or why not."""
     try:
-        r = subprocess.run([sys.executable, str(skill / "scripts" / "_contract.py"), "doctor", "--json"], capture_output=True, text=True, timeout=DOCTOR_TIMEOUT_S)
+        r = subprocess.run(
+            [
+                sys.executable,
+                str(skill / "scripts" / "_contract.py"),
+                "doctor",
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=DOCTOR_TIMEOUT_S,
+        )
         doc = json.loads(r.stdout)
         if not isinstance(doc, dict):
             raise ValueError("not a JSON object")
@@ -78,7 +106,10 @@ def check(skill_dir: Optional[str] = None) -> Dict:
     """ingest doctor's view: where ffmpeg-skill is (without running it)."""
     p = find_skill(skill_dir)
     if p is None:
-        return {"status": "unavailable", "detail": f"not found ({ENV_DIR} or {DEFAULT_DIR}): offload --proxy is refused (PROXY_UNAVAILABLE); nothing else needs it"}
+        return {
+            "status": "unavailable",
+            "detail": f"not found ({ENV_DIR} or {DEFAULT_DIR}): offload --proxy is refused (PROXY_UNAVAILABLE); nothing else needs it",
+        }
     return {"status": "ok", "detail": str(p)}
 
 
@@ -99,18 +130,36 @@ def read_index(root: Path) -> List[Dict]:
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
-    if not isinstance(doc, dict) or doc.get("schema") != INDEX_SCHEMA or not isinstance(doc.get("proxies"), list):
+    if (
+        not isinstance(doc, dict)
+        or doc.get("schema") != INDEX_SCHEMA
+        or not isinstance(doc.get("proxies"), list)
+    ):
         return []
-    return [e for e in doc["proxies"] if isinstance(e, dict) and isinstance(e.get("original_hash"), dict) and e.get("path")]
+    return [
+        e
+        for e in doc["proxies"]
+        if isinstance(e, dict)
+        and isinstance(e.get("original_hash"), dict)
+        and e.get("path")
+    ]
 
 
 def write_index(root: Path, entries: List[Dict]) -> Path:
     folder = root / FOLDER
     folder.mkdir(parents=True, exist_ok=True)
-    doc = {"schema": INDEX_SCHEMA, "tool": f"ingest-skill {__version__}", "updated_at": _now(),
-           "proxies": sorted(entries, key=lambda e: (e["original"], e["original_hash"]["value"]))}
+    doc = {
+        "schema": INDEX_SCHEMA,
+        "tool": f"ingest-skill {__version__}",
+        "updated_at": _now(),
+        "proxies": sorted(
+            entries, key=lambda e: (e["original"], e["original_hash"]["value"])
+        ),
+    }
     tmp = folder / (INDEX + ".part")
-    tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.write_text(
+        json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     os.replace(tmp, folder / INDEX)
     return folder / INDEX
 
@@ -123,17 +172,27 @@ class ProxyQueue:
         doc = skill_doctor(skill)
         hw = doc.get("hw") if isinstance(doc.get("hw"), dict) else {}
         self.hw = hw.get("platform_ok") is True
-        self.info = {"skill": "ffmpeg-skill", "tool": "proxy", "skill_dir": str(skill), "version": doc.get("version"),
-                     "encoder": "hw" if self.hw else "cpu",
-                     "encoder_detail": ("ffmpeg-skill --hw (VideoToolbox): its doctor reports hw.platform_ok" if self.hw else
-                                        "CPU (x264): ffmpeg-skill's doctor does not report a hardware encoder its tools can use here"
-                                        + (f" ({doc['error']})" if doc.get("error") else "")),
-                     "gpu_encoders": doc.get("gpu_encoders")}
+        self.info = {
+            "skill": "ffmpeg-skill",
+            "tool": "proxy",
+            "skill_dir": str(skill),
+            "version": doc.get("version"),
+            "encoder": "hw" if self.hw else "cpu",
+            "encoder_detail": (
+                "ffmpeg-skill --hw (VideoToolbox): its doctor reports hw.platform_ok"
+                if self.hw
+                else "CPU (x264): ffmpeg-skill's doctor does not report a hardware encoder its tools can use here"
+                + (f" ({doc['error']})" if doc.get("error") else "")
+            ),
+            "gpu_encoders": doc.get("gpu_encoders"),
+        }
         self.items: List[Dict] = []
         self.indexes: Dict[str, List[Dict]] = {}
         self._q: "queue.Queue" = queue.Queue()
         self._lock = threading.Lock()
-        self._thread = threading.Thread(target=self._run, name="ingest-proxy", daemon=True)
+        self._thread = threading.Thread(
+            target=self._run, name="ingest-proxy", daemon=True
+        )
         self._thread.start()
 
     def submit(self, root: Path, rel: str, digest: str) -> None:
@@ -155,20 +214,58 @@ class ProxyQueue:
         return args
 
     def _one(self, root: Path, rel: str, digest: str) -> Dict:
-        item: Dict = {"original": rel, "root": str(root), "original_hash": {"algorithm": self.hash_algorithm, "value": digest}, "path": proxy_path(rel)}
+        item: Dict = {
+            "original": rel,
+            "root": str(root),
+            "original_hash": {"algorithm": self.hash_algorithm, "value": digest},
+            "path": proxy_path(rel),
+        }
         final = root / item["path"]
         index = self.indexes[str(root)]
-        old = next((e for e in index if e["original"] == rel and e["original_hash"].get("value") == digest), None)
-        if old is not None and final.is_file() and old.get("sha256") and hash_file(final, ["sha256"])["sha256"] == old["sha256"]:
-            return {**item, "status": "exists", "size": old.get("size"), "sha256": old["sha256"], "detail": "made by an earlier run for the same original hash"}
+        old = next(
+            (
+                e
+                for e in index
+                if e["original"] == rel and e["original_hash"].get("value") == digest
+            ),
+            None,
+        )
+        if (
+            old is not None
+            and final.is_file()
+            and old.get("sha256")
+            and hash_file(final, ["sha256"])["sha256"] == old["sha256"]
+        ):
+            return {
+                **item,
+                "status": "exists",
+                "size": old.get("size"),
+                "sha256": old["sha256"],
+                "detail": "made by an earlier run for the same original hash",
+            }
         tmp = final.with_name(f".{final.name[:-4]}.ingest-part.mp4")
         args = self._args(root / rel, tmp)
-        item["args"] = [a if a not in (str(root / rel), str(tmp)) else ("<original>" if a == str(root / rel) else "<proxy>") for a in args]
+        item["args"] = [
+            (
+                a
+                if a not in (str(root / rel), str(tmp))
+                else ("<original>" if a == str(root / rel) else "<proxy>")
+            )
+            for a in args
+        ]
         try:
             final.parent.mkdir(parents=True, exist_ok=True)
-            r = subprocess.run([sys.executable, str(self.skill / "scripts" / "proxy.py"), *args], capture_output=True, text=True)
+            r = subprocess.run(
+                [sys.executable, str(self.skill / "scripts" / "proxy.py"), *args],
+                capture_output=True,
+                text=True,
+            )
         except (OSError, subprocess.SubprocessError) as e:
-            return {**item, "status": "failed", "detail": f"ffmpeg-skill proxy did not run: {e}"}
+            return {
+                **item,
+                "status": "failed",
+                "detail": f"ffmpeg-skill proxy did not run: {e}",
+            }
         try:
             result = json.loads(r.stdout) if r.stdout.strip().startswith("{") else {}
         except ValueError:
@@ -179,15 +276,51 @@ class ProxyQueue:
             except OSError:
                 pass
             err = (r.stderr or r.stdout or "").strip().splitlines()
-            return {**item, "status": "failed", "detail": f"ffmpeg-skill proxy exited {r.returncode}: {err[-1] if err else 'no output file'}"}
+            return {
+                **item,
+                "status": "failed",
+                "detail": f"ffmpeg-skill proxy exited {r.returncode}: {err[-1] if err else 'no output file'}",
+            }
         os.replace(tmp, final)
         hw = result.get("hw") if isinstance(result.get("hw"), dict) else None
-        made = {**item, "status": "made", "size": final.stat().st_size, "sha256": hash_file(final, ["sha256"])["sha256"],
-                "encoder": ("hw" if hw.get("used") else "cpu") if hw is not None and hw.get("used") is not None else self.info["encoder"], "created_at": _now()}
+        made = {
+            **item,
+            "status": "made",
+            "size": final.stat().st_size,
+            "sha256": hash_file(final, ["sha256"])["sha256"],
+            "encoder": (
+                ("hw" if hw.get("used") else "cpu")
+                if hw is not None and hw.get("used") is not None
+                else self.info["encoder"]
+            ),
+            "created_at": _now(),
+        }
         with self._lock:
-            index[:] = [e for e in index if not (e["original"] == rel and e["original_hash"].get("value") == digest)]
-            index.append({k: made[k] for k in ("original", "original_hash", "path", "size", "sha256", "encoder", "created_at")}
-                         | {"made_by": {k: self.info[k] for k in ("skill", "tool", "version")}, "args": made["args"]})
+            index[:] = [
+                e
+                for e in index
+                if not (
+                    e["original"] == rel and e["original_hash"].get("value") == digest
+                )
+            ]
+            index.append(
+                {
+                    k: made[k]
+                    for k in (
+                        "original",
+                        "original_hash",
+                        "path",
+                        "size",
+                        "sha256",
+                        "encoder",
+                        "created_at",
+                    )
+                }
+                | {
+                    "made_by": {k: self.info[k] for k in ("skill", "tool", "version")},
+                    "args": made["args"],
+                }
+            )
         return made
 
     def _run(self) -> None:
@@ -198,7 +331,14 @@ class ProxyQueue:
             try:
                 self.items.append(self._one(*job))
             except Exception as e:  # noqa: BLE001 - a proxy never fails the offload
-                self.items.append({"original": job[1], "root": str(job[0]), "status": "failed", "detail": f"{type(e).__name__}: {e}"})
+                self.items.append(
+                    {
+                        "original": job[1],
+                        "root": str(job[0]),
+                        "status": "failed",
+                        "detail": f"{type(e).__name__}: {e}",
+                    }
+                )
 
     def close(self) -> Dict:
         """Wait for the queue, write each destination's proxies.json, and return the report's "proxy" section."""
@@ -208,5 +348,8 @@ class ProxyQueue:
             if entries:
                 write_index(Path(root), entries)
         items = sorted(self.items, key=lambda i: i["original"])
-        count = {s: sum(1 for i in items if i["status"] == s) for s in ("made", "exists", "failed", "skipped")}
+        count = {
+            s: sum(1 for i in items if i["status"] == s)
+            for s in ("made", "exists", "failed", "skipped")
+        }
         return {**self.info, **count, "items": items}

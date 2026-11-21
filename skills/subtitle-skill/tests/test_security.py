@@ -22,7 +22,18 @@ def _base_request(**overrides):
 
 @pytest.mark.parametrize(
     "forbidden_key",
-    ["command", "argv", "shell", "executable", "filter", "filter_complex", "vf", "af", "env", "api_key"],
+    [
+        "command",
+        "argv",
+        "shell",
+        "executable",
+        "filter",
+        "filter_complex",
+        "vf",
+        "af",
+        "env",
+        "api_key",
+    ],
 )
 def test_forbidden_keys_rejected_top_level(tmp_path, forbidden_key):
     req = _base_request(workspace=str(tmp_path))

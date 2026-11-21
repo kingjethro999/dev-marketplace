@@ -34,7 +34,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..models import QCMeasurement
 from .frames import count_frames
-from .stinger import _stream_origin, alpha_pixel_formats, frame_at, grab_frame, stream_frame_rate
+from .stinger import (
+    _stream_origin,
+    alpha_pixel_formats,
+    frame_at,
+    grab_frame,
+    stream_frame_rate,
+)
 
 MODE_TOLERANCE = 2  # of 255: a colour this far above its alpha still counts as premultiplied (rounding)
 FRINGE_TOLERANCE = 16  # of 255: a composite further than this from the graphic's own composite is a fringe pixel
@@ -77,7 +83,9 @@ def mode_facts(raw: bytes) -> Dict[str, Any]:
     return {"over_alpha_pixels": over, "worst": worst}
 
 
-def _edge_colours(raw: bytes, width: int, height: int, partial: List[int]) -> Dict[int, Tuple[float, float, float]]:
+def _edge_colours(
+    raw: bytes, width: int, height: int, partial: List[int]
+) -> Dict[int, Tuple[float, float, float]]:
     """For partly transparent pixels, the graphic's colour carried in from
     the nearest opaque pixels, ring by ring (at most MAX_EDGE_DEPTH)."""
 
@@ -98,7 +106,9 @@ def _edge_colours(raw: bytes, width: int, height: int, partial: List[int]) -> Di
         if src:
             n = len(src)
             ring[i] = (
-                sum(raw[4 * j] for j in src) / n, sum(raw[4 * j + 1] for j in src) / n, sum(raw[4 * j + 2] for j in src) / n,
+                sum(raw[4 * j] for j in src) / n,
+                sum(raw[4 * j + 1] for j in src) / n,
+                sum(raw[4 * j + 2] for j in src) / n,
             )
     depth = 1
     while ring and depth <= MAX_EDGE_DEPTH:
@@ -111,7 +121,11 @@ def _edge_colours(raw: bytes, width: int, height: int, partial: List[int]) -> Di
             src = [colours[j] for j in neighbours(i) if j in ring]
             if src:
                 n = len(src)
-                nxt[i] = (sum(c[0] for c in src) / n, sum(c[1] for c in src) / n, sum(c[2] for c in src) / n)
+                nxt[i] = (
+                    sum(c[0] for c in src) / n,
+                    sum(c[1] for c in src) / n,
+                    sum(c[2] for c in src) / n,
+                )
         ring = nxt
         depth += 1
     return colours
@@ -162,7 +176,12 @@ def fringe_facts(raw: bytes, width: int, height: int, mode: str) -> Dict[str, An
         for name, bg in BACKGROUNDS:
             for ch in range(3):
                 got = composite(raw[4 * i + ch], a, bg, mode)
-                want = composite(ref[ch] * a / 255 if mode == "premultiplied" else ref[ch], a, bg, mode)
+                want = composite(
+                    ref[ch] * a / 255 if mode == "premultiplied" else ref[ch],
+                    a,
+                    bg,
+                    mode,
+                )
                 d = got - want
                 if abs(d) > abs(deviation):
                     deviation = d
@@ -174,16 +193,28 @@ def fringe_facts(raw: bytes, width: int, height: int, mode: str) -> Dict[str, An
             else:
                 light += 1
             if first is None:
-                first = {"x": i % width, "y": i // width, "alpha": a, "deviation": round(deviation, 3)}
+                first = {
+                    "x": i % width,
+                    "y": i // width,
+                    "alpha": a,
+                    "deviation": round(deviation, 3),
+                }
     return {
-        "partial_pixels": len(partial), "judged_pixels": len(colours), "unjudged_pixels": len(partial) - len(colours),
-        "fringe_pixels": len(fringe), "dark_pixels": dark, "light_pixels": light,
+        "partial_pixels": len(partial),
+        "judged_pixels": len(colours),
+        "unjudged_pixels": len(partial) - len(colours),
+        "fringe_pixels": len(fringe),
+        "dark_pixels": dark,
+        "light_pixels": light,
         "width_px": fringe_width(fringe, width, height),
-        "max_deviation": {k: round(v, 3) for k, v in worst.items()}, "first": first,
+        "max_deviation": {k: round(v, 3) for k, v in worst.items()},
+        "first": first,
     }
 
 
-def _sample_frames(ffprobe_path: str, path: Path, stream: Dict[str, Any], rule: Any, rate) -> Tuple[Optional[List[int]], Optional[str]]:
+def _sample_frames(
+    ffprobe_path: str, path: Path, stream: Dict[str, Any], rule: Any, rate
+) -> Tuple[Optional[List[int]], Optional[str]]:
     if rule.times:
         return sorted({frame_at(t, rate)[0] for t in rule.times}), None
     frames, reason = count_frames(ffprobe_path, path, int(stream["index"]))
@@ -198,15 +229,26 @@ def _sample_frames(ffprobe_path: str, path: Path, stream: Dict[str, Any], rule: 
 
 
 def _measure(
-    ffmpeg_path: str, ffprobe_path: str, path: Path, probe_data: Dict[str, Any], stream: Dict[str, Any], rule: Any,
+    ffmpeg_path: str,
+    ffprobe_path: str,
+    path: Path,
+    probe_data: Dict[str, Any],
+    stream: Dict[str, Any],
+    rule: Any,
 ) -> Dict[str, Any]:
-    entry: Dict[str, Any] = {"measured": False, "alpha_mode": rule.alpha_mode, "pix_fmt": stream.get("pix_fmt")}
+    entry: Dict[str, Any] = {
+        "measured": False,
+        "alpha_mode": rule.alpha_mode,
+        "pix_fmt": stream.get("pix_fmt"),
+    }
     formats = alpha_pixel_formats(ffprobe_path)
     if formats is None:
         entry["reason"] = "ffprobe could not list which pixel formats carry alpha"
         return entry
     if stream.get("pix_fmt") not in formats:
-        entry["reason"] = f"the stream's pixel format {stream.get('pix_fmt')!r} has no alpha channel"
+        entry["reason"] = (
+            f"the stream's pixel format {stream.get('pix_fmt')!r} has no alpha channel"
+        )
         return entry
     rate = stream_frame_rate(stream)
     if rate is None:
@@ -220,7 +262,16 @@ def _measure(
     origin = _stream_origin(probe_data, stream)
     frames: List[Dict[str, Any]] = []
     for n in indices:
-        got = grab_frame(ffmpeg_path, path, int(stream["index"]), n, rate, ["format=rgba"], pix_fmt="rgba", origin=origin)
+        got = grab_frame(
+            ffmpeg_path,
+            path,
+            int(stream["index"]),
+            n,
+            rate,
+            ["format=rgba"],
+            pix_fmt="rgba",
+            origin=origin,
+        )
         item: Dict[str, Any] = {"frame": n, "measured": False}
         if "reason" in got:
             item["reason"] = got["reason"]
@@ -235,10 +286,20 @@ def _measure(
         mode = mode_facts(raw)
         worst = mode.pop("worst")
         if worst is not None:
-            mode["worst"] = {"x": worst[1] % width, "y": worst[1] // width, "alpha": worst[2], "excess": worst[0]}
+            mode["worst"] = {
+                "x": worst[1] % width,
+                "y": worst[1] // width,
+                "alpha": worst[2],
+                "excess": worst[0],
+            }
         item.update(
-            measured=True, time=got["time"], width=width, height=height, pixels=width * height,
-            mode=mode, fringe=fringe_facts(raw, width, height, rule.alpha_mode),
+            measured=True,
+            time=got["time"],
+            width=width,
+            height=height,
+            pixels=width * height,
+            mode=mode,
+            fringe=fringe_facts(raw, width, height, rule.alpha_mode),
         )
         frames.append(item)
     entry.update(measured=True, frames=frames)
@@ -246,12 +307,35 @@ def _measure(
 
 
 def analyze_alpha_edge(
-    ffmpeg_path: str, ffprobe_path: str, input_path: Path, probe_data: Dict[str, Any], stream: Dict[str, Any], rule: Any,
+    ffmpeg_path: str,
+    ffprobe_path: str,
+    input_path: Path,
+    probe_data: Dict[str, Any],
+    stream: Dict[str, Any],
+    rule: Any,
 ) -> List[QCMeasurement]:
     value = _measure(ffmpeg_path, ffprobe_path, input_path, probe_data, stream, rule)
-    return [QCMeasurement("video.alpha_edges", "video", "alpha_edges", value, source="ffmpeg:rawvideo", notes=NOTE)]
+    return [
+        QCMeasurement(
+            "video.alpha_edges",
+            "video",
+            "alpha_edges",
+            value,
+            source="ffmpeg:rawvideo",
+            notes=NOTE,
+        )
+    ]
 
 
 def not_performed(rule: Any, reason: str) -> List[QCMeasurement]:
     value = {"measured": False, "alpha_mode": rule.alpha_mode, "reason": reason}
-    return [QCMeasurement("video.alpha_edges", "video", "alpha_edges", value, source="ffmpeg:rawvideo", notes=NOTE)]
+    return [
+        QCMeasurement(
+            "video.alpha_edges",
+            "video",
+            "alpha_edges",
+            value,
+            source="ffmpeg:rawvideo",
+            notes=NOTE,
+        )
+    ]

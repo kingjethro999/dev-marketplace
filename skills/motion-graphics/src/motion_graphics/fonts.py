@@ -12,7 +12,9 @@ A request never supplies a raw fontconfig name or an arbitrary filesystem path s
   breaks drawtext's filter-option parsing on some ffmpeg builds, however it is escaped, and cwd-relative
   addressing sidesteps that entirely (docs/decisions.md). Its sha256 is recorded in provenance as `font_file_hash`.
 - No field is provided: the default is the explicit system font below (`DEFAULT_FONT_ID`), recorded in
-  provenance exactly like a requested one -- it is a documented default, not an unreported fallback."""
+  provenance exactly like a requested one -- it is a documented default, not an unreported fallback.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,9 +27,18 @@ from .security import PathPolicy
 # font_id -> fontconfig family name this skill is willing to pass to ffmpeg-skill's `--font` / `font=`.
 # Matches the `fonts-dejavu-core` package that ships in the CI image and is the ffmpeg-skill default font.
 FONT_REGISTRY: Dict[str, Dict[str, str]] = {
-    "system:dejavu-sans": {"family": "DejaVu Sans", "description": "Default sans-serif, always available where fonts-dejavu-core is installed"},
-    "system:dejavu-serif": {"family": "DejaVu Serif", "description": "Serif variant of the DejaVu family"},
-    "system:dejavu-sans-mono": {"family": "DejaVu Sans Mono", "description": "Monospace variant of the DejaVu family"},
+    "system:dejavu-sans": {
+        "family": "DejaVu Sans",
+        "description": "Default sans-serif, always available where fonts-dejavu-core is installed",
+    },
+    "system:dejavu-serif": {
+        "family": "DejaVu Serif",
+        "description": "Serif variant of the DejaVu family",
+    },
+    "system:dejavu-sans-mono": {
+        "family": "DejaVu Sans Mono",
+        "description": "Monospace variant of the DejaVu family",
+    },
 }
 DEFAULT_FONT_ID = "system:dejavu-sans"
 ALLOWED_FONT_EXTENSIONS = (".ttf", ".otf", ".ttc")
@@ -35,12 +46,14 @@ ALLOWED_FONT_EXTENSIONS = (".ttf", ".otf", ".ttc")
 
 @dataclass(frozen=True)
 class ResolvedFont:
-    kind: str            # "system" | "file"
-    font_id: Optional[str]        # set for kind == "system"
-    font_name: str                # fontconfig family (system) or file stem (file) -- for display/provenance only
-    engine_arg: Dict[str, str]    # {"font": "<family>"} for kind == "system"; empty for kind == "file" (see
-                                  # font_file_path -- the executor runs that call with cwd set to its directory
-                                  # and passes the bare file name, see executor._argv)
+    kind: str  # "system" | "file"
+    font_id: Optional[str]  # set for kind == "system"
+    font_name: str  # fontconfig family (system) or file stem (file) -- for display/provenance only
+    engine_arg: Dict[
+        str, str
+    ]  # {"font": "<family>"} for kind == "system"; empty for kind == "file" (see
+    # font_file_path -- the executor runs that call with cwd set to its directory
+    # and passes the bare file name, see executor._argv)
     font_file_hash: Optional[str] = None
     font_file_path: Optional[str] = None
 
@@ -56,23 +69,50 @@ class ResolvedFont:
 def resolve_font(spec: Optional[Dict[str, Any]], policy: PathPolicy) -> ResolvedFont:
     if not spec:
         entry = FONT_REGISTRY[DEFAULT_FONT_ID]
-        return ResolvedFont("system", DEFAULT_FONT_ID, entry["family"], {"font": entry["family"]})
+        return ResolvedFont(
+            "system", DEFAULT_FONT_ID, entry["family"], {"font": entry["family"]}
+        )
     font_id = spec.get("font_id")
     font_file = spec.get("font_file")
     if font_id and font_file:
-        raise MotionGraphicsError("INVALID_REQUEST", "font: give font_id or font_file, not both", {"field": "font"})
+        raise MotionGraphicsError(
+            "INVALID_REQUEST",
+            "font: give font_id or font_file, not both",
+            {"field": "font"},
+        )
     if font_id:
         registered = FONT_REGISTRY.get(font_id)
         if registered is None:
-            raise MotionGraphicsError("MISSING_INPUT", f"unknown font_id {font_id!r} (not in the font registry)",
-                                       {"field": "font_id", "font_id": font_id, "available": sorted(FONT_REGISTRY)})
-        return ResolvedFont("system", font_id, registered["family"], {"font": registered["family"]})
+            raise MotionGraphicsError(
+                "MISSING_INPUT",
+                f"unknown font_id {font_id!r} (not in the font registry)",
+                {
+                    "field": "font_id",
+                    "font_id": font_id,
+                    "available": sorted(FONT_REGISTRY),
+                },
+            )
+        return ResolvedFont(
+            "system", font_id, registered["family"], {"font": registered["family"]}
+        )
     if font_file:
         resolved = policy.resolve_input(font_file, "font_file")
         if resolved.suffix.lower() not in ALLOWED_FONT_EXTENSIONS:
-            raise MotionGraphicsError("UNSUPPORTED_FORMAT", f"font_file must be one of {ALLOWED_FONT_EXTENSIONS}: {resolved.suffix}",
-                                       {"field": "font_file", "extension": resolved.suffix})
+            raise MotionGraphicsError(
+                "UNSUPPORTED_FORMAT",
+                f"font_file must be one of {ALLOWED_FONT_EXTENSIONS}: {resolved.suffix}",
+                {"field": "font_file", "extension": resolved.suffix},
+            )
         digest = sha256_file(str(resolved))
-        return ResolvedFont("file", None, resolved.stem, {}, font_file_hash=digest, font_file_path=str(resolved))
+        return ResolvedFont(
+            "file",
+            None,
+            resolved.stem,
+            {},
+            font_file_hash=digest,
+            font_file_path=str(resolved),
+        )
     entry = FONT_REGISTRY[DEFAULT_FONT_ID]
-    return ResolvedFont("system", DEFAULT_FONT_ID, entry["family"], {"font": entry["family"]})
+    return ResolvedFont(
+        "system", DEFAULT_FONT_ID, entry["family"], {"font": entry["family"]}
+    )

@@ -9,6 +9,7 @@ across all objects in a multi-object edit-mode selection) so more than one objec
 share a single output image; without it, each object keeps its own UV and should really get its
 own output image (baking several un-repacked objects to one image will overlap).
 """
+
 import sys
 from pathlib import Path
 
@@ -19,12 +20,19 @@ import _compat
 import bpy
 import numpy as np
 
-_BAKE_TYPE = {"ao": "AO", "normal": "NORMAL", "roughness": "ROUGHNESS", "diffuse": "DIFFUSE", "combined": "COMBINED"}
+_BAKE_TYPE = {
+    "ao": "AO",
+    "normal": "NORMAL",
+    "roughness": "ROUGHNESS",
+    "diffuse": "DIFFUSE",
+    "combined": "COMBINED",
+}
 
 
 def _prep_diffuse_pass_filter(scene, bake_pass: str):
     """A plain 'DIFFUSE' bake includes direct+indirect lighting by default -- fine for
-    'combined', wrong for a clean albedo map. Restrict to just the color pass for 'diffuse'."""
+    'combined', wrong for a clean albedo map. Restrict to just the color pass for 'diffuse'.
+    """
     b = scene.render.bake
     if bake_pass == "diffuse":
         b.use_pass_direct = False
@@ -41,12 +49,18 @@ def run(args):
         raise ValueError(f"unknown bake pass {bake_pass!r}")
     size = args.get("size", 1024)
     names = args.get("objects")
-    targets = [o for o in bpy.data.objects if o.type == "MESH" and (not names or o.name in names)]
+    targets = [
+        o
+        for o in bpy.data.objects
+        if o.type == "MESH" and (not names or o.name in names)
+    ]
     if not targets:
         raise ValueError("no matching mesh objects to bake")
     no_uv = [o.name for o in targets if not o.data.uv_layers]
     if no_uv:
-        raise ValueError(f"no UV map on: {', '.join(no_uv)} (baking needs one -- see look.py --uv or check.py's 'UV maps' row)")
+        raise ValueError(
+            f"no UV map on: {', '.join(no_uv)} (baking needs one -- see look.py --uv or check.py's 'UV maps' row)"
+        )
 
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
@@ -63,8 +77,12 @@ def run(args):
         bpy.ops.uv.pack_islands(margin=0.02)
         bpy.ops.object.mode_set(mode="OBJECT")
 
-    image = bpy.data.images.new(f"bake_{bake_pass}", width=size, height=size, alpha=False)
-    image.colorspace_settings.name = "Non-Color" if bake_pass in ("normal", "roughness", "ao") else "sRGB"
+    image = bpy.data.images.new(
+        f"bake_{bake_pass}", width=size, height=size, alpha=False
+    )
+    image.colorspace_settings.name = (
+        "Non-Color" if bake_pass in ("normal", "roughness", "ao") else "sRGB"
+    )
 
     bpy.ops.object.select_all(action="DESELECT")
     for o in targets:
@@ -90,8 +108,13 @@ def run(args):
     image.file_format = "PNG"
     image.save()
 
-    return {"pass": bake_pass, "output_path": args["output"], "size": size,
-            "objects": [o.name for o in targets], "pixel_stats": stats}
+    return {
+        "pass": bake_pass,
+        "output_path": args["output"],
+        "size": size,
+        "objects": [o.name for o in targets],
+        "pixel_stats": stats,
+    }
 
 
 if __name__ == "__main__":

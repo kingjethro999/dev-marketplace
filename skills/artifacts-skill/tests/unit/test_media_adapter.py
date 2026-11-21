@@ -15,7 +15,9 @@ def adapter() -> MediaAdapter:
     return MediaAdapter()
 
 
-def _probe_media_render_works(adapter: MediaAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+def _probe_media_render_works(
+    adapter: MediaAdapter, ref: ArtifactRef, tmp_path: Path
+) -> bool:
     """Same pattern as the LibreOffice/Chromium-backed adapters' render
     probes — a present ffmpeg/ffprobe on PATH doesn't guarantee a specific
     environment's install actually works."""
@@ -109,7 +111,9 @@ def test_inspect_audio_only_mp4_has_no_video_stream(audio_only_mp4, adapter):
     assert details["has_audio"] is True
 
 
-def test_inspect_audio_with_cover_art_is_not_reported_as_having_video(audio_with_cover_m4a, adapter):
+def test_inspect_audio_with_cover_art_is_not_reported_as_having_video(
+    audio_with_cover_m4a, adapter
+):
     """Adversarial-review finding, verified by direct reproduction before
     this fix: an audio file with embedded cover art (extremely common -
     iTunes/Apple Music/podcast-tool M4A, ripped MP3/M4A with album art)
@@ -123,14 +127,18 @@ def test_inspect_audio_with_cover_art_is_not_reported_as_having_video(audio_with
     assert details["video"] is None
 
 
-def test_verify_require_has_video_fails_for_cover_art_only(audio_with_cover_m4a, adapter):
+def test_verify_require_has_video_fails_for_cover_art_only(
+    audio_with_cover_m4a, adapter
+):
     ref = ArtifactRef.from_path(audio_with_cover_m4a)
     result = adapter.verify_structural(ref, {"require_has_video": True})
     check = next(c for c in result.checks if c.id == "has_video")
     assert check.status == CheckStatus.FAIL
 
 
-def test_render_audio_with_cover_art_takes_the_audio_only_path_not_a_crash(audio_with_cover_m4a, adapter, tmp_path):
+def test_render_audio_with_cover_art_takes_the_audio_only_path_not_a_crash(
+    audio_with_cover_m4a, adapter, tmp_path
+):
     """Before the _first_stream() fix, render() tried to seek to a
     mid-file timestamp the attached-pic stream has no real frame at,
     raising ArtifactExecutionError for a perfectly ordinary, valid audio
@@ -141,7 +149,9 @@ def test_render_audio_with_cover_art_takes_the_audio_only_path_not_a_crash(audio
     assert any("audio-only" in w for w in result.warnings)
 
 
-def test_render_single_frame_short_video_falls_back_to_t_zero(single_frame_mp4, adapter, tmp_path):
+def test_render_single_frame_short_video_falls_back_to_t_zero(
+    single_frame_mp4, adapter, tmp_path
+):
     """Adversarial-review finding, verified by direct reproduction before
     this fix: a short/single-frame-ish clip can genuinely have no frame
     at render()'s computed midpoint seek time (only a real frame at
@@ -149,13 +159,17 @@ def test_render_single_frame_short_video_falls_back_to_t_zero(single_frame_mp4, 
     is not corrupt. render() must retry at t=0 rather than raising."""
     ref = ArtifactRef.from_path(single_frame_mp4)
     if not _probe_media_render_works(adapter, ref, tmp_path):
-        pytest.skip("ffmpeg in this environment cannot render (see adapter module docstring)")
+        pytest.skip(
+            "ffmpeg in this environment cannot render (see adapter module docstring)"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) == 1
     assert result.files[0].exists() and result.files[0].stat().st_size > 0
 
 
-def test_inspect_rejects_an_oversized_declared_resolution(oversized_resolution_mp4, adapter):
+def test_inspect_rejects_an_oversized_declared_resolution(
+    oversized_resolution_mp4, adapter
+):
     """Security-review finding, verified by direct reproduction before
     this fix: a container can declare an enormous *decoded* frame size
     while compressing to almost nothing on disk (a solid-color frame is
@@ -190,7 +204,9 @@ def test_inspect_garbage_too_short_raises(garbage_too_short_mp4, adapter):
     assert exc_info.value.code == "ARTIFACT_MEDIA_UNREADABLE"
 
 
-def test_inspect_reports_leftover_placeholder_metadata_tag(leftover_placeholder_wav, adapter):
+def test_inspect_reports_leftover_placeholder_metadata_tag(
+    leftover_placeholder_wav, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_wav)
     details = adapter.inspect(ref).details
     assert "todo" in details["leftover_markers"]
@@ -215,35 +231,70 @@ def test_verify_corrupt_file_fails_media_readable(corrupt_truncated_mp4, adapter
 
 def test_verify_duration_range_policy(good_mp4, adapter):
     ref = ArtifactRef.from_path(good_mp4)
-    ok = adapter.verify_structural(ref, {"min_duration_seconds": 1.0, "max_duration_seconds": 5.0})
-    assert next(c for c in ok.checks if c.id == "duration_range").status == CheckStatus.PASS
+    ok = adapter.verify_structural(
+        ref, {"min_duration_seconds": 1.0, "max_duration_seconds": 5.0}
+    )
+    assert (
+        next(c for c in ok.checks if c.id == "duration_range").status
+        == CheckStatus.PASS
+    )
 
     too_strict = adapter.verify_structural(ref, {"min_duration_seconds": 10.0})
-    assert next(c for c in too_strict.checks if c.id == "duration_range").status == CheckStatus.FAIL
+    assert (
+        next(c for c in too_strict.checks if c.id == "duration_range").status
+        == CheckStatus.FAIL
+    )
 
 
 def test_verify_require_has_video_and_has_audio(good_mp4, good_wav, adapter):
     video_ref = ArtifactRef.from_path(good_mp4)
     audio_ref = ArtifactRef.from_path(good_wav)
 
-    assert next(
-        c for c in adapter.verify_structural(video_ref, {"require_has_video": True}).checks if c.id == "has_video"
-    ).status == CheckStatus.PASS
-    assert next(
-        c for c in adapter.verify_structural(audio_ref, {"require_has_video": True}).checks if c.id == "has_video"
-    ).status == CheckStatus.FAIL
-    assert next(
-        c for c in adapter.verify_structural(audio_ref, {"require_has_audio": True}).checks if c.id == "has_audio"
-    ).status == CheckStatus.PASS
+    assert (
+        next(
+            c
+            for c in adapter.verify_structural(
+                video_ref, {"require_has_video": True}
+            ).checks
+            if c.id == "has_video"
+        ).status
+        == CheckStatus.PASS
+    )
+    assert (
+        next(
+            c
+            for c in adapter.verify_structural(
+                audio_ref, {"require_has_video": True}
+            ).checks
+            if c.id == "has_video"
+        ).status
+        == CheckStatus.FAIL
+    )
+    assert (
+        next(
+            c
+            for c in adapter.verify_structural(
+                audio_ref, {"require_has_audio": True}
+            ).checks
+            if c.id == "has_audio"
+        ).status
+        == CheckStatus.PASS
+    )
 
 
 def test_verify_require_min_resolution(good_mp4, adapter):
     ref = ArtifactRef.from_path(good_mp4)
     ok = adapter.verify_structural(ref, {"require_min_resolution": (320, 240)})
-    assert next(c for c in ok.checks if c.id == "min_resolution").status == CheckStatus.PASS
+    assert (
+        next(c for c in ok.checks if c.id == "min_resolution").status
+        == CheckStatus.PASS
+    )
 
     too_big = adapter.verify_structural(ref, {"require_min_resolution": (1920, 1080)})
-    assert next(c for c in too_big.checks if c.id == "min_resolution").status == CheckStatus.FAIL
+    assert (
+        next(c for c in too_big.checks if c.id == "min_resolution").status
+        == CheckStatus.FAIL
+    )
 
 
 def test_verify_require_min_resolution_fails_with_no_video_stream(good_wav, adapter):
@@ -256,21 +307,42 @@ def test_verify_require_min_resolution_fails_with_no_video_stream(good_wav, adap
 
 def test_verify_require_video_and_audio_codec(good_mp4, adapter):
     ref = ArtifactRef.from_path(good_mp4)
-    ok = adapter.verify_structural(ref, {"require_video_codec": ["h264"], "require_audio_codec": ["aac"]})
-    assert next(c for c in ok.checks if c.id == "video_codec").status == CheckStatus.PASS
-    assert next(c for c in ok.checks if c.id == "audio_codec").status == CheckStatus.PASS
+    ok = adapter.verify_structural(
+        ref, {"require_video_codec": ["h264"], "require_audio_codec": ["aac"]}
+    )
+    assert (
+        next(c for c in ok.checks if c.id == "video_codec").status == CheckStatus.PASS
+    )
+    assert (
+        next(c for c in ok.checks if c.id == "audio_codec").status == CheckStatus.PASS
+    )
 
     wrong = adapter.verify_structural(ref, {"require_video_codec": "vp9"})
-    assert next(c for c in wrong.checks if c.id == "video_codec").status == CheckStatus.FAIL
+    assert (
+        next(c for c in wrong.checks if c.id == "video_codec").status
+        == CheckStatus.FAIL
+    )
 
 
-def test_verify_forbid_placeholder_text_escalates_to_fail(leftover_placeholder_wav, adapter):
+def test_verify_forbid_placeholder_text_escalates_to_fail(
+    leftover_placeholder_wav, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_wav)
     warn_result = adapter.verify_structural(ref, {})
-    assert next(c for c in warn_result.checks if c.id == "leftover_placeholder_text").status == CheckStatus.WARN
+    assert (
+        next(
+            c for c in warn_result.checks if c.id == "leftover_placeholder_text"
+        ).status
+        == CheckStatus.WARN
+    )
 
     fail_result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
-    assert next(c for c in fail_result.checks if c.id == "leftover_placeholder_text").status == CheckStatus.FAIL
+    assert (
+        next(
+            c for c in fail_result.checks if c.id == "leftover_placeholder_text"
+        ).status
+        == CheckStatus.FAIL
+    )
 
 
 def test_verify_require_video_codec_matches_case_insensitively(good_mp4, adapter):
@@ -279,14 +351,19 @@ def test_verify_require_video_codec_matches_case_insensitively(good_mp4, adapter
     # value like "H264" used to always FAIL with no hint it was a casing issue.
     ref = ArtifactRef.from_path(good_mp4)
     result = adapter.verify_structural(ref, {"require_video_codec": "H264"})
-    assert next(c for c in result.checks if c.id == "video_codec").status == CheckStatus.PASS
+    assert (
+        next(c for c in result.checks if c.id == "video_codec").status
+        == CheckStatus.PASS
+    )
 
 
 @pytest.mark.parametrize(
     "bad_value",
     [[100], [100, 100, 100], [], "100x100", {"w": 1, "h": 1}, ["a", "b"]],
 )
-def test_verify_require_min_resolution_rejects_malformed_policy_value(good_mp4, adapter, bad_value):
+def test_verify_require_min_resolution_rejects_malformed_policy_value(
+    good_mp4, adapter, bad_value
+):
     # Adversarial-review finding, verified by direct reproduction: a raw
     # `min_w, min_h = policy[...]` unpack crashed with an unhandled
     # ValueError/TypeError instead of a clean ArtifactInputError.
@@ -297,7 +374,9 @@ def test_verify_require_min_resolution_rejects_malformed_policy_value(good_mp4, 
 
 
 @pytest.mark.parametrize("bad_value", [123, None])
-def test_verify_require_video_codec_rejects_non_string_non_iterable(good_mp4, adapter, bad_value):
+def test_verify_require_video_codec_rejects_non_string_non_iterable(
+    good_mp4, adapter, bad_value
+):
     # Adversarial-review finding, verified by direct reproduction: `set(123)`/
     # `set(None)` crashed with an unhandled TypeError instead of a clean
     # ArtifactInputError.
@@ -317,7 +396,9 @@ def test_verify_duration_policy_rejects_non_numeric_value(good_mp4, adapter):
     assert exc_info.value.code == "ARTIFACT_INVALID_ARGS"
 
 
-def test_inspect_tolerates_non_numeric_sample_rate_from_ffprobe(monkeypatch, good_mp4, adapter):
+def test_inspect_tolerates_non_numeric_sample_rate_from_ffprobe(
+    monkeypatch, good_mp4, adapter
+):
     # Adversarial-review finding, verified by direct reproduction: ffprobe's
     # real "N/A" sentinel for numeric fields (already guarded for duration/
     # bit_rate) was missed for sample_rate and raised an unhandled ValueError.
@@ -360,13 +441,17 @@ def test_render_forwards_limits_to_the_probe_step(good_mp4, adapter, tmp_path):
 def test_render_extracts_one_frame_from_good_mp4(good_mp4, adapter, tmp_path):
     ref = ArtifactRef.from_path(good_mp4)
     if not _probe_media_render_works(adapter, ref, tmp_path):
-        pytest.skip("ffmpeg in this environment cannot render (see adapter module docstring)")
+        pytest.skip(
+            "ffmpeg in this environment cannot render (see adapter module docstring)"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) == 1
     assert result.files[0].exists() and result.files[0].stat().st_size > 0
 
 
-def test_render_audio_only_produces_no_files_with_a_warning(good_wav, adapter, tmp_path):
+def test_render_audio_only_produces_no_files_with_a_warning(
+    good_wav, adapter, tmp_path
+):
     ref = ArtifactRef.from_path(good_wav)
     out_dir = tmp_path / "rendered"
     result = adapter.render(ref, out_dir)

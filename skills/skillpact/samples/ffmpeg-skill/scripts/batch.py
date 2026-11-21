@@ -22,6 +22,7 @@ Examples:
   python3 batch.py ~/Footage --recipe batch.json --force        # ignore the cache
   python3 batch.py ~/Footage --recipe batch.json --watch 30     # poll the folder every 30 s
 """
+
 import argparse
 import hashlib
 import json
@@ -32,12 +33,25 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from _common import STATE, add_common, apply_common, child_args, die, emit, info, run_tool, read_text_or_die, MEDIA_EXT as _MEDIA_EXT
+from _common import (
+    STATE,
+    add_common,
+    apply_common,
+    child_args,
+    die,
+    emit,
+    info,
+    run_tool,
+    read_text_or_die,
+    MEDIA_EXT as _MEDIA_EXT,
+)
 from _common.runner import HW_FORCED_ENV, add_hw_orchestrator_args, env_hw
 from _common.emit import absorb_stage_hw, steps_encoder_report
 
 HERE = Path(__file__).resolve().parent
-MEDIA_EXT = {e for e in _MEDIA_EXT if e not in (".png", ".jpg", ".jpeg", ".webp")}  # one list (_common); a batch walks media, not stills
+MEDIA_EXT = {
+    e for e in _MEDIA_EXT if e not in (".png", ".jpg", ".jpeg", ".webp")
+}  # one list (_common); a batch walks media, not stills
 # recipe steps name the script to run as plain, untrusted JSON -- run_step() joins it onto HERE
 # with the `/` operator, which silently ignores the left side when the right side is itself an
 # absolute path (Path("/scripts") / "/tmp/evil.py" == Path("/tmp/evil.py")), and does nothing to
@@ -51,7 +65,9 @@ def file_key(path: Path) -> str:
     st = path.stat()
     h = hashlib.sha1()
     h.update(f"{path.name}|{st.st_size}|{int(st.st_mtime)}".encode())
-    with open(path, "rb") as fh:  # first and last MB: cheap and good enough to detect changes
+    with open(
+        path, "rb"
+    ) as fh:  # first and last MB: cheap and good enough to detect changes
         h.update(fh.read(1 << 20))
         if st.st_size > 2 << 20:
             fh.seek(-(1 << 20), os.SEEK_END)
@@ -72,7 +88,9 @@ def recipe_key(recipe: Dict[str, Any]) -> str:
             project_content = Path(recipe["project"]).read_text(encoding="utf-8")
         except OSError:
             pass
-    return hashlib.sha1((json.dumps(recipe, sort_keys=True) + "\0" + project_content).encode()).hexdigest()[:12]
+    return hashlib.sha1(
+        (json.dumps(recipe, sort_keys=True) + "\0" + project_content).encode()
+    ).hexdigest()[:12]
 
 
 def gpu_key() -> str:
@@ -80,21 +98,23 @@ def gpu_key() -> str:
     not the CPU's bytes, so a --hw output is never served to a --no-hw run or the other way round
     (render.py's cache_key folds the same two variables in). Read after apply_common(), which has
     exported --hw/--no-hw to the steps. '' when every step encodes on the CPU -- no flag and no
-    $FFMPEG_SKILL_HW, or --no-hw -- so the keys of a cache written before --hw existed still hit."""
+    $FFMPEG_SKILL_HW, or --no-hw -- so the keys of a cache written before --hw existed still hit.
+    """
     if not env_hw():
         return ""
     # the variable alone leaves export.py's delivery presets on the CPU; --hw puts them on the GPU
     return ":hw" if os.environ.get(HW_FORCED_ENV) == "1" else ":hw-env"
 
 
-JOBS_CAP = 8   # beyond this, concurrent encodes contend for the same cores and memory
+JOBS_CAP = 8  # beyond this, concurrent encodes contend for the same cores and memory
 
 _LOG = threading.local()
 
 
 def log(message: str) -> None:
     """info(), unless this thread is a --jobs worker -- then the line is buffered and flushed in
-    file order when the item finishes, so a parallel run's log reads exactly like a serial one."""
+    file order when the item finishes, so a parallel run's log reads exactly like a serial one.
+    """
     buf = getattr(_LOG, "buffer", None)
     if buf is None:
         info(message)
@@ -102,7 +122,9 @@ def log(message: str) -> None:
         buf.append(message)
 
 
-def run_step(argv: List[str], per_call: "Optional[float]" = None) -> "tuple[bool, Optional[dict]]":
+def run_step(
+    argv: List[str], per_call: "Optional[float]" = None
+) -> "tuple[bool, Optional[dict]]":
     """Returns (ok, doc): doc is the step's own --json result document, or None if it couldn't
     be parsed. {in}/{out} are already resolved by the caller before argv reaches here, so forcing
     --json on every step (harmless: no step reads another step's stdout, only its output path)
@@ -110,10 +132,20 @@ def run_step(argv: List[str], per_call: "Optional[float]" = None) -> "tuple[bool
     `reencoded`, without adding a bespoke flag per field it might someday want."""
     script = argv[0]
     if script not in ALLOWED_STEP_SCRIPTS:
-        die(f"recipe step names a script that isn't one of this skill's own tools: {script!r} "
-            f"(must be a bare filename like 'silence.py', found in scripts/)")
-    cmd = [str(HERE / script)] + argv[1:] + child_args() + (["--json"] if "--json" not in argv[1:] else [])
-    log("  → " + " ".join(os.path.basename(c) if i < 1 else c for i, c in enumerate(cmd)))
+        die(
+            f"recipe step names a script that isn't one of this skill's own tools: {script!r} "
+            f"(must be a bare filename like 'silence.py', found in scripts/)"
+        )
+    cmd = (
+        [str(HERE / script)]
+        + argv[1:]
+        + child_args()
+        + (["--json"] if "--json" not in argv[1:] else [])
+    )
+    log(
+        "  → "
+        + " ".join(os.path.basename(c) if i < 1 else c for i, c in enumerate(cmd))
+    )
     proc = run_tool(cmd, per_call=per_call)
     try:
         doc = json.loads(proc.stdout)
@@ -123,7 +155,9 @@ def run_step(argv: List[str], per_call: "Optional[float]" = None) -> "tuple[bool
         log("    " + "\n    ".join(proc.stderr.strip().splitlines()[-4:]))
         return False, doc
     for line in proc.stderr.splitlines():
-        if line.startswith("warning:"):  # a step's deprecation notice is not swallowed by a success (review 9)
+        if line.startswith(
+            "warning:"
+        ):  # a step's deprecation notice is not swallowed by a success (review 9)
             log("    " + line)
     return True, doc
 
@@ -146,20 +180,29 @@ def final_path(src: Path, recipe: Dict[str, Any], outdir: Path) -> Path:
     return outdir / f"{src.stem}{suffix}.{final_ext}"
 
 
-def process(src: Path, recipe: Dict[str, Any], outdir: Path, work: Path,
-            deadline: "Optional[float]" = None) -> Dict[str, Any]:
+def process(
+    src: Path,
+    recipe: Dict[str, Any],
+    outdir: Path,
+    work: Path,
+    deadline: "Optional[float]" = None,
+) -> Dict[str, Any]:
     final = final_path(src, recipe, outdir)
     t0 = time.time()
 
     def budget() -> "Optional[float]":
         """What is left of the BATCH's time limit -- not a fresh one per item. A --timeout is a
-        promise about the whole run, so a queue of 40 files cannot quietly take 40 timeouts."""
+        promise about the whole run, so a queue of 40 files cannot quietly take 40 timeouts.
+        """
         if deadline is None:
             return None
         return max(1.0, deadline - time.monotonic())
+
     if recipe.get("project"):
         try:
-            proj = json.loads(read_text_or_die(str(recipe["project"]), "recipe.project"))
+            proj = json.loads(
+                read_text_or_die(str(recipe["project"]), "recipe.project")
+            )
         except ValueError as e:
             die(f"recipe.project: {recipe['project']} is not valid JSON: {e}")
         idx = int(recipe.get("clip_key", 0))
@@ -185,7 +228,14 @@ def process(src: Path, recipe: Dict[str, Any], outdir: Path, work: Path,
         cut_reasons = []
         for i, step in enumerate(steps):
             last = i == len(steps) - 1
-            out = str(final) if last else str(work / f"{src.stem}_step{i}.{'mp4' if src.suffix.lower() not in ('.wav', '.mp3', '.m4a', '.flac') else src.suffix.lstrip('.')}")
+            out = (
+                str(final)
+                if last
+                else str(
+                    work
+                    / f"{src.stem}_step{i}.{'mp4' if src.suffix.lower() not in ('.wav', '.mp3', '.m4a', '.flac') else src.suffix.lstrip('.')}"
+                )
+            )
             argv = [str(a).replace("{in}", cur).replace("{out}", out) for a in step]
             step_ok, doc = run_step(argv, budget())
             step_docs.append((Path(str(argv[0])).stem if argv else "step", doc))
@@ -193,14 +243,27 @@ def process(src: Path, recipe: Dict[str, Any], outdir: Path, work: Path,
             # --segments join) re-encoded, for the reasons in its `reencode_reason` (distinct per
             # call, so cut_reencode_reasons lists each reason once per cut.py call that named it).
             # Per cut.py call, not per --segments range.
-            if step_ok and argv and argv[0] == "cut.py" and isinstance(doc, dict) and "reencoded" in doc:
+            if (
+                step_ok
+                and argv
+                and argv[0] == "cut.py"
+                and isinstance(doc, dict)
+                and "reencoded" in doc
+            ):
                 cut_reencoded.append(bool(doc["reencoded"]))
-                cut_reasons.extend(r for r in (doc.get("reencode_reason") or []) if isinstance(r, str))
+                cut_reasons.extend(
+                    r for r in (doc.get("reencode_reason") or []) if isinstance(r, str)
+                )
             if not step_ok:
                 ok = False
                 break
             cur = out
-    result: Dict[str, Any] = {"file": str(src), "output": str(final), "ok": ok, "seconds": round(time.time() - t0, 1)}
+    result: Dict[str, Any] = {
+        "file": str(src),
+        "output": str(final),
+        "ok": ok,
+        "seconds": round(time.time() - t0, 1),
+    }
     if cut_reencoded:
         result["cut_reencoded"] = cut_reencoded
         result["cut_reencode_reasons"] = cut_reasons
@@ -211,24 +274,38 @@ def process(src: Path, recipe: Dict[str, Any], outdir: Path, work: Path,
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("folder")
     ap.add_argument("--recipe", required=True, help="batch.json")
-    ap.add_argument("--force", action="store_true", help="ignore the cache and redo everything")
-    ap.add_argument("--watch", type=float, help="keep polling the folder every N seconds")
-    ap.add_argument("--jobs", default="1", metavar="N",
-                    help="process N files at once, or 'auto' for min(cpu_count, 4). Capped at "
-                         "min(N, cpu_count, 8): every item is already an ffmpeg that threads "
-                         "across cores, so more than a few contend rather than go faster. "
-                         "Default 1, which is 1.16's behaviour exactly.")
-    ap.add_argument("--work", help="work directory for intermediates (default: <output_dir>/.work)")
+    ap.add_argument(
+        "--force", action="store_true", help="ignore the cache and redo everything"
+    )
+    ap.add_argument(
+        "--watch", type=float, help="keep polling the folder every N seconds"
+    )
+    ap.add_argument(
+        "--jobs",
+        default="1",
+        metavar="N",
+        help="process N files at once, or 'auto' for min(cpu_count, 4). Capped at "
+        "min(N, cpu_count, 8): every item is already an ffmpeg that threads "
+        "across cores, so more than a few contend rather than go faster. "
+        "Default 1, which is 1.16's behaviour exactly.",
+    )
+    ap.add_argument(
+        "--work", help="work directory for intermediates (default: <output_dir>/.work)"
+    )
     add_common(ap)
     add_hw_orchestrator_args(ap)
     args = ap.parse_args()
     apply_common(args)
 
     started = time.time()
-    folder = Path(args.folder).resolve()  # relative 'bdir' used to become bdir/bdir/out once joined with the default outdir
+    folder = Path(
+        args.folder
+    ).resolve()  # relative 'bdir' used to become bdir/bdir/out once joined with the default outdir
     if not folder.is_dir():
         die(f"not a folder: {folder}")
     try:
@@ -236,7 +313,9 @@ def main() -> int:
     except (OSError, ValueError) as exc:
         die(f"cannot read recipe: {exc}")
     if recipe.get("project") and not os.path.isabs(recipe["project"]):
-        recipe["project"] = str((Path(args.recipe).resolve().parent / recipe["project"]))
+        recipe["project"] = str(
+            (Path(args.recipe).resolve().parent / recipe["project"])
+        )
     outdir = Path(recipe.get("output_dir") or (folder / "out"))
     if not outdir.is_absolute():
         outdir = folder / outdir
@@ -257,6 +336,7 @@ def main() -> int:
                         d.rmdir()
                 except OSError:
                     pass
+
         atexit.register(_remove_empty_dirs)
     cache_path = outdir / ".ffskill_cache.json"
     cache: Dict[str, Any] = {}
@@ -283,22 +363,30 @@ def main() -> int:
             die("--jobs must be at least 1", kind="input")
     jobs = max(1, min(requested, cpus, JOBS_CAP))
     if jobs != requested:
-        info(f"--jobs {requested} capped to {jobs} (min of the request, {cpus} CPU(s) and the "
-             f"{JOBS_CAP}-job ceiling): each item is already a multi-threaded encode")
+        info(
+            f"--jobs {requested} capped to {jobs} (min of the request, {cpus} CPU(s) and the "
+            f"{JOBS_CAP}-job ceiling): each item is already a multi-threaded encode"
+        )
     # One budget for the whole batch, not one per item -- but only where that cannot change what
     # 1.16 did. A stated --timeout is a statement about this run, and asking for --jobs > 1 is
     # asking for the batch to be treated as one piece of work; the default sequential path with
     # the default timeout keeps 1.16's behaviour exactly, where each item got its own ceiling and
     # a long folder was never cut off part-way.
     shared_budget = bool(args.timeout) or jobs > 1
-    deadline = time.monotonic() + STATE.timeout if (shared_budget and STATE.timeout) else None
+    deadline = (
+        time.monotonic() + STATE.timeout if (shared_budget and STATE.timeout) else None
+    )
     cache_lock = threading.Lock()
     timed_out = {"hit": False}
     interrupted = {"hit": False}
 
     def one_pass() -> List[Dict[str, Any]]:
         results = []
-        files = sorted(p for p in folder.glob(glob) if p.is_file() and p.suffix.lower() in MEDIA_EXT and outdir not in p.parents)
+        files = sorted(
+            p
+            for p in folder.glob(glob)
+            if p.is_file() and p.suffix.lower() in MEDIA_EXT and outdir not in p.parents
+        )
         # Two different sources can compute the same final path (most often a fixed recipe "ext"
         # collapsing e.g. clip.mp4 and clip.mov to the same clip_out.mp4) -- catch that before
         # processing anything, rather than letting the later one silently overwrite the earlier
@@ -308,13 +396,20 @@ def main() -> int:
             by_final.setdefault(final_path(src, recipe, outdir), []).append(src)
         collisions = {dst: srcs for dst, srcs in by_final.items() if len(srcs) > 1}
         if collisions:
-            detail = "; ".join(f"{dst.name} <- {', '.join(s.name for s in srcs)}" for dst, srcs in collisions.items())
-            die(f"{len(collisions)} output filename collision(s) in this batch -- rename the sources, "
-                f"or add a distinguishing \"suffix\"/\"ext\" per run, or split into separate globs: {detail}")
+            detail = "; ".join(
+                f"{dst.name} <- {', '.join(s.name for s in srcs)}"
+                for dst, srcs in collisions.items()
+            )
+            die(
+                f"{len(collisions)} output filename collision(s) in this batch -- rename the sources, "
+                f'or add a distinguishing "suffix"/"ext" per run, or split into separate globs: {detail}'
+            )
+
         def item_work(i: int, src: Path) -> Path:
             """Where this item's intermediates go. Parallel items must not share one work dir:
             the step file names are stem-derived, so two globs holding the same stem would write
-            over each other. Serial runs keep the flat layout 1.16 used, byte for byte."""
+            over each other. Serial runs keep the flat layout 1.16 used, byte for byte.
+            """
             if jobs == 1:
                 return work
             sub = work / f"{i}-{src.stem}"
@@ -330,7 +425,13 @@ def main() -> int:
             with cache_lock:
                 # this run just rewrote r["output"]: an entry under another key (another recipe,
                 # the other GPU setting) that names the same file now describes bytes that are gone
-                for stale in [k for k, v in cache.items() if k != key and isinstance(v, dict) and v.get("output") == r["output"]]:
+                for stale in [
+                    k
+                    for k, v in cache.items()
+                    if k != key
+                    and isinstance(v, dict)
+                    and v.get("output") == r["output"]
+                ]:
                     del cache[stale]
                 cache[key] = r
                 # write_text isn't atomic -- a process killed mid-write (or a --watch loop racing
@@ -339,7 +440,10 @@ def main() -> int:
                 # entry. Write to a sibling temp file and rename into place: same-directory
                 # renames are atomic on POSIX and os.replace() is atomic on Windows too, so a
                 # reader only ever sees the old complete file or the new complete file.
-                tmp = cache_path.parent / f"{cache_path.name}.tmp{os.getpid()}.{threading.get_ident()}"
+                tmp = (
+                    cache_path.parent
+                    / f"{cache_path.name}.tmp{os.getpid()}.{threading.get_ident()}"
+                )
                 tmp.write_text(json.dumps(cache, indent=2), encoding="utf-8")
                 os.replace(tmp, cache_path)
 
@@ -360,17 +464,28 @@ def main() -> int:
 
         def timed_out_row(src: Path) -> "Dict[str, Any]":
             timed_out["hit"] = True
-            return {"file": str(src), "output": str(final_path(src, recipe, outdir)),
-                    "ok": False, "seconds": 0.0, "skipped": "timeout"}
+            return {
+                "file": str(src),
+                "output": str(final_path(src, recipe, outdir)),
+                "ok": False,
+                "seconds": 0.0,
+                "skipped": "timeout",
+            }
 
         def failed_row(src: Path, exc: BaseException) -> "Dict[str, Any]":
             """A worker that raised is a failed item, not a dead run. A die() inside a thread
             raises SystemExit through fut.result() and used to take the whole process down
             before the summary and the per-item table were printed -- so the one thing the user
-            needed, which item failed and which succeeded, was the thing they did not get."""
+            needed, which item failed and which succeeded, was the thing they did not get.
+            """
             reason = str(exc) or exc.__class__.__name__
-            return {"file": str(src), "output": str(final_path(src, recipe, outdir)),
-                    "ok": False, "seconds": 0.0, "error": reason[:300]}
+            return {
+                "file": str(src),
+                "output": str(final_path(src, recipe, outdir)),
+                "ok": False,
+                "seconds": 0.0,
+                "error": reason[:300],
+            }
 
         if jobs == 1 or len(pending) < 2:
             for i, src, key in pending:
@@ -383,7 +498,7 @@ def main() -> int:
                 except KeyboardInterrupt:
                     interrupted["hit"] = True
                     break
-                except BaseException as exc:            # noqa: BLE001 - reported, never swallowed
+                except BaseException as exc:  # noqa: BLE001 - reported, never swallowed
                     if isinstance(exc, SystemExit) and not exc.code:
                         raise
                     slots[i] = failed_row(src, exc)
@@ -427,13 +542,16 @@ def main() -> int:
                     if not in_flight:
                         break
                     done_now, in_flight = concurrent.futures.wait(
-                        in_flight, return_when=concurrent.futures.FIRST_COMPLETED)
+                        in_flight, return_when=concurrent.futures.FIRST_COMPLETED
+                    )
                     in_flight = set(in_flight)
                     for fut in done_now:
                         i, src = futures[fut]
                         try:
                             slots[i], lines[i] = fut.result()
-                        except BaseException as exc:    # noqa: BLE001 - reported, never swallowed
+                        except (
+                            BaseException
+                        ) as exc:  # noqa: BLE001 - reported, never swallowed
                             slots[i] = failed_row(src, exc)
                             lines[i] = [f"=== {src.name}", f"    failed: {exc}"]
                 for i, src, key in queue:
@@ -450,7 +568,7 @@ def main() -> int:
                         continue
                     try:
                         slots[i], lines[i] = fut.result()
-                    except BaseException:               # noqa: BLE001
+                    except BaseException:  # noqa: BLE001
                         pass
                 info("interrupted: reporting what had already finished")
         for i, src in enumerate(files):
@@ -495,15 +613,20 @@ def main() -> int:
                     if not in_flight:
                         break
                     done_now, in_flight = concurrent.futures.wait(
-                        in_flight, return_when=concurrent.futures.FIRST_COMPLETED)
+                        in_flight, return_when=concurrent.futures.FIRST_COMPLETED
+                    )
                     in_flight = set(in_flight)
                     for fut in done_now:
                         ordered[futures[fut]], lines[futures[fut]] = fut.result()
                 for slot, (i, src, key) in queue:
                     timed_out["hit"] = True
-                    ordered[slot] = {"file": str(src),
-                                     "output": str(final_path(src, recipe, outdir)),
-                                     "ok": False, "seconds": 0.0, "skipped": "timeout"}
+                    ordered[slot] = {
+                        "file": str(src),
+                        "output": str(final_path(src, recipe, outdir)),
+                        "ok": False,
+                        "seconds": 0.0,
+                        "skipped": "timeout",
+                    }
             except KeyboardInterrupt:
                 for fut in futures:
                     fut.cancel()
@@ -514,8 +637,13 @@ def main() -> int:
                 info(line)
             if ordered[slot] is None:
                 timed_out["hit"] = True
-                ordered[slot] = {"file": str(src), "output": str(final_path(src, recipe, outdir)),
-                                 "ok": False, "seconds": 0.0, "skipped": "timeout"}
+                ordered[slot] = {
+                    "file": str(src),
+                    "output": str(final_path(src, recipe, outdir)),
+                    "ok": False,
+                    "seconds": 0.0,
+                    "skipped": "timeout",
+                }
             results.append(ordered[slot])
         return results
 
@@ -526,6 +654,7 @@ def main() -> int:
         # which is wrong for a watch that already processed files: while idle between passes,
         # let Ctrl-C be a plain KeyboardInterrupt so the summary below prints (review 5)
         import signal
+
         try:
             while True:
                 previous = signal.signal(signal.SIGINT, signal.default_int_handler)
@@ -541,31 +670,62 @@ def main() -> int:
     for r in results:
         absorb_stage_hw(Path(r["file"]).name, r)
     done = sum(1 for r in results if r["ok"])
-    info(f"{done}/{len(results)} processed, {sum(1 for r in results if r.get('cached'))} from cache")
+    info(
+        f"{done}/{len(results)} processed, {sum(1 for r in results if r.get('cached'))} from cache"
+    )
     if not args.json:
         for r in results:
-            print(f"{'OK  ' if r['ok'] else 'FAIL'} {r['file']} -> {r['output']}" + (" (cached)" if r.get("cached") else ""))
+            print(
+                f"{'OK  ' if r['ok'] else 'FAIL'} {r['file']} -> {r['output']}"
+                + (" (cached)" if r.get("cached") else "")
+            )
     if interrupted["hit"]:
         # Ctrl-C on a batch that already produced files: the user needs the partial table, not a
         # traceback and not "nothing was written". Exit 130 with everything that completed.
-        die(f"interrupted after {done} of {len(results)} item(s); the finished outputs are kept "
+        die(
+            f"interrupted after {done} of {len(results)} item(s); the finished outputs are kept "
             "and the rest were not started",
-            code=130, kind="interrupted", output=None, dry_run=STATE.dry_run, results=results,
-            processed=done, total=len(results), jobs=jobs, jobs_requested=requested,
-            timed_out=timed_out["hit"])
+            code=130,
+            kind="interrupted",
+            output=None,
+            dry_run=STATE.dry_run,
+            results=results,
+            processed=done,
+            total=len(results),
+            jobs=jobs,
+            jobs_requested=requested,
+            timed_out=timed_out["hit"],
+        )
     if timed_out["hit"]:
         skipped = [r["file"] for r in results if r.get("skipped") == "timeout"]
-        die(f"the batch's {STATE.timeout:.0f} s budget ran out with {len(skipped)} item(s) not "
+        die(
+            f"the batch's {STATE.timeout:.0f} s budget ran out with {len(skipped)} item(s) not "
             f"started: {', '.join(os.path.basename(f) for f in skipped[:5])}"
             + (" ..." if len(skipped) > 5 else "")
             + ". --timeout is the whole run's limit, not each item's; raise it or split the folder.",
-            code=124, kind="timeout", output=None, dry_run=STATE.dry_run, results=results,
-            processed=done, total=len(results), jobs=jobs, jobs_requested=requested,
-            timed_out=True)
+            code=124,
+            kind="timeout",
+            output=None,
+            dry_run=STATE.dry_run,
+            results=results,
+            processed=done,
+            total=len(results),
+            jobs=jobs,
+            jobs_requested=requested,
+            timed_out=True,
+        )
     if done != len(results):
         failed_files = [r["file"] for r in results if not r["ok"]]
-        die(f"{len(results) - done} of {len(results)} items failed: {', '.join(failed_files[:5])}" + (" ..." if len(failed_files) > 5 else ""),
-            kind="verification", output=None, dry_run=STATE.dry_run, results=results, processed=done, total=len(results))
+        die(
+            f"{len(results) - done} of {len(results)} items failed: {', '.join(failed_files[:5])}"
+            + (" ..." if len(failed_files) > 5 else ""),
+            kind="verification",
+            output=None,
+            dry_run=STATE.dry_run,
+            results=results,
+            processed=done,
+            total=len(results),
+        )
     # cut.py's own `reencoded`, rolled up across every cut.py step this batch ran: how much of the
     # folder landed on the fast lossless path (mode "copy") vs re-encoded on at least one range.
     # Keyframe placement, VFR sources, --accurate/--codec in the recipe and --segments joins all
@@ -578,8 +738,12 @@ def main() -> int:
     reasons: Optional[Dict[str, int]] = None
     if all_cuts:
         copied = sum(1 for r in all_cuts if not r)
-        cut_summary = {"calls": len(all_cuts), "stream_copy": copied, "reencoded": len(all_cuts) - copied,
-                        "stream_copy_rate": round(copied / len(all_cuts), 3)}
+        cut_summary = {
+            "calls": len(all_cuts),
+            "stream_copy": copied,
+            "reencoded": len(all_cuts) - copied,
+            "stream_copy_rate": round(copied / len(all_cuts), 3),
+        }
         reasons = {}
         for res in results:
             if "cut_reencode_reasons" not in res:
@@ -590,13 +754,32 @@ def main() -> int:
                     reasons["unknown"] = reasons.get("unknown", 0) + unknown
             for r in res.get("cut_reencode_reasons") or []:
                 reasons[r] = reasons.get(r, 0) + 1
-        why = (" (reencode_reason: " + ", ".join(f"{k} x{v}" for k, v in reasons.items()) + ")") if reasons else ""
-        info(f"cut.py: {copied}/{len(all_cuts)} call(s) stayed fully lossless stream-copy "
-             f"({cut_summary['stream_copy_rate']:.0%}), {len(all_cuts) - copied} re-encoded a range or its --segments join{why}")
-    emit(None, results=results, processed=done, total=len(results),
-         jobs=jobs, jobs_requested=requested, wall_seconds=round(time.time() - started, 1),
-         item_seconds_total=round(sum(float(r.get("seconds") or 0) for r in results), 1),
-         timed_out=timed_out["hit"], cut_stream_copy=cut_summary, cut_reencode_reasons=reasons)
+        why = (
+            (
+                " (reencode_reason: "
+                + ", ".join(f"{k} x{v}" for k, v in reasons.items())
+                + ")"
+            )
+            if reasons
+            else ""
+        )
+        info(
+            f"cut.py: {copied}/{len(all_cuts)} call(s) stayed fully lossless stream-copy "
+            f"({cut_summary['stream_copy_rate']:.0%}), {len(all_cuts) - copied} re-encoded a range or its --segments join{why}"
+        )
+    emit(
+        None,
+        results=results,
+        processed=done,
+        total=len(results),
+        jobs=jobs,
+        jobs_requested=requested,
+        wall_seconds=round(time.time() - started, 1),
+        item_seconds_total=round(sum(float(r.get("seconds") or 0) for r in results), 1),
+        timed_out=timed_out["hit"],
+        cut_stream_copy=cut_summary,
+        cut_reencode_reasons=reasons,
+    )
     return 0
 
 

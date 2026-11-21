@@ -26,6 +26,7 @@ Validation of the translated document (line length, reading speed, ...) is
 the caller's (`operations._run_translate`) job, with the target language's
 locale profile. Nothing here rewrites a translation to make it fit.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -107,22 +108,37 @@ def parse_glossary(raw: Any) -> Tuple[GlossaryEntry, ...]:
     if raw is None:
         return ()
     if not isinstance(raw, list):
-        raise SubtitleSkillError("INVALID_INPUT", "glossary must be an array of {source, target} objects")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", "glossary must be an array of {source, target} objects"
+        )
     if len(raw) > GLOSSARY_LIMIT:
-        raise SubtitleSkillError("INVALID_INPUT", f"glossary has more than {GLOSSARY_LIMIT} entries")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"glossary has more than {GLOSSARY_LIMIT} entries"
+        )
     entries = []
     seen = {}
     for i, item in enumerate(raw):
         if not isinstance(item, Mapping) or set(item) != {"source", "target"}:
-            raise SubtitleSkillError("INVALID_INPUT", f"glossary[{i}] must be an object with exactly 'source' and 'target'")
+            raise SubtitleSkillError(
+                "INVALID_INPUT",
+                f"glossary[{i}] must be an object with exactly 'source' and 'target'",
+            )
         src, tgt = item["source"], item["target"]
         for name, value in (("source", src), ("target", tgt)):
-            if not isinstance(value, str) or not value.strip() or "\n" in value or "\t" in value:
+            if (
+                not isinstance(value, str)
+                or not value.strip()
+                or "\n" in value
+                or "\t" in value
+            ):
                 raise SubtitleSkillError(
-                    "INVALID_INPUT", f"glossary[{i}].{name} must be a non-empty single-line string without tabs"
+                    "INVALID_INPUT",
+                    f"glossary[{i}].{name} must be a non-empty single-line string without tabs",
                 )
         if src in seen and seen[src] != tgt:
-            raise SubtitleSkillError("INVALID_INPUT", f"glossary source term {src!r} is given two targets")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"glossary source term {src!r} is given two targets"
+            )
         if src not in seen:
             seen[src] = tgt
             entries.append(GlossaryEntry(src, tgt))
@@ -134,19 +150,33 @@ def parse_memory(raw: Any) -> dict:
     if raw is None:
         return {}
     if not isinstance(raw, list):
-        raise SubtitleSkillError("INVALID_INPUT", "translation_memory must be an array of {source, target} objects")
+        raise SubtitleSkillError(
+            "INVALID_INPUT",
+            "translation_memory must be an array of {source, target} objects",
+        )
     out: dict = {}
     for i, item in enumerate(raw):
         if not isinstance(item, Mapping) or set(item) != {"source", "target"}:
             raise SubtitleSkillError(
-                "INVALID_INPUT", f"translation_memory[{i}] must be an object with exactly 'source' and 'target'"
+                "INVALID_INPUT",
+                f"translation_memory[{i}] must be an object with exactly 'source' and 'target'",
             )
         src, tgt = item["source"], item["target"]
-        if not isinstance(src, str) or not isinstance(tgt, str) or not src.strip() or not tgt.strip():
-            raise SubtitleSkillError("INVALID_INPUT", f"translation_memory[{i}] source/target must be non-empty strings")
+        if (
+            not isinstance(src, str)
+            or not isinstance(tgt, str)
+            or not src.strip()
+            or not tgt.strip()
+        ):
+            raise SubtitleSkillError(
+                "INVALID_INPUT",
+                f"translation_memory[{i}] source/target must be non-empty strings",
+            )
         key = _normalize_segment(src)
         if key in out and out[key] != tgt:
-            raise SubtitleSkillError("INVALID_INPUT", f"translation_memory gives two targets for {src!r}")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"translation_memory gives two targets for {src!r}"
+            )
         out[key] = tgt
     return out
 
@@ -184,7 +214,11 @@ class TranslationEngine:
         return self.version()
 
     def translate(
-        self, texts: Sequence[str], source: str, target: str, glossary: Sequence[GlossaryEntry]
+        self,
+        texts: Sequence[str],
+        source: str,
+        target: str,
+        glossary: Sequence[GlossaryEntry],
     ) -> List[str]:  # pragma: no cover - overridden
         raise NotImplementedError
 
@@ -260,7 +294,9 @@ class ArgosEngine(TranslationEngine):
             ) from exc
         try:
             import argostranslate.settings as settings  # type: ignore
-        except ImportError:  # pragma: no cover - every released argostranslate has settings
+        except (
+            ImportError
+        ):  # pragma: no cover - every released argostranslate has settings
             settings = None
         return package, translate, settings
 
@@ -280,7 +316,10 @@ class ArgosEngine(TranslationEngine):
     def _package(self, package_module, source: str, target: str):
         src, tgt = _argos_code(source), _argos_code(target)
         for pkg in package_module.get_installed_packages():
-            if getattr(pkg, "from_code", None) == src and getattr(pkg, "to_code", None) == tgt:
+            if (
+                getattr(pkg, "from_code", None) == src
+                and getattr(pkg, "to_code", None) == tgt
+            ):
                 return pkg
         raise SubtitleSkillError(
             "DEPENDENCY_ERROR",
@@ -315,16 +354,21 @@ class ArgosEngine(TranslationEngine):
         package_module, translate_module, settings = self._modules()
         self._check_local_provider(settings)
         self._package(package_module, source, target)
-        translation = translate_module.get_translation_from_codes(_argos_code(source), _argos_code(target))
+        translation = translate_module.get_translation_from_codes(
+            _argos_code(source), _argos_code(target)
+        )
         if translation is None:
             raise SubtitleSkillError(
-                "DEPENDENCY_ERROR", f"Argos Translate has no translation for {source}->{target}"
+                "DEPENDENCY_ERROR",
+                f"Argos Translate has no translation for {source}->{target}",
             )
         out = []
         for text in texts:
             result = translation.translate(text)
             if not isinstance(result, str):
-                raise SubtitleSkillError("TOOL_ERROR", "Argos Translate returned a non-string translation")
+                raise SubtitleSkillError(
+                    "TOOL_ERROR", "Argos Translate returned a non-string translation"
+                )
             out.append(result)
         return out
 
@@ -334,23 +378,37 @@ HttpFunc = Callable[[str, str, Mapping[str, str], Optional[bytes]], Tuple[int, b
 
 
 def _http_request(
-    method: str, url: str, headers: Mapping[str, str], body: Optional[bytes], *, service: str, timeout: float
+    method: str,
+    url: str,
+    headers: Mapping[str, str],
+    body: Optional[bytes],
+    *,
+    service: str,
+    timeout: float,
 ) -> Tuple[int, bytes]:
     req = urllib.request.Request(url, data=body, method=method, headers=dict(headers))
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - URL checked by the engine
+        with urllib.request.urlopen(
+            req, timeout=timeout
+        ) as resp:  # noqa: S310 - URL checked by the engine
             return resp.status, resp.read()
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read()
     except (urllib.error.URLError, OSError) as exc:
-        raise SubtitleSkillError("DEPENDENCY_ERROR", f"{service} unreachable: {exc}") from exc
+        raise SubtitleSkillError(
+            "DEPENDENCY_ERROR", f"{service} unreachable: {exc}"
+        ) from exc
 
 
-def _urllib_http(method: str, url: str, headers: Mapping[str, str], body: Optional[bytes]) -> Tuple[int, bytes]:
+def _urllib_http(
+    method: str, url: str, headers: Mapping[str, str], body: Optional[bytes]
+) -> Tuple[int, bytes]:
     return _http_request(method, url, headers, body, service="DeepL API", timeout=60)
 
 
-def _ollama_http(method: str, url: str, headers: Mapping[str, str], body: Optional[bytes]) -> Tuple[int, bytes]:
+def _ollama_http(
+    method: str, url: str, headers: Mapping[str, str], body: Optional[bytes]
+) -> Tuple[int, bytes]:
     # a local LLM on a CPU can take minutes for one cue
     return _http_request(method, url, headers, body, service="Ollama", timeout=600)
 
@@ -366,7 +424,9 @@ def deepl_target_code(language: str) -> str:
     if primary == "PT":
         return "PT-PT" if region == "PT" else "PT-BR"
     if primary == "ZH":
-        if region in ("TW", "HK", "MO") or (len(parts) > 1 and parts[1].lower() == "hant"):
+        if region in ("TW", "HK", "MO") or (
+            len(parts) > 1 and parts[1].lower() == "hant"
+        ):
             return "ZH-HANT"
         return "ZH-HANS"
     return primary
@@ -378,7 +438,11 @@ class DeepLEngine(TranslationEngine):
     name = "deepl"
     API_VERSION = "v2"
 
-    def __init__(self, http: Optional[HttpFunc] = None, environ: Optional[Mapping[str, str]] = None):
+    def __init__(
+        self,
+        http: Optional[HttpFunc] = None,
+        environ: Optional[Mapping[str, str]] = None,
+    ):
         self.http = http or _urllib_http
         self.environ = os.environ if environ is None else environ
 
@@ -386,7 +450,8 @@ class DeepLEngine(TranslationEngine):
         key = self.environ.get(DEEPL_KEY_ENV, "").strip()
         if not key:
             raise SubtitleSkillError(
-                "DEPENDENCY_ERROR", f"engine 'deepl' needs an API key in the {DEEPL_KEY_ENV} environment variable"
+                "DEPENDENCY_ERROR",
+                f"engine 'deepl' needs an API key in the {DEEPL_KEY_ENV} environment variable",
             )
         return key
 
@@ -394,7 +459,9 @@ class DeepLEngine(TranslationEngine):
         override = self.environ.get(DEEPL_URL_ENV, "").strip()
         if override:
             if not override.startswith("https://"):
-                raise SubtitleSkillError("DEPENDENCY_ERROR", f"{DEEPL_URL_ENV} must be an https:// URL")
+                raise SubtitleSkillError(
+                    "DEPENDENCY_ERROR", f"{DEEPL_URL_ENV} must be an https:// URL"
+                )
             return override.rstrip("/")
         return DEEPL_FREE_URL if self._key().endswith(":fx") else DEEPL_PRO_URL
 
@@ -412,28 +479,41 @@ class DeepLEngine(TranslationEngine):
         return True
 
     def _call(self, method: str, path: str, payload: Optional[dict]) -> dict:
-        headers = {"Authorization": f"DeepL-Auth-Key {self._key()}", "User-Agent": "subtitle-skill"}
+        headers = {
+            "Authorization": f"DeepL-Auth-Key {self._key()}",
+            "User-Agent": "subtitle-skill",
+        }
         body = None
         if payload is not None:
             headers["Content-Type"] = "application/json"
             body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         status, raw = self.http(method, self.base_url() + path, headers, body)
         if status in (401, 403):
-            raise SubtitleSkillError("DEPENDENCY_ERROR", f"DeepL rejected the API key (HTTP {status})")
+            raise SubtitleSkillError(
+                "DEPENDENCY_ERROR", f"DeepL rejected the API key (HTTP {status})"
+            )
         if status == 456:
-            raise SubtitleSkillError("DEPENDENCY_ERROR", "DeepL quota exceeded (HTTP 456)")
+            raise SubtitleSkillError(
+                "DEPENDENCY_ERROR", "DeepL quota exceeded (HTTP 456)"
+            )
         if status >= 400:
             text = raw.decode("utf-8", "replace")[:500]
             code = "INVALID_INPUT" if status == 400 else "TOOL_ERROR"
-            raise SubtitleSkillError(code, f"DeepL {method} {path} failed (HTTP {status}): {text}")
+            raise SubtitleSkillError(
+                code, f"DeepL {method} {path} failed (HTTP {status}): {text}"
+            )
         if not raw:
             return {}
         try:
             data = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise SubtitleSkillError("TOOL_ERROR", f"DeepL returned a non-JSON response for {path}") from exc
+            raise SubtitleSkillError(
+                "TOOL_ERROR", f"DeepL returned a non-JSON response for {path}"
+            ) from exc
         if not isinstance(data, dict):
-            raise SubtitleSkillError("TOOL_ERROR", f"DeepL returned an unexpected document for {path}")
+            raise SubtitleSkillError(
+                "TOOL_ERROR", f"DeepL returned an unexpected document for {path}"
+            )
         return data
 
     def translate(self, texts, source, target, glossary):
@@ -454,29 +534,42 @@ class DeepLEngine(TranslationEngine):
             )
             glossary_id = created.get("glossary_id")
             if not isinstance(glossary_id, str) or not glossary_id:
-                raise SubtitleSkillError("TOOL_ERROR", "DeepL did not return a glossary_id")
+                raise SubtitleSkillError(
+                    "TOOL_ERROR", "DeepL did not return a glossary_id"
+                )
         try:
             out: List[str] = []
             for batch in _batches(list(texts), _DEEPL_BATCH_BYTES):
-                payload: dict = {"text": batch, "source_lang": source_code, "target_lang": target_code}
+                payload: dict = {
+                    "text": batch,
+                    "source_lang": source_code,
+                    "target_lang": target_code,
+                }
                 if glossary_id:
                     payload["glossary_id"] = glossary_id
                 data = self._call("POST", "/v2/translate", payload)
                 items = data.get("translations")
                 if not isinstance(items, list) or len(items) != len(batch):
                     raise SubtitleSkillError(
-                        "TOOL_ERROR", f"DeepL returned {len(items) if isinstance(items, list) else 'no'} translations for {len(batch)} texts"
+                        "TOOL_ERROR",
+                        f"DeepL returned {len(items) if isinstance(items, list) else 'no'} translations for {len(batch)} texts",
                     )
                 for item in items:
                     text = item.get("text") if isinstance(item, Mapping) else None
                     if not isinstance(text, str):
-                        raise SubtitleSkillError("TOOL_ERROR", "DeepL returned a translation without text")
+                        raise SubtitleSkillError(
+                            "TOOL_ERROR", "DeepL returned a translation without text"
+                        )
                     out.append(text)
             return out
         finally:
             if glossary_id:
                 try:
-                    self._call("DELETE", f"/v2/glossaries/{urllib.parse.quote(glossary_id)}", None)
+                    self._call(
+                        "DELETE",
+                        f"/v2/glossaries/{urllib.parse.quote(glossary_id)}",
+                        None,
+                    )
                 except SubtitleSkillError:
                     pass  # a leftover glossary is harmless; the translation already succeeded or failed
 
@@ -569,25 +662,36 @@ class OpusMTEngine(TranslationEngine):
         ctranslate2, sentencepiece = self._modules()
         path = self.model_dir(source, target)
         translator = ctranslate2.Translator(str(path), device="cpu")
-        sp_source = sentencepiece.SentencePieceProcessor(model_file=str(path / "source.spm"))
-        sp_target = sentencepiece.SentencePieceProcessor(model_file=str(path / "target.spm"))
+        sp_source = sentencepiece.SentencePieceProcessor(
+            model_file=str(path / "source.spm")
+        )
+        sp_target = sentencepiece.SentencePieceProcessor(
+            model_file=str(path / "target.spm")
+        )
         # Marian models expect the end-of-sentence token the Hugging Face
         # tokenizer appends; CTranslate2 strips it from the output.
-        batch = [list(sp_source.encode(text, out_type=str)) + ["</s>"] for text in texts]
+        batch = [
+            list(sp_source.encode(text, out_type=str)) + ["</s>"] for text in texts
+        ]
         results = translator.translate_batch(batch, beam_size=4)
         if len(results) != len(texts):
             raise SubtitleSkillError(
-                "TOOL_ERROR", f"CTranslate2 returned {len(results)} results for {len(texts)} texts"
+                "TOOL_ERROR",
+                f"CTranslate2 returned {len(results)} results for {len(texts)} texts",
             )
         out = []
         for result in results:
             hypotheses = getattr(result, "hypotheses", None)
             if not hypotheses:
-                raise SubtitleSkillError("TOOL_ERROR", "CTranslate2 returned a result without a hypothesis")
+                raise SubtitleSkillError(
+                    "TOOL_ERROR", "CTranslate2 returned a result without a hypothesis"
+                )
             tokens = [t for t in hypotheses[0] if t != "</s>"]
             text = sp_target.decode(tokens)
             if not isinstance(text, str):
-                raise SubtitleSkillError("TOOL_ERROR", "SentencePiece returned a non-string translation")
+                raise SubtitleSkillError(
+                    "TOOL_ERROR", "SentencePiece returned a non-string translation"
+                )
             out.append(text)
         return out
 
@@ -625,16 +729,27 @@ class OllamaEngine(TranslationEngine):
 
     name = "ollama"
 
-    def __init__(self, http: Optional[HttpFunc] = None, environ: Optional[Mapping[str, str]] = None):
+    def __init__(
+        self,
+        http: Optional[HttpFunc] = None,
+        environ: Optional[Mapping[str, str]] = None,
+    ):
         self.http = http or _ollama_http
         self.environ = os.environ if environ is None else environ
 
     def base_url(self) -> str:
-        url = (self.environ.get(OLLAMA_URL_ENV, "") or OLLAMA_DEFAULT_URL).strip().rstrip("/")
+        url = (
+            (self.environ.get(OLLAMA_URL_ENV, "") or OLLAMA_DEFAULT_URL)
+            .strip()
+            .rstrip("/")
+        )
         parsed = urllib.parse.urlparse(url)
         host = (parsed.hostname or "").lower()
         if parsed.scheme not in ("http", "https") or not host:
-            raise SubtitleSkillError("DEPENDENCY_ERROR", f"{OLLAMA_URL_ENV} must be an http(s):// URL, got {url!r}")
+            raise SubtitleSkillError(
+                "DEPENDENCY_ERROR",
+                f"{OLLAMA_URL_ENV} must be an http(s):// URL, got {url!r}",
+            )
         if parsed.scheme == "http" and host not in _LOOPBACK_HOSTS:
             raise SubtitleSkillError(
                 "DEPENDENCY_ERROR",
@@ -667,13 +782,19 @@ class OllamaEngine(TranslationEngine):
             )
         if status >= 400:
             text = raw.decode("utf-8", "replace")[:500]
-            raise SubtitleSkillError("TOOL_ERROR", f"Ollama {method} {path} failed (HTTP {status}): {text}")
+            raise SubtitleSkillError(
+                "TOOL_ERROR", f"Ollama {method} {path} failed (HTTP {status}): {text}"
+            )
         try:
             data = json.loads(raw.decode("utf-8")) if raw else {}
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise SubtitleSkillError("TOOL_ERROR", f"Ollama returned a non-JSON response for {path}") from exc
+            raise SubtitleSkillError(
+                "TOOL_ERROR", f"Ollama returned a non-JSON response for {path}"
+            ) from exc
         if not isinstance(data, dict):
-            raise SubtitleSkillError("TOOL_ERROR", f"Ollama returned an unexpected document for {path}")
+            raise SubtitleSkillError(
+                "TOOL_ERROR", f"Ollama returned an unexpected document for {path}"
+            )
         return data
 
     def version(self) -> str:
@@ -685,7 +806,10 @@ class OllamaEngine(TranslationEngine):
         tags = self._call("GET", "/api/tags", None).get("models")
         digest = None
         for item in tags if isinstance(tags, list) else []:
-            if isinstance(item, Mapping) and model in (item.get("name"), item.get("model")):
+            if isinstance(item, Mapping) and model in (
+                item.get("name"),
+                item.get("model"),
+            ):
                 digest = item.get("digest")
                 break
         if not isinstance(digest, str) or not digest:
@@ -720,7 +844,10 @@ class OllamaEngine(TranslationEngine):
                 "/api/chat",
                 {
                     "model": self.model(),
-                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": text}],
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": text},
+                    ],
                     "stream": False,
                     "think": False,
                     "options": {"temperature": 0, "seed": 0},
@@ -729,7 +856,9 @@ class OllamaEngine(TranslationEngine):
             message = data.get("message")
             content = message.get("content") if isinstance(message, Mapping) else None
             if not isinstance(content, str):
-                raise SubtitleSkillError("TOOL_ERROR", "Ollama returned a reply without message.content")
+                raise SubtitleSkillError(
+                    "TOOL_ERROR", "Ollama returned a reply without message.content"
+                )
             out.append(_THINK_BLOCK.sub("", content).strip())
         return out
 
@@ -750,7 +879,9 @@ def _batches(texts: List[str], limit: int) -> List[List[str]]:
     return batches
 
 
-def make_engine(name: str, *, memory: Optional[Mapping[str, str]] = None) -> TranslationEngine:
+def make_engine(
+    name: str, *, memory: Optional[Mapping[str, str]] = None
+) -> TranslationEngine:
     if name == "memory":
         return MemoryEngine(memory or {})
     if name == "argos":
@@ -761,7 +892,9 @@ def make_engine(name: str, *, memory: Optional[Mapping[str, str]] = None) -> Tra
         return OpusMTEngine()
     if name == "ollama":
         return OllamaEngine()
-    raise SubtitleSkillError("INVALID_INPUT", f"engine must be one of {list(ENGINES)}, got {name!r}")
+    raise SubtitleSkillError(
+        "INVALID_INPUT", f"engine must be one of {list(ENGINES)}, got {name!r}"
+    )
 
 
 def engine_status() -> dict:
@@ -770,11 +903,19 @@ def engine_status() -> dict:
     for name in ENGINES:
         engine = make_engine(name)
         ok, why = engine.available()
-        offline = engine.is_local() if isinstance(engine, OllamaEngine) else name != "deepl"
-        entry = {"available": ok, "offline": offline, "weights_licence": WEIGHTS_LICENCES[name]}
+        offline = (
+            engine.is_local() if isinstance(engine, OllamaEngine) else name != "deepl"
+        )
+        entry = {
+            "available": ok,
+            "offline": offline,
+            "weights_licence": WEIGHTS_LICENCES[name],
+        }
         if isinstance(engine, OllamaEngine):
             entry["model"] = engine.model()
-            entry["checked"] = "configuration only: the server and model are probed when a request runs"
+            entry["checked"] = (
+                "configuration only: the server and model are probed when a request runs"
+            )
         if why:
             entry["detail"] = why
         out[name] = entry
@@ -814,7 +955,9 @@ def apply_glossary_to_source(text: str, glossary: Sequence[GlossaryEntry]) -> st
     return "".join(p for p, _ in pieces)
 
 
-def glossary_misses(source: str, translated: str, glossary: Sequence[GlossaryEntry]) -> List[GlossaryEntry]:
+def glossary_misses(
+    source: str, translated: str, glossary: Sequence[GlossaryEntry]
+) -> List[GlossaryEntry]:
     """Glossary entries whose source term is in `source` (longest-first,
     non-overlapping) but whose target term is not in `translated`."""
     misses: List[GlossaryEntry] = []
@@ -854,7 +997,11 @@ def _is_hiragana(ch: str) -> bool:
 
 
 def _is_kanji_or_katakana(ch: str) -> bool:
-    return "\u4e00" <= ch <= "\u9fff" or "\u3400" <= ch <= "\u4dbf" or "\u30a0" <= ch <= "\u30ff"
+    return (
+        "\u4e00" <= ch <= "\u9fff"
+        or "\u3400" <= ch <= "\u4dbf"
+        or "\u30a0" <= ch <= "\u30ff"
+    )
 
 
 def _break_penalty(head: str, tail: str, profile: Optional[LocaleProfile]) -> int:
@@ -871,7 +1018,9 @@ def _break_penalty(head: str, tail: str, profile: Optional[LocaleProfile]) -> in
     return 1
 
 
-def _balanced_two_lines(text: str, profile: Optional[LocaleProfile], max_width: float) -> Optional[List[str]]:
+def _balanced_two_lines(
+    text: str, profile: Optional[LocaleProfile], max_width: float
+) -> Optional[List[str]]:
     """The legal two-line break that fits, preferring a natural break
     (`_break_penalty`) and then the shortest longer line; None if none fits."""
     best = None
@@ -900,7 +1049,9 @@ def _balanced_two_lines(text: str, profile: Optional[LocaleProfile], max_width: 
     return best[1] if best else None
 
 
-def layout_text(text: str, profile: Optional[LocaleProfile], max_width: float, max_lines: int) -> str:
+def layout_text(
+    text: str, profile: Optional[LocaleProfile], max_width: float, max_lines: int
+) -> str:
     """Break translated text into lines for the target language."""
     text = text.strip()
     width = profile.text_width(text) if profile is not None else len(text)
@@ -939,30 +1090,46 @@ def translate_document(
     segments = [_segment(cue, source_profile) for cue in document.cues]
     for cue, seg in zip(document.cues, segments):
         if len(seg) > TEXT_LIMIT:
-            raise SubtitleSkillError("INVALID_INPUT", f"cue {cue.id}: text longer than {TEXT_LIMIT} characters")
+            raise SubtitleSkillError(
+                "INVALID_INPUT",
+                f"cue {cue.id}: text longer than {TEXT_LIMIT} characters",
+            )
 
     if isinstance(engine, MemoryEngine) or engine.native_glossary():
         engine_input = segments
     else:
         engine_input = [apply_glossary_to_source(s, glossary) for s in segments]
 
-    translated = engine.translate(engine_input, document.language, target_language, glossary)
+    translated = engine.translate(
+        engine_input, document.language, target_language, glossary
+    )
     if len(translated) != len(segments):
         raise SubtitleSkillError(
-            "TOOL_ERROR", f"engine {engine.name!r} returned {len(translated)} translations for {len(segments)} cues"
+            "TOOL_ERROR",
+            f"engine {engine.name!r} returned {len(translated)} translations for {len(segments)} cues",
         )
 
     cues = []
     misses: List[Tuple[str, GlossaryEntry]] = []
     for cue, seg, out in zip(document.cues, segments, translated):
-        flat = " ".join(out.split()) if target_profile is None or target_profile.break_at_spaces else _join_lines(out.strip(), target_profile)
+        flat = (
+            " ".join(out.split())
+            if target_profile is None or target_profile.break_at_spaces
+            else _join_lines(out.strip(), target_profile)
+        )
         if not flat.strip():
-            raise SubtitleSkillError("TOOL_ERROR", f"engine {engine.name!r} returned an empty translation for cue {cue.id}")
+            raise SubtitleSkillError(
+                "TOOL_ERROR",
+                f"engine {engine.name!r} returned an empty translation for cue {cue.id}",
+            )
         text = layout_text(flat, target_profile, max_chars_per_line, max_lines)
         for entry in glossary_misses(seg, flat, glossary):
             misses.append((cue.id, entry))
         metadata = dict(cue.metadata)
-        metadata["translation"] = {"source_text": cue.text, "source_language": document.language}
+        metadata["translation"] = {
+            "source_text": cue.text,
+            "source_language": document.language,
+        }
         cues.append(replace(cue, text=text, metadata=metadata))
 
     version = engine_version or engine.version()
@@ -973,7 +1140,9 @@ def translate_document(
         "source_document_id": document.id,
         "source_language": document.language,
         "target_language": target_language,
-        "glossary_sha256": sha256_json([[e.source, e.target] for e in glossary]) if glossary else None,
+        "glossary_sha256": (
+            sha256_json([[e.source, e.target] for e in glossary]) if glossary else None
+        ),
     }
     new_doc = SubtitleDocument(
         id=f"{document.id}.{target_language}",

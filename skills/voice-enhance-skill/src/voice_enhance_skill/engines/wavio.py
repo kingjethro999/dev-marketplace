@@ -10,6 +10,7 @@ the stdlib only and doctor stays fast.
   stft_frames     the STFT of a run of frames (Hann window, hop = window / 4)
   stft_process    STFT -> a per-block function -> weighted overlap-add, block by block; with an identity function the
                   input comes back sample for sample (no delay)"""
+
 from __future__ import annotations
 
 import math
@@ -19,7 +20,7 @@ from typing import Any, Callable, List, Sequence, Tuple
 
 from ..errors import VoiceEnhanceError
 
-HOP_SECONDS = 0.008                  # default STFT hop; the window is 4 hops
+HOP_SECONDS = 0.008  # default STFT hop; the window is 4 hops
 
 
 def stft_sizes(rate: int, hop_seconds: float = HOP_SECONDS) -> Tuple[int, int]:
@@ -30,7 +31,8 @@ def stft_sizes(rate: int, hop_seconds: float = HOP_SECONDS) -> Tuple[int, int]:
 
 class WavReader:
     """A RIFF/WAVE file read in frames on demand: PCM 16/24/32-bit integer or IEEE float 32/64-bit, plain or
-    WAVE_FORMAT_EXTENSIBLE (the stdlib wave module reads neither 24-bit extensible nor float on Python 3.9)."""
+    WAVE_FORMAT_EXTENSIBLE (the stdlib wave module reads neither 24-bit extensible nor float on Python 3.9).
+    """
 
     def __init__(self, path: str) -> None:
         self.fh = open(path, "rb")
@@ -42,11 +44,19 @@ class WavReader:
 
     def _parse(self, path: str) -> None:
         head = self.fh.read(12)
-        if len(head) < 12 or head[:4] not in (b"RIFF", b"RF64") or head[8:12] != b"WAVE":
-            raise VoiceEnhanceError("INVALID_ARGUMENT", f"{os.path.basename(path)} is not a RIFF/WAVE file")
+        if (
+            len(head) < 12
+            or head[:4] not in (b"RIFF", b"RF64")
+            or head[8:12] != b"WAVE"
+        ):
+            raise VoiceEnhanceError(
+                "INVALID_ARGUMENT", f"{os.path.basename(path)} is not a RIFF/WAVE file"
+            )
         fmt = None
         self.data_offset = self.data_bytes = None
-        ds64_data = None                    # RF64 (EBU Tech 3306): the 64-bit data size lives in the ds64 chunk
+        ds64_data = (
+            None  # RF64 (EBU Tech 3306): the 64-bit data size lives in the ds64 chunk
+        )
         while True:
             chunk = self.fh.read(8)
             if len(chunk) < 8:
@@ -66,17 +76,30 @@ class WavReader:
                 if size & 1:
                     self.fh.seek(1, os.SEEK_CUR)
             elif cid == b"data":
-                if size == 0xFFFFFFFF:      # RF64, or a writer that could not fit the size: the data runs to the end
+                if (
+                    size == 0xFFFFFFFF
+                ):  # RF64, or a writer that could not fit the size: the data runs to the end
                     size = ds64_data if ds64_data is not None else 1 << 62
                 self.data_offset, self.data_bytes = self.fh.tell(), size
                 break
             else:
                 self.fh.seek(size + (size & 1), os.SEEK_CUR)
         if fmt is None or self.data_offset is None:
-            raise VoiceEnhanceError("INVALID_ARGUMENT", f"{os.path.basename(path)} has no fmt or data chunk")
+            raise VoiceEnhanceError(
+                "INVALID_ARGUMENT", f"{os.path.basename(path)} has no fmt or data chunk"
+            )
         self.tag, self.channels, self.rate, _, self.block_align, self.bits = fmt
-        if (self.tag, self.bits) not in ((1, 16), (1, 24), (1, 32), (3, 32), (3, 64)) or self.channels < 1:
-            raise VoiceEnhanceError("INVALID_ARGUMENT", f"{os.path.basename(path)}: unsupported WAV format {self.tag}/{self.bits} bit")
+        if (self.tag, self.bits) not in (
+            (1, 16),
+            (1, 24),
+            (1, 32),
+            (3, 32),
+            (3, 64),
+        ) or self.channels < 1:
+            raise VoiceEnhanceError(
+                "INVALID_ARGUMENT",
+                f"{os.path.basename(path)}: unsupported WAV format {self.tag}/{self.bits} bit",
+            )
         self.width = self.bits // 8
         size_on_disk = os.fstat(self.fh.fileno()).st_size - self.data_offset
         self.frames = min(self.data_bytes, size_on_disk) // (self.width * self.channels)
@@ -90,7 +113,9 @@ class WavReader:
         self.fh.seek(self.data_offset + lo * self.width * self.channels)
         raw = self.fh.read((hi - lo) * self.width * self.channels)
         if self.tag == 3:
-            vals = np.frombuffer(raw, dtype="<f4" if self.bits == 32 else "<f8").astype(np.float64)
+            vals = np.frombuffer(raw, dtype="<f4" if self.bits == 32 else "<f8").astype(
+                np.float64
+            )
         elif self.bits == 16:
             vals = np.frombuffer(raw, dtype="<i2") / 32768.0
         elif self.bits == 32:
@@ -99,7 +124,7 @@ class WavReader:
             b = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 3).astype(np.int32)
             v = b[:, 0] | (b[:, 1] << 8) | (b[:, 2] << 16)
             vals = np.where(v >= 1 << 23, v - (1 << 24), v) / 8388608.0
-        out[lo - start:hi - start] = vals.reshape(-1, self.channels)
+        out[lo - start : hi - start] = vals.reshape(-1, self.channels)
         return out
 
     def close(self) -> None:
@@ -116,9 +141,24 @@ class FloatWavWriter:
 
     def _header(self, frames: int) -> bytes:
         data = frames * 4 * self.channels
-        return (b"RIFF" + struct.pack("<I", 36 + data) + b"WAVE" + b"fmt " +
-                struct.pack("<IHHIIHH", 16, 3, self.channels, self.rate, self.rate * 4 * self.channels, 4 * self.channels, 32) +
-                b"data" + struct.pack("<I", data))
+        return (
+            b"RIFF"
+            + struct.pack("<I", 36 + data)
+            + b"WAVE"
+            + b"fmt "
+            + struct.pack(
+                "<IHHIIHH",
+                16,
+                3,
+                self.channels,
+                self.rate,
+                self.rate * 4 * self.channels,
+                4 * self.channels,
+                32,
+            )
+            + b"data"
+            + struct.pack("<I", data)
+        )
 
     def write(self, np: Any, block: Any) -> None:
         self.fh.write(np.ascontiguousarray(block, dtype="<f4").tobytes())
@@ -130,10 +170,10 @@ class FloatWavWriter:
         self.fh.close()
 
 
-
 class TrackReader:
     """Mono WAV files at one sample rate, read as the channels of one signal: read() gives (count, len(paths)) float64,
-    with zeros past the end of a shorter file. `frames` is the longest file's length, `lengths` each file's own."""
+    with zeros past the end of a shorter file. `frames` is the longest file's length, `lengths` each file's own.
+    """
 
     def __init__(self, paths: Sequence[str]) -> None:
         self.readers: List[WavReader] = []
@@ -142,10 +182,19 @@ class TrackReader:
                 self.readers.append(WavReader(p))
             rates = {r.rate for r in self.readers}
             if len(rates) != 1:
-                raise VoiceEnhanceError("INVALID_ARGUMENT", f"the tracks have different sample rates {sorted(rates)}")
-            bad = [os.path.basename(p) for p, r in zip(paths, self.readers) if r.channels != 1]
+                raise VoiceEnhanceError(
+                    "INVALID_ARGUMENT",
+                    f"the tracks have different sample rates {sorted(rates)}",
+                )
+            bad = [
+                os.path.basename(p)
+                for p, r in zip(paths, self.readers)
+                if r.channels != 1
+            ]
             if bad:
-                raise VoiceEnhanceError("INVALID_ARGUMENT", f"every track must be mono: {bad}")
+                raise VoiceEnhanceError(
+                    "INVALID_ARGUMENT", f"every track must be mono: {bad}"
+                )
         except BaseException:
             self.close()
             raise
@@ -184,7 +233,7 @@ class TrackWriter:
         for k, w in enumerate(self.writers):
             keep = max(0, min(len(block), self.lengths[k] - self.position))
             if keep:
-                w.write(np, block[:keep, k:k + 1])
+                w.write(np, block[:keep, k : k + 1])
         self.position += len(block)
 
     def close(self) -> None:
@@ -193,7 +242,7 @@ class TrackWriter:
 
 
 def stft_window(np: Any, size: int) -> Any:
-    return np.hanning(size + 1)[:-1]                       # periodic Hann
+    return np.hanning(size + 1)[:-1]  # periodic Hann
 
 
 def frame_count(n: int, size: int, hop: int) -> int:
@@ -201,43 +250,73 @@ def frame_count(n: int, size: int, hop: int) -> int:
     return int(math.ceil((n + size - hop) / hop))
 
 
-def stft_frames(np: Any, reader: Any, a: int, b: int, size: int, hop: int, window: Any) -> Any:
+def stft_frames(
+    np: Any, reader: Any, a: int, b: int, size: int, hop: int, window: Any
+) -> Any:
     """The STFT of frames [a, b) of `reader`'s signal, (b - a, size // 2 + 1, channels) complex. Frame k starts at
-    sample k * hop - (size - hop), so every sample lies under all four overlapping frames."""
+    sample k * hop - (size - hop), so every sample lies under all four overlapping frames.
+    """
     x = reader.read(np, a * hop - (size - hop), (b - a - 1) * hop + size)
-    frames = np.stack([x[j * hop:j * hop + size] for j in range(b - a)])           # (T, size, D)
-    return np.fft.rfft(frames * window[None, :, None], axis=1)                     # (T, F, D)
+    frames = np.stack(
+        [x[j * hop : j * hop + size] for j in range(b - a)]
+    )  # (T, size, D)
+    return np.fft.rfft(frames * window[None, :, None], axis=1)  # (T, F, D)
 
 
-def stft_process(reader: Any, writer: Any, np: Any, size: int, hop: int, block: int, context: int,
-                 process: Callable[[Any, int], Any]) -> None:
+def stft_process(
+    reader: Any,
+    writer: Any,
+    np: Any,
+    size: int,
+    hop: int,
+    block: int,
+    context: int,
+    process: Callable[[Any, int], Any],
+) -> None:
     """Streams `reader` through STFT -> `process` -> weighted overlap-add into `writer`, `block` frames at a time.
     `process(spec, skip)` gets the (T, F, D) STFT of a block plus up to `context` frames before it, and returns the
-    processed (T - skip, F, D) frames of the block itself. Exactly reader.frames samples are written."""
+    processed (T - skip, F, D) frames of the block itself. Exactly reader.frames samples are written.
+    """
     n, channels = reader.frames, reader.channels
     pad = size - hop
     window = stft_window(np, size)
     norm = np.zeros(hop)
     for k in range(size // hop):
-        norm += window[k * hop:(k + 1) * hop] ** 2     # overlap-added window^2, the same at every hop offset
+        norm += (
+            window[k * hop : (k + 1) * hop] ** 2
+        )  # overlap-added window^2, the same at every hop offset
     total_frames = frame_count(n, size, hop)
-    acc = np.zeros((size, channels))                   # overlap-add tail, starting at padded-signal index `emitted`
+    acc = np.zeros(
+        (size, channels)
+    )  # overlap-add tail, starting at padded-signal index `emitted`
     emitted = 0
     for a in range(0, total_frames, block):
         b = min(a + block, total_frames)
         a0 = max(0, a - context)
-        out = np.fft.irfft(process(stft_frames(np, reader, a0, b, size, hop, window), a - a0), n=size, axis=1) * window[None, :, None]
+        out = (
+            np.fft.irfft(
+                process(stft_frames(np, reader, a0, b, size, hop, window), a - a0),
+                n=size,
+                axis=1,
+            )
+            * window[None, :, None]
+        )
         need = (b - a) * hop + size - (a * hop - emitted)
         if len(acc) < need:
             acc = np.concatenate([acc, np.zeros((need - len(acc), channels))])
         base = a * hop - emitted
         for j in range(b - a):
-            acc[base + j * hop:base + j * hop + size] += out[j]
-        final = b * hop if b < total_frames else pad + n          # frames >= b start at b * hop
+            acc[base + j * hop : base + j * hop + size] += out[j]
+        final = b * hop if b < total_frames else pad + n  # frames >= b start at b * hop
         done = final - emitted
-        chunk = acc[:done] / np.tile(norm, done // hop + 2)[(emitted % hop):(emitted % hop) + done, None]
+        chunk = (
+            acc[:done]
+            / np.tile(norm, done // hop + 2)[
+                (emitted % hop) : (emitted % hop) + done, None
+            ]
+        )
         lo, hi = max(emitted, pad), min(final, pad + n)
         if hi > lo:
-            writer.write(np, chunk[lo - emitted:hi - emitted])
+            writer.write(np, chunk[lo - emitted : hi - emitted])
         acc = acc[done:]
         emitted = final

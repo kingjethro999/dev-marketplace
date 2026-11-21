@@ -10,6 +10,7 @@ Usage:
   python3 scripts/check.py model.glb --target three.js
   python3 scripts/check.py model.usdz --target ios-ar
 """
+
 import argparse
 import json
 import sys
@@ -23,7 +24,17 @@ import _run
 import _usdz_validate
 from _common import SkillError
 
-TARGETS = ["three.js", "unity", "unreal", "godot", "ios-ar", "android-ar", "webxr", "3d-print", "sketchfab"]
+TARGETS = [
+    "three.js",
+    "unity",
+    "unreal",
+    "godot",
+    "ios-ar",
+    "android-ar",
+    "webxr",
+    "3d-print",
+    "sketchfab",
+]
 
 # (preferred formats, triangle budget, texture-px budget, require UV, require manifold, transmission-size MB budget or None)
 _SPEC = {
@@ -47,8 +58,10 @@ def _size_fix_command(file: str, fmt: str) -> str:
         return f"python3 scripts/optimize.py {file} -o out.{fmt} --texture-max 2048"
     if _delegate.gltf_transform_available():
         return f"python3 scripts/optimize.py {file} -o out.glb --draco --ktx2  # or --meshopt instead of --draco"
-    return (f"python3 scripts/optimize.py {file} -o out.glb --texture-max 2048  # "
-            f"install gltf-transform ({_delegate.GLTF_TRANSFORM_INSTALL}) for --draco/--meshopt/--ktx2 compression instead")
+    return (
+        f"python3 scripts/optimize.py {file} -o out.glb --texture-max 2048  # "
+        f"install gltf-transform ({_delegate.GLTF_TRANSFORM_INSTALL}) for --draco/--meshopt/--ktx2 compression instead"
+    )
 
 
 def _check(info: dict, target: str) -> list:
@@ -56,58 +69,141 @@ def _check(info: dict, target: str) -> list:
     rows = []
     fmt = info["format"]
     if fmt in fmts:
-        rows.append({"check": "format", "status": "PASS", "detail": f"{fmt} is a recommended format for {target}"})
+        rows.append(
+            {
+                "check": "format",
+                "status": "PASS",
+                "detail": f"{fmt} is a recommended format for {target}",
+            }
+        )
     else:
-        rows.append({"check": "format", "status": "WARN", "detail": f"{fmt} is not among this tool's preferred formats for {target} ({', '.join(fmts)})",
-                     "fix": f"python3 scripts/convert.py {info['file']} -o out.{fmts[0]} --verify"})
+        rows.append(
+            {
+                "check": "format",
+                "status": "WARN",
+                "detail": f"{fmt} is not among this tool's preferred formats for {target} ({', '.join(fmts)})",
+                "fix": f"python3 scripts/convert.py {info['file']} -o out.{fmts[0]} --verify",
+            }
+        )
 
     tris = info["meshes"]["triangles"]
     if tris <= tri_budget:
-        rows.append({"check": "triangle budget", "status": "PASS", "detail": f"{tris} <= {tri_budget}"})
+        rows.append(
+            {
+                "check": "triangle budget",
+                "status": "PASS",
+                "detail": f"{tris} <= {tri_budget}",
+            }
+        )
     else:
-        rows.append({"check": "triangle budget", "status": "WARN", "detail": f"{tris} > {tri_budget}",
-                     "fix": f"python3 scripts/optimize.py {info['file']} -o out.{fmt} --decimate-ratio {tri_budget / tris:.2f}"})
+        rows.append(
+            {
+                "check": "triangle budget",
+                "status": "WARN",
+                "detail": f"{tris} > {tri_budget}",
+                "fix": f"python3 scripts/optimize.py {info['file']} -o out.{fmt} --decimate-ratio {tri_budget / tris:.2f}",
+            }
+        )
 
     if tex_budget:
         big = [t for t in info["textures"] if max(t["width"], t["height"]) > tex_budget]
         if big:
-            rows.append({"check": "texture size", "status": "WARN",
-                         "detail": f"{len(big)} texture(s) exceed {tex_budget}px: {', '.join(t['name'] for t in big)}",
-                         "fix": f"python3 scripts/optimize.py {info['file']} -o out.{fmt} --texture-max {tex_budget}"})
+            rows.append(
+                {
+                    "check": "texture size",
+                    "status": "WARN",
+                    "detail": f"{len(big)} texture(s) exceed {tex_budget}px: {', '.join(t['name'] for t in big)}",
+                    "fix": f"python3 scripts/optimize.py {info['file']} -o out.{fmt} --texture-max {tex_budget}",
+                }
+            )
         else:
-            rows.append({"check": "texture size", "status": "PASS", "detail": f"all textures <= {tex_budget}px"})
+            rows.append(
+                {
+                    "check": "texture size",
+                    "status": "PASS",
+                    "detail": f"all textures <= {tex_budget}px",
+                }
+            )
 
     missing_tex = [t["name"] for t in info["textures"] if t["missing"]]
     if missing_tex:
-        rows.append({"check": "textures present", "status": "FAIL", "detail": f"missing: {', '.join(missing_tex)}"})
+        rows.append(
+            {
+                "check": "textures present",
+                "status": "FAIL",
+                "detail": f"missing: {', '.join(missing_tex)}",
+            }
+        )
     else:
-        rows.append({"check": "textures present", "status": "PASS", "detail": "no missing texture files"})
+        rows.append(
+            {
+                "check": "textures present",
+                "status": "PASS",
+                "detail": "no missing texture files",
+            }
+        )
 
     if need_uv:
         no_uv = [o["name"] for o in info["meshes"]["per_object"] if not o["has_uv"]]
         if no_uv:
-            rows.append({"check": "UV maps", "status": "FAIL", "detail": f"no UV map: {', '.join(no_uv)}",
-                         "fix": "UV unwrapping is not automated by this skill yet; unwrap in Blender or a DCC tool"})
+            rows.append(
+                {
+                    "check": "UV maps",
+                    "status": "FAIL",
+                    "detail": f"no UV map: {', '.join(no_uv)}",
+                    "fix": "UV unwrapping is not automated by this skill yet; unwrap in Blender or a DCC tool",
+                }
+            )
         else:
-            rows.append({"check": "UV maps", "status": "PASS", "detail": "every mesh has a UV map"})
+            rows.append(
+                {
+                    "check": "UV maps",
+                    "status": "PASS",
+                    "detail": "every mesh has a UV map",
+                }
+            )
 
     if size_mb_budget:
         size_mb = Path(info["file"]).stat().st_size / (1024 * 1024)
         if size_mb <= size_mb_budget:
-            rows.append({"check": "transmission size", "status": "PASS", "detail": f"{size_mb:.1f} MB <= {size_mb_budget} MB"})
+            rows.append(
+                {
+                    "check": "transmission size",
+                    "status": "PASS",
+                    "detail": f"{size_mb:.1f} MB <= {size_mb_budget} MB",
+                }
+            )
         else:
-            rows.append({"check": "transmission size", "status": "WARN",
-                         "detail": f"{size_mb:.1f} MB > {size_mb_budget} MB",
-                         "fix": _size_fix_command(info["file"], fmt)})
+            rows.append(
+                {
+                    "check": "transmission size",
+                    "status": "WARN",
+                    "detail": f"{size_mb:.1f} MB > {size_mb_budget} MB",
+                    "fix": _size_fix_command(info["file"], fmt),
+                }
+            )
 
     if need_manifold:
-        bad = [o["name"] for o in info["meshes"]["per_object"] if o["non_manifold_edges"]]
+        bad = [
+            o["name"] for o in info["meshes"]["per_object"] if o["non_manifold_edges"]
+        ]
         if bad:
-            rows.append({"check": "manifold", "status": "FAIL",
-                         "detail": f"non-manifold: {', '.join(f'{n}' for n in bad)}",
-                         "fix": "manifold repair is not automated by this skill yet; use Blender's 3D-Print toolbox or a dedicated repair tool"})
+            rows.append(
+                {
+                    "check": "manifold",
+                    "status": "FAIL",
+                    "detail": f"non-manifold: {', '.join(f'{n}' for n in bad)}",
+                    "fix": "manifold repair is not automated by this skill yet; use Blender's 3D-Print toolbox or a dedicated repair tool",
+                }
+            )
         else:
-            rows.append({"check": "manifold", "status": "PASS", "detail": "no non-manifold edges"})
+            rows.append(
+                {
+                    "check": "manifold",
+                    "status": "PASS",
+                    "detail": "no non-manifold edges",
+                }
+            )
 
     if target == "3d-print":
         # STL (this target's main format) carries no unit information at all -- by
@@ -115,32 +211,68 @@ def _check(info: dict, target: str) -> list:
         # conservative default budget (0.8mm, a commonly-cited FDM minimum for a structurally
         # sound wall) is applied directly against wall_thickness_min in the file's own units.
         min_wall_mm = 0.8
-        thin = [(o["name"], o["wall_thickness_min"]) for o in info["meshes"]["per_object"]
-                if o["wall_thickness_min"] is not None and o["wall_thickness_min"] < min_wall_mm]
+        thin = [
+            (o["name"], o["wall_thickness_min"])
+            for o in info["meshes"]["per_object"]
+            if o["wall_thickness_min"] is not None
+            and o["wall_thickness_min"] < min_wall_mm
+        ]
         if thin:
-            detail = ", ".join(f"{name} ({thickness:.2f}mm)" for name, thickness in thin)
-            rows.append({"check": "wall thickness", "status": "WARN",
-                         "detail": f"below {min_wall_mm}mm (assuming the file's units are mm, the standard STL convention): {detail}",
-                         "fix": "thicken the affected walls in Blender or a dedicated repair tool; not automated by this skill yet"})
+            detail = ", ".join(
+                f"{name} ({thickness:.2f}mm)" for name, thickness in thin
+            )
+            rows.append(
+                {
+                    "check": "wall thickness",
+                    "status": "WARN",
+                    "detail": f"below {min_wall_mm}mm (assuming the file's units are mm, the standard STL convention): {detail}",
+                    "fix": "thicken the affected walls in Blender or a dedicated repair tool; not automated by this skill yet",
+                }
+            )
         else:
-            rows.append({"check": "wall thickness", "status": "PASS", "detail": f"no sampled face under {min_wall_mm}mm (assuming mm units)"})
+            rows.append(
+                {
+                    "check": "wall thickness",
+                    "status": "PASS",
+                    "detail": f"no sampled face under {min_wall_mm}mm (assuming mm units)",
+                }
+            )
 
     if fmt == "usdz":
         usdz = _usdz_validate.validate(info["file"])
         if usdz is None:
-            rows.append({"check": "USDZ package", "status": "FAIL", "detail": "not a valid zip container"})
+            rows.append(
+                {
+                    "check": "USDZ package",
+                    "status": "FAIL",
+                    "detail": "not a valid zip container",
+                }
+            )
         elif usdz["valid"]:
-            rows.append({"check": "USDZ package", "status": "PASS",
-                         "detail": f"{len(usdz['entries'])} entry/entries, all uncompressed and 64-byte-aligned (Apple's USDZ package requirements)"})
+            rows.append(
+                {
+                    "check": "USDZ package",
+                    "status": "PASS",
+                    "detail": f"{len(usdz['entries'])} entry/entries, all uncompressed and 64-byte-aligned (Apple's USDZ package requirements)",
+                }
+            )
         else:
-            rows.append({"check": "USDZ package", "status": "FAIL", "detail": "; ".join(usdz["issues"]),
-                         "fix": f"python3 scripts/convert.py {info['file']} -o out.usdz  # re-export via this skill's own exporter"})
+            rows.append(
+                {
+                    "check": "USDZ package",
+                    "status": "FAIL",
+                    "detail": "; ".join(usdz["issues"]),
+                    "fix": f"python3 scripts/convert.py {info['file']} -o out.usdz  # re-export via this skill's own exporter",
+                }
+            )
 
     return rows
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("file")
     ap.add_argument("--target", required=True, choices=TARGETS)
     _common.add_common_args(ap, dry_run=False, fast=False, progress=False)
@@ -150,24 +282,45 @@ def main() -> int:
         path = _common.require_exists(args.file, "file")
         fmt = _formats.detect_format(str(path))
         if fmt is None:
-            raise SkillError(f"unrecognized file extension: {path.suffix}", kind="input")
+            raise SkillError(
+                f"unrecognized file extension: {path.suffix}", kind="input"
+            )
         blender_bin = _run.find_blender(args.blender)
         # _check() below never reads overlapping_faces_approx -- always skip that scan's own
         # uncapped O(n^2) cost (see info.py's own --skip-uv-overlap-check help) rather than
         # paying for data this tool's own output never uses.
-        result = _run.run_bpy("info.py", {"path": str(path.resolve()), "format": fmt, "skip_uv_overlap_check": True},
-                               blender_bin=blender_bin, timeout=args.timeout)
+        result = _run.run_bpy(
+            "info.py",
+            {"path": str(path.resolve()), "format": fmt, "skip_uv_overlap_check": True},
+            blender_bin=blender_bin,
+            timeout=args.timeout,
+        )
     except SkillError as err:
         return _common.fail(err, args.json)
 
     if not result.get("ok"):
-        return _common.fail(SkillError(result["error"]["message"], kind=result["error"].get("kind", "internal")), args.json)
+        return _common.fail(
+            SkillError(
+                result["error"]["message"], kind=result["error"].get("kind", "internal")
+            ),
+            args.json,
+        )
 
     rows = _check(result["data"], args.target)
-    overall = "FAIL" if any(r["status"] == "FAIL" for r in rows) else ("WARN" if any(r["status"] == "WARN" for r in rows) else "PASS")
+    overall = (
+        "FAIL"
+        if any(r["status"] == "FAIL" for r in rows)
+        else ("WARN" if any(r["status"] == "WARN" for r in rows) else "PASS")
+    )
 
     if args.json:
-        print(json.dumps({"target": args.target, "overall": overall, "checks": rows}, indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                {"target": args.target, "overall": overall, "checks": rows},
+                indent=2,
+                sort_keys=True,
+            )
+        )
     else:
         print(f"{args.file} vs {args.target}: {overall}")
         for r in rows:

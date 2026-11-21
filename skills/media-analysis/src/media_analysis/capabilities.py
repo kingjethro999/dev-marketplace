@@ -3,6 +3,7 @@
 Capability names follow the video-production-agent CapabilityResolver vocabulary so a future adapter can pass them
 through unchanged: "ffmpeg", "ffprobe", "filter:<name>". A capability is AVAILABLE only when it was actually
 detected in this process's environment; nothing is assumed."""
+
 from __future__ import annotations
 
 import re
@@ -24,7 +25,13 @@ class Capability:
     detail: str = ""
 
     def to_dict(self) -> Dict[str, object]:
-        return {"name": self.name, "status": self.status, "version": self.version, "path": self.path, "detail": self.detail}
+        return {
+            "name": self.name,
+            "status": self.status,
+            "version": self.version,
+            "path": self.path,
+            "detail": self.detail,
+        }
 
 
 @dataclass
@@ -78,7 +85,9 @@ def detect(timeout: float = 10.0) -> CapabilitySet:
             continue
         ver = _tool_version(path, timeout)
         if ver is None:
-            caps.items[tool] = Capability(tool, "MISSING", path=path, detail="found on PATH but `-version` failed")
+            caps.items[tool] = Capability(
+                tool, "MISSING", path=path, detail="found on PATH but `-version` failed"
+            )
         else:
             caps.items[tool] = Capability(tool, "AVAILABLE", version=ver, path=path)
     ff = caps.items["ffmpeg"]
@@ -90,5 +99,7 @@ def detect(timeout: float = 10.0) -> CapabilitySet:
         elif f in filters:
             caps.items[name] = Capability(name, "AVAILABLE", version=ff.version)
         else:
-            caps.items[name] = Capability(name, "MISSING", detail="filter not compiled into this ffmpeg")
+            caps.items[name] = Capability(
+                name, "MISSING", detail="filter not compiled into this ffmpeg"
+            )
     return caps

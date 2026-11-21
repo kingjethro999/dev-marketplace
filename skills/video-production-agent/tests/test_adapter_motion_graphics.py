@@ -1,6 +1,7 @@
 """MotionGraphicsAdapter boundary tests against the fake motion-graphics-skill process (tests/fake_motion_graphics.py): contract
 discovery and refusals, drift detection, request building, success mapping, every error mode, timeout, security. A real-Skill
 class runs only when VIDEO_AGENT_MOTION_GRAPHICS_DIR is set."""
+
 from __future__ import annotations
 
 import hashlib
@@ -20,8 +21,19 @@ from video_agent.models import Operation  # noqa: E402
 from video_agent.tools.base import ToolError  # noqa: E402
 from video_agent.tools.discovery import MODULE_BOOTSTRAP  # noqa: E402
 from video_agent.tools.ffmpeg_skill.adapter import PathPolicy  # noqa: E402
-from video_agent.tools.motion_graphics import (ENV_DIR, PACKAGE, SKILL_ID, TOOL_ID, ContractError, MotionGraphicsAdapter, check_contract,  # noqa: E402
-                                               contract_drift, lift_observation, locate_motion_graphics, pinned_contract)
+from video_agent.tools.motion_graphics import (
+    ENV_DIR,
+    PACKAGE,
+    SKILL_ID,
+    TOOL_ID,
+    ContractError,
+    MotionGraphicsAdapter,
+    check_contract,  # noqa: E402
+    contract_drift,
+    lift_observation,
+    locate_motion_graphics,
+    pinned_contract,
+)
 from video_agent.tools.skill_process import CliSkill, sha256_file  # noqa: E402
 
 FAKE = Path(__file__).resolve().parent / "fake_motion_graphics.py"
@@ -32,7 +44,18 @@ def fake_skill() -> CliSkill:
 
 
 def write_fake_media(path: str, duration: float = 3.0) -> str:
-    Path(path).write_bytes(json.dumps({"fake": True, "duration": duration, "video": True, "channels": 2, "width": 640, "height": 360}).encode())
+    Path(path).write_bytes(
+        json.dumps(
+            {
+                "fake": True,
+                "duration": duration,
+                "video": True,
+                "channels": 2,
+                "width": 640,
+                "height": 360,
+            }
+        ).encode()
+    )
     return path
 
 
@@ -70,18 +93,43 @@ class Base(unittest.TestCase):
 
     @staticmethod
     def elements(extra=None):
-        els = [{"id": "t1", "type": "text_overlay", "start": 0.2, "end": 2.5, "parameters": {"text": "Hello", "position": "bottom"}, "animation": {"kind": "fade", "parameters": {"duration": 0.3}}},
-               {"id": "title", "type": "title", "start": 0.0, "end": 1.5, "parameters": {"title": "Opening", "subtitle": "Day 1", "primary_color": "#1E3A8A"}}]
+        els = [
+            {
+                "id": "t1",
+                "type": "text_overlay",
+                "start": 0.2,
+                "end": 2.5,
+                "parameters": {"text": "Hello", "position": "bottom"},
+                "animation": {"kind": "fade", "parameters": {"duration": 0.3}},
+            },
+            {
+                "id": "title",
+                "type": "title",
+                "start": 0.0,
+                "end": 1.5,
+                "parameters": {
+                    "title": "Opening",
+                    "subtitle": "Day 1",
+                    "primary_color": "#1E3A8A",
+                },
+            },
+        ]
         return els + list(extra or [])
 
     def op(self, args=None, **over):
         a = {"input": "vid", "output": "out", "elements": self.elements()}
         a.update(args or {})
         a.update(over)
-        return Operation(tool=TOOL_ID, args=a, inputs=["vid"], outputs=["out"], id="op-mg-1")
+        return Operation(
+            tool=TOOL_ID, args=a, inputs=["vid"], outputs=["out"], id="op-mg-1"
+        )
 
     def logged(self):
-        return [json.loads(line) for line in Path(self.calls).read_text(encoding="utf-8").splitlines() if line.strip()]
+        return [
+            json.loads(line)
+            for line in Path(self.calls).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
 
 
 class ContractTests(Base):
@@ -92,9 +140,27 @@ class ContractTests(Base):
         self.assertTrue(a.supports(TOOL_ID))
         self.assertFalse(a.supports("motion-graphics/other"))
         # shape: 0.2.7 (ADR-078); logo / rendered_layer: 0.2.12 / 0.2.16 (in the contract, not planned: finishing.MOTION_NOT_PLANNED, ADR-097 addendum 6)
-        self.assertEqual(sorted(a.element_types), ["bug", "chapter", "countdown", "hook", "image_overlay", "logo", "lower_third", "meme", "progress", "rendered_layer", "shape", "sticker",
-                                                   "text_overlay", "title", "video_overlay"])
-        self.assertNotIn("shape", a.unsupported)   # implemented in 0.2.7 (ADR-078)
+        self.assertEqual(
+            sorted(a.element_types),
+            [
+                "bug",
+                "chapter",
+                "countdown",
+                "hook",
+                "image_overlay",
+                "logo",
+                "lower_third",
+                "meme",
+                "progress",
+                "rendered_layer",
+                "shape",
+                "sticker",
+                "text_overlay",
+                "title",
+                "video_overlay",
+            ],
+        )
+        self.assertNotIn("shape", a.unsupported)  # implemented in 0.2.7 (ADR-078)
         self.assertEqual(a.drift(), [])
         self.assertEqual(check_contract(pinned_contract()), [])
         self.assertEqual(contract_drift(pinned_contract()), [])
@@ -104,16 +170,26 @@ class ContractTests(Base):
         self.assertEqual(pkg.repository, "kajisho5/motion-graphics-skill")
         self.assertIn("motion-graphics", pkg.capabilities)
         self.assertEqual(PACKAGE.version, "0.4.0")
-        self.assertEqual(PACKAGE.tool(TOOL_ID).inputs, ["input", "output", "image", "video"])
+        self.assertEqual(
+            PACKAGE.tool(TOOL_ID).inputs, ["input", "output", "image", "video"]
+        )
         self.assertTrue(PACKAGE.tool(TOOL_ID).produces_output)
-        self.assertTrue(a.retryable["TOOL_ERROR"]); self.assertTrue(a.retryable["CANCELLED"]); self.assertFalse(a.retryable["INVALID_REQUEST"])
+        self.assertTrue(a.retryable["TOOL_ERROR"])
+        self.assertTrue(a.retryable["CANCELLED"])
+        self.assertFalse(a.retryable["INVALID_REQUEST"])
         self.assertEqual(a.exit_codes["CANCELLED"], 15)
         d = a.describe()
         self.assertEqual(d["drift"], [])
         self.assertIn("system:dejavu-sans", d["fonts"])
 
     def test_refusals(self):
-        for m, frag in (("wrong_schema", "schema"), ("wrong_skill", "skill_id"), ("wrong_version", "version"), ("bad_contract", "execution.shell"), ("contract_fail", "failed")):
+        for m, frag in (
+            ("wrong_schema", "schema"),
+            ("wrong_skill", "skill_id"),
+            ("wrong_version", "version"),
+            ("bad_contract", "execution.shell"),
+            ("contract_fail", "failed"),
+        ):
             self.mode(m)
             with self.assertRaises(ContractError) as cm:
                 self.adapter()
@@ -131,8 +207,10 @@ class ContractTests(Base):
         self.assertEqual(d["status"], "ok")
         st = MotionGraphicsAdapter.element_status(d)
         self.assertEqual(st["text_overlay"], "supported")
-        self.assertEqual(st["title"], "unknown")   # never upgraded by the adapter
-        self.assertEqual(MotionGraphicsAdapter.font_status(d)["system:dejavu-sans"], "supported")
+        self.assertEqual(st["title"], "unknown")  # never upgraded by the adapter
+        self.assertEqual(
+            MotionGraphicsAdapter.font_status(d)["system:dejavu-sans"], "supported"
+        )
         argv = self.logged()[-1]["argv"]
         self.assertEqual(argv[:2], ["doctor", "--json"])
         self.assertIn("--ffmpeg-skill", argv)
@@ -141,49 +219,104 @@ class ContractTests(Base):
         self.assertEqual(d["status"], "fail")
         self.assertEqual(d["exit_code"], 1)
         self.mode("doctor_degraded")
-        self.assertEqual(MotionGraphicsAdapter.element_status(a.doctor())["image_overlay"], "unavailable")
+        self.assertEqual(
+            MotionGraphicsAdapter.element_status(a.doctor())["image_overlay"],
+            "unavailable",
+        )
 
     def test_locate_env(self):
-        with mock.patch("video_agent.tools.discovery.source_checkout_root", return_value=None), mock.patch("video_agent.tools.discovery._home", return_value=Path(self.tmp)):   # ADR-069: no guessed checkout
+        with mock.patch(
+            "video_agent.tools.discovery.source_checkout_root", return_value=None
+        ), mock.patch(
+            "video_agent.tools.discovery._home", return_value=Path(self.tmp)
+        ):  # ADR-069: no guessed checkout
             self.assertIsNone(locate_motion_graphics(env={"PATH": ""}))
         root = os.path.join(self.tmp, "motion-graphics-skill")
         os.makedirs(os.path.join(root, "src", "motion_graphics"))
         Path(root, "src", "motion_graphics", "cli.py").write_text("", encoding="utf-8")
         s = locate_motion_graphics(env={ENV_DIR: root, "PATH": ""})
         self.assertIsNotNone(s)
-        self.assertEqual(s.command[1:], ["-c", MODULE_BOOTSTRAP, "motion_graphics.cli"])   # python -m without the current directory on sys.path (ADR-074)
+        self.assertEqual(
+            s.command[1:], ["-c", MODULE_BOOTSTRAP, "motion_graphics.cli"]
+        )  # python -m without the current directory on sys.path (ADR-074)
         self.assertEqual(s.env["PYTHONPATH"], os.path.join(root, "src"))
 
 
 class RequestTests(Base):
     def test_build(self):
         a = self.adapter()
-        b = a.build_request(TOOL_ID, self.op().args, self.paths(), op_id="op-1", timeout=30)
+        b = a.build_request(
+            TOOL_ID, self.op().args, self.paths(), op_id="op-1", timeout=30
+        )
         r = b["request"]
         self.assertEqual(r["schema"], "motion-graphics/request@1")
         self.assertEqual(r["video"]["path"], str(Path(self.video).resolve()))
         self.assertTrue(r["output"]["path"].endswith("graded.mp4"))
         self.assertTrue(r["output"]["overwrite"])
         self.assertEqual([e["id"] for e in r["elements"]], ["t1", "title"])
-        self.assertEqual(r["elements"][0]["animation"], {"kind": "fade", "parameters": {"duration": 0.3}})
+        self.assertEqual(
+            r["elements"][0]["animation"],
+            {"kind": "fade", "parameters": {"duration": 0.3}},
+        )
         self.assertNotIn("options", r)
         self.assertEqual(b["element_ids"], ["t1", "title"])
         argv = a._argv(b, dry_run=True, timeout=30)
         self.assertEqual(argv[:3], ["run", "-", "--json"])
-        self.assertIn("--workspace", argv); self.assertIn("--allowed-input", argv); self.assertIn("--ffmpeg-skill", argv)
+        self.assertIn("--workspace", argv)
+        self.assertIn("--allowed-input", argv)
+        self.assertIn("--ffmpeg-skill", argv)
         self.assertEqual(argv[argv.index("--timeout") + 1], "30")
         self.assertEqual(argv[-1], "--dry-run")
 
     def test_options_font_position_image(self):
         a = self.adapter()
-        els = [{"id": "i1", "type": "image_overlay", "start": 0, "end": 2, "parameters": {"image": "logo", "position": {"x": 10, "y": -20}, "scale_percent": 25.0}},
-               {"id": "t2", "type": "text_overlay", "start": 0, "end": 1, "parameters": {"text": "x", "font": "system:dejavu-serif", "box": True, "box_color": "black@0.5"}}]
-        r = a.build_request(TOOL_ID, {"input": "vid", "output": "out", "elements": els, "crf": 20, "preset": "fast"}, self.paths())["request"]
+        els = [
+            {
+                "id": "i1",
+                "type": "image_overlay",
+                "start": 0,
+                "end": 2,
+                "parameters": {
+                    "image": "logo",
+                    "position": {"x": 10, "y": -20},
+                    "scale_percent": 25.0,
+                },
+            },
+            {
+                "id": "t2",
+                "type": "text_overlay",
+                "start": 0,
+                "end": 1,
+                "parameters": {
+                    "text": "x",
+                    "font": "system:dejavu-serif",
+                    "box": True,
+                    "box_color": "black@0.5",
+                },
+            },
+        ]
+        r = a.build_request(
+            TOOL_ID,
+            {
+                "input": "vid",
+                "output": "out",
+                "elements": els,
+                "crf": 20,
+                "preset": "fast",
+            },
+            self.paths(),
+        )["request"]
         self.assertEqual(r["options"], {"crf": 20, "preset": "fast"})
-        self.assertEqual(r["elements"][0]["parameters"]["image_path"], str(Path(self.logo).resolve()))
+        self.assertEqual(
+            r["elements"][0]["parameters"]["image_path"], str(Path(self.logo).resolve())
+        )
         self.assertNotIn("image", r["elements"][0]["parameters"])
-        self.assertEqual(r["elements"][0]["parameters"]["position"], {"x": 10, "y": -20})
-        self.assertEqual(r["elements"][1]["parameters"]["font"], {"font_id": "system:dejavu-serif"})
+        self.assertEqual(
+            r["elements"][0]["parameters"]["position"], {"x": 10, "y": -20}
+        )
+        self.assertEqual(
+            r["elements"][1]["parameters"]["font"], {"font_id": "system:dejavu-serif"}
+        )
 
     def test_refused(self):
         a = self.adapter()
@@ -194,43 +327,185 @@ class RequestTests(Base):
                 a.build_request(TOOL_ID, args, kw.get("paths", p))
             self.assertIn(frag, str(cm.exception))
 
-        el = lambda **o: [dict({"id": "e", "type": "text_overlay", "start": 0, "end": 1, "parameters": {"text": "x"}}, **o)]  # noqa: E731
+        el = lambda **o: [
+            dict(
+                {
+                    "id": "e",
+                    "type": "text_overlay",
+                    "start": 0,
+                    "end": 1,
+                    "parameters": {"text": "x"},
+                },
+                **o,
+            )
+        ]  # noqa: E731
         base = {"input": "vid", "output": "out"}
         bad(dict(base, elements=self.elements(), filter="x"), "forbidden field")
-        bad(dict(base, elements=el(parameters={"text": "x", "vf": "y"})), "forbidden field")
-        bad(dict(base, elements=el(parameters={"text": "x", "command": ["ls"]})), "forbidden field")
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "vf": "y"})),
+            "forbidden field",
+        )
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "command": ["ls"]})),
+            "forbidden field",
+        )
         bad(dict(base, elements=self.elements(), timeout=5), "unknown argument")
-        bad(dict(base, elements=el(parameters={"text": "x", "wobble": 1})), "not declared")
-        bad(dict(base, elements=el(parameters={"text": "x", "image_path": self.logo})), "not declared")
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "wobble": 1})),
+            "not declared",
+        )
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "image_path": self.logo})),
+            "not declared",
+        )
         bad(dict(base, elements=el(parameters={})), "requires parameter 'text'")
         bad(dict(base, elements=el(parameters={"text": "x" * 501})), "longer than 500")
-        bad(dict(base, elements=el(parameters={"text": "x", "font_size": 4})), "below the contract minimum")
-        bad(dict(base, elements=el(parameters={"text": "x", "font_size": 301})), "above the contract maximum")
-        bad(dict(base, elements=el(parameters={"text": "x", "font_size": 12.5})), "must be an integer")
-        bad(dict(base, elements=el(parameters={"text": "x", "box": "yes"})), "must be a boolean")
-        bad(dict(base, elements=el(parameters={"text": "x", "font_color": "red; rm -rf"})), "cannot be a colour")
-        bad(dict(base, elements=el(parameters={"text": "x", "font_color": ""})), "non-empty")
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "font_size": 4})),
+            "below the contract minimum",
+        )
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "font_size": 301})),
+            "above the contract maximum",
+        )
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "font_size": 12.5})),
+            "must be an integer",
+        )
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "box": "yes"})),
+            "must be a boolean",
+        )
+        bad(
+            dict(
+                base, elements=el(parameters={"text": "x", "font_color": "red; rm -rf"})
+            ),
+            "cannot be a colour",
+        )
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "font_color": ""})),
+            "non-empty",
+        )
         # ADR-067: @alpha is refused where the pinned schema says alpha: false (template colours); overlay colours keep it, names pass to the Skill
-        bad(dict(base, elements=el(type="title", parameters={"title": "T", "primary_color": "navy@0.5"})), "takes no @alpha")
-        bad(dict(base, elements=el(type="progress", parameters={"primary_color": "FFCC00@1.0"})), "takes no @alpha")
-        ok = a.build_request(TOOL_ID, dict(base, elements=el(type="hook", parameters={"title": "T", "text_color": "Navy", "primary_color": "FFCC00"})), p)["request"]
-        self.assertEqual(ok["elements"][0]["parameters"], {"title": "T", "text_color": "Navy", "primary_color": "FFCC00"})
-        self.assertEqual(a.build_request(TOOL_ID, dict(base, elements=el(parameters={"text": "x", "font_color": "white@0.5"})), p)["request"]["elements"][0]["parameters"]["font_color"], "white@0.5")
-        bad(dict(base, elements=el(parameters={"text": "x", "position": "middle"})), "not one of")
-        bad(dict(base, elements=el(parameters={"text": "x", "position": {"x": 1.5, "y": 2}})), "named position")
-        bad(dict(base, elements=el(parameters={"text": "x", "font": "/usr/share/fonts/x.ttf"})), "registry font id")
-        bad(dict(base, elements=el(parameters={"text": "x", "font": {"font_file": "/x.ttf"}})), "non-empty string")
-        bad(dict(base, elements=el(type="title", parameters={"title": "T"}, animation={"kind": "fade", "parameters": {"duration": 0.5}})), "does not apply to title")
-        bad(dict(base, elements=el(animation={"kind": "slide", "parameters": {}})), "not implemented")
-        bad(dict(base, elements=el(animation={"kind": "fade", "parameters": {"duration": 31}})), "above the contract maximum")
-        bad(dict(base, elements=el(animation={"kind": "fade", "parameters": {}})), "requires 'duration'")
-        bad(dict(base, elements=el(animation={"kind": "fade", "parameters": {"duration": 1, "ease": "in"}})), "not declared for fade")
+        bad(
+            dict(
+                base,
+                elements=el(
+                    type="title", parameters={"title": "T", "primary_color": "navy@0.5"}
+                ),
+            ),
+            "takes no @alpha",
+        )
+        bad(
+            dict(
+                base,
+                elements=el(
+                    type="progress", parameters={"primary_color": "FFCC00@1.0"}
+                ),
+            ),
+            "takes no @alpha",
+        )
+        ok = a.build_request(
+            TOOL_ID,
+            dict(
+                base,
+                elements=el(
+                    type="hook",
+                    parameters={
+                        "title": "T",
+                        "text_color": "Navy",
+                        "primary_color": "FFCC00",
+                    },
+                ),
+            ),
+            p,
+        )["request"]
+        self.assertEqual(
+            ok["elements"][0]["parameters"],
+            {"title": "T", "text_color": "Navy", "primary_color": "FFCC00"},
+        )
+        self.assertEqual(
+            a.build_request(
+                TOOL_ID,
+                dict(
+                    base,
+                    elements=el(parameters={"text": "x", "font_color": "white@0.5"}),
+                ),
+                p,
+            )["request"]["elements"][0]["parameters"]["font_color"],
+            "white@0.5",
+        )
+        bad(
+            dict(base, elements=el(parameters={"text": "x", "position": "middle"})),
+            "not one of",
+        )
+        bad(
+            dict(
+                base,
+                elements=el(parameters={"text": "x", "position": {"x": 1.5, "y": 2}}),
+            ),
+            "named position",
+        )
+        bad(
+            dict(
+                base,
+                elements=el(parameters={"text": "x", "font": "/usr/share/fonts/x.ttf"}),
+            ),
+            "registry font id",
+        )
+        bad(
+            dict(
+                base,
+                elements=el(parameters={"text": "x", "font": {"font_file": "/x.ttf"}}),
+            ),
+            "non-empty string",
+        )
+        bad(
+            dict(
+                base,
+                elements=el(
+                    type="title",
+                    parameters={"title": "T"},
+                    animation={"kind": "fade", "parameters": {"duration": 0.5}},
+                ),
+            ),
+            "does not apply to title",
+        )
+        bad(
+            dict(base, elements=el(animation={"kind": "slide", "parameters": {}})),
+            "not implemented",
+        )
+        bad(
+            dict(
+                base,
+                elements=el(animation={"kind": "fade", "parameters": {"duration": 31}}),
+            ),
+            "above the contract maximum",
+        )
+        bad(
+            dict(base, elements=el(animation={"kind": "fade", "parameters": {}})),
+            "requires 'duration'",
+        )
+        bad(
+            dict(
+                base,
+                elements=el(
+                    animation={
+                        "kind": "fade",
+                        "parameters": {"duration": 1, "ease": "in"},
+                    }
+                ),
+            ),
+            "not declared for fade",
+        )
         bad(dict(base, elements=el(start=1, end=1)), "0 <= start < end")
         bad(dict(base, elements=el(start=-1, end=1)), "0 <= start < end")
         bad(dict(base, elements=el(start=0, end=1e9)), "0 <= start < end")
         bad(dict(base, elements=el(start=float("nan"), end=1)), "finite number")
         bad(dict(base, elements=el(id="bad id!")), "must match")
-        a.unsupported = ["shape"]   # 0.2.7 implements shape (ADR-078); a type the contract lists as unsupported is still refused by name
+        a.unsupported = [
+            "shape"
+        ]  # 0.2.7 implements shape (ADR-078); a type the contract lists as unsupported is still refused by name
         bad(dict(base, elements=el(type="shape")), "declared unsupported")
         a.unsupported = []
         bad(dict(base, elements=el(type="blob")), "unknown element type")
@@ -239,31 +514,98 @@ class RequestTests(Base):
         bad(dict(base, elements=el() + el()), "duplicate element id")
         bad(dict(base, elements=[]), "non-empty list")
         bad(dict(base, elements=el() * 65), "more than 64")
-        bad(dict(base, elements=[{"id": "i", "type": "image_overlay", "start": 0, "end": 1, "parameters": {}}]), "requires parameter 'image'")
-        bad(dict(base, elements=[{"id": "i", "type": "image_overlay", "start": 0, "end": 1, "parameters": {"image": "vid"}}]), "image must be an existing")
+        bad(
+            dict(
+                base,
+                elements=[
+                    {
+                        "id": "i",
+                        "type": "image_overlay",
+                        "start": 0,
+                        "end": 1,
+                        "parameters": {},
+                    }
+                ],
+            ),
+            "requires parameter 'image'",
+        )
+        bad(
+            dict(
+                base,
+                elements=[
+                    {
+                        "id": "i",
+                        "type": "image_overlay",
+                        "start": 0,
+                        "end": 1,
+                        "parameters": {"image": "vid"},
+                    }
+                ],
+            ),
+            "image must be an existing",
+        )
         bad(dict(base, elements=self.elements(), crf=52), "crf must be")
         bad(dict(base, elements=self.elements(), crf=True), "crf must be")
         bad(dict(base, elements=self.elements(), preset="turbo"), "preset must be")
-        bad(dict(base, elements=self.elements()), "outside the workspace", paths=dict(p, out=os.path.join(self.tmp, "elsewhere.mp4")))
-        bad(dict(base, elements=self.elements()), "must be a .mp4", paths=dict(p, out=os.path.join(self.ws, "o.mov")))
+        bad(
+            dict(base, elements=self.elements()),
+            "outside the workspace",
+            paths=dict(p, out=os.path.join(self.tmp, "elsewhere.mp4")),
+        )
+        bad(
+            dict(base, elements=self.elements()),
+            "must be a .mp4",
+            paths=dict(p, out=os.path.join(self.ws, "o.mov")),
+        )
         outside = write_fake_media(os.path.join(self.tmp, "outside.mp4"))
-        bad(dict(base, elements=self.elements()), "outside the allowed roots", paths=dict(p, vid=outside))
-        bad(dict(base, elements=self.elements()), "not found", paths=dict(p, vid=os.path.join(self.src_dir, "nope.mp4")))
+        bad(
+            dict(base, elements=self.elements()),
+            "outside the allowed roots",
+            paths=dict(p, vid=outside),
+        )
+        bad(
+            dict(base, elements=self.elements()),
+            "not found",
+            paths=dict(p, vid=os.path.join(self.src_dir, "nope.mp4")),
+        )
         outside_png = os.path.join(self.tmp, "outside.png")
         Path(outside_png).write_bytes(b"png")
-        bad(dict(base, elements=[{"id": "i", "type": "image_overlay", "start": 0, "end": 1, "parameters": {"image": "logo"}}]), "outside the allowed roots", paths=dict(p, logo=outside_png))
+        bad(
+            dict(
+                base,
+                elements=[
+                    {
+                        "id": "i",
+                        "type": "image_overlay",
+                        "start": 0,
+                        "end": 1,
+                        "parameters": {"image": "logo"},
+                    }
+                ],
+            ),
+            "outside the allowed roots",
+            paths=dict(p, logo=outside_png),
+        )
         bad(dict(base, output="vid", elements=self.elements()), "outside the workspace")
         with self.assertRaises(ToolError):
-            a.build_request("motion-graphics/other", dict(base, elements=self.elements()), p)
+            a.build_request(
+                "motion-graphics/other", dict(base, elements=self.elements()), p
+            )
 
     def test_path_policy(self):
-        a = self.adapter(allowed_inputs=[], path_policy=PathPolicy([self.src_dir], self.ws))
+        a = self.adapter(
+            allowed_inputs=[], path_policy=PathPolicy([self.src_dir], self.ws)
+        )
         a.build_request(TOOL_ID, self.op().args, self.paths())
         outside = write_fake_media(os.path.join(self.tmp, "o.mp4"))
         with self.assertRaises(ToolError):
             a.build_request(TOOL_ID, self.op().args, dict(self.paths(), vid=outside))
         with self.assertRaises(ToolError):
-            a.build_request(TOOL_ID, self.op().args, dict(self.paths(), out=os.path.join(self.tmp, "x.mp4")))
+            a.build_request(
+                TOOL_ID,
+                self.op().args,
+                dict(self.paths(), out=os.path.join(self.tmp, "x.mp4")),
+            )
 
     def test_preview_and_measure(self):
         a = self.adapter()
@@ -294,11 +636,25 @@ class SuccessTests(Base):
         self.assertEqual(d["artifact"]["duration"], 3.0)
         self.assertFalse(d["artifact"]["reused"])
         self.assertEqual({t["id"] for t in d["timeline"]}, {"t1", "title"})
-        self.assertEqual([o["element_id"] for o in d["operations"]], ["title", "t1"])   # (start, id) order
+        self.assertEqual(
+            [o["element_id"] for o in d["operations"]], ["title", "t1"]
+        )  # (start, id) order
         for o in d["operations"]:
             self.assertEqual(o["status"], "rendered")
             self.assertTrue(o["tool"].startswith("ffmpeg-skill/"))
-            self.assertEqual(set(o), {"element_id", "type", "tool", "status", "operation_id", "parameters", "input_hashes", "output_hash"})
+            self.assertEqual(
+                set(o),
+                {
+                    "element_id",
+                    "type",
+                    "tool",
+                    "status",
+                    "operation_id",
+                    "parameters",
+                    "input_hashes",
+                    "output_hash",
+                },
+            )
         self.assertEqual(d["engine"]["ffmpeg-skill"], "0.9.1-fake")
         self.assertEqual(d["provenance"]["output_hash"], d["artifact"]["sha256"])
         self.assertEqual(d["provenance"]["video"]["sha256"], sha256_file(self.video))
@@ -314,7 +670,9 @@ class SuccessTests(Base):
         self.assertEqual(obs.skill, SKILL_ID)
         self.assertEqual(obs.fingerprint, d["artifact"]["sha256"])
         self.assertEqual(obs.parameters["document_id"], d["provenance"]["document_id"])
-        self.assertEqual(json.loads(Path(r.output).read_bytes())["graphics"], ["title", "t1"])
+        self.assertEqual(
+            json.loads(Path(r.output).read_bytes())["graphics"], ["title", "t1"]
+        )
 
     def test_dry_run(self):
         a = self.adapter()
@@ -332,55 +690,174 @@ class SuccessTests(Base):
     def test_layer_export(self):
         """ADR-106: options.layer_export (motion-graphics-skill 0.2.17, contract `layer_export`) passes through. `directory` is a plain folder
         name sent as that folder inside the workspace (never a path from the plan); alpha_codec / alpha_mode are the contract's. The reported
-        layer files and manifest are checked (inside the folder, sha256) and carried in data.layer_export; the dry run carries the plan's."""
+        layer files and manifest are checked (inside the folder, sha256) and carried in data.layer_export; the dry run carries the plan's.
+        """
         from video_agent.tools.motion_graphics.adapter import OPTION_KEYS
+
         self.assertIn("layer_export", OPTION_KEYS)
-        self.assertEqual(sorted(pinned_contract()["layer_export"]["containers"]), ["png", "prores4444", "qtrle", "vp9"])
+        self.assertEqual(
+            sorted(pinned_contract()["layer_export"]["containers"]),
+            ["png", "prores4444", "qtrle", "vp9"],
+        )
         self.assertIn("layer_export", pinned_contract()["response"]["conditional"])
         a = self.adapter()
-        b = a.build_request(TOOL_ID, self.op(options={"layer_export": {"directory": "layers", "alpha_codec": "qtrle", "alpha_mode": "premultiplied"}}).args, self.paths())
-        self.assertEqual(b["request"]["options"]["layer_export"], {"directory": os.path.join(self.ws, "layers"), "alpha_codec": "qtrle", "alpha_mode": "premultiplied"})
-        for bad in ({"directory": "../up"}, {"directory": "/abs/dir"}, {}, {"directory": "layers", "alpha_codec": "h264"}, {"directory": "layers", "alpha_mode": "linear"},
-                    {"directory": "layers", "path": "x"}, {"directory": "layers", "codec": "png"}, "layers"):
+        b = a.build_request(
+            TOOL_ID,
+            self.op(
+                options={
+                    "layer_export": {
+                        "directory": "layers",
+                        "alpha_codec": "qtrle",
+                        "alpha_mode": "premultiplied",
+                    }
+                }
+            ).args,
+            self.paths(),
+        )
+        self.assertEqual(
+            b["request"]["options"]["layer_export"],
+            {
+                "directory": os.path.join(self.ws, "layers"),
+                "alpha_codec": "qtrle",
+                "alpha_mode": "premultiplied",
+            },
+        )
+        for bad in (
+            {"directory": "../up"},
+            {"directory": "/abs/dir"},
+            {},
+            {"directory": "layers", "alpha_codec": "h264"},
+            {"directory": "layers", "alpha_mode": "linear"},
+            {"directory": "layers", "path": "x"},
+            {"directory": "layers", "codec": "png"},
+            "layers",
+        ):
             with self.assertRaises(ToolError, msg=str(bad)):
-                a.build_request(TOOL_ID, self.op(options={"layer_export": bad}).args, self.paths())
-        r = a.run(self.op(options={"layer_export": {"directory": "layers"}}), self.paths(), timeout=20)
+                a.build_request(
+                    TOOL_ID, self.op(options={"layer_export": bad}).args, self.paths()
+                )
+        r = a.run(
+            self.op(options={"layer_export": {"directory": "layers"}}),
+            self.paths(),
+            timeout=20,
+        )
         self.assertTrue(r.ok, r.data)
         le = r.data["layer_export"]
-        self.assertEqual((le["directory"], le["alpha_codec"], le["alpha_mode"], le["verified"]), (os.path.join(self.ws, "layers"), "prores4444", "straight", True))
+        self.assertEqual(
+            (le["directory"], le["alpha_codec"], le["alpha_mode"], le["verified"]),
+            (os.path.join(self.ws, "layers"), "prores4444", "straight", True),
+        )
         self.assertEqual({x["id"] for x in le["layers"]}, {"t1", "title"})
         for x in le["layers"]:
-            self.assertEqual((x["file"], x["sha256"]), (x["id"] + ".mov", sha256_file(x["path"])))
+            self.assertEqual(
+                (x["file"], x["sha256"]), (x["id"] + ".mov", sha256_file(x["path"]))
+            )
         self.assertEqual(le["manifest"]["sha256"], sha256_file(le["manifest"]["path"]))
-        dr = a.run(self.op(options={"layer_export": {"directory": "layers2"}}), self.paths("out/dry.mp4"), dry_run=True)
+        dr = a.run(
+            self.op(options={"layer_export": {"directory": "layers2"}}),
+            self.paths("out/dry.mp4"),
+            dry_run=True,
+        )
         self.assertTrue(dr.ok, dr.data)
-        self.assertEqual([x["file"] for x in dr.data["layer_export"]["layers"]], ["title.mov", "t1.mov"])
+        self.assertEqual(
+            [x["file"] for x in dr.data["layer_export"]["layers"]],
+            ["title.mov", "t1.mov"],
+        )
         # the reported export must be the requested one: its folder, one layer per element named <id><container>, manifest.json in the folder
-        good = {"schema": "motion-graphics/response@1", "skill": {"id": SKILL_ID, "version": a.version}, "status": "ok", "dry_run": False}
+        good = {
+            "schema": "motion-graphics/response@1",
+            "skill": {"id": SKILL_ID, "version": a.version},
+            "status": "ok",
+            "dry_run": False,
+        }
+
         def le_errs(**over):
-            le = json.loads(json.dumps(r.data["layer_export"])); le.update(over)
-            return [e for e in a._check_response(dict(good, layer_export=le), self.paths()["out"], False, ["t1", "title"], os.path.join(self.ws, "layers")) if "layer_export" in e]
+            le = json.loads(json.dumps(r.data["layer_export"]))
+            le.update(over)
+            return [
+                e
+                for e in a._check_response(
+                    dict(good, layer_export=le),
+                    self.paths()["out"],
+                    False,
+                    ["t1", "title"],
+                    os.path.join(self.ws, "layers"),
+                )
+                if "layer_export" in e
+            ]
+
         self.assertEqual(le_errs(), [])
         self.assertTrue(le_errs(directory=os.path.join(self.ws, "elsewhere")))
         lay = r.data["layer_export"]["layers"]
         self.assertTrue(le_errs(layers=[lay[0], lay[0]]))
-        self.assertTrue(le_errs(layers=[lay[0], dict(lay[1], file="manifest.json", path=le["manifest"]["path"], sha256=le["manifest"]["sha256"])]))
-        self.assertTrue([e for e in a._check_response(dict(good, layer_export=r.data["layer_export"]), self.paths()["out"], False, ["t1", "title"], None) if "layer_export" in e])
-        self.mode("layer_hash_mismatch")   # a layer whose reported hash is not the file's is not a success
-        r = a.run(self.op(options={"layer_export": {"directory": "layers3"}}), self.paths("out/bad.mp4"), timeout=20)
+        self.assertTrue(
+            le_errs(
+                layers=[
+                    lay[0],
+                    dict(
+                        lay[1],
+                        file="manifest.json",
+                        path=le["manifest"]["path"],
+                        sha256=le["manifest"]["sha256"],
+                    ),
+                ]
+            )
+        )
+        self.assertTrue(
+            [
+                e
+                for e in a._check_response(
+                    dict(good, layer_export=r.data["layer_export"]),
+                    self.paths()["out"],
+                    False,
+                    ["t1", "title"],
+                    None,
+                )
+                if "layer_export" in e
+            ]
+        )
+        self.mode(
+            "layer_hash_mismatch"
+        )  # a layer whose reported hash is not the file's is not a success
+        r = a.run(
+            self.op(options={"layer_export": {"directory": "layers3"}}),
+            self.paths("out/bad.mp4"),
+            timeout=20,
+        )
         self.assertFalse(r.ok)
         self.assertEqual(r.data["error"]["code"], "INVALID_RESULT")
-        self.mode("no_layer_export")   # an ffmpeg-skill without the flags: the Skill's TOOL_ERROR, before anything renders
-        r = a.run(self.op(options={"layer_export": {"directory": "layers4"}}), self.paths("out/old.mp4"), timeout=20)
+        self.mode(
+            "no_layer_export"
+        )  # an ffmpeg-skill without the flags: the Skill's TOOL_ERROR, before anything renders
+        r = a.run(
+            self.op(options={"layer_export": {"directory": "layers4"}}),
+            self.paths("out/old.mp4"),
+            timeout=20,
+        )
         self.assertFalse(r.ok)
-        self.assertEqual((r.data["error"]["code"], r.data["error"]["details"]["reason"]), ("TOOL_ERROR", "ffmpeg_skill_lacks_flag"))
+        self.assertEqual(
+            (r.data["error"]["code"], r.data["error"]["details"]["reason"]),
+            ("TOOL_ERROR", "ffmpeg_skill_lacks_flag"),
+        )
 
     def test_reused_and_image(self):
         a = self.adapter()
-        els = self.elements([{"id": "logo", "type": "image_overlay", "start": 0.5, "end": 2.0, "parameters": {"image": "logo", "opacity": 0.8}}])
+        els = self.elements(
+            [
+                {
+                    "id": "logo",
+                    "type": "image_overlay",
+                    "start": 0.5,
+                    "end": 2.0,
+                    "parameters": {"image": "logo", "opacity": 0.8},
+                }
+            ]
+        )
         r = a.run(self.op(elements=els), self.paths())
         self.assertTrue(r.ok, r.data)
-        self.assertEqual(r.data["provenance"]["assets"]["logo"]["sha256"], sha256_file(self.logo))
+        self.assertEqual(
+            r.data["provenance"]["assets"]["logo"]["sha256"], sha256_file(self.logo)
+        )
         self.mode("reused")
         r2 = a.run(self.op(elements=els), self.paths())
         self.assertTrue(r2.ok, r2.data)
@@ -389,7 +866,9 @@ class SuccessTests(Base):
 
 
 class ErrorTests(Base):
-    def check(self, mode, code, retryable, rc, removed=True, exit_code=None, timeout=None):
+    def check(
+        self, mode, code, retryable, rc, removed=True, exit_code=None, timeout=None
+    ):
         self.mode(mode)
         a = self.adapter()
         r = a.run(self.op(), self.paths(), timeout=timeout)
@@ -410,27 +889,51 @@ class ErrorTests(Base):
     def test_skill_errors(self):
         self.check("tool_error", "TOOL_ERROR", True, "UNKNOWN", exit_code=12)
         self.check("tool_error_final", "TOOL_ERROR", False, "UNKNOWN", exit_code=12)
-        self.check("validation_error", "VALIDATION_ERROR", False, "SKILL_ERROR", exit_code=14)
+        self.check(
+            "validation_error", "VALIDATION_ERROR", False, "SKILL_ERROR", exit_code=14
+        )
         r = self.check("cancelled", "CANCELLED", True, "TIMEOUT", exit_code=15)
         self.assertEqual(r.data["error"]["details"]["reason"], "signal")
         r = self.check("skill_timeout", "CANCELLED", True, "TIMEOUT", exit_code=15)
         self.assertEqual(r.data["error"]["details"]["reason"], "timeout")
-        self.check("internal_error", "INTERNAL_ERROR", False, "SKILL_ERROR", exit_code=16)
-        self.check("duplicate_ids", "DEPENDENCY_ERROR", False, "INVALID_ARGS", exit_code=11)
-        r = self.check("unknown_font", "MISSING_INPUT", False, "INPUT_MISSING", exit_code=7)
+        self.check(
+            "internal_error", "INTERNAL_ERROR", False, "SKILL_ERROR", exit_code=16
+        )
+        self.check(
+            "duplicate_ids", "DEPENDENCY_ERROR", False, "INVALID_ARGS", exit_code=11
+        )
+        r = self.check(
+            "unknown_font", "MISSING_INPUT", False, "INPUT_MISSING", exit_code=7
+        )
         self.assertEqual(r.data["error"]["details"]["font_id"], "system:dejavu-sans")
 
     def test_invalid_results(self):
-        for mode in ("malformed", "empty", "two_docs", "text", "nonzero_ok", "unknown_code", "output_missing", "hash_mismatch", "no_provenance", "timeline_mismatch"):
+        for mode in (
+            "malformed",
+            "empty",
+            "two_docs",
+            "text",
+            "nonzero_ok",
+            "unknown_code",
+            "output_missing",
+            "hash_mismatch",
+            "no_provenance",
+            "timeline_mismatch",
+        ):
             self.check(mode, "INVALID_RESULT", False, "SKILL_ERROR")
-            self.tearDown(); self.setUp()
+            self.tearDown()
+            self.setUp()
         r = self.check("hash_mismatch", "INVALID_RESULT", False, "SKILL_ERROR")
         self.assertIn("sha256", r.data["error"]["message"])
-        r = self.check("nonzero_ok", "INVALID_RESULT", False, "SKILL_ERROR", exit_code=3)
+        r = self.check(
+            "nonzero_ok", "INVALID_RESULT", False, "SKILL_ERROR", exit_code=3
+        )
         self.assertIn("exit code 3", r.data["error"]["message"])
 
     def test_timeout(self):
-        r = self.check("timeout", "CANCELLED", True, "TIMEOUT", exit_code=124, timeout=1)
+        r = self.check(
+            "timeout", "CANCELLED", True, "TIMEOUT", exit_code=124, timeout=1
+        )
         self.assertEqual(r.data["error"]["details"]["reason"], "timeout")
         self.assertLess(r.seconds, 20)
 
@@ -441,11 +944,26 @@ class ErrorTests(Base):
         self.assertEqual(r.data["error"]["code"], "INVALID_REQUEST")
         self.assertEqual(r.data["error"]["recovery_class"], "INVALID_ARGS")
         self.assertEqual(r.exit_code, 2)
-        self.assertEqual(a.calls, 1)   # the contract fetch only: nothing was sent to the Skill
+        self.assertEqual(
+            a.calls, 1
+        )  # the contract fetch only: nothing was sent to the Skill
 
     def test_unknown_font_id_refused_locally(self):
         a = self.adapter()
-        r = a.run(self.op(elements=[{"id": "e", "type": "text_overlay", "start": 0, "end": 1, "parameters": {"text": "x", "font": "system:comic"}}]), self.paths())
+        r = a.run(
+            self.op(
+                elements=[
+                    {
+                        "id": "e",
+                        "type": "text_overlay",
+                        "start": 0,
+                        "end": 1,
+                        "parameters": {"text": "x", "font": "system:comic"},
+                    }
+                ]
+            ),
+            self.paths(),
+        )
         self.assertEqual(r.data["error"]["code"], "INVALID_REQUEST")
 
 
@@ -460,11 +978,18 @@ class SecurityTests(Base):
         run = calls[-1]
         self.assertIsInstance(run["argv"], list)
         for tok in run["argv"]:
-            self.assertNotIn("Hello", tok); self.assertNotIn("Opening", tok); self.assertNotIn("elements", tok)
+            self.assertNotIn("Hello", tok)
+            self.assertNotIn("Opening", tok)
+            self.assertNotIn("elements", tok)
         self.assertEqual(run["argv"][:3], ["run", "-", "--json"])
-        self.assertEqual(run["argv"][run["argv"].index("--ffmpeg-skill") + 1], "/opt/fake-ffmpeg-skill")
+        self.assertEqual(
+            run["argv"][run["argv"].index("--ffmpeg-skill") + 1],
+            "/opt/fake-ffmpeg-skill",
+        )
         self.assertNotIn("VIDEO_AGENT_MOTION_GRAPHICS_DIR", run["env_video"])
-        self.assertEqual({k for k in run["env_video"] if "SECRET" in k}, {"VIDEO_AGENT_SECRET_TOKEN"})   # the parent's environment is inherited as-is, never added to
+        self.assertEqual(
+            {k for k in run["env_video"] if "SECRET" in k}, {"VIDEO_AGENT_SECRET_TOKEN"}
+        )  # the parent's environment is inherited as-is, never added to
         b = a.build_request(TOOL_ID, self.op().args, self.paths())
         text = json.dumps(b["request"]).lower()
         for k in a.forbidden:
@@ -476,13 +1001,29 @@ class SecurityTests(Base):
 
     def test_never_shell(self):
         a = self.adapter()
-        r = a.run(self.op(elements=[{"id": "e", "type": "text_overlay", "start": 0, "end": 1, "parameters": {"text": "$(touch pwned); `id`"}}]), self.paths())
+        r = a.run(
+            self.op(
+                elements=[
+                    {
+                        "id": "e",
+                        "type": "text_overlay",
+                        "start": 0,
+                        "end": 1,
+                        "parameters": {"text": "$(touch pwned); `id`"},
+                    }
+                ]
+            ),
+            self.paths(),
+        )
         self.assertTrue(r.ok, r.data)
         self.assertFalse(os.path.exists("pwned"))
         self.assertEqual(self.logged()[-1]["argv"][1], "-")
 
 
-@unittest.skipUnless(os.environ.get(ENV_DIR), f"set {ENV_DIR} to run against the real motion-graphics-skill")
+@unittest.skipUnless(
+    os.environ.get(ENV_DIR),
+    f"set {ENV_DIR} to run against the real motion-graphics-skill",
+)
 class RealSkillTests(unittest.TestCase):
     def setUp(self):
         self.tmp = os.path.realpath(tempfile.mkdtemp())
@@ -492,13 +1033,57 @@ class RealSkillTests(unittest.TestCase):
         os.makedirs(os.path.dirname(self.video))
         if not shutil.which("ffmpeg"):
             self.skipTest("ffmpeg not on PATH")
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=25", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000", "-t", "3",
-                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", self.video], check=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=640x360:rate=25",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:sample_rate=48000",
+                "-t",
+                "3",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                self.video,
+            ],
+            check=True,
+        )
         self.logo = os.path.join(self.tmp, "src", "logo.png")
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:size=64x64", "-frames:v", "1", self.logo], check=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=red:size=64x64",
+                "-frames:v",
+                "1",
+                self.logo,
+            ],
+            check=True,
+        )
         self.skill = locate_motion_graphics()
         self.assertIsNotNone(self.skill)
-        self.adapter = MotionGraphicsAdapter(self.skill, workspace=self.ws, allowed_inputs=[os.path.dirname(self.video)], ffmpeg_skill_dir=os.environ.get("VIDEO_AGENT_FFMPEG_SKILL_DIR"))
+        self.adapter = MotionGraphicsAdapter(
+            self.skill,
+            workspace=self.ws,
+            allowed_inputs=[os.path.dirname(self.video)],
+            ffmpeg_skill_dir=os.environ.get("VIDEO_AGENT_FFMPEG_SKILL_DIR"),
+        )
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -509,10 +1094,45 @@ class RealSkillTests(unittest.TestCase):
         self.assertIn(d["status"], ("ok", "degraded"))
         st = MotionGraphicsAdapter.element_status(d)
         self.assertEqual(st["text_overlay"], "supported")
-        paths = {"vid": self.video, "logo": self.logo, "out": os.path.join(self.ws, "out", "mg.mp4")}
-        els = [{"id": "t1", "type": "text_overlay", "start": 0.2, "end": 2.5, "parameters": {"text": "Hello MG", "position": "bottom"}, "animation": {"kind": "fade", "parameters": {"duration": 0.3}}},
-               {"id": "logo", "type": "image_overlay", "start": 0.0, "end": 3.0, "parameters": {"image": "logo", "position": "top-right", "scale_width": 32}}]
-        op = Operation(tool=TOOL_ID, args={"input": "vid", "output": "out", "elements": els, "crf": 28, "preset": "ultrafast"}, inputs=["vid"], outputs=["out"], id="op-real")
+        paths = {
+            "vid": self.video,
+            "logo": self.logo,
+            "out": os.path.join(self.ws, "out", "mg.mp4"),
+        }
+        els = [
+            {
+                "id": "t1",
+                "type": "text_overlay",
+                "start": 0.2,
+                "end": 2.5,
+                "parameters": {"text": "Hello MG", "position": "bottom"},
+                "animation": {"kind": "fade", "parameters": {"duration": 0.3}},
+            },
+            {
+                "id": "logo",
+                "type": "image_overlay",
+                "start": 0.0,
+                "end": 3.0,
+                "parameters": {
+                    "image": "logo",
+                    "position": "top-right",
+                    "scale_width": 32,
+                },
+            },
+        ]
+        op = Operation(
+            tool=TOOL_ID,
+            args={
+                "input": "vid",
+                "output": "out",
+                "elements": els,
+                "crf": 28,
+                "preset": "ultrafast",
+            },
+            inputs=["vid"],
+            outputs=["out"],
+            id="op-real",
+        )
         r = self.adapter.run(op, paths, dry_run=True)
         self.assertTrue(r.ok, r.data)
         r = self.adapter.run(op, paths, timeout=300)
@@ -520,11 +1140,32 @@ class RealSkillTests(unittest.TestCase):
         self.assertEqual(r.data["artifact"]["sha256"], sha256_file(r.output))
         self.assertEqual(r.data["artifact"]["width"], 640)
         self.assertAlmostEqual(float(r.data["artifact"]["duration"]), 3.0, delta=0.3)
-        self.assertEqual({o["element_id"] for o in r.data["operations"]}, {"t1", "logo"})
-        self.assertTrue(all(o["status"] in ("rendered", "reused") for o in r.data["operations"]))
-        self.assertEqual(r.data["provenance"]["assets"]["logo"]["sha256"], hashlib.sha256(Path(self.logo).read_bytes()).hexdigest())
+        self.assertEqual(
+            {o["element_id"] for o in r.data["operations"]}, {"t1", "logo"}
+        )
+        self.assertTrue(
+            all(o["status"] in ("rendered", "reused") for o in r.data["operations"])
+        )
+        self.assertEqual(
+            r.data["provenance"]["assets"]["logo"]["sha256"],
+            hashlib.sha256(Path(self.logo).read_bytes()).hexdigest(),
+        )
         self.assertIsNotNone(lift_observation(r))
-        bad = Operation(tool=TOOL_ID, args={"input": "vid", "output": "out", "elements": [dict(els[0], parameters={"text": "x", "font_color": "notacolour123"})]}, inputs=["vid"], outputs=["out"], id="op-bad")
+        bad = Operation(
+            tool=TOOL_ID,
+            args={
+                "input": "vid",
+                "output": "out",
+                "elements": [
+                    dict(
+                        els[0], parameters={"text": "x", "font_color": "notacolour123"}
+                    )
+                ],
+            },
+            inputs=["vid"],
+            outputs=["out"],
+            id="op-bad",
+        )
         rb = self.adapter.run(bad, paths)
         self.assertFalse(rb.ok)
         self.assertEqual(rb.data["error"]["code"], "INVALID_REQUEST")

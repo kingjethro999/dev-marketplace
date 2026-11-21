@@ -19,5 +19,8 @@ def is_link(path: str | os.PathLike[str]) -> bool:
         return True
     if os.name == "nt":
         reparse_point = status.st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT
-        return bool(reparse_point) and status.st_reparse_tag == stat.IO_REPARSE_TAG_MOUNT_POINT
+        return (
+            bool(reparse_point)
+            and status.st_reparse_tag == stat.IO_REPARSE_TAG_MOUNT_POINT
+        )
     return False

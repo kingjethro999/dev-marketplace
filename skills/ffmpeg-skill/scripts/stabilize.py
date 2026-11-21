@@ -22,6 +22,7 @@ Examples:
   python3 stabilize.py shaky.mp4 --shakiness 8 --smoothing 20 --zoom 5
   python3 stabilize.py locked-off.mp4 --tripod --crop black
 """
+
 import argparse
 import sys
 import tempfile
@@ -32,20 +33,70 @@ from _common.color import bt709_matrix_filter, is_rgb
 from _common.decision import keeps_source_tags
 from _common.emit import note
 from _common.runner import ffmpeg_failure_extra, require_filter
-from _common import add_common, apply_common, aac_args, cfr_args, with_cfr, default_output, die, emit, escape_filter_path, ffmpeg_base, info, probe, require_tool, run_keeping_subtitles, video_args, X264_PRESETS, run_analysis, dry_run_input_pending, fmt_secs, record_fallback, EVEN_SCALE
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    with_cfr,
+    default_output,
+    die,
+    emit,
+    escape_filter_path,
+    ffmpeg_base,
+    info,
+    probe,
+    require_tool,
+    run_keeping_subtitles,
+    video_args,
+    X264_PRESETS,
+    run_analysis,
+    dry_run_input_pending,
+    fmt_secs,
+    record_fallback,
+    EVEN_SCALE,
+)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_stab.<ext>)")
-    ap.add_argument("--shakiness", type=int, default=5, help="1 (barely shaky) .. 10 (very shaky), default 5")
-    ap.add_argument("--smoothing", type=int, default=15, help="frames of camera-path smoothing on each side, default 15")
-    ap.add_argument("--zoom", type=float, default=0.0, help="percent to zoom in to hide stabilization edges, 0..100 (default 0)")
-    ap.add_argument("--crop", choices=["keep", "black"], default="keep", help="edges --zoom doesn't crop away: keep (stretch border pixels, default) or black (fill solid black)")
-    ap.add_argument("--tripod", action="store_true", help="lock the frame fully still against a single reference frame instead of smoothing the camera's motion")
+    ap.add_argument(
+        "--shakiness",
+        type=int,
+        default=5,
+        help="1 (barely shaky) .. 10 (very shaky), default 5",
+    )
+    ap.add_argument(
+        "--smoothing",
+        type=int,
+        default=15,
+        help="frames of camera-path smoothing on each side, default 15",
+    )
+    ap.add_argument(
+        "--zoom",
+        type=float,
+        default=0.0,
+        help="percent to zoom in to hide stabilization edges, 0..100 (default 0)",
+    )
+    ap.add_argument(
+        "--crop",
+        choices=["keep", "black"],
+        default="keep",
+        help="edges --zoom doesn't crop away: keep (stretch border pixels, default) or black (fill solid black)",
+    )
+    ap.add_argument(
+        "--tripod",
+        action="store_true",
+        help="lock the frame fully still against a single reference frame instead of smoothing the camera's motion",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -81,8 +132,12 @@ def main() -> int:
             w, h = h, w
         even = f"{EVEN_SCALE}," if (w % 2 or h % 2) else ""
         if even:
-            record_fallback("source has odd dimensions; scaling to even before stabilizing (vid.stab needs it)",
-                            "odd_dimensions_scaled_even", output=output, scale=EVEN_SCALE)
+            record_fallback(
+                "source has odd dimensions; scaling to even before stabilizing (vid.stab needs it)",
+                "odd_dimensions_scaled_even",
+                output=output,
+                scale=EVEN_SCALE,
+            )
         # vid.stab aborts on an RGB picture (FFmpeg 6.1.1 with libvidstab 1.1: rgb24, bgr24, rgba
         # and gbrp all fail the assertion `fi->planes==1`), so pass 1 failed as kind ffmpeg on a
         # PNG still or an RGB .mov (#531), and yuv444p of the same frames runs. Both passes see YUV
@@ -97,23 +152,48 @@ def main() -> int:
         if is_rgb(meta):
             conv = None if keeps_source_tags() else bt709_matrix_filter(meta)
             to_yuv = (conv or "format=yuv444p") + ","
-            to_yuv_pass2 = "" if conv else to_yuv  # the encoder line's conversion is folded in by run() (fold_bt709_matrix)
-            note(f"the source is RGB ({v.get('pix_fmt')}), which vid.stab does not take: both passes stabilize a YUV 4:4:4 "
-                 "copy of it, and the output's pixel format is the encoder line's (probe.video.pix_fmt)")
-        detect_vf = f"{to_yuv}{even}vidstabdetect=shakiness={args.shakiness}:result={trf_arg}"
+            to_yuv_pass2 = (
+                "" if conv else to_yuv
+            )  # the encoder line's conversion is folded in by run() (fold_bt709_matrix)
+            note(
+                f"the source is RGB ({v.get('pix_fmt')}), which vid.stab does not take: both passes stabilize a YUV 4:4:4 "
+                "copy of it, and the output's pixel format is the encoder line's (probe.video.pix_fmt)"
+            )
+        detect_vf = (
+            f"{to_yuv}{even}vidstabdetect=shakiness={args.shakiness}:result={trf_arg}"
+        )
         if args.tripod:
             # A frame number, not a boolean: frame 1 is the standard reference for "lock to
             # this fixed frame" (mirrors vidstabtransform's own tripod=1 below).
             detect_vf += ":tripod=1"
         # both passes read the picture probe() describes (its size chose the even scale above)
-        detect_cmd = [ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", args.input,
-                      "-map", f"0:{PROBED_VIDEO}", "-vf", detect_vf, "-f", "null", "-"]
+        detect_cmd = [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-nostdin",
+            "-y",
+            "-i",
+            args.input,
+            "-map",
+            f"0:{PROBED_VIDEO}",
+            "-vf",
+            detect_vf,
+            "-f",
+            "null",
+            "-",
+        ]
         # Pass 1 is a measurement into a temp file (the transforms), so it runs under --dry-run
         # as well; only pass 2, the write, is skipped there.
         if not dry_run_input_pending(args.input):
             proc = run_analysis(detect_cmd, check=False, record=True)
             if proc.returncode != 0:
-                die(f"stabilization analysis (pass 1) failed:\n{proc.stderr.strip()[-1500:]}", kind="ffmpeg", **ffmpeg_failure_extra(proc.stderr))
+                die(
+                    f"stabilization analysis (pass 1) failed:\n{proc.stderr.strip()[-1500:]}",
+                    kind="ffmpeg",
+                    **ffmpeg_failure_extra(proc.stderr),
+                )
 
         crop_mode = {"keep": 0, "black": 1}[args.crop]
         # optzoom=0: the zoom is --zoom and nothing else. vidstab's default (optzoom=1) adds its own
@@ -124,7 +204,12 @@ def main() -> int:
             # Equivalent to relative=0:smoothing=0 -- overrides --smoothing, since averaging a
             # camera path makes no sense once every frame is locked to one fixed reference.
             transform_vf += ":tripod=1"
-        cmd = ffmpeg_base() + ["-i", args.input] + probed_maps(meta) + ["-vf", with_cfr(transform_vf, meta)]
+        cmd = (
+            ffmpeg_base()
+            + ["-i", args.input]
+            + probed_maps(meta)
+            + ["-vf", with_cfr(transform_vf, meta)]
+        )
         cmd += video_args(meta, args.crf, args.preset)
         cmd += cfr_args(meta)
         if has_audio:
@@ -136,7 +221,9 @@ def main() -> int:
         dropped_streams = run_keeping_subtitles(cmd, output)
 
     result = probe(output, role="output")
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {result['video']['width']}x{result['video']['height']})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {result['video']['width']}x{result['video']['height']})"
+    )
     emit(output, dropped_non_av_streams=dropped_streams)
     return 0
 

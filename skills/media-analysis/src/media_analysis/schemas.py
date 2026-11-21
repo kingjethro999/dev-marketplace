@@ -3,6 +3,7 @@ validator for them. The schemas are the contract published by `media-analysis co
 are what a future MCP transport would carry. Standard library only: the validator supports the subset of JSON
 Schema this contract uses (type, required, properties, additionalProperties, enum, items, pattern, minimum,
 maximum, const, nullable via type lists)."""
+
 from __future__ import annotations
 
 import re
@@ -20,7 +21,8 @@ RESULT_STATUSES = ("ok", "error")
 RESPONSE_STATUSES = ("ok", "partial", "error")
 
 BUDGET_SCHEMA: Dict[str, Any] = {
-    "type": "object", "additionalProperties": False,
+    "type": "object",
+    "additionalProperties": False,
     "properties": {
         "max_analysis_calls": {"type": ["integer", "null"], "minimum": 0},
         "timeout": {"type": ["number", "null"], "minimum": 0},
@@ -29,24 +31,64 @@ BUDGET_SCHEMA: Dict[str, Any] = {
 }
 
 
-def request_schema(kinds: List[str], parameter_schemas: Dict[str, Dict[str, Dict[str, Any]]]) -> Dict[str, Any]:
+def request_schema(
+    kinds: List[str], parameter_schemas: Dict[str, Dict[str, Dict[str, Any]]]
+) -> Dict[str, Any]:
     """One AnalysisRequest. `parameters` is validated per kind by the engine (contract.validate_parameters); the
-    schema lists every parameter name per kind under `x-parameters-by-kind` so an adapter can build requests."""
+    schema lists every parameter name per kind under `x-parameters-by-kind` so an adapter can build requests.
+    """
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "media-analysis AnalysisRequest", "version": REQUEST_SCHEMA_VERSION,
-        "type": "object", "additionalProperties": False,
+        "title": "media-analysis AnalysisRequest",
+        "version": REQUEST_SCHEMA_VERSION,
+        "type": "object",
+        "additionalProperties": False,
         "required": ["asset_id", "input", "kind"],
         "properties": {
-            "analysis_id": {"type": ["string", "null"], "pattern": ID_PATTERN, "description": "caller's id; derived from the analysis identity when omitted"},
-            "asset_id": {"type": "string", "pattern": ID_PATTERN, "description": "caller's label for the asset; echoed, not part of the identity"},
-            "input": {"type": "string", "minLength": 1, "description": "path of one media file (absolute, or relative to the process working directory)"},
+            "analysis_id": {
+                "type": ["string", "null"],
+                "pattern": ID_PATTERN,
+                "description": "caller's id; derived from the analysis identity when omitted",
+            },
+            "asset_id": {
+                "type": "string",
+                "pattern": ID_PATTERN,
+                "description": "caller's label for the asset; echoed, not part of the identity",
+            },
+            "input": {
+                "type": "string",
+                "minLength": 1,
+                "description": "path of one media file (absolute, or relative to the process working directory)",
+            },
             "kind": {"type": "string", "enum": list(kinds)},
-            "parameters": {"type": "object", "description": "kind-specific parameters; unknown names, wrong types and out-of-range values are INVALID_INPUT"},
-            "timeout": {"type": ["number", "null"], "exclusiveMinimum": 0, "maximum": 86400, "description": "seconds per analyzer execution"},
-            "cache_policy": {"type": "string", "enum": list(CACHE_POLICIES), "default": "use",
-                             "description": "use: read and write; bypass: never read or write; only: read, CACHE_MISS when absent"},
-            "output_policy": {"type": "object", "additionalProperties": False, "properties": {"round": {"type": "integer", "minimum": 0, "maximum": 9, "default": 3}}},
+            "parameters": {
+                "type": "object",
+                "description": "kind-specific parameters; unknown names, wrong types and out-of-range values are INVALID_INPUT",
+            },
+            "timeout": {
+                "type": ["number", "null"],
+                "exclusiveMinimum": 0,
+                "maximum": 86400,
+                "description": "seconds per analyzer execution",
+            },
+            "cache_policy": {
+                "type": "string",
+                "enum": list(CACHE_POLICIES),
+                "default": "use",
+                "description": "use: read and write; bypass: never read or write; only: read, CACHE_MISS when absent",
+            },
+            "output_policy": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "round": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9,
+                        "default": 3,
+                    }
+                },
+            },
         },
         "x-forbidden-properties": ["command", "argv", "args", "shell", "cmd", "exec"],
         "x-parameters-by-kind": parameter_schemas,
@@ -55,9 +97,11 @@ def request_schema(kinds: List[str], parameter_schemas: Dict[str, Dict[str, Dict
 
 BATCH_SCHEMA: Dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "media-analysis request batch", "version": REQUEST_SCHEMA_VERSION,
+    "title": "media-analysis request batch",
+    "version": REQUEST_SCHEMA_VERSION,
     "description": "Document accepted by `media-analysis run`: a single AnalysisRequest, a list of them, or this batch envelope.",
-    "type": "object", "additionalProperties": False,
+    "type": "object",
+    "additionalProperties": False,
     "required": ["requests"],
     "properties": {
         "requests": {"type": "array", "minItems": 1, "items": {"$ref": "#/request"}},
@@ -67,47 +111,100 @@ BATCH_SCHEMA: Dict[str, Any] = {
 
 OBSERVATION_SCHEMA: Dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "media-analysis Observation", "version": OBSERVATION_SCHEMA_VERSION,
-    "type": "object", "additionalProperties": False,
-    "required": ["id", "asset_id", "kind", "data", "source", "analysis_id", "observed_at", "analysis", "asset"],
+    "title": "media-analysis Observation",
+    "version": OBSERVATION_SCHEMA_VERSION,
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "id",
+        "asset_id",
+        "kind",
+        "data",
+        "source",
+        "analysis_id",
+        "observed_at",
+        "analysis",
+        "asset",
+    ],
     "properties": {
         "id": {"type": "string", "pattern": r"^obs_[0-9a-f]{16}$"},
         "asset_id": {"type": "string", "pattern": ID_PATTERN},
         "kind": {"type": "string"},
-        "data": {"type": "object", "description": "measured values only; finite numbers; no command / argv keys"},
-        "source": {"type": "string", "pattern": SOURCE_PATTERN, "description": "media-analysis/<tool>@<version>; provenance is always OBSERVED"},
+        "data": {
+            "type": "object",
+            "description": "measured values only; finite numbers; no command / argv keys",
+        },
+        "source": {
+            "type": "string",
+            "pattern": SOURCE_PATTERN,
+            "description": "media-analysis/<tool>@<version>; provenance is always OBSERVED",
+        },
         "analysis_id": {"type": "string", "pattern": ID_PATTERN},
-        "observed_at": {"type": "string", "pattern": r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"},
+        "observed_at": {
+            "type": "string",
+            "pattern": r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$",
+        },
         "analysis": {
-            "type": "object", "additionalProperties": False,
-            "required": ["identity", "analyzer", "analyzer_version", "parameters", "seconds"],
+            "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "identity",
+                "analyzer",
+                "analyzer_version",
+                "parameters",
+                "seconds",
+            ],
             "properties": {
                 "identity": {"type": "string", "pattern": r"^[0-9a-f]{64}$"},
                 "analyzer": {"type": "string", "pattern": r"^media-analysis/[a-z]+$"},
-                "analyzer_version": {"type": "string", "description": "package version that measured this observation (provenance; == the version in source)"},
-                "algorithm_version": {"type": "string", "pattern": r"^[0-9]+$",
-                                      "description": "the analyzer's measurement version; enters the identity and the cache key instead of the package version"},
-                "parameters": {"type": "object", "description": "effective parameters (defaults applied)"},
+                "analyzer_version": {
+                    "type": "string",
+                    "description": "package version that measured this observation (provenance; == the version in source)",
+                },
+                "algorithm_version": {
+                    "type": "string",
+                    "pattern": r"^[0-9]+$",
+                    "description": "the analyzer's measurement version; enters the identity and the cache key instead of the package version",
+                },
+                "parameters": {
+                    "type": "object",
+                    "description": "effective parameters (defaults applied)",
+                },
                 "seconds": {"type": "number", "minimum": 0},
             },
         },
         "asset": {
-            "type": "object", "additionalProperties": False,
+            "type": "object",
+            "additionalProperties": False,
             "required": ["path", "fingerprint", "size"],
-            "properties": {"path": {"type": "string"}, "fingerprint": {"type": "string", "pattern": r"^[0-9a-f]{64}$"}, "size": {"type": "integer", "minimum": 0}},
+            "properties": {
+                "path": {"type": "string"},
+                "fingerprint": {"type": "string", "pattern": r"^[0-9a-f]{64}$"},
+                "size": {"type": "integer", "minimum": 0},
+            },
         },
     },
 }
 
 ERROR_SCHEMA: Dict[str, Any] = {
-    "type": "object", "additionalProperties": False, "required": ["code", "message", "details"],
-    "properties": {"code": {"type": "string"}, "message": {"type": "string"}, "details": {"type": "object"},
-                   "class": {"type": "string", "enum": ["FATAL", "RETRYABLE", "BLOCKED"],
-                             "description": "retry guidance: FATAL never retry unchanged; RETRYABLE bounded retry may succeed; BLOCKED environment / budget must change"}},
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["code", "message", "details"],
+    "properties": {
+        "code": {"type": "string"},
+        "message": {"type": "string"},
+        "details": {"type": "object"},
+        "class": {
+            "type": "string",
+            "enum": ["FATAL", "RETRYABLE", "BLOCKED"],
+            "description": "retry guidance: FATAL never retry unchanged; RETRYABLE bounded retry may succeed; BLOCKED environment / budget must change",
+        },
+    },
 }
 
 RESULT_SCHEMA: Dict[str, Any] = {
-    "type": "object", "additionalProperties": False,
+    "type": "object",
+    "additionalProperties": False,
     "required": ["analysis_id", "asset_id", "kind", "status", "cache", "usage"],
     "properties": {
         "analysis_id": {"type": ["string", "null"]},
@@ -115,37 +212,113 @@ RESULT_SCHEMA: Dict[str, Any] = {
         "kind": {"type": ["string", "null"]},
         "status": {"type": "string", "enum": list(RESULT_STATUSES)},
         "observation": {"$ref": "#/observation"},
-        "plan": {"type": "object", "description": "dry-run only: analyzer, capabilities and operations that would run"},
+        "plan": {
+            "type": "object",
+            "description": "dry-run only: analyzer, capabilities and operations that would run",
+        },
         "error": ERROR_SCHEMA,
         "error_kind": {"type": "string"},
         "error_class": {"type": "string", "enum": ["FATAL", "RETRYABLE", "BLOCKED"]},
-        "cache": {"type": "object", "additionalProperties": False, "required": ["status", "policy", "key"],
-                  "properties": {"status": {"type": "string", "enum": list(CACHE_STATUSES)}, "policy": {"type": "string", "enum": list(CACHE_POLICIES)},
-                                 "key": {"type": ["string", "null"], "pattern": r"^[0-9a-f]{64}$"}}},
-        "usage": {"type": "object", "additionalProperties": False, "required": ["analyzer_calls", "seconds", "operations"],
-                  "properties": {"analyzer_calls": {"type": "integer", "minimum": 0, "maximum": 1}, "seconds": {"type": "number", "minimum": 0},
-                                 "operations": {"type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["executable", "purpose"],
-                                                                            "properties": {"executable": {"type": "string", "enum": ["ffprobe", "ffmpeg"]}, "purpose": {"type": "string"}}}}}},
+        "cache": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["status", "policy", "key"],
+            "properties": {
+                "status": {"type": "string", "enum": list(CACHE_STATUSES)},
+                "policy": {"type": "string", "enum": list(CACHE_POLICIES)},
+                "key": {"type": ["string", "null"], "pattern": r"^[0-9a-f]{64}$"},
+            },
+        },
+        "usage": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["analyzer_calls", "seconds", "operations"],
+            "properties": {
+                "analyzer_calls": {"type": "integer", "minimum": 0, "maximum": 1},
+                "seconds": {"type": "number", "minimum": 0},
+                "operations": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["executable", "purpose"],
+                        "properties": {
+                            "executable": {
+                                "type": "string",
+                                "enum": ["ffprobe", "ffmpeg"],
+                            },
+                            "purpose": {"type": "string"},
+                        },
+                    },
+                },
+            },
+        },
     },
 }
 
 RESPONSE_SCHEMA: Dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "media-analysis response", "version": RESPONSE_SCHEMA_VERSION,
+    "title": "media-analysis response",
+    "version": RESPONSE_SCHEMA_VERSION,
     "description": "stdout document of `media-analysis run ... --json` (also used for `analyze` / `probe` with --json)",
-    "type": "object", "additionalProperties": False,
-    "required": ["schema", "skill", "status", "results", "observations", "usage", "budget", "warnings"],
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "schema",
+        "skill",
+        "status",
+        "results",
+        "observations",
+        "usage",
+        "budget",
+        "warnings",
+    ],
     "properties": {
-        "schema": {"type": "string", "const": f"media-analysis/response@{RESPONSE_SCHEMA_VERSION}"},
-        "skill": {"type": "object", "additionalProperties": False, "required": ["id", "version"], "properties": {"id": {"type": "string", "const": "media-analysis"}, "version": {"type": "string"}}},
-        "status": {"type": "string", "enum": list(RESPONSE_STATUSES), "description": "ok: every result ok; partial: some; error: none (or the batch itself was rejected)"},
+        "schema": {
+            "type": "string",
+            "const": f"media-analysis/response@{RESPONSE_SCHEMA_VERSION}",
+        },
+        "skill": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["id", "version"],
+            "properties": {
+                "id": {"type": "string", "const": "media-analysis"},
+                "version": {"type": "string"},
+            },
+        },
+        "status": {
+            "type": "string",
+            "enum": list(RESPONSE_STATUSES),
+            "description": "ok: every result ok; partial: some; error: none (or the batch itself was rejected)",
+        },
         "dry_run": {"type": "boolean"},
         "results": {"type": "array", "items": {"$ref": "#/result"}},
-        "observations": {"type": "array", "items": {"$ref": "#/observation"}, "description": "observations of the ok results, in request order"},
-        "usage": {"type": "object", "additionalProperties": False, "required": ["analyzer_calls", "cache_hits", "seconds"],
-                  "properties": {"analyzer_calls": {"type": "integer", "minimum": 0}, "cache_hits": {"type": "integer", "minimum": 0}, "seconds": {"type": "number", "minimum": 0}}},
-        "budget": {"type": "object", "additionalProperties": False, "required": ["calls", "seconds", "budget"],
-                   "properties": {"calls": {"type": "integer"}, "seconds": {"type": "number"}, "budget": BUDGET_SCHEMA}},
+        "observations": {
+            "type": "array",
+            "items": {"$ref": "#/observation"},
+            "description": "observations of the ok results, in request order",
+        },
+        "usage": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["analyzer_calls", "cache_hits", "seconds"],
+            "properties": {
+                "analyzer_calls": {"type": "integer", "minimum": 0},
+                "cache_hits": {"type": "integer", "minimum": 0},
+                "seconds": {"type": "number", "minimum": 0},
+            },
+        },
+        "budget": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["calls", "seconds", "budget"],
+            "properties": {
+                "calls": {"type": "integer"},
+                "seconds": {"type": "number"},
+                "budget": BUDGET_SCHEMA,
+            },
+        },
         "warnings": {"type": "array", "items": {"type": "string"}},
         "error": ERROR_SCHEMA,
         "error_kind": {"type": "string"},
@@ -155,7 +328,12 @@ RESPONSE_SCHEMA: Dict[str, Any] = {
 
 
 # ---- minimal validator
-def validate(doc: Any, schema: Dict[str, Any], refs: Dict[str, Dict[str, Any]] = None, path: str = "$") -> List[str]:
+def validate(
+    doc: Any,
+    schema: Dict[str, Any],
+    refs: Dict[str, Dict[str, Any]] = None,
+    path: str = "$",
+) -> List[str]:
     """Return a list of violations (empty = valid). `refs` maps "#/name" to sub-schemas."""
     refs = refs or {}
     if "$ref" in schema:
@@ -219,5 +397,11 @@ def _is_type(doc: Any, t: str) -> bool:
     raise ValueError(f"unknown schema type {t}")
 
 
-def contract_refs(kinds: List[str], parameter_schemas: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    return {"#/request": request_schema(kinds, parameter_schemas), "#/observation": OBSERVATION_SCHEMA, "#/result": RESULT_SCHEMA}
+def contract_refs(
+    kinds: List[str], parameter_schemas: Dict[str, Any]
+) -> Dict[str, Dict[str, Any]]:
+    return {
+        "#/request": request_schema(kinds, parameter_schemas),
+        "#/observation": OBSERVATION_SCHEMA,
+        "#/result": RESULT_SCHEMA,
+    }

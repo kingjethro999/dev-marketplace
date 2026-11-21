@@ -4,7 +4,9 @@ This is where the actual picture is drawn, and it never touches ffmpeg: it is a 
 raster pipeline over Pillow (canvas fill, paste, crop, resize, ImageDraw text). There is no filter
 string, no shell, no arbitrary code path; every operation here corresponds to exactly one validated
 field of a ThumbnailElement (model.py). Elements are drawn in z_index order (ties broken by their
-position in the document, stable sort) so the caller's stacking is the only stacking that happens."""
+position in the document, stable sort) so the caller's stacking is the only stacking that happens.
+"""
+
 from __future__ import annotations
 
 import math
@@ -20,9 +22,9 @@ from .model import Crop, ImageContent, TextContent, ThumbnailDocument, Thumbnail
 def _hex_color(value: str) -> tuple:
     v = value.lstrip("#")
     if len(v) == 6:
-        r, g, b = (int(v[i:i + 2], 16) for i in (0, 2, 4))
+        r, g, b = (int(v[i : i + 2], 16) for i in (0, 2, 4))
         return (r, g, b, 255)
-    r, g, b, a = (int(v[i:i + 2], 16) for i in (0, 2, 4, 6))
+    r, g, b, a = (int(v[i : i + 2], 16) for i in (0, 2, 4, 6))
     return (r, g, b, a)
 
 
@@ -38,12 +40,21 @@ def _apply_opacity(img: "Image.Image", opacity: float) -> "Image.Image":
 def _apply_crop(img: "Image.Image", crop: Crop, where: str) -> "Image.Image":
     w, h = img.size
     if crop.x + crop.width > w or crop.y + crop.height > h:
-        raise ThumbnailError("INVALID_REQUEST", f"{where}.crop [{crop.x},{crop.y},{crop.width}x{crop.height}] exceeds the source image size ({w}x{h})",
-                             {"field": f"{where}.crop", "reason": "crop_out_of_bounds", "image_size": {"width": w, "height": h}})
+        raise ThumbnailError(
+            "INVALID_REQUEST",
+            f"{where}.crop [{crop.x},{crop.y},{crop.width}x{crop.height}] exceeds the source image size ({w}x{h})",
+            {
+                "field": f"{where}.crop",
+                "reason": "crop_out_of_bounds",
+                "image_size": {"width": w, "height": h},
+            },
+        )
     return img.crop((crop.x, crop.y, crop.x + crop.width, crop.y + crop.height))
 
 
-def _apply_fit(img: "Image.Image", target_w: int, target_h: int, fit: str) -> "Image.Image":
+def _apply_fit(
+    img: "Image.Image", target_w: int, target_h: int, fit: str
+) -> "Image.Image":
     """Resize `img` for placement in a target_w x target_h box.
     - fill:    stretch to exactly the box (aspect not preserved)
     - cover:   scale to fully cover the box, cropping the overflow, centred
@@ -71,31 +82,52 @@ def _apply_fit(img: "Image.Image", target_w: int, target_h: int, fit: str) -> "I
 def _rotate(img: "Image.Image", degrees: int) -> "Image.Image":
     if degrees == 0:
         return img
-    return img.rotate(-degrees, expand=True)   # PIL rotates counter-clockwise; this skill's rotation is clockwise
+    return img.rotate(
+        -degrees, expand=True
+    )  # PIL rotates counter-clockwise; this skill's rotation is clockwise
 
 
 class LayerRecorder:
     """Collects every composite the renderer makes, in order, as (image, dest, meta): exactly the operations that
-    built the canvas, so replaying them over the background reproduces it pixel for pixel (ADR-17)."""
+    built the canvas, so replaying them over the background reproduces it pixel for pixel (ADR-17).
+    """
 
     def __init__(self) -> None:
         self.ops: List[Tuple["Image.Image", Tuple[int, int], Dict[str, Any]]] = []
         self.meta: Dict[str, Any] = {}
-        self.base: Optional["Image.Image"] = None   # the canvas fill, before any element
+        self.base: Optional["Image.Image"] = None  # the canvas fill, before any element
 
-    def composite(self, canvas: "Image.Image", src: "Image.Image", dest: Tuple[int, int], role: str) -> None:
+    def composite(
+        self,
+        canvas: "Image.Image",
+        src: "Image.Image",
+        dest: Tuple[int, int],
+        role: str,
+    ) -> None:
         canvas.alpha_composite(src, dest=dest)
         self.ops.append((src, dest, {**self.meta, "role": role}))
 
 
-def _composite(canvas: "Image.Image", src: "Image.Image", dest: Tuple[int, int], recorder: Optional[LayerRecorder], role: str) -> None:
+def _composite(
+    canvas: "Image.Image",
+    src: "Image.Image",
+    dest: Tuple[int, int],
+    recorder: Optional[LayerRecorder],
+    role: str,
+) -> None:
     if recorder is None:
         canvas.alpha_composite(src, dest=dest)
     else:
         recorder.composite(canvas, src, dest, role)
 
 
-def draw_image_element(canvas: "Image.Image", content: ImageContent, source: "Image.Image", where: str, recorder: Optional[LayerRecorder] = None) -> None:
+def draw_image_element(
+    canvas: "Image.Image",
+    content: ImageContent,
+    source: "Image.Image",
+    where: str,
+    recorder: Optional[LayerRecorder] = None,
+) -> None:
     img = source.convert("RGBA")
     if content.crop is not None:
         img = _apply_crop(img, content.crop, where)
@@ -110,7 +142,12 @@ def draw_image_element(canvas: "Image.Image", content: ImageContent, source: "Im
     _composite(canvas, img, (x, y), recorder, "image")
 
 
-def _measure_lines(draw: "ImageDraw.ImageDraw", lines: List[str], font: "ImageFont.FreeTypeFont", line_spacing: float) -> Any:
+def _measure_lines(
+    draw: "ImageDraw.ImageDraw",
+    lines: List[str],
+    font: "ImageFont.FreeTypeFont",
+    line_spacing: float,
+) -> Any:
     ascent, descent = font.getmetrics()
     line_h = int(round((ascent + descent) * line_spacing))
     widths = []
@@ -120,11 +157,17 @@ def _measure_lines(draw: "ImageDraw.ImageDraw", lines: List[str], font: "ImageFo
     return widths, line_h, ascent, descent
 
 
-def load_font(content: TextContent, font_file: ResolvedFont) -> "ImageFont.FreeTypeFont":
+def load_font(
+    content: TextContent, font_file: ResolvedFont
+) -> "ImageFont.FreeTypeFont":
     return ImageFont.truetype(font_file.path, content.font_size, index=font_file.index)
 
 
-def _layout(draw: "ImageDraw.ImageDraw", content: TextContent, font: "ImageFont.FreeTypeFont") -> Tuple[List[str], List[int], int, float, float, int, int, List[Tuple[float, float]]]:
+def _layout(
+    draw: "ImageDraw.ImageDraw", content: TextContent, font: "ImageFont.FreeTypeFont"
+) -> Tuple[
+    List[str], List[int], int, float, float, int, int, List[Tuple[float, float]]
+]:
     """Where every line of a text element goes: the one layout both drawing and measuring use, so a
     measured box is exactly the box that is drawn."""
     lines = content.text.split("\n")
@@ -151,7 +194,9 @@ def _layout(draw: "ImageDraw.ImageDraw", content: TextContent, font: "ImageFont.
     return lines, widths, line_h, ax, ay, block_w, block_h, origins
 
 
-def text_box(content: TextContent, font_file: ResolvedFont) -> Tuple[int, int, int, int]:
+def text_box(
+    content: TextContent, font_file: ResolvedFont
+) -> Tuple[int, int, int, int]:
     """The canvas rectangle (x0, y0, x1, y1; x1/y1 exclusive) a text element can paint: the union of its
     layout block, its background box, and every glyph's ink including stroke and shadow, rounded
     outward to whole pixels. Measured with the same layout and font as `draw_text_element`, so nothing
@@ -162,60 +207,130 @@ def text_box(content: TextContent, font_file: ResolvedFont) -> Tuple[int, int, i
     boxes = [(ax, ay, ax + block_w, ay + block_h)]
     if content.background is not None:
         pad = content.background.padding
-        boxes.append((round(ax - pad), round(ay - pad), round(ax + block_w + pad) + 1, round(ay + block_h + pad) + 1))
+        boxes.append(
+            (
+                round(ax - pad),
+                round(ay - pad),
+                round(ax + block_w + pad) + 1,
+                round(ay + block_h + pad) + 1,
+            )
+        )
     stroke = content.stroke.width if content.stroke is not None else 0
     for ln, (lx, ly) in zip(lines, origins):
         if not ln:
             continue
         boxes.append(draw.textbbox((lx, ly), ln, font=font, stroke_width=stroke))
         if content.shadow is not None:
-            boxes.append(draw.textbbox((lx + content.shadow.offset_x, ly + content.shadow.offset_y), ln, font=font))
-    return (math.floor(min(b[0] for b in boxes)), math.floor(min(b[1] for b in boxes)),
-            math.ceil(max(b[2] for b in boxes)), math.ceil(max(b[3] for b in boxes)))
+            boxes.append(
+                draw.textbbox(
+                    (lx + content.shadow.offset_x, ly + content.shadow.offset_y),
+                    ln,
+                    font=font,
+                )
+            )
+    return (
+        math.floor(min(b[0] for b in boxes)),
+        math.floor(min(b[1] for b in boxes)),
+        math.ceil(max(b[2] for b in boxes)),
+        math.ceil(max(b[3] for b in boxes)),
+    )
 
 
-def draw_text_element(canvas: "Image.Image", content: TextContent, font_file: ResolvedFont, recorder: Optional[LayerRecorder] = None) -> None:
+def draw_text_element(
+    canvas: "Image.Image",
+    content: TextContent,
+    font_file: ResolvedFont,
+    recorder: Optional[LayerRecorder] = None,
+) -> None:
     draw = ImageDraw.Draw(canvas)
     font = load_font(content, font_file)
     lines, _, _, ax, ay, block_w, block_h, origins = _layout(draw, content, font)
 
     if content.background is not None:
         pad = content.background.padding
-        box = (round(ax - pad), round(ay - pad), round(ax + block_w + pad), round(ay + block_h + pad))
+        box = (
+            round(ax - pad),
+            round(ay - pad),
+            round(ax + block_w + pad),
+            round(ay + block_h + pad),
+        )
         overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        ImageDraw.Draw(overlay).rectangle(box, fill=_hex_color(content.background.color))
-        _composite(canvas, _apply_opacity(overlay, content.opacity), (0, 0), recorder, "text_background")
+        ImageDraw.Draw(overlay).rectangle(
+            box, fill=_hex_color(content.background.color)
+        )
+        _composite(
+            canvas,
+            _apply_opacity(overlay, content.opacity),
+            (0, 0),
+            recorder,
+            "text_background",
+        )
 
     text_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     tdraw = ImageDraw.Draw(text_layer)
     fill = _hex_color(content.color)
     for ln, (lx, ly) in zip(lines, origins):
         if content.shadow is not None:
-            tdraw.text((lx + content.shadow.offset_x, ly + content.shadow.offset_y), ln, font=font, fill=_hex_color(content.shadow.color))
+            tdraw.text(
+                (lx + content.shadow.offset_x, ly + content.shadow.offset_y),
+                ln,
+                font=font,
+                fill=_hex_color(content.shadow.color),
+            )
         if content.stroke is not None and content.stroke.width > 0:
-            tdraw.text((lx, ly), ln, font=font, fill=fill, stroke_width=content.stroke.width, stroke_fill=_hex_color(content.stroke.color))
+            tdraw.text(
+                (lx, ly),
+                ln,
+                font=font,
+                fill=fill,
+                stroke_width=content.stroke.width,
+                stroke_fill=_hex_color(content.stroke.color),
+            )
         else:
             tdraw.text((lx, ly), ln, font=font, fill=fill)
-    _composite(canvas, _apply_opacity(text_layer, content.opacity), (0, 0), recorder, "text")
+    _composite(
+        canvas, _apply_opacity(text_layer, content.opacity), (0, 0), recorder, "text"
+    )
 
 
-def render_document(document: ThumbnailDocument, images: Dict[str, "Image.Image"], fonts_used: Dict[str, ResolvedFont],
-                    recorder: Optional[LayerRecorder] = None) -> "Image.Image":
+def render_document(
+    document: ThumbnailDocument,
+    images: Dict[str, "Image.Image"],
+    fonts_used: Dict[str, ResolvedFont],
+    recorder: Optional[LayerRecorder] = None,
+) -> "Image.Image":
     """`images` maps asset_id -> an already-opened, already-validated Pillow Image (the still image
     itself, or the decoded video frame). `fonts_used` maps font_id -> ResolvedFont. Pure function:
-    no file I/O, no ffmpeg, no randomness; the same inputs always draw the same pixels."""
-    canvas = Image.new("RGBA", (document.canvas.width, document.canvas.height), _hex_color(document.canvas.background))
+    no file I/O, no ffmpeg, no randomness; the same inputs always draw the same pixels.
+    """
+    canvas = Image.new(
+        "RGBA",
+        (document.canvas.width, document.canvas.height),
+        _hex_color(document.canvas.background),
+    )
     if recorder is not None:
         recorder.base = canvas.copy()
-    ordered: List[ThumbnailElement] = sorted(enumerate(document.elements), key=lambda pair: (pair[1].z_index, pair[0]))
+    ordered: List[ThumbnailElement] = sorted(
+        enumerate(document.elements), key=lambda pair: (pair[1].z_index, pair[0])
+    )
     for _, element in ordered:
         if recorder is not None:
-            recorder.meta = {"element_id": element.element_id, "type": element.type, "z_index": element.z_index}
+            recorder.meta = {
+                "element_id": element.element_id,
+                "type": element.type,
+                "z_index": element.z_index,
+            }
         if element.type == "image":
             content = element.image
             assert content is not None
             source = images[content.asset_id]
-            draw_image_element(canvas, content, source, f"elements[{element.element_id}].image", recorder)
+            draw_image_element(
+                canvas,
+                content,
+                source,
+                f"elements[{element.element_id}].image",
+                recorder,
+            )
         else:
             content = element.text
             assert content is not None
@@ -223,4 +338,11 @@ def render_document(document: ThumbnailDocument, images: Dict[str, "Image.Image"
     return canvas
 
 
-__all__ = ["LayerRecorder", "render_document", "draw_image_element", "draw_text_element", "text_box", "load_font"]
+__all__ = [
+    "LayerRecorder",
+    "render_document",
+    "draw_image_element",
+    "draw_text_element",
+    "text_box",
+    "load_font",
+]

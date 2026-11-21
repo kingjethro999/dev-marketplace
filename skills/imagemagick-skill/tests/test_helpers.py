@@ -13,7 +13,16 @@ from _common import which_magick  # noqa: E402
 
 class ArgumentTypeTests(unittest.TestCase):
     def test_color_arg_accepts_names_hex_and_functions(self):
-        for ok in ("white", "none", "gray50", "#fff", "#ffffff80", "rgb(1,2,3)", "rgba(1, 2, 3, 0.5)", "hsl(120,50%,50%)"):
+        for ok in (
+            "white",
+            "none",
+            "gray50",
+            "#fff",
+            "#ffffff80",
+            "rgb(1,2,3)",
+            "rgba(1, 2, 3, 0.5)",
+            "hsl(120,50%,50%)",
+        ):
             self.assertEqual(_common.color_arg(ok), ok)
 
     def test_color_arg_refuses_anything_else(self):
@@ -47,7 +56,10 @@ class ArgumentTypeTests(unittest.TestCase):
         self.assertFalse(_common.needs_cjk_font("© 2026 kajisho5"))
 
 
-@unittest.skipUnless(which_magick() and _common.find_fonts()["default"], "requires ImageMagick and a font")
+@unittest.skipUnless(
+    which_magick() and _common.find_fonts()["default"],
+    "requires ImageMagick and a font",
+)
 class EscapedTextRendersLiterallyTests(unittest.TestCase):
     """ImageMagick expands %-escapes and backslashes in label: text, and reads a file when
     the text starts with '@'. Escaped text must render exactly its own characters; widths
@@ -56,9 +68,24 @@ class EscapedTextRendersLiterallyTests(unittest.TestCase):
     def width(self, text):
         font = _common.find_fonts()["default"]
         out = subprocess.run(
-            [which_magick(), "-background", "white", "-fill", "black", "-font", font, "-pointsize", "40",
-             f"label:{text}", "-format", "%w", "info:"],
-            capture_output=True, text=True, check=True,
+            [
+                which_magick(),
+                "-background",
+                "white",
+                "-fill",
+                "black",
+                "-font",
+                font,
+                "-pointsize",
+                "40",
+                f"label:{text}",
+                "-format",
+                "%w",
+                "info:",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout
         return int(out)
 
@@ -67,14 +94,23 @@ class EscapedTextRendersLiterallyTests(unittest.TestCase):
             f.write("THIS FILE MUST NOT BE RENDERED " * 20)
         self.addCleanup(os.remove, f.name)
         literal = self.width(_common.escape_magick_text("@" + f.name))
-        reference = self.width("a@" + _common.escape_magick_text(f.name)) - self.width("a")
+        reference = self.width("a@" + _common.escape_magick_text(f.name)) - self.width(
+            "a"
+        )
         self.assertLess(abs(literal - reference), 4)
 
     def test_percent_and_backslash_are_literal(self):
-        self.assertLess(abs(self.width(_common.escape_magick_text("100%")) - (self.width("100%%"))), 2)
+        self.assertLess(
+            abs(self.width(_common.escape_magick_text("100%")) - (self.width("100%%"))),
+            2,
+        )
         with_escape = self.width(_common.escape_magick_text("%w"))
-        self.assertGreater(with_escape, self.width("w"))  # "%w" stays two glyphs, not the image width
-        self.assertEqual(self.width(_common.escape_magick_text("a\\b")), self.width("a\\\\b"))
+        self.assertGreater(
+            with_escape, self.width("w")
+        )  # "%w" stays two glyphs, not the image width
+        self.assertEqual(
+            self.width(_common.escape_magick_text("a\\b")), self.width("a\\\\b")
+        )
 
 
 if __name__ == "__main__":

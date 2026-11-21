@@ -27,13 +27,25 @@ Examples:
   python3 cropdetect.py input.mp4
   python3 cropdetect.py input.mp4 --seconds 30 --limit 0.15
 """
+
 import argparse
 import re
 import sys
 from collections import Counter
 from typing import Dict, List, Optional, Tuple
 
-from _common import add_common, apply_common, die, emit, info, print_json, probe, require_tool, run_analysis, decode_gray_frames
+from _common import (
+    add_common,
+    apply_common,
+    die,
+    emit,
+    info,
+    print_json,
+    probe,
+    require_tool,
+    run_analysis,
+    decode_gray_frames,
+)
 from _common.emit import note, warn
 from _common.probe import PROBED_VIDEO, display_size, square_pixels, square_pixels_note
 
@@ -43,12 +55,15 @@ MOTION_CENTRE_W, MOTION_CENTRE_H = 64, 36
 CROP_RE = re.compile(r"crop=(\d+):(\d+):(\d+):(\d+)")
 
 
-def round_rect(rect: Tuple[int, int, int, int], round_to: int, full: Tuple[int, int]) -> Tuple[int, int, int, int]:
+def round_rect(
+    rect: Tuple[int, int, int, int], round_to: int, full: Tuple[int, int]
+) -> Tuple[int, int, int, int]:
     """One measured rectangle (w, h, x, y) as it is reported: the whole frame when the picture
     reaches every edge (cropdetect's own round=2 reading of an odd side is one pixel short of it),
     else rounded down to a multiple of `round_to` and re-centred the way cropdetect's round option
     does it. Rounding inside the filter made a bar-free 1920x1080 read 1920x1072 at the default 16
-    (#403): 1080 is not a multiple of 16, and the rounded size was then compared with the source's."""
+    (#403): 1080 is not a multiple of 16, and the rounded size was then compared with the source's.
+    """
     w, h, x, y = rect
     fw, fh = full
     if fw and fh and x == 0 and y == 0 and w >= fw - fw % 2 and h >= fh - fh % 2:
@@ -56,11 +71,25 @@ def round_rect(rect: Tuple[int, int, int, int], round_to: int, full: Tuple[int, 
     # the filter's own reading of its round option: 1 is 16, an odd value is doubled
     round_to = 16 if round_to <= 1 else round_to * 2 if round_to % 2 else round_to
     shrink_w, shrink_h = w % round_to, h % round_to
-    return w - shrink_w, h - shrink_h, x + ((shrink_w // 2 + 1) & ~1), y + ((shrink_h // 2 + 1) & ~1)
+    return (
+        w - shrink_w,
+        h - shrink_h,
+        x + ((shrink_w // 2 + 1) & ~1),
+        y + ((shrink_h // 2 + 1) & ~1),
+    )
 
 
-def detect(path: str, seconds: float, samples: int, limit: float, round_to: int, duration: float,
-           failed: "Optional[List[Dict]]" = None, square: str = "", full: Tuple[int, int] = (0, 0)) -> List[Tuple[int, int, int, int]]:
+def detect(
+    path: str,
+    seconds: float,
+    samples: int,
+    limit: float,
+    round_to: int,
+    duration: float,
+    failed: "Optional[List[Dict]]" = None,
+    square: str = "",
+    full: Tuple[int, int] = (0, 0),
+) -> List[Tuple[int, int, int, int]]:
     """Crop rectangles from `samples` windows spread over the file. A window ffmpeg cannot decode
     is skipped, and appended to `failed` as {start, seconds, error} when the caller passes a list,
     so the result can say how many of the readings it stands on. `square` is the source's
@@ -72,26 +101,73 @@ def detect(path: str, seconds: float, samples: int, limit: float, round_to: int,
     rects: List[Tuple[int, int, int, int]] = []
     failures: List[List[str]] = []
     for i in range(samples):
-        start = 0.0 if duration <= 0 else (duration - per_window) * i / max(1, samples - 1) if samples > 1 else 0.0
+        start = (
+            0.0
+            if duration <= 0
+            else (
+                (duration - per_window) * i / max(1, samples - 1)
+                if samples > 1
+                else 0.0
+            )
+        )
         start = max(0.0, start)
-        cmd = [ffmpeg, "-hide_banner", "-nostdin", "-ss", f"{start:.3f}", "-i", path, "-t", f"{per_window:.3f}",
-               "-map", f"0:{PROBED_VIDEO}", "-vf", (square + "," if square else "") + f"cropdetect=limit={limit:g}:round=2:reset=1", "-f", "null", "-"]
+        cmd = [
+            ffmpeg,
+            "-hide_banner",
+            "-nostdin",
+            "-ss",
+            f"{start:.3f}",
+            "-i",
+            path,
+            "-t",
+            f"{per_window:.3f}",
+            "-map",
+            f"0:{PROBED_VIDEO}",
+            "-vf",
+            (square + "," if square else "")
+            + f"cropdetect=limit={limit:g}:round=2:reset=1",
+            "-f",
+            "null",
+            "-",
+        ]
         proc = run_analysis(cmd, check=False)
         if proc.returncode != 0:
             # One window ffmpeg cannot decode (a damaged stretch) is skipped; the other windows
             # still measure. Only when every window fails is there nothing to report.
             failures.append(proc.stderr.strip().splitlines()[-1:] or ["?"])
             if failed is not None:
-                failed.append({"start": round(start, 3), "seconds": round(per_window, 3), "error": failures[-1][0][:300]})
+                failed.append(
+                    {
+                        "start": round(start, 3),
+                        "seconds": round(per_window, 3),
+                        "error": failures[-1][0][:300],
+                    }
+                )
             continue
         for m in CROP_RE.finditer(proc.stderr):
-            rects.append(round_rect((int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4))), round_to, full))
+            rects.append(
+                round_rect(
+                    (
+                        int(m.group(1)),
+                        int(m.group(2)),
+                        int(m.group(3)),
+                        int(m.group(4)),
+                    ),
+                    round_to,
+                    full,
+                )
+            )
     if failures and len(failures) == samples:
-        die(f"cropdetect could not decode any of the {samples} sampled windows: {failures[-1][0][:300]}", kind="ffmpeg")
+        die(
+            f"cropdetect could not decode any of the {samples} sampled windows: {failures[-1][0][:300]}",
+            kind="ffmpeg",
+        )
     return rects
 
 
-def motion_centre(path: str, seconds: float, samples: int, duration: float, sw: int, sh: int) -> List[Dict]:
+def motion_centre(
+    path: str, seconds: float, samples: int, duration: float, sw: int, sh: int
+) -> List[Dict]:
     """Per-second motion centroid: {time, x, y, x_frac, y_frac} -- a report-only measurement,
     the same sampled-window approach as detect() above. x/y are pixel coordinates in the SOURCE
     frame (consistent with the --round crop rectangle this tool already reports in source
@@ -105,10 +181,25 @@ def motion_centre(path: str, seconds: float, samples: int, duration: float, sw: 
     cw, ch = MOTION_CENTRE_W / cell, MOTION_CENTRE_H / cell
     out: List[Dict] = []
     for i in range(samples):
-        start = 0.0 if duration <= 0 else (duration - per_window) * i / max(1, samples - 1) if samples > 1 else 0.0
+        start = (
+            0.0
+            if duration <= 0
+            else (
+                (duration - per_window) * i / max(1, samples - 1)
+                if samples > 1
+                else 0.0
+            )
+        )
         start = max(0.0, start)
-        frames = decode_gray_frames(path, MOTION_CENTRE_FPS, MOTION_CENTRE_W, MOTION_CENTRE_H,
-                                     start=start, seconds=per_window, check=False)
+        frames = decode_gray_frames(
+            path,
+            MOTION_CENTRE_FPS,
+            MOTION_CENTRE_W,
+            MOTION_CENTRE_H,
+            start=start,
+            seconds=per_window,
+            check=False,
+        )
         for k in range(len(frames) - 1):
             prev, cur = frames[k], frames[k + 1]
             wsum = wx = wy = 0.0
@@ -128,26 +219,69 @@ def motion_centre(path: str, seconds: float, samples: int, duration: float, sw: 
                     wy += diff * cy
             t = start + (k + 1) / MOTION_CENTRE_FPS
             if wsum <= 0:
-                out.append({"time": round(t, 2), "x": None, "y": None, "x_frac": None, "y_frac": None, "motion": 0.0})
+                out.append(
+                    {
+                        "time": round(t, 2),
+                        "x": None,
+                        "y": None,
+                        "x_frac": None,
+                        "y_frac": None,
+                        "motion": 0.0,
+                    }
+                )
                 continue
             xf, yf = wx / wsum, wy / wsum
-            out.append({"time": round(t, 2), "x": round(xf * sw), "y": round(yf * sh),
-                        "x_frac": round(xf, 3), "y_frac": round(yf, 3), "motion": round(wsum / (MOTION_CENTRE_W * MOTION_CENTRE_H), 2)})
+            out.append(
+                {
+                    "time": round(t, 2),
+                    "x": round(xf * sw),
+                    "y": round(yf * sh),
+                    "x_frac": round(xf, 3),
+                    "y_frac": round(yf, 3),
+                    "motion": round(wsum / (MOTION_CENTRE_W * MOTION_CENTRE_H), 2),
+                }
+            )
     out.sort(key=lambda r: r["time"])
     return out
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("--seconds", type=float, default=10.0, help="total seconds of footage to sample across the file (default 10)")
-    ap.add_argument("--samples", type=int, default=5, help="number of windows spread across the file (default 5)")
-    ap.add_argument("--limit", type=float, default=0.0941176, help="black-pixel threshold, 0..1 (default ~0.094, cropdetect's own default)")
-    ap.add_argument("--round", type=int, default=16, dest="round_to", help="a detected crop's width/height are rounded down to a multiple of this (default 16); a picture that reaches every edge is reported as the whole frame, unrounded")
-    ap.add_argument("--motion-centre", action="store_true",
-                    help="report the motion centroid per second, sampled the same way as the crop "
-                         "detection above (report only -- this tool never picks a reframe, it hands "
-                         "the calling agent numbers to reframe with)")
+    ap.add_argument(
+        "--seconds",
+        type=float,
+        default=10.0,
+        help="total seconds of footage to sample across the file (default 10)",
+    )
+    ap.add_argument(
+        "--samples",
+        type=int,
+        default=5,
+        help="number of windows spread across the file (default 5)",
+    )
+    ap.add_argument(
+        "--limit",
+        type=float,
+        default=0.0941176,
+        help="black-pixel threshold, 0..1 (default ~0.094, cropdetect's own default)",
+    )
+    ap.add_argument(
+        "--round",
+        type=int,
+        default=16,
+        dest="round_to",
+        help="a detected crop's width/height are rounded down to a multiple of this (default 16); a picture that reaches every edge is reported as the whole frame, unrounded",
+    )
+    ap.add_argument(
+        "--motion-centre",
+        action="store_true",
+        help="report the motion centroid per second, sampled the same way as the crop "
+        "detection above (report only -- this tool never picks a reframe, it hands "
+        "the calling agent numbers to reframe with)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -178,29 +312,58 @@ def main() -> int:
     # code itself, so --limit 1, the top of the documented 0..1 range, was read as code 1 (nearly
     # nothing is black) where 0.999 reads as nearly everything. The top of the range is written
     # as the top code of the source's bit depth (255 for 8 bits, 1023 for 10).
-    limit = args.limit if args.limit < 1 else float((1 << int(meta["video"].get("bit_depth") or 8)) - 1)
-    rects = detect(args.input, args.seconds, args.samples, limit, args.round_to, duration, failed,
-                   square_pixels(meta["video"]), (sw, sh))
+    limit = (
+        args.limit
+        if args.limit < 1
+        else float((1 << int(meta["video"].get("bit_depth") or 8)) - 1)
+    )
+    rects = detect(
+        args.input,
+        args.seconds,
+        args.samples,
+        limit,
+        args.round_to,
+        duration,
+        failed,
+        square_pixels(meta["video"]),
+        (sw, sh),
+    )
     # windows_failed: a window ffmpeg could not decode was skipped without a word, so a
     # crop measured on one window of five read as well-founded as one measured on all five
-    result: Dict = {"file": args.input, "source_width": sw, "source_height": sh,
-                    "windows": args.samples, "windows_failed": len(failed)}
+    result: Dict = {
+        "file": args.input,
+        "source_width": sw,
+        "source_height": sh,
+        "windows": args.samples,
+        "windows_failed": len(failed),
+    }
     if failed:
-        warn(f"cropdetect could not decode {len(failed)} of {args.samples} sampled windows; the crop rests on the other "
-             f"{args.samples - len(failed)}: {failed[-1]['error']}", "cropdetect_windows_failed",
-             failed=len(failed), windows=args.samples, starts=[f["start"] for f in failed])
+        warn(
+            f"cropdetect could not decode {len(failed)} of {args.samples} sampled windows; the crop rests on the other "
+            f"{args.samples - len(failed)}: {failed[-1]['error']}",
+            "cropdetect_windows_failed",
+            failed=len(failed),
+            windows=args.samples,
+            starts=[f["start"] for f in failed],
+        )
     if not rects:
         result["crop"] = None
-        info("no crop bars detected (cropdetect produced no readings -- try --limit higher, or the source may already be full-frame)")
+        info(
+            "no crop bars detected (cropdetect produced no readings -- try --limit higher, or the source may already be full-frame)"
+        )
     else:
         w, h, x, y = Counter(rects).most_common(1)[0][0]
         result["crop"] = {"width": w, "height": h, "x": x, "y": y}
-        result["confidence"] = round(Counter(rects).most_common(1)[0][1] / len(rects), 3)
+        result["confidence"] = round(
+            Counter(rects).most_common(1)[0][1] / len(rects), 3
+        )
         if (w, h) == (sw, sh):
             info(f"no bars detected: full {sw}x{sh} frame is already content")
         else:
-            info(f"detected crop={w}:{h}:{x}:{y} (source {sw}x{sh}, confidence {result['confidence']:.0%}) -- "
-                 f"crop.py {args.input} --x {x} --y {y} --width {w} --height {h}")
+            info(
+                f"detected crop={w}:{h}:{x}:{y} (source {sw}x{sh}, confidence {result['confidence']:.0%}) -- "
+                f"crop.py {args.input} --x {x} --y {y} --width {w} --height {h}"
+            )
 
     if args.motion_centre:
         centre = motion_centre(args.input, args.seconds, args.samples, duration, sw, sh)

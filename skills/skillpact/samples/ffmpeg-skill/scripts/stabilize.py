@@ -22,25 +22,74 @@ Examples:
   python3 stabilize.py shaky.mp4 --shakiness 8 --smoothing 20 --zoom 5
   python3 stabilize.py locked-off.mp4 --tripod --crop black
 """
+
 import argparse
 import sys
 import tempfile
 from pathlib import Path
 
-from _common import STATE, add_common, apply_common, aac_args, cfr_args, default_output, die, emit, escape_filter_path, ffmpeg_base, info, probe, require_tool, run, video_args, X264_PRESETS, run_analysis, dry_run_input_pending, fmt_secs
+from _common import (
+    STATE,
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    default_output,
+    die,
+    emit,
+    escape_filter_path,
+    ffmpeg_base,
+    info,
+    probe,
+    require_tool,
+    run,
+    video_args,
+    X264_PRESETS,
+    run_analysis,
+    dry_run_input_pending,
+    fmt_secs,
+)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_stab.<ext>)")
-    ap.add_argument("--shakiness", type=int, default=5, help="1 (barely shaky) .. 10 (very shaky), default 5")
-    ap.add_argument("--smoothing", type=int, default=15, help="frames of camera-path smoothing on each side, default 15")
-    ap.add_argument("--zoom", type=float, default=0.0, help="percent to zoom in to hide stabilization edges, 0..100 (default 0)")
-    ap.add_argument("--crop", choices=["keep", "black"], default="keep", help="edges --zoom doesn't crop away: keep (stretch border pixels, default) or black (fill solid black)")
-    ap.add_argument("--tripod", action="store_true", help="lock the frame fully still against a single reference frame instead of smoothing the camera's motion")
+    ap.add_argument(
+        "--shakiness",
+        type=int,
+        default=5,
+        help="1 (barely shaky) .. 10 (very shaky), default 5",
+    )
+    ap.add_argument(
+        "--smoothing",
+        type=int,
+        default=15,
+        help="frames of camera-path smoothing on each side, default 15",
+    )
+    ap.add_argument(
+        "--zoom",
+        type=float,
+        default=0.0,
+        help="percent to zoom in to hide stabilization edges, 0..100 (default 0)",
+    )
+    ap.add_argument(
+        "--crop",
+        choices=["keep", "black"],
+        default="keep",
+        help="edges --zoom doesn't crop away: keep (stretch border pixels, default) or black (fill solid black)",
+    )
+    ap.add_argument(
+        "--tripod",
+        action="store_true",
+        help="lock the frame fully still against a single reference frame instead of smoothing the camera's motion",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -68,14 +117,30 @@ def main() -> int:
             # A frame number, not a boolean: frame 1 is the standard reference for "lock to
             # this fixed frame" (mirrors vidstabtransform's own tripod=1 below).
             detect_vf += ":tripod=1"
-        detect_cmd = [ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", args.input,
-                      "-vf", detect_vf, "-f", "null", "-"]
+        detect_cmd = [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-nostdin",
+            "-y",
+            "-i",
+            args.input,
+            "-vf",
+            detect_vf,
+            "-f",
+            "null",
+            "-",
+        ]
         # Pass 1 is a measurement into a temp file (the transforms), so it runs under --dry-run
         # as well; only pass 2, the write, is skipped there.
         if not dry_run_input_pending(args.input):
             proc = run_analysis(detect_cmd, check=False, record=True)
             if proc.returncode != 0:
-                die(f"stabilization analysis (pass 1) failed:\n{proc.stderr.strip()[-1500:]}", kind="ffmpeg")
+                die(
+                    f"stabilization analysis (pass 1) failed:\n{proc.stderr.strip()[-1500:]}",
+                    kind="ffmpeg",
+                )
 
         crop_mode = {"keep": 0, "black": 1}[args.crop]
         transform_vf = f"vidstabtransform=input={trf_arg}:smoothing={args.smoothing}:crop={crop_mode}:zoom={args.zoom:g}:optzoom=1"
@@ -94,7 +159,9 @@ def main() -> int:
         run(cmd)
 
     result = probe(output, role="output")
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {result['video']['width']}x{result['video']['height']})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {result['video']['width']}x{result['video']['height']})"
+    )
     emit(output)
     return 0
 

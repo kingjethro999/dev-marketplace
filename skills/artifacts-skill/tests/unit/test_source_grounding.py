@@ -22,7 +22,11 @@ from artifact_skill.core.engine import run_lifecycle
 from artifact_skill.core.errors import ArtifactInputError
 from artifact_skill.core.verification import CheckStatus
 from artifact_skill.policies import known_policy_keys, resolve_policy
-from artifact_skill.source_grounding import CHECK_ID, extract_claims, verify_structural_with_grounding
+from artifact_skill.source_grounding import (
+    CHECK_ID,
+    extract_claims,
+    verify_structural_with_grounding,
+)
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "grounding"
 TRANSCRIPT = FIXTURES / "transcript.txt"
@@ -53,14 +57,18 @@ def test_invented_dosage_is_reported_and_nothing_else(tmp_path):
     check = _check(doc, {"grounding_sources": [str(TRANSCRIPT)]})
 
     assert check.status == CheckStatus.FAIL
-    assert check.evidence["unsupported"] == [{"kind": "number", "text": "10 mg", "lines": [6]}]
+    assert check.evidence["unsupported"] == [
+        {"kind": "number", "text": "10 mg", "lines": [6]}
+    ]
     assert check.evidence["claims_checked"] > 10
     assert "'10 mg' (line 6)" in check.message
     assert doc.read_bytes() == before  # reported, never fixed
 
 
 def test_faithful_summary_passes():
-    check = _check(FIXTURES / "summary_faithful.md", {"grounding_sources": [str(TRANSCRIPT)]})
+    check = _check(
+        FIXTURES / "summary_faithful.md", {"grounding_sources": [str(TRANSCRIPT)]}
+    )
     assert check.status == CheckStatus.PASS
     assert check.evidence["unsupported"] == []
 
@@ -74,7 +82,9 @@ def test_without_grounding_sources_there_is_no_check():
 # ---- what counts as a claim, and when the source supports it ---------------
 
 
-def _unsupported(tmp_path: Path, generated: str, source: str, terms: list[str] | None = None) -> list[str]:
+def _unsupported(
+    tmp_path: Path, generated: str, source: str, terms: list[str] | None = None
+) -> list[str]:
     # A heading and a list item make the file Markdown (plain text is not a format this
     # tool verifies); it holds no claims.
     doc = _write(tmp_path, "doc.md", f"# Notes\n\n- {generated}\n")
@@ -105,7 +115,9 @@ def test_numbers_compare_by_value_and_unit(tmp_path, generated, source):
 
 
 def test_a_range_is_two_numbers(tmp_path):
-    assert _unsupported(tmp_path, "Give 5-10 mg/kg.", "give 5 mg/kg, at most 12 mg/kg") == ["10 mg/kg"]
+    assert _unsupported(
+        tmp_path, "Give 5-10 mg/kg.", "give 5 mg/kg, at most 12 mg/kg"
+    ) == ["10 mg/kg"]
 
 
 def test_a_number_without_a_unit_is_not_a_claim(tmp_path):
@@ -131,8 +143,12 @@ def test_dates(tmp_path, generated, source, expected):
 
 
 def test_drug_names(tmp_path):
-    generated = "Continue apixaban; add atorvastatin and aspirin. Cholesterol was checked."
-    assert _unsupported(tmp_path, generated, "apixaban and Aspirin were used; cholesterol") == ["atorvastatin"]
+    generated = (
+        "Continue apixaban; add atorvastatin and aspirin. Cholesterol was checked."
+    )
+    assert _unsupported(
+        tmp_path, generated, "apixaban and Aspirin were used; cholesterol"
+    ) == ["atorvastatin"]
 
 
 def test_people_with_a_title(tmp_path):
@@ -144,7 +160,9 @@ def test_people_with_a_title(tmp_path):
 def test_listed_terms(tmp_path):
     generated = "Velisa and Northwind were compared with Halcyon."
     source = "We tested Velisa and Halcyon."
-    assert _unsupported(tmp_path, generated, source, ["Velisa", "Northwind", "Halcyon", "Unused"]) == ["Northwind"]
+    assert _unsupported(
+        tmp_path, generated, source, ["Velisa", "Northwind", "Halcyon", "Unused"]
+    ) == ["Northwind"]
 
 
 def test_claims_list_every_line_once():
@@ -164,7 +182,11 @@ def test_slides_as_the_source(tmp_path):
     deck = tmp_path / "slides.pptx"
     prs.save(str(deck))
 
-    doc = _write(tmp_path, "script.md", "# Script\n\n- Apixaban 5 mg twice a day, or 2.5 mg over 80 years, never 7.5 mg.")
+    doc = _write(
+        tmp_path,
+        "script.md",
+        "# Script\n\n- Apixaban 5 mg twice a day, or 2.5 mg over 80 years, never 7.5 mg.",
+    )
     check = _check(doc, {"grounding_sources": [str(deck)]})
     assert [u["text"] for u in check.evidence["unsupported"]] == ["7.5 mg"]
 
@@ -184,7 +206,9 @@ def test_several_sources_are_read_together(tmp_path):
     a = _write(tmp_path, "a.txt", "give 5 mg")
     b = _write(tmp_path, "b.srt", "1\n00:00:01,000 --> 00:00:02,000\nthen 10 mg\n")
     doc = _write(tmp_path, "doc.md", "# Notes\n\n- 5 mg, then 10 mg.\n")
-    assert _check(doc, {"grounding_sources": [str(a), str(b)]}).status == CheckStatus.PASS
+    assert (
+        _check(doc, {"grounding_sources": [str(a), str(b)]}).status == CheckStatus.PASS
+    )
 
 
 def test_missing_source_is_unknown_not_pass(tmp_path):
@@ -221,7 +245,9 @@ def test_inspect_output_does_not_carry_the_text():
 
 def test_policy_keys_are_known():
     assert {"grounding_sources", "grounding_terms"} <= known_policy_keys()
-    policy = resolve_policy("web-no-external", {"grounding_sources": ["t.txt"], "grounding_terms": ["X"]})
+    policy = resolve_policy(
+        "web-no-external", {"grounding_sources": ["t.txt"], "grounding_terms": ["X"]}
+    )
     assert policy["grounding_sources"] == ["t.txt"]
 
 
@@ -245,22 +271,31 @@ def test_receipt_carries_the_check(tmp_path):
     doc = tmp_path / "summary.md"
     shutil.copy(FIXTURES / "summary_invented_dosage.md", doc)
     result = run_lifecycle(
-        doc, None, {}, None, policy={"grounding_sources": [str(TRANSCRIPT)]}, evidence_dir=tmp_path / "ev"
+        doc,
+        None,
+        {},
+        None,
+        policy={"grounding_sources": [str(TRANSCRIPT)]},
+        evidence_dir=tmp_path / "ev",
     )
     assert result.receipt is not None
     receipt = result.receipt.to_dict()
     assert receipt["status"] == "fail"
     checks = {c["id"]: c for c in receipt["verification"]["structural"]["checks"]}
-    assert checks[CHECK_ID]["evidence"]["unsupported"] == [{"kind": "number", "text": "10 mg", "lines": [6]}]
+    assert checks[CHECK_ID]["evidence"]["unsupported"] == [
+        {"kind": "number", "text": "10 mg", "lines": [6]}
+    ]
 
 
 def test_mcp_verify_runs_the_check():
     from artifact_skill.mcp.server import _h_verify
 
-    out = _h_verify({
-        "input": str(FIXTURES / "summary_invented_dosage.md"),
-        "policy": {"grounding_sources": [str(TRANSCRIPT)]},
-    })
+    out = _h_verify(
+        {
+            "input": str(FIXTURES / "summary_invented_dosage.md"),
+            "policy": {"grounding_sources": [str(TRANSCRIPT)]},
+        }
+    )
     assert out["status"] == "fail"
     assert any(c["id"] == CHECK_ID for c in out["checks"])
 
@@ -270,8 +305,18 @@ def test_cli_verify_exits_fail_and_lists_the_dosage(tmp_path):
     cmd = [cli] if cli else [sys.executable, "-m", "artifact_skill.cli.main"]
     policy = json.dumps({"grounding_sources": [str(TRANSCRIPT)]})
     proc = subprocess.run(
-        [*cmd, "verify", str(FIXTURES / "summary_invented_dosage.md"), "--policy", policy, "--json"],
-        cwd=tmp_path, capture_output=True, text=True, timeout=60,
+        [
+            *cmd,
+            "verify",
+            str(FIXTURES / "summary_invented_dosage.md"),
+            "--policy",
+            policy,
+            "--json",
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
     assert proc.returncode == 1, proc.stderr
     data = json.loads(proc.stdout)
@@ -284,17 +329,23 @@ def test_cli_verify_exits_fail_and_lists_the_dosage(tmp_path):
 
 def test_the_sign_of_a_number_counts(tmp_path):
     assert _unsupported(tmp_path, "Store at -5 °C.", "store at 5 °C") == ["-5 °C"]
-    assert _unsupported(tmp_path, f"Store at {chr(0x2212)}5 °C.", "store at -5 °C") == []
+    assert (
+        _unsupported(tmp_path, f"Store at {chr(0x2212)}5 °C.", "store at -5 °C") == []
+    )
 
 
 def test_a_known_unit_prefix_is_not_the_claim(tmp_path):
-    assert _unsupported(tmp_path, "Give 5 mg/kg/week.", "give 5 mg/kg") == ["5 mg/kg/week"]
+    assert _unsupported(tmp_path, "Give 5 mg/kg/week.", "give 5 mg/kg") == [
+        "5 mg/kg/week"
+    ]
     assert _unsupported(tmp_path, "Give 5 mg/kg/week.", "give 5 mg/kg/week") == []
 
 
 def test_a_name_must_appear_as_one_name(tmp_path):
     source = "Speakers: Dr. Jane Doe and Dr. Alice Smith; also Jane K. Smith."
-    assert _unsupported(tmp_path, "Dr. Jane Smith spoke.", "Dr. Jane Doe and Dr. Alice Smith") == ["Dr. Jane Smith"]
+    assert _unsupported(
+        tmp_path, "Dr. Jane Smith spoke.", "Dr. Jane Doe and Dr. Alice Smith"
+    ) == ["Dr. Jane Smith"]
     assert _unsupported(tmp_path, "Dr. Jane Smith spoke.", source) == []
 
 
@@ -312,7 +363,9 @@ def test_text_inside_grouped_pptx_shapes_is_read(tmp_path):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     outer = slide.shapes.add_group_shape()
     inner = outer.shapes.add_group_shape()
-    inner.shapes.add_textbox(Inches(1), Inches(1), Inches(3), Inches(1)).text_frame.text = "Give 7.5 mg"
+    inner.shapes.add_textbox(
+        Inches(1), Inches(1), Inches(3), Inches(1)
+    ).text_frame.text = "Give 7.5 mg"
     deck = tmp_path / "deck.pptx"
     prs.save(str(deck))
     check = _check(deck, {"grounding_sources": [str(TRANSCRIPT)]})
@@ -320,8 +373,12 @@ def test_text_inside_grouped_pptx_shapes_is_read(tmp_path):
 
 
 def test_svg_tspan_tails_are_read(tmp_path):
-    svg = _write(tmp_path, "x.svg", '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">'
-                 "<text><tspan>Note</tspan> 7.5 mg</text></svg>")
+    svg = _write(
+        tmp_path,
+        "x.svg",
+        '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">'
+        "<text><tspan>Note</tspan> 7.5 mg</text></svg>",
+    )
     check = _check(svg, {"grounding_sources": [str(TRANSCRIPT)]})
     assert [u["text"] for u in check.evidence["unsupported"]] == ["7.5 mg"]
 
@@ -343,7 +400,10 @@ def test_xlsx_formula_without_a_cached_value_is_unknown(tmp_path):
     wb.active.append([1, 2, "=A1+B1"])
     path = tmp_path / "f.xlsx"
     wb.save(str(path))
-    assert _check(path, {"grounding_sources": [str(TRANSCRIPT)]}).status == CheckStatus.UNKNOWN
+    assert (
+        _check(path, {"grounding_sources": [str(TRANSCRIPT)]}).status
+        == CheckStatus.UNKNOWN
+    )
 
 
 def test_pdf_with_a_page_whose_text_fails_is_unknown(tmp_path, monkeypatch):
@@ -355,4 +415,7 @@ def test_pdf_with_a_page_whose_text_fails_is_unknown(tmp_path, monkeypatch):
         raise ValueError("broken page")
 
     monkeypatch.setattr(pypdf.PageObject, "extract_text", boom)
-    assert _check(pdf, {"grounding_sources": [str(TRANSCRIPT)]}).status == CheckStatus.UNKNOWN
+    assert (
+        _check(pdf, {"grounding_sources": [str(TRANSCRIPT)]}).status
+        == CheckStatus.UNKNOWN
+    )

@@ -11,19 +11,43 @@ Examples:
   python3 reverse.py input.mp4
   python3 reverse.py input.mp4 --no-audio -o backwards.mp4
 """
+
 import argparse
 import sys
 
-from _common import add_common, apply_common, aac_args, cfr_args, default_output, die, emit, ffmpeg_base, info, probe, run, video_args, X264_PRESETS, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="output file (default: <name>_reverse.<ext>)")
-    ap.add_argument("--no-audio", action="store_true", help="drop audio instead of reversing it")
+    ap.add_argument(
+        "-o", "--output", help="output file (default: <name>_reverse.<ext>)"
+    )
+    ap.add_argument(
+        "--no-audio", action="store_true", help="drop audio instead of reversing it"
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -35,8 +59,10 @@ def main() -> int:
 
     output = args.output or default_output(args.input, "reverse")
     if (meta.get("duration") or 0) > 60:
-        info(f"warning: reverse buffers every decoded frame in memory; {meta['duration']:.0f}s of "
-             f"{meta['video']['width']}x{meta['video']['height']} can exhaust RAM -- cut the part to reverse first (cut.py)")
+        info(
+            f"warning: reverse buffers every decoded frame in memory; {meta['duration']:.0f}s of "
+            f"{meta['video']['width']}x{meta['video']['height']} can exhaust RAM -- cut the part to reverse first (cut.py)"
+        )
     cmd = ffmpeg_base() + ["-i", args.input, "-vf", "reverse"]
     if has_audio:
         cmd += ["-af", "areverse"]
@@ -50,7 +76,9 @@ def main() -> int:
     run(cmd)
 
     result = probe(output, role="output")
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {result['video']['width']}x{result['video']['height']})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {result['video']['width']}x{result['video']['height']})"
+    )
     emit(output)
     return 0
 

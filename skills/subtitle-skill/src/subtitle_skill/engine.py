@@ -82,6 +82,7 @@ Key facts this module depends on:
   (for caption) a `probe.video` on the output with a duration consistent
   with the input's -- burning in captions must not change the length.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -150,7 +151,13 @@ KARAOKE_STYLES = ("sweep", "word")
 #: The caption.py flags an animated burn sends. A caption tool that lacks one
 #: cannot do what the request asks, so the burn is a DEPENDENCY_ERROR rather
 #: than a burn that silently does not move.
-_ANIMATION_FLAGS = ('"--animate"', '"--karaoke"', '"--karaoke-style"', '"--karaoke-timing"', '"--write-ass"')
+_ANIMATION_FLAGS = (
+    '"--animate"',
+    '"--karaoke"',
+    '"--karaoke-style"',
+    '"--karaoke-timing"',
+    '"--write-ass"',
+)
 
 
 def _candidate_install_roots() -> list[Path]:
@@ -206,9 +213,7 @@ FONT_REFUSAL_MARKER = "no installed font covers"
 #: own reason, which is kept). Short, with the field first: a known consumer
 #: keeps the first 500 characters of an error message, and the engine's own
 #: sentence is about 330 of them.
-FONTS_DIR_HINT = (
-    "Or set request.fonts_dir to a workspace directory holding a font file (.ttf/.otf/.ttc) that covers the text"
-)
+FONTS_DIR_HINT = "Or set request.fonts_dir to a workspace directory holding a font file (.ttf/.otf/.ttc) that covers the text"
 
 
 def caption_takes_fonts_dir(root: Path) -> bool:
@@ -227,7 +232,9 @@ def caption_takes_animation(root: Path) -> bool:
     return all(flag in source for flag in _ANIMATION_FLAGS)
 
 
-def animation_argv(animate: Optional[str], karaoke: Optional[str], ass_path: Path) -> list[str]:
+def animation_argv(
+    animate: Optional[str], karaoke: Optional[str], ass_path: Path
+) -> list[str]:
     """The caption.py flags for an animated burn; empty when nothing moves.
 
     `--write-ass` names where caption.py writes the ASS it generates for the
@@ -243,14 +250,16 @@ def animation_argv(animate: Optional[str], karaoke: Optional[str], ass_path: Pat
     if animate is not None and animate != "none":
         if animate not in ANIMATE_MODES:
             raise SubtitleSkillError(
-                "INVALID_INPUT", f"animate must be one of {list(ANIMATE_MODES)}, got {animate!r}",
+                "INVALID_INPUT",
+                f"animate must be one of {list(ANIMATE_MODES)}, got {animate!r}",
                 details={"field": "animate"},
             )
         argv += ["--animate", animate]
     if karaoke is not None:
         if karaoke not in KARAOKE_STYLES:
             raise SubtitleSkillError(
-                "INVALID_INPUT", f"karaoke must be one of {list(KARAOKE_STYLES)}, got {karaoke!r}",
+                "INVALID_INPUT",
+                f"karaoke must be one of {list(KARAOKE_STYLES)}, got {karaoke!r}",
                 details={"field": "karaoke"},
             )
         argv += ["--karaoke", "--karaoke-style", karaoke, "--karaoke-timing", "even"]
@@ -362,10 +371,13 @@ def _run_tool(root: Path, tool: str, argv: list[str], *, timeout_seconds: int) -
         )
     except subprocess.TimeoutExpired as exc:
         raise SubtitleSkillError(
-            "DEPENDENCY_ERROR", f"ffmpeg-skill/{tool} timed out after {timeout_seconds}s"
+            "DEPENDENCY_ERROR",
+            f"ffmpeg-skill/{tool} timed out after {timeout_seconds}s",
         ) from exc
     except OSError as exc:
-        raise SubtitleSkillError("DEPENDENCY_ERROR", f"failed to launch ffmpeg-skill/{tool}: {exc}") from exc
+        raise SubtitleSkillError(
+            "DEPENDENCY_ERROR", f"failed to launch ffmpeg-skill/{tool}: {exc}"
+        ) from exc
 
     try:
         response = json.loads(proc.stdout)
@@ -378,7 +390,8 @@ def _run_tool(root: Path, tool: str, argv: list[str], *, timeout_seconds: int) -
 
     if not isinstance(response, dict) or "status" not in response:
         raise SubtitleSkillError(
-            "DEPENDENCY_ERROR", f"ffmpeg-skill/{tool} returned an unrecognised document: {response!r}"
+            "DEPENDENCY_ERROR",
+            f"ffmpeg-skill/{tool} returned an unrecognised document: {response!r}",
         )
 
     if response["status"] == "failed":
@@ -386,11 +399,14 @@ def _run_tool(root: Path, tool: str, argv: list[str], *, timeout_seconds: int) -
         kind = error.get("kind")
         message = error.get("message", "unknown error")
         code = _ERROR_KIND_TO_CODE.get(kind, "TOOL_ERROR")
-        raise SubtitleSkillError(code, f"ffmpeg-skill/{tool} failed ({kind}): {message}")
+        raise SubtitleSkillError(
+            code, f"ffmpeg-skill/{tool} failed ({kind}): {message}"
+        )
 
     if response["status"] != "completed":
         raise SubtitleSkillError(
-            "DEPENDENCY_ERROR", f"ffmpeg-skill/{tool} returned an unexpected status: {response['status']!r}"
+            "DEPENDENCY_ERROR",
+            f"ffmpeg-skill/{tool} returned an unexpected status: {response['status']!r}",
         )
 
     if proc.returncode != 0:
@@ -414,11 +430,17 @@ def probe(root: Path, media_path: Path, *, timeout_seconds: int = 120) -> dict:
     script = root / "scripts" / "probe.py"
     cmd = [sys.executable, str(script), str(media_path), "--json"]
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds, shell=False)
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout_seconds, shell=False
+        )
     except subprocess.TimeoutExpired as exc:
-        raise SubtitleSkillError("DEPENDENCY_ERROR", f"ffmpeg-skill/probe timed out after {timeout_seconds}s") from exc
+        raise SubtitleSkillError(
+            "DEPENDENCY_ERROR", f"ffmpeg-skill/probe timed out after {timeout_seconds}s"
+        ) from exc
     except OSError as exc:
-        raise SubtitleSkillError("DEPENDENCY_ERROR", f"failed to launch ffmpeg-skill/probe: {exc}") from exc
+        raise SubtitleSkillError(
+            "DEPENDENCY_ERROR", f"failed to launch ffmpeg-skill/probe: {exc}"
+        ) from exc
 
     try:
         doc = json.loads(proc.stdout)
@@ -438,7 +460,8 @@ def probe(root: Path, media_path: Path, *, timeout_seconds: int = 120) -> dict:
 
     if proc.returncode != 0 or not isinstance(doc, dict) or "duration" not in doc:
         raise SubtitleSkillError(
-            "DEPENDENCY_ERROR", f"ffmpeg-skill/probe returned an unrecognised document: {doc!r}"
+            "DEPENDENCY_ERROR",
+            f"ffmpeg-skill/probe returned an unrecognised document: {doc!r}",
         )
     return doc
 
@@ -495,7 +518,8 @@ def _style_argv(style: SubtitleStyle) -> list[str]:
     if style.color is not None:
         if not isinstance(style.color, str) or not style.color.strip():
             raise SubtitleSkillError(
-                "INVALID_INPUT", f"style.color must be a non-empty string, got {style.color!r}"
+                "INVALID_INPUT",
+                f"style.color must be a non-empty string, got {style.color!r}",
             )
         # Forwarded verbatim, not re-validated as hex here: caption.py's own
         # color_hex() normalises "#RRGGBB"/"RRGGBB"/"0xRRGGBB" and fails
@@ -506,7 +530,9 @@ def _style_argv(style: SubtitleStyle) -> list[str]:
 
     if style.bold is not None:
         if not isinstance(style.bold, bool):
-            raise SubtitleSkillError("INVALID_INPUT", f"style.bold must be a boolean, got {style.bold!r}")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"style.bold must be a boolean, got {style.bold!r}"
+            )
         if style.bold:
             argv.append("--bold")
 
@@ -518,7 +544,8 @@ def _style_argv(style: SubtitleStyle) -> list[str]:
             or style.size <= 0
         ):
             raise SubtitleSkillError(
-                "INVALID_INPUT", f"style.size must be a positive number, got {style.size!r}"
+                "INVALID_INPUT",
+                f"style.size must be a positive number, got {style.size!r}",
             )
         points = round(style.size / 100.0 * _ASS_SCRIPT_HEIGHT)
         argv += ["--size", str(max(points, 1))]
@@ -635,18 +662,32 @@ def burn_in(
     # its styles are inside the file, so no style flag goes with it, and caption.py
     # refuses `--mode mux --ass`.
     if subtitle_format == "ass" and (mode != "burn" or style is not None):
-        raise SubtitleSkillError("INVALID_INPUT", "an ASS subtitle is only burned, with its styles inside the file")
+        raise SubtitleSkillError(
+            "INVALID_INPUT",
+            "an ASS subtitle is only burned, with its styles inside the file",
+        )
 
     if mode not in ALLOWED_RENDER_MODES:
         raise SubtitleSkillError(
-            "INVALID_INPUT", f"mode must be one of {sorted(ALLOWED_RENDER_MODES)}, got {mode!r}"
+            "INVALID_INPUT",
+            f"mode must be one of {sorted(ALLOWED_RENDER_MODES)}, got {mode!r}",
         )
 
-    if audio_stream is not None and (isinstance(audio_stream, bool) or not isinstance(audio_stream, int) or audio_stream < 0):
-        raise SubtitleSkillError("INVALID_INPUT", f"audio_stream must be a non-negative integer, got {audio_stream!r}")
+    if audio_stream is not None and (
+        isinstance(audio_stream, bool)
+        or not isinstance(audio_stream, int)
+        or audio_stream < 0
+    ):
+        raise SubtitleSkillError(
+            "INVALID_INPUT",
+            f"audio_stream must be a non-negative integer, got {audio_stream!r}",
+        )
 
     if style is not None and not isinstance(style, SubtitleStyle):
-        raise SubtitleSkillError("INVALID_INPUT", f"style must be a SubtitleStyle or None, got {type(style).__name__}")
+        raise SubtitleSkillError(
+            "INVALID_INPUT",
+            f"style must be a SubtitleStyle or None, got {type(style).__name__}",
+        )
 
     animated = (animate is not None and animate != "none") or karaoke is not None
     if animated and (mode != "burn" or subtitle_format != "srt"):
@@ -654,20 +695,31 @@ def burn_in(
             "INVALID_INPUT",
             "animate/karaoke are drawn by ffmpeg-skill caption from an SRT burn (mode 'burn'); "
             "a soft track or an ASS cannot carry them",
-            details={"field": "animate" if animate not in (None, "none") else "karaoke"},
+            details={
+                "field": "animate" if animate not in (None, "none") else "karaoke"
+            },
         )
     if karaoke is not None and not word_timings:
         raise SubtitleSkillError(
-            "INVALID_INPUT", "karaoke needs the word timings of the cues", details={"field": "words"}
+            "INVALID_INPUT",
+            "karaoke needs the word timings of the cues",
+            details={"field": "words"},
         )
 
     if (fonts_dir is None) != (font_family is None):
-        raise SubtitleSkillError("INVALID_INPUT", "fonts_dir and font_family go together")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", "fonts_dir and font_family go together"
+        )
     if fonts_dir is not None:
         if mode != "burn":
-            raise SubtitleSkillError("INVALID_INPUT", "fonts_dir is for burned captions (mode 'burn')")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", "fonts_dir is for burned captions (mode 'burn')"
+            )
         if not isinstance(font_family, str) or not font_family.strip():
-            raise SubtitleSkillError("INVALID_INPUT", f"font_family must be a non-empty string, got {font_family!r}")
+            raise SubtitleSkillError(
+                "INVALID_INPUT",
+                f"font_family must be a non-empty string, got {font_family!r}",
+            )
 
     root = resolve_ffmpeg_skill_root()
     if root is None:
@@ -692,10 +744,18 @@ def burn_in(
 
     input_probe = probe(root, video_path, timeout_seconds=timeout_seconds)
     if not input_probe.get("video"):
-        raise SubtitleSkillError("INVALID_INPUT", f"input has no video stream: {video_path}")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"input has no video stream: {video_path}"
+        )
     input_duration = input_probe.get("duration")
 
-    argv = [str(video_path), f"--{subtitle_format}", str(subtitle_path), "-o", str(output_path)]
+    argv = [
+        str(video_path),
+        f"--{subtitle_format}",
+        str(subtitle_path),
+        "-o",
+        str(output_path),
+    ]
     # a re-render replaces subtitle-skill's own earlier output at the same path
     if _caption_takes_overwrite(root):
         argv.append("--overwrite")
@@ -716,7 +776,9 @@ def burn_in(
         planned = [ass_path]
         if karaoke is not None:
             beside_srt = subtitle_path.with_suffix(".words.json")
-            beside_adjusted = output_path.with_name(output_path.stem + "_adjusted.words.json")
+            beside_adjusted = output_path.with_name(
+                output_path.stem + "_adjusted.words.json"
+            )
             planned += [beside_srt, beside_adjusted]
         # Each side file is this call's own: an existing one is refused rather than
         # replaced, removed afterwards, or (a .words.json) read by caption.py as this
@@ -747,7 +809,9 @@ def burn_in(
         if fonts_dir is None and mode == "burn" and FONT_REFUSAL_MARKER in exc.message:
             # the engine's own reason first, then the way out this skill offers
             raise SubtitleSkillError(
-                exc.code, f"{exc.message}. {FONTS_DIR_HINT}.", details={"field": "fonts_dir"}
+                exc.code,
+                f"{exc.message}. {FONTS_DIR_HINT}.",
+                details={"field": "fonts_dir"},
             ) from exc
         raise
     finally:
@@ -755,12 +819,16 @@ def burn_in(
             path.unlink(missing_ok=True)
 
     if not output_path.exists() or output_path.stat().st_size == 0:
-        raise SubtitleSkillError("OUTPUT_ERROR", "ffmpeg-skill/caption reported success but output is missing/empty")
+        raise SubtitleSkillError(
+            "OUTPUT_ERROR",
+            "ffmpeg-skill/caption reported success but output is missing/empty",
+        )
 
     output_probe = response.get("probe")
     if not isinstance(output_probe, dict) or not output_probe.get("video"):
         raise SubtitleSkillError(
-            "OUTPUT_ERROR", "ffmpeg-skill/caption reported success but the output has no video stream"
+            "OUTPUT_ERROR",
+            "ffmpeg-skill/caption reported success but the output has no video stream",
         )
     output_duration = output_probe.get("duration")
     if (
@@ -784,7 +852,13 @@ def burn_in(
 #: caption.py picks for each (its `mux_subtitle_codec`, verified against
 #: ffmpeg-skill 2.24.0): mov_text for MPEG-4/QuickTime, SubRip for Matroska,
 #: WebVTT for WebM. ASS is not muxed: caption.py refuses `--mode mux --ass`.
-MUX_CONTAINERS = {".mp4": "mov_text", ".m4v": "mov_text", ".mov": "mov_text", ".mkv": "srt", ".webm": "webvtt"}
+MUX_CONTAINERS = {
+    ".mp4": "mov_text",
+    ".m4v": "mov_text",
+    ".mov": "mov_text",
+    ".mkv": "srt",
+    ".webm": "webvtt",
+}
 
 #: caption.py's own `--srt FILE:LANG` language grammar (its LANG_TOKEN_RE): a
 #: 2-3 letter lowercase primary subtag, then 2-8 character subtags.
@@ -856,14 +930,18 @@ def mux_tracks(
 
     input_probe = probe(root, video_path, timeout_seconds=timeout_seconds)
     if not input_probe.get("video"):
-        raise SubtitleSkillError("INVALID_INPUT", f"input has no video stream: {video_path}")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"input has no video stream: {video_path}"
+        )
     input_duration = input_probe.get("duration")
     max_lines = 1
     for path, _lang, _title in tracks:
         try:
             text = Path(path).read_text(encoding="utf-8")
         except OSError as exc:
-            raise SubtitleSkillError("OUTPUT_ERROR", f"could not read generated SRT {path}: {exc}") from exc
+            raise SubtitleSkillError(
+                "OUTPUT_ERROR", f"could not read generated SRT {path}: {exc}"
+            ) from exc
         for block in text.replace("\r\n", "\n").split("\n\n"):
             lines = [ln for ln in block.split("\n") if ln.strip()]
             max_lines = max(max_lines, len(lines) - 2)
@@ -893,10 +971,16 @@ def mux_tracks(
     response = _run_tool(root, "caption", argv, timeout_seconds=timeout_seconds)
 
     if not output_path.exists() or output_path.stat().st_size == 0:
-        raise SubtitleSkillError("OUTPUT_ERROR", "ffmpeg-skill/caption reported success but output is missing/empty")
+        raise SubtitleSkillError(
+            "OUTPUT_ERROR",
+            "ffmpeg-skill/caption reported success but output is missing/empty",
+        )
     output_probe = response.get("probe")
     if not isinstance(output_probe, dict) or not output_probe.get("video"):
-        raise SubtitleSkillError("OUTPUT_ERROR", "ffmpeg-skill/caption reported success but the output has no video stream")
+        raise SubtitleSkillError(
+            "OUTPUT_ERROR",
+            "ffmpeg-skill/caption reported success but the output has no video stream",
+        )
     output_duration = output_probe.get("duration")
     if (
         isinstance(input_duration, (int, float))
@@ -910,7 +994,11 @@ def mux_tracks(
         )
     reported = response.get("tracks")
     if multitrack:
-        added = [t for t in reported or [] if isinstance(t, dict) and not t.get("kept_from_input")]
+        added = [
+            t
+            for t in reported or []
+            if isinstance(t, dict) and not t.get("kept_from_input")
+        ]
         if len(added) != len(tracks):
             raise SubtitleSkillError(
                 "OUTPUT_ERROR",

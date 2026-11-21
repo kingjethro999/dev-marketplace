@@ -9,14 +9,20 @@
   30000/1001 is exactly 1 frame); a time exactly half-way between two frames goes to the even one, the rule
   ffmpeg-skill's own timeline export uses (Python's round()), so both exports put a cut on the same frame.
 """
+
 from __future__ import annotations
 
 import re
 from fractions import Fraction
 from typing import Any, Tuple
 
-_NTSC = {23.976: Fraction(24000, 1001), 29.97: Fraction(30000, 1001), 59.94: Fraction(60000, 1001),
-         47.952: Fraction(48000, 1001), 119.88: Fraction(120000, 1001)}
+_NTSC = {
+    23.976: Fraction(24000, 1001),
+    29.97: Fraction(30000, 1001),
+    59.94: Fraction(60000, 1001),
+    47.952: Fraction(48000, 1001),
+    119.88: Fraction(120000, 1001),
+}
 DROP_FRAME_RATES = (Fraction(30000, 1001), Fraction(60000, 1001))
 _TC = re.compile(r"^(\d{1,2})[:;.](\d{2})[:;.](\d{2})([:;.,])(\d{2,3})$")
 
@@ -42,7 +48,14 @@ def parse_rate(value: Any) -> Fraction:
             raise TimecodeError(f"frame rate {value!r} is not a number")
         if f != f or f in (float("inf"), float("-inf")):
             raise TimecodeError(f"frame rate {value!r} is not a number")
-        rate = next((exact for approx, exact in _NTSC.items() if abs(f - approx) < 0.0015 or abs(f - float(exact)) < 1e-6), None)
+        rate = next(
+            (
+                exact
+                for approx, exact in _NTSC.items()
+                if abs(f - approx) < 0.0015 or abs(f - float(exact)) < 1e-6
+            ),
+            None,
+        )
         if rate is None:
             rate = Fraction(f).limit_denominator(1001)
     if rate <= 0 or rate > 1000:
@@ -52,7 +65,11 @@ def parse_rate(value: Any) -> Fraction:
 
 def rate_str(rate: Fraction) -> str:
     """'25' or '30000/1001': how a rate is written in this skill's JSON."""
-    return str(rate.numerator) if rate.denominator == 1 else f"{rate.numerator}/{rate.denominator}"
+    return (
+        str(rate.numerator)
+        if rate.denominator == 1
+        else f"{rate.numerator}/{rate.denominator}"
+    )
 
 
 def nominal(rate: Fraction) -> int:
@@ -67,7 +84,9 @@ def is_ntsc(rate: Fraction) -> bool:
 def drop_frames_per_minute(rate: Fraction) -> int:
     """2 at 29.97, 4 at 59.94; drop-frame is not defined for any other rate."""
     if rate not in DROP_FRAME_RATES:
-        raise TimecodeError(f"drop-frame timecode exists only at 29.97 and 59.94 fps, not {float(rate):.3f}")
+        raise TimecodeError(
+            f"drop-frame timecode exists only at 29.97 and 59.94 fps, not {float(rate):.3f}"
+        )
     return 2 * nominal(rate) // 30
 
 
@@ -112,7 +131,13 @@ def parse_timecode(tc: str) -> Tuple[int, int, int, int, bool]:
     m = _TC.match(str(tc).strip())
     if not m:
         raise TimecodeError(f"{tc!r} is not hh:mm:ss:ff timecode")
-    h, mi, s, sep, f = int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5))
+    h, mi, s, sep, f = (
+        int(m.group(1)),
+        int(m.group(2)),
+        int(m.group(3)),
+        m.group(4),
+        int(m.group(5)),
+    )
     if mi > 59 or s > 59:
         raise TimecodeError(f"{tc!r}: minutes and seconds must be 00-59")
     return h, mi, s, f, sep in ";,." or ";" in str(tc)
@@ -124,13 +149,17 @@ def timecode_to_frames(tc: str, rate: Fraction, drop_frame: bool = False) -> int
     h, mi, s, f, _ = parse_timecode(tc)
     fps = nominal(rate)
     if f >= fps:
-        raise TimecodeError(f"{tc!r}: frame {f} is out of range for {fps} fps timecode (00-{fps - 1:02d})")
+        raise TimecodeError(
+            f"{tc!r}: frame {f} is out of range for {fps} fps timecode (00-{fps - 1:02d})"
+        )
     total = ((h * 60 + mi) * 60 + s) * fps + f
     if drop_frame:
         drop = drop_frames_per_minute(rate)
         if s == 0 and f < drop and mi % 10 != 0:
-            raise TimecodeError(f"{tc!r} does not exist in drop-frame timecode (frames 00-{drop - 1:02d} are skipped "
-                                "at the start of every minute not divisible by 10)")
+            raise TimecodeError(
+                f"{tc!r} does not exist in drop-frame timecode (frames 00-{drop - 1:02d} are skipped "
+                "at the start of every minute not divisible by 10)"
+            )
         minutes = h * 60 + mi
         total -= drop * (minutes - minutes // 10)
     return total

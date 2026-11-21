@@ -7,38 +7,154 @@
 #   "judge": [["question only a person can answer", "why"]], "decisions": [["Topic", "decision and reason"]],
 #   "files": ["<film>/deliver/ – masters, upload copies, .srt, web set, poster"], "sound": "…", "spend": "None"}
 import base64, html, json, os, subprocess, sys
-F = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'); V = sys.argv[1] if len(sys.argv) > 1 else 'v1'
-tl = json.load(open(f'{F}/film/timeline.json')); NAME = tl['name']; TL_TITLE = tl.get('title', NAME)
-BR = {'accent': '#0E8A7E', 'accentText': '#FFFFFF', 'wordmark': NAME, **tl.get('brand', {})}
-R = json.load(open(f'{F}/notes/review-{V}.json')) if os.path.exists(f'{F}/notes/review-{V}.json') else {}
-out = f'{F}/review/{V}'; os.makedirs(out, exist_ok=True)
-M = lambda fmt: f'{F}/out/{V}/{NAME}-{fmt}-{V}_master.mov'
-C = ['-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv']
-def enc(src, dst, vf, crf, ab='96k'):
-    if not os.path.exists(src): return None
-    if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src): subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', '-i', src, '-vf', vf, '-c:v', 'libx264', '-preset', 'slow', '-crf', str(crf), '-profile:v', 'high', '-pix_fmt', 'yuv420p', *C, '-c:a', 'aac', '-b:a', ab, '-movflags', '+faststart', dst], check=True)
+
+F = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+V = sys.argv[1] if len(sys.argv) > 1 else "v1"
+tl = json.load(open(f"{F}/film/timeline.json"))
+NAME = tl["name"]
+TL_TITLE = tl.get("title", NAME)
+BR = {
+    "accent": "#0E8A7E",
+    "accentText": "#FFFFFF",
+    "wordmark": NAME,
+    **tl.get("brand", {}),
+}
+R = (
+    json.load(open(f"{F}/notes/review-{V}.json"))
+    if os.path.exists(f"{F}/notes/review-{V}.json")
+    else {}
+)
+out = f"{F}/review/{V}"
+os.makedirs(out, exist_ok=True)
+M = lambda fmt: f"{F}/out/{V}/{NAME}-{fmt}-{V}_master.mov"
+C = [
+    "-colorspace",
+    "bt709",
+    "-color_primaries",
+    "bt709",
+    "-color_trc",
+    "bt709",
+    "-color_range",
+    "tv",
+]
+
+
+def enc(src, dst, vf, crf, ab="96k"):
+    if not os.path.exists(src):
+        return None
+    if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-nostdin",
+                "-v",
+                "error",
+                "-y",
+                "-i",
+                src,
+                "-vf",
+                vf,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "slow",
+                "-crf",
+                str(crf),
+                "-profile:v",
+                "high",
+                "-pix_fmt",
+                "yuv420p",
+                *C,
+                "-c:a",
+                "aac",
+                "-b:a",
+                ab,
+                "-movflags",
+                "+faststart",
+                dst,
+            ],
+            check=True,
+        )
     return dst
-v720 = enc(M('16x9'), f'{out}/film-720.mp4', 'scale=1280:720:flags=lanczos', 24)
-v1080 = enc(M('16x9'), f'{out}/film-1080.mp4', 'null', 22, '128k')
-v916 = enc(M('9x16'), f'{out}/film-9x16.mp4', 'scale=540:960:flags=lanczos', 25)
-v45 = enc(M('4x5'), f'{out}/film-4x5.mp4', 'scale=540:676:flags=lanczos', 25)
-poster = f'{out}/poster.jpg'
-subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', '-ss', '0', '-i', M('16x9'), '-frames:v', '1', '-vf', 'scale=1280:720:flags=lanczos:out_color_matrix=bt709:out_range=pc', '-q:v', '4', poster], check=True)
-b64 = lambda p: base64.b64encode(open(p, 'rb').read()).decode()
+
+
+v720 = enc(M("16x9"), f"{out}/film-720.mp4", "scale=1280:720:flags=lanczos", 24)
+v1080 = enc(M("16x9"), f"{out}/film-1080.mp4", "null", 22, "128k")
+v916 = enc(M("9x16"), f"{out}/film-9x16.mp4", "scale=540:960:flags=lanczos", 25)
+v45 = enc(M("4x5"), f"{out}/film-4x5.mp4", "scale=540:676:flags=lanczos", 25)
+poster = f"{out}/poster.jpg"
+subprocess.run(
+    [
+        "ffmpeg",
+        "-nostdin",
+        "-v",
+        "error",
+        "-y",
+        "-ss",
+        "0",
+        "-i",
+        M("16x9"),
+        "-frames:v",
+        "1",
+        "-vf",
+        "scale=1280:720:flags=lanczos:out_color_matrix=bt709:out_range=pc",
+        "-q:v",
+        "4",
+        poster,
+    ],
+    check=True,
+)
+b64 = lambda p: base64.b64encode(open(p, "rb").read()).decode()
 mb = lambda p: os.path.getsize(p) / 1048576
-checks = [l for l in open(f'{F}/out/{V}/checks.txt').read().strip().splitlines()] if os.path.exists(f'{F}/out/{V}/checks.txt') else []
+checks = (
+    [l for l in open(f"{F}/out/{V}/checks.txt").read().strip().splitlines()]
+    if os.path.exists(f"{F}/out/{V}/checks.txt")
+    else []
+)
+
+
 def row(line):
-    parts = [p.strip() for p in line.split('|')]; name = parts[0]
-    g = lambda key: next((p for p in parts if p.startswith(key)), '')
-    return name, parts[1].replace('frames ', ''), parts[2].replace('timing jumps ', ''), g('VMAF').replace('VMAF score: ', ''), parts[-1].replace('audio ', '').replace('I:', '').strip()
-caps = ''.join(f'<li><button data-t="{c["start"]}"><span class="tc">{int(c["start"] // 60)}:{c["start"] % 60:04.1f}</span><span class="cap">{html.escape(c["text"]).replace(html.escape(c["accent"]), "<em>" + html.escape(c["accent"]) + "</em>", 1)}</span></button></li>' for c in tl['captions'])
-crow = ''.join(f'<tr><th scope="row">{html.escape(n.replace(NAME + "-", "").replace("-" + V, ""))}</th><td>{html.escape(fr)}</td><td>{html.escape(j)}</td><td class="num">{html.escape("not measured" if "not measured" in vm else vm[:5])}</td><td>{html.escape(a)}</td></tr>' for n, fr, j, vm, a in map(row, checks))
-chg = ''.join(f'<li><p class="q">{html.escape(q)}</p><p>{html.escape(a)}</p></li>' for q, a in R.get('changes', []))
-jud = ''.join(f'<li><p class="q">{html.escape(q)}</p><p>{html.escape(a)}</p></li>' for q, a in R.get('judge', []))
-dec = ''.join(f'<div class="dec"><dt>{html.escape(k)}</dt><dd>{html.escape(v)}</dd></div>' for k, v in R.get('decisions', []))
-FORMATS = ' · '.join(f'{f.replace("x", ":")}{" without captions" if c == 0 else ""}' for f, c in tl.get('outputs', [])) + ' + .srt'
-DESC = f'Cut {V[1:]} of {TL_TITLE}: ' + tl.get('summary', '')
-page = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    parts = [p.strip() for p in line.split("|")]
+    name = parts[0]
+    g = lambda key: next((p for p in parts if p.startswith(key)), "")
+    return (
+        name,
+        parts[1].replace("frames ", ""),
+        parts[2].replace("timing jumps ", ""),
+        g("VMAF").replace("VMAF score: ", ""),
+        parts[-1].replace("audio ", "").replace("I:", "").strip(),
+    )
+
+
+caps = "".join(
+    f'<li><button data-t="{c["start"]}"><span class="tc">{int(c["start"] // 60)}:{c["start"] % 60:04.1f}</span><span class="cap">{html.escape(c["text"]).replace(html.escape(c["accent"]), "<em>" + html.escape(c["accent"]) + "</em>", 1)}</span></button></li>'
+    for c in tl["captions"]
+)
+crow = "".join(
+    f'<tr><th scope="row">{html.escape(n.replace(NAME + "-", "").replace("-" + V, ""))}</th><td>{html.escape(fr)}</td><td>{html.escape(j)}</td><td class="num">{html.escape("not measured" if "not measured" in vm else vm[:5])}</td><td>{html.escape(a)}</td></tr>'
+    for n, fr, j, vm, a in map(row, checks)
+)
+chg = "".join(
+    f'<li><p class="q">{html.escape(q)}</p><p>{html.escape(a)}</p></li>'
+    for q, a in R.get("changes", [])
+)
+jud = "".join(
+    f'<li><p class="q">{html.escape(q)}</p><p>{html.escape(a)}</p></li>'
+    for q, a in R.get("judge", [])
+)
+dec = "".join(
+    f'<div class="dec"><dt>{html.escape(k)}</dt><dd>{html.escape(v)}</dd></div>'
+    for k, v in R.get("decisions", [])
+)
+FORMATS = (
+    " · ".join(
+        f'{f.replace("x", ":")}{" without captions" if c == 0 else ""}'
+        for f, c in tl.get("outputs", [])
+    )
+    + " + .srt"
+)
+DESC = f"Cut {V[1:]} of {TL_TITLE}: " + tl.get("summary", "")
+page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(TL_TITLE)} – review {V}</title>
 <meta name="description" content="{html.escape(DESC)}">
 <meta property="og:title" content="{html.escape(TL_TITLE)} – review {V}"><meta property="og:description" content="{html.escape(DESC)}">
@@ -98,9 +214,17 @@ const v=document.getElementById('v');const bs=[...document.querySelectorAll('.sc
 bs.forEach(b=>b.addEventListener('click',()=>{{v.currentTime=+b.dataset.t+0.05;v.play();}}));
 const caps={json.dumps([[c["start"],c["end"]] for c in tl["captions"]])};
 v.addEventListener('timeupdate',()=>{{const t=v.currentTime;bs.forEach((b,i)=>b.classList.toggle('on',t>=caps[i][0]&&t<caps[i][1]));}});
-</script></body></html>'''
-dst = f'{F}/review/review-{V}.html'; open(dst, 'w').write(page)
+</script></body></html>"""
+dst = f"{F}/review/review-{V}.html"
+open(dst, "w").write(page)
 size = os.path.getsize(dst) / 1048576
-print(dst, f'{size:.1f} MB', f'(720p {mb(v720):.1f}, 1080p {mb(v1080):.1f} MB)')
-print('publish: bash tools/review.sh ' + V + ' <film>  (or review.sh publishes it for you when it ran this build); a cut is delivered only with its review page')
-if size > 45: print('WARNING: over 45 MB; display.dev caps a page at 50 MB. Raise the CRF of the embedded copies.')
+print(dst, f"{size:.1f} MB", f"(720p {mb(v720):.1f}, 1080p {mb(v1080):.1f} MB)")
+print(
+    "publish: bash tools/review.sh "
+    + V
+    + " <film>  (or review.sh publishes it for you when it ran this build); a cut is delivered only with its review page"
+)
+if size > 45:
+    print(
+        "WARNING: over 45 MB; display.dev caps a page at 50 MB. Raise the CRF of the embedded copies."
+    )

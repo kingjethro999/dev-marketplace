@@ -5,6 +5,7 @@ Parameters are validated here into canonical Python values (Time / Fraction / in
 end up inside an ffmpeg filter graph (pad colour, position) are restricted to closed vocabularies or
 integers so no request string can reach a filter expression.
 """
+
 import re
 from fractions import Fraction
 from typing import Any, Dict, List
@@ -12,9 +13,34 @@ from typing import Any, Dict, List
 from .errors import EditError
 from .timebase import Time, fraction_text, parse_fraction
 
-TRANSITIONS = ("fade", "dissolve", "wipeleft", "wiperight", "wipeup", "wipedown", "slideleft", "slideright",
-               "circleopen", "circleclose", "fadeblack", "fadewhite", "smoothleft", "smoothright", "radial")
-POSITIONS = ("top-left", "top", "top-right", "left", "center", "right", "bottom-left", "bottom", "bottom-right")
+TRANSITIONS = (
+    "fade",
+    "dissolve",
+    "wipeleft",
+    "wiperight",
+    "wipeup",
+    "wipedown",
+    "slideleft",
+    "slideright",
+    "circleopen",
+    "circleclose",
+    "fadeblack",
+    "fadewhite",
+    "smoothleft",
+    "smoothright",
+    "radial",
+)
+POSITIONS = (
+    "top-left",
+    "top",
+    "top-right",
+    "left",
+    "center",
+    "right",
+    "bottom-left",
+    "bottom",
+    "bottom-right",
+)
 PRECISIONS = ("frame", "keyframe")
 ROTATIONS = (90, 180, 270)
 FLIPS = ("h", "v")
@@ -24,57 +50,133 @@ _ASPECT = re.compile(r"^([1-9]\d{0,3}):([1-9]\d{0,3})$")
 
 # execution escape hatches and boundary settings: refused wherever they appear in a request (any level), with reason
 # forbidden_key, before the unknown-key check, so a caller learns *why* rather than just that the key is unknown
-FORBIDDEN_KEYS = ("command", "commands", "cmd", "argv", "args", "shell", "exec", "executable", "executables", "script", "binary",
-                  "filter", "filters", "filter_complex", "filtergraph", "ffmpeg", "ffprobe",
-                  "env", "environment", "cwd", "pythonpath",
-                  "api_key", "api_token", "token", "secret", "password", "credentials",
-                  "workspace", "allowed_input", "allowed_inputs", "allowed_input_roots", "ffmpeg_skill_dir", "engine_dir", "path_policy")
+FORBIDDEN_KEYS = (
+    "command",
+    "commands",
+    "cmd",
+    "argv",
+    "args",
+    "shell",
+    "exec",
+    "executable",
+    "executables",
+    "script",
+    "binary",
+    "filter",
+    "filters",
+    "filter_complex",
+    "filtergraph",
+    "ffmpeg",
+    "ffprobe",
+    "env",
+    "environment",
+    "cwd",
+    "pythonpath",
+    "api_key",
+    "api_token",
+    "token",
+    "secret",
+    "password",
+    "credentials",
+    "workspace",
+    "allowed_input",
+    "allowed_inputs",
+    "allowed_input_roots",
+    "ffmpeg_skill_dir",
+    "engine_dir",
+    "path_policy",
+)
 
 # ---- encoding profile (contract.encoding): what an output may ask for. Everything else is fixed by ffmpeg-skill 0.9.x
 # (video_args / aac_args in its _common.py) and is reported, never configured, here.
-X264_PRESETS = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow")   # engine list minus placebo
+X264_PRESETS = (
+    "ultrafast",
+    "superfast",
+    "veryfast",
+    "faster",
+    "fast",
+    "medium",
+    "slow",
+    "slower",
+    "veryslow",
+)  # engine list minus placebo
 CRF_MIN, CRF_MAX = 14, 28
-ENCODING_DEFAULTS = {"crf": 18, "preset": "medium"}   # ffmpeg-skill's own defaults; reported as normalized values when nothing is asked
+ENCODING_DEFAULTS = {
+    "crf": 18,
+    "preset": "medium",
+}  # ffmpeg-skill's own defaults; reported as normalized values when nothing is asked
 ENCODING = {
     "request_field": "project.outputs[].encoding (optional object)",
-    "parameters": {"crf": f"integer {CRF_MIN}..{CRF_MAX}: x264 constant-quality factor (lower = larger, better; engine default {ENCODING_DEFAULTS['crf']}; +2 on HEVC for HDR sources)",
-                   "preset": "|".join(X264_PRESETS) + f" (encoder speed / efficiency trade-off; engine default {ENCODING_DEFAULTS['preset']})"},
+    "parameters": {
+        "crf": f"integer {CRF_MIN}..{CRF_MAX}: x264 constant-quality factor (lower = larger, better; engine default {ENCODING_DEFAULTS['crf']}; +2 on HEVC for HDR sources)",
+        "preset": "|".join(X264_PRESETS)
+        + f" (encoder speed / efficiency trade-off; engine default {ENCODING_DEFAULTS['preset']})",
+    },
     "applies_to": "the operation that produces the output: its re-encode uses the profile; an intermediate feeding two outputs must be asked for one profile",
     "identity": "part of operation_id and idempotency_key when present, so a different profile is a different artifact",
-    "fixed_by_engine": {"video_codec": "h264 (libx264, High, yuv420p, bt709 tags) for SDR sources; hevc (libx265, 10-bit, hvc1) for HDR sources",
-                        "audio_codec": "aac 192 kb/s, source sample rate and layout (CONCAT: stereo)", "container": "from the output extension (.mp4 | .mov | .mkv)",
-                        "resolution": "by RESIZE / FIT / FILL / CONCAT (frame_semantics), never by the profile", "frame_rate": "by params.fps of CONCAT / FIT / FILL / RESIZE; VFR sources are conformed to CFR"},
-    "not_configurable": ["video codec choice", "bitrate / CBR / ABR modes", "pixel format / bit depth", "colour space tags", "audio codec, bitrate, sample rate, channel layout",
-                         "keyframe interval / GOP", "two-pass encoding", "hardware encoders"],
-    "refused": ["unknown keys (INVALID_REQUEST)", "crf or preset outside the vocabulary (INVALID_REQUEST)",
-                "a profile on an output produced by TRIM / CUT with precision keyframe: stream copy ignores it (INVALID_REQUEST)",
-                "two outputs of one operation with different profiles (DEPENDENCY_ERROR)"],
+    "fixed_by_engine": {
+        "video_codec": "h264 (libx264, High, yuv420p, bt709 tags) for SDR sources; hevc (libx265, 10-bit, hvc1) for HDR sources",
+        "audio_codec": "aac 192 kb/s, source sample rate and layout (CONCAT: stereo)",
+        "container": "from the output extension (.mp4 | .mov | .mkv)",
+        "resolution": "by RESIZE / FIT / FILL / CONCAT (frame_semantics), never by the profile",
+        "frame_rate": "by params.fps of CONCAT / FIT / FILL / RESIZE; VFR sources are conformed to CFR",
+    },
+    "not_configurable": [
+        "video codec choice",
+        "bitrate / CBR / ABR modes",
+        "pixel format / bit depth",
+        "colour space tags",
+        "audio codec, bitrate, sample rate, channel layout",
+        "keyframe interval / GOP",
+        "two-pass encoding",
+        "hardware encoders",
+    ],
+    "refused": [
+        "unknown keys (INVALID_REQUEST)",
+        "crf or preset outside the vocabulary (INVALID_REQUEST)",
+        "a profile on an output produced by TRIM / CUT with precision keyframe: stream copy ignores it (INVALID_REQUEST)",
+        "two outputs of one operation with different profiles (DEPENDENCY_ERROR)",
+    ],
 }
 
 # ---- frame semantics (contract.frame_semantics): RESIZE, FIT, FILL and ROTATE never overlap. Targets follow
 # ffmpeg-skill fit.py exactly (even(n) = round(n), +1 when odd), so the frame is normalized before execution and
 # verified afterwards.
 FRAME_SEMANTICS = {
-    "RESIZE": {"changes": "frame size", "keeps": "the source aspect ratio; nothing is padded, cropped or stretched",
-               "target": "width = params.width (even); height = even(width * source_height / source_width)",
-               "when": "the picture must become smaller / larger and keep its shape"},
-    "FIT": {"changes": "frame aspect ratio", "keeps": "every source pixel (scaled to fit inside, letterboxed / pillarboxed with pad_color)",
-            "target": "width = params.width, else source_width when aspect <= source_aspect, else even(source_height * aspect); height = even(width / aspect)",
-            "when": "a delivery aspect differs from the source and nothing may be lost"},
-    "FILL": {"changes": "frame aspect ratio", "keeps": "the centre of the picture (scaled to cover, centre-cropped); edges are lost",
-             "target": "same rule as FIT", "when": "a delivery aspect differs from the source and a full frame matters more than the edges"},
-    "ROTATE": {"changes": "picture orientation only (a clockwise turn and/or a mirror); frame size changes only by the width x height swap a 90 / 270 turn implies -- never by scaling",
-               "keeps": "every source pixel losslessly; no scaling, padding or cropping (like TRIM / CUT / SPEED / OVERLAY, unlike RESIZE / FIT / FILL)",
-               "target": "width, height = source width, height (already measured as displayed); swapped when params.degrees is 90 or 270",
-               "when": "a source was recorded or tagged with the wrong orientation, or needs mirroring, and no aspect or size change is wanted"},
-    "rules": ["a source whose rotation metadata is ±90 / 270 is measured with width and height swapped (as the engine does)",
-              "even(n) = int(round(n)), +1 when odd (ffmpeg-skill fit.py)",
-              "CONCAT (ffmpeg-skill join.py): params.width x params.height; only one given -> the other from the first input's aspect (round); none -> the first input's frame; then floored to even",
-              "TRIM / CUT / SPEED / OVERLAY / ROTATE keep the input frame -- losslessly, no filter maths beyond a turn or a mirror for ROTATE, whose target frame is the source's "
-              "width x height, swapped for a 90 / 270 degrees turn; an input with an odd width or height is refused before execution (INVALID_INPUT odd_frame) because the "
-              "engine's encoders need even sizes",
-              "no operation stretches (distorts) the picture; anamorphic output is not provided",
-              "the normalized target frame is reported in plan.steps[].normalized and execution.operations[].normalized and verified on the output exactly"],
+    "RESIZE": {
+        "changes": "frame size",
+        "keeps": "the source aspect ratio; nothing is padded, cropped or stretched",
+        "target": "width = params.width (even); height = even(width * source_height / source_width)",
+        "when": "the picture must become smaller / larger and keep its shape",
+    },
+    "FIT": {
+        "changes": "frame aspect ratio",
+        "keeps": "every source pixel (scaled to fit inside, letterboxed / pillarboxed with pad_color)",
+        "target": "width = params.width, else source_width when aspect <= source_aspect, else even(source_height * aspect); height = even(width / aspect)",
+        "when": "a delivery aspect differs from the source and nothing may be lost",
+    },
+    "FILL": {
+        "changes": "frame aspect ratio",
+        "keeps": "the centre of the picture (scaled to cover, centre-cropped); edges are lost",
+        "target": "same rule as FIT",
+        "when": "a delivery aspect differs from the source and a full frame matters more than the edges",
+    },
+    "ROTATE": {
+        "changes": "picture orientation only (a clockwise turn and/or a mirror); frame size changes only by the width x height swap a 90 / 270 turn implies -- never by scaling",
+        "keeps": "every source pixel losslessly; no scaling, padding or cropping (like TRIM / CUT / SPEED / OVERLAY, unlike RESIZE / FIT / FILL)",
+        "target": "width, height = source width, height (already measured as displayed); swapped when params.degrees is 90 or 270",
+        "when": "a source was recorded or tagged with the wrong orientation, or needs mirroring, and no aspect or size change is wanted",
+    },
+    "rules": [
+        "a source whose rotation metadata is ±90 / 270 is measured with width and height swapped (as the engine does)",
+        "even(n) = int(round(n)), +1 when odd (ffmpeg-skill fit.py)",
+        "CONCAT (ffmpeg-skill join.py): params.width x params.height; only one given -> the other from the first input's aspect (round); none -> the first input's frame; then floored to even",
+        "TRIM / CUT / SPEED / OVERLAY / ROTATE keep the input frame -- losslessly, no filter maths beyond a turn or a mirror for ROTATE, whose target frame is the source's "
+        "width x height, swapped for a 90 / 270 degrees turn; an input with an odd width or height is refused before execution (INVALID_INPUT odd_frame) because the "
+        "engine's encoders need even sizes",
+        "no operation stretches (distorts) the picture; anamorphic output is not provided",
+        "the normalized target frame is reported in plan.steps[].normalized and execution.operations[].normalized and verified on the output exactly",
+    ],
 }
 
 # ---- media policy (contract.media_policy): who handles what
@@ -85,17 +187,24 @@ MEDIA_POLICY = {
         "image source that does not decode to a frame: INVALID_INPUT image_undecodable",
         "TRIM / CUT / SPEED / OVERLAY / ROTATE on an input whose frame has an odd width or height: INVALID_INPUT odd_frame (the encoder needs even sizes; RESIZE / FIT / FILL / CONCAT normalize to even)",
         "CONCAT of HDR and SDR inputs: INVALID_INPUT hdr_mismatch (the engine encodes from the first input's colour system)",
-        "unsupported input extension / output container: UNSUPPORTED_FORMAT", "ranges beyond the input duration, transitions longer than half an input: INVALID_TIME_RANGE",
+        "unsupported input extension / output container: UNSUPPORTED_FORMAT",
+        "ranges beyond the input duration, transitions longer than half an input: INVALID_TIME_RANGE",
         "engine tool / encoder / filter missing: TOOL_ERROR (not retryable)",
     ],
     "normalized_by_skill": [
-        "times in any accepted form -> exact rational seconds", "target frame of RESIZE / FIT / FILL / CONCAT (frame_semantics)",
-        "target duration of SPEED (input duration / factor)", "encoding profile -> typed engine flags (crf, preset)", "audio expectation per operation (kept / added / none)",
+        "times in any accepted form -> exact rational seconds",
+        "target frame of RESIZE / FIT / FILL / CONCAT (frame_semantics)",
+        "target duration of SPEED (input duration / factor)",
+        "encoding profile -> typed engine flags (crf, preset)",
+        "audio expectation per operation (kept / added / none)",
     ],
     "delegated_to_engine": [
-        "scaling, padding, cropping filters and their exact pixel maths", "constant-frame-rate conform of variable-frame-rate sources (a warning is reported)",
-        "resampling, silence insertion and stereo layout in CONCAT", "HDR sources encoded HEVC 10-bit (the output codec is hevc; a warning is reported)",
-        "audio codec / bitrate / sample rate (AAC 192 kb/s)", "keyframe snapping for precision keyframe TRIM / CUT",
+        "scaling, padding, cropping filters and their exact pixel maths",
+        "constant-frame-rate conform of variable-frame-rate sources (a warning is reported)",
+        "resampling, silence insertion and stereo layout in CONCAT",
+        "HDR sources encoded HEVC 10-bit (the output codec is hevc; a warning is reported)",
+        "audio codec / bitrate / sample rate (AAC 192 kb/s)",
+        "keyframe snapping for precision keyframe TRIM / CUT",
     ],
     "by_stream": {
         "video_only": "all operations allowed, OVERLAY included (ffmpeg-skill >=0.10.0 bounds the looped-image overlay with an explicit -t instead of -shortest); the output has no audio stream (validated)",
@@ -118,72 +227,201 @@ MAX_DIMENSION = 8192
 
 # type -> {"arity": "one" | "many", "tool": ffmpeg-skill tool, "capability": name, "summary": text}
 OPERATIONS: Dict[str, Dict[str, Any]] = {
-    "TRIM": {"arity": "one", "tool": "ffmpeg-skill/cut", "capability": "video.trim",
-             "summary": "keep one source time range [start, end)"},
-    "CUT": {"arity": "one", "tool": "ffmpeg-skill/cut", "capability": "video.cut",
-            "summary": "keep several ranges of one input, joined in the order given (removes everything else)"},
-    "CONCAT": {"arity": "many", "tool": "ffmpeg-skill/join", "capability": "video.concat",
-               "summary": "join two or more inputs in order, optionally with a transition, conforming size / fps"},
-    "SPEED": {"arity": "one", "tool": "ffmpeg-skill/fit", "capability": "video.speed",
-              "summary": "retime by a constant factor (video and pitch-preserved audio)"},
-    "FIT": {"arity": "one", "tool": "ffmpeg-skill/fit", "capability": "video.fit",
-            "summary": "letterbox / pillarbox into an aspect ratio (nothing is cropped)"},
-    "FILL": {"arity": "one", "tool": "ffmpeg-skill/fit", "capability": "video.fill",
-             "summary": "centre-crop into an aspect ratio (edges are lost)"},
-    "RESIZE": {"arity": "one", "tool": "ffmpeg-skill/fit", "capability": "video.resize",
-               "summary": "scale to a width keeping the aspect ratio"},
-    "OVERLAY": {"arity": "one", "tool": "ffmpeg-skill/overlay", "capability": "video.overlay",
-                "summary": "composite a still image (logo, lower-third PNG) at a named position for a time range"},
-    "ROTATE": {"arity": "one", "tool": "ffmpeg-skill/fit", "capability": "video.rotate",
-               "summary": "turn the picture clockwise by 90/180/270 and/or mirror it horizontally or vertically (no scaling, padding or cropping)"},
+    "TRIM": {
+        "arity": "one",
+        "tool": "ffmpeg-skill/cut",
+        "capability": "video.trim",
+        "summary": "keep one source time range [start, end)",
+    },
+    "CUT": {
+        "arity": "one",
+        "tool": "ffmpeg-skill/cut",
+        "capability": "video.cut",
+        "summary": "keep several ranges of one input, joined in the order given (removes everything else)",
+    },
+    "CONCAT": {
+        "arity": "many",
+        "tool": "ffmpeg-skill/join",
+        "capability": "video.concat",
+        "summary": "join two or more inputs in order, optionally with a transition, conforming size / fps",
+    },
+    "SPEED": {
+        "arity": "one",
+        "tool": "ffmpeg-skill/fit",
+        "capability": "video.speed",
+        "summary": "retime by a constant factor (video and pitch-preserved audio)",
+    },
+    "FIT": {
+        "arity": "one",
+        "tool": "ffmpeg-skill/fit",
+        "capability": "video.fit",
+        "summary": "letterbox / pillarbox into an aspect ratio (nothing is cropped)",
+    },
+    "FILL": {
+        "arity": "one",
+        "tool": "ffmpeg-skill/fit",
+        "capability": "video.fill",
+        "summary": "centre-crop into an aspect ratio (edges are lost)",
+    },
+    "RESIZE": {
+        "arity": "one",
+        "tool": "ffmpeg-skill/fit",
+        "capability": "video.resize",
+        "summary": "scale to a width keeping the aspect ratio",
+    },
+    "OVERLAY": {
+        "arity": "one",
+        "tool": "ffmpeg-skill/overlay",
+        "capability": "video.overlay",
+        "summary": "composite a still image (logo, lower-third PNG) at a named position for a time range",
+    },
+    "ROTATE": {
+        "arity": "one",
+        "tool": "ffmpeg-skill/fit",
+        "capability": "video.rotate",
+        "summary": "turn the picture clockwise by 90/180/270 and/or mirror it horizontally or vertically (no scaling, padding or cropping)",
+    },
 }
 
 # Media compatibility per operation: what every input must be, what the output keeps, and which mismatches are
 # refused *before* anything reaches the engine (executor._check_media) or verified afterwards (executor._validate).
 # "requires" is machine-checked against probes; the text fields are the contract's documentation of the rule.
 MEDIA: Dict[str, Dict[str, Any]] = {
-    "TRIM": {"inputs": "one video", "requires": {"video": True, "audio": False, "image": False},
-             "output": {"frame_size": "as input", "audio": "as input", "fps": "as input"},
-             "refused_before_execution": ["source without a video stream or duration", "range beyond the input duration", "input frame with an odd width or height (odd_frame)"]},
-    "CUT": {"inputs": "one video", "requires": {"video": True, "audio": False, "image": False},
-            "output": {"frame_size": "as input", "audio": "as input", "fps": "as input"},
-            "refused_before_execution": ["source without a video stream or duration", "range beyond the input duration", "input frame with an odd width or height (odd_frame)"]},
-    "CONCAT": {"inputs": "two or more videos (any sizes / frame rates; conformed by params.mode to params.width/height/fps or the first input)",
-               "requires": {"video": True, "audio": False, "image": False},
-               "output": {"frame_size": "params.width x params.height, else the first input", "fps": "params.fps, else the first input",
-                          "audio": "stereo AAC when any input has audio (silence is inserted for inputs without); none when no input has audio"},
-               "refused_before_execution": ["source without a video stream or duration", "an input shorter than twice the transition"]},
-    "SPEED": {"inputs": "one video", "requires": {"video": True, "audio": False, "image": False},
-              "output": {"frame_size": "as input", "audio": "as input, pitch preserved (atempo)", "fps": "as input", "duration": "input duration / factor"},
-              "refused_before_execution": ["source without a video stream or duration", "factor outside [1/4, 4]", "input frame with an odd width or height (odd_frame)"]},
-    "FIT": {"inputs": "one video", "requires": {"video": True, "audio": False, "image": False},
-            "output": {"frame_size": "params.aspect (params.width when given; padded, nothing cropped)", "audio": "as input", "fps": "params.fps or as input"},
-            "refused_before_execution": ["source without a video stream or duration"]},
-    "FILL": {"inputs": "one video", "requires": {"video": True, "audio": False, "image": False},
-             "output": {"frame_size": "params.aspect (params.width when given; centre-cropped)", "audio": "as input", "fps": "params.fps or as input"},
-             "refused_before_execution": ["source without a video stream or duration"]},
-    "RESIZE": {"inputs": "one video", "requires": {"video": True, "audio": False, "image": False},
-               "output": {"frame_size": "params.width, height by the input aspect (even)", "audio": "as input", "fps": "params.fps or as input"},
-               "refused_before_execution": ["source without a video stream or duration"]},
-    "OVERLAY": {"inputs": "one video plus one image source (png / jpg; alpha respected)", "requires": {"video": True, "audio": False, "image": True},
-                "output": {"frame_size": "as input", "audio": "as input", "fps": "as input"},
-                "refused_before_execution": ["source without a video stream or duration", "image that does not decode",
-                                             "start / end beyond the input duration", "input frame with an odd width or height (odd_frame)"]},
-    "ROTATE": {"inputs": "one video", "requires": {"video": True, "audio": False, "image": False},
-               "output": {"frame_size": "as input, with width and height swapped when params.degrees is 90 or 270", "audio": "as input", "fps": "as input"},
-               "refused_before_execution": ["source without a video stream or duration", "input frame with an odd width or height (odd_frame)"]},
+    "TRIM": {
+        "inputs": "one video",
+        "requires": {"video": True, "audio": False, "image": False},
+        "output": {"frame_size": "as input", "audio": "as input", "fps": "as input"},
+        "refused_before_execution": [
+            "source without a video stream or duration",
+            "range beyond the input duration",
+            "input frame with an odd width or height (odd_frame)",
+        ],
+    },
+    "CUT": {
+        "inputs": "one video",
+        "requires": {"video": True, "audio": False, "image": False},
+        "output": {"frame_size": "as input", "audio": "as input", "fps": "as input"},
+        "refused_before_execution": [
+            "source without a video stream or duration",
+            "range beyond the input duration",
+            "input frame with an odd width or height (odd_frame)",
+        ],
+    },
+    "CONCAT": {
+        "inputs": "two or more videos (any sizes / frame rates; conformed by params.mode to params.width/height/fps or the first input)",
+        "requires": {"video": True, "audio": False, "image": False},
+        "output": {
+            "frame_size": "params.width x params.height, else the first input",
+            "fps": "params.fps, else the first input",
+            "audio": "stereo AAC when any input has audio (silence is inserted for inputs without); none when no input has audio",
+        },
+        "refused_before_execution": [
+            "source without a video stream or duration",
+            "an input shorter than twice the transition",
+        ],
+    },
+    "SPEED": {
+        "inputs": "one video",
+        "requires": {"video": True, "audio": False, "image": False},
+        "output": {
+            "frame_size": "as input",
+            "audio": "as input, pitch preserved (atempo)",
+            "fps": "as input",
+            "duration": "input duration / factor",
+        },
+        "refused_before_execution": [
+            "source without a video stream or duration",
+            "factor outside [1/4, 4]",
+            "input frame with an odd width or height (odd_frame)",
+        ],
+    },
+    "FIT": {
+        "inputs": "one video",
+        "requires": {"video": True, "audio": False, "image": False},
+        "output": {
+            "frame_size": "params.aspect (params.width when given; padded, nothing cropped)",
+            "audio": "as input",
+            "fps": "params.fps or as input",
+        },
+        "refused_before_execution": ["source without a video stream or duration"],
+    },
+    "FILL": {
+        "inputs": "one video",
+        "requires": {"video": True, "audio": False, "image": False},
+        "output": {
+            "frame_size": "params.aspect (params.width when given; centre-cropped)",
+            "audio": "as input",
+            "fps": "params.fps or as input",
+        },
+        "refused_before_execution": ["source without a video stream or duration"],
+    },
+    "RESIZE": {
+        "inputs": "one video",
+        "requires": {"video": True, "audio": False, "image": False},
+        "output": {
+            "frame_size": "params.width, height by the input aspect (even)",
+            "audio": "as input",
+            "fps": "params.fps or as input",
+        },
+        "refused_before_execution": ["source without a video stream or duration"],
+    },
+    "OVERLAY": {
+        "inputs": "one video plus one image source (png / jpg; alpha respected)",
+        "requires": {"video": True, "audio": False, "image": True},
+        "output": {"frame_size": "as input", "audio": "as input", "fps": "as input"},
+        "refused_before_execution": [
+            "source without a video stream or duration",
+            "image that does not decode",
+            "start / end beyond the input duration",
+            "input frame with an odd width or height (odd_frame)",
+        ],
+    },
+    "ROTATE": {
+        "inputs": "one video",
+        "requires": {"video": True, "audio": False, "image": False},
+        "output": {
+            "frame_size": "as input, with width and height swapped when params.degrees is 90 or 270",
+            "audio": "as input",
+            "fps": "as input",
+        },
+        "refused_before_execution": [
+            "source without a video stream or duration",
+            "input frame with an odd width or height (odd_frame)",
+        ],
+    },
 }
 
 # capabilities that video editing normally has but ffmpeg-skill 0.9.x has no tool for: declared as gaps,
 # never as capabilities.
 UNSUPPORTED: Dict[str, Dict[str, str]] = {
-    "CROP": {"capability": "video.crop", "reason": "ffmpeg-skill has no pixel-rectangle crop tool (fit.py only crops to an aspect ratio); use FILL for aspect-ratio crops"},
-    "FREEZE": {"capability": "video.freeze", "reason": "ffmpeg-skill has no freeze-frame tool"},
-    "REVERSE": {"capability": "video.reverse", "reason": "ffmpeg-skill has no reverse tool"},
-    "IMAGE_INSERT": {"capability": "video.image_insert", "reason": "ffmpeg-skill has no still-image-to-clip tool (join.py needs video inputs)"},
-    "POSITION": {"capability": "video.position", "reason": "free placement of a video layer is not provided (overlay.py composites images only)"},
-    "REORDER": {"capability": "video.reorder", "reason": "not a separate type: give CONCAT its inputs in the wanted order, or CUT its keep ranges in the wanted order"},
-    "TRANSITION": {"capability": "video.transition", "reason": "not a separate type: set CONCAT params.transition"},
+    "CROP": {
+        "capability": "video.crop",
+        "reason": "ffmpeg-skill has no pixel-rectangle crop tool (fit.py only crops to an aspect ratio); use FILL for aspect-ratio crops",
+    },
+    "FREEZE": {
+        "capability": "video.freeze",
+        "reason": "ffmpeg-skill has no freeze-frame tool",
+    },
+    "REVERSE": {
+        "capability": "video.reverse",
+        "reason": "ffmpeg-skill has no reverse tool",
+    },
+    "IMAGE_INSERT": {
+        "capability": "video.image_insert",
+        "reason": "ffmpeg-skill has no still-image-to-clip tool (join.py needs video inputs)",
+    },
+    "POSITION": {
+        "capability": "video.position",
+        "reason": "free placement of a video layer is not provided (overlay.py composites images only)",
+    },
+    "REORDER": {
+        "capability": "video.reorder",
+        "reason": "not a separate type: give CONCAT its inputs in the wanted order, or CUT its keep ranges in the wanted order",
+    },
+    "TRANSITION": {
+        "capability": "video.transition",
+        "reason": "not a separate type: set CONCAT params.transition",
+    },
 }
 
 
@@ -216,7 +454,10 @@ def _int_choice(v: Any, what: str, allowed: tuple) -> int:
 
 def _color(v: Any, what: str) -> str:
     if not isinstance(v, str) or not _COLOR.match(v):
-        raise EditError("INVALID_REQUEST", f"{what}: must be a named colour (black, white, ...) or 0xRRGGBB")
+        raise EditError(
+            "INVALID_REQUEST",
+            f"{what}: must be a named colour (black, white, ...) or 0xRRGGBB",
+        )
     return v
 
 
@@ -236,21 +477,38 @@ def _unit_float(v: Any, what: str) -> Fraction:
 
 def _range(raw: Any, what: str) -> Dict[str, Time]:
     if not isinstance(raw, dict) or set(raw) != {"start", "end"}:
-        raise EditError("INVALID_REQUEST", f"{what}: must be an object with start and end")
-    start, end = Time.parse(raw["start"], what + ".start"), Time.parse(raw["end"], what + ".end")
+        raise EditError(
+            "INVALID_REQUEST", f"{what}: must be an object with start and end"
+        )
+    start, end = Time.parse(raw["start"], what + ".start"), Time.parse(
+        raw["end"], what + ".end"
+    )
     if not start < end:
-        raise EditError("INVALID_TIME_RANGE", f"{what}: start must be before end", {"start": start.text(), "end": end.text()})
+        raise EditError(
+            "INVALID_TIME_RANGE",
+            f"{what}: start must be before end",
+            {"start": start.text(), "end": end.text()},
+        )
     return {"start": start, "end": end}
 
 
-def _keys(params: Dict[str, Any], what: str, allowed: tuple, required: tuple = ()) -> None:
+def _keys(
+    params: Dict[str, Any], what: str, allowed: tuple, required: tuple = ()
+) -> None:
     for k in params:
         if isinstance(k, str) and k.lower() in FORBIDDEN_KEYS:
-            raise EditError("INVALID_REQUEST", f"{what}: key {k!r} is not accepted (this skill takes typed operations, never commands)",
-                            {"reason": "forbidden_key"})
+            raise EditError(
+                "INVALID_REQUEST",
+                f"{what}: key {k!r} is not accepted (this skill takes typed operations, never commands)",
+                {"reason": "forbidden_key"},
+            )
     extra = sorted(set(params) - set(allowed))
     if extra:
-        raise EditError("INVALID_REQUEST", f"{what}: unknown parameters {extra}", {"allowed": list(allowed)})
+        raise EditError(
+            "INVALID_REQUEST",
+            f"{what}: unknown parameters {extra}",
+            {"allowed": list(allowed)},
+        )
     missing = sorted(set(required) - set(params))
     if missing:
         raise EditError("INVALID_REQUEST", f"{what}: missing parameters {missing}")
@@ -267,10 +525,17 @@ def _frame(params: Dict[str, Any], what: str, out: Dict[str, Any]) -> None:
 def validate_params(op_type: str, params: Any, what: str) -> Dict[str, Any]:
     """Return canonical parameters for an allowlisted type; raise on anything else."""
     if op_type in UNSUPPORTED:
-        raise EditError("UNSUPPORTED_OPERATION", f"{what}: {op_type} is not implemented: {UNSUPPORTED[op_type]['reason']}",
-                        {"type": op_type, "supported": sorted(OPERATIONS)})
+        raise EditError(
+            "UNSUPPORTED_OPERATION",
+            f"{what}: {op_type} is not implemented: {UNSUPPORTED[op_type]['reason']}",
+            {"type": op_type, "supported": sorted(OPERATIONS)},
+        )
     if op_type not in OPERATIONS:
-        raise EditError("UNSUPPORTED_OPERATION", f"{what}: unknown operation type", {"type": op_type, "supported": sorted(OPERATIONS)})
+        raise EditError(
+            "UNSUPPORTED_OPERATION",
+            f"{what}: unknown operation type",
+            {"type": op_type, "supported": sorted(OPERATIONS)},
+        )
     if params is None:
         params = {}
     if not isinstance(params, dict):
@@ -279,25 +544,42 @@ def validate_params(op_type: str, params: Any, what: str) -> Dict[str, Any]:
     if op_type == "TRIM":
         _keys(params, what, ("start", "end", "precision"), ("start", "end"))
         p.update(_range({"start": params["start"], "end": params["end"]}, what))
-        p["precision"] = _enum(params.get("precision", "frame"), what + ".precision", PRECISIONS)
+        p["precision"] = _enum(
+            params.get("precision", "frame"), what + ".precision", PRECISIONS
+        )
     elif op_type == "CUT":
         _keys(params, what, ("keep", "precision"), ("keep",))
         keep = params["keep"]
         if not isinstance(keep, list) or not keep or len(keep) > 500:
-            raise EditError("INVALID_REQUEST", f"{what}.keep: must be a non-empty list of ranges (max 500)")
+            raise EditError(
+                "INVALID_REQUEST",
+                f"{what}.keep: must be a non-empty list of ranges (max 500)",
+            )
         p["keep"] = [_range(r, f"{what}.keep[{i}]") for i, r in enumerate(keep)]
-        p["precision"] = _enum(params.get("precision", "frame"), what + ".precision", PRECISIONS)
+        p["precision"] = _enum(
+            params.get("precision", "frame"), what + ".precision", PRECISIONS
+        )
     elif op_type == "CONCAT":
-        _keys(params, what, ("transition", "width", "height", "fps", "mode", "pad_color"))
+        _keys(
+            params, what, ("transition", "width", "height", "fps", "mode", "pad_color")
+        )
         tr = params.get("transition")
         if tr is not None:
             if not isinstance(tr, dict):
-                raise EditError("INVALID_REQUEST", f"{what}.transition: must be an object")
+                raise EditError(
+                    "INVALID_REQUEST", f"{what}.transition: must be an object"
+                )
             _keys(tr, what + ".transition", ("type", "duration"), ("type", "duration"))
             d = Time.parse(tr["duration"], what + ".transition.duration")
             if not (Fraction(1, 100) <= d.value <= Fraction(10)):
-                raise EditError("INVALID_TIME_RANGE", f"{what}.transition.duration: must be between 0.01 and 10 seconds")
-            p["transition"] = {"type": _enum(tr["type"], what + ".transition.type", TRANSITIONS), "duration": d}
+                raise EditError(
+                    "INVALID_TIME_RANGE",
+                    f"{what}.transition.duration: must be between 0.01 and 10 seconds",
+                )
+            p["transition"] = {
+                "type": _enum(tr["type"], what + ".transition.type", TRANSITIONS),
+                "duration": d,
+            }
         if "width" in params:
             p["width"] = _even(params["width"], what + ".width")
         if "height" in params:
@@ -309,49 +591,87 @@ def validate_params(op_type: str, params: Any, what: str) -> Dict[str, Any]:
         _keys(params, what, ("factor", "smooth"), ("factor",))
         f = parse_fraction(params["factor"], what + ".factor")
         if not (MIN_SPEED <= f <= MAX_SPEED):
-            raise EditError("INVALID_REQUEST", f"{what}.factor: must be between {fraction_text(MIN_SPEED)} and {fraction_text(MAX_SPEED)}")
+            raise EditError(
+                "INVALID_REQUEST",
+                f"{what}.factor: must be between {fraction_text(MIN_SPEED)} and {fraction_text(MAX_SPEED)}",
+            )
         if f == 1:
-            raise EditError("INVALID_REQUEST", f"{what}.factor: 1 changes nothing; drop the operation")
+            raise EditError(
+                "INVALID_REQUEST",
+                f"{what}.factor: 1 changes nothing; drop the operation",
+            )
         p["factor"] = f
         if "smooth" in params:
             p["smooth"] = _enum(params["smooth"], what + ".smooth", SMOOTH_MODES)
     elif op_type in ("FIT", "FILL"):
-        _keys(params, what, ("aspect", "width", "fps") + (("pad_color",) if op_type == "FIT" else ("anchor",)), ("aspect",))
+        _keys(
+            params,
+            what,
+            ("aspect", "width", "fps")
+            + (("pad_color",) if op_type == "FIT" else ("anchor",)),
+            ("aspect",),
+        )
         p["aspect"] = _aspect(params["aspect"], what + ".aspect")
         if "width" in params:
             p["width"] = _even(params["width"], what + ".width")
         if op_type == "FIT":
-            p["pad_color"] = _color(params.get("pad_color", "black"), what + ".pad_color")
+            p["pad_color"] = _color(
+                params.get("pad_color", "black"), what + ".pad_color"
+            )
         elif "anchor" in params:
             a = params["anchor"]
             if not isinstance(a, dict):
-                raise EditError("INVALID_REQUEST", f"{what}.anchor: must be an object with x and y")
+                raise EditError(
+                    "INVALID_REQUEST", f"{what}.anchor: must be an object with x and y"
+                )
             _keys(a, what + ".anchor", ("x", "y"), ("x", "y"))
-            p["anchor"] = {"x": _unit_float(a["x"], what + ".anchor.x"), "y": _unit_float(a["y"], what + ".anchor.y")}
+            p["anchor"] = {
+                "x": _unit_float(a["x"], what + ".anchor.x"),
+                "y": _unit_float(a["y"], what + ".anchor.y"),
+            }
         _frame(params, what, p)
     elif op_type == "RESIZE":
         _keys(params, what, ("width", "fps"), ("width",))
         p["width"] = _even(params["width"], what + ".width")
         _frame(params, what, p)
     elif op_type == "OVERLAY":
-        _keys(params, what, ("image", "position", "margin", "scale", "opacity", "start", "end", "fade"), ("image",))
+        _keys(
+            params,
+            what,
+            ("image", "position", "margin", "scale", "opacity", "start", "end", "fade"),
+            ("image",),
+        )
         img = params["image"]
         if not isinstance(img, str) or not img:
-            raise EditError("INVALID_REQUEST", f"{what}.image: must reference an image source id")
+            raise EditError(
+                "INVALID_REQUEST", f"{what}.image: must reference an image source id"
+            )
         p["image"] = img
         pos = params.get("position", "top-right")
         if isinstance(pos, dict):
             _keys(pos, what + ".position", ("x", "y"), ("x", "y"))
-            p["position"] = {"x": _int(pos["x"], what + ".position.x", -MAX_DIMENSION, MAX_DIMENSION),
-                             "y": _int(pos["y"], what + ".position.y", -MAX_DIMENSION, MAX_DIMENSION)}
+            p["position"] = {
+                "x": _int(
+                    pos["x"], what + ".position.x", -MAX_DIMENSION, MAX_DIMENSION
+                ),
+                "y": _int(
+                    pos["y"], what + ".position.y", -MAX_DIMENSION, MAX_DIMENSION
+                ),
+            }
         else:
             p["position"] = _enum(pos, what + ".position", POSITIONS)
         p["margin"] = _int(params.get("margin", 24), what + ".margin", 0, 1024)
         if "scale" in params:
             p["scale"] = _int(params["scale"], what + ".scale", 1, MAX_DIMENSION)
         op = params.get("opacity", 1)
-        if isinstance(op, bool) or not isinstance(op, (int, float)) or not (0 < op <= 1):
-            raise EditError("INVALID_REQUEST", f"{what}.opacity: must be a number in (0, 1]")
+        if (
+            isinstance(op, bool)
+            or not isinstance(op, (int, float))
+            or not (0 < op <= 1)
+        ):
+            raise EditError(
+                "INVALID_REQUEST", f"{what}.opacity: must be a number in (0, 1]"
+            )
         p["opacity"] = Fraction(repr(float(op))).limit_denominator(1000)
         if "start" in params:
             p["start"] = Time.parse(params["start"], what + ".start")
@@ -362,7 +682,9 @@ def validate_params(op_type: str, params: Any, what: str) -> Dict[str, Any]:
         if "fade" in params:
             fd = parse_fraction(params["fade"], what + ".fade")
             if not (0 <= fd <= 10):
-                raise EditError("INVALID_REQUEST", f"{what}.fade: must be between 0 and 10 seconds")
+                raise EditError(
+                    "INVALID_REQUEST", f"{what}.fade: must be between 0 and 10 seconds"
+                )
             p["fade"] = fd
     elif op_type == "ROTATE":
         _keys(params, what, ("degrees", "flip"))
@@ -371,7 +693,9 @@ def validate_params(op_type: str, params: Any, what: str) -> Dict[str, Any]:
         if "flip" in params:
             p["flip"] = _enum(params["flip"], what + ".flip", FLIPS)
         if "degrees" not in p and "flip" not in p:
-            raise EditError("INVALID_REQUEST", f"{what}: give degrees and/or flip; nothing to do")
+            raise EditError(
+                "INVALID_REQUEST", f"{what}: give degrees and/or flip; nothing to do"
+            )
     return p
 
 
@@ -386,7 +710,9 @@ def validate_encoding(raw: Any, what: str) -> Dict[str, Any]:
     if "preset" in raw:
         out["preset"] = _enum(raw["preset"], what + ".preset", X264_PRESETS)
     if not out:
-        raise EditError("INVALID_REQUEST", f"{what}: an empty profile changes nothing; drop it")
+        raise EditError(
+            "INVALID_REQUEST", f"{what}: an empty profile changes nothing; drop it"
+        )
     return out
 
 
@@ -398,6 +724,7 @@ def even(n: Any) -> int:
 
 def params_to_json(p: Dict[str, Any]) -> Dict[str, Any]:
     """Canonical JSON form of validated parameters (Time -> {seconds, rational}, Fraction -> 'N/D')."""
+
     def conv(v: Any) -> Any:
         if isinstance(v, Time):
             return v.to_dict()
@@ -408,25 +735,54 @@ def params_to_json(p: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(v, list):
             return [conv(x) for x in v]
         return v
+
     return conv(p)
 
 
 def capability_list() -> List[Dict[str, Any]]:
     seen: Dict[str, Dict[str, Any]] = {}
     for t, spec in OPERATIONS.items():
-        seen.setdefault(spec["capability"], {"capability": spec["capability"], "operations": [], "tool": spec["tool"]})["operations"].append(t)
-    extra = {"video.transition": {"capability": "video.transition", "operations": ["CONCAT (params.transition)"], "tool": "ffmpeg-skill/join"},
-             "video.reorder": {"capability": "video.reorder", "operations": ["CONCAT (input order)", "CUT (keep order)"], "tool": "ffmpeg-skill/cut | ffmpeg-skill/join"}}
+        seen.setdefault(
+            spec["capability"],
+            {"capability": spec["capability"], "operations": [], "tool": spec["tool"]},
+        )["operations"].append(t)
+    extra = {
+        "video.transition": {
+            "capability": "video.transition",
+            "operations": ["CONCAT (params.transition)"],
+            "tool": "ffmpeg-skill/join",
+        },
+        "video.reorder": {
+            "capability": "video.reorder",
+            "operations": ["CONCAT (input order)", "CUT (keep order)"],
+            "tool": "ffmpeg-skill/cut | ffmpeg-skill/join",
+        },
+    }
     seen.update(extra)
     return [seen[k] for k in sorted(seen)]
 
 
 def media_compatibility() -> Dict[str, Dict[str, Any]]:
     """Per operation type: input requirements, output guarantees and the mismatches refused before execution."""
-    return {t: {"inputs": m["inputs"], "requires": dict(m["requires"]), "output": dict(m["output"]),
-                "refused_before_execution": list(m["refused_before_execution"])} for t, m in sorted(MEDIA.items())}
+    return {
+        t: {
+            "inputs": m["inputs"],
+            "requires": dict(m["requires"]),
+            "output": dict(m["output"]),
+            "refused_before_execution": list(m["refused_before_execution"]),
+        }
+        for t, m in sorted(MEDIA.items())
+    }
 
 
 def unsupported_list() -> List[Dict[str, str]]:
-    return [{"type": t, "capability": u["capability"], "status": "NOT_IMPLEMENTED", "reason": u["reason"]}
-            for t, u in sorted(UNSUPPORTED.items()) if t not in ("REORDER", "TRANSITION")]
+    return [
+        {
+            "type": t,
+            "capability": u["capability"],
+            "status": "NOT_IMPLEMENTED",
+            "reason": u["reason"],
+        }
+        for t, u in sorted(UNSUPPORTED.items())
+        if t not in ("REORDER", "TRANSITION")
+    ]

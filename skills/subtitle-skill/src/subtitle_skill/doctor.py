@@ -9,6 +9,7 @@ ffmpeg-skill already owns), this module asks ffmpeg-skill's own
 `scripts/_contract.py doctor --json` for that verdict once the install is
 located, and folds it into subtitle-skill's own report.
 """
+
 from __future__ import annotations
 
 import json
@@ -22,7 +23,13 @@ from .translation import engine_status
 
 #: Capabilities ffmpeg-skill's `caption` tool always requires, per its own
 #: contract (scripts/_contract.py TOOL_META["caption"]["required"]).
-_CAPTION_REQUIRED_CAPABILITIES = ("ffmpeg", "ffprobe", "encoder:libx264", "encoder:aac", "filter:subtitles")
+_CAPTION_REQUIRED_CAPABILITIES = (
+    "ffmpeg",
+    "ffprobe",
+    "encoder:libx264",
+    "encoder:aac",
+    "filter:subtitles",
+)
 
 #: `render` only ever produces SRT-driven burn-ins; ffmpeg-skill's
 #: `caption.py` has no WebVTT support (`--srt` / `--ass` only).
@@ -46,13 +53,22 @@ def _ffmpeg_skill_capabilities(root) -> dict:
         )
         report = json.loads(proc.stdout)
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
-        return {"checked": False, "missing": [], "unknown": [], "detail": f"ffmpeg-skill doctor failed: {exc}"}
+        return {
+            "checked": False,
+            "missing": [],
+            "unknown": [],
+            "detail": f"ffmpeg-skill doctor failed: {exc}",
+        }
 
     # ffmpeg-skill's own doctor already classifies each capability as
     # available / missing / unknown (a listing it could not prove one way
     # or the other -- never folded into "missing" there, so not here either).
-    missing = sorted(set(report.get("missing", [])) & set(_CAPTION_REQUIRED_CAPABILITIES))
-    unknown = sorted(set(report.get("unknown", [])) & set(_CAPTION_REQUIRED_CAPABILITIES))
+    missing = sorted(
+        set(report.get("missing", [])) & set(_CAPTION_REQUIRED_CAPABILITIES)
+    )
+    unknown = sorted(
+        set(report.get("unknown", [])) & set(_CAPTION_REQUIRED_CAPABILITIES)
+    )
     return {"checked": True, "missing": missing, "unknown": unknown, "detail": None}
 
 
@@ -60,7 +76,11 @@ def build_doctor_report() -> dict:
     root = resolve_ffmpeg_skill_root()
     problems = []
     render_available = False
-    ffmpeg_skill_dependency = {"available": False, "resolved_path": None, "capabilities": None}
+    ffmpeg_skill_dependency = {
+        "available": False,
+        "resolved_path": None,
+        "capabilities": None,
+    }
 
     if root is None:
         problems.append(
@@ -79,7 +99,10 @@ def build_doctor_report() -> dict:
         ffmpeg_skill_dependency["capabilities"] = caps
         if not caps["checked"]:
             problems.append(
-                {"code": "DEPENDENCY_ERROR", "message": f"could not verify ffmpeg-skill capabilities: {caps['detail']}"}
+                {
+                    "code": "DEPENDENCY_ERROR",
+                    "message": f"could not verify ffmpeg-skill capabilities: {caps['detail']}",
+                }
             )
         elif caps["missing"]:
             problems.append(
@@ -120,5 +143,7 @@ def build_doctor_report() -> dict:
         "dependencies": {"ffmpeg-skill": ffmpeg_skill_dependency},
         "translation_engines": engine_status(),
         "problems": problems,
-        "healthy": not any(p.get("severity", "blocking") == "blocking" for p in problems),
+        "healthy": not any(
+            p.get("severity", "blocking") == "blocking" for p in problems
+        ),
     }

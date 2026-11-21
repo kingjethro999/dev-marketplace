@@ -5,6 +5,7 @@ execution, regardless of where in the JSON tree it appears or what its
 value is. This is checked before any other parsing so a malicious payload
 never reaches format/render code.
 """
+
 from __future__ import annotations
 
 from typing import Any

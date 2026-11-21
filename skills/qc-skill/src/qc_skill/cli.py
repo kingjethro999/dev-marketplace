@@ -43,7 +43,9 @@ def _read_request_document(source: str) -> Any:
             with open(source, "r", encoding="utf-8") as fh:
                 raw = fh.read()
         except OSError as exc:
-            raise error("INVALID_REQUEST", f"could not read request file: {exc}", path=source)
+            raise error(
+                "INVALID_REQUEST", f"could not read request file: {exc}", path=source
+            )
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -84,7 +86,9 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     workspace = args.workspace or os.getcwd()
-    path_policy = PathPolicy(workspace=workspace, allowed_input_roots=args.allowed_input_root or None)
+    path_policy = PathPolicy(
+        workspace=workspace, allowed_input_roots=args.allowed_input_root or None
+    )
 
     try:
         doc = _read_request_document(args.request)
@@ -98,7 +102,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         # request.timeout covers capability detection too (ADR-019)
         with request_deadline(request.timeout):
             caps = detect_capabilities()
-            ctx = ExecutionContext(path_policy=path_policy, capabilities=caps, cache=cache)
+            ctx = ExecutionContext(
+                path_policy=path_policy, capabilities=caps, cache=cache
+            )
             response = run_report(request, ctx)
     except QCError as err:
         if args.json:
@@ -122,7 +128,9 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="qc", description="Media quality control / validation skill")
+    parser = argparse.ArgumentParser(
+        prog="qc", description="Media quality control / validation skill"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_contract = sub.add_parser("contract", help="print the skill contract")
@@ -134,16 +142,26 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--workspace", default=None)
     p_doctor.set_defaults(func=cmd_doctor)
 
-    p_run = sub.add_parser("run", help="run inspect/check/validate against a request document")
+    p_run = sub.add_parser(
+        "run", help="run inspect/check/validate against a request document"
+    )
     p_run.add_argument("request", help="path to a request JSON file, or '-' for stdin")
     p_run.add_argument("--json", action="store_true")
-    p_run.add_argument("--workspace", default=None, help="root for cache/report writes (default: cwd)")
     p_run.add_argument(
-        "--allowed-input-root", action="append", default=None,
+        "--workspace", default=None, help="root for cache/report writes (default: cwd)"
+    )
+    p_run.add_argument(
+        "--allowed-input-root",
+        action="append",
+        default=None,
         help="restrict input files to this root (repeatable); default: any readable regular file",
     )
-    p_run.add_argument("--cache-dir", default=None, help="override the report cache directory")
-    p_run.add_argument("--no-cache", action="store_true", help="disable report reuse entirely")
+    p_run.add_argument(
+        "--cache-dir", default=None, help="override the report cache directory"
+    )
+    p_run.add_argument(
+        "--no-cache", action="store_true", help="disable report reuse entirely"
+    )
     p_run.set_defaults(func=cmd_run)
 
     return parser

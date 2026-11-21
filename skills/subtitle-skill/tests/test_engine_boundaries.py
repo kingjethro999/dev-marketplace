@@ -8,6 +8,7 @@ testing subtitle-skill's own arithmetic (the 0.25s tolerance boundary,
 what happens when the reported probe has no video, etc.) precisely and
 without depending on encoder-timing variance in a real ffmpeg run.
 """
+
 import json
 import textwrap
 from pathlib import Path
@@ -15,7 +16,14 @@ from pathlib import Path
 import pytest
 
 
-def _write_fake_scripts(root: Path, *, input_duration: float, output_duration, output_has_video: bool, write_output: bool = True):
+def _write_fake_scripts(
+    root: Path,
+    *,
+    input_duration: float,
+    output_duration,
+    output_has_video: bool,
+    write_output: bool = True,
+):
     (root / "scripts").mkdir(parents=True, exist_ok=True)
     (root / "scripts" / "_common.py").write_text("# fake\n", encoding="utf-8")
 
@@ -53,8 +61,19 @@ def _write_fake_scripts(root: Path, *, input_duration: float, output_duration, o
 
 @pytest.fixture()
 def fake_engine(tmp_path, monkeypatch):
-    def _make(*, input_duration=10.0, output_duration=10.0, output_has_video=True, write_output=True):
-        root = tmp_path / f"ffskill_{output_duration}_{output_has_video}_{write_output}".replace(".", "_").replace("-", "_")
+    def _make(
+        *,
+        input_duration=10.0,
+        output_duration=10.0,
+        output_has_video=True,
+        write_output=True,
+    ):
+        root = (
+            tmp_path
+            / f"ffskill_{output_duration}_{output_has_video}_{write_output}".replace(
+                ".", "_"
+            ).replace("-", "_")
+        )
         _write_fake_scripts(
             root,
             input_duration=input_duration,
@@ -76,7 +95,12 @@ def _burn_in(tmp_path):
     srt_path = tmp_path / "cues.srt"
     srt_path.write_text("1\n00:00:00,000 --> 00:00:01,000\nhi\n\n", encoding="utf-8")
     output_path = tmp_path / "out.mp4"
-    return engine.burn_in(video_path=video_path, subtitle_path=srt_path, subtitle_format="srt", output_path=output_path)
+    return engine.burn_in(
+        video_path=video_path,
+        subtitle_path=srt_path,
+        subtitle_format="srt",
+        output_path=output_path,
+    )
 
 
 @pytest.mark.parametrize("output_duration", [10.0, 9.76, 10.24])
@@ -127,4 +151,7 @@ def test_engine_version_is_never_null_without_package_json(tmp_path, fake_engine
     root = fake_engine(input_duration=10.0, output_duration=10.0)
     response = _burn_in(tmp_path)
     assert response["engine_skill_version"] == engine.UNKNOWN_ENGINE_VERSION
-    assert isinstance(response["engine_skill_version"], str) and response["engine_skill_version"]
+    assert (
+        isinstance(response["engine_skill_version"], str)
+        and response["engine_skill_version"]
+    )

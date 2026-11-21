@@ -46,13 +46,34 @@ from .rules import (
 REQUEST_SCHEMA = "qc/request@1"
 
 ALLOWED_TOP_LEVEL_KEYS = {
-    "schema", "request_id", "operation", "kind", "input", "subtitle", "reference_video",
-    "artifacts", "parameters", "rules", "cache_policy", "timeout",
+    "schema",
+    "request_id",
+    "operation",
+    "kind",
+    "input",
+    "subtitle",
+    "reference_video",
+    "artifacts",
+    "parameters",
+    "rules",
+    "cache_policy",
+    "timeout",
 }
 
 FORBIDDEN_KEYS = {
-    "command", "commands", "argv", "args", "shell", "cmd", "cmdline",
-    "exec", "executable", "filter", "filter_complex", "env", "environment",
+    "command",
+    "commands",
+    "argv",
+    "args",
+    "shell",
+    "cmd",
+    "cmdline",
+    "exec",
+    "executable",
+    "filter",
+    "filter_complex",
+    "env",
+    "environment",
 }
 
 VALID_OPERATIONS = {"inspect", "check", "validate"}
@@ -61,12 +82,20 @@ VALID_CACHE_POLICIES = {"use", "bypass", "only"}
 VALID_ARTIFACT_TYPES = {"video", "audio", "subtitle", "thumbnail", "metadata", "other"}
 
 _ALLOWED_PARAMETER_KEYS = {
-    "black_min_duration_sec", "black_pixel_threshold",
-    "freeze_noise_db", "freeze_min_duration_sec",
-    "luminance_legal_min", "luminance_legal_max",
-    "silence_threshold_db", "silence_min_duration_sec", "clipping_threshold_dbfs",
-    "max_line_length", "max_cue_duration_sec", "max_gap_sec",
-    "flash_area_fraction", "scene_cut_threshold",
+    "black_min_duration_sec",
+    "black_pixel_threshold",
+    "freeze_noise_db",
+    "freeze_min_duration_sec",
+    "luminance_legal_min",
+    "luminance_legal_max",
+    "silence_threshold_db",
+    "silence_min_duration_sec",
+    "clipping_threshold_dbfs",
+    "max_line_length",
+    "max_cue_duration_sec",
+    "max_gap_sec",
+    "flash_area_fraction",
+    "scene_cut_threshold",
 }
 
 
@@ -146,11 +175,15 @@ def _build_rule(cls, data: Optional[Dict[str, Any]]):
     if data is None:
         return None
     if not isinstance(data, dict):
-        raise error("INVALID_REQUEST", f"rule payload for {cls.__name__} must be an object")
+        raise error(
+            "INVALID_REQUEST", f"rule payload for {cls.__name__} must be an object"
+        )
     valid_fields = {f.name for f in cls.__dataclass_fields__.values()}  # type: ignore[attr-defined]
     unknown = set(data) - valid_fields
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for {cls.__name__}: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST", f"unknown fields for {cls.__name__}: {sorted(unknown)}"
+        )
     kwargs = dict(data)
     if cls is VideoRule:
         _validate_video_rule_fields(kwargs)
@@ -165,17 +198,23 @@ def _build_rule(cls, data: Optional[Dict[str, Any]]):
     if "subtitle" in kwargs and kwargs["subtitle"] is not None:
         kwargs["subtitle"] = _build_rule(SubtitleRule, kwargs["subtitle"])
     if "timeline_integrity" in kwargs and kwargs["timeline_integrity"] is not None:
-        kwargs["timeline_integrity"] = _build_timeline_integrity_rule(kwargs["timeline_integrity"])
+        kwargs["timeline_integrity"] = _build_timeline_integrity_rule(
+            kwargs["timeline_integrity"]
+        )
     try:
         return cls(**kwargs)
     except TypeError as exc:
-        raise error("INVALID_REQUEST", f"invalid rule payload for {cls.__name__}: {exc}")
+        raise error(
+            "INVALID_REQUEST", f"invalid rule payload for {cls.__name__}: {exc}"
+        )
 
 
 def _number(value: Any, *, field_name: str, allow_negative: bool = True) -> float:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         raise error("INVALID_REQUEST", f"{field_name} must be a number")
-    if not math.isfinite(value):  # JSON decoders accept NaN / Infinity; no rule field means them
+    if not math.isfinite(
+        value
+    ):  # JSON decoders accept NaN / Infinity; no rule field means them
         raise error("INVALID_REQUEST", f"{field_name} must be a finite number")
     if not allow_negative and value < 0:
         raise error("INVALID_REQUEST", f"{field_name} must not be negative")
@@ -190,25 +229,39 @@ def _bool_or_none(value: Any, *, field_name: str) -> Optional[bool]:
 
 def _build_text_region(item: Any) -> TextRegion:
     if not isinstance(item, dict):
-        raise error("INVALID_REQUEST", "each entry in VideoRule.text_regions must be an object")
+        raise error(
+            "INVALID_REQUEST", "each entry in VideoRule.text_regions must be an object"
+        )
     unknown = set(item) - {"t", "box", "role"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for a text region: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST", f"unknown fields for a text region: {sorted(unknown)}"
+        )
     for key in ("t", "box", "role"):
         if key not in item:
-            raise error("INVALID_REQUEST", f"text region is missing required field {key!r}")
+            raise error(
+                "INVALID_REQUEST", f"text region is missing required field {key!r}"
+            )
     t = _number(item["t"], field_name="text region.t", allow_negative=False)
     box = item["box"]
     if (
-        not isinstance(box, list) or len(box) != 4
+        not isinstance(box, list)
+        or len(box) != 4
         or not all(isinstance(v, int) and not isinstance(v, bool) for v in box)
     ):
-        raise error("INVALID_REQUEST", "text region.box must be a list of four integers [x, y, w, h]")
+        raise error(
+            "INVALID_REQUEST",
+            "text region.box must be a list of four integers [x, y, w, h]",
+        )
     x, y, w, h = box
     if x < 0 or y < 0 or w <= 0 or h <= 0:
         raise error("INVALID_REQUEST", "text region.box needs x, y >= 0 and w, h > 0")
     if item["role"] not in TEXT_ROLES:
-        raise error("INVALID_REQUEST", f"text region.role must be one of {list(TEXT_ROLES)}", got=item["role"])
+        raise error(
+            "INVALID_REQUEST",
+            f"text region.role must be one of {list(TEXT_ROLES)}",
+            got=item["role"],
+        )
     return TextRegion(t=t, box=[x, y, w, h], role=item["role"])
 
 
@@ -221,40 +274,91 @@ def _build_stinger_rule(data: Any) -> StingerRule:
     allowed = {"cut_point", "cover", "file", "cut_at", "max_cut_frame_difference"}
     unknown = set(data) - allowed
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for VideoRule.stinger: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for VideoRule.stinger: {sorted(unknown)}",
+        )
     if data.get("cut_point") is None:
-        raise error("INVALID_REQUEST", "VideoRule.stinger.cut_point is required (seconds on the stinger's own timeline)")
-    cut_point = _number(data["cut_point"], field_name="VideoRule.stinger.cut_point", allow_negative=False)
+        raise error(
+            "INVALID_REQUEST",
+            "VideoRule.stinger.cut_point is required (seconds on the stinger's own timeline)",
+        )
+    cut_point = _number(
+        data["cut_point"],
+        field_name="VideoRule.stinger.cut_point",
+        allow_negative=False,
+    )
     cover = None
     if data.get("cover") is not None:
         raw = data["cover"]
         if not isinstance(raw, dict) or set(raw) != {"start", "end"}:
-            raise error("INVALID_REQUEST", "VideoRule.stinger.cover must be an object {start, end}")
-        start = _number(raw["start"], field_name="VideoRule.stinger.cover.start", allow_negative=False)
-        end = _number(raw["end"], field_name="VideoRule.stinger.cover.end", allow_negative=False)
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.stinger.cover must be an object {start, end}",
+            )
+        start = _number(
+            raw["start"],
+            field_name="VideoRule.stinger.cover.start",
+            allow_negative=False,
+        )
+        end = _number(
+            raw["end"], field_name="VideoRule.stinger.cover.end", allow_negative=False
+        )
         if end <= start:
-            raise error("INVALID_REQUEST", "VideoRule.stinger.cover.end must be after its start")
+            raise error(
+                "INVALID_REQUEST", "VideoRule.stinger.cover.end must be after its start"
+            )
         cover = StingerCover(start=start, end=end)
     file = data.get("file")
     if file is not None and (not isinstance(file, str) or not file):
-        raise error("INVALID_REQUEST", "VideoRule.stinger.file must be a non-empty path string")
+        raise error(
+            "INVALID_REQUEST", "VideoRule.stinger.file must be a non-empty path string"
+        )
     cut_at = data.get("cut_at")
     if cut_at is not None:
         if not isinstance(cut_at, list) or not cut_at:
-            raise error("INVALID_REQUEST", "VideoRule.stinger.cut_at must be a non-empty list of seconds")
-        cut_at = sorted(_number(t, field_name="VideoRule.stinger.cut_at[]", allow_negative=False) for t in cut_at)
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.stinger.cut_at must be a non-empty list of seconds",
+            )
+        cut_at = sorted(
+            _number(t, field_name="VideoRule.stinger.cut_at[]", allow_negative=False)
+            for t in cut_at
+        )
         if file is None:
-            raise error("INVALID_REQUEST", "VideoRule.stinger.cut_at needs VideoRule.stinger.file (the stinger to compare the cut frames with)")
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.stinger.cut_at needs VideoRule.stinger.file (the stinger to compare the cut frames with)",
+            )
     limit = data.get("max_cut_frame_difference")
     if limit is not None:
-        limit = _number(limit, field_name="VideoRule.stinger.max_cut_frame_difference", allow_negative=False)
+        limit = _number(
+            limit,
+            field_name="VideoRule.stinger.max_cut_frame_difference",
+            allow_negative=False,
+        )
         if limit > 255:
-            raise error("INVALID_REQUEST", "VideoRule.stinger.max_cut_frame_difference must be between 0 and 255")
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.stinger.max_cut_frame_difference must be between 0 and 255",
+            )
         if cut_at is None:
-            raise error("INVALID_REQUEST", "VideoRule.stinger.max_cut_frame_difference needs VideoRule.stinger.cut_at")
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.stinger.max_cut_frame_difference needs VideoRule.stinger.cut_at",
+            )
     elif cut_at is not None:
-        raise error("INVALID_REQUEST", "VideoRule.stinger.cut_at needs max_cut_frame_difference (no default: a delivery's encoding loss is yours to allow)")
-    return StingerRule(cut_point=cut_point, cover=cover, file=file, cut_at=cut_at, max_cut_frame_difference=limit)
+        raise error(
+            "INVALID_REQUEST",
+            "VideoRule.stinger.cut_at needs max_cut_frame_difference (no default: a delivery's encoding loss is yours to allow)",
+        )
+    return StingerRule(
+        cut_point=cut_point,
+        cover=cover,
+        file=file,
+        cut_at=cut_at,
+        max_cut_frame_difference=limit,
+    )
 
 
 def _only(data: Any, name: str, allowed: set) -> None:
@@ -266,8 +370,15 @@ def _only(data: Any, name: str, allowed: set) -> None:
 
 
 def _int_field(value: Any, *, field_name: str, low: int, high: int) -> int:
-    if not isinstance(value, int) or isinstance(value, bool) or not low <= value <= high:
-        raise error("INVALID_REQUEST", f"{field_name} must be a whole number from {low} to {high}")
+    if (
+        not isinstance(value, int)
+        or isinstance(value, bool)
+        or not low <= value <= high
+    ):
+        raise error(
+            "INVALID_REQUEST",
+            f"{field_name} must be a whole number from {low} to {high}",
+        )
     return value
 
 
@@ -280,20 +391,40 @@ def _build_video_loop_seam_rule(data: Any) -> VideoLoopRule:
     _only(data, "VideoRule.loop_seam", {"window_frames", "segments", "max_seam_ratio"})
     window = None
     if data.get("window_frames") is not None:
-        window = _int_field(data["window_frames"], field_name="VideoRule.loop_seam.window_frames", low=1, high=MAX_WINDOW_FRAMES)
+        window = _int_field(
+            data["window_frames"],
+            field_name="VideoRule.loop_seam.window_frames",
+            low=1,
+            high=MAX_WINDOW_FRAMES,
+        )
     segments = None
     if data.get("segments") is not None:
         raw = data["segments"]
         if not isinstance(raw, dict) or set(raw) != {"in", "loop", "out"}:
-            raise error("INVALID_REQUEST", "VideoRule.loop_seam.segments must be title.json's {in, loop, out} (seconds)")
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.loop_seam.segments must be title.json's {in, loop, out} (seconds)",
+            )
         segments = {
-            k: _number(raw[k], field_name=f"VideoRule.loop_seam.segments.{k}", allow_negative=False) for k in ("in", "loop", "out")
+            k: _number(
+                raw[k],
+                field_name=f"VideoRule.loop_seam.segments.{k}",
+                allow_negative=False,
+            )
+            for k in ("in", "loop", "out")
         }
         if segments["loop"] <= 0:
-            raise error("INVALID_REQUEST", "VideoRule.loop_seam.segments.loop must be greater than 0 (a title without a loop has no seam)")
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.loop_seam.segments.loop must be greater than 0 (a title without a loop has no seam)",
+            )
     limit = None
     if data.get("max_seam_ratio") is not None:
-        limit = _number(data["max_seam_ratio"], field_name="VideoRule.loop_seam.max_seam_ratio", allow_negative=False)
+        limit = _number(
+            data["max_seam_ratio"],
+            field_name="VideoRule.loop_seam.max_seam_ratio",
+            allow_negative=False,
+        )
     return VideoLoopRule(window_frames=window, segments=segments, max_seam_ratio=limit)
 
 
@@ -304,37 +435,80 @@ def _build_alpha_edge_rule(data: Any) -> AlphaEdgeRule:
     _only(data, "VideoRule.alpha_edge", {"alpha_mode", "times", "max_fringe_px"})
     mode = data.get("alpha_mode")
     if mode not in ALPHA_MODES:
-        raise error("INVALID_REQUEST", f"VideoRule.alpha_edge.alpha_mode is required: one of {list(ALPHA_MODES)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"VideoRule.alpha_edge.alpha_mode is required: one of {list(ALPHA_MODES)}",
+        )
     times = data.get("times")
     if times is not None:
         if not isinstance(times, list) or not times or len(times) > 100:
-            raise error("INVALID_REQUEST", "VideoRule.alpha_edge.times must be a list of 1 to 100 seconds")
-        times = sorted({_number(t, field_name="VideoRule.alpha_edge.times[]", allow_negative=False) for t in times})
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.alpha_edge.times must be a list of 1 to 100 seconds",
+            )
+        times = sorted(
+            {
+                _number(
+                    t, field_name="VideoRule.alpha_edge.times[]", allow_negative=False
+                )
+                for t in times
+            }
+        )
     limit = None
     if data.get("max_fringe_px") is not None:
-        limit = _int_field(data["max_fringe_px"], field_name="VideoRule.alpha_edge.max_fringe_px", low=0, high=10000)
+        limit = _int_field(
+            data["max_fringe_px"],
+            field_name="VideoRule.alpha_edge.max_fringe_px",
+            low=0,
+            high=10000,
+        )
     return AlphaEdgeRule(alpha_mode=mode, times=times, max_fringe_px=limit)
 
 
 def _build_key_fill_rule(data: Any) -> KeyFillRule:
     """ADR-028: ``VideoRule.key_fill``; the input is the fill."""
 
-    _only(data, "VideoRule.key_fill", {"key_file", "tolerance", "max_off_fraction", "key_range"})
+    _only(
+        data,
+        "VideoRule.key_fill",
+        {"key_file", "tolerance", "max_off_fraction", "key_range"},
+    )
     key_file = data.get("key_file")
     if not isinstance(key_file, str) or not key_file:
-        raise error("INVALID_REQUEST", "VideoRule.key_fill.key_file is required: the key's path")
+        raise error(
+            "INVALID_REQUEST", "VideoRule.key_fill.key_file is required: the key's path"
+        )
     tolerance = None
     if data.get("tolerance") is not None:
-        tolerance = _int_field(data["tolerance"], field_name="VideoRule.key_fill.tolerance", low=0, high=254)
+        tolerance = _int_field(
+            data["tolerance"],
+            field_name="VideoRule.key_fill.tolerance",
+            low=0,
+            high=254,
+        )
     share = None
     if data.get("max_off_fraction") is not None:
-        share = _number(data["max_off_fraction"], field_name="VideoRule.key_fill.max_off_fraction", allow_negative=False)
+        share = _number(
+            data["max_off_fraction"],
+            field_name="VideoRule.key_fill.max_off_fraction",
+            allow_negative=False,
+        )
         if share >= 1:
-            raise error("INVALID_REQUEST", "VideoRule.key_fill.max_off_fraction must be below 1")
+            raise error(
+                "INVALID_REQUEST", "VideoRule.key_fill.max_off_fraction must be below 1"
+            )
     key_range = data.get("key_range")
     if key_range is not None and key_range not in KEY_RANGES:
-        raise error("INVALID_REQUEST", f"VideoRule.key_fill.key_range must be one of {list(KEY_RANGES)}")
-    return KeyFillRule(key_file=key_file, tolerance=tolerance, max_off_fraction=share, key_range=key_range)
+        raise error(
+            "INVALID_REQUEST",
+            f"VideoRule.key_fill.key_range must be one of {list(KEY_RANGES)}",
+        )
+    return KeyFillRule(
+        key_file=key_file,
+        tolerance=tolerance,
+        max_off_fraction=share,
+        key_range=key_range,
+    )
 
 
 def _validate_video_rule_fields(kwargs: Dict[str, Any]) -> None:
@@ -344,42 +518,81 @@ def _validate_video_rule_fields(kwargs: Dict[str, Any]) -> None:
     if kwargs.get("reference_metrics") is not None:
         metrics = kwargs["reference_metrics"]
         if not isinstance(metrics, list) or not metrics:
-            raise error("INVALID_REQUEST", f"VideoRule.reference_metrics must be a non-empty list of {list(REFERENCE_METRICS)}")
-        bad = [m for m in metrics if not isinstance(m, str) or m not in REFERENCE_METRICS]
+            raise error(
+                "INVALID_REQUEST",
+                f"VideoRule.reference_metrics must be a non-empty list of {list(REFERENCE_METRICS)}",
+            )
+        bad = [
+            m for m in metrics if not isinstance(m, str) or m not in REFERENCE_METRICS
+        ]
         if bad:
-            raise error("INVALID_REQUEST", f"VideoRule.reference_metrics entries must be one of {list(REFERENCE_METRICS)}", got=bad)
+            raise error(
+                "INVALID_REQUEST",
+                f"VideoRule.reference_metrics entries must be one of {list(REFERENCE_METRICS)}",
+                got=bad,
+            )
         if len(set(metrics)) != len(metrics):
-            raise error("INVALID_REQUEST", "VideoRule.reference_metrics has duplicate entries")
-        kwargs["reference_metrics"] = [m for m in REFERENCE_METRICS if m in metrics]  # canonical order: stable identity
+            raise error(
+                "INVALID_REQUEST", "VideoRule.reference_metrics has duplicate entries"
+            )
+        kwargs["reference_metrics"] = [
+            m for m in REFERENCE_METRICS if m in metrics
+        ]  # canonical order: stable identity
     for name, upper in (("min_vmaf", 100.0), ("min_ssim", 1.0), ("min_psnr_db", None)):
         if name in kwargs:
-            value = _number(kwargs[name], field_name=f"VideoRule.{name}", allow_negative=False)
+            value = _number(
+                kwargs[name], field_name=f"VideoRule.{name}", allow_negative=False
+            )
             if upper is not None and value > upper:
-                raise error("INVALID_REQUEST", f"VideoRule.{name} must be between 0 and {upper:g}")
+                raise error(
+                    "INVALID_REQUEST",
+                    f"VideoRule.{name} must be between 0 and {upper:g}",
+                )
             kwargs[name] = value
 
     if "check_photosensitivity" in kwargs:
-        _bool_or_none(kwargs["check_photosensitivity"], field_name="VideoRule.check_photosensitivity")
+        _bool_or_none(
+            kwargs["check_photosensitivity"],
+            field_name="VideoRule.check_photosensitivity",
+        )
     if "max_flashes_per_second" in kwargs:
         kwargs["max_flashes_per_second"] = _number(
-            kwargs["max_flashes_per_second"], field_name="VideoRule.max_flashes_per_second", allow_negative=False
+            kwargs["max_flashes_per_second"],
+            field_name="VideoRule.max_flashes_per_second",
+            allow_negative=False,
         )
     if kwargs.get("expected_cuts") is not None:
         cuts = kwargs["expected_cuts"]
         if not isinstance(cuts, list):
-            raise error("INVALID_REQUEST", "VideoRule.expected_cuts must be a list of seconds")
-        kwargs["expected_cuts"] = sorted(_number(c, field_name="VideoRule.expected_cuts[]", allow_negative=False) for c in cuts)
+            raise error(
+                "INVALID_REQUEST", "VideoRule.expected_cuts must be a list of seconds"
+            )
+        kwargs["expected_cuts"] = sorted(
+            _number(c, field_name="VideoRule.expected_cuts[]", allow_negative=False)
+            for c in cuts
+        )
     if "max_cut_error_frames" in kwargs:
         kwargs["max_cut_error_frames"] = _number(
-            kwargs["max_cut_error_frames"], field_name="VideoRule.max_cut_error_frames", allow_negative=False
+            kwargs["max_cut_error_frames"],
+            field_name="VideoRule.max_cut_error_frames",
+            allow_negative=False,
         )
     if "allow_extra_cuts" in kwargs:
         if not isinstance(kwargs["allow_extra_cuts"], bool):
-            raise error("INVALID_REQUEST", "VideoRule.allow_extra_cuts must be a boolean")
+            raise error(
+                "INVALID_REQUEST", "VideoRule.allow_extra_cuts must be a boolean"
+            )
     if "cut_match_window_sec" in kwargs:
-        window = _number(kwargs["cut_match_window_sec"], field_name="VideoRule.cut_match_window_sec", allow_negative=False)
+        window = _number(
+            kwargs["cut_match_window_sec"],
+            field_name="VideoRule.cut_match_window_sec",
+            allow_negative=False,
+        )
         if window == 0:
-            raise error("INVALID_REQUEST", "VideoRule.cut_match_window_sec must be greater than zero")
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.cut_match_window_sec must be greater than zero",
+            )
         kwargs["cut_match_window_sec"] = window
     if kwargs.get("text_regions") is not None:
         regions = kwargs["text_regions"]
@@ -387,9 +600,16 @@ def _validate_video_rule_fields(kwargs: Dict[str, Any]) -> None:
             raise error("INVALID_REQUEST", "VideoRule.text_regions must be a list")
         kwargs["text_regions"] = [_build_text_region(r) for r in regions]
     if "min_contrast_ratio" in kwargs:
-        ratio = _number(kwargs["min_contrast_ratio"], field_name="VideoRule.min_contrast_ratio", allow_negative=False)
+        ratio = _number(
+            kwargs["min_contrast_ratio"],
+            field_name="VideoRule.min_contrast_ratio",
+            allow_negative=False,
+        )
         if ratio < 1.0 or ratio > 21.0:
-            raise error("INVALID_REQUEST", "VideoRule.min_contrast_ratio must be between 1 and 21")
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.min_contrast_ratio must be between 1 and 21",
+            )
         kwargs["min_contrast_ratio"] = ratio
     if kwargs.get("stinger") is not None:
         kwargs["stinger"] = _build_stinger_rule(kwargs["stinger"])
@@ -402,12 +622,22 @@ def _validate_video_rule_fields(kwargs: Dict[str, Any]) -> None:
     if kwargs.get("min_text_height_px") is not None:
         heights = kwargs["min_text_height_px"]
         if not isinstance(heights, dict):
-            raise error("INVALID_REQUEST", "VideoRule.min_text_height_px must be an object keyed by role")
+            raise error(
+                "INVALID_REQUEST",
+                "VideoRule.min_text_height_px must be an object keyed by role",
+            )
         unknown_roles = set(heights) - set(TEXT_ROLES)
         if unknown_roles:
-            raise error("INVALID_REQUEST", f"VideoRule.min_text_height_px has unknown roles: {sorted(unknown_roles)}")
+            raise error(
+                "INVALID_REQUEST",
+                f"VideoRule.min_text_height_px has unknown roles: {sorted(unknown_roles)}",
+            )
         kwargs["min_text_height_px"] = {
-            role: _number(v, field_name=f"VideoRule.min_text_height_px.{role}", allow_negative=False)
+            role: _number(
+                v,
+                field_name=f"VideoRule.min_text_height_px.{role}",
+                allow_negative=False,
+            )
             for role, v in sorted(heights.items())
         }
 
@@ -421,58 +651,107 @@ def _build_loop_seam_rule(data: Any) -> LoopSeamRule:
     allowed = {f for f in LoopSeamRule.__dataclass_fields__}  # type: ignore[attr-defined]
     unknown = set(data) - allowed
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for AudioRule.loop_seam: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for AudioRule.loop_seam: {sorted(unknown)}",
+        )
     kwargs: Dict[str, Any] = {}
     if data.get("window_sec") is not None:
-        window = _number(data["window_sec"], field_name="AudioRule.loop_seam.window_sec", allow_negative=False)
+        window = _number(
+            data["window_sec"],
+            field_name="AudioRule.loop_seam.window_sec",
+            allow_negative=False,
+        )
         if window <= 0 or window > 60:
-            raise error("INVALID_REQUEST", "AudioRule.loop_seam.window_sec must be greater than 0 and at most 60")
+            raise error(
+                "INVALID_REQUEST",
+                "AudioRule.loop_seam.window_sec must be greater than 0 and at most 60",
+            )
         kwargs["window_sec"] = window
     if data.get("seams") is not None:
         seams = data["seams"]
         if not isinstance(seams, list):
-            raise error("INVALID_REQUEST", "AudioRule.loop_seam.seams must be a list of seconds")
-        times = sorted(_number(t, field_name="AudioRule.loop_seam.seams[]", allow_negative=False) for t in seams)
+            raise error(
+                "INVALID_REQUEST", "AudioRule.loop_seam.seams must be a list of seconds"
+            )
+        times = sorted(
+            _number(t, field_name="AudioRule.loop_seam.seams[]", allow_negative=False)
+            for t in seams
+        )
         if len(set(times)) != len(times):
-            raise error("INVALID_REQUEST", "AudioRule.loop_seam.seams has duplicate times")
+            raise error(
+                "INVALID_REQUEST", "AudioRule.loop_seam.seams has duplicate times"
+            )
         kwargs["seams"] = times
     if "include_wrap" in data:
         if not isinstance(data["include_wrap"], bool):
-            raise error("INVALID_REQUEST", "AudioRule.loop_seam.include_wrap must be a boolean")
+            raise error(
+                "INVALID_REQUEST", "AudioRule.loop_seam.include_wrap must be a boolean"
+            )
         kwargs["include_wrap"] = data["include_wrap"]
     for name in ("max_click_ratio", "max_level_diff_db", "max_band_diff_db"):
         if data.get(name) is not None:
-            kwargs[name] = _number(data[name], field_name=f"AudioRule.loop_seam.{name}", allow_negative=False)
+            kwargs[name] = _number(
+                data[name],
+                field_name=f"AudioRule.loop_seam.{name}",
+                allow_negative=False,
+            )
     rule = LoopSeamRule(**kwargs)
     if not rule.include_wrap and not rule.seams:
-        raise error("INVALID_REQUEST", "AudioRule.loop_seam has no seam to measure: include_wrap is false and seams is empty")
-    if rule.window_sec is None and (rule.max_level_diff_db is not None or rule.max_band_diff_db is not None):
-        raise error("INVALID_REQUEST", "AudioRule.loop_seam.max_level_diff_db / max_band_diff_db need window_sec (no default)")
+        raise error(
+            "INVALID_REQUEST",
+            "AudioRule.loop_seam has no seam to measure: include_wrap is false and seams is empty",
+        )
+    if rule.window_sec is None and (
+        rule.max_level_diff_db is not None or rule.max_band_diff_db is not None
+    ):
+        raise error(
+            "INVALID_REQUEST",
+            "AudioRule.loop_seam.max_level_diff_db / max_band_diff_db need window_sec (no default)",
+        )
     return rule
 
 
 def _build_covered_interval(item: Any) -> CoveredInterval:
     if not isinstance(item, dict):
-        raise error("INVALID_REQUEST", "each entry in SubtitleRule.extra_covered_intervals must be an object")
+        raise error(
+            "INVALID_REQUEST",
+            "each entry in SubtitleRule.extra_covered_intervals must be an object",
+        )
     unknown = set(item) - {"start", "end", "label"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for a covered interval: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for a covered interval: {sorted(unknown)}",
+        )
     for key in ("start", "end"):
         if key not in item:
-            raise error("INVALID_REQUEST", f"covered interval is missing required field {key!r}")
-    start = _number(item["start"], field_name="covered interval.start", allow_negative=False)
+            raise error(
+                "INVALID_REQUEST", f"covered interval is missing required field {key!r}"
+            )
+    start = _number(
+        item["start"], field_name="covered interval.start", allow_negative=False
+    )
     end = _number(item["end"], field_name="covered interval.end", allow_negative=False)
     if end < start:
-        raise error("INVALID_REQUEST", "covered interval.end must not be before its start")
+        raise error(
+            "INVALID_REQUEST", "covered interval.end must not be before its start"
+        )
     label = item.get("label")
     if label is not None and not isinstance(label, str):
-        raise error("INVALID_REQUEST", "covered interval.label must be a string when present")
+        raise error(
+            "INVALID_REQUEST", "covered interval.label must be a string when present"
+        )
     return CoveredInterval(start=start, end=end, label=label)
 
 
 def _string_list(value: Any, *, field_name: str) -> List[str]:
-    if not isinstance(value, list) or not all(isinstance(v, str) and v.strip() for v in value):
-        raise error("INVALID_REQUEST", f"{field_name} must be a list of non-empty strings")
+    if not isinstance(value, list) or not all(
+        isinstance(v, str) and v.strip() for v in value
+    ):
+        raise error(
+            "INVALID_REQUEST", f"{field_name} must be a list of non-empty strings"
+        )
     return list(value)
 
 
@@ -480,60 +759,116 @@ def _validate_subtitle_rule_fields(kwargs: Dict[str, Any]) -> None:
     """Typed validation for the ADR-023 SubtitleRule fields."""
 
     if kwargs.get("preset") is not None and kwargs["preset"] not in SUBTITLE_PRESETS:
-        raise error("INVALID_REQUEST", f"SubtitleRule.preset must be one of {sorted(SUBTITLE_PRESETS)}", got=kwargs["preset"])
+        raise error(
+            "INVALID_REQUEST",
+            f"SubtitleRule.preset must be one of {sorted(SUBTITLE_PRESETS)}",
+            got=kwargs["preset"],
+        )
     if kwargs.get("transcript") is not None:
         if not isinstance(kwargs["transcript"], str) or not kwargs["transcript"]:
-            raise error("INVALID_REQUEST", "SubtitleRule.transcript must be a non-empty path string")
-    for name in ("word_boundary_tolerance_sec", "max_cue_lead_sec", "max_uncovered_speech_sec"):
+            raise error(
+                "INVALID_REQUEST",
+                "SubtitleRule.transcript must be a non-empty path string",
+            )
+    for name in (
+        "word_boundary_tolerance_sec",
+        "max_cue_lead_sec",
+        "max_uncovered_speech_sec",
+    ):
         if kwargs.get(name) is not None:
-            kwargs[name] = _number(kwargs[name], field_name=f"SubtitleRule.{name}", allow_negative=False)
+            kwargs[name] = _number(
+                kwargs[name], field_name=f"SubtitleRule.{name}", allow_negative=False
+            )
     for name in ("max_total_chars", "min_cue_chars"):
         value = kwargs.get(name)
-        if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
-            raise error("INVALID_REQUEST", f"SubtitleRule.{name} must be a positive integer")
+        if value is not None and (
+            not isinstance(value, int) or isinstance(value, bool) or value < 1
+        ):
+            raise error(
+                "INVALID_REQUEST", f"SubtitleRule.{name} must be a positive integer"
+            )
     if kwargs.get("extra_covered_intervals") is not None:
         intervals = kwargs["extra_covered_intervals"]
         if not isinstance(intervals, list):
-            raise error("INVALID_REQUEST", "SubtitleRule.extra_covered_intervals must be a list")
-        kwargs["extra_covered_intervals"] = [_build_covered_interval(i) for i in intervals]
+            raise error(
+                "INVALID_REQUEST", "SubtitleRule.extra_covered_intervals must be a list"
+            )
+        kwargs["extra_covered_intervals"] = [
+            _build_covered_interval(i) for i in intervals
+        ]
     if kwargs.get("forbidden_line_start_pos") is not None:
-        tags = _string_list(kwargs["forbidden_line_start_pos"], field_name="SubtitleRule.forbidden_line_start_pos")
+        tags = _string_list(
+            kwargs["forbidden_line_start_pos"],
+            field_name="SubtitleRule.forbidden_line_start_pos",
+        )
         bad = [t for t in tags if t not in POS_TAGS]
         if bad:
-            raise error("INVALID_REQUEST", f"SubtitleRule.forbidden_line_start_pos entries must be one of {list(POS_TAGS)}", got=bad)
-        kwargs["forbidden_line_start_pos"] = [t for t in POS_TAGS if t in tags]  # canonical order: stable identity
+            raise error(
+                "INVALID_REQUEST",
+                f"SubtitleRule.forbidden_line_start_pos entries must be one of {list(POS_TAGS)}",
+                got=bad,
+            )
+        kwargs["forbidden_line_start_pos"] = [
+            t for t in POS_TAGS if t in tags
+        ]  # canonical order: stable identity
     if kwargs.get("forbidden_line_start_phrases") is not None:
         kwargs["forbidden_line_start_phrases"] = _string_list(
-            kwargs["forbidden_line_start_phrases"], field_name="SubtitleRule.forbidden_line_start_phrases",
+            kwargs["forbidden_line_start_phrases"],
+            field_name="SubtitleRule.forbidden_line_start_phrases",
         )
 
 
 def _build_timeline_segment(item: Any) -> TimelineSegment:
     if not isinstance(item, dict):
-        raise error("INVALID_REQUEST", "each entry in timeline_integrity.timeline must be an object")
+        raise error(
+            "INVALID_REQUEST",
+            "each entry in timeline_integrity.timeline must be an object",
+        )
     unknown = set(item) - {"source_start", "source_end", "delivery_start", "speed"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for a timeline segment: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for a timeline segment: {sorted(unknown)}",
+        )
     for key in ("source_start", "source_end", "delivery_start"):
         if key not in item:
-            raise error("INVALID_REQUEST", f"timeline segment is missing required field {key!r}")
-    speed = _number(item.get("speed", 1.0), field_name="timeline segment.speed", allow_negative=False)
+            raise error(
+                "INVALID_REQUEST", f"timeline segment is missing required field {key!r}"
+            )
+    speed = _number(
+        item.get("speed", 1.0),
+        field_name="timeline segment.speed",
+        allow_negative=False,
+    )
     if speed == 0:
-        raise error("INVALID_REQUEST", "timeline segment.speed must be greater than zero")
+        raise error(
+            "INVALID_REQUEST", "timeline segment.speed must be greater than zero"
+        )
     return TimelineSegment(
-        source_start=_number(item["source_start"], field_name="timeline segment.source_start"),
-        source_end=_number(item["source_end"], field_name="timeline segment.source_end"),
-        delivery_start=_number(item["delivery_start"], field_name="timeline segment.delivery_start"),
+        source_start=_number(
+            item["source_start"], field_name="timeline segment.source_start"
+        ),
+        source_end=_number(
+            item["source_end"], field_name="timeline segment.source_end"
+        ),
+        delivery_start=_number(
+            item["delivery_start"], field_name="timeline segment.delivery_start"
+        ),
         speed=speed,
     )
 
 
 def _build_source_cue(item: Any) -> SourceCue:
     if not isinstance(item, dict):
-        raise error("INVALID_REQUEST", "each entry in timeline_integrity.source_cues must be an object")
+        raise error(
+            "INVALID_REQUEST",
+            "each entry in timeline_integrity.source_cues must be an object",
+        )
     unknown = set(item) - {"start", "end"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for a source cue: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST", f"unknown fields for a source cue: {sorted(unknown)}"
+        )
     if "start" not in item or "end" not in item:
         raise error("INVALID_REQUEST", "a source cue requires both 'start' and 'end'")
     return SourceCue(
@@ -544,17 +879,29 @@ def _build_source_cue(item: Any) -> SourceCue:
 
 def _build_timeline_integrity_rule(data: Any) -> TimelineIntegrityRule:
     if not isinstance(data, dict):
-        raise error("INVALID_REQUEST", "rule payload for TimelineIntegrityRule must be an object")
+        raise error(
+            "INVALID_REQUEST",
+            "rule payload for TimelineIntegrityRule must be an object",
+        )
     unknown = set(data) - {"timeline", "source_cues", "tolerance_sec"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for TimelineIntegrityRule: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for TimelineIntegrityRule: {sorted(unknown)}",
+        )
     timeline_data = data.get("timeline", [])
     if not isinstance(timeline_data, list):
         raise error("INVALID_REQUEST", "TimelineIntegrityRule.timeline must be a list")
     source_cues_data = data.get("source_cues", [])
     if not isinstance(source_cues_data, list):
-        raise error("INVALID_REQUEST", "TimelineIntegrityRule.source_cues must be a list")
-    tolerance_sec = _number(data.get("tolerance_sec", 0.1), field_name="TimelineIntegrityRule.tolerance_sec", allow_negative=False)
+        raise error(
+            "INVALID_REQUEST", "TimelineIntegrityRule.source_cues must be a list"
+        )
+    tolerance_sec = _number(
+        data.get("tolerance_sec", 0.1),
+        field_name="TimelineIntegrityRule.tolerance_sec",
+        allow_negative=False,
+    )
     return TimelineIntegrityRule(
         timeline=[_build_timeline_segment(s) for s in timeline_data],
         source_cues=[_build_source_cue(c) for c in source_cues_data],
@@ -564,13 +911,22 @@ def _build_timeline_integrity_rule(data: Any) -> TimelineIntegrityRule:
 
 def _build_delivery_artifact_rule(data: Any) -> DeliveryArtifactRule:
     if not isinstance(data, dict):
-        raise error("INVALID_REQUEST", "each entry in rules.delivery_package.artifacts must be an object")
+        raise error(
+            "INVALID_REQUEST",
+            "each entry in rules.delivery_package.artifacts must be an object",
+        )
     valid_fields = {f.name for f in DeliveryArtifactRule.__dataclass_fields__.values()}  # type: ignore[attr-defined]
     unknown = set(data) - valid_fields
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for DeliveryArtifactRule: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for DeliveryArtifactRule: {sorted(unknown)}",
+        )
     if not isinstance(data.get("artifact_id"), str) or not data.get("artifact_id"):
-        raise error("INVALID_REQUEST", "DeliveryArtifactRule.artifact_id must be a non-empty string")
+        raise error(
+            "INVALID_REQUEST",
+            "DeliveryArtifactRule.artifact_id must be a non-empty string",
+        )
     kwargs = dict(data)
     if kwargs.get("video") is not None:
         kwargs["video"] = _build_rule(VideoRule, kwargs["video"])
@@ -586,69 +942,122 @@ def _build_delivery_artifact_rule(data: Any) -> DeliveryArtifactRule:
 
 def _build_duration_consistency_rule(data: Any) -> ArtifactDurationConsistencyRule:
     if not isinstance(data, dict):
-        raise error("INVALID_REQUEST", "each entry in cross_artifact.duration_consistency must be an object")
+        raise error(
+            "INVALID_REQUEST",
+            "each entry in cross_artifact.duration_consistency must be an object",
+        )
     unknown = set(data) - {"artifact_ids", "max_delta_sec"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for duration_consistency rule: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for duration_consistency rule: {sorted(unknown)}",
+        )
     artifact_ids = data.get("artifact_ids")
-    if not isinstance(artifact_ids, list) or len(artifact_ids) < 2 or not all(isinstance(a, str) and a for a in artifact_ids):
-        raise error("INVALID_REQUEST", "duration_consistency.artifact_ids must be a list of at least 2 non-empty strings")
+    if (
+        not isinstance(artifact_ids, list)
+        or len(artifact_ids) < 2
+        or not all(isinstance(a, str) and a for a in artifact_ids)
+    ):
+        raise error(
+            "INVALID_REQUEST",
+            "duration_consistency.artifact_ids must be a list of at least 2 non-empty strings",
+        )
     max_delta_sec = data.get("max_delta_sec")
-    if not isinstance(max_delta_sec, (int, float)) or isinstance(max_delta_sec, bool) or max_delta_sec < 0:
-        raise error("INVALID_REQUEST", "duration_consistency.max_delta_sec must be a non-negative number")
-    return ArtifactDurationConsistencyRule(artifact_ids=list(artifact_ids), max_delta_sec=float(max_delta_sec))
+    if (
+        not isinstance(max_delta_sec, (int, float))
+        or isinstance(max_delta_sec, bool)
+        or max_delta_sec < 0
+    ):
+        raise error(
+            "INVALID_REQUEST",
+            "duration_consistency.max_delta_sec must be a non-negative number",
+        )
+    return ArtifactDurationConsistencyRule(
+        artifact_ids=list(artifact_ids), max_delta_sec=float(max_delta_sec)
+    )
 
 
 def _build_dependency_rule(data: Any) -> ArtifactDependencyRule:
     if not isinstance(data, dict):
-        raise error("INVALID_REQUEST", "each entry in cross_artifact.dependencies must be an object")
+        raise error(
+            "INVALID_REQUEST",
+            "each entry in cross_artifact.dependencies must be an object",
+        )
     unknown = set(data) - {"artifact_id", "requires_artifact_id"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for dependency rule: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST", f"unknown fields for dependency rule: {sorted(unknown)}"
+        )
     artifact_id = data.get("artifact_id")
     requires_artifact_id = data.get("requires_artifact_id")
     if not isinstance(artifact_id, str) or not artifact_id:
-        raise error("INVALID_REQUEST", "dependency.artifact_id must be a non-empty string")
+        raise error(
+            "INVALID_REQUEST", "dependency.artifact_id must be a non-empty string"
+        )
     if not isinstance(requires_artifact_id, str) or not requires_artifact_id:
-        raise error("INVALID_REQUEST", "dependency.requires_artifact_id must be a non-empty string")
-    return ArtifactDependencyRule(artifact_id=artifact_id, requires_artifact_id=requires_artifact_id)
+        raise error(
+            "INVALID_REQUEST",
+            "dependency.requires_artifact_id must be a non-empty string",
+        )
+    return ArtifactDependencyRule(
+        artifact_id=artifact_id, requires_artifact_id=requires_artifact_id
+    )
 
 
 def _build_cross_artifact_rule(data: Any) -> Optional[CrossArtifactRule]:
     if data is None:
         return None
     if not isinstance(data, dict):
-        raise error("INVALID_REQUEST", "rule payload for CrossArtifactRule must be an object")
+        raise error(
+            "INVALID_REQUEST", "rule payload for CrossArtifactRule must be an object"
+        )
     unknown = set(data) - {"duration_consistency", "dependencies"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for CrossArtifactRule: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for CrossArtifactRule: {sorted(unknown)}",
+        )
     duration_data = data.get("duration_consistency", [])
     if not isinstance(duration_data, list):
-        raise error("INVALID_REQUEST", "cross_artifact.duration_consistency must be a list")
+        raise error(
+            "INVALID_REQUEST", "cross_artifact.duration_consistency must be a list"
+        )
     dependency_data = data.get("dependencies", [])
     if not isinstance(dependency_data, list):
         raise error("INVALID_REQUEST", "cross_artifact.dependencies must be a list")
     return CrossArtifactRule(
-        duration_consistency=[_build_duration_consistency_rule(d) for d in duration_data],
+        duration_consistency=[
+            _build_duration_consistency_rule(d) for d in duration_data
+        ],
         dependencies=[_build_dependency_rule(d) for d in dependency_data],
     )
 
 
-def _build_delivery_package_rule(data: Optional[Dict[str, Any]]) -> Optional[DeliveryPackageRule]:
+def _build_delivery_package_rule(
+    data: Optional[Dict[str, Any]],
+) -> Optional[DeliveryPackageRule]:
     if data is None:
         return None
     if not isinstance(data, dict):
-        raise error("INVALID_REQUEST", "rule payload for DeliveryPackageRule must be an object")
+        raise error(
+            "INVALID_REQUEST", "rule payload for DeliveryPackageRule must be an object"
+        )
     unknown = set(data) - {"artifacts", "cross_artifact"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields for DeliveryPackageRule: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST",
+            f"unknown fields for DeliveryPackageRule: {sorted(unknown)}",
+        )
     artifacts_data = data.get("artifacts", [])
     if not isinstance(artifacts_data, list):
         raise error("INVALID_REQUEST", "DeliveryPackageRule.artifacts must be a list")
     artifact_rules = [_build_delivery_artifact_rule(a) for a in artifacts_data]
     ids = [a.artifact_id for a in artifact_rules]
     if len(ids) != len(set(ids)):
-        raise error("INVALID_REQUEST", "rules.delivery_package.artifacts has duplicate artifact_id values")
+        raise error(
+            "INVALID_REQUEST",
+            "rules.delivery_package.artifacts has duplicate artifact_id values",
+        )
     return DeliveryPackageRule(
         artifacts=artifact_rules,
         cross_artifact=_build_cross_artifact_rule(data.get("cross_artifact")),
@@ -657,20 +1066,32 @@ def _build_delivery_package_rule(data: Optional[Dict[str, Any]]) -> Optional[Del
 
 def _build_artifact(item: Any) -> DeliveryArtifact:
     if not isinstance(item, dict):
-        raise error("INVALID_REQUEST", "each entry in request.artifacts must be an object")
+        raise error(
+            "INVALID_REQUEST", "each entry in request.artifacts must be an object"
+        )
     unknown = set(item) - {"artifact_id", "artifact_type", "path"}
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown fields in artifact entry: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST", f"unknown fields in artifact entry: {sorted(unknown)}"
+        )
     artifact_id = item.get("artifact_id")
     artifact_type = item.get("artifact_type")
     path = item.get("path")
     if not isinstance(artifact_id, str) or not artifact_id:
-        raise error("INVALID_REQUEST", "artifact.artifact_id must be a non-empty string")
+        raise error(
+            "INVALID_REQUEST", "artifact.artifact_id must be a non-empty string"
+        )
     if artifact_type not in VALID_ARTIFACT_TYPES:
-        raise error("INVALID_REQUEST", f"artifact.artifact_type must be one of {sorted(VALID_ARTIFACT_TYPES)}", got=artifact_type)
+        raise error(
+            "INVALID_REQUEST",
+            f"artifact.artifact_type must be one of {sorted(VALID_ARTIFACT_TYPES)}",
+            got=artifact_type,
+        )
     if not isinstance(path, str) or not path:
         raise error("INVALID_REQUEST", "artifact.path must be a non-empty string")
-    return DeliveryArtifact(artifact_id=artifact_id, artifact_type=artifact_type, path=path)
+    return DeliveryArtifact(
+        artifact_id=artifact_id, artifact_type=artifact_type, path=path
+    )
 
 
 def parse_request(doc: Any) -> Request:
@@ -682,19 +1103,30 @@ def parse_request(doc: Any) -> Request:
         raise error("INVALID_REQUEST", f"request contains a forbidden key: {forbidden}")
     non_finite = _find_non_finite(doc)
     if non_finite:
-        raise error("INVALID_REQUEST", f"{non_finite} must be a finite number (NaN and Infinity are not accepted)")
+        raise error(
+            "INVALID_REQUEST",
+            f"{non_finite} must be a finite number (NaN and Infinity are not accepted)",
+        )
 
     unknown = set(doc) - ALLOWED_TOP_LEVEL_KEYS
     if unknown:
-        raise error("INVALID_REQUEST", f"unknown top-level request keys: {sorted(unknown)}")
+        raise error(
+            "INVALID_REQUEST", f"unknown top-level request keys: {sorted(unknown)}"
+        )
 
     operation = doc.get("operation")
     if operation not in VALID_OPERATIONS:
-        raise error("UNSUPPORTED_OPERATION", f"operation must be one of {sorted(VALID_OPERATIONS)}", got=operation)
+        raise error(
+            "UNSUPPORTED_OPERATION",
+            f"operation must be one of {sorted(VALID_OPERATIONS)}",
+            got=operation,
+        )
 
     kind = doc.get("kind")
     if kind not in VALID_KINDS:
-        raise error("INVALID_REQUEST", f"kind must be one of {sorted(VALID_KINDS)}", got=kind)
+        raise error(
+            "INVALID_REQUEST", f"kind must be one of {sorted(VALID_KINDS)}", got=kind
+        )
 
     input_path = doc.get("input")
     if kind == "delivery_package":
@@ -702,8 +1134,13 @@ def parse_request(doc: Any) -> Request:
         # whole point of it) - file paths come from request.artifacts
         # instead, exactly as request.subtitle is separate from input
         # today for kind="delivery".
-        if input_path is not None and (not isinstance(input_path, str) or not input_path):
-            raise error("INVALID_REQUEST", "request.input must be a non-empty string when present")
+        if input_path is not None and (
+            not isinstance(input_path, str) or not input_path
+        ):
+            raise error(
+                "INVALID_REQUEST",
+                "request.input must be a non-empty string when present",
+            )
     elif not isinstance(input_path, str) or not input_path:
         raise error("MISSING_INPUT", "request.input must be a non-empty string")
 
@@ -713,11 +1150,19 @@ def parse_request(doc: Any) -> Request:
     artifacts = [_build_artifact(a) for a in artifacts_doc]
     artifact_ids = [a.artifact_id for a in artifacts]
     if len(artifact_ids) != len(set(artifact_ids)):
-        raise error("INVALID_REQUEST", "request.artifacts has duplicate artifact_id values")
+        raise error(
+            "INVALID_REQUEST", "request.artifacts has duplicate artifact_id values"
+        )
     if kind == "delivery_package" and not artifacts:
-        raise error("INVALID_REQUEST", "kind=delivery_package requires a non-empty request.artifacts list")
+        raise error(
+            "INVALID_REQUEST",
+            "kind=delivery_package requires a non-empty request.artifacts list",
+        )
     if kind != "delivery_package" and artifacts:
-        raise error("INVALID_REQUEST", "request.artifacts is only accepted when kind=delivery_package")
+        raise error(
+            "INVALID_REQUEST",
+            "request.artifacts is only accepted when kind=delivery_package",
+        )
 
     subtitle_path = doc.get("subtitle")
     if subtitle_path is not None and not isinstance(subtitle_path, str):
@@ -725,42 +1170,81 @@ def parse_request(doc: Any) -> Request:
 
     reference_video = doc.get("reference_video")
     if reference_video is not None and not isinstance(reference_video, str):
-        raise error("INVALID_REQUEST", "request.reference_video must be a string when present")
+        raise error(
+            "INVALID_REQUEST", "request.reference_video must be a string when present"
+        )
 
     parameters = doc.get("parameters", {})
     if not isinstance(parameters, dict):
         raise error("INVALID_REQUEST", "request.parameters must be an object")
     unknown_params = set(parameters) - _ALLOWED_PARAMETER_KEYS
     if unknown_params:
-        raise error("INVALID_REQUEST", f"unknown parameter keys: {sorted(unknown_params)}")
+        raise error(
+            "INVALID_REQUEST", f"unknown parameter keys: {sorted(unknown_params)}"
+        )
     if "flash_area_fraction" in parameters:
-        fraction = _number(parameters["flash_area_fraction"], field_name="parameters.flash_area_fraction", allow_negative=False)
+        fraction = _number(
+            parameters["flash_area_fraction"],
+            field_name="parameters.flash_area_fraction",
+            allow_negative=False,
+        )
         if not 0 < fraction < 1:
-            raise error("INVALID_REQUEST", "parameters.flash_area_fraction must be between 0 and 1 (exclusive)")
+            raise error(
+                "INVALID_REQUEST",
+                "parameters.flash_area_fraction must be between 0 and 1 (exclusive)",
+            )
     if "scene_cut_threshold" in parameters:
-        threshold = _number(parameters["scene_cut_threshold"], field_name="parameters.scene_cut_threshold", allow_negative=False)
+        threshold = _number(
+            parameters["scene_cut_threshold"],
+            field_name="parameters.scene_cut_threshold",
+            allow_negative=False,
+        )
         if threshold > 100:
-            raise error("INVALID_REQUEST", "parameters.scene_cut_threshold must be between 0 and 100")
+            raise error(
+                "INVALID_REQUEST",
+                "parameters.scene_cut_threshold must be between 0 and 100",
+            )
 
     rules_doc = doc.get("rules", {})
     if not isinstance(rules_doc, dict):
         raise error("INVALID_REQUEST", "request.rules must be an object")
-    unknown_rule_keys = set(rules_doc) - {"video", "audio", "subtitle", "delivery", "delivery_package"}
+    unknown_rule_keys = set(rules_doc) - {
+        "video",
+        "audio",
+        "subtitle",
+        "delivery",
+        "delivery_package",
+    }
     if unknown_rule_keys:
-        raise error("INVALID_REQUEST", f"unknown rule sections: {sorted(unknown_rule_keys)}")
+        raise error(
+            "INVALID_REQUEST", f"unknown rule sections: {sorted(unknown_rule_keys)}"
+        )
 
     cache_policy = doc.get("cache_policy", "use")
     if cache_policy not in VALID_CACHE_POLICIES:
-        raise error("INVALID_REQUEST", f"cache_policy must be one of {sorted(VALID_CACHE_POLICIES)}", got=cache_policy)
+        raise error(
+            "INVALID_REQUEST",
+            f"cache_policy must be one of {sorted(VALID_CACHE_POLICIES)}",
+            got=cache_policy,
+        )
 
     timeout = doc.get("timeout")
     if timeout is not None:
-        if not isinstance(timeout, (int, float)) or isinstance(timeout, bool) or timeout <= 0:
-            raise error("INVALID_TIME_RANGE", "request.timeout must be a positive number of seconds")
+        if (
+            not isinstance(timeout, (int, float))
+            or isinstance(timeout, bool)
+            or timeout <= 0
+        ):
+            raise error(
+                "INVALID_TIME_RANGE",
+                "request.timeout must be a positive number of seconds",
+            )
 
     request_id = doc.get("request_id")
     if request_id is not None and not isinstance(request_id, str):
-        raise error("INVALID_REQUEST", "request.request_id must be a string when present")
+        raise error(
+            "INVALID_REQUEST", "request.request_id must be a string when present"
+        )
 
     return Request(
         operation=operation,
@@ -774,7 +1258,9 @@ def parse_request(doc: Any) -> Request:
         audio_rule=_build_rule(AudioRule, rules_doc.get("audio")),
         subtitle_rule=_build_rule(SubtitleRule, rules_doc.get("subtitle")),
         delivery_rule=_build_rule(DeliveryRule, rules_doc.get("delivery")),
-        delivery_package_rule=_build_delivery_package_rule(rules_doc.get("delivery_package")),
+        delivery_package_rule=_build_delivery_package_rule(
+            rules_doc.get("delivery_package")
+        ),
         cache_policy=cache_policy,
         timeout=timeout,
         request_id=request_id,

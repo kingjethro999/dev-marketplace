@@ -2,6 +2,7 @@
 (fc-match / fc-list / fc-scan) and the font-for-this-text resolution the drawing tools use.
 Split out of _common.text in the refactor after 1.17.3; every body is byte-identical.
 """
+
 from __future__ import annotations
 
 import os
@@ -50,10 +51,37 @@ def default_font_file(font_name: str) -> Optional[str]:
         if wanted:
             for f in files:
                 stem = re.sub(r"[^a-z0-9]", "", f.stem.lower())
-                if f.suffix.lower() in (".ttf", ".otf", ".ttc") and stem.startswith(wanted):
+                if f.suffix.lower() in (".ttf", ".otf", ".ttc") and stem.startswith(
+                    wanted
+                ):
                     return str(f)
-        if any(k in wanted for k in ("cjk", "gothic", "mincho", "meiryo", "yugoth", "msgothic", "malgun", "simhei", "simsun", "jp", "kr", "sc", "tc")):
-            for name in ("NotoSansCJKjp-Regular.otf", "NotoSansCJK-Regular.ttc", "meiryo.ttc", "YuGothM.ttc", "msgothic.ttc", "malgun.ttf", "msyh.ttc"):
+        if any(
+            k in wanted
+            for k in (
+                "cjk",
+                "gothic",
+                "mincho",
+                "meiryo",
+                "yugoth",
+                "msgothic",
+                "malgun",
+                "simhei",
+                "simsun",
+                "jp",
+                "kr",
+                "sc",
+                "tc",
+            )
+        ):
+            for name in (
+                "NotoSansCJKjp-Regular.otf",
+                "NotoSansCJK-Regular.ttc",
+                "meiryo.ttc",
+                "YuGothM.ttc",
+                "msgothic.ttc",
+                "malgun.ttf",
+                "msyh.ttc",
+            ):
                 if (fonts / name).exists():
                     return str(fonts / name)
         candidate = fonts / "arial.ttf"
@@ -62,7 +90,15 @@ def default_font_file(font_name: str) -> Optional[str]:
     if not exe:
         return None
     try:
-        proc = subprocess.run([exe, "--format=%{file}\n", font_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", timeout=5)
+        proc = subprocess.run(
+            [exe, "--format=%{file}\n", font_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+        )
     except (subprocess.TimeoutExpired, OSError):
         return None
     if proc.returncode != 0:
@@ -77,36 +113,157 @@ def default_font_file(font_name: str) -> Optional[str]:
 # request and ffmpeg exits 0 either way. The tools now detect the script of the text they are about
 # to draw and resolve a font file that actually covers it; nothing found is a failed job, not a
 # warning (a video full of boxes is not a delivery).
-SCRIPTS = ("ja", "zh", "ko", "ar", "he", "hi", "bn", "ta", "th", "lo", "ru", "el", "latin")
+SCRIPTS = (
+    "ja",
+    "zh",
+    "ko",
+    "ar",
+    "he",
+    "hi",
+    "bn",
+    "ta",
+    "th",
+    "lo",
+    "ru",
+    "el",
+    "latin",
+)
 
 
 LANGUAGE_NAMES = {
-    "ja": "Japanese", "zh": "Chinese", "ko": "Korean", "ar": "Arabic", "he": "Hebrew",
-    "hi": "Devanagari (Hindi/Marathi/Nepali)", "th": "Thai", "ru": "Cyrillic (Russian and others)",
-    "el": "Greek", "latin": "Latin", "bn": "Bengali", "ta": "Tamil", "lo": "Lao",
+    "ja": "Japanese",
+    "zh": "Chinese",
+    "ko": "Korean",
+    "ar": "Arabic",
+    "he": "Hebrew",
+    "hi": "Devanagari (Hindi/Marathi/Nepali)",
+    "th": "Thai",
+    "ru": "Cyrillic (Russian and others)",
+    "el": "Greek",
+    "latin": "Latin",
+    "bn": "Bengali",
+    "ta": "Tamil",
+    "lo": "Lao",
 }
 
 
 # fontconfig's own :lang= codes for each script we detect (zh uses zh-cn, the Simplified subset
 # every CJK font that claims zh carries; the rest are the plain two-letter codes).
-FC_LANG = {"ja": "ja", "zh": "zh-cn", "ko": "ko", "ar": "ar", "he": "he", "hi": "hi", "th": "th", "ru": "ru", "el": "el",
-           "bn": "bn", "ta": "ta", "lo": "lo"}
+FC_LANG = {
+    "ja": "ja",
+    "zh": "zh-cn",
+    "ko": "ko",
+    "ar": "ar",
+    "he": "he",
+    "hi": "hi",
+    "th": "th",
+    "ru": "ru",
+    "el": "el",
+    "bn": "bn",
+    "ta": "ta",
+    "lo": "lo",
+}
 
 
 # Families tried in order, best first. The names are matched case-insensitively against the start
 # of any family fontconfig reports for a file, so "Noto Sans CJK JP" also matches
 # "Noto Sans CJK JP Black". Anything not listed still qualifies -- it just sorts after these.
 PREFERRED_FAMILIES = {
-    "ja": ["Noto Sans CJK JP", "Noto Serif CJK JP", "Noto Sans JP", "Source Han Sans", "IPAPGothic", "IPAGothic", "IPA", "VL Gothic", "TakaoGothic", "WenQuanYi Zen Hei"],
-    "zh": ["Noto Sans CJK SC", "Noto Serif CJK SC", "Noto Sans SC", "Source Han Sans", "WenQuanYi Zen Hei", "WenQuanYi Micro Hei", "Droid Sans Fallback"],
-    "ko": ["Noto Sans CJK KR", "Noto Serif CJK KR", "Noto Sans KR", "Source Han Sans K", "NanumGothic", "Nanum Gothic", "Malgun Gothic", "WenQuanYi Zen Hei"],
-    "ar": ["Noto Sans Arabic", "Noto Naskh Arabic", "Amiri", "Scheherazade", "DejaVu Sans", "FreeSans", "FreeSerif"],
-    "he": ["Noto Sans Hebrew", "Noto Serif Hebrew", "DejaVu Sans", "FreeSans", "FreeSerif"],
-    "hi": ["Noto Sans Devanagari", "Noto Serif Devanagari", "Lohit Devanagari", "Mangal", "Nirmala UI", "Samyak Devanagari", "FreeSans", "FreeSerif"],
-    "th": ["Noto Sans Thai", "Noto Serif Thai", "Loma", "Garuda", "Waree", "Umpush", "Norasi", "Sarabun", "Leelawadee UI", "FreeSerif"],
-    "bn": ["Noto Sans Bengali", "Noto Serif Bengali", "Lohit Bengali", "Mukti Narrow", "Vrinda", "Nirmala UI", "FreeSerif"],
-    "ta": ["Noto Sans Tamil", "Noto Serif Tamil", "Lohit Tamil", "Latha", "Nirmala UI", "FreeSerif"],
-    "lo": ["Noto Sans Lao", "Noto Serif Lao", "Phetsarath OT", "Souliyo Unicode", "Saysettha OT", "DokChampa", "Leelawadee UI"],
+    "ja": [
+        "Noto Sans CJK JP",
+        "Noto Serif CJK JP",
+        "Noto Sans JP",
+        "Source Han Sans",
+        "IPAPGothic",
+        "IPAGothic",
+        "IPA",
+        "VL Gothic",
+        "TakaoGothic",
+        "WenQuanYi Zen Hei",
+    ],
+    "zh": [
+        "Noto Sans CJK SC",
+        "Noto Serif CJK SC",
+        "Noto Sans SC",
+        "Source Han Sans",
+        "WenQuanYi Zen Hei",
+        "WenQuanYi Micro Hei",
+        "Droid Sans Fallback",
+    ],
+    "ko": [
+        "Noto Sans CJK KR",
+        "Noto Serif CJK KR",
+        "Noto Sans KR",
+        "Source Han Sans K",
+        "NanumGothic",
+        "Nanum Gothic",
+        "Malgun Gothic",
+        "WenQuanYi Zen Hei",
+    ],
+    "ar": [
+        "Noto Sans Arabic",
+        "Noto Naskh Arabic",
+        "Amiri",
+        "Scheherazade",
+        "DejaVu Sans",
+        "FreeSans",
+        "FreeSerif",
+    ],
+    "he": [
+        "Noto Sans Hebrew",
+        "Noto Serif Hebrew",
+        "DejaVu Sans",
+        "FreeSans",
+        "FreeSerif",
+    ],
+    "hi": [
+        "Noto Sans Devanagari",
+        "Noto Serif Devanagari",
+        "Lohit Devanagari",
+        "Mangal",
+        "Nirmala UI",
+        "Samyak Devanagari",
+        "FreeSans",
+        "FreeSerif",
+    ],
+    "th": [
+        "Noto Sans Thai",
+        "Noto Serif Thai",
+        "Loma",
+        "Garuda",
+        "Waree",
+        "Umpush",
+        "Norasi",
+        "Sarabun",
+        "Leelawadee UI",
+        "FreeSerif",
+    ],
+    "bn": [
+        "Noto Sans Bengali",
+        "Noto Serif Bengali",
+        "Lohit Bengali",
+        "Mukti Narrow",
+        "Vrinda",
+        "Nirmala UI",
+        "FreeSerif",
+    ],
+    "ta": [
+        "Noto Sans Tamil",
+        "Noto Serif Tamil",
+        "Lohit Tamil",
+        "Latha",
+        "Nirmala UI",
+        "FreeSerif",
+    ],
+    "lo": [
+        "Noto Sans Lao",
+        "Noto Serif Lao",
+        "Phetsarath OT",
+        "Souliyo Unicode",
+        "Saysettha OT",
+        "DokChampa",
+        "Leelawadee UI",
+    ],
     "ru": ["Noto Sans", "DejaVu Sans", "Liberation Sans", "FreeSans", "FreeSerif"],
     "el": ["Noto Sans", "DejaVu Sans", "Liberation Sans", "FreeSans", "FreeSerif"],
 }
@@ -114,18 +271,48 @@ PREFERRED_FAMILIES = {
 
 # Windows has no fontconfig: the system fonts are looked up by file name instead, best first.
 WINDOWS_FONTS = {
-    "ko": [("malgun.ttf", "Malgun Gothic"), ("gulim.ttc", "Gulim"), ("batang.ttc", "Batang")],
-    "zh": [("msyh.ttc", "Microsoft YaHei"), ("simhei.ttf", "SimHei"), ("simsun.ttc", "SimSun")],
-    "ja": [("meiryo.ttc", "Meiryo"), ("YuGothM.ttc", "Yu Gothic Medium"), ("YuGothR.ttc", "Yu Gothic"), ("msgothic.ttc", "MS Gothic")],
+    "ko": [
+        ("malgun.ttf", "Malgun Gothic"),
+        ("gulim.ttc", "Gulim"),
+        ("batang.ttc", "Batang"),
+    ],
+    "zh": [
+        ("msyh.ttc", "Microsoft YaHei"),
+        ("simhei.ttf", "SimHei"),
+        ("simsun.ttc", "SimSun"),
+    ],
+    "ja": [
+        ("meiryo.ttc", "Meiryo"),
+        ("YuGothM.ttc", "Yu Gothic Medium"),
+        ("YuGothR.ttc", "Yu Gothic"),
+        ("msgothic.ttc", "MS Gothic"),
+    ],
     "ar": [("tahoma.ttf", "Tahoma"), ("arial.ttf", "Arial")],
     "he": [("tahoma.ttf", "Tahoma"), ("arial.ttf", "Arial")],
     # Windows 11 ships Nirmala UI as the collection Nirmala.ttc; there is no Nirmala.ttf (#339).
     # The .ttf names stay first so a machine that still has them (older Windows, a copied font)
     # keeps that file. Mangal, when present, stays the Devanagari face it always was.
-    "hi": [("mangal.ttf", "Mangal"), ("Nirmala.ttf", "Nirmala UI"), ("Nirmala.ttc", "Nirmala UI"), ("NirmalaB.ttf", "Nirmala UI")],
-    "th": [("leelawui.ttf", "Leelawadee UI"), ("leelawad.ttf", "Leelawadee"), ("tahoma.ttf", "Tahoma")],
-    "bn": [("Nirmala.ttf", "Nirmala UI"), ("Nirmala.ttc", "Nirmala UI"), ("vrinda.ttf", "Vrinda")],
-    "ta": [("Nirmala.ttf", "Nirmala UI"), ("Nirmala.ttc", "Nirmala UI"), ("latha.ttf", "Latha")],
+    "hi": [
+        ("mangal.ttf", "Mangal"),
+        ("Nirmala.ttf", "Nirmala UI"),
+        ("Nirmala.ttc", "Nirmala UI"),
+        ("NirmalaB.ttf", "Nirmala UI"),
+    ],
+    "th": [
+        ("leelawui.ttf", "Leelawadee UI"),
+        ("leelawad.ttf", "Leelawadee"),
+        ("tahoma.ttf", "Tahoma"),
+    ],
+    "bn": [
+        ("Nirmala.ttf", "Nirmala UI"),
+        ("Nirmala.ttc", "Nirmala UI"),
+        ("vrinda.ttf", "Vrinda"),
+    ],
+    "ta": [
+        ("Nirmala.ttf", "Nirmala UI"),
+        ("Nirmala.ttc", "Nirmala UI"),
+        ("latha.ttf", "Latha"),
+    ],
     "lo": [("leelawui.ttf", "Leelawadee UI"), ("DokChamp.ttf", "DokChampa")],
     "ru": [("arial.ttf", "Arial"), ("segoeui.ttf", "Segoe UI")],
     "el": [("arial.ttf", "Arial"), ("segoeui.ttf", "Segoe UI")],
@@ -133,10 +320,25 @@ WINDOWS_FONTS = {
 
 
 _SCRIPT_RANGES = (
-    ("ko", ((0x1100, 0x11FF), (0x3130, 0x318F), (0xA960, 0xA97F), (0xAC00, 0xD7FF))),   # Hangul syllables + Jamo
-    ("kana", ((0x3040, 0x309F), (0x30A0, 0x30FF), (0x31F0, 0x31FF), (0xFF66, 0xFF9F))),  # hiragana/katakana
+    (
+        "ko",
+        ((0x1100, 0x11FF), (0x3130, 0x318F), (0xA960, 0xA97F), (0xAC00, 0xD7FF)),
+    ),  # Hangul syllables + Jamo
+    (
+        "kana",
+        ((0x3040, 0x309F), (0x30A0, 0x30FF), (0x31F0, 0x31FF), (0xFF66, 0xFF9F)),
+    ),  # hiragana/katakana
     ("han", ((0x3400, 0x4DBF), (0x4E00, 0x9FFF), (0xF900, 0xFAFF), (0x20000, 0x2A6DF))),
-    ("ar", ((0x0600, 0x06FF), (0x0750, 0x077F), (0x08A0, 0x08FF), (0xFB50, 0xFDFF), (0xFE70, 0xFEFF))),
+    (
+        "ar",
+        (
+            (0x0600, 0x06FF),
+            (0x0750, 0x077F),
+            (0x08A0, 0x08FF),
+            (0xFB50, 0xFDFF),
+            (0xFE70, 0xFEFF),
+        ),
+    ),
     ("he", ((0x0590, 0x05FF), (0xFB1D, 0xFB4F))),
     ("hi", ((0x0900, 0x097F), (0xA8E0, 0xA8FF))),
     ("bn", ((0x0980, 0x09FF),)),
@@ -156,8 +358,15 @@ def font_family_of_file(path: str) -> "Optional[str]":
     exe = shutil.which("fc-scan")
     if exe:
         try:
-            proc = subprocess.run([exe, "--format", "%{family[0]}", path], stdout=subprocess.PIPE,
-                                  stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace", timeout=10)
+            proc = subprocess.run(
+                [exe, "--format", "%{family[0]}", path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=10,
+            )
             if proc.returncode == 0 and proc.stdout.strip():
                 return proc.stdout.strip().splitlines()[0].strip()
         except (subprocess.TimeoutExpired, OSError):
@@ -197,7 +406,11 @@ def detect_script(text: str, lang: "Optional[str]" = None) -> str:
         s = char_script(ch)
         if s in ("latin", "emoji"):
             continue
-        if ord(ch) in range(0x3040, 0x3100) or ord(ch) in range(0x31F0, 0x3200) or ord(ch) in range(0xFF66, 0xFFA0):
+        if (
+            ord(ch) in range(0x3040, 0x3100)
+            or ord(ch) in range(0x31F0, 0x3200)
+            or ord(ch) in range(0xFF66, 0xFFA0)
+        ):
             kana += 1
         if s not in counts:
             order.append(s)
@@ -228,8 +441,15 @@ def _fc_list_fonts(fc_lang: str) -> "Optional[List[Tuple[str, List[str]]]]":
     if not exe:
         return None
     try:
-        proc = subprocess.run([exe, f":lang={fc_lang}", "file", "family"],
-                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace", timeout=10)
+        proc = subprocess.run(
+            [exe, f":lang={fc_lang}", "file", "family"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
     except (subprocess.TimeoutExpired, OSError):
         return None
     if proc.returncode != 0:
@@ -242,7 +462,9 @@ def _fc_list_fonts(fc_lang: str) -> "Optional[List[Tuple[str, List[str]]]]":
         path = path.strip()
         if not path or not os.path.exists(path):
             continue
-        names = [f.replace("\\-", "-").strip() for f in families.split(",") if f.strip()]
+        names = [
+            f.replace("\\-", "-").strip() for f in families.split(",") if f.strip()
+        ]
         out.append((path, names or [Path(path).stem]))
     return out
 
@@ -255,7 +477,9 @@ def _family_rank(families: "Sequence[str]", preferred: "Sequence[str]") -> int:
     return len(preferred)
 
 
-def _script_font_entry(script: str, family_hint: "Optional[str]" = None) -> "Optional[Tuple[str, str]]":
+def _script_font_entry(
+    script: str, family_hint: "Optional[str]" = None
+) -> "Optional[Tuple[str, str]]":
     key = (script, family_hint)
     if key in _SCRIPT_FONT_CACHE:
         return _SCRIPT_FONT_CACHE[key]
@@ -295,14 +519,32 @@ def _script_font_uncached(script: str, family_hint: "Optional[str]" = None):
         last_resort = 1 if "unifont" in joined else 0
         mono = 1 if "mono" in joined else 0
         # regular weights before Bold/Italic/Oblique cuts, so a default caption is not bold by accident
-        styled = 1 if any(k in stem for k in ("bold", "italic", "oblique", "light", "thin", "black")) else 0
-        scored.append((last_resort, _family_rank(families, preferred), mono, styled, path, families[0]))
+        styled = (
+            1
+            if any(
+                k in stem
+                for k in ("bold", "italic", "oblique", "light", "thin", "black")
+            )
+            else 0
+        )
+        scored.append(
+            (
+                last_resort,
+                _family_rank(families, preferred),
+                mono,
+                styled,
+                path,
+                families[0],
+            )
+        )
     scored.sort(key=lambda row: (row[0], row[1], row[2], row[3], row[4]))
     best = scored[0]
     return best[4], best[5]
 
 
-def font_for_script(script: str, family_hint: "Optional[str]" = None) -> "Optional[str]":
+def font_for_script(
+    script: str, family_hint: "Optional[str]" = None
+) -> "Optional[str]":
     """A font FILE path that covers `script`, or None when this machine has none.
 
     Linux/macOS ask fontconfig (`fc-list :lang=xx file family`) and rank what it reports by the
@@ -313,14 +555,16 @@ def font_for_script(script: str, family_hint: "Optional[str]" = None) -> "Option
     return entry[0] if entry and entry is not FC_UNKNOWN else None
 
 
-def font_family_for_script(script: str, family_hint: "Optional[str]" = None) -> "Optional[str]":
+def font_family_for_script(
+    script: str, family_hint: "Optional[str]" = None
+) -> "Optional[str]":
     """The family NAME of font_for_script()'s file -- what libass wants in an ASS Fontname."""
     entry = _script_font_entry(script, family_hint)
     return entry[1] if entry and entry is not FC_UNKNOWN else None
 
 
 def script_font_status(script: str) -> str:
-    """"available" (a font file covers `script`), "missing" (fontconfig answered, none does) or
+    """ "available" (a font file covers `script`), "missing" (fontconfig answered, none does) or
     "unknown" (there is no working fontconfig to ask). Only "missing" is a refusal."""
     entry = _script_font_entry(script)
     if entry is FC_UNKNOWN:
@@ -343,8 +587,15 @@ def font_covers_script(font_name: str, script: str) -> bool:
     if not exe:
         return True
     try:
-        proc = subprocess.run([exe, f":lang={FC_LANG[script]}:family={font_name}", "file"],
-                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace", timeout=10)
+        proc = subprocess.run(
+            [exe, f":lang={FC_LANG[script]}:family={font_name}", "file"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
     except (subprocess.TimeoutExpired, OSError):
         return True
     if proc.returncode != 0:
@@ -358,9 +609,11 @@ def font_covers_script(font_name: str, script: str) -> bool:
 FONT_FLAG_HINT = "pass a font file (--font-file on overlay.py/graphics.py, --fonts-dir with --font on caption.py)"
 
 
-FONT_INSTALL_HINT = ("install fonts-noto-cjk / fonts-noto-core (apt), "
-                     "brew install --cask font-noto-sans-cjk / font-noto-sans-arabic (mac), or "
-                     + FONT_FLAG_HINT)
+FONT_INSTALL_HINT = (
+    "install fonts-noto-cjk / fonts-noto-core (apt), "
+    "brew install --cask font-noto-sans-cjk / font-noto-sans-arabic (mac), or "
+    + FONT_FLAG_HINT
+)
 
 
 def fonts_dir_covers_script(fonts_dir: str, script: str) -> "Optional[bool]":
@@ -377,8 +630,15 @@ def fonts_dir_covers_script(fonts_dir: str, script: str) -> "Optional[bool]":
     if not exe:
         return None
     try:
-        proc = subprocess.run([exe, "--format", "%{lang}\n", fonts_dir],
-                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace", timeout=10)
+        proc = subprocess.run(
+            [exe, "--format", "%{lang}\n", fonts_dir],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
     except (subprocess.TimeoutExpired, OSError):
         return None
     if proc.returncode != 0:
@@ -390,10 +650,15 @@ def fonts_dir_covers_script(fonts_dir: str, script: str) -> "Optional[bool]":
     return False
 
 
-def script_font_for_text(text: str, *, lang: "Optional[str]" = None, font: "Optional[str]" = None,
-                         font_explicit: bool = False, font_file: "Optional[str]" = None,
-                         fonts_dir: "Optional[str]" = None
-                         ) -> "Tuple[str, Optional[str], Optional[str]]":
+def script_font_for_text(
+    text: str,
+    *,
+    lang: "Optional[str]" = None,
+    font: "Optional[str]" = None,
+    font_explicit: bool = False,
+    font_file: "Optional[str]" = None,
+    fonts_dir: "Optional[str]" = None,
+) -> "Tuple[str, Optional[str], Optional[str]]":
     """(script, font file, family) to draw `text` with, resolving by script when nothing explicit
     was asked for.
 
@@ -415,26 +680,37 @@ def script_font_for_text(text: str, *, lang: "Optional[str]" = None, font: "Opti
         return script, None, None
     if font_explicit and font:
         if not font_covers_script(font, script):
-            info(f"font: '{font}' does not cover {LANGUAGE_NAMES[script]} text on this machine; keeping it as asked "
-                 f"(drop --font, or {FONT_FLAG_HINT}, to pick one by script automatically)")
+            info(
+                f"font: '{font}' does not cover {LANGUAGE_NAMES[script]} text on this machine; keeping it as asked "
+                f"(drop --font, or {FONT_FLAG_HINT}, to pick one by script automatically)"
+            )
         return script, None, None
     if fonts_dir:
         covered = fonts_dir_covers_script(fonts_dir, script)
         if covered:
             return script, None, None
         if covered is None:
-            info(f"font: could not verify that {fonts_dir} covers {LANGUAGE_NAMES[script]} text "
-                 "(no fc-scan on this machine); using it as given")
+            info(
+                f"font: could not verify that {fonts_dir} covers {LANGUAGE_NAMES[script]} text "
+                "(no fc-scan on this machine); using it as given"
+            )
             return script, None, None
-        info(f"font: no face in {fonts_dir} covers {LANGUAGE_NAMES[script]} text; "
-             "picking one by script instead (the directory is still searched first)")
+        info(
+            f"font: no face in {fonts_dir} covers {LANGUAGE_NAMES[script]} text; "
+            "picking one by script instead (the directory is still searched first)"
+        )
     entry = _script_font_entry(script)
     if entry is FC_UNKNOWN:
-        info(f"font: could not verify that this machine can render {LANGUAGE_NAMES[script]} text "
-             "(no working fontconfig); rendering with the font as given -- "
-             "doctor --json .fonts.scripts reports what is known")
+        info(
+            f"font: could not verify that this machine can render {LANGUAGE_NAMES[script]} text "
+            "(no working fontconfig); rendering with the font as given -- "
+            "doctor --json .fonts.scripts reports what is known"
+        )
         return script, None, None
     if not entry:
-        die(f"no installed font covers {LANGUAGE_NAMES[script]} text on this machine — {FONT_INSTALL_HINT}", kind="input")
+        die(
+            f"no installed font covers {LANGUAGE_NAMES[script]} text on this machine — {FONT_INSTALL_HINT}",
+            kind="input",
+        )
     info(f"font: {entry[0]} (covers {script})")
     return script, entry[0], entry[1]

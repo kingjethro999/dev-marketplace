@@ -25,6 +25,7 @@ Examples:
   python3 loop.py wave.mp4 --boomerang --times 4
   python3 loop.py smoke.mp4 --crossfade 1 --duration 60
 """
+
 import argparse
 import json
 import math
@@ -32,12 +33,39 @@ import os
 import sys
 import tempfile
 
-from _common import STATE, concat_list_line, add_common, aac_args, apply_common, cfr_args, with_cfr, default_output, die, emit, ffmpeg_base, info, probe, refuse_output_is_input, require_filter, require_tool, run, video_args, X264_PRESETS, time_arg, fmt_secs
+from _common import (
+    STATE,
+    concat_list_line,
+    add_common,
+    aac_args,
+    apply_common,
+    cfr_args,
+    with_cfr,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    refuse_output_is_input,
+    require_filter,
+    require_tool,
+    run,
+    video_args,
+    X264_PRESETS,
+    time_arg,
+    fmt_secs,
+)
 from _common.emit import warn
-from _common.decision import HELD_FRAMES_WARN_BYTES, av_trim, held_frames_bytes, length_output_t, stream_starts
+from _common.decision import (
+    HELD_FRAMES_WARN_BYTES,
+    av_trim,
+    held_frames_bytes,
+    length_output_t,
+    stream_starts,
+)
 from _common.probe import decode_gray_frames, decode_pcm_mono
 from _common.emit import input_length, own_length, refuse_still
-
 
 # The loop filter's size is capped at 32767 frames, so one boomerang cycle (2N-2 frames) must fit.
 LOOP_FILTER_MAX_FRAMES = 32767
@@ -51,20 +79,27 @@ def _boomerang_graph(meta, src_dur: float, times) -> str:
     common split/reverse/concat recipe, which shows frame N-1 twice and, on every repeat, frame 0
     twice. Trimming by frame index this way needs no frame count."""
     v = meta["video"]
-    frames = v.get("nb_frames") or round((v.get("duration") or src_dur) * (v.get("fps") or 30.0))
+    frames = v.get("nb_frames") or round(
+        (v.get("duration") or src_dur) * (v.get("fps") or 30.0)
+    )
     if frames < 3:
         die(f"--boomerang needs a clip of at least 3 frames, got {frames}")
     cycle = 2 * frames - 2
     if cycle > LOOP_FILTER_MAX_FRAMES:
-        die(f"--boomerang cycle is {cycle} frames; ffmpeg's loop filter holds at most {LOOP_FILTER_MAX_FRAMES} "
-            f"-- cut the clip shorter first (cut.py)")
+        die(
+            f"--boomerang cycle is {cycle} frames; ffmpeg's loop filter holds at most {LOOP_FILTER_MAX_FRAMES} "
+            f"-- cut the clip shorter first (cut.py)"
+        )
     # reverse holds the clip's decoded frames; split, trim and loop pass references to the same
     # frames, so the peak is about one clip (measured: the same max RSS as a plain reverse)
     held = held_frames_bytes(v, frames)
     if held > HELD_FRAMES_WARN_BYTES:
-        warn(f"--boomerang holds about {held / 1024 ** 3:.1f} GiB of decoded frames in memory "
-             f"({frames} frames of {v['width']}x{v['height']}) -- cut the clip shorter first (cut.py) if RAM is tight",
-             "memory_heavy", bytes=int(held))
+        warn(
+            f"--boomerang holds about {held / 1024 ** 3:.1f} GiB of decoded frames in memory "
+            f"({frames} frames of {v['width']}x{v['height']}) -- cut the clip shorter first (cut.py) if RAM is tight",
+            "memory_heavy",
+            bytes=int(held),
+        )
     repeats = -1 if times is None else times - 1
     # Retimed by frame index at the source's nominal rate: a VFR source's reversed half carries
     # its gaps mirrored, and a CFR conform after the graph duplicated a frame against them (a
@@ -72,10 +107,12 @@ def _boomerang_graph(meta, src_dur: float, times) -> str:
     # fps= after setpts drops or repeats nothing; it tells the encoder the rate, whose time base
     # otherwise follows the source's r_frame_rate and rounds the new timestamps unevenly.
     rate = _nominal_rate(v)
-    return ("[0:v]split[f][r];[f]setpts=PTS-STARTPTS[fw];"
-            "[r]trim=start_frame=1,reverse,trim=start_frame=1,setpts=PTS-STARTPTS[bw];"
-            f"[fw][bw]concat=n=2:v=1:a=0,loop=loop={repeats}:size={LOOP_FILTER_MAX_FRAMES},"
-            f"setpts=N/(({rate})*TB),fps={rate}[v]")
+    return (
+        "[0:v]split[f][r];[f]setpts=PTS-STARTPTS[fw];"
+        "[r]trim=start_frame=1,reverse,trim=start_frame=1,setpts=PTS-STARTPTS[bw];"
+        f"[fw][bw]concat=n=2:v=1:a=0,loop=loop={repeats}:size={LOOP_FILTER_MAX_FRAMES},"
+        f"setpts=N/(({rate})*TB),fps={rate}[v]"
+    )
 
 
 # Above this a "frame rate" is a time base (90000/1 from MPEG-TS, 1000/1 from Matroska), not a rate.
@@ -109,13 +146,34 @@ def concat_first_frame(listfile: str) -> float:
     """Where the first frame sits on the clock ffmpeg reads a concat list on: the list's first video
     start minus its start_time. The concat demuxer counts an MP4's hidden AAC priming packet into its
     start (-0.021 s) where the MP4 demuxer does not, so ffmpeg moves both streams 21 ms later, and a
-    frame-rate time base then rounded the picture's move to 33 ms (12 ms off). 0.0 when unmeasured."""
-    proc = run([require_tool("ffprobe"), "-v", "error", "-f", "concat", "-safe", "0", "-i", listfile,
-                "-select_streams", "v:0", "-show_entries", "stream=start_time:format=start_time", "-of", "json"],
-               quiet=True, check=False)
+    frame-rate time base then rounded the picture's move to 33 ms (12 ms off). 0.0 when unmeasured.
+    """
+    proc = run(
+        [
+            require_tool("ffprobe"),
+            "-v",
+            "error",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            listfile,
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=start_time:format=start_time",
+            "-of",
+            "json",
+        ],
+        quiet=True,
+        check=False,
+    )
     try:
         doc = json.loads(proc.stdout or "")
-        return float(doc["streams"][0]["start_time"]) - float(doc["format"]["start_time"])
+        return float(doc["streams"][0]["start_time"]) - float(
+            doc["format"]["start_time"]
+        )
     except (ValueError, KeyError, IndexError, TypeError):
         return 0.0
 
@@ -128,14 +186,17 @@ def _conformed_frames(v, rate: float, src_dur: float) -> int:
     """The frames the crossfade's graph sees: the picture after fps=RATE, which fills a gap in a
     variable-rate stream and drops crowded frames, so its count follows the stream's length, not
     the frames stored (299 stored frames over 10 s at 30 fps come out 300). The unit's trims and
-    its length are counted in these, or a repeat is a frame or more off the length planned."""
+    its length are counted in these, or a repeat is a frame or more off the length planned.
+    """
     # the video stream's length, else Matroska's tag, else the container's (main() refuses a source
     # without one): never the stored frame count, which is what fps= does not keep
     d = own_length(v) or src_dur
     return int(round(float(d) * rate))
 
 
-def _seamless_unit_cmd(meta, src: str, unit: str, rate: str, frames: int, fade_frames: int, has_audio: bool) -> list:
+def _seamless_unit_cmd(
+    meta, src: str, unit: str, rate: str, frames: int, fade_frames: int, has_audio: bool
+) -> list:
     """One repeat that loops on itself: the clip's last `fade_frames` fade into its first ones.
 
     The tail (frames N-F..N-1) is laid over the head (frames 0..F-1) with xfade, so the repeat
@@ -151,10 +212,12 @@ def _seamless_unit_cmd(meta, src: str, unit: str, rate: str, frames: int, fade_f
     length = frames / fps
     # each branch re-states its rate after setpts: FFmpeg 7.x's setpts marks the frame rate
     # unknown (1/0) and xfade refuses anything but a constant one (6.1 kept it)
-    graph = (f"[0:v:0]setpts=PTS-STARTPTS,fps={rate},split[vt][vb];"
-             f"[vt]trim=start_frame={frames - fade_frames}:end_frame={frames},setpts=PTS-STARTPTS,fps={rate}[t];"
-             f"[vb]trim=end_frame={frames - fade_frames},setpts=PTS-STARTPTS,fps={rate}[b];"
-             f"[t][b]xfade=transition=fade:duration={fade:.6f}:offset=0[v]")
+    graph = (
+        f"[0:v:0]setpts=PTS-STARTPTS,fps={rate},split[vt][vb];"
+        f"[vt]trim=start_frame={frames - fade_frames}:end_frame={frames},setpts=PTS-STARTPTS,fps={rate}[t];"
+        f"[vb]trim=end_frame={frames - fade_frames},setpts=PTS-STARTPTS,fps={rate}[b];"
+        f"[t][b]xfade=transition=fade:duration={fade:.6f}:offset=0[v]"
+    )
     maps = ["-map", "[v]"]
     if has_audio:
         # acrossfade writes nothing when its first input is exactly the fade long (FFmpeg 6.1 and
@@ -163,17 +226,24 @@ def _seamless_unit_cmd(meta, src: str, unit: str, rate: str, frames: int, fade_f
         # picture: rebased to its own start (aresample's first_pts=0 alone), a picture that starts
         # 0.2 s after its sound came out 200 ms behind it in every repeat (A168)
         v0 = stream_starts(meta)[0]
-        graph += (f";[0:a:0]atrim=start={v0:.6f},asetpts=PTS-{v0:.6f}/TB,aresample=async=1:first_pts=0,"
-                  f"apad,atrim=end={length:.6f},asplit=3[at][ah][ab];"
-                  f"[at]atrim=start={cut:.6f},asetpts=PTS-STARTPTS,afade=t=out:d={fade:.6f}:curve=tri[ta];"
-                  f"[ah]atrim=end={fade:.6f},asetpts=PTS-STARTPTS,afade=t=in:d={fade:.6f}:curve=tri[ha];"
-                  f"[ta][ha]amix=inputs=2:normalize=0:duration=longest[xa];"
-                  f"[ab]atrim=start={fade:.6f}:end={cut:.6f},asetpts=PTS-STARTPTS[ba];"
-                  f"[xa][ba]concat=n=2:v=0:a=1[a]")
+        graph += (
+            f";[0:a:0]atrim=start={v0:.6f},asetpts=PTS-{v0:.6f}/TB,aresample=async=1:first_pts=0,"
+            f"apad,atrim=end={length:.6f},asplit=3[at][ah][ab];"
+            f"[at]atrim=start={cut:.6f},asetpts=PTS-STARTPTS,afade=t=out:d={fade:.6f}:curve=tri[ta];"
+            f"[ah]atrim=end={fade:.6f},asetpts=PTS-STARTPTS,afade=t=in:d={fade:.6f}:curve=tri[ha];"
+            f"[ta][ha]amix=inputs=2:normalize=0:duration=longest[xa];"
+            f"[ab]atrim=start={fade:.6f}:end={cut:.6f},asetpts=PTS-STARTPTS[ba];"
+            f"[xa][ba]concat=n=2:v=0:a=1[a]"
+        )
         maps += ["-map", "[a]", "-c:a", "flac"]
     else:
         maps += ["-an"]
-    return ffmpeg_base() + ["-i", src, "-filter_complex", graph] + maps + ["-c:v", "ffv1", "-fps_mode", "passthrough", unit]
+    return (
+        ffmpeg_base()
+        + ["-i", src, "-filter_complex", graph]
+        + maps
+        + ["-c:v", "ffv1", "-fps_mode", "passthrough", unit]
+    )
 
 
 # Frames are compared at this size: enough to see a cut or a jump, a few KB per frame.
@@ -191,7 +261,9 @@ def _rms_db(block) -> "float | None":
     return 20 * math.log10(rms) if rms > 1e-6 else -120.0
 
 
-def _measure_seam(output: str, unit: float, out_dur: float, fps: float, has_audio: bool) -> dict:
+def _measure_seam(
+    output: str, unit: float, out_dur: float, fps: float, has_audio: bool
+) -> dict:
     """The first seam of the written file, where repeat 1 meets repeat 2 (or, for a single repeat,
     the file's last frame against its first, as a player looping it would show them).
 
@@ -201,51 +273,92 @@ def _measure_seam(output: str, unit: float, out_dur: float, fps: float, has_audi
     audio_level_step_db: the RMS level 20 ms after the seam minus 20 ms before it."""
     half = min(0.5, unit / 2)
     if out_dur - unit > 1.5 / fps:
-        frames = decode_gray_frames(output, fps, SEAM_W, SEAM_H, start=unit - half, seconds=2 * half, check=False)
+        frames = decode_gray_frames(
+            output,
+            fps,
+            SEAM_W,
+            SEAM_H,
+            start=unit - half,
+            seconds=2 * half,
+            check=False,
+        )
         at = round(half * fps)
         pair = (frames[at - 1], frames[at]) if 0 < at < len(frames) else None
         where = "between_repeats"
     else:
-        head = decode_gray_frames(output, fps, SEAM_W, SEAM_H, seconds=half, check=False)
-        tail = decode_gray_frames(output, fps, SEAM_W, SEAM_H, start=max(0.0, out_dur - half), check=False)
+        head = decode_gray_frames(
+            output, fps, SEAM_W, SEAM_H, seconds=half, check=False
+        )
+        tail = decode_gray_frames(
+            output, fps, SEAM_W, SEAM_H, start=max(0.0, out_dur - half), check=False
+        )
         frames = tail + head
         at = len(tail)
         pair = (tail[-1], head[0]) if tail and head else None
         where = "end_to_start"
     seam = {"at": where, "time": round(unit, 3) if where == "between_repeats" else None}
     if pair:
-        steps = [_mean_step(frames[i - 1], frames[i]) for i in range(1, len(frames)) if i != at]
+        steps = [
+            _mean_step(frames[i - 1], frames[i])
+            for i in range(1, len(frames))
+            if i != at
+        ]
         seam["video_step"] = round(_mean_step(*pair), 2)
-        seam["video_typical_step"] = round(sorted(steps)[len(steps) // 2], 2) if steps else None
+        seam["video_typical_step"] = (
+            round(sorted(steps)[len(steps) // 2], 2) if steps else None
+        )
     else:
         seam["video_step"] = seam["video_typical_step"] = None
     if has_audio:
         rate, win = 48000, 0.02
         if where == "between_repeats":
-            pcm = decode_pcm_mono(output, rate, seconds=2 * win, start=unit - win, check=False)
-            before, after = pcm[: int(rate * win)], pcm[int(rate * win):]
+            pcm = decode_pcm_mono(
+                output, rate, seconds=2 * win, start=unit - win, check=False
+            )
+            before, after = pcm[: int(rate * win)], pcm[int(rate * win) :]
         else:
             after = decode_pcm_mono(output, rate, seconds=win, check=False)
-            before = decode_pcm_mono(output, rate, start=max(0.0, out_dur - win), check=False)
+            before = decode_pcm_mono(
+                output, rate, start=max(0.0, out_dur - win), check=False
+            )
         b, a = _rms_db(before), _rms_db(after)
-        seam["audio_level_step_db"] = round(a - b, 1) if a is not None and b is not None else None
+        seam["audio_level_step_db"] = (
+            round(a - b, 1) if a is not None and b is not None else None
+        )
     return seam
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_loop.<ext>)")
     group = ap.add_mutually_exclusive_group(required=True)
-    group.add_argument("--times", type=int, help="repeat the whole clip this many times (2 = original + 1 repeat)")
-    group.add_argument("--duration", help="loop (and trim the last repeat) to hit exactly this target duration (seconds or mm:ss)")
-    ap.add_argument("--boomerang", action="store_true",
-                    help="play forward then backward (--times counts round trips; 1 is allowed); drops audio")
-    ap.add_argument("--crossfade", metavar="S",
-                    help="fade the clip's last S seconds into its first S (picture and sound) so every seam is smooth; "
-                         "one repeat is then S shorter than the clip, and --times 1 writes one seamless loop")
+    group.add_argument(
+        "--times",
+        type=int,
+        help="repeat the whole clip this many times (2 = original + 1 repeat)",
+    )
+    group.add_argument(
+        "--duration",
+        help="loop (and trim the last repeat) to hit exactly this target duration (seconds or mm:ss)",
+    )
+    ap.add_argument(
+        "--boomerang",
+        action="store_true",
+        help="play forward then backward (--times counts round trips; 1 is allowed); drops audio",
+    )
+    ap.add_argument(
+        "--crossfade",
+        metavar="S",
+        help="fade the clip's last S seconds into its first S (picture and sound) so every seam is smooth; "
+        "one repeat is then S shorter than the clip, and --times 1 writes one seamless loop",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -253,7 +366,9 @@ def main() -> int:
     meta = probe(args.input)
     if not meta.get("video"):
         die("input has no video stream")
-    refuse_still(meta, args.input, "a loop repeats a clip's length, and a still has none")  # #531
+    refuse_still(
+        meta, args.input, "a loop repeats a clip's length, and a still has none"
+    )  # #531
     src_dur = input_length(meta)  # no stated length: refused with the way out (#491)
     if src_dur <= 0:
         die("input has no measurable duration to loop")
@@ -270,41 +385,65 @@ def main() -> int:
     fade_frames = 0
     if args.crossfade is not None:
         if args.boomerang:
-            die("--crossfade and --boomerang cannot be combined: a boomerang's turnarounds already meet matching frames")
+            die(
+                "--crossfade and --boomerang cannot be combined: a boomerang's turnarounds already meet matching frames"
+            )
         frames = _conformed_frames(v, fps, src_dur)
         require_filter("xfade", "--crossfade")
         fade = time_arg(args.crossfade, "--crossfade", v.get("fps"))
         if not math.isfinite(fade):
-            die(f"--crossfade must be a finite number of seconds, got {args.crossfade!r}")
+            die(
+                f"--crossfade must be a finite number of seconds, got {args.crossfade!r}"
+            )
         fade_frames = round(fade * fps)
         if fade_frames < 1:
-            die(f"--crossfade {args.crossfade!r} is shorter than one frame ({1 / fps:.3f}s at {fps:g} fps)")
+            die(
+                f"--crossfade {args.crossfade!r} is shorter than one frame ({1 / fps:.3f}s at {fps:g} fps)"
+            )
         if 2 * fade_frames > frames:
-            die(f"--crossfade ({fade_frames / fps:.3f}s) must be at most half the clip ({frames / fps:.3f}s): "
-                f"the fade lays the clip's end over its start, and the two must not overlap")
+            die(
+                f"--crossfade ({fade_frames / fps:.3f}s) must be at most half the clip ({frames / fps:.3f}s): "
+                f"the fade lays the clip's end over its start, and the two must not overlap"
+            )
         unit = (frames - fade_frames) / fps
 
     if args.times is not None:
         least = 1 if (args.boomerang or fade_frames) else 2
         if args.times < least:
-            die(f"--times must be >= 1, got {args.times}" if least == 1 else
-                f"--times must be >= 2 (1 is just the original clip; with --crossfade, 1 writes one seamless loop), got {args.times}")
+            die(
+                f"--times must be >= 1, got {args.times}"
+                if least == 1
+                else f"--times must be >= 2 (1 is just the original clip; with --crossfade, 1 writes one seamless loop), got {args.times}"
+            )
         target = None
         stream_loop = args.times - 1
     else:
         target = time_arg(args.duration, "--duration", v.get("fps"))
         if target <= unit:
-            die(f"--duration ({target:g}s) must be longer than one repeat ({unit:.3f}s) -- use cut.py to trim instead")
+            die(
+                f"--duration ({target:g}s) must be longer than one repeat ({unit:.3f}s) -- use cut.py to trim instead"
+            )
         stream_loop = math.ceil(target / unit) - 1
 
     # a variable-rate source is conformed to the rate cfr_args() delivers, by the fps filter in the
     # picture's chain (below) and the output's -fps_mode cfr -r; the fps stage for a sound that
     # outlasts the picture is for a constant-rate clip only, so the two never meet
-    forced_rate = cfr_args(meta, fps if fade_frames and v.get("variable_frame_rate_suspected") else None)
+    forced_rate = cfr_args(
+        meta, fps if fade_frames and v.get("variable_frame_rate_suspected") else None
+    )
     if args.boomerang:
-        cmd = ffmpeg_base() + ["-i", args.input, "-filter_complex", _boomerang_graph(meta, src_dur, args.times), "-map", "[v]"]
+        cmd = ffmpeg_base() + [
+            "-i",
+            args.input,
+            "-filter_complex",
+            _boomerang_graph(meta, src_dur, args.times),
+            "-map",
+            "[v]",
+        ]
         if meta.get("audio"):
-            notes.append("audio dropped: a boomerang plays half its sound backwards -- add a bed with audio.py")
+            notes.append(
+                "audio dropped: a boomerang plays half its sound backwards -- add a bed with audio.py"
+            )
     else:
         # The concat demuxer reads the clip once per repeat and starts each repeat at the previous
         # one's start plus the file's duration (#409): both streams keep their offset from the
@@ -318,16 +457,35 @@ def main() -> int:
         repeat = os.path.abspath(args.input)
         if fade_frames:
             repeat = os.path.join(workdir.name, "unit.mkv")
-            run(_seamless_unit_cmd(meta, args.input, repeat, rate, _conformed_frames(v, fps, src_dur), fade_frames, has_audio))
+            run(
+                _seamless_unit_cmd(
+                    meta,
+                    args.input,
+                    repeat,
+                    rate,
+                    _conformed_frames(v, fps, src_dur),
+                    fade_frames,
+                    has_audio,
+                )
+            )
         with open(listfile, "w", encoding="utf-8") as fh:
             fh.write((concat_list_line(repeat) + "\n") * (stream_loop + 1))
         vtrim, atrim = av_trim(concat_first_frame(listfile), None, fill_gaps=True)
         # the conform of a VFR source is the fps filter at the end of the picture's chain, at the
         # rate cfr_args() below delivers (#512)
-        vtrim = with_cfr(vtrim, meta, fps if fade_frames and v.get("variable_frame_rate_suspected") else None)
+        vtrim = with_cfr(
+            vtrim,
+            meta,
+            fps if fade_frames and v.get("variable_frame_rate_suspected") else None,
+        )
         cmd = ffmpeg_base() + ["-f", "concat", "-safe", "0", "-i", listfile]
         v_end = stream_starts(meta)[0] + (v.get("duration") or 0.0)
-        if has_audio and not forced_rate and not fade_frames and src_dur - v_end > 0.5 / fps:
+        if (
+            has_audio
+            and not forced_rate
+            and not fade_frames
+            and src_dur - v_end > 0.5 / fps
+        ):
             # A repeat is as long as the file, so where the sound outlasts the picture by more
             # than half a frame the next repeat's first frame comes later than one frame after
             # the last. What stood in that gap was left to the output's frame-rate handling:
@@ -339,13 +497,26 @@ def main() -> int:
             # once. A clip without that gap has nothing to fill and keeps the command it had.
             vtrim += f",fps={rate}"
         if has_audio:
-            cmd += ["-filter_complex", f"[0:v:0]{vtrim}[v];[0:a:0]{atrim}[a]",
-                    "-map", "[v]", "-map", "[a]"]
+            cmd += [
+                "-filter_complex",
+                f"[0:v:0]{vtrim}[v];[0:a:0]{atrim}[a]",
+                "-map",
+                "[v]",
+                "-map",
+                "[a]",
+            ]
         else:
             cmd += ["-map", "0:v:0", "-vf", vtrim]
     if target is not None:
         # the sound ends at --duration to the sample, not to the millisecond (length_output_t)
-        cmd += ["-t", length_output_t(target, (meta.get("audio") or {}).get("sample_rate") if has_audio else None, runs_on=True)]
+        cmd += [
+            "-t",
+            length_output_t(
+                target,
+                (meta.get("audio") or {}).get("sample_rate") if has_audio else None,
+                runs_on=True,
+            ),
+        ]
     cmd += video_args(meta, args.crf, args.preset)
     # a crossfade's repeat is already constant at `rate` (its graph's fps=): the loop keeps that rate,
     # not a variable-rate source's average, which re-timed every repeat by a frame or two
@@ -364,10 +535,22 @@ def main() -> int:
     extra = {"boomerang": args.boomerang}
     if fade_frames:
         extra["crossfade"] = round(fade_frames / fps, 6)
-    requested = target if target is not None else (
-        args.times * (2 * _frame_count(v, fps, src_dur) - 2) / fps if args.boomerang else args.times * unit)
+    requested = (
+        target
+        if target is not None
+        else (
+            args.times * (2 * _frame_count(v, fps, src_dur) - 2) / fps
+            if args.boomerang
+            else args.times * unit
+        )
+    )
     if STATE.dry_run:
-        emit(output, expected_duration=round(requested, 3), **extra, **({"notes": notes} if notes else {}))
+        emit(
+            output,
+            expected_duration=round(requested, 3),
+            **extra,
+            **({"notes": notes} if notes else {}),
+        )
         return 0
     result = probe(output, role="output")
     rv = result["video"]
@@ -375,19 +558,33 @@ def main() -> int:
     # the length asked for (repeats x one repeat, or --duration), against the file: within a frame
     # and a half, the slack the last repeat's trim and the encoder's final frame leave
     tolerance = 1.5 / fps
-    verification = [{"step": "duration", "requested": round(requested, 3), "measured": round(out_dur, 3),
-                     "tolerance": round(tolerance, 3), "ok": abs(out_dur - requested) <= tolerance}]
+    verification = [
+        {
+            "step": "duration",
+            "requested": round(requested, 3),
+            "measured": round(out_dur, 3),
+            "tolerance": round(tolerance, 3),
+            "ok": abs(out_dur - requested) <= tolerance,
+        }
+    ]
     if not args.boomerang:
         extra["seam"] = _measure_seam(output, unit, out_dur, fps, has_audio)
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {rv['width']}x{rv['height']}, source {src_dur:.3f}s "
-         f"{'boomeranged' if args.boomerang else 'looped'})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {rv['width']}x{rv['height']}, source {src_dur:.3f}s "
+        f"{'boomeranged' if args.boomerang else 'looped'})"
+    )
     for note in notes:
         info(note)
     # the streams the run must have written: a crossfade unit whose sound came out empty once left
     # a silent loop that still said verified: true
-    emit(output, expected_duration=round(requested, 3), verification=verification,
-         expect_streams={"video": 1, "audio": 1 if has_audio else 0}, **extra,
-         **({"notes": notes} if notes else {}))
+    emit(
+        output,
+        expected_duration=round(requested, 3),
+        verification=verification,
+        expect_streams={"video": 1, "audio": 1 if has_audio else 0},
+        **extra,
+        **({"notes": notes} if notes else {}),
+    )
     return 0
 
 

@@ -37,11 +37,20 @@ from typing import Any
 from artifact_skill.adapters.base import ArtifactAdapter, OperationSpec, RenderResult
 from artifact_skill.core.artifact import ArtifactRef, ArtifactType, InspectionReport
 from artifact_skill.core.capability import Capability, CapabilityStatus
-from artifact_skill.core.errors import ArtifactExecutionError, ArtifactInputError, ArtifactSecurityError
+from artifact_skill.core.errors import (
+    ArtifactExecutionError,
+    ArtifactInputError,
+    ArtifactSecurityError,
+)
 from artifact_skill.core.operation import OperationPlan
 from artifact_skill.core.verification import Check, CheckStatus, VerificationResult
 from artifact_skill.leftover_text import find_leftover_markers
-from artifact_skill.rendering.ffmpeg_probe import extract_frame, ffmpeg_binary, ffprobe_binary, probe_media
+from artifact_skill.rendering.ffmpeg_probe import (
+    extract_frame,
+    ffmpeg_binary,
+    ffprobe_binary,
+    probe_media,
+)
 from artifact_skill.security.limits import DEFAULT_LIMITS, Limits
 from artifact_skill.security.paths import check_input_size
 
@@ -72,17 +81,21 @@ def _validate_codec_policy(allowed: Any, policy_key: str) -> set[str]:
     int or None)."""
     if isinstance(allowed, str):
         return {allowed}
-    if isinstance(allowed, (list, tuple, set)) and all(isinstance(v, str) for v in allowed):
+    if isinstance(allowed, (list, tuple, set)) and all(
+        isinstance(v, str) for v in allowed
+    ):
         return set(allowed)
     raise ArtifactInputError(
         code="ARTIFACT_INVALID_ARGS",
         message=f"'{policy_key}' must be a string or a list of strings, got {allowed!r}.",
-        remediation="Pass e.g. \"h264\" or [\"h264\", \"hevc\"].",
+        remediation='Pass e.g. "h264" or ["h264", "hevc"].',
         evidence={policy_key: allowed},
     )
 
 
-def _first_stream(streams: list[dict[str, Any]], codec_type: str) -> dict[str, Any] | None:
+def _first_stream(
+    streams: list[dict[str, Any]], codec_type: str
+) -> dict[str, Any] | None:
     """Adversarial-review finding, verified by direct reproduction: an
     audio file with embedded cover art (extremely common — iTunes/Apple
     Music/podcast-tool M4A, ripped MP3/M4A with album art) has an mjpeg
@@ -95,7 +108,12 @@ def _first_stream(streams: list[dict[str, Any]], codec_type: str) -> dict[str, A
     `ARTIFACT_RENDER_BACKEND_FAILED` instead of taking the ordinary
     audio-only "zero files, one warning" path."""
     return next(
-        (s for s in streams if s.get("codec_type") == codec_type and not s.get("disposition", {}).get("attached_pic")),
+        (
+            s
+            for s in streams
+            if s.get("codec_type") == codec_type
+            and not s.get("disposition", {}).get("attached_pic")
+        ),
         None,
     )
 
@@ -114,19 +132,23 @@ class MediaAdapter(ArtifactAdapter):
     def capabilities(self) -> list[Capability]:
         structural = (
             Capability(
-                id="media.structural", status=CapabilityStatus.AVAILABLE,
+                id="media.structural",
+                status=CapabilityStatus.AVAILABLE,
                 detail=f"ffprobe found on PATH: {ffprobe_binary()}",
                 detected_via="which ffprobe",
             )
             if ffprobe_binary()
             else Capability(
-                id="media.structural", status=CapabilityStatus.MISSING,
-                detail="ffprobe not found on PATH.", detected_via="which ffprobe",
+                id="media.structural",
+                status=CapabilityStatus.MISSING,
+                detail="ffprobe not found on PATH.",
+                detected_via="which ffprobe",
             )
         )
         if ffmpeg_binary() and ffprobe_binary():
             render = Capability(
-                id="media.render", status=CapabilityStatus.AVAILABLE,
+                id="media.render",
+                status=CapabilityStatus.AVAILABLE,
                 detail=f"ffmpeg found on PATH: {ffmpeg_binary()}. A present binary does not guarantee a specific "
                 "file converts successfully — see adapters/pptx/adapter.py's docstring for the same caveat "
                 "applied to LibreOffice.",
@@ -134,8 +156,10 @@ class MediaAdapter(ArtifactAdapter):
             )
         else:
             render = Capability(
-                id="media.render", status=CapabilityStatus.MISSING,
-                detail="ffmpeg and/or ffprobe not found on PATH.", detected_via="which ffmpeg",
+                id="media.render",
+                status=CapabilityStatus.MISSING,
+                detail="ffmpeg and/or ffprobe not found on PATH.",
+                detected_via="which ffmpeg",
             )
         return [structural, render]
 
@@ -158,14 +182,24 @@ class MediaAdapter(ArtifactAdapter):
         ]
 
     def recognized_policy_keys(self) -> frozenset[str]:
-        return frozenset({
-            "min_duration_seconds", "max_duration_seconds", "require_has_video", "require_has_audio",
-            "require_min_resolution", "require_video_codec", "require_audio_codec", "forbid_placeholder_text",
-        })
+        return frozenset(
+            {
+                "min_duration_seconds",
+                "max_duration_seconds",
+                "require_has_video",
+                "require_has_audio",
+                "require_min_resolution",
+                "require_video_codec",
+                "require_audio_codec",
+                "forbid_placeholder_text",
+            }
+        )
 
     # ---- inspect ---------------------------------------------------
 
-    def inspect(self, ref: ArtifactRef, *, limits: Limits = DEFAULT_LIMITS) -> InspectionReport:
+    def inspect(
+        self, ref: ArtifactRef, *, limits: Limits = DEFAULT_LIMITS
+    ) -> InspectionReport:
         # `limits` is an addition beyond the base ArtifactAdapter.inspect()
         # signature (a keyword-only default, so every existing caller that
         # calls plain `adapter.inspect(ref)` is unaffected). Round-3-plus
@@ -185,7 +219,11 @@ class MediaAdapter(ArtifactAdapter):
 
         if video is not None:
             width, height = video.get("width"), video.get("height")
-            if isinstance(width, int) and isinstance(height, int) and width * height > limits.max_video_pixels:
+            if (
+                isinstance(width, int)
+                and isinstance(height, int)
+                and width * height > limits.max_video_pixels
+            ):
                 # Security-review finding, verified by direct reproduction:
                 # a container can declare an enormous *decoded* frame size
                 # while compressing to almost nothing on disk (a solid-color
@@ -236,30 +274,38 @@ class MediaAdapter(ArtifactAdapter):
             "stream_count": len(streams),
             "has_video": video is not None,
             "has_audio": audio is not None,
-            "video": None
-            if video is None
-            else {
-                "codec_name": video.get("codec_name"),
-                "width": video.get("width"),
-                "height": video.get("height"),
-                "frame_rate": _parse_frame_rate(video.get("avg_frame_rate")),
-                "pix_fmt": video.get("pix_fmt"),
-            },
-            "audio": None
-            if audio is None
-            else {
-                "codec_name": audio.get("codec_name"),
-                "sample_rate": sample_rate,
-                "channels": audio.get("channels"),
-            },
+            "video": (
+                None
+                if video is None
+                else {
+                    "codec_name": video.get("codec_name"),
+                    "width": video.get("width"),
+                    "height": video.get("height"),
+                    "frame_rate": _parse_frame_rate(video.get("avg_frame_rate")),
+                    "pix_fmt": video.get("pix_fmt"),
+                }
+            ),
+            "audio": (
+                None
+                if audio is None
+                else {
+                    "codec_name": audio.get("codec_name"),
+                    "sample_rate": sample_rate,
+                    "channels": audio.get("channels"),
+                }
+            ),
             "tags": tags,
-            "leftover_markers": find_leftover_markers("\n".join(str(v) for v in tags.values())),
+            "leftover_markers": find_leftover_markers(
+                "\n".join(str(v) for v in tags.values())
+            ),
         }
         return InspectionReport(artifact=ref, details=details)
 
     # ---- plan / execute -----------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"Media adapter has no mutating operations (requested '{operation}').",
@@ -267,7 +313,9 @@ class MediaAdapter(ArtifactAdapter):
             evidence={"operation": operation},
         )
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"Media adapter has no mutating operations (requested '{operation}').",
@@ -277,7 +325,9 @@ class MediaAdapter(ArtifactAdapter):
 
     # ---- render ------------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         check_input_size(ref.path, limits)
         report = self.inspect(ref, limits=limits)
         details = report.details
@@ -295,7 +345,9 @@ class MediaAdapter(ArtifactAdapter):
                 if details["has_audio"]
                 else "No audio or video stream found in this container (likely truncated or corrupt)."
             )
-            return RenderResult(kind="page_images", files=[], backend="ffmpeg", warnings=[warning])
+            return RenderResult(
+                kind="page_images", files=[], backend="ffmpeg", warnings=[warning]
+            )
 
         duration = details["duration_seconds"]
         at_seconds = min(2.0, duration / 2) if duration and duration > 0 else 0.0
@@ -313,43 +365,68 @@ class MediaAdapter(ArtifactAdapter):
             # to a timestamp that doesn't land on a frame.
             if at_seconds == 0.0:
                 return RenderResult(
-                    kind="page_images", files=[], backend="ffmpeg",
-                    warnings=["ffmpeg could not extract a frame from this video (no frame found at t=0)."],
+                    kind="page_images",
+                    files=[],
+                    backend="ffmpeg",
+                    warnings=[
+                        "ffmpeg could not extract a frame from this video (no frame found at t=0)."
+                    ],
                 )
             try:
                 extract_frame(ref.path, out_path, at_seconds=0.0, limits=limits)
             except ArtifactExecutionError:
                 return RenderResult(
-                    kind="page_images", files=[], backend="ffmpeg",
-                    warnings=["ffmpeg could not extract a frame from this video at the midpoint or at t=0."],
+                    kind="page_images",
+                    files=[],
+                    backend="ffmpeg",
+                    warnings=[
+                        "ffmpeg could not extract a frame from this video at the midpoint or at t=0."
+                    ],
                 )
         return RenderResult(kind="page_images", files=[out_path], backend="ffmpeg")
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="media_readable", name="Media is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="media_readable",
+                    name="Media is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="media_readable", name="Media is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(
+                id="media_readable", name="Media is readable", status=CheckStatus.PASS
+            )
+        )
 
         details = report.details
         duration = details["duration_seconds"]
         if duration is None:
             checks.append(
                 Check(
-                    id="duration_known", name="Duration is known", status=CheckStatus.UNKNOWN,
+                    id="duration_known",
+                    name="Duration is known",
+                    status=CheckStatus.UNKNOWN,
                     message="ffprobe did not report a duration for this file.",
                 )
             )
         elif duration <= 0:
             checks.append(
                 Check(
-                    id="duration_known", name="Duration is known", status=CheckStatus.FAIL,
+                    id="duration_known",
+                    name="Duration is known",
+                    status=CheckStatus.FAIL,
                     message=f"Reported duration is {duration}s — a real media file should not be zero-length.",
                     evidence={"duration_seconds": duration},
                 )
@@ -357,32 +434,46 @@ class MediaAdapter(ArtifactAdapter):
         else:
             checks.append(
                 Check(
-                    id="duration_known", name="Duration is known", status=CheckStatus.PASS,
-                    message=f"{duration:.2f}s.", evidence={"duration_seconds": duration},
+                    id="duration_known",
+                    name="Duration is known",
+                    status=CheckStatus.PASS,
+                    message=f"{duration:.2f}s.",
+                    evidence={"duration_seconds": duration},
                 )
             )
 
         if details["stream_count"] == 0:
             checks.append(
                 Check(
-                    id="has_stream", name="Container has at least one audio/video stream", status=CheckStatus.FAIL,
+                    id="has_stream",
+                    name="Container has at least one audio/video stream",
+                    status=CheckStatus.FAIL,
                     message="ffprobe opened the file but found zero streams — likely truncated or corrupt.",
                 )
             )
         else:
             checks.append(
-                Check(id="has_stream", name="Container has at least one audio/video stream", status=CheckStatus.PASS)
+                Check(
+                    id="has_stream",
+                    name="Container has at least one audio/video stream",
+                    status=CheckStatus.PASS,
+                )
             )
 
         if "min_duration_seconds" in policy or "max_duration_seconds" in policy:
             lo = policy.get("min_duration_seconds")
             hi = policy.get("max_duration_seconds")
-            for key, val in (("min_duration_seconds", lo), ("max_duration_seconds", hi)):
+            for key, val in (
+                ("min_duration_seconds", lo),
+                ("max_duration_seconds", hi),
+            ):
                 # Fuzzing-review finding, verified by direct reproduction: a
                 # quoted number in a JSON policy (e.g. "5" instead of 5) used
                 # to crash `duration >= lo` with an unhandled TypeError,
                 # including from the real CLI.
-                if val is not None and (isinstance(val, bool) or not isinstance(val, (int, float))):
+                if val is not None and (
+                    isinstance(val, bool) or not isinstance(val, (int, float))
+                ):
                     raise ArtifactInputError(
                         code="ARTIFACT_INVALID_ARGS",
                         message=f"'{key}' must be a number, got {val!r}.",
@@ -400,7 +491,9 @@ class MediaAdapter(ArtifactAdapter):
                 status = CheckStatus.PASS if ok else CheckStatus.FAIL
             checks.append(
                 Check(
-                    id="duration_range", name="Duration within required range", status=status,
+                    id="duration_range",
+                    name="Duration within required range",
+                    status=status,
                     message=f"Expected [{lo}, {hi}]s, found {duration}.",
                     evidence={"min": lo, "max": hi, "actual": duration},
                 )
@@ -409,18 +502,32 @@ class MediaAdapter(ArtifactAdapter):
         if policy.get("require_has_video"):
             checks.append(
                 Check(
-                    id="has_video", name="Has a video stream",
-                    status=CheckStatus.PASS if details["has_video"] else CheckStatus.FAIL,
-                    message="Video stream present." if details["has_video"] else "No video stream found.",
+                    id="has_video",
+                    name="Has a video stream",
+                    status=(
+                        CheckStatus.PASS if details["has_video"] else CheckStatus.FAIL
+                    ),
+                    message=(
+                        "Video stream present."
+                        if details["has_video"]
+                        else "No video stream found."
+                    ),
                 )
             )
 
         if policy.get("require_has_audio"):
             checks.append(
                 Check(
-                    id="has_audio", name="Has an audio stream",
-                    status=CheckStatus.PASS if details["has_audio"] else CheckStatus.FAIL,
-                    message="Audio stream present." if details["has_audio"] else "No audio stream found.",
+                    id="has_audio",
+                    name="Has an audio stream",
+                    status=(
+                        CheckStatus.PASS if details["has_audio"] else CheckStatus.FAIL
+                    ),
+                    message=(
+                        "Audio stream present."
+                        if details["has_audio"]
+                        else "No audio stream found."
+                    ),
                 )
             )
 
@@ -433,7 +540,10 @@ class MediaAdapter(ArtifactAdapter):
             is_valid_shape = (
                 isinstance(min_res, (list, tuple))
                 and len(min_res) == 2
-                and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in min_res)
+                and all(
+                    isinstance(v, (int, float)) and not isinstance(v, bool)
+                    for v in min_res
+                )
             )
             if not is_valid_shape:
                 raise ArtifactInputError(
@@ -452,14 +562,18 @@ class MediaAdapter(ArtifactAdapter):
             # check) — fail closed rather than crash on a non-numeric width/height.
             ok = (
                 video is not None
-                and isinstance(actual_w, (int, float)) and not isinstance(actual_w, bool)
-                and isinstance(actual_h, (int, float)) and not isinstance(actual_h, bool)
-                and actual_w >= min_w and actual_h >= min_h
+                and isinstance(actual_w, (int, float))
+                and not isinstance(actual_w, bool)
+                and isinstance(actual_h, (int, float))
+                and not isinstance(actual_h, bool)
+                and actual_w >= min_w
+                and actual_h >= min_h
             )
             actual = f"{actual_w}x{actual_h}" if video else "no video stream"
             checks.append(
                 Check(
-                    id="min_resolution", name="Video resolution meets minimum",
+                    id="min_resolution",
+                    name="Video resolution meets minimum",
                     status=CheckStatus.PASS if ok else CheckStatus.FAIL,
                     message=f"Expected at least {min_w}x{min_h}, found {actual}.",
                     evidence={"expected_min": [min_w, min_h], "actual": actual},
@@ -467,17 +581,22 @@ class MediaAdapter(ArtifactAdapter):
             )
 
         if "require_video_codec" in policy:
-            allowed = _validate_codec_policy(policy["require_video_codec"], "require_video_codec")
+            allowed = _validate_codec_policy(
+                policy["require_video_codec"], "require_video_codec"
+            )
             video = details["video"]
             actual_codec = video["codec_name"] if video else None
             # ffprobe always reports codec names lowercase; matching
             # case-insensitively (fuzzing-review finding: "H264" is a
             # reasonable caller guess that used to always FAIL silently)
             # only ever makes a previously-failing match pass, never the reverse.
-            ok = actual_codec is not None and actual_codec.lower() in {a.lower() for a in allowed}
+            ok = actual_codec is not None and actual_codec.lower() in {
+                a.lower() for a in allowed
+            }
             checks.append(
                 Check(
-                    id="video_codec", name="Video codec matches requirement",
+                    id="video_codec",
+                    name="Video codec matches requirement",
                     status=CheckStatus.PASS if ok else CheckStatus.FAIL,
                     message=f"Expected one of {sorted(allowed)}, found {actual_codec!r}.",
                     evidence={"expected": sorted(allowed), "actual": actual_codec},
@@ -485,13 +604,18 @@ class MediaAdapter(ArtifactAdapter):
             )
 
         if "require_audio_codec" in policy:
-            allowed = _validate_codec_policy(policy["require_audio_codec"], "require_audio_codec")
+            allowed = _validate_codec_policy(
+                policy["require_audio_codec"], "require_audio_codec"
+            )
             audio = details["audio"]
             actual_codec = audio["codec_name"] if audio else None
-            ok = actual_codec is not None and actual_codec.lower() in {a.lower() for a in allowed}
+            ok = actual_codec is not None and actual_codec.lower() in {
+                a.lower() for a in allowed
+            }
             checks.append(
                 Check(
-                    id="audio_codec", name="Audio codec matches requirement",
+                    id="audio_codec",
+                    name="Audio codec matches requirement",
                     status=CheckStatus.PASS if ok else CheckStatus.FAIL,
                     message=f"Expected one of {sorted(allowed)}, found {actual_codec!r}.",
                     evidence={"expected": sorted(allowed), "actual": actual_codec},
@@ -502,15 +626,24 @@ class MediaAdapter(ArtifactAdapter):
         if leftover_markers:
             checks.append(
                 Check(
-                    id="leftover_placeholder_text", name="No leftover generation placeholder text",
-                    status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_placeholder_text")
+                        else CheckStatus.WARN
+                    ),
                     message=f"Found likely-unreviewed placeholder text in metadata tags: {leftover_markers}.",
                     evidence={"markers": leftover_markers},
                 )
             )
         else:
             checks.append(
-                Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                Check(
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=CheckStatus.PASS,
+                )
             )
 
         return VerificationResult(kind="structural", checks=checks)

@@ -5,6 +5,7 @@ seed and a duration), a fake checkpoints directory, and a fake EzAudio checkout 
 `api/ezaudio.py` with the API surface read at 86f18268, its ckpts/ layout, the flan-t5-xl cache snapshot and stand-ins
 for the modules it needs). Nothing here is part of the package; no engine, no weights, no GPU and no network are
 needed."""
+
 from __future__ import annotations
 
 import io
@@ -31,16 +32,24 @@ XL_CHECKPOINT_FILES = XL_FILES
 
 
 def _dir_from_env(key: str, sibling: str, marker: str) -> Optional[Path]:
-    for c in ([Path(os.environ[key])] if os.environ.get(key) else []) + [ROOT.parent / sibling]:
+    for c in ([Path(os.environ[key])] if os.environ.get(key) else []) + [
+        ROOT.parent / sibling
+    ]:
         if (c / marker).is_file():
             return c
     return None
 
 
-OS_DIR = _dir_from_env("AI_VIDEO_PRODUCTION_OS_DIR", "AI-video-production-OS", "registry/conformance.py")
-FFMPEG_SKILL_DIR = _dir_from_env("SOUND_DESIGN_FFMPEG_SKILL_DIR", "ffmpeg-skill", "scripts/_contract.py")
+OS_DIR = _dir_from_env(
+    "AI_VIDEO_PRODUCTION_OS_DIR", "AI-video-production-OS", "registry/conformance.py"
+)
+FFMPEG_SKILL_DIR = _dir_from_env(
+    "SOUND_DESIGN_FFMPEG_SKILL_DIR", "ffmpeg-skill", "scripts/_contract.py"
+)
 # qc-skill (>= 1.3.0, its ADR-025 loop_seam rule), for roadmap step 7's "passes qc-skill's loop seam check"
-QC_SKILL_DIR = _dir_from_env("SOUND_DESIGN_QC_SKILL_DIR", "qc-skill", "src/qc_skill/measurements/loop_seam.py")
+QC_SKILL_DIR = _dir_from_env(
+    "SOUND_DESIGN_QC_SKILL_DIR", "qc-skill", "src/qc_skill/measurements/loop_seam.py"
+)
 
 
 def run_cli(*argv: str) -> Tuple[int, Dict[str, Any]]:
@@ -70,35 +79,60 @@ def env(**values: Optional[str]) -> Iterator[None]:
 
 def no_engines_env(cache: str) -> Dict[str, Optional[str]]:
     """No engine environment and an empty Hugging Face cache, whatever this machine has installed."""
-    return {"SOUND_DESIGN_ACESTEP_PYTHON": None, "SOUND_DESIGN_ACESTEP_CHECKPOINTS": None,
-            "SOUND_DESIGN_EZAUDIO_DIR": None, "SOUND_DESIGN_EZAUDIO_PYTHON": None,
-            "HF_HUB_CACHE": cache, "HF_HOME": cache, "XDG_CACHE_HOME": cache}
+    return {
+        "SOUND_DESIGN_ACESTEP_PYTHON": None,
+        "SOUND_DESIGN_ACESTEP_CHECKPOINTS": None,
+        "SOUND_DESIGN_EZAUDIO_DIR": None,
+        "SOUND_DESIGN_EZAUDIO_PYTHON": None,
+        "HF_HUB_CACHE": cache,
+        "HF_HOME": cache,
+        "XDG_CACHE_HOME": cache,
+    }
 
 
 @contextmanager
 def gpu(mb=None, *, cpu_only=False, unknown=False, apple_mb=None, xpu_smi=False):
     """device.detect() sees one NVIDIA GPU of `mb` MiB, Apple Silicon with `apple_mb` MiB, no GPU, an nvidia-smi
-    that answers with no rows (memory not measured), or Intel's xpu-smi on PATH (an XPU, not measured)."""
+    that answers with no rows (memory not measured), or Intel's xpu-smi on PATH (an XPU, not measured).
+    """
     if xpu_smi:
-        with mock.patch.object(device.shutil, "which", lambda n: "/usr/bin/xpu-smi" if n == "xpu-smi" else None), \
-                mock.patch.object(device.platform, "system", return_value="Linux"):
+        with mock.patch.object(
+            device.shutil,
+            "which",
+            lambda n: "/usr/bin/xpu-smi" if n == "xpu-smi" else None,
+        ), mock.patch.object(device.platform, "system", return_value="Linux"):
             yield
         return
     if apple_mb is not None:
-        with mock.patch.object(device.shutil, "which", lambda n: "/usr/sbin/sysctl" if n == "sysctl" else None), \
-                mock.patch.object(device.platform, "system", return_value="Darwin"), \
-                mock.patch.object(device.platform, "machine", return_value="arm64"), \
-                mock.patch.object(device, "run_process_group", return_value=(0, str(apple_mb * 1024 ** 2), "")):
+        with mock.patch.object(
+            device.shutil,
+            "which",
+            lambda n: "/usr/sbin/sysctl" if n == "sysctl" else None,
+        ), mock.patch.object(
+            device.platform, "system", return_value="Darwin"
+        ), mock.patch.object(
+            device.platform, "machine", return_value="arm64"
+        ), mock.patch.object(
+            device, "run_process_group", return_value=(0, str(apple_mb * 1024**2), "")
+        ):
             yield
         return
     if cpu_only:
-        with mock.patch.object(device.shutil, "which", lambda n: None), \
-                mock.patch.object(device.platform, "system", return_value="Linux"):
+        with mock.patch.object(
+            device.shutil, "which", lambda n: None
+        ), mock.patch.object(device.platform, "system", return_value="Linux"):
             yield
         return
-    answer = (9, "", "NVIDIA-SMI has failed") if unknown else (0, f"0, NVIDIA RTX Test, {mb}, {mb - 500}, 550.54.15\n", "")
-    with mock.patch.object(device.shutil, "which", lambda n: "/usr/bin/nvidia-smi" if n == "nvidia-smi" else None), \
-            mock.patch.object(device, "run_process_group", return_value=answer):
+    answer = (
+        (9, "", "NVIDIA-SMI has failed")
+        if unknown
+        else (0, f"0, NVIDIA RTX Test, {mb}, {mb - 500}, 550.54.15\n", "")
+    )
+    with mock.patch.object(
+        device.shutil,
+        "which",
+        lambda n: "/usr/bin/nvidia-smi" if n == "nvidia-smi" else None,
+    ), mock.patch.object(device, "run_process_group", return_value=answer):
         yield
 
 
@@ -111,8 +145,15 @@ def fake_checkpoints(root: str, files: Sequence[str] = CHECKPOINT_FILES) -> str:
     return root
 
 
-def fake_hf_snapshot(cache: str, repo_id: str, files: Sequence[str] = CHECKPOINT_FILES) -> str:
-    d = Path(cache) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "0123abcd"
+def fake_hf_snapshot(
+    cache: str, repo_id: str, files: Sequence[str] = CHECKPOINT_FILES
+) -> str:
+    d = (
+        Path(cache)
+        / ("models--" + repo_id.replace("/", "--"))
+        / "snapshots"
+        / "0123abcd"
+    )
     return fake_checkpoints(str(d), files)
 
 
@@ -122,7 +163,7 @@ def fake_hf_snapshot(cache: str, repo_id: str, files: Sequence[str] = CHECKPOINT
 # appended to the "log" file named there.
 FAKE_ACESTEP = {
     "__init__.py": '"""Fake ACE-Step package for sound-design-skill tests."""\n',
-    "_fake.py": '''import json, os
+    "_fake.py": """import json, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 def config():
     with open(os.path.join(HERE, "fake_config.json"), encoding="utf-8") as fh:
@@ -132,8 +173,8 @@ def log(event, **data):
     if path:
         with open(path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(dict(data, event=event)) + "\\n")
-''',
-    "model_downloader.py": '''import os, socket
+""",
+    "model_downloader.py": """import os, socket
 from pathlib import Path
 from acestep._fake import log
 MAIN_MODEL_COMPONENTS = ["acestep-v15-turbo", "vae", "Qwen3-Embedding-0.6B", "acestep-5Hz-lm-1.7B"]
@@ -207,8 +248,8 @@ def ensure_dit_model(model_name, checkpoints_dir=None, token=None, prefer_source
     if model_name == "acestep-v15-turbo":
         return ensure_main_model(d, prefer_source)
     return download_submodel(model_name, d, force=force, token=token, prefer_source=prefer_source)
-''',
-    "handler.py": '''import os, time
+""",
+    "handler.py": """import os, time
 from pathlib import Path
 from acestep import model_downloader
 from acestep._fake import config, log
@@ -246,7 +287,7 @@ class AceStepHandler:
             time.sleep(60)
         self.device = "cpu" if device == "auto" else device
         return "ok", True
-''',
+""",
     "inference.py": '''import array, hashlib, math, os, random, sys
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
@@ -330,7 +371,9 @@ def generate_music(dit_handler, llm_handler, params, config_, save_dir=None, pro
 
 
 @contextmanager
-def fake_acestep_engine(root: str, version: str = "1.5.0", **cfg: Any) -> Iterator[Dict[str, Any]]:
+def fake_acestep_engine(
+    root: str, version: str = "1.5.0", **cfg: Any
+) -> Iterator[Dict[str, Any]]:
     """`ace-step` metadata plus a working fake `acestep` package (FAKE_ACESTEP) in `root`, on sys.path and PYTHONPATH,
     so the worker subprocess runs it as it would run ACE-Step. Yields {"site", "config", "log", "calls"()}; change the
     behaviour with set_mode(mode) or keyword arguments (mode="ok" | "short" | "fail" | "wrong_seed" | "init_fail" |
@@ -350,20 +393,32 @@ def fake_acestep_engine(root: str, version: str = "1.5.0", **cfg: Any) -> Iterat
     def calls() -> list:
         if not log_path.is_file():
             return []
-        return [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return [
+            json.loads(line)
+            for line in log_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
 
     set_mode(conf["mode"])
     with _on_path(site, version):
-        yield {"site": str(site), "log": str(log_path), "calls": calls, "set_mode": set_mode}
+        yield {
+            "site": str(site),
+            "log": str(log_path),
+            "calls": calls,
+            "set_mode": set_mode,
+        }
 
 
 @contextmanager
 def fake_acestep_install(root: str, version: str = "1.5.0") -> Iterator[str]:
     """`ace-step` distribution metadata and an empty `acestep` package in `root`, on sys.path and PYTHONPATH (so the
-    worker subprocess sees it too). The package is only found, never imported (it raises if it is)."""
+    worker subprocess sees it too). The package is only found, never imported (it raises if it is).
+    """
     site = Path(root) / "site"
     (site / "acestep").mkdir(parents=True, exist_ok=True)
-    (site / "acestep" / "__init__.py").write_text("raise ImportError('the skill must never import acestep')\n", encoding="utf-8")
+    (site / "acestep" / "__init__.py").write_text(
+        "raise ImportError('the skill must never import acestep')\n", encoding="utf-8"
+    )
     with _on_path(site, version):
         yield str(site)
 
@@ -372,7 +427,9 @@ def fake_acestep_install(root: str, version: str = "1.5.0") -> Iterator[str]:
 def _on_path(site: Path, version: str) -> Iterator[None]:
     meta = site / f"ace_step-{version}.dist-info"
     meta.mkdir(exist_ok=True)
-    (meta / "METADATA").write_text(f"Metadata-Version: 2.1\nName: ace-step\nVersion: {version}\n", encoding="utf-8")
+    (meta / "METADATA").write_text(
+        f"Metadata-Version: 2.1\nName: ace-step\nVersion: {version}\n", encoding="utf-8"
+    )
     sys.path.insert(0, str(site))
     old = os.environ.get("PYTHONPATH")
     os.environ["PYTHONPATH"] = os.pathsep.join([str(site)] + ([old] if old else []))
@@ -392,7 +449,7 @@ def _on_path(site: Path, version: str) -> Iterator[None]:
 # VAE's config.json is read beside the VAE checkpoint; `length * latent_sr` must be an int (torch.randn takes integer
 # sizes). Behaviour is set by api/fake_config.json; every call is appended to the "log" file named there.
 EZAUDIO_COMMIT = "86f18268117dde73bb274401c610e639e4a8fae1"
-FAKE_EZAUDIO_API = '''import json, math, os, random, socket, sys, time
+FAKE_EZAUDIO_API = """import json, math, os, random, socket, sys, time
 from pathlib import Path
 import urllib.request
 
@@ -474,10 +531,10 @@ class EzAudio:
         n = seconds * sr
         audio = [0.4 * math.sin(2 * math.pi * freq * i / sr) + rng.uniform(-0.05, 0.05) for i in range(n)]
         return sr, audio
-'''
+"""
 # soundfile.write and torch.cuda.is_available, the two things the adapter calls outside EzAudio; the other modules
 # EzAudio needs only have to be findable (doctor never imports them)
-FAKE_SOUNDFILE = '''import array, sys, wave
+FAKE_SOUNDFILE = """import array, sys, wave
 def write(file, data, samplerate, subtype=None, **kwargs):
     if subtype != "PCM_16":
         raise ValueError("fake soundfile: only PCM_16")
@@ -489,20 +546,27 @@ def write(file, data, samplerate, subtype=None, **kwargs):
         w.setsampwidth(2)
         w.setframerate(int(samplerate))
         w.writeframes(pcm.tobytes())
-'''
-FAKE_TORCH = '''class cuda:
+"""
+FAKE_TORCH = """class cuda:
     @staticmethod
     def is_available():
         return False
-'''
+"""
 
 
-def fake_ezaudio_checkout(root: str, weights: bool = True, commit: str = EZAUDIO_COMMIT) -> str:
+def fake_ezaudio_checkout(
+    root: str, weights: bool = True, commit: str = EZAUDIO_COMMIT
+) -> str:
     """An EzAudio checkout as `git clone` + the weights download leave it (files that matter here only)."""
     d = Path(root)
-    for rel, text in (("api/ezaudio.py", FAKE_EZAUDIO_API), ("src/inference.py", "# fake\n"),
-                      (ezaudio.CONFIG_FILE, "model_name: EzAudio-XL\n"), (ezaudio.VAE_CONFIG, "{}\n"),
-                      (".git/HEAD", "ref: refs/heads/main\n"), (".git/refs/heads/main", commit + "\n")):
+    for rel, text in (
+        ("api/ezaudio.py", FAKE_EZAUDIO_API),
+        ("src/inference.py", "# fake\n"),
+        (ezaudio.CONFIG_FILE, "model_name: EzAudio-XL\n"),
+        (ezaudio.VAE_CONFIG, "{}\n"),
+        (".git/HEAD", "ref: refs/heads/main\n"),
+        (".git/refs/heads/main", commit + "\n"),
+    ):
         p = d / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8")
@@ -512,7 +576,9 @@ def fake_ezaudio_checkout(root: str, weights: bool = True, commit: str = EZAUDIO
 
 
 @contextmanager
-def fake_ezaudio_engine(root: str, cache: Optional[str] = None, **cfg: Any) -> Iterator[Dict[str, Any]]:
+def fake_ezaudio_engine(
+    root: str, cache: Optional[str] = None, **cfg: Any
+) -> Iterator[Dict[str, Any]]:
     """A fake EzAudio checkout (SOUND_DESIGN_EZAUDIO_DIR), the flan-t5-xl snapshot in the Hugging Face cache (`cache`,
     default `root`), and stand-ins for EzAudio's modules on sys.path and PYTHONPATH, so the worker subprocess runs it as
     it would run EzAudio. Yields {"dir", "log", "calls"(), "set_mode"(mode)}; mode = "ok" | "short" | "fail" |
@@ -522,28 +588,45 @@ def fake_ezaudio_engine(root: str, cache: Optional[str] = None, **cfg: Any) -> I
     site = Path(root) / "ez-site"
     for mod in ezaudio.MODULES:
         (site / mod).mkdir(parents=True, exist_ok=True)
-        (site / mod / "__init__.py").write_text({"torch": FAKE_TORCH, "soundfile": FAKE_SOUNDFILE}.get(mod, '"""stand-in"""\n'),
-                                                encoding="utf-8")
+        (site / mod / "__init__.py").write_text(
+            {"torch": FAKE_TORCH, "soundfile": FAKE_SOUNDFILE}.get(
+                mod, '"""stand-in"""\n'
+            ),
+            encoding="utf-8",
+        )
     log_path = Path(root) / "fake_ezaudio_calls.jsonl"
     conf = dict({"mode": "ok", "log": str(log_path)}, **cfg)
 
     def set_mode(mode: str) -> None:
         conf["mode"] = mode
-        (Path(checkout) / "api" / "fake_config.json").write_text(json.dumps(conf), encoding="utf-8")
+        (Path(checkout) / "api" / "fake_config.json").write_text(
+            json.dumps(conf), encoding="utf-8"
+        )
 
     def calls() -> list:
         if not log_path.is_file():
             return []
-        return [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return [
+            json.loads(line)
+            for line in log_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
 
     set_mode(conf["mode"])
     old_dir = os.environ.get("SOUND_DESIGN_EZAUDIO_DIR")
     old_pp = os.environ.get("PYTHONPATH")
     os.environ["SOUND_DESIGN_EZAUDIO_DIR"] = checkout
-    os.environ["PYTHONPATH"] = os.pathsep.join([str(site)] + ([old_pp] if old_pp else []))
+    os.environ["PYTHONPATH"] = os.pathsep.join(
+        [str(site)] + ([old_pp] if old_pp else [])
+    )
     sys.path.insert(0, str(site))
     try:
-        yield {"dir": checkout, "log": str(log_path), "calls": calls, "set_mode": set_mode}
+        yield {
+            "dir": checkout,
+            "log": str(log_path),
+            "calls": calls,
+            "set_mode": set_mode,
+        }
     finally:
         sys.path.remove(str(site))
         for k, v in (("SOUND_DESIGN_EZAUDIO_DIR", old_dir), ("PYTHONPATH", old_pp)):
@@ -553,23 +636,39 @@ def fake_ezaudio_engine(root: str, cache: Optional[str] = None, **cfg: Any) -> I
                 os.environ[k] = v
 
 
-def write_tone_wav(path: str, seconds: float = 1.0, rate: int = 48000, freq: float = 440.0) -> str:
+def write_tone_wav(
+    path: str, seconds: float = 1.0, rate: int = 48000, freq: float = 440.0
+) -> str:
     import math
     import struct
     import wave
+
     n = int(seconds * rate)
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(rate)
-        w.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(2 * math.pi * freq * i / rate))) for i in range(n)))
+        w.writeframes(
+            b"".join(
+                struct.pack("<h", int(8000 * math.sin(2 * math.pi * freq * i / rate)))
+                for i in range(n)
+            )
+        )
     return path
 
 
 def _write_pcm16(path: str, samples: Sequence[float], rate: int, channels: int) -> str:
     import array
     import wave
-    data = array.array("h", (max(-32767, min(32767, int(v * 32767))) for v in samples for _ in range(channels)))
+
+    data = array.array(
+        "h",
+        (
+            max(-32767, min(32767, int(v * 32767)))
+            for v in samples
+            for _ in range(channels)
+        ),
+    )
     if sys.byteorder == "big":
         data.byteswap()
     with wave.open(path, "wb") as w:
@@ -580,18 +679,29 @@ def _write_pcm16(path: str, samples: Sequence[float], rate: int, channels: int) 
     return path
 
 
-def write_bed_wav(path: str, seconds: float = 20.0, rate: int = 48000, bpm: float = 120.0, channels: int = 2,
-                  seed: int = 1) -> str:
+def write_bed_wav(
+    path: str,
+    seconds: float = 20.0,
+    rate: int = 48000,
+    bpm: float = 120.0,
+    channels: int = 2,
+    seed: int = 1,
+) -> str:
     """A stand-in music bed (roadmap step 7) that repeats exactly every two 4/4 bars, like a looped beat: two chords of
     three harmonic-rich tones alternating every bar (frequencies whole multiples of 1 / (two bars), so they repeat
-    too), a decaying kick on every beat, and a seeded noise pad (low-passed and white) of two bars, tiled."""
+    too), a decaying kick on every beat, and a seeded noise pad (low-passed and white) of two bars, tiled.
+    """
     import math
     import random
+
     rng = random.Random(seed)
     beat = 60.0 / bpm
     bar, period = 4 * beat, 8 * beat
     q = 1.0 / period
-    chords = tuple(tuple(round(f / q) * q for f in c) for c in ((220.0, 277.18, 329.63), (196.0, 246.94, 293.66)))
+    chords = tuple(
+        tuple(round(f / q) * q for f in c)
+        for c in ((220.0, 277.18, 329.63), (196.0, 246.94, 293.66))
+    )
     pad, lp = [], 0.0
     for _ in range(int(round(period * rate))):
         w = rng.random() * 2 - 1
@@ -601,60 +711,132 @@ def write_bed_wav(path: str, seconds: float = 20.0, rate: int = 48000, bpm: floa
     for i in range(int(seconds * rate)):
         t = i / rate
         ph = t % beat
-        v = 0.1 * sum(math.sin(2 * math.pi * f * t) + 0.4 * math.sin(4 * math.pi * f * t) + 0.2 * math.sin(6 * math.pi * f * t)
-                      for f in chords[int(t // bar) % 2]) / 3
-        v += 0.35 * math.exp(-ph * 25) * math.sin(2 * math.pi * 55 * ph) + pad[i % len(pad)]
+        v = (
+            0.1
+            * sum(
+                math.sin(2 * math.pi * f * t)
+                + 0.4 * math.sin(4 * math.pi * f * t)
+                + 0.2 * math.sin(6 * math.pi * f * t)
+                for f in chords[int(t // bar) % 2]
+            )
+            / 3
+        )
+        v += (
+            0.35 * math.exp(-ph * 25) * math.sin(2 * math.pi * 55 * ph)
+            + pad[i % len(pad)]
+        )
         out.append(v)
     return _write_pcm16(path, out, rate, channels)
 
 
-def write_drifting_bed_wav(path: str, seconds: float = 14.0, rate: int = 48000, bpm: float = 112.0, channels: int = 2,
-                           seed: int = 3) -> str:
+def write_drifting_bed_wav(
+    path: str,
+    seconds: float = 14.0,
+    rate: int = 48000,
+    bpm: float = 112.0,
+    channels: int = 2,
+    seed: int = 3,
+) -> str:
     """A stand-in bed that never repeats exactly, closer to generated music than `write_bed_wav`: four chords of two
     harmonic-rich tones a bar each (frequencies not tied to the bar), a decaying kick on every beat, low-passed noise
-    that is never tiled, and a slow 5 % level drift. A loop of it needs the crossfade, not a period."""
+    that is never tiled, and a slow 5 % level drift. A loop of it needs the crossfade, not a period.
+    """
     import math
     import random
+
     rng = random.Random(seed)
     beat = 60.0 / bpm
-    chords = ((220.0, 277.18, 329.63), (196.0, 246.94, 293.66), (174.61, 220.0, 261.63), (196.0, 246.94, 311.13))
+    chords = (
+        (220.0, 277.18, 329.63),
+        (196.0, 246.94, 293.66),
+        (174.61, 220.0, 261.63),
+        (196.0, 246.94, 311.13),
+    )
     out, lp = [], 0.0
     for i in range(int(seconds * rate)):
         t = i / rate
         ph = t % beat
         w = rng.random() * 2 - 1
         lp += 0.05 * (w - lp)
-        v = 0.1 * sum(math.sin(2 * math.pi * f * t) + 0.4 * math.sin(4 * math.pi * f * t)
-                      for f in chords[int(t // (4 * beat)) % 4]) / 3
-        v += 0.35 * math.exp(-ph * 25) * math.sin(2 * math.pi * 55 * ph) + 0.25 * lp + 0.01 * w
+        v = (
+            0.1
+            * sum(
+                math.sin(2 * math.pi * f * t) + 0.4 * math.sin(4 * math.pi * f * t)
+                for f in chords[int(t // (4 * beat)) % 4]
+            )
+            / 3
+        )
+        v += (
+            0.35 * math.exp(-ph * 25) * math.sin(2 * math.pi * 55 * ph)
+            + 0.25 * lp
+            + 0.01 * w
+        )
         out.append(v * (1 + 0.05 * math.sin(2 * math.pi * 0.13 * t)))
     return _write_pcm16(path, out, rate, channels)
 
 
-def run_qc_loop_seam(qc_dir: Path, wav: str, seams: Sequence[float], workspace: str, **limits: float) -> Dict[str, Any]:
+def run_qc_loop_seam(
+    qc_dir: Path, wav: str, seams: Sequence[float], workspace: str, **limits: float
+) -> Dict[str, Any]:
     """qc-skill's own CLI (`qc run`, stdlib only, imported from its checkout) on one WAV with an AudioRule.loop_seam
     of the wrap and the listed seams; returns its report."""
     import subprocess
-    req = {"operation": "check", "kind": "audio", "input": wav,
-           "rules": {"audio": {"loop_seam": dict({"include_wrap": True, "seams": list(seams)}, **limits)}}}
+
+    req = {
+        "operation": "check",
+        "kind": "audio",
+        "input": wav,
+        "rules": {
+            "audio": {
+                "loop_seam": dict(
+                    {"include_wrap": True, "seams": list(seams)}, **limits
+                )
+            }
+        },
+    }
     req_path = os.path.join(workspace, "qc-request.json")
     with open(req_path, "w", encoding="utf-8") as f:
         json.dump(req, f)
-    proc = subprocess.run([sys.executable, "-m", "qc_skill.cli", "run", req_path, "--json", "--workspace", workspace,
-                           "--no-cache", "--allowed-input-root", os.path.dirname(os.path.abspath(wav))],
-                          capture_output=True, text=True, encoding="utf-8",
-                          env=dict(os.environ, PYTHONPATH=str(Path(qc_dir) / "src")))
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "qc_skill.cli",
+            "run",
+            req_path,
+            "--json",
+            "--workspace",
+            workspace,
+            "--no-cache",
+            "--allowed-input-root",
+            os.path.dirname(os.path.abspath(wav)),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=dict(os.environ, PYTHONPATH=str(Path(qc_dir) / "src")),
+    )
     doc = json.loads(proc.stdout)
     if "report" not in doc:
-        raise AssertionError(f"qc run failed ({proc.returncode}): {proc.stdout[-2000:]} {proc.stderr[-2000:]}")
+        raise AssertionError(
+            f"qc run failed ({proc.returncode}): {proc.stdout[-2000:]} {proc.stderr[-2000:]}"
+        )
     return doc["report"]
 
 
-def write_burst_wav(path: str, kind: str, seconds: float, at: float = 0.0, rate: int = 48000, seed: int = 2) -> str:
+def write_burst_wav(
+    path: str,
+    kind: str,
+    seconds: float,
+    at: float = 0.0,
+    rate: int = 48000,
+    seed: int = 2,
+) -> str:
     """Stand-in transition sounds (step 7), seeded noise under an envelope: "whoosh" swells to `at` and fades, "hit"
     starts at `at` and decays, "rise" grows to the end."""
     import math
     import random
+
     rng = random.Random(seed)
     out = []
     for i in range(int(seconds * rate)):

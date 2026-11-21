@@ -4,6 +4,7 @@
 Standard library only. Locates ffmpeg/ffprobe on PATH, runs them with clear
 error reporting, and provides a compact media probe used by every script.
 """
+
 from __future__ import annotations
 
 import json
@@ -75,25 +76,30 @@ ERROR_RETRYABLE = False
 
 def die(msg: str, code: int = 1, kind: str = "input") -> "None":
     """Exit with a message. Under --json also print a machine-readable failure document
-    (status: failed) on stdout so callers get the same shape as a success; exit codes are unchanged."""
+    (status: failed) on stdout so callers get the same shape as a success; exit codes are unchanged.
+    """
     sys.stderr.write(f"error: {msg}\n")
     if STATE.json:
-        print_json({
-            "status": "failed", "exit_code": code,
-            "error": {
-                "kind": kind, "message": msg,
-                "code": ERROR_CODE.get(kind, "INTERNAL_ERROR"),
-                "retryable": ERROR_RETRYABLE,
-            },
-            "commands": list(STATE.commands),
-        })
+        print_json(
+            {
+                "status": "failed",
+                "exit_code": code,
+                "error": {
+                    "kind": kind,
+                    "message": msg,
+                    "code": ERROR_CODE.get(kind, "INTERNAL_ERROR"),
+                    "retryable": ERROR_RETRYABLE,
+                },
+                "commands": list(STATE.commands),
+            }
+        )
     sys.exit(code)
 
 
 def info(msg: str) -> None:
     # under --dry-run nothing is written; do not let scripts claim otherwise
     if msg.startswith("wrote ") and STATE.dry_run:
-        msg = "[dry-run] would write " + msg[len("wrote "):]
+        msg = "[dry-run] would write " + msg[len("wrote ") :]
     sys.stderr.write(f"{msg}\n")
 
 
@@ -107,12 +113,24 @@ def require_tool(name: str) -> str:
     die(
         f"'{name}' was not found on PATH.\n"
         f"Install FFmpeg (which includes ffprobe) for {system}:\n{hint}",
-        code=127, kind="missing_tool",
+        code=127,
+        kind="missing_tool",
     )
     return ""  # unreachable
 
 
-X264_PRESETS = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo")
+X264_PRESETS = (
+    "ultrafast",
+    "superfast",
+    "veryfast",
+    "faster",
+    "fast",
+    "medium",
+    "slow",
+    "slower",
+    "veryslow",
+    "placebo",
+)
 
 
 class Context:
@@ -130,12 +148,16 @@ class Context:
         self.reset()
 
     def reset(self) -> None:
-        self.dry_run = False      # print ffmpeg commands, run nothing (ffprobe still runs)
-        self.json = False         # emit() prints a JSON document instead of the output path
-        self.progress = False     # run() streams percent / ETA to stderr for ffmpeg
-        self.fast = False         # x264 preset forced to veryfast
-        self.duration_hint: Optional[float] = None  # expected output length, for the progress percent
-        self.commands: List[str] = []               # every ffmpeg command line, for --json and --dry-run
+        self.dry_run = False  # print ffmpeg commands, run nothing (ffprobe still runs)
+        self.json = False  # emit() prints a JSON document instead of the output path
+        self.progress = False  # run() streams percent / ETA to stderr for ffmpeg
+        self.fast = False  # x264 preset forced to veryfast
+        self.duration_hint: Optional[float] = (
+            None  # expected output length, for the progress percent
+        )
+        self.commands: List[str] = (
+            []
+        )  # every ffmpeg command line, for --json and --dry-run
 
     # mapping-style access kept for backwards compatibility
     def __getitem__(self, key: str) -> Any:
@@ -158,10 +180,26 @@ STATE = Context()
 def add_common(ap: "argparse.ArgumentParser") -> None:
     """Add the flags every script shares."""
     g = ap.add_argument_group("agent options")
-    g.add_argument("--dry-run", action="store_true", help="print the ffmpeg commands that would run, run nothing")
-    g.add_argument("--json", action="store_true", help="print a JSON result (output, probe, commands) on stdout instead of the path")
-    g.add_argument("--progress", action="store_true", help="show percent / ETA on stderr while ffmpeg encodes")
-    g.add_argument("--fast", action="store_true", help="preview quality: x264 preset veryfast (overrides --preset) for quick iterations")
+    g.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the ffmpeg commands that would run, run nothing",
+    )
+    g.add_argument(
+        "--json",
+        action="store_true",
+        help="print a JSON result (output, probe, commands) on stdout instead of the path",
+    )
+    g.add_argument(
+        "--progress",
+        action="store_true",
+        help="show percent / ETA on stderr while ffmpeg encodes",
+    )
+    g.add_argument(
+        "--fast",
+        action="store_true",
+        help="preview quality: x264 preset veryfast (overrides --preset) for quick iterations",
+    )
 
 
 def apply_common(args: "argparse.Namespace") -> None:
@@ -177,9 +215,16 @@ def emit(output: Optional[str], **extra: Any) -> None:
     """Final stdout line: the output path, or a JSON document with --json."""
     meta: Dict[str, Any] = {}
     if output and not STATE.dry_run:
-        meta = verify_output(output)  # dies (status: failed, kind: output) if the artifact is unusable
+        meta = verify_output(
+            output
+        )  # dies (status: failed, kind: output) if the artifact is unusable
     if STATE.json:
-        doc: Dict[str, Any] = {"status": "completed", "output": output, "dry_run": STATE.dry_run, "commands": list(STATE.commands)}
+        doc: Dict[str, Any] = {
+            "status": "completed",
+            "output": output,
+            "dry_run": STATE.dry_run,
+            "commands": list(STATE.commands),
+        }
         if meta:
             doc["probe"] = meta
         doc.update(extra)
@@ -206,7 +251,11 @@ def _cleanup_partial_output(cmd: Sequence[str]) -> None:
     to write so a caller scanning the output directory after a failure never mistakes a partial
     artifact for a real (if unverified) one."""
     output = cmd[-1]
-    if output in ("-", "pipe:0", "pipe:1") or output.startswith("pipe:") or output.startswith("-"):
+    if (
+        output in ("-", "pipe:0", "pipe:1")
+        or output.startswith("pipe:")
+        or output.startswith("-")
+    ):
         return
     try:
         if os.path.exists(output):
@@ -219,7 +268,11 @@ def _fail(cmd: Sequence[str], returncode: int, stderr: str) -> None:
     # Partial-output cleanup already ran in the caller (_run_captured/_run_with_progress) for
     # every failed ffmpeg invocation, not just this check=True path -- see _cleanup_partial_output.
     tail = "\n".join(stderr.strip().splitlines()[-15:])
-    die(f"command failed ({returncode}): {cmd[0]}\n{tail}", code=returncode or 1, kind="ffmpeg")
+    die(
+        f"command failed ({returncode}): {cmd[0]}\n{tail}",
+        code=returncode or 1,
+        kind="ffmpeg",
+    )
 
 
 def _check_no_overwrite_input(cmd: Sequence[str]) -> None:
@@ -229,9 +282,14 @@ def _check_no_overwrite_input(cmd: Sequence[str]) -> None:
     all resolve to the same file but pass that check, so "-o ./same.mp4" on an input opened as
     "same.mp4" would otherwise silently let ffmpeg's -y clobber the source mid-encode. Every
     write-side script routes through this one run() choke point rather than each computing its
-    own output path defensively, so the guard lives here once instead of at 25+ call sites."""
+    own output path defensively, so the guard lives here once instead of at 25+ call sites.
+    """
     output = cmd[-1]
-    if output in ("-", "pipe:0", "pipe:1") or output.startswith("pipe:") or output.startswith("-"):
+    if (
+        output in ("-", "pipe:0", "pipe:1")
+        or output.startswith("pipe:")
+        or output.startswith("-")
+    ):
         return
     try:
         out_real = os.path.realpath(output)
@@ -242,14 +300,18 @@ def _check_no_overwrite_input(cmd: Sequence[str]) -> None:
             inp = cmd[i + 1]
             try:
                 if os.path.realpath(inp) == out_real:
-                    die(f"refusing to run: output {output!r} is the same file as input {inp!r} "
+                    die(
+                        f"refusing to run: output {output!r} is the same file as input {inp!r} "
                         f"(would overwrite it while ffmpeg is still reading it) -- choose a different --output/-o path",
-                        kind="input")
+                        kind="input",
+                    )
             except OSError:
                 continue
 
 
-def run(cmd: Sequence[str], *, quiet: bool = False, check: bool = True) -> subprocess.CompletedProcess:
+def run(
+    cmd: Sequence[str], *, quiet: bool = False, check: bool = True
+) -> subprocess.CompletedProcess:
     """Run a command, echoing it to stderr unless quiet. Exits on failure when check=True.
 
     ffmpeg invocations are recorded in STATE.commands (for --json), skipped under --dry-run
@@ -276,8 +338,16 @@ def run_keeping_subtitles(cmd: List[str], output: str) -> bool:
     (e.g. a container change) makes that first attempt fail; retry the same command without the
     extra maps rather than let a tool that never touched subtitles start hard-failing because of
     them. `cmd` is the full argv *without* the output path. Returns True only when the
-    retry-without-subtitles path was actually needed (i.e. subtitle/data streams were dropped)."""
-    if run(cmd + ["-map", "0:s?", "-map", "0:d?", "-c:s", "copy", "-c:d", "copy", output], check=False).returncode == 0:
+    retry-without-subtitles path was actually needed (i.e. subtitle/data streams were dropped).
+    """
+    if (
+        run(
+            cmd
+            + ["-map", "0:s?", "-map", "0:d?", "-c:s", "copy", "-c:d", "copy", output],
+            check=False,
+        ).returncode
+        == 0
+    ):
         return False
     run(cmd + [output])
     return True
@@ -285,7 +355,9 @@ def run_keeping_subtitles(cmd: List[str], output: str) -> bool:
 
 def _run_captured(cmd: List[str], check: bool) -> subprocess.CompletedProcess:
     """Plain run with stdout/stderr captured."""
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
     if proc.returncode != 0:
         # Cleanup happens for every failed ffmpeg invocation, not just the check=True/_fail()
         # path: a handful of scripts (cut.py, loudness.py, silence.py, sync.py) call run() with
@@ -311,10 +383,13 @@ def _progress_line(done: float, total: float, elapsed: float) -> str:
 def _run_with_progress(cmd: List[str], check: bool) -> subprocess.CompletedProcess:
     """Run ffmpeg with -progress on a pipe and print percent/ETA to stderr."""
     import time
+
     total = STATE.duration_hint or 0.0
     full = cmd[:1] + ["-progress", "pipe:1", "-nostats"] + cmd[1:]
     t0 = time.time()
-    proc = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.Popen(
+        full, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
     last = ""
     assert proc.stdout is not None
     for line in proc.stdout:
@@ -350,7 +425,27 @@ def ffmpeg_base(overwrite: bool = True) -> List[str]:
     return cmd
 
 
-MEDIA_EXT = {".mp4", ".mov", ".mkv", ".webm", ".m4v", ".avi", ".ts", ".mts", ".gif", ".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".png", ".jpg", ".jpeg"}
+MEDIA_EXT = {
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".webm",
+    ".m4v",
+    ".avi",
+    ".ts",
+    ".mts",
+    ".gif",
+    ".wav",
+    ".flac",
+    ".mp3",
+    ".m4a",
+    ".aac",
+    ".ogg",
+    ".opus",
+    ".png",
+    ".jpg",
+    ".jpeg",
+}
 
 
 def _output_failed(path: str, why: str) -> "None":
@@ -398,14 +493,42 @@ def probe(path: str, role: str = "input") -> Dict[str, Any]:
             # values for aspect-ratio math and crashed on a real 0 (join.py, fit.py); those call
             # sites are now guarded to treat 0 as "unknown" and fall back sanely instead of dividing
             # by it, so the stub can finally report the honest, unknown value.
-            return {"file": path, "dry_run": True, "format": None, "duration": 0.0, "size_bytes": 0, "bitrate": None,
-                    "video": {"codec": None, "width": 0, "height": 0, "fps": 0.0, "pix_fmt": None, "hdr": False,
-                              "color_transfer": None, "color_primaries": None, "rotation": 0, "variable_frame_rate_suspected": False},
-                    "audio": {"codec": None, "channels": 0, "sample_rate": 0}, "subtitle_streams": 0, "data_streams": 0}
+            return {
+                "file": path,
+                "dry_run": True,
+                "format": None,
+                "duration": 0.0,
+                "size_bytes": 0,
+                "bitrate": None,
+                "video": {
+                    "codec": None,
+                    "width": 0,
+                    "height": 0,
+                    "fps": 0.0,
+                    "pix_fmt": None,
+                    "hdr": False,
+                    "color_transfer": None,
+                    "color_primaries": None,
+                    "rotation": 0,
+                    "variable_frame_rate_suspected": False,
+                },
+                "audio": {"codec": None, "channels": 0, "sample_rate": 0},
+                "subtitle_streams": 0,
+                "data_streams": 0,
+            }
         die(f"input not found: {path}")
     ffprobe = require_tool("ffprobe")
     proc = run(
-        [ffprobe, "-v", "error", "-print_format", "json", "-show_format", "-show_streams", path],
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            path,
+        ],
         quiet=True,
         check=False,
     )
@@ -416,10 +539,20 @@ def probe(path: str, role: str = "input") -> Dict[str, Any]:
     raw = json.loads(proc.stdout or "{}")
     fmt = raw.get("format", {})
     streams = raw.get("streams", [])
-    video = next((s for s in streams if s.get("codec_type") == "video" and s.get("disposition", {}).get("attached_pic", 0) == 0), None)
+    video = next(
+        (
+            s
+            for s in streams
+            if s.get("codec_type") == "video"
+            and s.get("disposition", {}).get("attached_pic", 0) == 0
+        ),
+        None,
+    )
     audio = next((s for s in streams if s.get("codec_type") == "audio"), None)
     subs = [s for s in streams if s.get("codec_type") == "subtitle"]
-    data_stream_count = sum(1 for s in streams if s.get("codec_type") in ("data", "attachment"))
+    data_stream_count = sum(
+        1 for s in streams if s.get("codec_type") in ("data", "attachment")
+    )
 
     duration = _to_float(fmt.get("duration"))
     if duration is None and video:
@@ -440,12 +573,15 @@ def probe(path: str, role: str = "input") -> Dict[str, Any]:
         "subtitle_streams": len(subs),
         "data_streams": data_stream_count,
         # every subtitle stream in file order: index n here is `-map 0:s:n`
-        "subtitle_stream_details": [{
-            "index": n,
-            "codec": s.get("codec_name"),
-            "language": (s.get("tags") or {}).get("language"),
-            "title": (s.get("tags") or {}).get("title"),
-        } for n, s in enumerate(subs)],
+        "subtitle_stream_details": [
+            {
+                "index": n,
+                "codec": s.get("codec_name"),
+                "language": (s.get("tags") or {}).get("language"),
+                "title": (s.get("tags") or {}).get("title"),
+            }
+            for n, s in enumerate(subs)
+        ],
     }
     if video:
         r_rate = _fraction(video.get("r_frame_rate"))
@@ -469,8 +605,14 @@ def probe(path: str, role: str = "input") -> Dict[str, Any]:
         dovi = None
         for sd in video.get("side_data_list", []) or []:
             if "dv_profile" in sd or "DOVI" in str(sd.get("side_data_type", "")):
-                dovi = {"profile": sd.get("dv_profile"), "level": sd.get("dv_level"), "bl_compatibility_id": sd.get("dv_bl_signal_compatibility_id")}
-        if dovi:  # a Dolby Vision stream is HDR even when its base layer tags are missing
+                dovi = {
+                    "profile": sd.get("dv_profile"),
+                    "level": sd.get("dv_level"),
+                    "bl_compatibility_id": sd.get("dv_bl_signal_compatibility_id"),
+                }
+        if (
+            dovi
+        ):  # a Dolby Vision stream is HDR even when its base layer tags are missing
             hdr = True
         out["video"] = {
             "codec": video.get("codec_name"),
@@ -485,8 +627,26 @@ def probe(path: str, role: str = "input") -> Dict[str, Any]:
             "pix_fmt": video.get("pix_fmt"),
             "bit_depth": 10 if "10" in pix else (12 if "12" in pix else 8),
             "hdr": hdr,
-            "hdr_format": (("Dolby Vision %s" % (("profile %s" % dovi["profile"]) if dovi and dovi.get("profile") is not None else "")).strip() if dovi else
-                           "HDR10/PQ" if trc == "smpte2084" else "HLG" if trc == "arib-std-b67" else "BT.2020 SDR" if hdr else None),
+            "hdr_format": (
+                (
+                    "Dolby Vision %s"
+                    % (
+                        ("profile %s" % dovi["profile"])
+                        if dovi and dovi.get("profile") is not None
+                        else ""
+                    )
+                ).strip()
+                if dovi
+                else (
+                    "HDR10/PQ"
+                    if trc == "smpte2084"
+                    else (
+                        "HLG"
+                        if trc == "arib-std-b67"
+                        else "BT.2020 SDR" if hdr else None
+                    )
+                )
+            ),
             "dolby_vision": dovi,
             "color_space": video.get("color_space"),
             "color_primaries": video.get("color_primaries"),
@@ -505,15 +665,18 @@ def probe(path: str, role: str = "input") -> Dict[str, Any]:
             "bitrate": _to_int(audio.get("bit_rate")),
         }
         # every audio stream in file order: index n here is `-map 0:a:n` (audio.py --audio-stream n)
-        out["audio_streams"] = [{
-            "index": n,
-            "codec": a.get("codec_name"),
-            "channels": _to_int(a.get("channels")),
-            "channel_layout": a.get("channel_layout"),
-            "sample_rate": _to_int(a.get("sample_rate")),
-            "language": (a.get("tags") or {}).get("language"),
-            "title": (a.get("tags") or {}).get("title"),
-        } for n, a in enumerate(s for s in streams if s.get("codec_type") == "audio")]
+        out["audio_streams"] = [
+            {
+                "index": n,
+                "codec": a.get("codec_name"),
+                "channels": _to_int(a.get("channels")),
+                "channel_layout": a.get("channel_layout"),
+                "sample_rate": _to_int(a.get("sample_rate")),
+                "language": (a.get("tags") or {}).get("language"),
+                "title": (a.get("tags") or {}).get("title"),
+            }
+            for n, a in enumerate(s for s in streams if s.get("codec_type") == "audio")
+        ]
     return out
 
 
@@ -532,20 +695,25 @@ class MissingFpsError(ValueError):
 
 def parse_time(value: str, fps: Optional[float] = None) -> float:
     """Accept seconds ('12.5'), mm:ss ('1:30'), hh:mm:ss(.ms) ('00:01:30.250'), SRT '00:01:30,250',
-    or -- when `fps` is given -- SMPTE non-drop-frame timecode 'hh:mm:ss:ff' ('00:01:30:15')."""
+    or -- when `fps` is given -- SMPTE non-drop-frame timecode 'hh:mm:ss:ff' ('00:01:30:15').
+    """
     v = value.strip().replace(",", ".")
     if not v:
         raise ValueError("empty time")
     parts = v.split(":")
     if len(parts) == 4:
         if fps is None or fps <= 0:
-            raise MissingFpsError(f"'{value}' looks like an hh:mm:ss:ff SMPTE timecode, but no fps was given to convert its frame count to seconds")
+            raise MissingFpsError(
+                f"'{value}' looks like an hh:mm:ss:ff SMPTE timecode, but no fps was given to convert its frame count to seconds"
+            )
         h, m, s, f = parts
         if "." in f:
             raise ValueError(f"bad SMPTE timecode: {value}")
         frame, whole_fps = int(f), int(round(fps))
         if not (0 <= frame < whole_fps):
-            raise ValueError(f"bad SMPTE timecode '{value}': frame {frame} is out of range for {fps:g} fps (0-{whole_fps - 1})")
+            raise ValueError(
+                f"bad SMPTE timecode '{value}': frame {frame} is out of range for {fps:g} fps (0-{whole_fps - 1})"
+            )
         return int(h) * 3600 + int(m) * 60 + int(s) + frame / fps
     if len(parts) > 3:
         raise ValueError(f"bad time: {value}")
@@ -567,7 +735,8 @@ def fmt_srt_time(seconds: float) -> str:
 
 def fmt_smpte_time(seconds: float, fps: float) -> str:
     """SMPTE non-drop-frame timecode 'hh:mm:ss:ff' for a real fps (not the fractional NTSC rates
-    -- 29.97/59.94 need drop-frame counting to stay wall-clock accurate, which this does not do)."""
+    -- 29.97/59.94 need drop-frame counting to stay wall-clock accurate, which this does not do).
+    """
     if seconds < 0:
         seconds = 0.0
     whole_fps = int(round(fps))
@@ -624,14 +793,36 @@ def cfr_args(meta: Optional[Dict[str, Any]], fps: Optional[float] = None) -> Lis
     return ["-fps_mode", "cfr", "-r", f"{rate:g}"]
 
 
-def x264_args(crf: int = 18, preset: str = "medium", keep_bt709: bool = True) -> List[str]:
-    args = ["-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
+def x264_args(
+    crf: int = 18, preset: str = "medium", keep_bt709: bool = True
+) -> List[str]:
+    args = [
+        "-c:v",
+        "libx264",
+        "-preset",
+        preset,
+        "-crf",
+        str(crf),
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+    ]
     if keep_bt709:
-        args += ["-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709"]
+        args += [
+            "-colorspace",
+            "bt709",
+            "-color_primaries",
+            "bt709",
+            "-color_trc",
+            "bt709",
+        ]
     return args
 
 
-def video_args(meta: Optional[Dict[str, Any]], crf: int = 18, preset: str = "medium") -> List[str]:
+def video_args(
+    meta: Optional[Dict[str, Any]], crf: int = 18, preset: str = "medium"
+) -> List[str]:
     """Encoder args that preserve what the source is.
 
     SDR sources -> H.264 8-bit tagged BT.709 (x264_args). HDR sources (HDR10/PQ, HLG,
@@ -645,9 +836,33 @@ def video_args(meta: Optional[Dict[str, Any]], crf: int = 18, preset: str = "med
     cs = v.get("color_space") or "bt2020nc"
     prim = v.get("color_primaries") or "bt2020"
     trc = v.get("color_transfer") or "arib-std-b67"
-    x265 = f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}:range=limited:hdr10-opt=1" if trc == "smpte2084" else f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}"
-    return ["-c:v", "libx265", "-preset", preset, "-crf", str(crf + 2), "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1",
-            "-x265-params", x265, "-colorspace", cs, "-color_primaries", prim, "-color_trc", trc, "-movflags", "+faststart"]
+    x265 = (
+        f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}:range=limited:hdr10-opt=1"
+        if trc == "smpte2084"
+        else f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}"
+    )
+    return [
+        "-c:v",
+        "libx265",
+        "-preset",
+        preset,
+        "-crf",
+        str(crf + 2),
+        "-pix_fmt",
+        "yuv420p10le",
+        "-tag:v",
+        "hvc1",
+        "-x265-params",
+        x265,
+        "-colorspace",
+        cs,
+        "-color_primaries",
+        prim,
+        "-color_trc",
+        trc,
+        "-movflags",
+        "+faststart",
+    ]
 
 
 def aac_args(bitrate: str = "192k") -> List[str]:
@@ -691,9 +906,24 @@ def analyze_levels(path: str, seconds: float = 20.0) -> Dict[str, Any]:
     white below ~235 with low saturation: the image looks grey and flat but is tagged as plain SDR.
     """
     ffmpeg = require_tool("ffmpeg")
-    cmd = [ffmpeg, "-hide_banner", "-nostdin", "-t", f"{seconds:.1f}", "-i", path, "-an",
-           "-vf", "fps=2,signalstats,metadata=print:file=-", "-f", "null", "-"]
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    cmd = [
+        ffmpeg,
+        "-hide_banner",
+        "-nostdin",
+        "-t",
+        f"{seconds:.1f}",
+        "-i",
+        path,
+        "-an",
+        "-vf",
+        "fps=2,signalstats,metadata=print:file=-",
+        "-f",
+        "null",
+        "-",
+    ]
+    proc = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
     vals: Dict[str, List[float]] = {}
     for line in proc.stdout.splitlines():
         if "lavfi.signalstats." in line and "=" in line:
@@ -704,10 +934,17 @@ def analyze_levels(path: str, seconds: float = 20.0) -> Dict[str, Any]:
                 pass
     if not vals.get("YAVG"):
         return {"error": "no frames analysed"}
+
     def mean(k: str) -> float:
         v = vals.get(k) or [0.0]
         return sum(v) / len(v)
-    ymin, ymax, yavg, sat = min(vals.get("YMIN") or [0]), max(vals.get("YMAX") or [255]), mean("YAVG"), mean("SATAVG")
+
+    ymin, ymax, yavg, sat = (
+        min(vals.get("YMIN") or [0]),
+        max(vals.get("YMAX") or [255]),
+        mean("YAVG"),
+        mean("SATAVG"),
+    )
     # signalstats reports in the source bit depth; normalise everything to an 8-bit scale
     scale = 1.0
     if ymax > 255 or yavg > 255:
@@ -721,24 +958,45 @@ def analyze_levels(path: str, seconds: float = 20.0) -> Dict[str, Any]:
     looks_log = p_low >= 64 and p_high <= 235 and sat < 40
     return {
         "scale": "8-bit equivalent",
-        "y_min": round(ymin, 1), "y_max": round(ymax, 1), "y_avg": round(yavg, 1), "y_low_p5": round(p_low, 1), "y_high_p95": round(p_high, 1),
+        "y_min": round(ymin, 1),
+        "y_max": round(ymax, 1),
+        "y_avg": round(yavg, 1),
+        "y_low_p5": round(p_low, 1),
+        "y_high_p95": round(p_high, 1),
         "saturation_avg": round(sat, 1),
         "looks_like_log": looks_log,
-        "note": ("flat, low-contrast, desaturated picture tagged as SDR: probably a Log profile (S-Log/V-Log/C-Log). "
-                 "Apply the camera's conversion LUT with color.py --lut" if looks_log else "contrast and saturation look like normal display-referred SDR"),
+        "note": (
+            "flat, low-contrast, desaturated picture tagged as SDR: probably a Log profile (S-Log/V-Log/C-Log). "
+            "Apply the camera's conversion LUT with color.py --lut"
+            if looks_log
+            else "contrast and saturation look like normal display-referred SDR"
+        ),
     }
 
 
 BRAND_DEFAULTS: Dict[str, Any] = {
     "font": "DejaVu Sans",
     "font_file": None,
-    "colors": {"primary": "FFD200", "text": "FFFFFF", "outline": "000000", "background": "101418", "accent": "1E6F8E"},
+    "colors": {
+        "primary": "FFD200",
+        "text": "FFFFFF",
+        "outline": "000000",
+        "background": "101418",
+        "accent": "1E6F8E",
+    },
     "logo": None,
     "logo_position": "top-right",
     "logo_scale": 160,
     "logo_opacity": 0.9,
     "safe_margin": 48,
-    "caption": {"size": 26, "position": "bottom", "animate": "pop", "karaoke": False, "bold": True, "outline": 2},
+    "caption": {
+        "size": 26,
+        "position": "bottom",
+        "animate": "pop",
+        "karaoke": False,
+        "bold": True,
+        "outline": 2,
+    },
     "loudness": {"lufs": -14, "tp": -1},
 }
 
@@ -746,6 +1004,7 @@ BRAND_DEFAULTS: Dict[str, Any] = {
 def load_brand(path: Optional[str]) -> Dict[str, Any]:
     """Load brand.json (fonts, colours, logo, safe margins, caption defaults); missing keys fall back to defaults."""
     import copy
+
     brand = copy.deepcopy(BRAND_DEFAULTS)
     if not path:
         return brand

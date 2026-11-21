@@ -7,7 +7,9 @@ Controlled via:
 
   FAKE_RF_READY: all (default) | nonode
   FAKE_RF_MODE: ok | fail:<kind> | unverified | elsewhere
-  FAKE_RF_CALLS: a file every invocation's argv is appended to (one JSON list per line, the script name first). Test double only."""
+  FAKE_RF_CALLS: a file every invocation's argv is appended to (one JSON list per line, the script name first). Test double only.
+"""
+
 from __future__ import annotations
 
 import json
@@ -47,18 +49,55 @@ def main(argv):
         return 0
     o, pos = opts(argv)
     if NAME == "doctor":
-        checks = [{"check": "python", "ok": True, "value": "3.11", "fix": ""}, {"check": "node", "ok": READY != "nonode", "value": None if READY == "nonode" else "v22",
-                   "fix": "install Node.js 18+ (https://nodejs.org)" if READY == "nonode" else ""},
-                  {"check": "npm", "ok": True, "value": "10", "fix": ""}, {"check": "ffmpeg-skill", "ok": True, "value": "fake", "fix": ""}, {"check": "ffmpeg", "ok": True, "value": "6.1", "fix": ""}]
+        checks = [
+            {"check": "python", "ok": True, "value": "3.11", "fix": ""},
+            {
+                "check": "node",
+                "ok": READY != "nonode",
+                "value": None if READY == "nonode" else "v22",
+                "fix": (
+                    "install Node.js 18+ (https://nodejs.org)"
+                    if READY == "nonode"
+                    else ""
+                ),
+            },
+            {"check": "npm", "ok": True, "value": "10", "fix": ""},
+            {"check": "ffmpeg-skill", "ok": True, "value": "fake", "fix": ""},
+            {"check": "ffmpeg", "ok": True, "value": "6.1", "fix": ""},
+        ]
         if o.get("project"):
-            ok = os.path.isfile(os.path.join(o["project"], "node_modules", "remotion", "package.json"))
-            checks.append({"check": "remotion project", "ok": ok, "value": o["project"], "fix": "" if ok else f"cd {o['project']} && npm install"})
-        emit({"status": "completed", "ok": all(c["ok"] for c in checks), "version": "0.14.0", "checks": checks, "ffmpeg_skill_doctor": None})
+            ok = os.path.isfile(
+                os.path.join(o["project"], "node_modules", "remotion", "package.json")
+            )
+            checks.append(
+                {
+                    "check": "remotion project",
+                    "ok": ok,
+                    "value": o["project"],
+                    "fix": "" if ok else f"cd {o['project']} && npm install",
+                }
+            )
+        emit(
+            {
+                "status": "completed",
+                "ok": all(c["ok"] for c in checks),
+                "version": "0.14.0",
+                "checks": checks,
+                "ffmpeg_skill_doctor": None,
+            }
+        )
         return 0
     if NAME == "pipeline":
         if MODE.startswith("fail:"):
             kind = MODE.split(":", 1)[1]
-            emit({"status": "failed", "error": f"refused (fake {kind})", "kind": kind, "dry_run": False})
+            emit(
+                {
+                    "status": "failed",
+                    "error": f"refused (fake {kind})",
+                    "kind": kind,
+                    "dry_run": False,
+                }
+            )
             return {"input": 2, "missing_tool": 3, "timeout": 4}.get(kind, 1)
         src = pos[0]
         try:
@@ -68,11 +107,44 @@ def main(argv):
         out_dir = Path(o["out-dir"])
         out_dir.mkdir(parents=True, exist_ok=True)
         render = out_dir / f"{Path(src).stem}_{o['comp']}.mp4"
-        render.write_bytes(json.dumps({"fake": True, "duration": meta.get("duration", 10.0), "lufs": meta.get("lufs", -11.0), "remotion": o["comp"]}).encode())
+        render.write_bytes(
+            json.dumps(
+                {
+                    "fake": True,
+                    "duration": meta.get("duration", 10.0),
+                    "lufs": meta.get("lufs", -11.0),
+                    "remotion": o["comp"],
+                }
+            ).encode()
+        )
         shown = str(render) + (".elsewhere.mp4" if MODE == "elsewhere" else "")
-        emit({"status": "completed", "dry_run": False, "output": shown, "timeline": str(out_dir / f"{Path(src).stem}.timeline.json"), "render": shown,
-              "deliverable": None, "look": str(out_dir / "sheet.png"), "verified": MODE != "unverified", "warnings": [],
-              "steps": [{"step": "measure", "status": "completed", "output": "t.json", "command": "analyze.py"}, {"step": "draw", "status": "completed", "output": str(render), "command": "render.py"}]})
+        emit(
+            {
+                "status": "completed",
+                "dry_run": False,
+                "output": shown,
+                "timeline": str(out_dir / f"{Path(src).stem}.timeline.json"),
+                "render": shown,
+                "deliverable": None,
+                "look": str(out_dir / "sheet.png"),
+                "verified": MODE != "unverified",
+                "warnings": [],
+                "steps": [
+                    {
+                        "step": "measure",
+                        "status": "completed",
+                        "output": "t.json",
+                        "command": "analyze.py",
+                    },
+                    {
+                        "step": "draw",
+                        "status": "completed",
+                        "output": str(render),
+                        "command": "render.py",
+                    },
+                ],
+            }
+        )
         return 0
     emit({"status": "failed", "error": f"unknown script {NAME}", "kind": "input"})
     return 2

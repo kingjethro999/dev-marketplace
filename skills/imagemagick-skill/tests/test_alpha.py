@@ -1,4 +1,5 @@
 """alpha.py: report, straight <-> premultiplied, defringe, key and fill."""
+
 import json
 import os
 import re
@@ -11,7 +12,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 import _contract  # noqa: E402
 from _common import which_magick  # noqa: E402
-from fixtures import fringed_disc_alpha, write_fringed_logo_png, write_solid_png  # noqa: E402
+from fixtures import (
+    fringed_disc_alpha,
+    write_fringed_logo_png,
+    write_solid_png,
+)  # noqa: E402
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "scripts", "alpha.py")
 SIZE, RGB = 40, (200, 20, 40)
@@ -19,14 +24,20 @@ SIZE, RGB = 40, (200, 20, 40)
 
 def pixels(path, colorspace="sRGB"):
     """{(x, y): (channel values 0..255)} from a txt: dump, 8-bit."""
-    out = subprocess.run([which_magick(), path, "-colorspace", colorspace, "-depth", "8", "txt:-"],
-                         capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(
+        [which_magick(), path, "-colorspace", colorspace, "-depth", "8", "txt:-"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
     result = {}
     for line in out.splitlines():
         m = re.match(r"(\d+),(\d+):\s*\(([^)]*)\)", line)
         if m:
             values = [float(v.strip().rstrip("%")) for v in m.group(3).split(",")]
-            result[(int(m.group(1)), int(m.group(2)))] = tuple(int(round(v)) for v in values)
+            result[(int(m.group(1)), int(m.group(2)))] = tuple(
+                int(round(v)) for v in values
+            )
     return result
 
 
@@ -48,11 +59,21 @@ class AlphaTests(unittest.TestCase):
         return os.path.join(self.tmp.name, name)
 
     def alpha(self, *args):
-        proc = subprocess.run([sys.executable, SCRIPT, *args, "--json"], capture_output=True, text=True, timeout=120)
+        proc = subprocess.run(
+            [sys.executable, SCRIPT, *args, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
         return proc.returncode, json.loads(proc.stdout)
 
     def partial(self):
-        return [(x, y) for x in range(SIZE) for y in range(SIZE) if 0 < expected_alpha(x, y) < 255]
+        return [
+            (x, y)
+            for x in range(SIZE)
+            for y in range(SIZE)
+            if 0 < expected_alpha(x, y) < 255
+        ]
 
     def test_report_tells_present_used_and_absent(self):
         code, out = self.alpha(self.logo, "--mode", "report")
@@ -76,7 +97,9 @@ class AlphaTests(unittest.TestCase):
         fringed = [p for p in self.partial() if before[p][1] > RGB[1] + 30]
         self.assertTrue(fringed, "the fixture should carry a white fringe")
         out_path = self.path("clean.png")
-        code, out = self.alpha(self.logo, "-o", out_path, "--mode", "defringe", "--matte", "white")
+        code, out = self.alpha(
+            self.logo, "-o", out_path, "--mode", "defringe", "--matte", "white"
+        )
         self.assertEqual(code, 0, out)
         self.assertEqual(out["alpha_max_difference"], 0.0)
         after = pixels(out_path)
@@ -92,7 +115,9 @@ class AlphaTests(unittest.TestCase):
     def test_defringe_uses_the_supplied_matte(self):
         logo, out_path = self.path("blue-fringe.png"), self.path("clean.png")
         write_fringed_logo_png(logo, SIZE, RGB, matte=(0, 0, 255))
-        code, out = self.alpha(logo, "-o", out_path, "--mode", "defringe", "--matte", "#0000FF")
+        code, out = self.alpha(
+            logo, "-o", out_path, "--mode", "defringe", "--matte", "#0000FF"
+        )
         self.assertEqual(code, 0, out)
         after = pixels(out_path)
         for p in self.partial():
@@ -102,7 +127,9 @@ class AlphaTests(unittest.TestCase):
 
     def test_cmyk_input_is_worked_on_in_srgb(self):
         cmyk, out_path = self.path("logo.tif"), self.path("pre.png")
-        subprocess.run([which_magick(), self.logo, "-colorspace", "CMYK", cmyk], check=True)
+        subprocess.run(
+            [which_magick(), self.logo, "-colorspace", "CMYK", cmyk], check=True
+        )
         code, out = self.alpha(cmyk, "-o", out_path, "--mode", "premultiply")
         self.assertEqual(code, 0, out)
         src, got = pixels(self.logo), pixels(out_path)
@@ -157,12 +184,46 @@ class AlphaTests(unittest.TestCase):
 
     def test_refusals(self):
         cases = [
-            ([self.opaque, "-o", self.path("k.png"), "--mode", "key"], "no alpha channel"),
-            ([self.logo, "-o", self.path("d.png"), "--mode", "defringe"], "needs --matte"),
-            ([self.logo, "-o", self.path("d.png"), "--mode", "defringe", "--matte", "none"], "opaque"),
-            ([self.logo, "-o", self.path("p.jpg"), "--mode", "premultiply"], "no alpha channel"),
-            ([self.logo, "-o", self.path("k.png"), "--mode", "key", "--matte", "white"], "only applies"),
-            ([self.logo, "-o", self.path("r.png"), "--mode", "report"], "writes nothing"),
+            (
+                [self.opaque, "-o", self.path("k.png"), "--mode", "key"],
+                "no alpha channel",
+            ),
+            (
+                [self.logo, "-o", self.path("d.png"), "--mode", "defringe"],
+                "needs --matte",
+            ),
+            (
+                [
+                    self.logo,
+                    "-o",
+                    self.path("d.png"),
+                    "--mode",
+                    "defringe",
+                    "--matte",
+                    "none",
+                ],
+                "opaque",
+            ),
+            (
+                [self.logo, "-o", self.path("p.jpg"), "--mode", "premultiply"],
+                "no alpha channel",
+            ),
+            (
+                [
+                    self.logo,
+                    "-o",
+                    self.path("k.png"),
+                    "--mode",
+                    "key",
+                    "--matte",
+                    "white",
+                ],
+                "only applies",
+            ),
+            (
+                [self.logo, "-o", self.path("r.png"), "--mode", "report"],
+                "writes nothing",
+            ),
             ([self.logo, "--mode", "key"], "give -o"),
             ([self.logo, "-o", self.logo, "--mode", "key"], ""),
         ]
@@ -176,7 +237,14 @@ class AlphaTests(unittest.TestCase):
 
     def test_every_mode_matches_the_output_schema(self):
         spec = _contract.tool_spec("alpha")["output_schema"]
-        for mode in ("report", "premultiply", "unpremultiply", "defringe", "key", "fill"):
+        for mode in (
+            "report",
+            "premultiply",
+            "unpremultiply",
+            "defringe",
+            "key",
+            "fill",
+        ):
             with self.subTest(mode=mode):
                 args = [self.logo, "--mode", mode]
                 if mode != "report":
@@ -189,7 +257,9 @@ class AlphaTests(unittest.TestCase):
                 self.assertLessEqual(set(spec["required"]), set(out))
 
     def test_dry_run_writes_nothing(self):
-        code, out = self.alpha(self.logo, "-o", self.path("k.png"), "--mode", "key", "--dry-run")
+        code, out = self.alpha(
+            self.logo, "-o", self.path("k.png"), "--mode", "key", "--dry-run"
+        )
         self.assertEqual(code, 0, out)
         self.assertTrue(out["dry_run"])
         self.assertFalse(os.path.exists(self.path("k.png")))

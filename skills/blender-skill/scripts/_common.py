@@ -4,6 +4,7 @@
 Every scripts/*.py imports this. Keep it stdlib-only (Python 3.9+, no third-party deps) --
 that guarantee is part of what this skill promises (see README "Requirements").
 """
+
 from __future__ import annotations
 
 import argparse
@@ -15,7 +16,8 @@ from typing import Any, Dict, Optional
 
 class SkillError(Exception):
     """A user-facing failure. `kind` is machine-readable (used by --json and by an MCP caller
-    to tell "no such file" from "Blender not found" from "timed out") without regexing stderr."""
+    to tell "no such file" from "Blender not found" from "timed out") without regexing stderr.
+    """
 
     def __init__(self, message: str, kind: str = "input", hint: Optional[str] = None):
         super().__init__(message)
@@ -30,19 +32,49 @@ class SkillError(Exception):
         return d
 
 
-def add_common_args(ap: argparse.ArgumentParser, *, dry_run: bool = True, fast: bool = True,
-                     progress: bool = True) -> None:
+def add_common_args(
+    ap: argparse.ArgumentParser,
+    *,
+    dry_run: bool = True,
+    fast: bool = True,
+    progress: bool = True,
+) -> None:
     """Flags shared by every writing/inspecting tool. Not every flag applies to every script
-    (an inspecting tool like info.py has no --fast); pass the matching kwargs to skip it."""
-    ap.add_argument("--json", action="store_true", help="print a machine-readable JSON result instead of a human-readable summary")
-    ap.add_argument("--blender", help="path to the Blender executable (overrides $BLENDER and PATH search)")
-    ap.add_argument("--timeout", type=float, default=1800.0, help="seconds to allow the Blender subprocess to run (default 1800)")
+    (an inspecting tool like info.py has no --fast); pass the matching kwargs to skip it.
+    """
+    ap.add_argument(
+        "--json",
+        action="store_true",
+        help="print a machine-readable JSON result instead of a human-readable summary",
+    )
+    ap.add_argument(
+        "--blender",
+        help="path to the Blender executable (overrides $BLENDER and PATH search)",
+    )
+    ap.add_argument(
+        "--timeout",
+        type=float,
+        default=1800.0,
+        help="seconds to allow the Blender subprocess to run (default 1800)",
+    )
     if dry_run:
-        ap.add_argument("--dry-run", action="store_true", help="print the Blender command and bpy script that would run, without running it")
+        ap.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="print the Blender command and bpy script that would run, without running it",
+        )
     if fast:
-        ap.add_argument("--fast", action="store_true", help="lower-quality preview instead of the final-quality result")
+        ap.add_argument(
+            "--fast",
+            action="store_true",
+            help="lower-quality preview instead of the final-quality result",
+        )
     if progress:
-        ap.add_argument("--progress", action="store_true", help="print percent/ETA to stderr while running")
+        ap.add_argument(
+            "--progress",
+            action="store_true",
+            help="print percent/ETA to stderr while running",
+        )
 
 
 def emit(result: Dict[str, Any], as_json: bool, summary: str) -> None:
@@ -56,9 +88,16 @@ def emit(result: Dict[str, Any], as_json: bool, summary: str) -> None:
 
 def fail(err: SkillError, as_json: bool) -> int:
     if as_json:
-        print(json.dumps({"status": "error", "error": err.to_dict()}, indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                {"status": "error", "error": err.to_dict()}, indent=2, sort_keys=True
+            )
+        )
     else:
-        print(f"error: {err.message}" + (f" ({err.hint})" if err.hint else ""), file=sys.stderr)
+        print(
+            f"error: {err.message}" + (f" ({err.hint})" if err.hint else ""),
+            file=sys.stderr,
+        )
     return 2 if err.kind == "missing_tool" else (3 if err.kind == "timeout" else 1)
 
 
@@ -69,7 +108,12 @@ def require_exists(path: str, what: str = "input") -> Path:
     return p
 
 
-def output_path(input_path: Path, operation: str, ext: Optional[str] = None, out: Optional[str] = None) -> Path:
+def output_path(
+    input_path: Path,
+    operation: str,
+    ext: Optional[str] = None,
+    out: Optional[str] = None,
+) -> Path:
     """`<input>_<operation>.<ext>` unless -o/--out was given explicitly."""
     if out:
         return Path(out)

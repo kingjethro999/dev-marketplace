@@ -12,7 +12,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 class AgentPromptsTests(unittest.TestCase):
     def setUp(self):
-        with open(os.path.join(ROOT, "evals", "agent_prompts.json"), encoding="utf-8") as f:
+        with open(
+            os.path.join(ROOT, "evals", "agent_prompts.json"), encoding="utf-8"
+        ) as f:
             self.prompts = json.load(f)
 
     def test_at_least_twenty_unique_prompts(self):
@@ -45,15 +47,24 @@ class AgentPromptsTests(unittest.TestCase):
 class WriteFixturesTests(unittest.TestCase):
     def test_every_fixture_a_prompt_names_is_created(self):
         with tempfile.TemporaryDirectory() as tmp:
-            subprocess.run([sys.executable, os.path.join(ROOT, "evals", "write_fixtures.py"), tmp],
-                           check=True, capture_output=True)
-            with open(os.path.join(ROOT, "evals", "agent_prompts.json"), encoding="utf-8") as f:
+            subprocess.run(
+                [sys.executable, os.path.join(ROOT, "evals", "write_fixtures.py"), tmp],
+                check=True,
+                capture_output=True,
+            )
+            with open(
+                os.path.join(ROOT, "evals", "agent_prompts.json"), encoding="utf-8"
+            ) as f:
                 prompts = json.load(f)
             for p in prompts:
                 if p.get("decline"):
                     continue
-                for rel in re.findall(r"FIXTURES/([\w./-]+?)(?=[\s,.]*(?:\s|$|を|の|に))", p["prompt"]):
-                    self.assertTrue(os.path.exists(os.path.join(tmp, rel)), f"{p['id']}: {rel}")
+                for rel in re.findall(
+                    r"FIXTURES/([\w./-]+?)(?=[\s,.]*(?:\s|$|を|の|に))", p["prompt"]
+                ):
+                    self.assertTrue(
+                        os.path.exists(os.path.join(tmp, rel)), f"{p['id']}: {rel}"
+                    )
 
 
 if __name__ == "__main__":

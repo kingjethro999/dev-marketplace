@@ -33,6 +33,7 @@ Everything here is vocabulary and arithmetic, no execution:
 
 Fixed order on a subject after the editing operations: color → graphics → captions.burn → loudness → export → check → thumbnail → qc.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,7 +43,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..models import Requirement
-from .editing import IMAGE_EXTENSIONS, NAMED_POSITIONS, EditRequirementError, _bool, _number, _token
+from .editing import (
+    IMAGE_EXTENSIONS,
+    NAMED_POSITIONS,
+    EditRequirementError,
+    _bool,
+    _number,
+    _token,
+)
 
 # ---- colour
 COLOR_TOOL = "color-grading/run"
@@ -50,10 +58,18 @@ COLOR_TOOL = "color-grading/run"
 # read from the pinned color-grading contract (the data file the adapter pins, read as data so the agent layer never imports a tool
 # package), the way ADR-064 reads motion-graphics. A re-pin that adds or narrows a parameter changes the keys and the plan-time check with
 # it; tests/test_satellite_params.py::ColorContractVocabularyTests says so, and the IR schema is checked against the same contract there.
-COLOR_CONTRACT_PATH = Path(__file__).resolve().parents[1] / "tools" / "color_grading" / "contract_1.1.0.json"
-_COLOR_CONTRACT: Dict[str, Any] = json.loads(COLOR_CONTRACT_PATH.read_text(encoding="utf-8"))
+COLOR_CONTRACT_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "tools"
+    / "color_grading"
+    / "contract_1.1.0.json"
+)
+_COLOR_CONTRACT: Dict[str, Any] = json.loads(
+    COLOR_CONTRACT_PATH.read_text(encoding="utf-8")
+)
 PRIMARY_CORRECTION_SPEC: Dict[str, Dict[str, Any]] = next(
-    o for o in _COLOR_CONTRACT["operations"] if o.get("type") == "PRIMARY_CORRECTION")["parameters"]
+    o for o in _COLOR_CONTRACT["operations"] if o.get("type") == "PRIMARY_CORRECTION"
+)["parameters"]
 # parameters of the same operation that are encoding / stream selection, not colour treatment: never `color.*` keys (the encode settings
 # stay the Skill's own defaults; audio_stream is chosen by the agent's audio path, not per colour operation)
 PRIMARY_CORRECTION_NOT_GRADING = ("crf", "preset", "audio_stream")
@@ -61,57 +77,143 @@ PRIMARY_CORRECTION_NOT_GRADING = ("crf", "preset", "audio_stream")
 
 def _grading_param(spec: Dict[str, Any]) -> bool:
     """A shape the plan-time check can validate exactly: a bounded number / integer, or a string enum. Anything else a future contract
-    declares is left out of the vocabulary (no key, so it is never sent) until it is decided, and the vocabulary test fails to say so."""
+    declares is left out of the vocabulary (no key, so it is never sent) until it is decided, and the vocabulary test fails to say so.
+    """
     t = spec.get("type")
     if t in ("number", "integer"):
-        return isinstance(spec.get("min"), (int, float)) and isinstance(spec.get("max"), (int, float)) and not spec.get("required")
+        return (
+            isinstance(spec.get("min"), (int, float))
+            and isinstance(spec.get("max"), (int, float))
+            and not spec.get("required")
+        )
     return t == "string" and bool(spec.get("enum")) and not spec.get("required")
 
 
 COLOR_CORRECTION_PARAMS: Dict[str, Dict[str, Any]] = {
-    n: s for n, s in PRIMARY_CORRECTION_SPEC.items() if n not in PRIMARY_CORRECTION_NOT_GRADING and _grading_param(s)}
+    n: s
+    for n, s in PRIMARY_CORRECTION_SPEC.items()
+    if n not in PRIMARY_CORRECTION_NOT_GRADING and _grading_param(s)
+}
+
+
 # ADR-100: color-grading-skill 0.5.0's OCIO_TRANSFORM (a colour-space conversion named by an OpenColorIO config), MATCH_CAMERA (this camera
 # matched to a reference camera's video) and LEGALIZE (a soft clip into broadcast-legal levels). Order: the technical conversions first
 # (Dolby Vision stripped, HDR tone-mapped, the OCIO space conversion), then the camera match (on the converted picture, before any grade),
 # the primary correction and the LUT (the look), legalize last among the pixel operations (it keeps the finished picture legal), retag last.
 def _color_spec(op_type: str) -> Dict[str, Dict[str, Any]]:
-    return next(o for o in _COLOR_CONTRACT["operations"] if o.get("type") == op_type)["parameters"]
+    return next(o for o in _COLOR_CONTRACT["operations"] if o.get("type") == op_type)[
+        "parameters"
+    ]
 
 
 OCIO_SPEC = _color_spec("OCIO_TRANSFORM")
 MATCH_CAMERA_SPEC = _color_spec("MATCH_CAMERA")
 LEGALIZE_SPEC = _color_spec("LEGALIZE")
 OCIO_INFO: Dict[str, Any] = dict(_COLOR_CONTRACT.get("ocio") or {})
-COLOR_ENCODE_PARAMS = PRIMARY_CORRECTION_NOT_GRADING   # crf / preset / audio_stream: never `color.*` keys on any colour operation
-COLOR_ORDER = ("color.strip_dovi", "color.hdr_to_sdr", "color.ocio", "color.match_camera", "color.primary_correction", "color.lut", "color.legalize", "color.retag")
+COLOR_ENCODE_PARAMS = PRIMARY_CORRECTION_NOT_GRADING  # crf / preset / audio_stream: never `color.*` keys on any colour operation
+COLOR_ORDER = (
+    "color.strip_dovi",
+    "color.hdr_to_sdr",
+    "color.ocio",
+    "color.match_camera",
+    "color.primary_correction",
+    "color.lut",
+    "color.legalize",
+    "color.retag",
+)
 COLOR_OPERATIONS: Dict[str, Dict[str, Any]] = {
-    "color.strip_dovi": {"skill": "color_strip_dovi", "type": "STRIP_DOVI", "params": (), "risk": "LOW"},
-    "color.hdr_to_sdr": {"skill": "color_hdr_to_sdr", "type": "HDR_TO_SDR", "params": (), "risk": "MEDIUM"},
-    "color.primary_correction": {"skill": "color_primary_correction", "type": "PRIMARY_CORRECTION",
-                                  "params": tuple(COLOR_CORRECTION_PARAMS), "risk": "MEDIUM"},
-    "color.lut":        {"skill": "color_lut",        "type": "LUT_APPLY",  "params": ("lut_strength",), "risk": "MEDIUM"},
-    "color.retag":      {"skill": "color_retag",      "type": "RETAG",      "params": ("target",), "risk": "LOW"},
+    "color.strip_dovi": {
+        "skill": "color_strip_dovi",
+        "type": "STRIP_DOVI",
+        "params": (),
+        "risk": "LOW",
+    },
+    "color.hdr_to_sdr": {
+        "skill": "color_hdr_to_sdr",
+        "type": "HDR_TO_SDR",
+        "params": (),
+        "risk": "MEDIUM",
+    },
+    "color.primary_correction": {
+        "skill": "color_primary_correction",
+        "type": "PRIMARY_CORRECTION",
+        "params": tuple(COLOR_CORRECTION_PARAMS),
+        "risk": "MEDIUM",
+    },
+    "color.lut": {
+        "skill": "color_lut",
+        "type": "LUT_APPLY",
+        "params": ("lut_strength",),
+        "risk": "MEDIUM",
+    },
+    "color.retag": {
+        "skill": "color_retag",
+        "type": "RETAG",
+        "params": ("target",),
+        "risk": "LOW",
+    },
     # ADR-100: the parameters by the contract's names, the encode settings left out
-    "color.ocio":         {"skill": "color_ocio", "type": "OCIO_TRANSFORM", "params": tuple(n for n in OCIO_SPEC if n not in COLOR_ENCODE_PARAMS), "risk": "MEDIUM"},
-    "color.match_camera": {"skill": "color_match_camera", "type": "MATCH_CAMERA", "params": tuple(n for n in MATCH_CAMERA_SPEC if n not in COLOR_ENCODE_PARAMS), "risk": "MEDIUM"},
-    "color.legalize":     {"skill": "color_legalize", "type": "LEGALIZE", "params": tuple(n for n in LEGALIZE_SPEC if n not in COLOR_ENCODE_PARAMS), "risk": "LOW"},
+    "color.ocio": {
+        "skill": "color_ocio",
+        "type": "OCIO_TRANSFORM",
+        "params": tuple(n for n in OCIO_SPEC if n not in COLOR_ENCODE_PARAMS),
+        "risk": "MEDIUM",
+    },
+    "color.match_camera": {
+        "skill": "color_match_camera",
+        "type": "MATCH_CAMERA",
+        "params": tuple(n for n in MATCH_CAMERA_SPEC if n not in COLOR_ENCODE_PARAMS),
+        "risk": "MEDIUM",
+    },
+    "color.legalize": {
+        "skill": "color_legalize",
+        "type": "LEGALIZE",
+        "params": tuple(n for n in LEGALIZE_SPEC if n not in COLOR_ENCODE_PARAMS),
+        "risk": "LOW",
+    },
 }
 COLOR_SKILL_OF = {k: v["skill"] for k, v in COLOR_OPERATIONS.items()}
 COLOR_TARGETS = ("bt709", "bt2020-pq", "bt2020-hlg", "bt601")
 # ADR-100: color.ocio (the source space) + .config / .destination_space / .display / .view / .look / .lut_size / .output_tags;
 # color.match_camera (the reference camera's video) + .reference_at / .at / .model / .patches / .lut_size; color.legalize (true or a profile) + .knee / .lut_size
-OCIO_KEYS = ("color.ocio",) + tuple(f"color.ocio.{n}" for n in ("config", "destination_space", "display", "view", "look", "lut_size", "output_tags"))
-MATCH_CAMERA_KEYS = ("color.match_camera",) + tuple(f"color.match_camera.{n}" for n in ("reference_at", "at", "model", "patches", "lut_size"))
+OCIO_KEYS = ("color.ocio",) + tuple(
+    f"color.ocio.{n}"
+    for n in (
+        "config",
+        "destination_space",
+        "display",
+        "view",
+        "look",
+        "lut_size",
+        "output_tags",
+    )
+)
+MATCH_CAMERA_KEYS = ("color.match_camera",) + tuple(
+    f"color.match_camera.{n}"
+    for n in ("reference_at", "at", "model", "patches", "lut_size")
+)
 LEGALIZE_KEYS = ("color.legalize", "color.legalize.knee", "color.legalize.lut_size")
-COLOR_KEYS = ("color.target", "color.sdr", "color.lut", "color.lut.strength", "color.strip_dovi") + tuple(f"color.{n}" for n in COLOR_CORRECTION_PARAMS) \
-    + OCIO_KEYS + MATCH_CAMERA_KEYS + LEGALIZE_KEYS
+COLOR_KEYS = (
+    ("color.target", "color.sdr", "color.lut", "color.lut.strength", "color.strip_dovi")
+    + tuple(f"color.{n}" for n in COLOR_CORRECTION_PARAMS)
+    + OCIO_KEYS
+    + MATCH_CAMERA_KEYS
+    + LEGALIZE_KEYS
+)
 
 # key -> (lo, hi) for the numeric parameters, the contract's own min / max (exposure / contrast / saturation / temperature / tint since
 # ADR-031, gamma / lift / gain / levels_* since ADR-062; hand-copied until ADR-076, the same numbers)
 COLOR_CORRECTION_RANGES: Dict[str, Tuple[float, float]] = {
-    f"color.{n}": (s["min"], s["max"]) for n, s in COLOR_CORRECTION_PARAMS.items() if s["type"] in ("number", "integer")}
+    f"color.{n}": (s["min"], s["max"])
+    for n, s in COLOR_CORRECTION_PARAMS.items()
+    if s["type"] in ("number", "integer")
+}
 # colorlevels points are integers in 8-bit units (the contract types them `integer`); unset ones keep the Skill's default (the contract's)
-COLOR_LEVELS_DEFAULTS: Dict[str, int] = {n: int(s["default"]) for n, s in COLOR_CORRECTION_PARAMS.items() if n.startswith("levels_")}
+COLOR_LEVELS_DEFAULTS: Dict[str, int] = {
+    n: int(s["default"])
+    for n, s in COLOR_CORRECTION_PARAMS.items()
+    if n.startswith("levels_")
+}
 # the curves filter's built-in presets (the contract's enum; the filter's own "none" is not one: leaving color.curves unset adds no curves term)
 COLOR_CURVES_PRESETS = tuple(PRIMARY_CORRECTION_SPEC["curves"]["enum"])
 
@@ -121,20 +223,39 @@ GRAPHICS_SKILL = "motion_graphics"
 # ADR-064: the vocabulary is read from the pinned motion-graphics contract (the data file the adapter pins, read as data so the agent
 # layer never imports a tool package): every element type it offers, each with every parameter it declares, by the contract's names
 # and ranges. A re-pin that adds an element or a parameter changes this vocabulary with it (tests/test_satellite_params.py says so).
-MOTION_CONTRACT_PATH = Path(__file__).resolve().parents[1] / "tools" / "motion_graphics" / "contract_0.4.0.json"
-_MOTION_CONTRACT: Dict[str, Any] = json.loads(MOTION_CONTRACT_PATH.read_text(encoding="utf-8"))
-MOTION_ELEMENT_SPECS: Dict[str, Dict[str, Any]] = {str(e["type"]): e for e in _MOTION_CONTRACT["element_types"]}
+MOTION_CONTRACT_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "tools"
+    / "motion_graphics"
+    / "contract_0.4.0.json"
+)
+_MOTION_CONTRACT: Dict[str, Any] = json.loads(
+    MOTION_CONTRACT_PATH.read_text(encoding="utf-8")
+)
+MOTION_ELEMENT_SPECS: Dict[str, Dict[str, Any]] = {
+    str(e["type"]): e for e in _MOTION_CONTRACT["element_types"]
+}
 # element type → (its `--set` key, the contract parameter that key's value sets; None = the key is a plain switch: the element has no
 # required text / file, e.g. progress / countdown, or needs one of several, e.g. meme's top / bottom). The four ADR-031 keys keep their names.
 MOTION_BASE: Dict[str, Tuple[str, Optional[str]]] = {
-    "title": ("motion.title", "title"), "lower_third": ("motion.lower_third", "name"), "text_overlay": ("motion.text", "text"),
-    "image_overlay": ("motion.image", "image_path"), "video_overlay": ("motion.video", "video_path"), "bug": ("motion.bug", "title"),
-    "chapter": ("motion.chapter", "title"), "progress": ("motion.progress", None), "countdown": ("motion.countdown", None),
-    "sticker": ("motion.sticker", "text"), "hook": ("motion.hook", "title"), "meme": ("motion.meme", None),
+    "title": ("motion.title", "title"),
+    "lower_third": ("motion.lower_third", "name"),
+    "text_overlay": ("motion.text", "text"),
+    "image_overlay": ("motion.image", "image_path"),
+    "video_overlay": ("motion.video", "video_path"),
+    "bug": ("motion.bug", "title"),
+    "chapter": ("motion.chapter", "title"),
+    "progress": ("motion.progress", None),
+    "countdown": ("motion.countdown", None),
+    "sticker": ("motion.sticker", "text"),
+    "hook": ("motion.hook", "title"),
+    "meme": ("motion.meme", None),
     # ADR-078: motion-graphics-skill 0.2.7 (its ADR-22) implements shape, a solid rectangle; a switch whose width / height / color are required
     "shape": ("motion.shape", None),
     # ADR-102: motion-graphics-skill 0.2.12 / 0.2.16: the active theme's logo (a switch; the theme gives the file) and a pre-rendered alpha clip
-    "logo": ("motion.logo", None), "rendered_layer": ("motion.layer", "video_path")}
+    "logo": ("motion.logo", None),
+    "rendered_layer": ("motion.layer", "video_path"),
+}
 ELEMENT_TYPES = tuple(MOTION_BASE)
 # element types the pinned contract declares that the agent does not plan (no `--set` key, no lowering). ADR-102 planned logo and rendered_layer
 # (pinned in ADR-097 addendum 6), so it is empty; a re-pin adding another type still fails tests/test_satellite_params.py until it is decided.
@@ -155,28 +276,72 @@ def motion_path_name(typ: str, name: str) -> str:
 
 # ADR-102: the request-level styling motion-graphics-skill 0.2.11 .. 0.2.16 offers, read from the pinned contract: style presets (per element and
 # for the document), a brand kit, theme files (a named set; one active), text fit for the template text, reserved regions (end screen / cards)
-STYLE_PRESETS = tuple(str(n) for n in (_MOTION_CONTRACT.get("style_presets") or {}).get("names") or ())
-STYLE_ROLES = tuple(str(n) for n in (_MOTION_CONTRACT.get("style_presets") or {}).get("roles") or ())
+STYLE_PRESETS = tuple(
+    str(n) for n in (_MOTION_CONTRACT.get("style_presets") or {}).get("names") or ()
+)
+STYLE_ROLES = tuple(
+    str(n) for n in (_MOTION_CONTRACT.get("style_presets") or {}).get("roles") or ()
+)
 TEXT_FIT: Dict[str, Any] = dict(_MOTION_CONTRACT.get("text_fit") or {})
 FIT_TYPES = tuple(str(t) for t in TEXT_FIT.get("applies_to") or ())
-MOTION_OPTION_KEYS = ("motion.style", "motion.brand_kit", "motion.themes", "motion.theme", "motion.reserved_regions")
-FADE_TYPES = tuple(t for a in _MOTION_CONTRACT.get("animations") or [] if a.get("kind") == "fade" for t in a.get("applies_to") or [])
+MOTION_OPTION_KEYS = (
+    "motion.style",
+    "motion.brand_kit",
+    "motion.themes",
+    "motion.theme",
+    "motion.reserved_regions",
+)
+FADE_TYPES = tuple(
+    t
+    for a in _MOTION_CONTRACT.get("animations") or []
+    if a.get("kind") == "fade"
+    for t in a.get("applies_to") or []
+)
 MOTION_KEYS: Dict[str, Tuple[str, ...]] = {
-    typ: (base,) + tuple(f"{base}.{p}" for p in MOTION_ELEMENT_SPECS[typ]["parameters"] if p != main) + (f"{base}.start", f"{base}.end")
-    + ((f"{base}.fade",) if typ in FADE_TYPES else ()) + (f"{base}.style",) + ((f"{base}.fit",) if typ in FIT_TYPES else ())   # ADR-102: style / fit
-    for typ, (base, main) in MOTION_BASE.items()}
+    typ: (base,)
+    + tuple(f"{base}.{p}" for p in MOTION_ELEMENT_SPECS[typ]["parameters"] if p != main)
+    + (f"{base}.start", f"{base}.end")
+    + ((f"{base}.fade",) if typ in FADE_TYPES else ())
+    + (f"{base}.style",)
+    + ((f"{base}.fit",) if typ in FIT_TYPES else ())  # ADR-102: style / fit
+    for typ, (base, main) in MOTION_BASE.items()
+}
 # explicit DEFAULTs of the policy keys `motion.<type>.duration` (recorded on the decision); an element without one runs to the end of the
 # subject (a persistent bug / progress bar / overlay / meme). chapter / sticker / hook / countdown are moments, not whole-programme layers.
-ELEMENT_DEFAULT_DURATION = {"title": 5.0, "lower_third": 6.0, "chapter": 5.0, "sticker": 4.0, "hook": 3.0, "countdown": 5.0}
-MOTION_FONTS = tuple(sorted((_MOTION_CONTRACT.get("fonts") or {}).get("registry") or {}))
+ELEMENT_DEFAULT_DURATION = {
+    "title": 5.0,
+    "lower_third": 6.0,
+    "chapter": 5.0,
+    "sticker": 4.0,
+    "hook": 3.0,
+    "countdown": 5.0,
+}
+MOTION_FONTS = tuple(
+    sorted((_MOTION_CONTRACT.get("fonts") or {}).get("registry") or {})
+)
 # motion-graphics-skill model.py COLOR_RE: a colour name or bare RRGGBB, optionally @alpha (the Skill refuses anything else)
-MOTION_COLOR_RE = re.compile(r"^([A-Za-z]{2,24}|[0-9A-Fa-f]{6})(@(0(\.[0-9]+)?|1(\.0+)?))?$")
+MOTION_COLOR_RE = re.compile(
+    r"^([A-Za-z]{2,24}|[0-9A-Fa-f]{6})(@(0(\.[0-9]+)?|1(\.0+)?))?$"
+)
 # motion-graphics-skill 0.2.4 (its ADR-20) publishes the colour names it accepts (`colors.named`: FFmpeg's own table, matched in any case)
 # and marks every colour parameter that cannot take @alpha with `alpha: false` (the graphics-template colours: ffmpeg-skill/graphics
 # draws them opaque, and the Skill converts a name to its RRGGBB itself). The agent accepts exactly that, read from the pinned contract:
 # a name from the table or bare RRGGBB everywhere, @alpha only where the parameter's schema does not say `alpha: false` (ADR-067).
-MOTION_COLOR_NAMES = frozenset(str(n).lower() for n in ((_MOTION_CONTRACT.get("colors") or {}).get("named") or {}))
-VIDEO_EXTENSIONS = (".mp4", ".mov", ".mkv", ".m4v", ".webm", ".mxf", ".avi", ".ts", ".mts", ".m2ts")
+MOTION_COLOR_NAMES = frozenset(
+    str(n).lower() for n in ((_MOTION_CONTRACT.get("colors") or {}).get("named") or {})
+)
+VIDEO_EXTENSIONS = (
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".m4v",
+    ".webm",
+    ".mxf",
+    ".avi",
+    ".ts",
+    ".mts",
+    ".m2ts",
+)
 
 # ---- thumbnail
 THUMBNAIL_FRAME_TOOL = "thumbnail/extract_frame"
@@ -185,25 +350,65 @@ THUMBNAIL_FRAME_SKILL = "thumbnail_frame"
 THUMBNAIL_RENDER_SKILL = "thumbnail_render"
 THUMBNAIL_FORMATS = ("png", "jpeg")
 THUMBNAIL_POSITIONS = ("center", "top", "bottom")
-THUMBNAIL_EXTRA_TEXTS = 3   # ADR-088: thumbnail.text2 .. thumbnail.text4, beside the caption (thumbnail.text)
-THUMBNAIL_TEXT_KEYS = tuple(f"thumbnail.text{n}" for n in range(2, 2 + THUMBNAIL_EXTRA_TEXTS))
+THUMBNAIL_EXTRA_TEXTS = 3  # ADR-088: thumbnail.text2 .. thumbnail.text4, beside the caption (thumbnail.text)
+THUMBNAIL_TEXT_KEYS = tuple(
+    f"thumbnail.text{n}" for n in range(2, 2 + THUMBNAIL_EXTRA_TEXTS)
+)
 THUMBNAIL_TEXT_FIELDS = ("position", "font_size", "color")
 THUMBNAIL_LOGO_POSITIONS = ("top-left", "top-right", "bottom-left", "bottom-right")
 THUMBNAIL_LOGO_FIELDS = ("position", "width", "margin", "opacity")
 THUMBNAIL_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
-THUMBNAIL_KEYS = ("thumbnail", "thumbnail.at", "thumbnail.text", "thumbnail.format", "thumbnail.font_size", "thumbnail.position", "thumbnail.color") \
-    + tuple(k for t in THUMBNAIL_TEXT_KEYS for k in (t,) + tuple(f"{t}.{f}" for f in THUMBNAIL_TEXT_FIELDS)) \
-    + ("thumbnail.logo",) + tuple(f"thumbnail.logo.{f}" for f in THUMBNAIL_LOGO_FIELDS)
+THUMBNAIL_KEYS = (
+    (
+        "thumbnail",
+        "thumbnail.at",
+        "thumbnail.text",
+        "thumbnail.format",
+        "thumbnail.font_size",
+        "thumbnail.position",
+        "thumbnail.color",
+    )
+    + tuple(
+        k
+        for t in THUMBNAIL_TEXT_KEYS
+        for k in (t,) + tuple(f"{t}.{f}" for f in THUMBNAIL_TEXT_FIELDS)
+    )
+    + ("thumbnail.logo",)
+    + tuple(f"thumbnail.logo.{f}" for f in THUMBNAIL_LOGO_FIELDS)
+)
 THUMBNAIL_FONT_SIZE_RANGE = (6, 400)
 # ADR-104: thumbnail-skill 0.1.12 .. 0.1.15 (agent/thumbnail_features.py): the frame by a face ranking, the caption clear of faces, variants,
 # layers, a batch per platform preset -- each thumbnail is rendered by exactly one of these tools
-from .thumbnail_features import FEATURE_KEYS as _THUMBNAIL_FEATURE_KEYS, parse_thumbnail_features  # noqa: E402
+from .thumbnail_features import (
+    FEATURE_KEYS as _THUMBNAIL_FEATURE_KEYS,
+    parse_thumbnail_features,
+)  # noqa: E402
+
 THUMBNAIL_KEYS = THUMBNAIL_KEYS + _THUMBNAIL_FEATURE_KEYS
-THUMBNAIL_VARIANTS_TOOL, THUMBNAIL_LAYERS_TOOL, THUMBNAIL_BATCH_TOOL = "thumbnail/render_variants", "thumbnail/render_layers", "thumbnail/render_batch"
-THUMBNAIL_VARIANTS_SKILL, THUMBNAIL_LAYERS_SKILL, THUMBNAIL_BATCH_SKILL = "thumbnail_variants", "thumbnail_layers", "thumbnail_batch"
-THUMBNAIL_SKILLS = (THUMBNAIL_FRAME_SKILL, THUMBNAIL_RENDER_SKILL, THUMBNAIL_VARIANTS_SKILL, THUMBNAIL_LAYERS_SKILL, THUMBNAIL_BATCH_SKILL)
-THUMBNAIL_TOOL_OF = {THUMBNAIL_FRAME_SKILL: THUMBNAIL_FRAME_TOOL, THUMBNAIL_RENDER_SKILL: THUMBNAIL_RENDER_TOOL, THUMBNAIL_VARIANTS_SKILL: THUMBNAIL_VARIANTS_TOOL,
-                     THUMBNAIL_LAYERS_SKILL: THUMBNAIL_LAYERS_TOOL, THUMBNAIL_BATCH_SKILL: THUMBNAIL_BATCH_TOOL}
+THUMBNAIL_VARIANTS_TOOL, THUMBNAIL_LAYERS_TOOL, THUMBNAIL_BATCH_TOOL = (
+    "thumbnail/render_variants",
+    "thumbnail/render_layers",
+    "thumbnail/render_batch",
+)
+THUMBNAIL_VARIANTS_SKILL, THUMBNAIL_LAYERS_SKILL, THUMBNAIL_BATCH_SKILL = (
+    "thumbnail_variants",
+    "thumbnail_layers",
+    "thumbnail_batch",
+)
+THUMBNAIL_SKILLS = (
+    THUMBNAIL_FRAME_SKILL,
+    THUMBNAIL_RENDER_SKILL,
+    THUMBNAIL_VARIANTS_SKILL,
+    THUMBNAIL_LAYERS_SKILL,
+    THUMBNAIL_BATCH_SKILL,
+)
+THUMBNAIL_TOOL_OF = {
+    THUMBNAIL_FRAME_SKILL: THUMBNAIL_FRAME_TOOL,
+    THUMBNAIL_RENDER_SKILL: THUMBNAIL_RENDER_TOOL,
+    THUMBNAIL_VARIANTS_SKILL: THUMBNAIL_VARIANTS_TOOL,
+    THUMBNAIL_LAYERS_SKILL: THUMBNAIL_LAYERS_TOOL,
+    THUMBNAIL_BATCH_SKILL: THUMBNAIL_BATCH_TOOL,
+}
 
 
 def thumbnail_skill_of(op: Dict[str, Any]) -> str:
@@ -215,13 +420,26 @@ def thumbnail_skill_of(op: Dict[str, Any]) -> str:
         return THUMBNAIL_VARIANTS_SKILL
     if op.get("layers"):
         return THUMBNAIL_LAYERS_SKILL
-    return THUMBNAIL_RENDER_SKILL if (op.get("text") is not None or op.get("texts") or op.get("logo")) else THUMBNAIL_FRAME_SKILL
+    return (
+        THUMBNAIL_RENDER_SKILL
+        if (op.get("text") is not None or op.get("texts") or op.get("logo"))
+        else THUMBNAIL_FRAME_SKILL
+    )
+
+
 _TEXT_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
 def _text(v: Any, key: str, max_len: int) -> str:
-    if not isinstance(v, str) or not v.strip() or _TEXT_RE.search(v) or len(v) > max_len:
-        raise EditRequirementError(f"{key} must be a non-empty text of at most {max_len} characters without control characters")
+    if (
+        not isinstance(v, str)
+        or not v.strip()
+        or _TEXT_RE.search(v)
+        or len(v) > max_len
+    ):
+        raise EditRequirementError(
+            f"{key} must be a non-empty text of at most {max_len} characters without control characters"
+        )
     return v
 
 
@@ -241,8 +459,16 @@ def _position(v: Any, key: str) -> Any:
     if isinstance(v, dict):
         if set(v) != {"x", "y"}:
             raise EditRequirementError(f"{key} must be a named position or {{x, y}}")
-        return {"x": int(_number(v["x"], key + ".x", -16384, 16384)), "y": int(_number(v["y"], key + ".y", -16384, 16384))}
-    return _token(v, key, re.compile("^(" + "|".join(NAMED_POSITIONS) + ")$"), "one of " + ", ".join(NAMED_POSITIONS))
+        return {
+            "x": int(_number(v["x"], key + ".x", -16384, 16384)),
+            "y": int(_number(v["y"], key + ".y", -16384, 16384)),
+        }
+    return _token(
+        v,
+        key,
+        re.compile("^(" + "|".join(NAMED_POSITIONS) + ")$"),
+        "one of " + ", ".join(NAMED_POSITIONS),
+    )
 
 
 def _contract_value(v: Any, key: str, spec: Dict[str, Any]) -> Any:
@@ -252,7 +478,9 @@ def _contract_value(v: Any, key: str, spec: Dict[str, Any]) -> Any:
         if "enum" in spec:
             x = _number(v, key)
             if x not in spec["enum"]:
-                raise EditRequirementError(f"{key} must be one of {', '.join(str(e) for e in spec['enum'])}, got {v!r}")
+                raise EditRequirementError(
+                    f"{key} must be one of {', '.join(str(e) for e in spec['enum'])}, got {v!r}"
+                )
             return int(x) if t == "integer" else float(x)
         x = _number(v, key, spec.get("min"), spec.get("max"))
         if t == "integer":
@@ -263,46 +491,90 @@ def _contract_value(v: Any, key: str, spec: Dict[str, Any]) -> Any:
     if t == "boolean":
         return _bool(v, key)
     if "enum" in spec:
-        return _token(v, key, re.compile("^(" + "|".join(re.escape(str(e)) for e in spec["enum"]) + ")$"), "one of " + ", ".join(str(e) for e in spec["enum"]))
-    if not isinstance(v, str) or not v.strip() or len(v) > 200 or any(c in v for c in "\n\r\x00"):
+        return _token(
+            v,
+            key,
+            re.compile("^(" + "|".join(re.escape(str(e)) for e in spec["enum"]) + ")$"),
+            "one of " + ", ".join(str(e) for e in spec["enum"]),
+        )
+    if (
+        not isinstance(v, str)
+        or not v.strip()
+        or len(v) > 200
+        or any(c in v for c in "\n\r\x00")
+    ):
         raise EditRequirementError(f"{key} must be a short single-line text, got {v!r}")
     return v
 
 
 def _parse_new_color_ops(m: Dict[str, Requirement]) -> Dict[str, Dict[str, Any]]:
     """ADR-100: OCIO_TRANSFORM / MATCH_CAMERA / LEGALIZE from their `color.*` keys, each value checked against the pinned contract. A refinement
-    key without its main key is refused (ambiguous). Nothing is defaulted here: an unset parameter is the Skill's own default."""
+    key without its main key is refused (ambiguous). Nothing is defaulted here: an unset parameter is the Skill's own default.
+    """
     out: Dict[str, Dict[str, Any]] = {}
-    for main, keys, op, spec in (("color.ocio", OCIO_KEYS, "color.ocio", OCIO_SPEC), ("color.match_camera", MATCH_CAMERA_KEYS, "color.match_camera", MATCH_CAMERA_SPEC),
-                                 ("color.legalize", LEGALIZE_KEYS, "color.legalize", LEGALIZE_SPEC)):
+    for main, keys, op, spec in (
+        ("color.ocio", OCIO_KEYS, "color.ocio", OCIO_SPEC),
+        (
+            "color.match_camera",
+            MATCH_CAMERA_KEYS,
+            "color.match_camera",
+            MATCH_CAMERA_SPEC,
+        ),
+        ("color.legalize", LEGALIZE_KEYS, "color.legalize", LEGALIZE_SPEC),
+    ):
         r = m.get(main)
         refs = [m[k] for k in keys[1:] if k in m and m[k].provenance != "DEFAULT"]
         if r is None or r.provenance == "DEFAULT":
             if refs:
-                raise EditRequirementError(f"{refs[0].key} is set but {main} is not: refusing an ambiguous request")
+                raise EditRequirementError(
+                    f"{refs[0].key} is set but {main} is not: refusing an ambiguous request"
+                )
             continue
         p: Dict[str, Any] = {}
-        if op == "color.match_camera":   # the main key first: its file is what the refinements refine
-            p["reference_path"] = _file(r.value, main, (".mp4", ".mov", ".mkv", ".m4v", ".mxf"))
+        if (
+            op == "color.match_camera"
+        ):  # the main key first: its file is what the refinements refine
+            p["reference_path"] = _file(
+                r.value, main, (".mp4", ".mov", ".mkv", ".m4v", ".mxf")
+            )
         for rq in refs:
-            name = rq.key[len(main) + 1:]
+            name = rq.key[len(main) + 1 :]
             if op == "color.ocio" and name == "config":
                 p[name] = ocio_config(rq.value, rq.key)
             elif op == "color.match_camera" and name == "patches":
-                if not isinstance(rq.value, str) or not re.fullmatch(r"[0-9.,/;]{1,4000}", rq.value) or len(rq.value.split(";")) > 64:
-                    raise EditRequirementError(f"{rq.key} must be up to 64 ';'-separated patches 'x,y,w,h' or 'x,y,w,h/x,y,w,h' (fractions of the frame)")
+                if (
+                    not isinstance(rq.value, str)
+                    or not re.fullmatch(r"[0-9.,/;]{1,4000}", rq.value)
+                    or len(rq.value.split(";")) > 64
+                ):
+                    raise EditRequirementError(
+                        f"{rq.key} must be up to 64 ';'-separated patches 'x,y,w,h' or 'x,y,w,h/x,y,w,h' (fractions of the frame)"
+                    )
                 p[name] = rq.value
             else:
                 p[name] = _contract_value(rq.value, rq.key, spec[name])
         if op == "color.ocio":
             p["source_space"] = _contract_value(r.value, main, {"type": "string"})
             has_dest, has_view = "destination_space" in p, "display" in p or "view" in p
-            if has_dest == has_view or (has_view and not ("display" in p and "view" in p)):
-                raise EditRequirementError("color.ocio needs color.ocio.destination_space, or color.ocio.display with color.ocio.view (one of the two, not both)")
+            if has_dest == has_view or (
+                has_view and not ("display" in p and "view" in p)
+            ):
+                raise EditRequirementError(
+                    "color.ocio needs color.ocio.destination_space, or color.ocio.display with color.ocio.view (one of the two, not both)"
+                )
             known = OCIO_INFO.get("known_destination_tags") or {}
-            if "output_tags" not in p and p.get("display") not in known and p.get("destination_space") not in known:
-                raise EditRequirementError("color.ocio.output_tags is required for this destination (the colour tags the output must carry: "
-                                           + ", ".join(spec["output_tags"]["enum"]) + "); only " + ", ".join(sorted(known)) + " imply them")
+            if (
+                "output_tags" not in p
+                and p.get("display") not in known
+                and p.get("destination_space") not in known
+            ):
+                raise EditRequirementError(
+                    "color.ocio.output_tags is required for this destination (the colour tags the output must carry: "
+                    + ", ".join(spec["output_tags"]["enum"])
+                    + "); only "
+                    + ", ".join(sorted(known))
+                    + " imply them"
+                )
         elif op == "color.match_camera":
             pass
         else:
@@ -311,8 +583,15 @@ def _parse_new_color_ops(m: Dict[str, Requirement]) -> Dict[str, Dict[str, Any]]
             elif not _bool(r.value, main):
                 continue
         out[op] = {"params": p, "requirements": [r] + refs}
-    if "color.ocio" in out and m.get("color.sdr") is not None and m["color.sdr"].provenance != "DEFAULT" and m["color.sdr"].value in (True, "true", "yes", "on", "1"):
-        raise EditRequirementError("color.ocio and color.sdr are both colour-space conversions: ask for one (an OCIO display / view to Rec.709 replaces the tone map)")
+    if (
+        "color.ocio" in out
+        and m.get("color.sdr") is not None
+        and m["color.sdr"].provenance != "DEFAULT"
+        and m["color.sdr"].value in (True, "true", "yes", "on", "1")
+    ):
+        raise EditRequirementError(
+            "color.ocio and color.sdr are both colour-space conversions: ask for one (an OCIO display / view to Rec.709 replaces the tone map)"
+        )
     return out
 
 
@@ -321,7 +600,9 @@ def ocio_config(v: Any, key: str) -> str:
     prefix = str(OCIO_INFO.get("builtin_prefix") or "ocio://")
     if isinstance(v, str) and v.startswith(prefix):
         if not re.fullmatch(re.escape(prefix) + r"[A-Za-z0-9._-]{1,120}", v):
-            raise EditRequirementError(f"{key} {v!r} is not a built-in config name ({prefix}…)")
+            raise EditRequirementError(
+                f"{key} {v!r} is not a built-in config name ({prefix}…)"
+            )
         return v
     return _file(v, key, tuple(OCIO_INFO.get("config_extensions") or (".ocio",)))
 
@@ -330,9 +611,20 @@ def parse_color_requirements(m: Dict[str, Requirement]) -> Dict[str, Dict[str, A
     """→ {IR op type: {"params", "requirements"}} for the colour operations asked for (explicit USER / PROFILE only)."""
     out: Dict[str, Dict[str, Any]] = _parse_new_color_ops(m)
     lut = m.get("color.lut")
-    if "color.lut.strength" in m and m["color.lut.strength"].provenance != "DEFAULT" and (lut is None or lut.provenance == "DEFAULT"):
-        raise EditRequirementError("color.lut.strength is set but color.lut is not: refusing an ambiguous request")
-    for key, op in (("color.strip_dovi", "color.strip_dovi"), ("color.sdr", "color.hdr_to_sdr"), ("color.lut", "color.lut"), ("color.target", "color.retag")):
+    if (
+        "color.lut.strength" in m
+        and m["color.lut.strength"].provenance != "DEFAULT"
+        and (lut is None or lut.provenance == "DEFAULT")
+    ):
+        raise EditRequirementError(
+            "color.lut.strength is set but color.lut is not: refusing an ambiguous request"
+        )
+    for key, op in (
+        ("color.strip_dovi", "color.strip_dovi"),
+        ("color.sdr", "color.hdr_to_sdr"),
+        ("color.lut", "color.lut"),
+        ("color.target", "color.retag"),
+    ):
         r = m.get(key)
         if r is None or r.provenance == "DEFAULT":
             continue
@@ -343,18 +635,34 @@ def parse_color_requirements(m: Dict[str, Requirement]) -> Dict[str, Dict[str, A
                 continue
         elif op == "color.lut":
             p["lut"] = _file(r.value, key, (".cube",))
-            if "color.lut.strength" in m and m["color.lut.strength"].provenance != "DEFAULT":
-                p["lut_strength"] = float(_number(m["color.lut.strength"].value, "color.lut.strength", 0.0, 1.0))
+            if (
+                "color.lut.strength" in m
+                and m["color.lut.strength"].provenance != "DEFAULT"
+            ):
+                p["lut_strength"] = float(
+                    _number(
+                        m["color.lut.strength"].value, "color.lut.strength", 0.0, 1.0
+                    )
+                )
                 reqs.append(m["color.lut.strength"])
         else:
-            p["target"] = _token(r.value, key, re.compile("^(" + "|".join(COLOR_TARGETS) + ")$"), "one of " + ", ".join(COLOR_TARGETS))
+            p["target"] = _token(
+                r.value,
+                key,
+                re.compile("^(" + "|".join(COLOR_TARGETS) + ")$"),
+                "one of " + ", ".join(COLOR_TARGETS),
+            )
         out[op] = {"params": p, "requirements": reqs}
     # color.exposure / color.contrast / color.saturation / color.temperature / color.tint: five independent, optional
     # parameters (no single "main" key the way color.lut/color.target have) -- any one of them, explicitly set, asks
     # for PRIMARY_CORRECTION; unset ones are left for the Skill's own defaults (unchanged), never guessed here.
     # ADR-062: gamma / lift / gain / levels_* / curves are more parameters of the same operation, read the same way.
     # ADR-076: the keys, types, ranges and enums are the pinned contract's (COLOR_CORRECTION_PARAMS); only explicit keys are sent.
-    active = [f"color.{n}" for n in COLOR_CORRECTION_PARAMS if f"color.{n}" in m and m[f"color.{n}"].provenance != "DEFAULT"]
+    active = [
+        f"color.{n}"
+        for n in COLOR_CORRECTION_PARAMS
+        if f"color.{n}" in m and m[f"color.{n}"].provenance != "DEFAULT"
+    ]
     if active:
         p = {}
         for k in active:
@@ -362,23 +670,38 @@ def parse_color_requirements(m: Dict[str, Requirement]) -> Dict[str, Dict[str, A
             spec = COLOR_CORRECTION_PARAMS[name]
             if spec["type"] == "string":
                 enum = tuple(str(x) for x in spec["enum"])
-                p[name] = _token(m[k].value, k, re.compile("^(" + "|".join(re.escape(x) for x in enum) + ")$"), "one of " + ", ".join(enum))
+                p[name] = _token(
+                    m[k].value,
+                    k,
+                    re.compile("^(" + "|".join(re.escape(x) for x in enum) + ")$"),
+                    "one of " + ", ".join(enum),
+                )
                 continue
             lo, hi = spec["min"], spec["max"]
             v = _number(m[k].value, k, lo, hi)
             if spec["type"] == "integer":
                 if float(v) != int(v):
                     unit = " (8-bit units)" if name in COLOR_LEVELS_DEFAULTS else ""
-                    raise EditRequirementError(f"{k} must be an integer from {lo} to {hi}{unit}, got {m[k].value!r}")
+                    raise EditRequirementError(
+                        f"{k} must be an integer from {lo} to {hi}{unit}, got {m[k].value!r}"
+                    )
                 p[name] = int(v)
             else:
                 p[name] = float(v)
         # the Skill refuses black >= white (its own colorlevels ordering check); unset points count with their defaults
         lv = {n: p.get(n, d) for n, d in COLOR_LEVELS_DEFAULTS.items()}
         for side in ("in", "out"):
-            if any(f"levels_{side}_{x}" in p for x in ("black", "white")) and not lv[f"levels_{side}_black"] < lv[f"levels_{side}_white"]:
-                raise EditRequirementError(f"color.levels_{side}_black ({lv[f'levels_{side}_black']}) must be below color.levels_{side}_white ({lv[f'levels_{side}_white']})")
-        out["color.primary_correction"] = {"params": p, "requirements": [m[k] for k in active]}
+            if (
+                any(f"levels_{side}_{x}" in p for x in ("black", "white"))
+                and not lv[f"levels_{side}_black"] < lv[f"levels_{side}_white"]
+            ):
+                raise EditRequirementError(
+                    f"color.levels_{side}_black ({lv[f'levels_{side}_black']}) must be below color.levels_{side}_white ({lv[f'levels_{side}_white']})"
+                )
+        out["color.primary_correction"] = {
+            "params": p,
+            "requirements": [m[k] for k in active],
+        }
     return out
 
 
@@ -387,35 +710,71 @@ def _motion_param(v: Any, key: str, name: str, spec: Dict[str, Any]) -> Any:
     contract's colour-name table and the parameter's `alpha: false`, ADR-067)."""
     t = spec.get("type")
     if t == "path":
-        return _file(v, key, IMAGE_EXTENSIONS if name == "image_path" else VIDEO_EXTENSIONS)
+        return _file(
+            v, key, IMAGE_EXTENSIONS if name == "image_path" else VIDEO_EXTENSIONS
+        )
     if t == "string":
         if spec.get("enum"):
-            return _token(v, key, re.compile("^(" + "|".join(re.escape(x) for x in spec["enum"]) + ")$"), "one of " + ", ".join(spec["enum"]))
+            return _token(
+                v,
+                key,
+                re.compile("^(" + "|".join(re.escape(x) for x in spec["enum"]) + ")$"),
+                "one of " + ", ".join(spec["enum"]),
+            )
         return _text(v, key, int(spec.get("max_length") or 500))
     if t == "color":
         if isinstance(v, str) and len(v) > 32:
-            raise EditRequirementError(f"{key} must be a colour of at most 32 characters, got {v!r}")
+            raise EditRequirementError(
+                f"{key} must be a colour of at most 32 characters, got {v!r}"
+            )
         opaque = spec.get("alpha") is False
-        c = _token(v, key, MOTION_COLOR_RE, "a colour name or RRGGBB hex" + ("" if opaque else ", optionally @alpha") + " (e.g. white, FFCC00" + ("" if opaque else ", black@0.5") + ")")
+        c = _token(
+            v,
+            key,
+            MOTION_COLOR_RE,
+            "a colour name or RRGGBB hex"
+            + ("" if opaque else ", optionally @alpha")
+            + " (e.g. white, FFCC00"
+            + ("" if opaque else ", black@0.5")
+            + ")",
+        )
         base, _, alpha = c.partition("@")
-        if not re.fullmatch(r"[0-9A-Fa-f]{6}", base) and base.lower() not in MOTION_COLOR_NAMES:
-            raise EditRequirementError(f"{key}: {base!r} is not a colour name motion-graphics-skill knows (its contract's colors.named table); give RRGGBB hex instead")
+        if (
+            not re.fullmatch(r"[0-9A-Fa-f]{6}", base)
+            and base.lower() not in MOTION_COLOR_NAMES
+        ):
+            raise EditRequirementError(
+                f"{key}: {base!r} is not a colour name motion-graphics-skill knows (its contract's colors.named table); give RRGGBB hex instead"
+            )
         if alpha and opaque:
-            raise EditRequirementError(f"{key} takes no @alpha: motion-graphics-skill draws this colour opaque (its contract says alpha: false); give RRGGBB or a colour name")
+            raise EditRequirementError(
+                f"{key} takes no @alpha: motion-graphics-skill draws this colour opaque (its contract says alpha: false); give RRGGBB or a colour name"
+            )
         return c
     if t == "position":
         return _position(v, key)
     if t == "font":
-        return _token(v, key, re.compile("^(" + "|".join(re.escape(x) for x in MOTION_FONTS) + ")$"), "a registry font id (" + ", ".join(MOTION_FONTS) + ")")
+        return _token(
+            v,
+            key,
+            re.compile("^(" + "|".join(re.escape(x) for x in MOTION_FONTS) + ")$"),
+            "a registry font id (" + ", ".join(MOTION_FONTS) + ")",
+        )
     if t == "boolean":
         return _bool(v, key)
     x = _number(v, key, spec.get("min"), spec.get("max"))
     if t == "integer":
         if float(x) != int(x):
-            raise EditRequirementError(f"{key} must be an integer from {spec.get('min')} to {spec.get('max')}, got {v!r}")
+            raise EditRequirementError(
+                f"{key} must be an integer from {spec.get('min')} to {spec.get('max')}, got {v!r}"
+            )
         step = spec.get("multiple_of")
-        if isinstance(step, int) and step > 1 and int(x) % step:   # ADR-078: shape's width / height are even
-            raise EditRequirementError(f"{key} must be a multiple of {step} (the contract's multiple_of), got {v!r}")
+        if (
+            isinstance(step, int) and step > 1 and int(x) % step
+        ):  # ADR-078: shape's width / height are even
+            raise EditRequirementError(
+                f"{key} must be a multiple of {step} (the contract's multiple_of), got {v!r}"
+            )
         return int(x)
     return float(x)
 
@@ -430,14 +789,20 @@ def parse_motion_requirements(m: Dict[str, Requirement]) -> Dict[str, Dict[str, 
         base, main_param = MOTION_BASE[typ]
         spec = MOTION_ELEMENT_SPECS[typ]
         main = m.get(base)
-        refinements = [m[k] for k in keys[1:] if k in m and m[k].provenance != "DEFAULT"]
+        refinements = [
+            m[k] for k in keys[1:] if k in m and m[k].provenance != "DEFAULT"
+        ]
         if main is None or main.provenance == "DEFAULT":
             if refinements:
-                raise EditRequirementError(f"{refinements[0].key} is set but {base} is not: refusing an ambiguous request")
+                raise EditRequirementError(
+                    f"{refinements[0].key} is set but {base} is not: refusing an ambiguous request"
+                )
             continue
         if main_param is None and not _bool(main.value, base):
             if refinements:
-                raise EditRequirementError(f"{base}=false with {base}.* refinements: refusing an ambiguous request")
+                raise EditRequirementError(
+                    f"{base}=false with {base}.* refinements: refusing an ambiguous request"
+                )
             continue
         reqs = [main] + refinements
         vals = {r.key: r.value for r in reqs}
@@ -447,26 +812,74 @@ def parse_motion_requirements(m: Dict[str, Requirement]) -> Dict[str, Dict[str, 
             key = base if name == main_param else f"{base}.{name}"
             if key not in vals:
                 continue
-            if typ == "rendered_layer" and key == base and isinstance(vals[key], str) and vals[key].strip().lower() == HTML_LAYER_SOURCE:
-                p[motion_path_name(typ, name)] = HTML_LAYER_SOURCE   # ADR-114: the clip is rendered in this plan by hyperframes-skill (agent/html_layer.py)
+            if (
+                typ == "rendered_layer"
+                and key == base
+                and isinstance(vals[key], str)
+                and vals[key].strip().lower() == HTML_LAYER_SOURCE
+            ):
+                p[motion_path_name(typ, name)] = (
+                    HTML_LAYER_SOURCE  # ADR-114: the clip is rendered in this plan by hyperframes-skill (agent/html_layer.py)
+                )
                 continue
             p[motion_path_name(typ, name)] = _motion_param(vals[key], key, name, pspec)
-        missing = [f"{base}.{n}" for n, ps in spec["parameters"].items() if ps.get("required") and n != main_param and motion_path_name(typ, n) not in p]
-        if missing:   # ADR-078: a parameter the contract requires (shape's width / height / color) is asked for, never defaulted here
-            raise EditRequirementError(f"{base} needs " + " / ".join(missing) + " (required by the contract)")
-        for group in (c.get("at_least_one_of") for c in spec.get("constraints") or [] if c.get("at_least_one_of")):
+        missing = [
+            f"{base}.{n}"
+            for n, ps in spec["parameters"].items()
+            if ps.get("required")
+            and n != main_param
+            and motion_path_name(typ, n) not in p
+        ]
+        if (
+            missing
+        ):  # ADR-078: a parameter the contract requires (shape's width / height / color) is asked for, never defaulted here
+            raise EditRequirementError(
+                f"{base} needs " + " / ".join(missing) + " (required by the contract)"
+            )
+        for group in (
+            c.get("at_least_one_of")
+            for c in spec.get("constraints") or []
+            if c.get("at_least_one_of")
+        ):
             if not any(n in p for n in group):
-                raise EditRequirementError(f"{base} needs at least one of " + " / ".join(f"{base}.{n}" for n in group) + " (the contract's constraint)")
+                raise EditRequirementError(
+                    f"{base} needs at least one of "
+                    + " / ".join(f"{base}.{n}" for n in group)
+                    + " (the contract's constraint)"
+                )
         for k in ("start", "end"):
             if f"{base}.{k}" in vals:
-                el[k] = float(_number(vals[f"{base}.{k}"], f"{base}.{k}", 0.0, float((_MOTION_CONTRACT.get("limits") or {}).get("max_element_duration_seconds") or 86400.0)))
+                el[k] = float(
+                    _number(
+                        vals[f"{base}.{k}"],
+                        f"{base}.{k}",
+                        0.0,
+                        float(
+                            (_MOTION_CONTRACT.get("limits") or {}).get(
+                                "max_element_duration_seconds"
+                            )
+                            or 86400.0
+                        ),
+                    )
+                )
         if "start" in el and "end" in el and not el["start"] < el["end"]:
             raise EditRequirementError(f"{base}.start must be before {base}.end")
         if f"{base}.fade" in vals:
-            el["fade"] = float(_number(vals[f"{base}.fade"], f"{base}.fade", 0.01, 30.0))
-        if f"{base}.style" in vals:   # ADR-102: a style preset for this element (overrides motion.style)
-            el["style"] = _token(vals[f"{base}.style"], f"{base}.style", re.compile("^(" + "|".join(map(re.escape, STYLE_PRESETS)) + ")$"), "one of " + ", ".join(STYLE_PRESETS))
-        if f"{base}.fit" in vals:   # ADR-102: fit the template's text into a box width (lower_third / title)
+            el["fade"] = float(
+                _number(vals[f"{base}.fade"], f"{base}.fade", 0.01, 30.0)
+            )
+        if (
+            f"{base}.style" in vals
+        ):  # ADR-102: a style preset for this element (overrides motion.style)
+            el["style"] = _token(
+                vals[f"{base}.style"],
+                f"{base}.style",
+                re.compile("^(" + "|".join(map(re.escape, STYLE_PRESETS)) + ")$"),
+                "one of " + ", ".join(STYLE_PRESETS),
+            )
+        if (
+            f"{base}.fit" in vals
+        ):  # ADR-102: fit the template's text into a box width (lower_third / title)
             el["fit"] = parse_text_fit(vals[f"{base}.fit"], f"{base}.fit")
         out[typ] = el
     return out
@@ -478,7 +891,11 @@ def parse_text_fit(v: Any, key: str) -> Dict[str, Any]:
         v = {"width": v}
     fields = TEXT_FIT.get("fields") or {}
     if not isinstance(v, dict) or "width" not in v or set(v) - set(fields):
-        raise EditRequirementError(f"{key} must be {{width, " + ", ".join(f"{n}?" for n in fields if n != "width") + "}} (or the width alone)")
+        raise EditRequirementError(
+            f"{key} must be {{width, "
+            + ", ".join(f"{n}?" for n in fields if n != "width")
+            + "}} (or the width alone)"
+        )
     out: Dict[str, Any] = {}
     for n, spec in fields.items():
         if n not in v:
@@ -489,9 +906,19 @@ def parse_text_fit(v: Any, key: str) -> Dict[str, Any]:
                 raise EditRequirementError(f"{key}.{n} must be an integer")
             out[n] = int(x) if spec["type"] == "integer" else float(x)
         elif "enum" in spec:
-            out[n] = _token(v[n], f"{key}.{n}", re.compile("^(" + "|".join(map(re.escape, spec["enum"])) + ")$"), "one of " + ", ".join(spec["enum"]))
+            out[n] = _token(
+                v[n],
+                f"{key}.{n}",
+                re.compile("^(" + "|".join(map(re.escape, spec["enum"])) + ")$"),
+                "one of " + ", ".join(spec["enum"]),
+            )
         else:
-            out[n] = _token(v[n], f"{key}.{n}", re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$"), "a language tag")
+            out[n] = _token(
+                v[n],
+                f"{key}.{n}",
+                re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$"),
+                "a language tag",
+            )
     return out
 
 
@@ -499,90 +926,174 @@ def parse_motion_options(m: Dict[str, Requirement]) -> Dict[str, Any]:
     """ADR-102: `motion.style` (a preset for every element), `motion.brand_kit` ({primary?, secondary?, background?, text?} opaque colours),
     `motion.themes` ({name: theme file}, 1..16) + `motion.theme` (the active one; optional with one theme), `motion.reserved_regions`
     ({end_screen?, cards?, on_overlap?}). A theme replaces the style and the brand kit (the Skill refuses them together, so the request is refused
-    here first). → {"options": {...}, "requirements": [...]} (empty options when nothing was asked)."""
-    given = {k: m[k] for k in MOTION_OPTION_KEYS if k in m and m[k].provenance != "DEFAULT"}
+    here first). → {"options": {...}, "requirements": [...]} (empty options when nothing was asked).
+    """
+    given = {
+        k: m[k] for k in MOTION_OPTION_KEYS if k in m and m[k].provenance != "DEFAULT"
+    }
     opts: Dict[str, Any] = {}
     if "motion.style" in given:
-        opts["style"] = _token(given["motion.style"].value, "motion.style", re.compile("^(" + "|".join(map(re.escape, STYLE_PRESETS)) + ")$"), "one of " + ", ".join(STYLE_PRESETS))
+        opts["style"] = _token(
+            given["motion.style"].value,
+            "motion.style",
+            re.compile("^(" + "|".join(map(re.escape, STYLE_PRESETS)) + ")$"),
+            "one of " + ", ".join(STYLE_PRESETS),
+        )
     if "motion.brand_kit" in given:
         bk = given["motion.brand_kit"].value
         if not isinstance(bk, dict) or not bk or set(bk) - set(STYLE_ROLES):
-            raise EditRequirementError(f"motion.brand_kit must be {{{', '.join(f'{r}?' for r in STYLE_ROLES)}}} (opaque RRGGBB or a colour name)")
+            raise EditRequirementError(
+                f"motion.brand_kit must be {{{', '.join(f'{r}?' for r in STYLE_ROLES)}}} (opaque RRGGBB or a colour name)"
+            )
         out = {}
         for r, c in bk.items():
-            c = _token(c, f"motion.brand_kit.{r}", MOTION_COLOR_RE, "an opaque colour name or RRGGBB")
-            if "@" in c or (not re.fullmatch(r"[0-9A-Fa-f]{6}", c) and c.lower() not in MOTION_COLOR_NAMES):
-                raise EditRequirementError(f"motion.brand_kit.{r} must be an opaque colour name or RRGGBB, got {c!r}")
+            c = _token(
+                c,
+                f"motion.brand_kit.{r}",
+                MOTION_COLOR_RE,
+                "an opaque colour name or RRGGBB",
+            )
+            if "@" in c or (
+                not re.fullmatch(r"[0-9A-Fa-f]{6}", c)
+                and c.lower() not in MOTION_COLOR_NAMES
+            ):
+                raise EditRequirementError(
+                    f"motion.brand_kit.{r} must be an opaque colour name or RRGGBB, got {c!r}"
+                )
             out[r] = c
         opts["brand_kit"] = out
     if "motion.themes" in given:
         th = given["motion.themes"].value
         if not isinstance(th, dict) or not 1 <= len(th) <= 16:
-            raise EditRequirementError("motion.themes must be {name: theme file} (1 to 16 themes)")
+            raise EditRequirementError(
+                "motion.themes must be {name: theme file} (1 to 16 themes)"
+            )
         files = {}
         for name, f in th.items():
-            if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", name):
+            if not isinstance(name, str) or not re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", name
+            ):
                 raise EditRequirementError(f"motion.themes name {name!r} must be an id")
             files[name] = _file(f, f"motion.themes.{name}", (".json",))
         opts["themes"] = files
         if "motion.theme" in given:
             if given["motion.theme"].value not in files:
-                raise EditRequirementError(f"motion.theme {given['motion.theme'].value!r} is not one of motion.themes ({', '.join(files)})")
+                raise EditRequirementError(
+                    f"motion.theme {given['motion.theme'].value!r} is not one of motion.themes ({', '.join(files)})"
+                )
             opts["theme"] = given["motion.theme"].value
         elif len(files) > 1:
-            raise EditRequirementError("motion.themes names several themes: say which one is active with motion.theme")
+            raise EditRequirementError(
+                "motion.themes names several themes: say which one is active with motion.theme"
+            )
         if "style" in opts or "brand_kit" in opts:
-            raise EditRequirementError("a theme replaces motion.style / motion.brand_kit (motion-graphics-skill refuses them together): give one or the other")
+            raise EditRequirementError(
+                "a theme replaces motion.style / motion.brand_kit (motion-graphics-skill refuses them together): give one or the other"
+            )
     elif "motion.theme" in given:
-        raise EditRequirementError("motion.theme is set but motion.themes is not: refusing an ambiguous request")
+        raise EditRequirementError(
+            "motion.theme is set but motion.themes is not: refusing an ambiguous request"
+        )
     if "motion.reserved_regions" in given:
         rr = given["motion.reserved_regions"].value
-        if not isinstance(rr, dict) or not rr or set(rr) - {"end_screen", "cards", "on_overlap"}:
-            raise EditRequirementError("motion.reserved_regions must be {end_screen?, cards?, on_overlap?}")
+        if (
+            not isinstance(rr, dict)
+            or not rr
+            or set(rr) - {"end_screen", "cards", "on_overlap"}
+        ):
+            raise EditRequirementError(
+                "motion.reserved_regions must be {end_screen?, cards?, on_overlap?}"
+            )
         out_rr: Dict[str, Any] = {}
         if "end_screen" in rr:
             es = rr["end_screen"]
             if es is True:
                 es = {}
             if not isinstance(es, dict) or set(es) - {"duration", "elements"}:
-                raise EditRequirementError("motion.reserved_regions.end_screen must be {duration?, elements?} (or true for the stated layout)")
+                raise EditRequirementError(
+                    "motion.reserved_regions.end_screen must be {duration?, elements?} (or true for the stated layout)"
+                )
             e_out: Dict[str, Any] = {}
             if "duration" in es:
-                e_out["duration"] = float(_number(es["duration"], "motion.reserved_regions.end_screen.duration", 5.0, 20.0))
+                e_out["duration"] = float(
+                    _number(
+                        es["duration"],
+                        "motion.reserved_regions.end_screen.duration",
+                        5.0,
+                        20.0,
+                    )
+                )
             if "elements" in es:
                 els = es["elements"]
                 if not isinstance(els, list) or not 1 <= len(els) <= 4:
-                    raise EditRequirementError("motion.reserved_regions.end_screen.elements must list 1 to 4 boxes {id?, x, y, width, height} in px")
-                e_out["elements"] = [_px_box(b, f"motion.reserved_regions.end_screen.elements[{i}]", with_id=True) for i, b in enumerate(els)]
+                    raise EditRequirementError(
+                        "motion.reserved_regions.end_screen.elements must list 1 to 4 boxes {id?, x, y, width, height} in px"
+                    )
+                e_out["elements"] = [
+                    _px_box(
+                        b,
+                        f"motion.reserved_regions.end_screen.elements[{i}]",
+                        with_id=True,
+                    )
+                    for i, b in enumerate(els)
+                ]
             out_rr["end_screen"] = e_out
         if "cards" in rr:
             cards = rr["cards"]
             if not isinstance(cards, list) or not cards or len(cards) > 5:
-                raise EditRequirementError("motion.reserved_regions.cards must list 1 to 5 cards {time, duration?, region?, id?}")
+                raise EditRequirementError(
+                    "motion.reserved_regions.cards must list 1 to 5 cards {time, duration?, region?, id?}"
+                )
             c_out = []
             for i, c in enumerate(cards):
                 k = f"motion.reserved_regions.cards[{i}]"
-                if not isinstance(c, dict) or "time" not in c or set(c) - {"time", "duration", "region", "id"}:
-                    raise EditRequirementError(f"{k} must be {{time, duration?, region?, id?}}")
-                rec: Dict[str, Any] = {"time": float(_number(c["time"], f"{k}.time", 0.0, 86400.0))}
+                if (
+                    not isinstance(c, dict)
+                    or "time" not in c
+                    or set(c) - {"time", "duration", "region", "id"}
+                ):
+                    raise EditRequirementError(
+                        f"{k} must be {{time, duration?, region?, id?}}"
+                    )
+                rec: Dict[str, Any] = {
+                    "time": float(_number(c["time"], f"{k}.time", 0.0, 86400.0))
+                }
                 if "duration" in c:
-                    rec["duration"] = float(_number(c["duration"], f"{k}.duration", 0.1, 60.0))
+                    rec["duration"] = float(
+                        _number(c["duration"], f"{k}.duration", 0.1, 60.0)
+                    )
                 if "region" in c:
                     rec["region"] = _px_box(c["region"], f"{k}.region")
                 if "id" in c:
-                    rec["id"] = _token(c["id"], f"{k}.id", re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"), "an id")
+                    rec["id"] = _token(
+                        c["id"],
+                        f"{k}.id",
+                        re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"),
+                        "an id",
+                    )
                 c_out.append(rec)
             out_rr["cards"] = c_out
         if "on_overlap" in rr:
-            out_rr["on_overlap"] = _token(rr["on_overlap"], "motion.reserved_regions.on_overlap", re.compile("^(report|refuse)$"), "report or refuse")
+            out_rr["on_overlap"] = _token(
+                rr["on_overlap"],
+                "motion.reserved_regions.on_overlap",
+                re.compile("^(report|refuse)$"),
+                "report or refuse",
+            )
         opts["reserved_regions"] = out_rr
     return {"options": opts, "requirements": list(given.values())}
 
 
 def _px_box(b: Any, key: str, with_id: bool = False) -> Dict[str, Any]:
     allowed = {"x", "y", "width", "height"} | ({"id"} if with_id else set())
-    if not isinstance(b, dict) or not {"x", "y", "width", "height"} <= set(b) or set(b) - allowed:
-        raise EditRequirementError(f"{key} must be {{{'id?, ' if with_id else ''}x, y, width, height}} in pixels")
+    if (
+        not isinstance(b, dict)
+        or not {"x", "y", "width", "height"} <= set(b)
+        or set(b) - allowed
+    ):
+        raise EditRequirementError(
+            f"{key} must be {{{'id?, ' if with_id else ''}x, y, width, height}} in pixels"
+        )
     out: Dict[str, Any] = {}
     for n in ("x", "y", "width", "height"):
         v = _number(b[n], f"{key}.{n}", 0 if n in ("x", "y") else 1, 16384)
@@ -590,7 +1101,12 @@ def _px_box(b: Any, key: str, with_id: bool = False) -> Dict[str, Any]:
             raise EditRequirementError(f"{key}.{n} must be a whole number of pixels")
         out[n] = int(v)
     if with_id and "id" in b:
-        out["id"] = _token(b["id"], f"{key}.id", re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"), "an id")
+        out["id"] = _token(
+            b["id"],
+            f"{key}.id",
+            re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"),
+            "an id",
+        )
     return out
 
 
@@ -603,7 +1119,11 @@ def element_label(typ: str, params: Dict[str, Any]) -> str:
         if params.get(k):
             return f"'{Path(str(params[k])).name}'"
     if typ == "meme":
-        return "'" + " / ".join(str(params[k]) for k in ("top", "bottom") if params.get(k)) + "'"
+        return (
+            "'"
+            + " / ".join(str(params[k]) for k in ("top", "bottom") if params.get(k))
+            + "'"
+        )
     if typ == "countdown":
         return f"from {params.get('count_from', MOTION_ELEMENT_SPECS[typ]['parameters']['count_from'].get('default'))}"
     if typ == "shape":
@@ -611,10 +1131,13 @@ def element_label(typ: str, params: Dict[str, Any]) -> str:
     return "bar"
 
 
-def placement_problems(typ: str, params: Dict[str, Any], size: Optional[Tuple[int, int]]) -> List[str]:
+def placement_problems(
+    typ: str, params: Dict[str, Any], size: Optional[Tuple[int, int]]
+) -> List[str]:
     """Why an element would not land on the picture it is drawn on (ADR-064): the planned size after the subject's edits (`picture_size`),
     not the source's. Only what is certain is refused: an explicit {x, y} outside the frame, a margin at least as large as the side it is
-    measured from, an overlay scaled wider than the frame, text taller than the frame. An unknown size checks nothing (never guessed)."""
+    measured from, an overlay scaled wider than the frame, text taller than the frame. An unknown size checks nothing (never guessed).
+    """
     if size is None:
         return []
     w, h = size
@@ -623,39 +1146,86 @@ def placement_problems(typ: str, params: Dict[str, Any], size: Optional[Tuple[in
     pos = params.get("position", (pspec.get("position") or {}).get("default"))
     if isinstance(pos, dict):
         if not (-w < int(pos["x"]) < w and -h < int(pos["y"]) < h):
-            out.append(f"position {{x: {pos['x']}, y: {pos['y']}}} lies outside the {w}x{h} picture")
-    elif isinstance(pos, str) and params.get("margin") is not None and (pspec.get("margin") or {}).get("type") == "integer":
+            out.append(
+                f"position {{x: {pos['x']}, y: {pos['y']}}} lies outside the {w}x{h} picture"
+            )
+    elif (
+        isinstance(pos, str)
+        and params.get("margin") is not None
+        and (pspec.get("margin") or {}).get("type") == "integer"
+    ):
         margin = int(params["margin"])
         for side, dim in (("left", w), ("right", w), ("top", h), ("bottom", h)):
             if side in pos and margin >= dim:
-                out.append(f"margin {margin} from the {side} edge puts it outside the {w}x{h} picture")
+                out.append(
+                    f"margin {margin} from the {side} edge puts it outside the {w}x{h} picture"
+                )
                 break
     if params.get("scale_width") is not None and int(params["scale_width"]) > w:
-        out.append(f"scale_width {params['scale_width']} is wider than the {w}x{h} picture")
+        out.append(
+            f"scale_width {params['scale_width']} is wider than the {w}x{h} picture"
+        )
     if params.get("font_size") is not None and int(params["font_size"]) >= h:
-        out.append(f"font_size {params['font_size']} is taller than the {w}x{h} picture")
-    if typ == "shape" and params.get("width") is not None and params.get("height") is not None and (int(params["width"]) > w or int(params["height"]) > h):
-        out.append(f"shape {params['width']}x{params['height']} is larger than the {w}x{h} picture")   # ADR-078
+        out.append(
+            f"font_size {params['font_size']} is taller than the {w}x{h} picture"
+        )
+    if (
+        typ == "shape"
+        and params.get("width") is not None
+        and params.get("height") is not None
+        and (int(params["width"]) > w or int(params["height"]) > h)
+    ):
+        out.append(
+            f"shape {params['width']}x{params['height']} is larger than the {w}x{h} picture"
+        )  # ADR-078
     return out
 
 
-def planned_picture_size(technical: Dict[str, Any], decisions: List[Any], subject: str) -> Optional[Tuple[int, int]]:
+def planned_picture_size(
+    technical: Dict[str, Any], decisions: List[Any], subject: str
+) -> Optional[Tuple[int, int]]:
     """`picture_size` at decision time: the subject's not-rejected editing decisions, in EDIT_ORDER, stand in for the IR operations the
     planner will build from them (their params carry the same names)."""
     from .editing import EDIT_ORDER
-    decs = [d for d in decisions if d.type == "TRANSFORM" and d.status != "REJECTED" and d.subject in EDIT_ORDER and d.params.get("asset_id") == subject]
-    ops = [dict(d.params, type=d.subject, asset=subject) for d in sorted(decs, key=lambda d: EDIT_ORDER.index(d.subject))]
+
+    decs = [
+        d
+        for d in decisions
+        if d.type == "TRANSFORM"
+        and d.status != "REJECTED"
+        and d.subject in EDIT_ORDER
+        and d.params.get("asset_id") == subject
+    ]
+    ops = [
+        dict(d.params, type=d.subject, asset=subject)
+        for d in sorted(decs, key=lambda d: EDIT_ORDER.index(d.subject))
+    ]
     return picture_size(technical, ops, subject)
 
 
 def parse_thumbnail_requirements(m: Dict[str, Requirement]) -> Dict[str, Any]:
     """→ {"enabled", "format" (None = policy), "at" (None = policy ratio), "text", "font_size", "position", "requirements"}."""
     main = m.get("thumbnail")
-    refinements = [m[k] for k in THUMBNAIL_KEYS[1:] if k in m and m[k].provenance != "DEFAULT"]
-    out: Dict[str, Any] = {"enabled": False, "format": None, "at": None, "text": None, "font_size": None, "position": None, "color": None, "texts": [], "logo": None, "requirements": []}
+    refinements = [
+        m[k] for k in THUMBNAIL_KEYS[1:] if k in m and m[k].provenance != "DEFAULT"
+    ]
+    out: Dict[str, Any] = {
+        "enabled": False,
+        "format": None,
+        "at": None,
+        "text": None,
+        "font_size": None,
+        "position": None,
+        "color": None,
+        "texts": [],
+        "logo": None,
+        "requirements": [],
+    }
     if main is None or main.provenance == "DEFAULT":
         if refinements:
-            raise EditRequirementError(f"{refinements[0].key} is set but thumbnail is not: refusing an ambiguous request")
+            raise EditRequirementError(
+                f"{refinements[0].key} is set but thumbnail is not: refusing an ambiguous request"
+            )
         return out
     fmt: Optional[str] = None
     if isinstance(main.value, str) and main.value.strip().lower() in THUMBNAIL_FORMATS:
@@ -664,71 +1234,142 @@ def parse_thumbnail_requirements(m: Dict[str, Requirement]) -> Dict[str, Any]:
         enabled = _bool(main.value, "thumbnail")
     if not enabled:
         if refinements:
-            raise EditRequirementError("thumbnail=false with thumbnail.* refinements: refusing an ambiguous request")
+            raise EditRequirementError(
+                "thumbnail=false with thumbnail.* refinements: refusing an ambiguous request"
+            )
         return out
     reqs = [main] + refinements
     vals = {r.key: r.value for r in reqs}
     if "thumbnail.format" in vals:
-        f = _token(vals["thumbnail.format"], "thumbnail.format", re.compile("^(png|jpeg)$"), "png or jpeg")
+        f = _token(
+            vals["thumbnail.format"],
+            "thumbnail.format",
+            re.compile("^(png|jpeg)$"),
+            "png or jpeg",
+        )
         if fmt and fmt != f:
-            raise EditRequirementError("thumbnail names one format and thumbnail.format another: refusing an ambiguous request")
+            raise EditRequirementError(
+                "thumbnail names one format and thumbnail.format another: refusing an ambiguous request"
+            )
         fmt = f
     out.update({"enabled": True, "format": fmt, "requirements": reqs})
-    if "thumbnail.at" in vals and not (isinstance(vals["thumbnail.at"], str) and vals["thumbnail.at"].strip().lower() == "faces"):   # ADR-104: or "faces"
+    if "thumbnail.at" in vals and not (
+        isinstance(vals["thumbnail.at"], str)
+        and vals["thumbnail.at"].strip().lower() == "faces"
+    ):  # ADR-104: or "faces"
         out["at"] = float(_number(vals["thumbnail.at"], "thumbnail.at", 0.0, 86400.0))
     if "thumbnail.text" in vals:
         out["text"] = _text(vals["thumbnail.text"], "thumbnail.text", 2000)
     if "thumbnail.font_size" in vals:
-        out["font_size"] = int(_number(vals["thumbnail.font_size"], "thumbnail.font_size", THUMBNAIL_FONT_SIZE_RANGE[0], THUMBNAIL_FONT_SIZE_RANGE[1]))
+        out["font_size"] = int(
+            _number(
+                vals["thumbnail.font_size"],
+                "thumbnail.font_size",
+                THUMBNAIL_FONT_SIZE_RANGE[0],
+                THUMBNAIL_FONT_SIZE_RANGE[1],
+            )
+        )
     if "thumbnail.position" in vals:
-        out["position"] = _token(vals["thumbnail.position"], "thumbnail.position", re.compile("^(" + "|".join(THUMBNAIL_POSITIONS) + ")$"), "one of " + ", ".join(THUMBNAIL_POSITIONS))
+        out["position"] = _token(
+            vals["thumbnail.position"],
+            "thumbnail.position",
+            re.compile("^(" + "|".join(THUMBNAIL_POSITIONS) + ")$"),
+            "one of " + ", ".join(THUMBNAIL_POSITIONS),
+        )
     # ADR-088: the full ThumbnailDocument -- the caption's colour, more text elements, a logo image
     pos_re = re.compile("^(" + "|".join(THUMBNAIL_POSITIONS) + ")$")
     if "thumbnail.color" in vals:
         if out["text"] is None:
-            raise EditRequirementError("thumbnail.color is the caption's colour: it needs thumbnail.text")
-        out["color"] = _token(vals["thumbnail.color"], "thumbnail.color", THUMBNAIL_COLOR_RE, "#RRGGBB")
+            raise EditRequirementError(
+                "thumbnail.color is the caption's colour: it needs thumbnail.text"
+            )
+        out["color"] = _token(
+            vals["thumbnail.color"], "thumbnail.color", THUMBNAIL_COLOR_RE, "#RRGGBB"
+        )
     texts: List[Dict[str, Any]] = []
     for t in THUMBNAIL_TEXT_KEYS:
         given = [f for f in THUMBNAIL_TEXT_FIELDS if f"{t}.{f}" in vals]
         if t not in vals:
             if given:
-                raise EditRequirementError(f"{t}.{given[0]} is set but {t} is not: refusing an ambiguous request")
+                raise EditRequirementError(
+                    f"{t}.{given[0]} is set but {t} is not: refusing an ambiguous request"
+                )
             continue
         el: Dict[str, Any] = {"text": _text(vals[t], t, 2000)}
         if "position" in given:
-            el["position"] = _token(vals[f"{t}.position"], f"{t}.position", pos_re, "one of " + ", ".join(THUMBNAIL_POSITIONS))
+            el["position"] = _token(
+                vals[f"{t}.position"],
+                f"{t}.position",
+                pos_re,
+                "one of " + ", ".join(THUMBNAIL_POSITIONS),
+            )
         if "font_size" in given:
-            el["font_size"] = int(_number(vals[f"{t}.font_size"], f"{t}.font_size", THUMBNAIL_FONT_SIZE_RANGE[0], THUMBNAIL_FONT_SIZE_RANGE[1]))
+            el["font_size"] = int(
+                _number(
+                    vals[f"{t}.font_size"],
+                    f"{t}.font_size",
+                    THUMBNAIL_FONT_SIZE_RANGE[0],
+                    THUMBNAIL_FONT_SIZE_RANGE[1],
+                )
+            )
         if "color" in given:
-            el["color"] = _token(vals[f"{t}.color"], f"{t}.color", THUMBNAIL_COLOR_RE, "#RRGGBB")
+            el["color"] = _token(
+                vals[f"{t}.color"], f"{t}.color", THUMBNAIL_COLOR_RE, "#RRGGBB"
+            )
         texts.append(el)
     out["texts"] = texts
     lg = [f for f in THUMBNAIL_LOGO_FIELDS if f"thumbnail.logo.{f}" in vals]
     if "thumbnail.logo" not in vals:
         if lg:
-            raise EditRequirementError(f"thumbnail.logo.{lg[0]} is set but thumbnail.logo is not: refusing an ambiguous request")
+            raise EditRequirementError(
+                f"thumbnail.logo.{lg[0]} is set but thumbnail.logo is not: refusing an ambiguous request"
+            )
     else:
         path = vals["thumbnail.logo"]
-        if not isinstance(path, str) or not path.strip() or any(part == ".." for part in path.replace("\\", "/").split("/")):
-            raise EditRequirementError("thumbnail.logo must be a path to a PNG / JPEG file (no '..')")
+        if (
+            not isinstance(path, str)
+            or not path.strip()
+            or any(part == ".." for part in path.replace("\\", "/").split("/"))
+        ):
+            raise EditRequirementError(
+                "thumbnail.logo must be a path to a PNG / JPEG file (no '..')"
+            )
         if os.path.splitext(path)[1].lower() not in IMAGE_EXTENSIONS:
-            raise EditRequirementError(f"thumbnail.logo must be a PNG / JPEG file: {os.path.basename(path)}")
+            raise EditRequirementError(
+                f"thumbnail.logo must be a PNG / JPEG file: {os.path.basename(path)}"
+            )
         size = image_size(path)
         if size is None:
-            raise EditRequirementError(f"thumbnail.logo: {os.path.basename(path)} is not a readable PNG / JPEG (its size is read from the file, never guessed)")
-        logo: Dict[str, Any] = {"image": str(Path(path).resolve()), "natural": list(size)}
+            raise EditRequirementError(
+                f"thumbnail.logo: {os.path.basename(path)} is not a readable PNG / JPEG (its size is read from the file, never guessed)"
+            )
+        logo: Dict[str, Any] = {
+            "image": str(Path(path).resolve()),
+            "natural": list(size),
+        }
         if "position" in lg:
-            logo["position"] = _token(vals["thumbnail.logo.position"], "thumbnail.logo.position", re.compile("^(" + "|".join(THUMBNAIL_LOGO_POSITIONS) + ")$"),
-                                      "one of " + ", ".join(THUMBNAIL_LOGO_POSITIONS))
+            logo["position"] = _token(
+                vals["thumbnail.logo.position"],
+                "thumbnail.logo.position",
+                re.compile("^(" + "|".join(THUMBNAIL_LOGO_POSITIONS) + ")$"),
+                "one of " + ", ".join(THUMBNAIL_LOGO_POSITIONS),
+            )
         if "width" in lg:
-            logo["width"] = int(_number(vals["thumbnail.logo.width"], "thumbnail.logo.width", 8, 7680))
+            logo["width"] = int(
+                _number(vals["thumbnail.logo.width"], "thumbnail.logo.width", 8, 7680)
+            )
         if "margin" in lg:
-            logo["margin"] = int(_number(vals["thumbnail.logo.margin"], "thumbnail.logo.margin", 0, 2000))
+            logo["margin"] = int(
+                _number(vals["thumbnail.logo.margin"], "thumbnail.logo.margin", 0, 2000)
+            )
         if "opacity" in lg:
-            logo["opacity"] = float(_number(vals["thumbnail.logo.opacity"], "thumbnail.logo.opacity", 0.0, 1.0))
+            logo["opacity"] = float(
+                _number(
+                    vals["thumbnail.logo.opacity"], "thumbnail.logo.opacity", 0.0, 1.0
+                )
+            )
         out["logo"] = logo
-    parse_thumbnail_features(vals, out, fmt)   # ADR-104
+    parse_thumbnail_features(vals, out, fmt)  # ADR-104
     return out
 
 
@@ -738,7 +1379,9 @@ def image_size(path: str) -> Optional[Tuple[int, int]]:
         with open(path, "rb") as fh:
             head = fh.read(26)
             if head.startswith(b"\x89PNG\r\n\x1a\n") and head[12:16] == b"IHDR":
-                w, h = int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+                w, h = int.from_bytes(head[16:20], "big"), int.from_bytes(
+                    head[20:24], "big"
+                )
                 return (w, h) if w > 0 and h > 0 else None
             if not head.startswith(b"\xff\xd8"):
                 return None
@@ -758,7 +1401,21 @@ def image_size(path: str) -> Optional[Tuple[int, int]]:
                 if len(seg) < 2:
                     return None
                 n = int.from_bytes(seg, "big")
-                if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                if marker in (
+                    0xC0,
+                    0xC1,
+                    0xC2,
+                    0xC3,
+                    0xC5,
+                    0xC6,
+                    0xC7,
+                    0xC9,
+                    0xCA,
+                    0xCB,
+                    0xCD,
+                    0xCE,
+                    0xCF,
+                ):
                     d = fh.read(5)
                     h, w = int.from_bytes(d[1:3], "big"), int.from_bytes(d[3:5], "big")
                     return (w, h) if w > 0 and h > 0 else None
@@ -767,9 +1424,17 @@ def image_size(path: str) -> Optional[Tuple[int, int]]:
         return None
 
 
-def thumbnail_layout(width: int, height: int, logo: Optional[Dict[str, Any]], texts: List[Dict[str, Any]], font_size: int, position: str) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+def thumbnail_layout(
+    width: int,
+    height: int,
+    logo: Optional[Dict[str, Any]],
+    texts: List[Dict[str, Any]],
+    font_size: int,
+    position: str,
+) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
     """ADR-088: the logo's box on the canvas (its own aspect ratio, default width a sixth of the canvas, margin 24 px, top-right) and each extra
-    text with its defaults (the caption's font size and position when not given, white). Pure arithmetic on what the plan already knows."""
+    text with its defaults (the caption's font size and position when not given, white). Pure arithmetic on what the plan already knows.
+    """
     box = None
     if logo:
         nw, nh = logo["natural"]
@@ -779,8 +1444,25 @@ def thumbnail_layout(width: int, height: int, logo: Optional[Dict[str, Any]], te
         pos = logo.get("position") or "top-right"
         x = m if pos.endswith("left") else width - w - m
         y = m if pos.startswith("top") else height - h - m
-        box = {"image": logo["image"], "x": int(x), "y": int(y), "width": w, "height": h, "opacity": float(logo.get("opacity") if logo.get("opacity") is not None else 1.0)}
-    els = [{"text": t["text"], "font_size": int(t.get("font_size") or font_size), "color": t.get("color") or "#FFFFFF", "position": t.get("position") or position} for t in texts]
+        box = {
+            "image": logo["image"],
+            "x": int(x),
+            "y": int(y),
+            "width": w,
+            "height": h,
+            "opacity": float(
+                logo.get("opacity") if logo.get("opacity") is not None else 1.0
+            ),
+        }
+    els = [
+        {
+            "text": t["text"],
+            "font_size": int(t.get("font_size") or font_size),
+            "color": t.get("color") or "#FFFFFF",
+            "position": t.get("position") or position,
+        }
+        for t in texts
+    ]
     return box, els
 
 
@@ -793,30 +1475,75 @@ def qc_requested(m: Dict[str, Requirement]) -> Optional[Requirement]:
 
 
 # ---- QC reference metrics (ADR-058): qc-skill 0.2.3 compares a video deliverable against a master the user names
-QC_REFERENCE_KEYS = ("qc.reference_video", "qc.reference_metrics", "qc.min_vmaf", "qc.min_ssim", "qc.min_psnr_db")
-QC_REFERENCE_METRICS = ("vmaf", "ssim", "psnr")   # qc-skill rules.py REFERENCE_METRICS, in its canonical order
+QC_REFERENCE_KEYS = (
+    "qc.reference_video",
+    "qc.reference_metrics",
+    "qc.min_vmaf",
+    "qc.min_ssim",
+    "qc.min_psnr_db",
+)
+QC_REFERENCE_METRICS = (
+    "vmaf",
+    "ssim",
+    "psnr",
+)  # qc-skill rules.py REFERENCE_METRICS, in its canonical order
 # the threshold key of each metric → (rule field, lo, hi); unset, the Skill's own defaults apply (VMAF 93, SSIM 0.95, PSNR 31 dB)
-QC_REFERENCE_MINIMA = {"vmaf": ("qc.min_vmaf", "min_vmaf", 0.0, 100.0), "ssim": ("qc.min_ssim", "min_ssim", 0.0, 1.0), "psnr": ("qc.min_psnr_db", "min_psnr_db", 0.0, 100.0)}
-QC_REFERENCE_EXTENSIONS = (".mp4", ".mov", ".mkv", ".m4v", ".webm", ".mxf", ".avi", ".ts", ".mts", ".m2ts")
+QC_REFERENCE_MINIMA = {
+    "vmaf": ("qc.min_vmaf", "min_vmaf", 0.0, 100.0),
+    "ssim": ("qc.min_ssim", "min_ssim", 0.0, 1.0),
+    "psnr": ("qc.min_psnr_db", "min_psnr_db", 0.0, 100.0),
+}
+QC_REFERENCE_EXTENSIONS = (
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".m4v",
+    ".webm",
+    ".mxf",
+    ".avi",
+    ".ts",
+    ".mts",
+    ".m2ts",
+)
 
 
 def parse_qc_reference(m: Dict[str, Requirement]) -> Optional[Dict[str, Any]]:
     """`qc.reference_video` (the master file) + `qc.reference_metrics` (vmaf, ssim, psnr: a comma list or a list) and optional
     `qc.min_vmaf` / `qc.min_ssim` / `qc.min_psnr_db` → {"path", "metrics", "rule": {reference_metrics, min_*}, "requirements"}.
     Opt-in and explicit: every key needs the `qc` gate, the file and the metrics are named together, and a threshold only for a
-    listed metric — an ambiguous request is refused, never completed by guessing. None when none of the keys is set."""
+    listed metric — an ambiguous request is refused, never completed by guessing. None when none of the keys is set.
+    """
     given = [m[k] for k in QC_REFERENCE_KEYS if k in m and m[k].provenance != "DEFAULT"]
     if not given:
         return None
     if qc_requested(m) is None:
-        raise EditRequirementError(f"{', '.join(r.key for r in given)} set without the qc gate (--set qc=true): refusing an ambiguous request")
+        raise EditRequirementError(
+            f"{', '.join(r.key for r in given)} set without the qc gate (--set qc=true): refusing an ambiguous request"
+        )
     ref, met = m.get("qc.reference_video"), m.get("qc.reference_metrics")
-    if ref is None or ref.provenance == "DEFAULT" or met is None or met.provenance == "DEFAULT":
-        raise EditRequirementError("qc.reference_video and qc.reference_metrics are set together (the master and what to measure against it)")
-    raw = met.value if isinstance(met.value, list) else str(met.value).split(",") if isinstance(met.value, str) else None
+    if (
+        ref is None
+        or ref.provenance == "DEFAULT"
+        or met is None
+        or met.provenance == "DEFAULT"
+    ):
+        raise EditRequirementError(
+            "qc.reference_video and qc.reference_metrics are set together (the master and what to measure against it)"
+        )
+    raw = (
+        met.value
+        if isinstance(met.value, list)
+        else str(met.value).split(",") if isinstance(met.value, str) else None
+    )
     names = [str(x).strip().lower() for x in raw or [] if str(x).strip()]
-    if not names or any(n not in QC_REFERENCE_METRICS for n in names) or len(set(names)) != len(names):
-        raise EditRequirementError(f"qc.reference_metrics must name one or more of {', '.join(QC_REFERENCE_METRICS)} once each, got {met.value!r}")
+    if (
+        not names
+        or any(n not in QC_REFERENCE_METRICS for n in names)
+        or len(set(names)) != len(names)
+    ):
+        raise EditRequirementError(
+            f"qc.reference_metrics must name one or more of {', '.join(QC_REFERENCE_METRICS)} once each, got {met.value!r}"
+        )
     metrics = [x for x in QC_REFERENCE_METRICS if x in names]
     rule: Dict[str, Any] = {"reference_metrics": metrics}
     reqs = [ref, met]
@@ -825,10 +1552,17 @@ def parse_qc_reference(m: Dict[str, Requirement]) -> Optional[Dict[str, Any]]:
         if r is None or r.provenance == "DEFAULT":
             continue
         if metric not in metrics:
-            raise EditRequirementError(f"{key} is set but qc.reference_metrics does not list {metric}: refusing an ambiguous request")
+            raise EditRequirementError(
+                f"{key} is set but qc.reference_metrics does not list {metric}: refusing an ambiguous request"
+            )
         rule[field] = float(_number(r.value, key, lo, hi))
         reqs.append(r)
-    return {"path": _file(ref.value, "qc.reference_video", QC_REFERENCE_EXTENSIONS), "metrics": metrics, "rule": rule, "requirements": reqs}
+    return {
+        "path": _file(ref.value, "qc.reference_video", QC_REFERENCE_EXTENSIONS),
+        "metrics": metrics,
+        "rule": rule,
+        "requirements": reqs,
+    }
 
 
 # ---- IR arithmetic
@@ -840,18 +1574,26 @@ GRID_GAP_DEFAULT = 0
 def grid_size(op: Dict[str, Any]) -> Optional[Tuple[int, int]]:
     """The picture grid.py writes: xstack places input i at column i % cols, row i // cols, each cell cell_width x cell_height and
     `gap` apart, so the frame is the cells the inputs fill plus the gaps between them. An unfilled grid with gaps is None: grid.py
-    pads a colour-converted cell by its gap but leaves an untouched one bare, so the size depends on the inputs' colour tags (not guessed)."""
+    pads a colour-converted cell by its gap but leaves an untouched one bare, so the size depends on the inputs' colour tags (not guessed).
+    """
     cols, rows = int(op["cols"]), int(op["rows"])
     n = len(op.get("inputs") or []) or cols * rows
-    cw, ch = int(op.get("cell_width") or GRID_CELL_DEFAULT[0]), int(op.get("cell_height") or GRID_CELL_DEFAULT[1])
+    cw, ch = int(op.get("cell_width") or GRID_CELL_DEFAULT[0]), int(
+        op.get("cell_height") or GRID_CELL_DEFAULT[1]
+    )
     gap = int(op.get("gap") or GRID_GAP_DEFAULT)
     if gap and n < cols * rows:
         return None
     used_cols, used_rows = min(cols, n), -(-n // cols)
-    return used_cols * cw + (used_cols - 1) * gap, used_rows * ch + (used_rows - 1) * gap
+    return (
+        used_cols * cw + (used_cols - 1) * gap,
+        used_rows * ch + (used_rows - 1) * gap,
+    )
 
 
-def picture_size(technical: Dict[str, Any], video_ops: List[Dict[str, Any]], subject: str) -> Optional[Tuple[int, int]]:
+def picture_size(
+    technical: Dict[str, Any], video_ops: List[Dict[str, Any]], subject: str
+) -> Optional[Tuple[int, int]]:
     """The subject's picture size after its editing operations, applied in the IR's (fixed) operation order: concat may set
     width / height; a grid is its cells (`grid_size`); crop makes the picture its rectangle (ADR-060's approved proposal or an explicit `edit.crop`, in source
     pixels, before any turn); a 90 / 270 rotation swaps width and height; resize keeps the aspect; fit / fill change it.
@@ -867,14 +1609,21 @@ def picture_size(technical: Dict[str, Any], video_ops: List[Dict[str, Any]], sub
         t = op.get("type")
         if t == "video.concat" and op.get("width") and op.get("height"):
             w, h = int(op["width"]), int(op["height"])
-        elif t == "video.grid" and op.get("cols") and op.get("rows"):   # the grid's own picture, not its first input (PR #81's leftover)
+        elif (
+            t == "video.grid" and op.get("cols") and op.get("rows")
+        ):  # the grid's own picture, not its first input (PR #81's leftover)
             size = grid_size(op)
             if size is None:
                 return None
             w, h = size
-        elif t == "video.crop" and op.get("width") and op.get("height"):   # the cropped picture is the rectangle (before rotate / resize / fit)
+        elif (
+            t == "video.crop" and op.get("width") and op.get("height")
+        ):  # the cropped picture is the rectangle (before rotate / resize / fit)
             w, h = int(op["width"]), int(op["height"])
-        elif t == "video.rotate" and op.get("degrees") in (90, 270):   # ADR-062: a quarter turn swaps width and height
+        elif t == "video.rotate" and op.get("degrees") in (
+            90,
+            270,
+        ):  # ADR-062: a quarter turn swaps width and height
             w, h = h, w
         elif t == "video.resize" and op.get("width"):
             nw = int(op["width"])
@@ -888,43 +1637,115 @@ def picture_size(technical: Dict[str, Any], video_ops: List[Dict[str, Any]], sub
     return w, h
 
 
-def ir_color_operation(op_type: str, subject: str, params: Dict[str, Any], decision_ids: List[str], input_id: str, output: str, scope: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
+def ir_color_operation(
+    op_type: str,
+    subject: str,
+    params: Dict[str, Any],
+    decision_ids: List[str],
+    input_id: str,
+    output: str,
+    scope: Optional[Dict[str, float]] = None,
+) -> Dict[str, Any]:
     spec = COLOR_OPERATIONS[op_type]
-    rec: Dict[str, Any] = {"type": op_type, "asset": subject, "input": input_id, "output": output}
+    rec: Dict[str, Any] = {
+        "type": op_type,
+        "asset": subject,
+        "input": input_id,
+        "output": output,
+    }
     if op_type == "color.lut":
         rec["lut"] = params["lut"]
     for k in spec["params"]:
         if params.get(k) is not None:
             rec[k] = params[k]
     if scope is not None:
-        rec["temporal_scope"] = {"start": round(float(scope["start"]), 3), "end": round(float(scope["end"]), 3)}
+        rec["temporal_scope"] = {
+            "start": round(float(scope["start"]), 3),
+            "end": round(float(scope["end"]), 3),
+        }
     rec["decision_ids"] = list(decision_ids)
     return rec
 
 
-def ir_graphics_render(subject: str, elements: List[Dict[str, Any]], decision_ids: List[str], input_id: str, output: str, scope: Optional[Dict[str, float]] = None,
-                       options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def ir_graphics_render(
+    subject: str,
+    elements: List[Dict[str, Any]],
+    decision_ids: List[str],
+    input_id: str,
+    output: str,
+    scope: Optional[Dict[str, float]] = None,
+    options: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """One render of every element of the subject. The files an element composites (an image overlay's picture, ADR-064: a video
-    overlay's clip) are also named on the operation (`image` / `video`), the way the compiler finds the inputs it registers."""
-    rec: Dict[str, Any] = {"type": "graphics.render", "asset": subject, "input": input_id, "output": output, "elements": list(elements)}
-    for typ, ref in (("image_overlay", "image"), ("video_overlay", "video"), ("rendered_layer", "layer")):   # ADR-102: the rendered layer's clip
-        files = [e["parameters"][ref] for e in elements if e.get("type") == typ and e.get("parameters", {}).get(ref)]
+    overlay's clip) are also named on the operation (`image` / `video`), the way the compiler finds the inputs it registers.
+    """
+    rec: Dict[str, Any] = {
+        "type": "graphics.render",
+        "asset": subject,
+        "input": input_id,
+        "output": output,
+        "elements": list(elements),
+    }
+    for typ, ref in (
+        ("image_overlay", "image"),
+        ("video_overlay", "video"),
+        ("rendered_layer", "layer"),
+    ):  # ADR-102: the rendered layer's clip
+        files = [
+            e["parameters"][ref]
+            for e in elements
+            if e.get("type") == typ and e.get("parameters", {}).get(ref)
+        ]
         if files and typ == "rendered_layer" and files[0] == f"{subject}_html_layer":
-            rec["layer_source"] = files[0]   # ADR-114: rendered in this plan (graphics.html_layer's output), an artifact id, not the user's file
+            rec["layer_source"] = files[
+                0
+            ]  # ADR-114: rendered in this plan (graphics.html_layer's output), an artifact id, not the user's file
         elif files:
             rec[ref] = files[0]
-    if options:   # ADR-102: style / brand kit / themes (the user's theme files) / reserved regions of the whole render
+    if (
+        options
+    ):  # ADR-102: style / brand kit / themes (the user's theme files) / reserved regions of the whole render
         rec["options"] = json.loads(json.dumps(options))
     if scope is not None:
-        rec["temporal_scope"] = {"start": round(float(scope["start"]), 3), "end": round(float(scope["end"]), 3)}
+        rec["temporal_scope"] = {
+            "start": round(float(scope["start"]), 3),
+            "end": round(float(scope["end"]), 3),
+        }
     rec["decision_ids"] = list(decision_ids)
     return rec
 
 
-def ir_thumbnail(subject: str, params: Dict[str, Any], decision_ids: List[str], input_id: str, output: str) -> Dict[str, Any]:
-    rec: Dict[str, Any] = {"type": "graphics.thumbnail", "asset": subject, "input": input_id, "output": output}
-    for k in ("timestamp", "format", "width", "height", "text", "font_id", "font_size", "color", "position", "texts", "logo",   # ADR-088: texts / logo
-              "frame_choice", "avoid_faces", "variants", "layers", "batch"):   # ADR-104
+def ir_thumbnail(
+    subject: str,
+    params: Dict[str, Any],
+    decision_ids: List[str],
+    input_id: str,
+    output: str,
+) -> Dict[str, Any]:
+    rec: Dict[str, Any] = {
+        "type": "graphics.thumbnail",
+        "asset": subject,
+        "input": input_id,
+        "output": output,
+    }
+    for k in (
+        "timestamp",
+        "format",
+        "width",
+        "height",
+        "text",
+        "font_id",
+        "font_size",
+        "color",
+        "position",
+        "texts",
+        "logo",  # ADR-088: texts / logo
+        "frame_choice",
+        "avoid_faces",
+        "variants",
+        "layers",
+        "batch",
+    ):  # ADR-104
         if params.get(k) not in (None, []):
             rec[k] = params[k]
     rec["decision_ids"] = list(decision_ids)

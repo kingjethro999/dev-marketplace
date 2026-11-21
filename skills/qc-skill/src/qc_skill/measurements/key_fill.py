@@ -54,14 +54,19 @@ FRAMES_NOTE = (
 
 
 def _timecode(probe_data: Dict[str, Any], stream: Dict[str, Any]) -> Optional[str]:
-    for tags in ((stream.get("tags") or {}), (probe_data.get("format", {}).get("tags") or {})):
+    for tags in (
+        (stream.get("tags") or {}),
+        (probe_data.get("format", {}).get("tags") or {}),
+    ):
         tc = tags.get("timecode")
         if isinstance(tc, str) and tc:
             return tc
     return None
 
 
-def _facts(ffprobe_path: str, path: Path, probe_data: Dict[str, Any], stream: Dict[str, Any]) -> Dict[str, Any]:
+def _facts(
+    ffprobe_path: str, path: Path, probe_data: Dict[str, Any], stream: Dict[str, Any]
+) -> Dict[str, Any]:
     rate = stream_frame_rate(stream)
     frames, _ = count_frames(ffprobe_path, path, int(stream["index"]))
     formats = alpha_pixel_formats(ffprobe_path)
@@ -70,9 +75,12 @@ def _facts(ffprobe_path: str, path: Path, probe_data: Dict[str, Any], stream: Di
     except (TypeError, ValueError):
         start = None
     return {
-        "width": stream.get("width"), "height": stream.get("height"),
+        "width": stream.get("width"),
+        "height": stream.get("height"),
         "frame_rate": None if rate is None else f"{rate.numerator}/{rate.denominator}",
-        "frames": frames, "start_time": start, "timecode": _timecode(probe_data, stream),
+        "frames": frames,
+        "start_time": start,
+        "timecode": _timecode(probe_data, stream),
         "pix_fmt": stream.get("pix_fmt"),
         "alpha": None if formats is None else stream.get("pix_fmt") in formats,
         "color_range": stream.get("color_range"),
@@ -90,7 +98,9 @@ def _key_range(rule: Any, key_facts: Dict[str, Any]) -> str:
 _PLANAR_DEPTH_RE = re.compile(r"^(?:yuva?|gray)\w*?(\d+)?(le|be)?$")
 
 
-def _luma_reader(pix_fmt: Optional[str], range_name: str) -> Tuple[List[str], Optional[str], int, Any]:
+def _luma_reader(
+    pix_fmt: Optional[str], range_name: str
+) -> Tuple[List[str], Optional[str], int, Any]:
     """``(filters, output pix_fmt, bytes per pixel, to_255)`` that read a
     stream's luma as 0-255 from ``range_name``. A YUV or gray stream's Y
     plane is taken as stored (``extractplanes=y``, its own bit depth) and
@@ -108,7 +118,10 @@ def _luma_reader(pix_fmt: Optional[str], range_name: str) -> Tuple[List[str], Op
         lut = [round(v * 255 / top) for v in range(top + 1)]
     else:
         scale = 1 << (depth - 8)
-        lut = [min(255, max(0, round((v - 16 * scale) * 255 / (219 * scale)))) for v in range(top + 1)]
+        lut = [
+            min(255, max(0, round((v - 16 * scale) * 255 / (219 * scale))))
+            for v in range(top + 1)
+        ]
     if depth == 8:
         table = bytes(lut)
         return ["extractplanes=y"], None, 1, lambda raw: raw.translate(table)
@@ -150,31 +163,53 @@ def _off_pixels(key: bytes, fill: bytes, mode: str, tolerance: int) -> int:
 
 
 def _compare(
-    ffmpeg_path: str, fill_path: Path, fill_probe: Dict[str, Any], fill_stream: Dict[str, Any],
-    key_path: Path, key_probe: Dict[str, Any], key_stream: Dict[str, Any],
-    facts: Dict[str, Any], rule: Any, key_range: str,
+    ffmpeg_path: str,
+    fill_path: Path,
+    fill_probe: Dict[str, Any],
+    fill_stream: Dict[str, Any],
+    key_path: Path,
+    key_probe: Dict[str, Any],
+    key_stream: Dict[str, Any],
+    facts: Dict[str, Any],
+    rule: Any,
+    key_range: str,
 ) -> Dict[str, Any]:
     fill_facts = facts["fill"]
-    width, height, frames = fill_facts["width"], fill_facts["height"], fill_facts["frames"]
+    width, height, frames = (
+        fill_facts["width"],
+        fill_facts["height"],
+        fill_facts["frames"],
+    )
     rate = stream_frame_rate(fill_stream)
     mode = "alpha" if fill_facts["alpha"] else "black_outside_key"
     tolerance = rule.tolerance if rule.tolerance is not None else DEFAULT_TOLERANCE
     limit = rule.max_off_fraction if rule.max_off_fraction is not None else 0.0
     entry: Dict[str, Any] = {
-        "measured": False, "mode": mode, "key_range": key_range, "tolerance": tolerance, "max_off_fraction": limit,
+        "measured": False,
+        "mode": mode,
+        "key_range": key_range,
+        "tolerance": tolerance,
+        "max_off_fraction": limit,
     }
     pixels = width * height
     if frames <= 0 or pixels <= 0:
         entry["reason"] = "the pair has no frames to compare"
         return entry
     if mode == "alpha":
-        fill_read: Tuple[List[str], Optional[str], int, Any] = (["alphaextract", "format=gray"], "gray", 1, None)
+        fill_read: Tuple[List[str], Optional[str], int, Any] = (
+            ["alphaextract", "format=gray"],
+            "gray",
+            1,
+            None,
+        )
     else:
         entry["fill_range"] = _stream_range(fill_facts)
         fill_read = _luma_reader(fill_facts["pix_fmt"], entry["fill_range"])
     key_read = _luma_reader(facts["key"]["pix_fmt"], key_range)
     per_chunk = max(1, min(frames, CHUNK_BYTES // (2 * pixels)))
-    fill_origin, key_origin = _stream_origin(fill_probe, fill_stream), _stream_origin(key_probe, key_stream)
+    fill_origin, key_origin = _stream_origin(fill_probe, fill_stream), _stream_origin(
+        key_probe, key_stream
+    )
     differing: List[Dict[str, Any]] = []
     differing_count = 0
     worst: Optional[Dict[str, Any]] = None
@@ -183,19 +218,37 @@ def _compare(
     while start < frames:
         n = min(per_chunk, frames - start)
         got_fill = grab_frames(
-            ffmpeg_path, fill_path, int(fill_stream["index"]), start, n, rate, fill_read[0],
-            pix_fmt=fill_read[1], frame_bytes=pixels * fill_read[2], origin=fill_origin,
+            ffmpeg_path,
+            fill_path,
+            int(fill_stream["index"]),
+            start,
+            n,
+            rate,
+            fill_read[0],
+            pix_fmt=fill_read[1],
+            frame_bytes=pixels * fill_read[2],
+            origin=fill_origin,
         )
         got_key = grab_frames(
-            ffmpeg_path, key_path, int(key_stream["index"]), start, n, rate, key_read[0],
-            pix_fmt=key_read[1], frame_bytes=pixels * key_read[2], origin=key_origin,
+            ffmpeg_path,
+            key_path,
+            int(key_stream["index"]),
+            start,
+            n,
+            rate,
+            key_read[0],
+            pix_fmt=key_read[1],
+            frame_bytes=pixels * key_read[2],
+            origin=key_origin,
         )
         for name, got in (("fill", got_fill), ("key", got_key)):
             if "reason" in got:
                 entry["reason"] = f"the {name}: {got['reason']}"
                 return entry
             if len(got["frames"]) < n:
-                entry["reason"] = f"the {name} ended at frame {got['frames'][-1]['index']}, before its counted {frames} frames"
+                entry["reason"] = (
+                    f"the {name} ended at frame {got['frames'][-1]['index']}, before its counted {frames} frames"
+                )
                 return entry
         for f, k in zip(got_fill["frames"], got_key["frames"]):
             fill_values = f["raw"] if fill_read[3] is None else fill_read[3](f["raw"])
@@ -204,15 +257,32 @@ def _compare(
             share = round(off / pixels, 6)  # reported; judged on the exact count below
             compared += 1
             if worst is None or off > worst["off_pixels"]:
-                worst = {"frame": f["index"], "time": f["time"], "off_pixels": off, "off_fraction": share}
+                worst = {
+                    "frame": f["index"],
+                    "time": f["time"],
+                    "off_pixels": off,
+                    "off_fraction": share,
+                }
             if off > limit * pixels:
                 differing_count += 1
                 if len(differing) < MAX_LISTED_FRAMES:
-                    differing.append({"frame": f["index"], "time": f["time"], "off_pixels": off, "off_fraction": share})
+                    differing.append(
+                        {
+                            "frame": f["index"],
+                            "time": f["time"],
+                            "off_pixels": off,
+                            "off_fraction": share,
+                        }
+                    )
         start += n
     entry.update(
-        measured=True, frames_compared=compared, pixels_per_frame=pixels, differing_frames=differing_count,
-        first_differing=differing[0] if differing else None, listed_differing=differing, worst=worst,
+        measured=True,
+        frames_compared=compared,
+        pixels_per_frame=pixels,
+        differing_frames=differing_count,
+        first_differing=differing[0] if differing else None,
+        listed_differing=differing,
+        worst=worst,
     )
     return entry
 
@@ -231,21 +301,33 @@ def _key_stream(ffprobe_path: str, key_path: Path):
 
 
 def analyze_key_fill(
-    ffmpeg_path: str, ffprobe_path: str, fill_path: Path, fill_probe: Dict[str, Any], fill_stream: Dict[str, Any],
-    rule: Any, key_path: Path,
+    ffmpeg_path: str,
+    ffprobe_path: str,
+    fill_path: Path,
+    fill_probe: Dict[str, Any],
+    fill_stream: Dict[str, Any],
+    rule: Any,
+    key_path: Path,
 ) -> List[QCMeasurement]:
     key_probe, key_stream, failure = _key_stream(ffprobe_path, key_path)
     if failure is not None:
         pair: Dict[str, Any] = {"measured": False, "reason": failure}
         frames: Dict[str, Any] = {"measured": False, "reason": failure}
     else:
-        facts = {"fill": _facts(ffprobe_path, fill_path, fill_probe, fill_stream), "key": _facts(ffprobe_path, key_path, key_probe, key_stream)}
+        facts = {
+            "fill": _facts(ffprobe_path, fill_path, fill_probe, fill_stream),
+            "key": _facts(ffprobe_path, key_path, key_probe, key_stream),
+        }
         unread = [
-            f"the {side}'s {name}" for side in ("fill", "key") for name in ("width", "height", "frame_rate", "frames")
+            f"the {side}'s {name}"
+            for side in ("fill", "key")
+            for name in ("width", "height", "frame_rate", "frames")
             if facts[side][name] is None
         ]
         if facts["fill"]["alpha"] is None:
-            unread.append("whether the fill carries alpha (ffprobe could not list the pixel formats with alpha)")
+            unread.append(
+                "whether the fill carries alpha (ffprobe could not list the pixel formats with alpha)"
+            )
         if unread:
             reason = f"{', '.join(unread)} could not be measured"
             pair = {"measured": False, "reason": reason, **facts}
@@ -256,24 +338,60 @@ def analyze_key_fill(
             key_range = _key_range(rule, facts["key"])
             if mismatches:
                 frames = {
-                    "measured": False, "key_range": key_range,
-                    "reason": "not compared: the pair differs in " + ", ".join(m["field"] for m in mismatches),
+                    "measured": False,
+                    "key_range": key_range,
+                    "reason": "not compared: the pair differs in "
+                    + ", ".join(m["field"] for m in mismatches),
                 }
             else:
                 frames = _compare(
-                    ffmpeg_path, fill_path, fill_probe, fill_stream, key_path, key_probe, key_stream, facts, rule, key_range,
+                    ffmpeg_path,
+                    fill_path,
+                    fill_probe,
+                    fill_stream,
+                    key_path,
+                    key_probe,
+                    key_stream,
+                    facts,
+                    rule,
+                    key_range,
                 )
     return [
-        QCMeasurement("video.key_fill_pair", "video", "key_fill_pair", pair, source="ffprobe", notes=PAIR_NOTE),
-        QCMeasurement("video.key_fill_frames", "video", "key_fill_frames", frames, source="ffmpeg:rawvideo", notes=FRAMES_NOTE),
+        QCMeasurement(
+            "video.key_fill_pair",
+            "video",
+            "key_fill_pair",
+            pair,
+            source="ffprobe",
+            notes=PAIR_NOTE,
+        ),
+        QCMeasurement(
+            "video.key_fill_frames",
+            "video",
+            "key_fill_frames",
+            frames,
+            source="ffmpeg:rawvideo",
+            notes=FRAMES_NOTE,
+        ),
     ]
 
 
 def not_performed(reason: str) -> List[QCMeasurement]:
     return [
-        QCMeasurement("video.key_fill_pair", "video", "key_fill_pair", {"measured": False, "reason": reason}, source="ffprobe", notes=PAIR_NOTE),
         QCMeasurement(
-            "video.key_fill_frames", "video", "key_fill_frames", {"measured": False, "reason": reason},
-            source="ffmpeg:rawvideo", notes=FRAMES_NOTE,
+            "video.key_fill_pair",
+            "video",
+            "key_fill_pair",
+            {"measured": False, "reason": reason},
+            source="ffprobe",
+            notes=PAIR_NOTE,
+        ),
+        QCMeasurement(
+            "video.key_fill_frames",
+            "video",
+            "key_fill_frames",
+            {"measured": False, "reason": reason},
+            source="ffmpeg:rawvideo",
+            notes=FRAMES_NOTE,
         ),
     ]

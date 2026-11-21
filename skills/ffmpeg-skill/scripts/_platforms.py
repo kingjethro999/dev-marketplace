@@ -37,6 +37,7 @@ ASS note: caption.py's --size and --margin are in the 288-line ASS script grid, 
 a fraction of the frame height is that fraction * 288 (ass_units() below); the
 burn scales it back to the real frame. graphics.py and look.py work in pixels.
 """
+
 from typing import Any, Dict, List, Optional
 
 ASS_SCRIPT_HEIGHT = 288  # caption.py's --size/--margin reference grid
@@ -54,8 +55,20 @@ _NO_SAFE = {"top": 0.0, "bottom": 0.0, "left": 0.0, "right": 0.0}
 # caption defaults: size is a fraction of the frame height (0.0833 = the 24 that every
 # vertical job in this repo has used since 1.2), position/box/outline/animate as the
 # caption.py flags of the same name.
-_CAP_VERTICAL = {"size": 0.0833, "position": "bottom", "box": False, "outline": 2, "animate": "pop"}
-_CAP_WIDE = {"size": 0.0694, "position": "bottom", "box": False, "outline": 2, "animate": "none"}
+_CAP_VERTICAL = {
+    "size": 0.0833,
+    "position": "bottom",
+    "box": False,
+    "outline": 2,
+    "animate": "pop",
+}
+_CAP_WIDE = {
+    "size": 0.0694,
+    "position": "bottom",
+    "box": False,
+    "outline": 2,
+    "animate": "none",
+}
 
 # The one true-peak tolerance every tool applies to a dBTP ceiling, reported beside the verdict.
 # Before 2.18 loudness.py allowed +0.1 dB, check.py +0.05 and export.py 0.0, so "verified" meant a
@@ -75,144 +88,271 @@ UPLOAD_LIMITS_AS_OF = "2026-10-30"
 
 def upload_limit_note(platform: str) -> str:
     """Why a row measured against this table's length or size limit is guidance, in one clause."""
-    return (f"the limit is this tool's table for {platform} as of {UPLOAD_LIMITS_AS_OF}; platforms change "
-            "upload limits, so whoever uploads checks the current one")
+    return (
+        f"the limit is this tool's table for {platform} as of {UPLOAD_LIMITS_AS_OF}; platforms change "
+        "upload limits, so whoever uploads checks the current one"
+    )
+
 
 PLATFORMS: Dict[str, Dict[str, Any]] = {
     "tiktok": {
         "title": "TikTok",
         "frame": {"w": 1080, "h": 1920, "aspect": "9:16"},
         "fps": 30,
-        "spec": {"max_duration": 600, "aspects": ["9:16", "1:1"], "min_height": 1080, "fps_max": 60,
-                 "codecs": ["h264", "hevc"], "max_bytes": 4 * 1024 ** 3,
-                 "lufs": -14, "lufs_tol": 2.0, "tp": -1.0, "sdr_only": True},
+        "spec": {
+            "max_duration": 600,
+            "aspects": ["9:16", "1:1"],
+            "min_height": 1080,
+            "fps_max": 60,
+            "codecs": ["h264", "hevc"],
+            "max_bytes": 4 * 1024**3,
+            "lufs": -14,
+            "lufs_tol": 2.0,
+            "tp": -1.0,
+            "sdr_only": True,
+        },
         # the description/caption block along the bottom, the like/comment/share column on the
         # right, the status bar and the "Following | For You" tabs at the top
         "safe": {"top": 0.10, "bottom": 0.22, "left": 0.05, "right": 0.14},
         "caption": _CAP_VERTICAL,
-        "preset": "tiktok", "check": "tiktok",
+        "preset": "tiktok",
+        "check": "tiktok",
     },
     "reels": {
         "title": "Instagram Reels",
         "frame": {"w": 1080, "h": 1920, "aspect": "9:16"},
         "fps": 30,
-        "spec": {"max_duration": 90, "aspects": ["9:16", "4:5", "1:1"], "min_height": 1080, "fps_max": 60,
-                 "codecs": ["h264", "hevc"], "max_bytes": 4 * 1024 ** 3,
-                 "lufs": -14, "lufs_tol": 2.0, "tp": -1.0, "sdr_only": True},
+        "spec": {
+            "max_duration": 90,
+            "aspects": ["9:16", "4:5", "1:1"],
+            "min_height": 1080,
+            "fps_max": 60,
+            "codecs": ["h264", "hevc"],
+            "max_bytes": 4 * 1024**3,
+            "lufs": -14,
+            "lufs_tol": 2.0,
+            "tp": -1.0,
+            "sdr_only": True,
+        },
         "safe": {"top": 0.08, "bottom": 0.20, "left": 0.05, "right": 0.12},
         "caption": _CAP_VERTICAL,
-        "preset": "reels", "check": "reels",
+        "preset": "reels",
+        "check": "reels",
     },
     "shorts": {
         "title": "YouTube Shorts",
         "frame": {"w": 1080, "h": 1920, "aspect": "9:16"},
         "fps": 30,
-        "spec": {"max_duration": 180, "aspects": ["9:16", "1:1"], "min_height": 1080, "fps_max": 60,
-                 "codecs": ["h264", "hevc"], "max_bytes": 256 * 1024 ** 3,
-                 "lufs": -14, "lufs_tol": 2.0, "tp": -1.0, "sdr_only": False},
+        "spec": {
+            "max_duration": 180,
+            "aspects": ["9:16", "1:1"],
+            "min_height": 1080,
+            "fps_max": 60,
+            "codecs": ["h264", "hevc"],
+            "max_bytes": 256 * 1024**3,
+            "lufs": -14,
+            "lufs_tol": 2.0,
+            "tp": -1.0,
+            "sdr_only": False,
+        },
         "safe": {"top": 0.06, "bottom": 0.18, "left": 0.05, "right": 0.12},
         "caption": _CAP_VERTICAL,
-        "preset": "shorts", "check": "shorts",
+        "preset": "shorts",
+        "check": "shorts",
     },
     "youtube": {
         "title": "YouTube",
         "frame": {"w": 1920, "h": 1080, "aspect": "16:9"},
         "fps": None,
-        "spec": {"max_duration": 12 * 3600, "aspects": ["16:9", "9:16", "1:1", "4:3"], "min_height": 720, "fps_max": 60,
-                 "codecs": ["h264", "hevc", "prores", "av1", "vp9"], "max_bytes": 256 * 1024 ** 3,
-                 "lufs": -14, "lufs_tol": 2.0, "tp": -1.0, "sdr_only": False},
+        "spec": {
+            "max_duration": 12 * 3600,
+            "aspects": ["16:9", "9:16", "1:1", "4:3"],
+            "min_height": 720,
+            "fps_max": 60,
+            "codecs": ["h264", "hevc", "prores", "av1", "vp9"],
+            "max_bytes": 256 * 1024**3,
+            "lufs": -14,
+            "lufs_tol": 2.0,
+            "tp": -1.0,
+            "sdr_only": False,
+        },
         "safe": _SAFE_5,
         "caption": _CAP_WIDE,
-        "preset": "youtube", "check": "youtube",
+        "preset": "youtube",
+        "check": "youtube",
     },
     "youtube-hdr": {
         "title": "YouTube (HDR10)",
         "frame": {"w": 1920, "h": 1080, "aspect": "16:9"},
         "fps": None,
-        "spec": dict({"max_duration": 12 * 3600, "aspects": ["16:9", "9:16", "1:1", "4:3"], "min_height": 720, "fps_max": 60,
-                      "codecs": ["h264", "hevc", "prores", "av1", "vp9"], "max_bytes": 256 * 1024 ** 3,
-                      "lufs": -14, "lufs_tol": 2.0, "tp": -1.0, "sdr_only": False}),
+        "spec": dict(
+            {
+                "max_duration": 12 * 3600,
+                "aspects": ["16:9", "9:16", "1:1", "4:3"],
+                "min_height": 720,
+                "fps_max": 60,
+                "codecs": ["h264", "hevc", "prores", "av1", "vp9"],
+                "max_bytes": 256 * 1024**3,
+                "lufs": -14,
+                "lufs_tol": 2.0,
+                "tp": -1.0,
+                "sdr_only": False,
+            }
+        ),
         "safe": _SAFE_5,
         "caption": _CAP_WIDE,
-        "preset": "youtube-hdr", "check": "youtube",
+        "preset": "youtube-hdr",
+        "check": "youtube",
     },
     "youtube-av1": {
         "title": "YouTube (AV1)",
         "frame": {"w": 1920, "h": 1080, "aspect": "16:9"},
         "fps": None,
-        "spec": dict({"max_duration": 12 * 3600, "aspects": ["16:9", "9:16", "1:1", "4:3"], "min_height": 720, "fps_max": 60,
-                      "codecs": ["h264", "hevc", "prores", "av1", "vp9"], "max_bytes": 256 * 1024 ** 3,
-                      "lufs": -14, "lufs_tol": 2.0, "tp": -1.0, "sdr_only": False}),
+        "spec": dict(
+            {
+                "max_duration": 12 * 3600,
+                "aspects": ["16:9", "9:16", "1:1", "4:3"],
+                "min_height": 720,
+                "fps_max": 60,
+                "codecs": ["h264", "hevc", "prores", "av1", "vp9"],
+                "max_bytes": 256 * 1024**3,
+                "lufs": -14,
+                "lufs_tol": 2.0,
+                "tp": -1.0,
+                "sdr_only": False,
+            }
+        ),
         "safe": _SAFE_5,
         "caption": _CAP_WIDE,
-        "preset": "youtube-av1", "check": "youtube",
+        "preset": "youtube-av1",
+        "check": "youtube",
     },
     "x": {
         "title": "X (Twitter)",
         "frame": {"w": 1280, "h": 720, "aspect": "16:9"},
         "fps": 30,
-        "spec": {"max_duration": 140, "aspects": ["16:9", "1:1", "9:16"], "min_height": 720, "fps_max": 60,
-                 "codecs": ["h264"], "max_bytes": 512 * 1024 ** 2,
-                 "lufs": -14, "lufs_tol": 3.0, "tp": -1.0, "sdr_only": True},
+        "spec": {
+            "max_duration": 140,
+            "aspects": ["16:9", "1:1", "9:16"],
+            "min_height": 720,
+            "fps_max": 60,
+            "codecs": ["h264"],
+            "max_bytes": 512 * 1024**2,
+            "lufs": -14,
+            "lufs_tol": 3.0,
+            "tp": -1.0,
+            "sdr_only": True,
+        },
         "safe": _SAFE_5,
         "caption": _CAP_WIDE,
-        "preset": "x", "check": "x",
+        "preset": "x",
+        "check": "x",
     },
     "linkedin": {
         "title": "LinkedIn",
         "frame": {"w": 1080, "h": 1080, "aspect": "1:1"},
         "fps": 30,
-        "spec": {"max_duration": 600, "aspects": ["16:9", "1:1", "9:16", "4:5"], "min_height": 720, "fps_max": 60,
-                 "codecs": ["h264"], "max_bytes": 5 * 1024 ** 3,
-                 "lufs": -14, "lufs_tol": 3.0, "tp": -1.0, "sdr_only": True},
+        "spec": {
+            "max_duration": 600,
+            "aspects": ["16:9", "1:1", "9:16", "4:5"],
+            "min_height": 720,
+            "fps_max": 60,
+            "codecs": ["h264"],
+            "max_bytes": 5 * 1024**3,
+            "lufs": -14,
+            "lufs_tol": 3.0,
+            "tp": -1.0,
+            "sdr_only": True,
+        },
         "safe": _SAFE_5,
         "caption": _CAP_WIDE,
-        "preset": "linkedin", "check": "linkedin",
+        "preset": "linkedin",
+        "check": "linkedin",
     },
     "facebook": {
         "title": "Facebook",
         "frame": {"w": 1920, "h": 1080, "aspect": "16:9"},
         "fps": 30,
-        "spec": {"max_duration": 240 * 60, "aspects": ["16:9", "1:1", "9:16", "4:5"], "min_height": 720, "fps_max": 60,
-                 "codecs": ["h264", "hevc"], "max_bytes": 4 * 1024 ** 3,
-                 "lufs": -14, "lufs_tol": 3.0, "tp": -1.0, "sdr_only": True},
+        "spec": {
+            "max_duration": 240 * 60,
+            "aspects": ["16:9", "1:1", "9:16", "4:5"],
+            "min_height": 720,
+            "fps_max": 60,
+            "codecs": ["h264", "hevc"],
+            "max_bytes": 4 * 1024**3,
+            "lufs": -14,
+            "lufs_tol": 3.0,
+            "tp": -1.0,
+            "sdr_only": True,
+        },
         "safe": _SAFE_5,
         "caption": _CAP_WIDE,
-        "preset": "facebook", "check": "facebook",
+        "preset": "facebook",
+        "check": "facebook",
     },
     "podcast": {
         "title": "Podcast (audio)",
         "frame": None,
         "fps": None,
-        "spec": {"max_duration": None, "aspects": None, "min_height": 0, "fps_max": None,
-                 "codecs": None, "max_bytes": None,
-                 "lufs": -16, "lufs_tol": 1.0, "tp": -1.0, "sdr_only": False},
+        "spec": {
+            "max_duration": None,
+            "aspects": None,
+            "min_height": 0,
+            "fps_max": None,
+            "codecs": None,
+            "max_bytes": None,
+            "lufs": -16,
+            "lufs_tol": 1.0,
+            "tp": -1.0,
+            "sdr_only": False,
+        },
         "safe": _NO_SAFE,
         "caption": _CAP_WIDE,
-        "preset": None, "check": "podcast",
+        "preset": None,
+        "check": "podcast",
     },
     # Not destinations an app owns, but compliance targets check.py has always had.
     "broadcast": {
         "title": "Broadcast (EBU R128)",
         "frame": {"w": 1920, "h": 1080, "aspect": "16:9"},
         "fps": None,
-        "spec": {"max_duration": None, "aspects": ["16:9"], "min_height": 1080, "fps_max": 60,
-                 "codecs": ["prores", "dnxhd", "h264", "hevc", "mpeg2video"], "max_bytes": None,
-                 "lufs": -23, "lufs_tol": 1.0, "tp": -1.0, "sdr_only": False},
+        "spec": {
+            "max_duration": None,
+            "aspects": ["16:9"],
+            "min_height": 1080,
+            "fps_max": 60,
+            "codecs": ["prores", "dnxhd", "h264", "hevc", "mpeg2video"],
+            "max_bytes": None,
+            "lufs": -23,
+            "lufs_tol": 1.0,
+            "tp": -1.0,
+            "sdr_only": False,
+        },
         "safe": _SAFE_5,
         "caption": _CAP_WIDE,
-        "preset": "prores", "check": "broadcast",
+        "preset": "prores",
+        "check": "broadcast",
     },
     "custom": {
         "title": "Custom",
         "frame": None,
         "fps": None,
-        "spec": {"max_duration": None, "aspects": None, "min_height": 0, "fps_max": None,
-                 "codecs": None, "max_bytes": None,
-                 "lufs": None, "lufs_tol": 2.0, "tp": -1.0, "sdr_only": False},
+        "spec": {
+            "max_duration": None,
+            "aspects": None,
+            "min_height": 0,
+            "fps_max": None,
+            "codecs": None,
+            "max_bytes": None,
+            "lufs": None,
+            "lufs_tol": 2.0,
+            "tp": -1.0,
+            "sdr_only": False,
+        },
         "safe": _NO_SAFE,
         "caption": _CAP_WIDE,
-        "preset": None, "check": "custom",
+        "preset": None,
+        "check": "custom",
     },
 }
 
@@ -221,13 +361,22 @@ PLATFORM_NAMES: List[str] = sorted(PLATFORMS)
 # The spellings people actually write for those destinations. resolve() maps them onto the
 # canonical name, and every tool's --platform/--safe/--preset accepts both, so
 # `--platform youtube-shorts` and `--platform shorts` are the same request everywhere.
-ALIASES: Dict[str, str] = {"youtube-shorts": "shorts", "yt-shorts": "shorts", "yt": "youtube",
-                           "instagram": "reels", "ig": "reels", "twitter": "x", "fb": "facebook"}
+ALIASES: Dict[str, str] = {
+    "youtube-shorts": "shorts",
+    "yt-shorts": "shorts",
+    "yt": "youtube",
+    "instagram": "reels",
+    "ig": "reels",
+    "twitter": "x",
+    "fb": "facebook",
+}
 # One vocabulary for the word "platform": check.py, caption.py, graphics.py and look.py all
 # offer this list (review 12 found three different ones). It is the compliance targets -- the
 # destinations a delivery is checked against -- plus every alias; youtube-hdr and youtube-av1
 # are export presets of the youtube target, not separate destinations, so they are not in it.
-PLATFORM_CHOICES: List[str] = sorted({n for n in PLATFORMS if PLATFORMS[n]["check"] == n} | set(ALIASES))
+PLATFORM_CHOICES: List[str] = sorted(
+    {n for n in PLATFORMS if PLATFORMS[n]["check"] == n} | set(ALIASES)
+)
 
 
 def spec_of(name: str) -> Dict[str, Any]:
@@ -247,8 +396,12 @@ def loudness_of(name: str) -> Dict[str, float]:
 def safe_margins_px(name: str, width: int, height: int) -> Dict[str, int]:
     """The safe zone in pixels for a frame of this size, as whole pixels per edge."""
     s = PLATFORMS[name]["safe"]
-    return {"top": int(round(s["top"] * height)), "bottom": int(round(s["bottom"] * height)),
-            "left": int(round(s["left"] * width)), "right": int(round(s["right"] * width))}
+    return {
+        "top": int(round(s["top"] * height)),
+        "bottom": int(round(s["bottom"] * height)),
+        "left": int(round(s["left"] * width)),
+        "right": int(round(s["right"] * width)),
+    }
 
 
 def caption_defaults(name: str) -> Dict[str, Any]:

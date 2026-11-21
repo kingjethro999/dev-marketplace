@@ -9,6 +9,7 @@ Accepted request forms (all converted losslessly):
 
 Serialised form (stable, machine-readable): {"seconds": "12.500000", "rational": "25/2"}.
 """
+
 import re
 from fractions import Fraction
 from typing import Any, Dict, Union
@@ -16,7 +17,9 @@ from typing import Any, Dict, Union
 from .errors import EditError
 
 _NUM = re.compile(r"^[+-]?(\d+(\.\d*)?|\.\d+)$")
-_MAX_SECONDS = Fraction(10 * 24 * 3600)  # 10 days: anything longer is a malformed request
+_MAX_SECONDS = Fraction(
+    10 * 24 * 3600
+)  # 10 days: anything longer is a malformed request
 
 
 class Time:
@@ -48,26 +51,44 @@ class Time:
                 return cls._check(cls._parse_rational(raw["rational"], what), what)
             if keys in ({"frames", "timebase"}, {"frames", "fps"}):
                 frames = raw["frames"]
-                if isinstance(frames, bool) or not isinstance(frames, int) or frames < 0:
-                    raise EditError("INVALID_REQUEST", f"{what}: frames must be a non-negative integer")
+                if (
+                    isinstance(frames, bool)
+                    or not isinstance(frames, int)
+                    or frames < 0
+                ):
+                    raise EditError(
+                        "INVALID_REQUEST",
+                        f"{what}: frames must be a non-negative integer",
+                    )
                 if "timebase" in raw:
                     tb = cls._parse_rational(raw["timebase"], what + ".timebase")
                     if tb <= 0:
-                        raise EditError("INVALID_REQUEST", f"{what}: timebase must be positive")
+                        raise EditError(
+                            "INVALID_REQUEST", f"{what}: timebase must be positive"
+                        )
                     return cls._check(Fraction(frames) * tb, what)
                 fps = cls._parse_rational(raw["fps"], what + ".fps")
                 if fps <= 0:
                     raise EditError("INVALID_REQUEST", f"{what}: fps must be positive")
                 return cls._check(Fraction(frames) / fps, what)
-            raise EditError("INVALID_REQUEST", f"{what}: a time object needs exactly one of seconds | rational | frames+timebase | frames+fps")
-        raise EditError("INVALID_REQUEST", f"{what}: must be a number, a time string or a time object")
+            raise EditError(
+                "INVALID_REQUEST",
+                f"{what}: a time object needs exactly one of seconds | rational | frames+timebase | frames+fps",
+            )
+        raise EditError(
+            "INVALID_REQUEST",
+            f"{what}: must be a number, a time string or a time object",
+        )
 
     @classmethod
     def _check(cls, v: Fraction, what: str) -> "Time":
         if v < 0:
             raise EditError("INVALID_TIME_RANGE", f"{what}: negative time {v}")
         if v > _MAX_SECONDS:
-            raise EditError("INVALID_TIME_RANGE", f"{what}: time {float(v):.0f}s exceeds the {int(_MAX_SECONDS)}s limit")
+            raise EditError(
+                "INVALID_TIME_RANGE",
+                f"{what}: time {float(v):.0f}s exceeds the {int(_MAX_SECONDS)}s limit",
+            )
         return cls(v)
 
     @staticmethod
@@ -137,7 +158,7 @@ class Time:
 
     def text(self, places: int = 6) -> str:
         """Fixed-point decimal string with `places` digits (exact for values representable that way)."""
-        q = Fraction(1, 10 ** places)
+        q = Fraction(1, 10**places)
         v = self.value
         n = int(round(v / q))
         sign = "-" if n < 0 else ""
@@ -149,7 +170,10 @@ class Time:
         return self.text(6)
 
     def to_dict(self) -> Dict[str, str]:
-        return {"seconds": self.text(6), "rational": f"{self.value.numerator}/{self.value.denominator}"}
+        return {
+            "seconds": self.text(6),
+            "rational": f"{self.value.numerator}/{self.value.denominator}",
+        }
 
 
 def parse_fraction(raw: Any, what: str) -> Fraction:

@@ -1,4 +1,5 @@
 """Production profiles: JSON files in profiles/ with single inheritance via "extends"."""
+
 from __future__ import annotations
 
 import json
@@ -31,7 +32,9 @@ class Profile:
         return {"name": self.name, "version": self.version, "chain": self.chain}
 
 
-def load_profile(name: str, directory: Optional[Path] = None, _seen: Optional[List[str]] = None) -> Profile:
+def load_profile(
+    name: str, directory: Optional[Path] = None, _seen: Optional[List[str]] = None
+) -> Profile:
     directory = directory or profiles_dir()
     _seen = _seen or []
     if name in _seen:
@@ -52,6 +55,21 @@ def load_profile(name: str, directory: Optional[Path] = None, _seen: Optional[Li
         if k != "rules":
             merged[k] = v
     for r in data.get("rules") or []:
-        rules.append(Rule(r["id"], r.get("kind", "POLICY"), "PROFILE", r["key"], r["value"], f"profile:{name}"))
+        rules.append(
+            Rule(
+                r["id"],
+                r.get("kind", "POLICY"),
+                "PROFILE",
+                r["key"],
+                r["value"],
+                f"profile:{name}",
+            )
+        )
     chain.append(name)
-    return Profile(name=name, version=str(data.get("version", "0")), data=merged, rules=rules, chain=chain)
+    return Profile(
+        name=name,
+        version=str(data.get("version", "0")),
+        data=merged,
+        rules=rules,
+        chain=chain,
+    )

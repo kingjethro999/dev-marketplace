@@ -43,7 +43,9 @@ from artifact_skill.security.paths import check_input_size
 
 _ATX_HEADING = re.compile(r"^ {0,3}(#{1,6})(?:\s+(.*))?$", re.MULTILINE)
 _FENCE_LINE = re.compile(r"^ {0,3}(```|~~~)", re.MULTILINE)
-_FENCED_BLOCK = re.compile(r"^ {0,3}(```|~~~).*?\n.*?^ {0,3}\1", re.MULTILINE | re.DOTALL)
+_FENCED_BLOCK = re.compile(
+    r"^ {0,3}(```|~~~).*?\n.*?^ {0,3}\1", re.MULTILINE | re.DOTALL
+)
 _LINK_OR_IMAGE = re.compile(r"(!?)\[([^\]\n]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 
 
@@ -81,7 +83,8 @@ class MarkdownAdapter(ArtifactAdapter):
 
     def capabilities(self) -> list[Capability]:
         structural = Capability(
-            id="markdown.structural", status=CapabilityStatus.AVAILABLE,
+            id="markdown.structural",
+            status=CapabilityStatus.AVAILABLE,
             detail="Uses only the standard library (regex over decoded text); always available.",
             detected_via="stdlib",
         )
@@ -94,18 +97,31 @@ class MarkdownAdapter(ArtifactAdapter):
                 except im.PackageNotFoundError:
                     return None
 
-            versions = {pkg: _version_or_none(pkg) for pkg in ("markdown-it-py", "playwright")}
+            versions = {
+                pkg: _version_or_none(pkg) for pkg in ("markdown-it-py", "playwright")
+            }
             render = Capability(
-                id="markdown.render", status=CapabilityStatus.AVAILABLE,
+                id="markdown.render",
+                status=CapabilityStatus.AVAILABLE,
                 detail="markdown-it-py and playwright both importable. A matching Chromium build must also be "
                 "installed (`playwright install chromium`) — verified at render() time, not here.",
-                detected_via="import markdown_it, playwright", version=str(versions),
+                detected_via="import markdown_it, playwright",
+                version=str(versions),
             )
         else:
-            missing = [n for n, mod in (("markdown-it-py", "markdown_it"), ("playwright", "playwright")) if not _has(mod)]
+            missing = [
+                n
+                for n, mod in (
+                    ("markdown-it-py", "markdown_it"),
+                    ("playwright", "playwright"),
+                )
+                if not _has(mod)
+            ]
             render = Capability(
-                id="markdown.render", status=CapabilityStatus.MISSING,
-                detail=f"Missing: {', '.join(missing)}.", detected_via="import markdown_it, playwright",
+                id="markdown.render",
+                status=CapabilityStatus.MISSING,
+                detail=f"Missing: {', '.join(missing)}.",
+                detected_via="import markdown_it, playwright",
             )
         return [structural, render]
 
@@ -122,7 +138,9 @@ class MarkdownAdapter(ArtifactAdapter):
         ]
 
     def recognized_policy_keys(self) -> frozenset[str]:
-        return frozenset({"require_heading", "forbid_external_resources", "forbid_placeholder_text"})
+        return frozenset(
+            {"require_heading", "forbid_external_resources", "forbid_placeholder_text"}
+        )
 
     # ---- inspect ---------------------------------------------------
 
@@ -142,7 +160,10 @@ class MarkdownAdapter(ArtifactAdapter):
                 evidence={"path": str(ref.path)},
             ) from exc
 
-        headings = [(len(m.group(1)), (m.group(2) or "").strip()) for m in _ATX_HEADING.finditer(text)]
+        headings = [
+            (len(m.group(1)), (m.group(2) or "").strip())
+            for m in _ATX_HEADING.finditer(text)
+        ]
         fence_line_count = len(_FENCE_LINE.findall(text))
 
         md_dir = ref.path.parent
@@ -162,7 +183,9 @@ class MarkdownAdapter(ArtifactAdapter):
                 # format) was worth extracting.
                 outcome = resolve_local_reference(md_dir, url)
                 if outcome.escaped:
-                    warnings.append(f"Local reference escapes the document's directory: {url}")
+                    warnings.append(
+                        f"Local reference escapes the document's directory: {url}"
+                    )
                     continue
                 if outcome.exists:
                     local_present += 1
@@ -180,11 +203,15 @@ class MarkdownAdapter(ArtifactAdapter):
             "size_bytes": ref.size_bytes,
             "leftover_markers": find_leftover_markers(_strip_fenced_code(text)),
         }
-        return InspectionReport(artifact=ref, details=details, warnings=warnings, text=text)
+        return InspectionReport(
+            artifact=ref, details=details, warnings=warnings, text=text
+        )
 
     # ---- plan / execute -----------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"Markdown adapter has no mutating operations (requested '{operation}').",
@@ -192,7 +219,9 @@ class MarkdownAdapter(ArtifactAdapter):
             evidence={"operation": operation},
         )
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"Markdown adapter has no mutating operations (requested '{operation}').",
@@ -202,7 +231,9 @@ class MarkdownAdapter(ArtifactAdapter):
 
     # ---- render ----------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         check_input_size(ref.path)
         if not _has("markdown_it"):
             raise ArtifactCapabilityError(
@@ -226,34 +257,60 @@ class MarkdownAdapter(ArtifactAdapter):
         render_html_path.write_text(doc, encoding="utf-8")
 
         out_path = render_local_file(
-            render_html_path, out_dir / "page-001.png", capability_id="markdown.render", limits=limits
+            render_html_path,
+            out_dir / "page-001.png",
+            capability_id="markdown.render",
+            limits=limits,
         )
-        return RenderResult(kind="page_images", files=[out_path], backend="markdown-it-py+playwright+chromium")
+        return RenderResult(
+            kind="page_images",
+            files=[out_path],
+            backend="markdown-it-py+playwright+chromium",
+        )
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
             checks.append(
-                Check(id="markdown_validity", name="Markdown is readable", status=CheckStatus.FAIL, message=str(exc))
+                Check(
+                    id="markdown_validity",
+                    name="Markdown is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
             )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="markdown_validity", name="Markdown is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(
+                id="markdown_validity",
+                name="Markdown is readable",
+                status=CheckStatus.PASS,
+            )
+        )
 
         details = report.details
         checks.append(
             Check(
                 id="fenced_code_block_balance",
                 name="Fenced code blocks are balanced",
-                status=CheckStatus.PASS if details["fenced_code_block_balanced"] else CheckStatus.WARN,
-                message="Every fence (``` or ~~~) has a matching close."
-                if details["fenced_code_block_balanced"]
-                else f"{details['fence_line_count']} fence line(s) found — an odd count means an unclosed "
-                "fence, which will render the rest of the document as code.",
+                status=(
+                    CheckStatus.PASS
+                    if details["fenced_code_block_balanced"]
+                    else CheckStatus.WARN
+                ),
+                message=(
+                    "Every fence (``` or ~~~) has a matching close."
+                    if details["fenced_code_block_balanced"]
+                    else f"{details['fence_line_count']} fence line(s) found — an odd count means an unclosed "
+                    "fence, which will render the rest of the document as code."
+                ),
             )
         )
 
@@ -262,7 +319,11 @@ class MarkdownAdapter(ArtifactAdapter):
                 Check(
                     id="heading_presence",
                     name="At least one heading present",
-                    status=CheckStatus.PASS if details["heading_count"] > 0 else CheckStatus.FAIL,
+                    status=(
+                        CheckStatus.PASS
+                        if details["heading_count"] > 0
+                        else CheckStatus.FAIL
+                    ),
                     message=f"{details['heading_count']} heading(s) found.",
                 )
             )
@@ -278,21 +339,37 @@ class MarkdownAdapter(ArtifactAdapter):
                 )
             )
         else:
-            checks.append(Check(id="local_resources", name="Local link/image references resolve", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="local_resources",
+                    name="Local link/image references resolve",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         if details["external_resources"]:
             checks.append(
                 Check(
                     id="external_resources",
                     name="No external link/image references",
-                    status=CheckStatus.FAIL if policy.get("forbid_external_resources") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_external_resources")
+                        else CheckStatus.WARN
+                    ),
                     message=f"{len(details['external_resources'])} external reference(s) found; not fetched "
                     "(network access is off by default — see docs/security.md).",
                     evidence={"urls": details["external_resources"]},
                 )
             )
         else:
-            checks.append(Check(id="external_resources", name="No external link/image references", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="external_resources",
+                    name="No external link/image references",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         leftover_markers = details["leftover_markers"]
         if leftover_markers:
@@ -300,14 +377,22 @@ class MarkdownAdapter(ArtifactAdapter):
                 Check(
                     id="leftover_placeholder_text",
                     name="No leftover generation placeholder text",
-                    status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_placeholder_text")
+                        else CheckStatus.WARN
+                    ),
                     message=f"Found likely-unreviewed placeholder text: {leftover_markers}.",
                     evidence={"markers": leftover_markers},
                 )
             )
         else:
             checks.append(
-                Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                Check(
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=CheckStatus.PASS,
+                )
             )
 
         return VerificationResult(kind="structural", checks=checks)

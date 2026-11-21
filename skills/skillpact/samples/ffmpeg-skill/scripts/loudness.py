@@ -13,27 +13,67 @@ Examples:
   python3 loudness.py input.mp4 --measure-only
   python3 loudness.py music.wav --lra 7                 # tighter loudness range target
 """
+
 import argparse
 import json
 import os
 import re
 import sys
 
-from _common import STATE, add_common, apply_common, emit, AUDIO_CODECS, audio_codec_for, default_output, die, ffmpeg_base, info, probe, require_tool, run, run_analysis, run_keeping_subtitles, dry_run_input_pending
-
+from _common import (
+    STATE,
+    add_common,
+    apply_common,
+    emit,
+    AUDIO_CODECS,
+    audio_codec_for,
+    default_output,
+    die,
+    ffmpeg_base,
+    info,
+    probe,
+    require_tool,
+    run,
+    run_analysis,
+    run_keeping_subtitles,
+    dry_run_input_pending,
+)
 
 
 def measure(path: str, I: float, tp: float, lra: float) -> dict:
     if dry_run_input_pending(path):
-        return {"input_i": "-20.0", "input_tp": "-3.0", "input_lra": "8.0", "input_thresh": "-30.0", "target_offset": "0.0", "silent": False, "placeholder": True}
+        return {
+            "input_i": "-20.0",
+            "input_tp": "-3.0",
+            "input_lra": "8.0",
+            "input_thresh": "-30.0",
+            "target_offset": "0.0",
+            "silent": False,
+            "placeholder": True,
+        }
     ffmpeg = require_tool("ffmpeg")
-    cmd = [ffmpeg, "-hide_banner", "-nostdin", "-i", path, "-vn", "-af", f"loudnorm=I={I}:TP={tp}:LRA={lra}:print_format=json", "-f", "null", "-"]
+    cmd = [
+        ffmpeg,
+        "-hide_banner",
+        "-nostdin",
+        "-i",
+        path,
+        "-vn",
+        "-af",
+        f"loudnorm=I={I}:TP={tp}:LRA={lra}:print_format=json",
+        "-f",
+        "null",
+        "-",
+    ]
     # Pass 1 is a measurement: it runs under --dry-run too, so the planned pass-2 command and
     # the reported input_i are real (before 1.4.6 a dry run returned a made-up -20 LUFS).
     proc = run_analysis(cmd, check=False, record=True)
     m = re.search(r"\{[^{}]*\"input_i\"[^{}]*\}", proc.stderr, re.S)
     if proc.returncode != 0 or not m:
-        die(f"loudness measurement failed:\n{proc.stderr.strip()[-1500:]}", kind="ffmpeg")
+        die(
+            f"loudness measurement failed:\n{proc.stderr.strip()[-1500:]}",
+            kind="ffmpeg",
+        )
     data = json.loads(m.group(0))
     for k in ("input_i", "input_tp", "input_lra", "input_thresh", "target_offset"):
         if data.get(k) in (None, "-inf", "inf", "nan"):
@@ -44,15 +84,44 @@ def measure(path: str, I: float, tp: float, lra: float) -> dict:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="output file (default: <name>_loudnorm.<ext>)")
-    ap.add_argument("-I", "--lufs", type=float, default=-14.0, help="integrated loudness target in LUFS (default -14)")
-    ap.add_argument("--tp", type=float, default=-1.0, help="true peak ceiling in dBTP (default -1)")
-    ap.add_argument("--lra", type=float, default=11.0, help="loudness range target in LU (default 11)")
-    ap.add_argument("--measure-only", action="store_true", help="print the measured stats as JSON and exit")
-    ap.add_argument("--audio-bitrate", default=None, help="AAC bitrate when the container is video (default 192k; raised to 256k/320k only when the encoder overshoots the true-peak ceiling and you did not pin it)")
-    ap.add_argument("--sample-rate", type=int, help="output sample rate (default: 48000; loudnorm upsamples internally to 192k)")
+    ap.add_argument(
+        "-o", "--output", help="output file (default: <name>_loudnorm.<ext>)"
+    )
+    ap.add_argument(
+        "-I",
+        "--lufs",
+        type=float,
+        default=-14.0,
+        help="integrated loudness target in LUFS (default -14)",
+    )
+    ap.add_argument(
+        "--tp", type=float, default=-1.0, help="true peak ceiling in dBTP (default -1)"
+    )
+    ap.add_argument(
+        "--lra",
+        type=float,
+        default=11.0,
+        help="loudness range target in LU (default 11)",
+    )
+    ap.add_argument(
+        "--measure-only",
+        action="store_true",
+        help="print the measured stats as JSON and exit",
+    )
+    ap.add_argument(
+        "--audio-bitrate",
+        default=None,
+        help="AAC bitrate when the container is video (default 192k; raised to 256k/320k only when the encoder overshoots the true-peak ceiling and you did not pin it)",
+    )
+    ap.add_argument(
+        "--sample-rate",
+        type=int,
+        help="output sample rate (default: 48000; loudnorm upsamples internally to 192k)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -70,12 +139,27 @@ def main() -> int:
             else:
                 print(json.dumps({"silent": True, "input_i": "-inf"}, indent=2))
             return 0
-        die("input audio is silent; loudness normalisation is meaningless (use audio.py --replace to add a track)")
-    info(f"measured: {float(stats['input_i']):.1f} LUFS, TP {float(stats['input_tp']):.1f} dBTP, LRA {float(stats['input_lra']):.1f} LU")
+        die(
+            "input audio is silent; loudness normalisation is meaningless (use audio.py --replace to add a track)"
+        )
+    info(
+        f"measured: {float(stats['input_i']):.1f} LUFS, TP {float(stats['input_tp']):.1f} dBTP, LRA {float(stats['input_lra']):.1f} LU"
+    )
     if args.measure_only:
-        measured = {k: stats[k] for k in ("input_i", "input_tp", "input_lra", "input_thresh", "target_offset")}
+        measured = {
+            k: stats[k]
+            for k in (
+                "input_i",
+                "input_tp",
+                "input_lra",
+                "input_thresh",
+                "target_offset",
+            )
+        }
         if STATE.json:
-            emit(None, measured=measured)  # the contract's document shape (status, commands), not a bare dict
+            emit(
+                None, measured=measured
+            )  # the contract's document shape (status, commands), not a bare dict
         else:
             print(json.dumps(measured, indent=2))
         return 0
@@ -104,7 +188,18 @@ def main() -> int:
         if ext in AUDIO_CODECS or not meta.get("video"):
             cmd += ["-vn"] + audio_codec_for(output, bitrate)
         else:
-            cmd += ["-map", "0:v:0", "-map", "0:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", bitrate]
+            cmd += [
+                "-map",
+                "0:v:0",
+                "-map",
+                "0:a:0",
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-b:a",
+                bitrate,
+            ]
             if ext in (".mp4", ".mov", ".m4v"):
                 cmd += ["-movflags", "+faststart"]
             dropped_streams = run_keeping_subtitles(cmd, output)
@@ -115,7 +210,20 @@ def main() -> int:
     encode(args.tp, bitrate)
     if STATE.dry_run:
         # pass 1 measured the input for real; there is no output to measure
-        emit(output, measured={k: stats[k] for k in ("input_i", "input_tp", "input_lra", "input_thresh", "target_offset", "silent")})
+        emit(
+            output,
+            measured={
+                k: stats[k]
+                for k in (
+                    "input_i",
+                    "input_tp",
+                    "input_lra",
+                    "input_thresh",
+                    "target_offset",
+                    "silent",
+                )
+            },
+        )
         return 0
     after = measure(output, args.lufs, args.tp, args.lra)
     # loudnorm holds the ceiling on the float samples it outputs; the lossy encoder then adds
@@ -127,42 +235,97 @@ def main() -> int:
     # loudnorm ceiling by the measured overshoot, which in linear mode also lowers the
     # integrated loudness -- reported, never hidden.
     ceiling, rounds = args.tp, 0
-    steps = [] if bitrate_pinned or ext in AUDIO_CODECS and "aac" not in AUDIO_CODECS[ext] else [b for b in ("256k", "320k") if _kbps(b) > _kbps(bitrate)]
-    while not after.get("silent") and float(after["input_tp"]) > args.tp + 0.1 and rounds < 5:
+    steps = (
+        []
+        if bitrate_pinned or ext in AUDIO_CODECS and "aac" not in AUDIO_CODECS[ext]
+        else [b for b in ("256k", "320k") if _kbps(b) > _kbps(bitrate)]
+    )
+    while (
+        not after.get("silent")
+        and float(after["input_tp"]) > args.tp + 0.1
+        and rounds < 5
+    ):
         rounds += 1
         overshoot = float(after["input_tp"]) - args.tp
         if steps:
             bitrate = steps.pop(0)
-            info(f"true peak {float(after['input_tp']):.2f} dBTP exceeds the requested {args.tp:g} dBTP after encoding "
-                 f"(codec overshoot); re-encoding at {bitrate}")
+            info(
+                f"true peak {float(after['input_tp']):.2f} dBTP exceeds the requested {args.tp:g} dBTP after encoding "
+                f"(codec overshoot); re-encoding at {bitrate}"
+            )
         else:
             ceiling -= overshoot + 0.2
-            info(f"true peak {float(after['input_tp']):.2f} dBTP exceeds the requested {args.tp:g} dBTP after encoding "
-                 f"(codec overshoot); re-encoding with the loudnorm ceiling at {ceiling:.2f} dBTP")
+            info(
+                f"true peak {float(after['input_tp']):.2f} dBTP exceeds the requested {args.tp:g} dBTP after encoding "
+                f"(codec overshoot); re-encoding with the loudnorm ceiling at {ceiling:.2f} dBTP"
+            )
         encode(ceiling, bitrate)
         after = measure(output, args.lufs, args.tp, args.lra)
     if not after.get("silent"):
-        info(f"result:   {float(after['input_i']):.1f} LUFS, TP {float(after['input_tp']):.1f} dBTP (target {args.lufs} LUFS, TP <= {args.tp:g})")
-    result = {k: after[k] for k in ("input_i", "input_tp", "input_lra", "input_thresh", "target_offset", "silent")}
+        info(
+            f"result:   {float(after['input_i']):.1f} LUFS, TP {float(after['input_tp']):.1f} dBTP (target {args.lufs} LUFS, TP <= {args.tp:g})"
+        )
+    result = {
+        k: after[k]
+        for k in (
+            "input_i",
+            "input_tp",
+            "input_lra",
+            "input_thresh",
+            "target_offset",
+            "silent",
+        )
+    }
     result["tp_ceiling_used"] = round(ceiling, 2)
     if ext not in AUDIO_CODECS or "aac" in AUDIO_CODECS[ext]:
         result["audio_bitrate_used"] = bitrate
     result["encodes"] = rounds + 1
     if not after.get("silent") and abs(float(after["input_i"]) - args.lufs) > 1.0:
-        result["note"] = (f"integrated loudness is {float(after['input_i']) - args.lufs:+.1f} LU from the target because the "
-                          f"true-peak ceiling had to absorb the encoder's overshoot; a lossless delivery (wav/flac) or a pinned "
-                          f"higher --audio-bitrate keeps both")
+        result["note"] = (
+            f"integrated loudness is {float(after['input_i']) - args.lufs:+.1f} LU from the target because the "
+            f"true-peak ceiling had to absorb the encoder's overshoot; a lossless delivery (wav/flac) or a pinned "
+            f"higher --audio-bitrate keeps both"
+        )
     if not after.get("silent") and float(after["input_tp"]) > args.tp + 0.1:
-        die(f"true peak is still {float(after['input_tp']):.2f} dBTP after {rounds + 1} encodes (requested <= {args.tp:g}); "
+        die(
+            f"true peak is still {float(after['input_tp']):.2f} dBTP after {rounds + 1} encodes (requested <= {args.tp:g}); "
             f"the encoder overshoots more than the loudnorm ceiling can absorb at this bitrate",
-            kind="verification", output=output, result=result,
-            hint="raise --audio-bitrate (e.g. 256k) or deliver a lossless format (wav/flac) and let the platform encode")
-    emit(output, result=result, dropped_non_av_streams=dropped_streams,
-         measured={k: stats[k] for k in ("input_i", "input_tp", "input_lra", "input_thresh", "target_offset", "silent")},
-         targets={"lufs": args.lufs, "tp": args.tp, "lra": args.lra},
-         verification=[{"step": "loudness",
-                        "ok": bool(after.get("silent")) or (abs(float(after["input_i"]) - args.lufs) <= 1.0 and float(after["input_tp"]) <= args.tp + 0.1),
-                        "lufs": float(after["input_i"]), "tp": float(after["input_tp"]), "target_lufs": args.lufs, "target_tp": args.tp}])
+            kind="verification",
+            output=output,
+            result=result,
+            hint="raise --audio-bitrate (e.g. 256k) or deliver a lossless format (wav/flac) and let the platform encode",
+        )
+    emit(
+        output,
+        result=result,
+        dropped_non_av_streams=dropped_streams,
+        measured={
+            k: stats[k]
+            for k in (
+                "input_i",
+                "input_tp",
+                "input_lra",
+                "input_thresh",
+                "target_offset",
+                "silent",
+            )
+        },
+        targets={"lufs": args.lufs, "tp": args.tp, "lra": args.lra},
+        verification=[
+            {
+                "step": "loudness",
+                "ok": bool(after.get("silent"))
+                or (
+                    abs(float(after["input_i"]) - args.lufs) <= 1.0
+                    and float(after["input_tp"]) <= args.tp + 0.1
+                ),
+                "lufs": float(after["input_i"]),
+                "tp": float(after["input_tp"]),
+                "target_lufs": args.lufs,
+                "target_tp": args.tp,
+            }
+        ],
+    )
     return 0
 
 

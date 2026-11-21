@@ -14,48 +14,70 @@ from scripts.release_decide import decide_release, tag_exists
 
 
 def test_no_tag_yet_uses_current_version_as_is():
-    decision = decide_release(current_version="0.1.0", latest_tag_version=None, resolved_version=None)
+    decision = decide_release(
+        current_version="0.1.0", latest_tag_version=None, resolved_version=None
+    )
     assert decision.new_version == "0.1.0"
     assert decision.needs_pyproject_bump is False
 
 
 def test_manual_bump_already_happened_is_respected():
     # pyproject says 0.3.0 but the last tag was 0.2.0 -> someone bumped by hand.
-    decision = decide_release(current_version="0.3.0", latest_tag_version="0.2.0", resolved_version=None)
+    decision = decide_release(
+        current_version="0.3.0", latest_tag_version="0.2.0", resolved_version=None
+    )
     assert decision.new_version == "0.3.0"
     assert decision.needs_pyproject_bump is False
 
 
 def test_matching_tag_triggers_auto_bump_from_resolved_version():
-    decision = decide_release(current_version="0.2.0", latest_tag_version="0.2.0", resolved_version="0.2.1")
+    decision = decide_release(
+        current_version="0.2.0", latest_tag_version="0.2.0", resolved_version="0.2.1"
+    )
     assert decision.new_version == "0.2.1"
     assert decision.needs_pyproject_bump is True
 
 
 def test_matching_tag_without_resolved_version_is_an_error():
     with pytest.raises(ValueError):
-        decide_release(current_version="0.2.0", latest_tag_version="0.2.0", resolved_version=None)
+        decide_release(
+            current_version="0.2.0", latest_tag_version="0.2.0", resolved_version=None
+        )
 
 
 def _init_repo(tmp_path, version="0.1.0"):
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True
+    )
     subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
     scripts_dir = tmp_path / "scripts"
     scripts_dir.mkdir()
     (scripts_dir / "__init__.py").write_text("", encoding="utf-8")
     repo_scripts = Path(__file__).resolve().parents[1] / "scripts"
-    (scripts_dir / "release_version.py").write_text((repo_scripts / "release_version.py").read_text(encoding="utf-8"), encoding="utf-8")
-    (scripts_dir / "release_decide.py").write_text((repo_scripts / "release_decide.py").read_text(encoding="utf-8"), encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text(f'[project]\nname = "example"\nversion = "{version}"\n', encoding="utf-8")
+    (scripts_dir / "release_version.py").write_text(
+        (repo_scripts / "release_version.py").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (scripts_dir / "release_decide.py").write_text(
+        (repo_scripts / "release_decide.py").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (tmp_path / "pyproject.toml").write_text(
+        f'[project]\nname = "example"\nversion = "{version}"\n', encoding="utf-8"
+    )
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "commit", "-q", "-m", "Initial commit"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "commit", "-q", "-m", "Initial commit"], cwd=tmp_path, check=True
+    )
 
 
 def _run_decide_cli(tmp_path, *extra_args):
     return subprocess.run(
         [sys.executable, "-m", "scripts.release_decide", *extra_args],
-        cwd=tmp_path, capture_output=True, text=True,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
     )
 
 
@@ -132,11 +154,37 @@ def test_nothing_to_release_is_a_no_op_not_a_failure(tmp_path, monkeypatch):
     from scripts import release_decide
 
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "x"],
-                   cwd=tmp_path, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "x",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
     subprocess.run(["git", "tag", "v1.0.0"], cwd=tmp_path, check=True)
-    (tmp_path / "pyproject.toml").write_text('[project]\nname = "x"\nversion = "1.0.0"\n', encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "x"\nversion = "1.0.0"\n', encoding="utf-8"
+    )
     out = tmp_path / "out.txt"
     monkeypatch.chdir(tmp_path)
-    assert release_decide.main(["--pyproject", str(tmp_path / "pyproject.toml"), "--github-output", str(out)]) == 0
+    assert (
+        release_decide.main(
+            [
+                "--pyproject",
+                str(tmp_path / "pyproject.toml"),
+                "--github-output",
+                str(out),
+            ]
+        )
+        == 0
+    )
     assert "needs_release=false" in out.read_text(encoding="utf-8")

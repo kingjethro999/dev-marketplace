@@ -10,7 +10,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-from scripts.release_version import bump_semver, parse_semver, read_version, write_version
+from scripts.release_version import (
+    bump_semver,
+    parse_semver,
+    read_version,
+    write_version,
+)
 
 
 def _write_pyproject(path, version="1.2.3"):
@@ -85,7 +90,11 @@ def test_read_then_bump_then_write_round_trip(tmp_path):
 def _run_cli(*args, cwd):
     script = Path(__file__).resolve().parents[1] / "scripts" / "release_version.py"
     return subprocess.run(
-        [sys.executable, str(script), *args], cwd=cwd, capture_output=True, text=True, check=True,
+        [sys.executable, str(script), *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
     )
 
 
@@ -113,6 +122,9 @@ def test_cli_set_rejects_a_malformed_version(tmp_path):
     _write_pyproject(tmp_path, "1.0.0")
     script = Path(__file__).resolve().parents[1] / "scripts" / "release_version.py"
     result = subprocess.run(
-        [sys.executable, str(script), "set", "not-a-version"], cwd=tmp_path, capture_output=True, text=True,
+        [sys.executable, str(script), "set", "not-a-version"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
     )
     assert result.returncode != 0

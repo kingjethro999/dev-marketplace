@@ -53,10 +53,20 @@ MAX_FREQ = 16000.0
 def decode_audio(path: str) -> np.ndarray:
     """Decode audio to mono float32 samples via ffmpeg."""
     cmd = [
-        find_program("ffmpeg"), "-i", path,
-        "-vn", "-ac", "1", "-ar", str(SAMPLE_RATE),
-        "-f", "s16le", "-acodec", "pcm_s16le",
-        "-loglevel", "error",
+        find_program("ffmpeg"),
+        "-i",
+        path,
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        str(SAMPLE_RATE),
+        "-f",
+        "s16le",
+        "-acodec",
+        "pcm_s16le",
+        "-loglevel",
+        "error",
         "pipe:1",
     ]
     result = subprocess.run(cmd, capture_output=True)
@@ -64,22 +74,27 @@ def decode_audio(path: str) -> np.ndarray:
         # Decoding ffmpeg's diagnostics strictly makes the reporter the thing that
         # crashes: a Windows ffmpeg emits cp1252 bytes, and UnicodeDecodeError here
         # would bury the actual failure it was trying to report.
-        print(f"ffmpeg error: {result.stderr.decode('utf-8', errors='replace')}", file=sys.stderr)
+        print(
+            f"ffmpeg error: {result.stderr.decode('utf-8', errors='replace')}",
+            file=sys.stderr,
+        )
         sys.exit(1)
     return np.frombuffer(result.stdout, dtype=np.int16).astype(np.float32) / 32768.0
 
 
 def compute_band_edges(n_bands: int) -> np.ndarray:
     """Logarithmically-spaced frequency band edges from MIN_FREQ to MAX_FREQ."""
-    return np.array([
-        MIN_FREQ * (MAX_FREQ / MIN_FREQ) ** (i / n_bands)
-        for i in range(n_bands + 1)
-    ])
+    return np.array(
+        [MIN_FREQ * (MAX_FREQ / MIN_FREQ) ** (i / n_bands) for i in range(n_bands + 1)]
+    )
 
 
 def compute_fft_bands(
-    windowed: np.ndarray, freq_per_bin: float, n_bins: int,
-    band_edges: np.ndarray, n_bands: int,
+    windowed: np.ndarray,
+    freq_per_bin: float,
+    n_bins: int,
+    band_edges: np.ndarray,
+    n_bands: int,
 ) -> np.ndarray:
     """Compute peak magnitude in logarithmically-spaced frequency bands."""
     magnitudes = np.abs(np.fft.rfft(windowed))
@@ -106,9 +121,17 @@ def extract(path: str, fps: int, n_bands: int) -> dict:
     frame_step = SAMPLE_RATE // fps
     total_frames = int(duration * fps)
 
-    print(f"Duration: {duration:.1f}s, {total_frames} frames at {fps}fps", file=sys.stderr)
-    print(f"FFT window: {FFT_SIZE} samples ({SAMPLE_RATE / FFT_SIZE:.1f} Hz/bin)", file=sys.stderr)
-    print(f"Frequency range: {MIN_FREQ:.0f}-{MAX_FREQ:.0f} Hz, {n_bands} bands", file=sys.stderr)
+    print(
+        f"Duration: {duration:.1f}s, {total_frames} frames at {fps}fps", file=sys.stderr
+    )
+    print(
+        f"FFT window: {FFT_SIZE} samples ({SAMPLE_RATE / FFT_SIZE:.1f} Hz/bin)",
+        file=sys.stderr,
+    )
+    print(
+        f"Frequency range: {MIN_FREQ:.0f}-{MAX_FREQ:.0f} Hz, {n_bands} bands",
+        file=sys.stderr,
+    )
 
     # Precompute constants
     hann = np.hanning(FFT_SIZE)
@@ -125,9 +148,9 @@ def extract(path: str, fps: int, n_bands: int) -> dict:
         # RMS from the frame's audio slice
         rms_start = f * frame_step
         rms_end = rms_start + frame_step
-        frame_slice = samples[rms_start:min(rms_end, len(samples))]
+        frame_slice = samples[rms_start : min(rms_end, len(samples))]
         if len(frame_slice) > 0:
-            rms_values[f] = np.sqrt(np.mean(frame_slice ** 2))
+            rms_values[f] = np.sqrt(np.mean(frame_slice**2))
 
         # FFT from a centered 4096-sample window
         center = rms_start + frame_step // 2
@@ -146,7 +169,9 @@ def extract(path: str, fps: int, n_bands: int) -> dict:
             padded[dst_start:dst_end] = samples[src_start:src_end]
             window = padded * hann
 
-        band_values[f] = compute_fft_bands(window, freq_per_bin, n_bins, band_edges, n_bands)
+        band_values[f] = compute_fft_bands(
+            window, freq_per_bin, n_bins, band_edges, n_bands
+        )
 
     # Pass 2: normalize
     peak_rms = rms_values.max() if total_frames > 0 else 1.0
@@ -161,11 +186,13 @@ def extract(path: str, fps: int, n_bands: int) -> dict:
     # Build output
     frames = []
     for f in range(total_frames):
-        frames.append({
-            "time": round(f / fps, 4),
-            "rms": round(float(rms_values[f]), 4),
-            "bands": [round(float(b), 4) for b in band_values[f]],
-        })
+        frames.append(
+            {
+                "time": round(f / fps, 4),
+                "rms": round(float(rms_values[f]), 4),
+                "bands": [round(float(b), 4) for b in band_values[f]],
+            }
+        )
 
     return {
         "duration": round(duration, 4),
@@ -177,11 +204,19 @@ def extract(path: str, fps: int, n_bands: int) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract per-frame audio visualization data")
+    parser = argparse.ArgumentParser(
+        description="Extract per-frame audio visualization data"
+    )
     parser.add_argument("input", help="Audio or video file")
-    parser.add_argument("-o", "--output", default="audio-data.json", help="Output JSON path")
-    parser.add_argument("--fps", type=int, default=30, help="Frames per second (default: 30)")
-    parser.add_argument("--bands", type=int, default=16, help="Number of frequency bands (default: 16)")
+    parser.add_argument(
+        "-o", "--output", default="audio-data.json", help="Output JSON path"
+    )
+    parser.add_argument(
+        "--fps", type=int, default=30, help="Frames per second (default: 30)"
+    )
+    parser.add_argument(
+        "--bands", type=int, default=16, help="Number of frequency bands (default: 16)"
+    )
     args = parser.parse_args()
 
     if args.fps < 1:
@@ -194,7 +229,10 @@ def main():
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(data, f)
 
-    print(f"Wrote {args.output} ({data['totalFrames']} frames, {data['bands']} bands)", file=sys.stderr)
+    print(
+        f"Wrote {args.output} ({data['totalFrames']} frames, {data['bands']} bands)",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 """The licence record's published shape (roadmap step 12): schemas/licence-record.schema.json is the base of the
 Velisa shared licence-record spec (docs/specs/licence-record.md). library-import's stored entry and the record a
 reader gets are validated against it, so a field that is renamed, added or dropped fails here and goes through the
-spec. The validator below covers only the JSON Schema keywords the file uses; no third-party package is needed."""
+spec. The validator below covers only the JSON Schema keywords the file uses; no third-party package is needed.
+"""
 
 from __future__ import annotations
 
@@ -14,11 +15,22 @@ import unittest
 from helpers import ROOT, write_tone_wav
 
 from sound_design_skill import library
-from sound_design_skill.library import MANIFEST_NAME, LibraryImportRequest, library_import, licence_info
+from sound_design_skill.library import (
+    MANIFEST_NAME,
+    LibraryImportRequest,
+    library_import,
+    licence_info,
+)
 from test_library import StubLibrarySkill
 
 SCHEMA_PATH = ROOT / "schemas" / "licence-record.schema.json"
-_TYPES = {"string": str, "boolean": bool, "object": dict, "array": list, "null": type(None)}
+_TYPES = {
+    "string": str,
+    "boolean": bool,
+    "object": dict,
+    "array": list,
+    "null": type(None),
+}
 
 
 def load_schema():
@@ -35,7 +47,11 @@ def errors(value, schema, root, where="$"):
     out = []
     if "type" in schema:
         kinds = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
-        if not any(isinstance(value, _TYPES[k]) and not (k != "boolean" and isinstance(value, bool)) for k in kinds):
+        if not any(
+            isinstance(value, _TYPES[k])
+            and not (k != "boolean" and isinstance(value, bool))
+            for k in kinds
+        ):
             return [f"{where}: {value!r} is not {'/'.join(kinds)}"]
     if "const" in schema and value is not schema["const"] and value != schema["const"]:
         out.append(f"{where}: {value!r} is not {schema['const']!r}")
@@ -48,9 +64,15 @@ def errors(value, schema, root, where="$"):
             out.append(f"{where}: {value!r} does not match {schema['pattern']}")
     if isinstance(value, dict):
         props = schema.get("properties", {})
-        out += [f"{where}: {k} is missing" for k in schema.get("required", []) if k not in value]
+        out += [
+            f"{where}: {k} is missing"
+            for k in schema.get("required", [])
+            if k not in value
+        ]
         if schema.get("additionalProperties") is False:
-            out += [f"{where}: {k} is not in the schema" for k in value if k not in props]
+            out += [
+                f"{where}: {k} is not in the schema" for k in value if k not in props
+            ]
         for k, v in value.items():
             if k in props:
                 out += errors(v, props[k], root, f"{where}.{k}")
@@ -70,24 +92,47 @@ class LicenceRecordSchemaTests(unittest.TestCase):
         os.mkdir(self.lib)
 
     def check(self, value, definition):
-        self.assertEqual(errors(value, {"$ref": f"#/$defs/{definition}"}, self.schema), [])
+        self.assertEqual(
+            errors(value, {"$ref": f"#/$defs/{definition}"}, self.schema), []
+        )
 
     def imp(self, name, **kw):
         src = write_tone_wav(os.path.join(self.dir, name), seconds=1.0, rate=8000)
-        return library_import(LibraryImportRequest(src, self.lib, kw.pop("licence", "CC-BY-4.0"), kw.pop("kind", "bgm"), **kw),
-                              skill=StubLibrarySkill())
+        return library_import(
+            LibraryImportRequest(
+                src,
+                self.lib,
+                kw.pop("licence", "CC-BY-4.0"),
+                kw.pop("kind", "bgm"),
+                **kw,
+            ),
+            skill=StubLibrarySkill(),
+        )
 
     def test_library_import_with_every_field_matches_the_schema(self):
         text = os.path.join(self.dir, "LICENSE.txt")
         with open(text, "w", encoding="utf-8") as fh:
             fh.write("Creative Commons Attribution 4.0 International\n")
-        doc = self.imp("full.wav", tags=["piano"], mood=["calm"], loopable=True, source="https://example.invalid/track",
-                       author="A. Composer", credit="Music: A. Composer", title="Morning", provider="Example Library",
-                       licence_url="https://creativecommons.org/licenses/by/4.0/", licence_file=text,
-                       attribution="\"Morning\" by A. Composer, CC BY 4.0", content_id="not-registered")
+        doc = self.imp(
+            "full.wav",
+            tags=["piano"],
+            mood=["calm"],
+            loopable=True,
+            source="https://example.invalid/track",
+            author="A. Composer",
+            credit="Music: A. Composer",
+            title="Morning",
+            provider="Example Library",
+            licence_url="https://creativecommons.org/licenses/by/4.0/",
+            licence_file=text,
+            attribution='"Morning" by A. Composer, CC BY 4.0',
+            content_id="not-registered",
+        )
         self.check(doc["entry"], "entry")
         self.check(doc["licence"], "record")
-        self.assertEqual(set(doc["entry"]), set(self.schema["$defs"]["entry"]["properties"]))   # every field written
+        self.assertEqual(
+            set(doc["entry"]), set(self.schema["$defs"]["entry"]["properties"])
+        )  # every field written
         with open(os.path.join(self.lib, MANIFEST_NAME), encoding="utf-8") as fh:
             self.check(json.load(fh)["files"]["full.wav"], "entry")
 
@@ -98,7 +143,10 @@ class LicenceRecordSchemaTests(unittest.TestCase):
 
     def test_the_record_without_a_declared_licence_matches_the_schema(self):
         record = licence_info(None)
-        self.assertEqual((record["licence"], record["status"], record["usable"]), ("unknown", "unknown", False))
+        self.assertEqual(
+            (record["licence"], record["status"], record["usable"]),
+            ("unknown", "unknown", False),
+        )
         self.check(record, "record")
 
     def test_the_record_fields_are_the_ones_the_schema_names(self):
@@ -113,12 +161,25 @@ class LicenceRecordSchemaTests(unittest.TestCase):
         renamed = dict(doc["entry"], license=doc["entry"]["licence"])
         del renamed["licence"]
         self.assertTrue(errors(renamed, {"$ref": "#/$defs/entry"}, self.schema))
-        self.assertTrue(errors(dict(doc["licence"], verified=True), {"$ref": "#/$defs/record"}, self.schema))
-        self.assertTrue(errors(dict(doc["entry"], kind="music"), {"$ref": "#/$defs/entry"}, self.schema))
+        self.assertTrue(
+            errors(
+                dict(doc["licence"], verified=True),
+                {"$ref": "#/$defs/record"},
+                self.schema,
+            )
+        )
+        self.assertTrue(
+            errors(
+                dict(doc["entry"], kind="music"), {"$ref": "#/$defs/entry"}, self.schema
+            )
+        )
 
     def test_the_schema_names_the_velisa_spec(self):
         self.assertIn("docs/specs/licence-record.md", self.schema["description"])
-        self.assertEqual(self.schema["$defs"]["entry"]["properties"]["content_id"]["enum"], list(library.CONTENT_ID_VALUES))
+        self.assertEqual(
+            self.schema["$defs"]["entry"]["properties"]["content_id"]["enum"],
+            list(library.CONTENT_ID_VALUES),
+        )
 
 
 if __name__ == "__main__":

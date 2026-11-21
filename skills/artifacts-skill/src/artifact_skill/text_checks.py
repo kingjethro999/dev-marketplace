@@ -11,8 +11,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from artifact_skill.core.verification import VerificationResult
-from artifact_skill.credits_check import CREDITS_POLICY_KEYS, credits_check, validate_credits_policy
-from artifact_skill.source_grounding import GROUNDING_POLICY_KEYS, grounding_check, validate_grounding_policy
+from artifact_skill.credits_check import (
+    CREDITS_POLICY_KEYS,
+    credits_check,
+    validate_credits_policy,
+)
+from artifact_skill.source_grounding import (
+    GROUNDING_POLICY_KEYS,
+    grounding_check,
+    validate_grounding_policy,
+)
 
 if TYPE_CHECKING:
     from artifact_skill.adapters.base import ArtifactAdapter
@@ -31,7 +39,10 @@ def verify_structural_with_text_checks(
 ) -> VerificationResult:
     """`adapter.verify_structural()` plus each text check the policy asks for."""
     result = adapter.verify_structural(ref, policy)
-    for check in (grounding_check(adapter, ref, policy), credits_check(adapter, ref, policy)):
+    for check in (
+        grounding_check(adapter, ref, policy),
+        credits_check(adapter, ref, policy),
+    ):
         if check is not None:
             result.checks.append(check)
     return result

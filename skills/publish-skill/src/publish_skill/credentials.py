@@ -10,7 +10,9 @@ Reports say whether each variable is `present` or `absent`, in the environment a
 length. `redact` replaces any credential value with "[REDACTED]" in a document before the CLI prints it, so a value
 that slipped into a message by mistake still does not reach stdout or stderr. It covers every credential variable in
 the environment, as before, and every value this process has read from the keychain or been given to store in it. It
-never reads the keychain itself: a value this process never held cannot be in its output."""
+never reads the keychain itself: a value this process never held cannot be in its output.
+"""
+
 from __future__ import annotations
 
 import os
@@ -22,15 +24,21 @@ from .platforms import get_platform, platform_ids
 
 REDACTED = "[REDACTED]"
 SOURCES = ("environment", "keychain")
-PRECEDENCE = ("per platform: the environment when any of the platform's variables is set there, otherwise the OS "
-              "keychain; one platform's values never mix sources")
-_HELD: Set[str] = set()          # keychain values this process has read or been given (for redact)
+PRECEDENCE = (
+    "per platform: the environment when any of the platform's variables is set there, otherwise the OS "
+    "keychain; one platform's values never mix sources"
+)
+_HELD: Set[str] = (
+    set()
+)  # keychain values this process has read or been given (for redact)
 
 
 class Credentials:
     """The values a platform needs, and where they came from. Its repr and str never show a value."""
 
-    def __init__(self, platform: str, values: Mapping[str, str], source: str = "environment") -> None:
+    def __init__(
+        self, platform: str, values: Mapping[str, str], source: str = "environment"
+    ) -> None:
         self.platform = platform
         self.source = source
         self._values = dict(values)
@@ -67,20 +75,30 @@ def _keychain_value(kc: keychain.Keychain, name: str) -> str:
     return value
 
 
-def env_present(platform_id: str, environ: Optional[Mapping[str, str]] = None) -> List[str]:
+def env_present(
+    platform_id: str, environ: Optional[Mapping[str, str]] = None
+) -> List[str]:
     """The platform's variables that are set in the environment (names only)."""
-    return [n for n in get_platform(platform_id).credential_env if _env_value(n, environ)]
+    return [
+        n for n in get_platform(platform_id).credential_env if _env_value(n, environ)
+    ]
 
 
 def _presence(values: Mapping[str, str]) -> Dict[str, str]:
     return {n: ("present" if v else "absent") for n, v in values.items()}
 
 
-def status(platform_id: str, environ: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:
+def status(
+    platform_id: str, environ: Optional[Mapping[str, str]] = None
+) -> Dict[str, Any]:
     """Which source would be used and which variables it has, as present / absent only."""
     names = get_platform(platform_id).credential_env
     env = {n: _env_value(n, environ) for n in names}
-    kc_report: Dict[str, Any] = {"status": "UNAVAILABLE", "backend": None, "variables": None}
+    kc_report: Dict[str, Any] = {
+        "status": "UNAVAILABLE",
+        "backend": None,
+        "variables": None,
+    }
     kc_vals: Dict[str, str] = {}
     kc = keychain.active()
     if kc is None:
@@ -100,10 +118,17 @@ def status(platform_id: str, environ: Optional[Mapping[str, str]] = None) -> Dic
         source, chosen = "keychain", kc_vals
     else:
         source, chosen = None, {n: "" for n in names}
-    out = {"source": source, "variables": _presence(chosen), "complete": all(chosen.values()),
-           "environment": _presence(env), "keychain": kc_report}
+    out = {
+        "source": source,
+        "variables": _presence(chosen),
+        "complete": all(chosen.values()),
+        "environment": _presence(env),
+        "keychain": kc_report,
+    }
     optional = get_platform(platform_id).optional_credential_env
-    if optional:                       # ADR-013: reported from the source the platform's credentials come from
+    if (
+        optional
+    ):  # ADR-013: reported from the source the platform's credentials come from
         if source == "keychain" and kc is not None:
             try:
                 opt = {n: _keychain_value(kc, n) for n in optional}
@@ -113,7 +138,9 @@ def status(platform_id: str, environ: Optional[Mapping[str, str]] = None) -> Dic
             opt = {n: _env_value(n, environ) for n in optional}
         out["optional"] = _presence(opt)
     if source == "environment" and any(kc_vals.values()):
-        out["note"] = "the keychain is not consulted while any of this platform's variables is set in the environment"
+        out["note"] = (
+            "the keychain is not consulted while any of this platform's variables is set in the environment"
+        )
     return out
 
 
@@ -124,26 +151,49 @@ def load(platform_id: str, environ: Optional[Mapping[str, str]] = None) -> Crede
     if env_present(platform_id, environ):
         missing = [n for n in names if not _env_value(n, environ)]
         if missing:
-            raise PublishError("CREDENTIALS_MISSING", f"set {', '.join(missing)} in the environment too; while any of this "
-                               "platform's variables is set there, the keychain is not consulted (values are never printed)",
-                               {"platform": platform_id, "missing": missing, "source": "environment"})
+            raise PublishError(
+                "CREDENTIALS_MISSING",
+                f"set {', '.join(missing)} in the environment too; while any of this "
+                "platform's variables is set there, the keychain is not consulted (values are never printed)",
+                {"platform": platform_id, "missing": missing, "source": "environment"},
+            )
         values = {n: _env_value(n, environ) for n in names}
-        values.update({n: v for n in _optional(platform_id) for v in [_env_value(n, environ)] if v})
+        values.update(
+            {
+                n: v
+                for n in _optional(platform_id)
+                for v in [_env_value(n, environ)]
+                if v
+            }
+        )
         return Credentials(platform_id, values, "environment")
     kc = keychain.active()
     if kc is None:
-        raise PublishError("CREDENTIALS_MISSING", f"set {', '.join(names)} in the environment; the OS keychain is "
-                           f"unavailable ({keychain.availability()['reason']}) (values are never printed)",
-                           {"platform": platform_id, "missing": list(names), "source": None})
+        raise PublishError(
+            "CREDENTIALS_MISSING",
+            f"set {', '.join(names)} in the environment; the OS keychain is "
+            f"unavailable ({keychain.availability()['reason']}) (values are never printed)",
+            {"platform": platform_id, "missing": list(names), "source": None},
+        )
     values = {n: _keychain_value(kc, n) for n in names}
     missing = [n for n in names if not values[n]]
     if missing:
         found = len(missing) < len(names)
-        raise PublishError("CREDENTIALS_MISSING", f"{', '.join(missing)} not found in the {kc.name}; store "
-                           + ("them" if found else "the credentials") + f" with `{login}` or set every variable in the "
-                           "environment (values are never printed)",
-                           {"platform": platform_id, "missing": missing, "source": "keychain" if found else None})
-    values.update({n: v for n in _optional(platform_id) for v in [_keychain_value(kc, n)] if v})
+        raise PublishError(
+            "CREDENTIALS_MISSING",
+            f"{', '.join(missing)} not found in the {kc.name}; store "
+            + ("them" if found else "the credentials")
+            + f" with `{login}` or set every variable in the "
+            "environment (values are never printed)",
+            {
+                "platform": platform_id,
+                "missing": missing,
+                "source": "keychain" if found else None,
+            },
+        )
+    values.update(
+        {n: v for n in _optional(platform_id) for v in [_keychain_value(kc, n)] if v}
+    )
     return Credentials(platform_id, values, "keychain")
 
 
@@ -154,15 +204,20 @@ def _optional(platform_id: str) -> tuple:
 def secret_values(environ: Optional[Mapping[str, str]] = None) -> List[str]:
     """Every non-empty credential value of every registered platform in the environment, and every keychain value
     this process holds, longest first. Never reads the keychain."""
-    vals = {_env_value(n, environ) for p in platform_ids()
-            for n in get_platform(p).credential_env + get_platform(p).optional_credential_env} | _HELD
+    vals = {
+        _env_value(n, environ)
+        for p in platform_ids()
+        for n in get_platform(p).credential_env
+        + get_platform(p).optional_credential_env
+    } | _HELD
     vals.discard("")
     return sorted(vals, key=len, reverse=True)
 
 
 def redact(obj: Any, secrets: Optional[List[str]] = None) -> Any:
     """`obj` with every credential value inside its string values replaced by REDACTED, however short the value.
-    Keys are left alone: they come from this skill's code, never from the environment, and the CLI reads them."""
+    Keys are left alone: they come from this skill's code, never from the environment, and the CLI reads them.
+    """
     secrets = secret_values() if secrets is None else secrets
     if not secrets:
         return obj

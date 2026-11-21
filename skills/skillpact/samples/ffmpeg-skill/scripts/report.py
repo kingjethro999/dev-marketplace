@@ -9,6 +9,7 @@ Examples:
   python3 report.py --before raw.mov --after final.mp4 --commands commands.txt --notes notes.md
   python3 report.py --pack talk_pack.md -o pack.html          # the social pack table as HTML
 """
+
 import argparse
 import base64
 import html
@@ -19,7 +20,18 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from _common import STATE, add_common, apply_common, child_args, die, emit, info, probe, read_text_or_die, run_tool
+from _common import (
+    STATE,
+    add_common,
+    apply_common,
+    child_args,
+    die,
+    emit,
+    info,
+    probe,
+    read_text_or_die,
+    run_tool,
+)
 
 HERE = Path(__file__).resolve().parent
 
@@ -27,7 +39,19 @@ HERE = Path(__file__).resolve().parent
 def sheet_b64(path: str, tiles: str = "4x2", width: int = 1200) -> Optional[str]:
     with tempfile.TemporaryDirectory(prefix="ffskill_report_") as tmp:
         png = os.path.join(tmp, "sheet.png")
-        proc = run_tool([str(HERE / "look.py"), path, "--tiles", tiles, "--width", str(width), "-o", png] + child_args())
+        proc = run_tool(
+            [
+                str(HERE / "look.py"),
+                path,
+                "--tiles",
+                tiles,
+                "--width",
+                str(width),
+                "-o",
+                png,
+            ]
+            + child_args()
+        )
         if proc.returncode != 0 or not os.path.exists(png):
             return None
         return base64.b64encode(Path(png).read_bytes()).decode("ascii")
@@ -37,13 +61,19 @@ def loudness(path: str) -> Dict[str, Any]:
     proc = run_tool([str(HERE / "loudness.py"), path, "--measure-only"] + child_args())
     try:
         d = json.loads(proc.stdout)
-        return {"lufs": round(float(d["input_i"]), 1), "tp": round(float(d["input_tp"]), 1), "lra": round(float(d["input_lra"]), 1)}
+        return {
+            "lufs": round(float(d["input_i"]), 1),
+            "tp": round(float(d["input_tp"]), 1),
+            "lra": round(float(d["input_lra"]), 1),
+        }
     except (ValueError, KeyError):
         return {}
 
 
 def check(path: str, platform: str) -> Optional[Dict[str, Any]]:
-    proc = run_tool([str(HERE / "check.py"), path, "--platform", platform, "--json"] + child_args())
+    proc = run_tool(
+        [str(HERE / "check.py"), path, "--platform", platform, "--json"] + child_args()
+    )
     try:
         doc = json.loads(proc.stdout)
     except ValueError:
@@ -51,7 +81,9 @@ def check(path: str, platform: str) -> Optional[Dict[str, Any]]:
     if not isinstance(doc, dict) or "checks" not in doc:
         # check.py could not run at all (missing ffmpeg, unreadable file): its failure document
         # has no rows to render. A failed *verification* still carries its rows and is shown.
-        reason = ((doc or {}).get("error") or {}).get("message") or (proc.stderr.strip().splitlines() or ["?"])[-1]
+        reason = ((doc or {}).get("error") or {}).get("message") or (
+            proc.stderr.strip().splitlines() or ["?"]
+        )[-1]
         info(f"check.py could not run: {reason[:200]}")
         return None
     return doc
@@ -70,13 +102,54 @@ def media_rows(meta: Dict[str, Any], ld: Dict[str, Any]) -> List[List[str]]:
     rows = [
         ["Duration", fmt_dur(meta.get("duration"))],
         ["Size", f"{(meta.get('size_bytes') or 0) / 1024 / 1024:.1f} MB"],
-        ["Video", f"{v.get('codec')} {v.get('width')}×{v.get('height')} @ {v.get('fps')} fps, {v.get('pix_fmt')}" if v else "none"],
-        ["Colour", (f"{v.get('color_primaries')}/{v.get('color_transfer')}" + (f" — {v.get('hdr_format')}" if v.get("bt2020_or_hdr") else " (SDR)")) if v else "—"],
-        ["Frame rate", ("variable (suspected)" if v.get("variable_frame_rate_suspected") else "constant") if v else "—"],
-        ["Audio", f"{a.get('codec')} {a.get('channels')} ch {a.get('sample_rate')} Hz" if a else "none"],
+        [
+            "Video",
+            (
+                f"{v.get('codec')} {v.get('width')}×{v.get('height')} @ {v.get('fps')} fps, {v.get('pix_fmt')}"
+                if v
+                else "none"
+            ),
+        ],
+        [
+            "Colour",
+            (
+                (
+                    f"{v.get('color_primaries')}/{v.get('color_transfer')}"
+                    + (
+                        f" — {v.get('hdr_format')}"
+                        if v.get("bt2020_or_hdr")
+                        else " (SDR)"
+                    )
+                )
+                if v
+                else "—"
+            ),
+        ],
+        [
+            "Frame rate",
+            (
+                (
+                    "variable (suspected)"
+                    if v.get("variable_frame_rate_suspected")
+                    else "constant"
+                )
+                if v
+                else "—"
+            ),
+        ],
+        [
+            "Audio",
+            (
+                f"{a.get('codec')} {a.get('channels')} ch {a.get('sample_rate')} Hz"
+                if a
+                else "none"
+            ),
+        ],
     ]
     if ld:
-        rows.append(["Loudness", f"{ld['lufs']} LUFS, TP {ld['tp']} dBTP, LRA {ld['lra']} LU"])
+        rows.append(
+            ["Loudness", f"{ld['lufs']} LUFS, TP {ld['tp']} dBTP, LRA {ld['lra']} LU"]
+        )
     return rows
 
 
@@ -113,7 +186,9 @@ def pack_report(args) -> int:
         else:
             rows.append(cells)
     if not rows:
-        die(f"{args.pack}: no pack table found (expected the Markdown table render.py --template all writes)")
+        die(
+            f"{args.pack}: no pack table found (expected the Markdown table render.py --template all writes)"
+        )
     title = args.title or f"Social pack — {Path(args.pack).stem.replace('_pack', '')}"
     output = args.output or str(Path(args.pack).with_suffix(".html"))
     head = "".join(f"<th>{html.escape(h)}</th>" for h in header)
@@ -122,15 +197,17 @@ def pack_report(args) -> int:
         cells = ""
         for i, c in enumerate(r):
             cls = ""
-            if header[i:i + 1] == ["check"]:
+            if header[i : i + 1] == ["check"]:
                 cls = " class='pass'" if c.lower() == "pass" else " class='bad'"
             cells += f"<td{cls}>{html.escape(c)}</td>"
         body += f"<tr>{cells}</tr>"
-    doc = ("<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-           f"<title>{html.escape(title)}</title><style>{PACK_CSS}</style></head><body><div class='wrap'>"
-           f"<h1>{html.escape(title)}</h1><table><tr>{head}</tr>{body}</table>"
-           f"<p class='note'>{len(rows)} destination(s) from one edit.</p>"
-           "<p class='foot'>Generated by ffmpeg-skill · local FFmpeg, no cloud.</p></div></body></html>")
+    doc = (
+        "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+        f"<title>{html.escape(title)}</title><style>{PACK_CSS}</style></head><body><div class='wrap'>"
+        f"<h1>{html.escape(title)}</h1><table><tr>{head}</tr>{body}</table>"
+        f"<p class='note'>{len(rows)} destination(s) from one edit.</p>"
+        "<p class='foot'>Generated by ffmpeg-skill · local FFmpeg, no cloud.</p></div></body></html>"
+    )
     if STATE.dry_run:
         info(f"wrote {output}")
     else:
@@ -139,24 +216,41 @@ def pack_report(args) -> int:
         except OSError as e:
             die(f"cannot write {output}: {e}", kind="output")
         info(f"wrote {output} ({os.path.getsize(output) / 1024:.0f} KB)")
-    emit(None, report=output, pack=[dict(zip(header, r)) for r in rows], check=None,
-         verification=([{"step": "exists", "ok": True}] if not STATE.dry_run else []))
+    emit(
+        None,
+        report=output,
+        pack=[dict(zip(header, r)) for r in rows],
+        check=None,
+        verification=([{"step": "exists", "ok": True}] if not STATE.dry_run else []),
+    )
     if not args.json:
         print(output)
     return 0
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--after", help="the deliverable (required unless --pack is given)")
-    ap.add_argument("--pack", metavar="FILE", help="a social pack table written by render.py --template all (<stem>_pack.md): render it as HTML")
+    ap.add_argument(
+        "--pack",
+        metavar="FILE",
+        help="a social pack table written by render.py --template all (<stem>_pack.md): render it as HTML",
+    )
     ap.add_argument("--before", help="the source (optional)")
     ap.add_argument("-o", "--output", help="report path (default: <after>_report.html)")
     ap.add_argument("--title", help="report title")
-    ap.add_argument("--platform", help="run check.py for this platform and include the table")
-    ap.add_argument("--commands", help="text file with the commands that were run (one per line)")
+    ap.add_argument(
+        "--platform", help="run check.py for this platform and include the table"
+    )
+    ap.add_argument(
+        "--commands", help="text file with the commands that were run (one per line)"
+    )
     ap.add_argument("--notes", help="text/markdown file with notes to include verbatim")
-    ap.add_argument("--no-sheets", action="store_true", help="skip contact sheets (faster, smaller)")
+    ap.add_argument(
+        "--no-sheets", action="store_true", help="skip contact sheets (faster, smaller)"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -176,36 +270,74 @@ def main() -> int:
             sheets["before"] = sheet_b64(args.before)
         if after.get("video"):
             sheets["after"] = sheet_b64(args.after)
-    commands = read_text_or_die(args.commands, "--commands").splitlines() if args.commands else []
+    commands = (
+        read_text_or_die(args.commands, "--commands").splitlines()
+        if args.commands
+        else []
+    )
     notes = read_text_or_die(args.notes, "--notes") if args.notes else ""
     title = args.title or f"Delivery report — {Path(args.after).name}"
-    output = args.output or str(Path(args.after).with_name(Path(args.after).stem + "_report.html"))
+    output = args.output or str(
+        Path(args.after).with_name(Path(args.after).stem + "_report.html")
+    )
 
     def table(rows: List[List[str]]) -> str:
-        return "<table>" + "".join(f"<tr><th>{html.escape(k)}</th><td>{html.escape(str(v))}</td></tr>" for k, v in rows) + "</table>"
+        return (
+            "<table>"
+            + "".join(
+                f"<tr><th>{html.escape(k)}</th><td>{html.escape(str(v))}</td></tr>"
+                for k, v in rows
+            )
+            + "</table>"
+        )
 
     parts: List[str] = []
     parts.append(f"<h1>{html.escape(title)}</h1>")
     parts.append(f"<p class='meta'>{html.escape(os.path.abspath(args.after))}</p>")
     cols = []
     if before:
-        cols.append(f"<div class='col'><h2>Before</h2><p class='file'>{html.escape(Path(args.before).name)}</p>{table(media_rows(before, ld_before))}"
-                    + (f"<img src='data:image/png;base64,{sheets['before']}' alt='before contact sheet'>" if sheets.get("before") else "") + "</div>")
-    cols.append(f"<div class='col'><h2>After</h2><p class='file'>{html.escape(Path(args.after).name)}</p>{table(media_rows(after, ld_after))}"
-                + (f"<img src='data:image/png;base64,{sheets['after']}' alt='after contact sheet'>" if sheets.get("after") else "") + "</div>")
+        cols.append(
+            f"<div class='col'><h2>Before</h2><p class='file'>{html.escape(Path(args.before).name)}</p>{table(media_rows(before, ld_before))}"
+            + (
+                f"<img src='data:image/png;base64,{sheets['before']}' alt='before contact sheet'>"
+                if sheets.get("before")
+                else ""
+            )
+            + "</div>"
+        )
+    cols.append(
+        f"<div class='col'><h2>After</h2><p class='file'>{html.escape(Path(args.after).name)}</p>{table(media_rows(after, ld_after))}"
+        + (
+            f"<img src='data:image/png;base64,{sheets['after']}' alt='after contact sheet'>"
+            if sheets.get("after")
+            else ""
+        )
+        + "</div>"
+    )
     parts.append("<div class='cols'>" + "".join(cols) + "</div>")
     if chk:
         rows = "".join(
             f"<tr class='{r['status'].lower()}'><td class='st'>{r['status']}</td><td>{html.escape(r['check'])}</td><td>{html.escape(str(r['value']))}</td><td>{html.escape(str(r['expected']))}</td><td>{html.escape(r.get('fix') or '') if r['status'] != 'PASS' else ''}</td></tr>"
-            for r in chk["checks"])
+            for r in chk["checks"]
+        )
         verdict = "READY" if chk.get("ok") else f"{chk.get('failed')} FAIL"
-        parts.append(f"<h2>Compliance — {html.escape(args.platform)} <span class='verdict {'ok' if chk.get('ok') else 'bad'}'>{verdict}</span></h2>"
-                     f"<table class='checks'><tr><th></th><th>check</th><th>value</th><th>expected</th><th>fix</th></tr>{rows}</table>")
+        parts.append(
+            f"<h2>Compliance — {html.escape(args.platform)} <span class='verdict {'ok' if chk.get('ok') else 'bad'}'>{verdict}</span></h2>"
+            f"<table class='checks'><tr><th></th><th>check</th><th>value</th><th>expected</th><th>fix</th></tr>{rows}</table>"
+        )
     if notes:
-        parts.append("<h2>Notes</h2><pre class='notes'>" + html.escape(notes) + "</pre>")
+        parts.append(
+            "<h2>Notes</h2><pre class='notes'>" + html.escape(notes) + "</pre>"
+        )
     if commands:
-        parts.append("<h2>Commands</h2><pre class='cmd'>" + html.escape("\n".join(commands)) + "</pre>")
-    parts.append("<p class='foot'>Generated by ffmpeg-skill · local FFmpeg, no cloud.</p>")
+        parts.append(
+            "<h2>Commands</h2><pre class='cmd'>"
+            + html.escape("\n".join(commands))
+            + "</pre>"
+        )
+    parts.append(
+        "<p class='foot'>Generated by ffmpeg-skill · local FFmpeg, no cloud.</p>"
+    )
 
     css = """
     :root{--bg:#F4F6F8;--paper:#fff;--ink:#161B21;--ink2:#4B5661;--line:#D8DEE4;--ok:#2C8A5B;--warn:#C48519;--bad:#B4362F;--accent:#1E6F8E}
@@ -228,14 +360,21 @@ def main() -> int:
     """
     doc = f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)}</title><style>{css}</style></head><body><div class='wrap'>{''.join(parts)}</div></body></html>"
     if STATE.dry_run:
-        info(f"wrote {output}")  # printed as "[dry-run] would write"; nothing is written
+        info(
+            f"wrote {output}"
+        )  # printed as "[dry-run] would write"; nothing is written
     else:
         try:
             Path(output).write_text(doc, encoding="utf-8")
         except OSError as e:
             die(f"cannot write {output}: {e}", kind="output")
         info(f"wrote {output} ({os.path.getsize(output) / 1024:.0f} KB)")
-    emit(None, report=output, check=chk, verification=([{"step": "exists", "ok": True}] if not STATE.dry_run else []))
+    emit(
+        None,
+        report=output,
+        check=chk,
+        verification=([{"step": "exists", "ok": True}] if not STATE.dry_run else []),
+    )
     if not args.json:
         print(output)
     return 0

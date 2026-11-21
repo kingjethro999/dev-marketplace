@@ -44,21 +44,36 @@ def test_verify_good_png_passes_cleanly(good_png, adapter):
 def test_verify_dimension_requirements(good_png, adapter):
     ref = ArtifactRef.from_path(good_png)
     ok = adapter.verify_structural(ref, {"require_width": 200, "require_height": 100})
-    assert next(c for c in ok.checks if c.id == "width_requirement").status == CheckStatus.PASS
-    assert next(c for c in ok.checks if c.id == "height_requirement").status == CheckStatus.PASS
+    assert (
+        next(c for c in ok.checks if c.id == "width_requirement").status
+        == CheckStatus.PASS
+    )
+    assert (
+        next(c for c in ok.checks if c.id == "height_requirement").status
+        == CheckStatus.PASS
+    )
 
     mismatch = adapter.verify_structural(ref, {"require_width": 999})
-    assert next(c for c in mismatch.checks if c.id == "width_requirement").status == CheckStatus.FAIL
+    assert (
+        next(c for c in mismatch.checks if c.id == "width_requirement").status
+        == CheckStatus.FAIL
+    )
     assert mismatch.status == CheckStatus.FAIL
 
 
 def test_verify_dimension_range(good_png, adapter):
     ref = ArtifactRef.from_path(good_png)
     ok = adapter.verify_structural(ref, {"min_width": 100, "max_width": 300})
-    assert next(c for c in ok.checks if c.id == "dimensions_range").status == CheckStatus.PASS
+    assert (
+        next(c for c in ok.checks if c.id == "dimensions_range").status
+        == CheckStatus.PASS
+    )
 
     too_narrow = adapter.verify_structural(ref, {"min_width": 500})
-    assert next(c for c in too_narrow.checks if c.id == "dimensions_range").status == CheckStatus.FAIL
+    assert (
+        next(c for c in too_narrow.checks if c.id == "dimensions_range").status
+        == CheckStatus.FAIL
+    )
 
 
 def test_verify_exif_orientation_warns(exif_rotated_jpeg, adapter):
@@ -74,7 +89,9 @@ def test_execute_resize_maintains_aspect_ratio_by_default(good_png, adapter, tmp
     before_hash = ref.sha256
     output_path = tmp_path / "resized.png"
 
-    result_ref = adapter.execute(ref, "resize", {"width": 50, "height": 50}, output_path)
+    result_ref = adapter.execute(
+        ref, "resize", {"width": 50, "height": 50}, output_path
+    )
 
     assert output_path.exists()
     assert ArtifactRef.from_path(good_png).sha256 == before_hash  # Original Protection
@@ -84,18 +101,25 @@ def test_execute_resize_maintains_aspect_ratio_by_default(good_png, adapter, tmp
     assert out_report.details["height"] == 25
 
 
-def test_execute_resize_without_aspect_ratio_stretches_exactly(good_png, adapter, tmp_path):
+def test_execute_resize_without_aspect_ratio_stretches_exactly(
+    good_png, adapter, tmp_path
+):
     ref = ArtifactRef.from_path(good_png)
     output_path = tmp_path / "resized.png"
     result_ref = adapter.execute(
-        ref, "resize", {"width": 40, "height": 40, "maintain_aspect_ratio": False}, output_path
+        ref,
+        "resize",
+        {"width": 40, "height": 40, "maintain_aspect_ratio": False},
+        output_path,
     )
     out_report = adapter.inspect(result_ref)
     assert out_report.details["width"] == 40
     assert out_report.details["height"] == 40
 
 
-def test_execute_resize_upscale_with_aspect_ratio_actually_enlarges(good_png, adapter, tmp_path):
+def test_execute_resize_upscale_with_aspect_ratio_actually_enlarges(
+    good_png, adapter, tmp_path
+):
     """Independent-review finding: Pillow's Image.thumbnail() only ever
     shrinks, never enlarges - so resizing a 200x100 source to a larger
     800x800 box with maintain_aspect_ratio=True (the schema's own default)
@@ -106,7 +130,9 @@ def test_execute_resize_upscale_with_aspect_ratio_actually_enlarges(good_png, ad
     ref = ArtifactRef.from_path(good_png)
     output_path = tmp_path / "upscaled.png"
 
-    result_ref = adapter.execute(ref, "resize", {"width": 800, "height": 800}, output_path)
+    result_ref = adapter.execute(
+        ref, "resize", {"width": 800, "height": 800}, output_path
+    )
 
     out_report = adapter.inspect(result_ref)
     # 200x100 fitted into an 800x800 box, aspect preserved -> 800x400
@@ -153,7 +179,10 @@ def test_capabilities_report_never_lies_about_probe_result(adapter):
     caps = {c.id: c for c in adapter.capabilities()}
     assert "image.structural" in caps
     assert "image.render" in caps
-    assert caps["image.structural"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["image.structural"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
 
 
 def test_limitations_names_the_real_known_caveats(adapter):

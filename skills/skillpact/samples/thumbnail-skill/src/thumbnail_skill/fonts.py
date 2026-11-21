@@ -9,6 +9,7 @@ file on this machine: it fails with MISSING_INPUT so a caller sees a clear, stru
 of a thumbnail rendered with a silently different typeface. `doctor` reports, for every font_id,
 whether it resolved on this machine and to which concrete file (path + sha256), so "which font
 actually rendered this" is always inspectable, never a guess."""
+
 from __future__ import annotations
 
 import os
@@ -24,7 +25,9 @@ from .errors import ThumbnailError
 _HOME = os.path.expanduser("~")
 FONT_REGISTRY: Dict[str, Dict[str, Any]] = {
     "sans": {
-        "display_name": "Sans", "style": "regular", "role": "default UI sans-serif",
+        "display_name": "Sans",
+        "style": "regular",
+        "role": "default UI sans-serif",
         "candidates": [
             ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0),
             ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", 0),
@@ -36,7 +39,9 @@ FONT_REGISTRY: Dict[str, Dict[str, Any]] = {
         ],
     },
     "sans-bold": {
-        "display_name": "Sans Bold", "style": "bold", "role": "emphasis / headline sans-serif",
+        "display_name": "Sans Bold",
+        "style": "bold",
+        "role": "emphasis / headline sans-serif",
         "candidates": [
             ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 0),
             ("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", 0),
@@ -47,7 +52,9 @@ FONT_REGISTRY: Dict[str, Dict[str, Any]] = {
         ],
     },
     "serif": {
-        "display_name": "Serif", "style": "regular", "role": "serif text",
+        "display_name": "Serif",
+        "style": "regular",
+        "role": "serif text",
         "candidates": [
             ("/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", 0),
             ("/usr/share/fonts/truetype/freefont/FreeSerif.ttf", 0),
@@ -57,7 +64,9 @@ FONT_REGISTRY: Dict[str, Dict[str, Any]] = {
         ],
     },
     "mono": {
-        "display_name": "Monospace", "style": "regular", "role": "monospaced text",
+        "display_name": "Monospace",
+        "style": "regular",
+        "role": "monospaced text",
         "candidates": [
             ("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 0),
             ("/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 0),
@@ -66,7 +75,9 @@ FONT_REGISTRY: Dict[str, Dict[str, Any]] = {
         ],
     },
     "cjk": {
-        "display_name": "CJK Sans", "style": "regular", "role": "Japanese / Chinese / Korean text",
+        "display_name": "CJK Sans",
+        "style": "regular",
+        "role": "Japanese / Chinese / Korean text",
         "candidates": [
             ("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc", 0),
             ("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 0),
@@ -89,7 +100,13 @@ class ResolvedFont:
     sha256: str
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"font_id": self.font_id, "font_name": self.display_name, "path": self.path, "index": self.index, "font_file_hash": f"sha256:{self.sha256}"}
+        return {
+            "font_id": self.font_id,
+            "font_name": self.display_name,
+            "path": self.path,
+            "index": self.index,
+            "font_file_hash": f"sha256:{self.sha256}",
+        }
 
 
 def font_ids() -> List[str]:
@@ -111,25 +128,54 @@ def font_status(font_id: str) -> Dict[str, Any]:
     found = _first_existing(font_id)
     entry = FONT_REGISTRY[font_id]
     if found is None:
-        return {"font_id": font_id, "display_name": entry["display_name"], "status": "unavailable",
-                "candidates_checked": [c[0] for c in entry["candidates"]]}
+        return {
+            "font_id": font_id,
+            "display_name": entry["display_name"],
+            "status": "unavailable",
+            "candidates_checked": [c[0] for c in entry["candidates"]],
+        }
     path, index = found
-    return {"font_id": font_id, "display_name": entry["display_name"], "status": "available",
-            "path": path, "index": index, "sha256": f"sha256:{sha256_file(path)}"}
+    return {
+        "font_id": font_id,
+        "display_name": entry["display_name"],
+        "status": "available",
+        "path": path,
+        "index": index,
+        "sha256": f"sha256:{sha256_file(path)}",
+    }
 
 
 def resolve_font(font_id: object) -> ResolvedFont:
     if not isinstance(font_id, str) or not font_id:
-        raise ThumbnailError("INVALID_REQUEST", "font_id must be a non-empty string", {"field": "font_id"})
+        raise ThumbnailError(
+            "INVALID_REQUEST",
+            "font_id must be a non-empty string",
+            {"field": "font_id"},
+        )
     if font_id not in FONT_REGISTRY:
-        raise ThumbnailError("MISSING_INPUT", f"font_id {font_id!r} is not registered", {"reason": "unknown_font_id", "font_id": font_id, "available": font_ids()})
+        raise ThumbnailError(
+            "MISSING_INPUT",
+            f"font_id {font_id!r} is not registered",
+            {"reason": "unknown_font_id", "font_id": font_id, "available": font_ids()},
+        )
     found = _first_existing(font_id)
     if found is None:
-        raise ThumbnailError("MISSING_INPUT", f"font_id {font_id!r} is registered but no candidate font file exists on this machine "
-                             f"(run `thumbnail doctor` to see what was checked); this skill never substitutes a different font",
-                             {"reason": "font_file_missing", "font_id": font_id, "candidates_checked": [c[0] for c in FONT_REGISTRY[font_id]["candidates"]]})
+        raise ThumbnailError(
+            "MISSING_INPUT",
+            f"font_id {font_id!r} is registered but no candidate font file exists on this machine "
+            f"(run `thumbnail doctor` to see what was checked); this skill never substitutes a different font",
+            {
+                "reason": "font_file_missing",
+                "font_id": font_id,
+                "candidates_checked": [
+                    c[0] for c in FONT_REGISTRY[font_id]["candidates"]
+                ],
+            },
+        )
     path, index = found
-    return ResolvedFont(font_id, FONT_REGISTRY[font_id]["display_name"], path, index, sha256_file(path))
+    return ResolvedFont(
+        font_id, FONT_REGISTRY[font_id]["display_name"], path, index, sha256_file(path)
+    )
 
 
 __all__ = ["FONT_REGISTRY", "ResolvedFont", "font_ids", "font_status", "resolve_font"]

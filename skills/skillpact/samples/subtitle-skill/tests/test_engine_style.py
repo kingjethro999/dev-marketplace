@@ -9,6 +9,7 @@ minimal FAKE caption/probe pair (see tests/test_engine_boundaries.py for
 the same pattern) -- the real, vendored caption.py is exercised separately
 in tests/test_engine_render.py.
 """
+
 import math
 import textwrap
 from pathlib import Path
@@ -24,20 +25,17 @@ def _write_fake_scripts(root: Path) -> None:
     (root / "scripts").mkdir(parents=True, exist_ok=True)
     (root / "scripts" / "_common.py").write_text("# fake\n", encoding="utf-8")
 
-    probe_src = textwrap.dedent(
-        """
+    probe_src = textwrap.dedent("""
         import json, sys
         def main():
             path = sys.argv[1]
             print(json.dumps({"file": path, "duration": 10.0, "video": {"codec": "h264"}, "audio": None}))
         if __name__ == "__main__":
             main()
-        """
-    )
+        """)
     (root / "scripts" / "probe.py").write_text(probe_src, encoding="utf-8")
 
-    caption_src = textwrap.dedent(
-        """
+    caption_src = textwrap.dedent("""
         import json, sys
         def main():
             args = sys.argv[1:]
@@ -53,8 +51,7 @@ def _write_fake_scripts(root: Path) -> None:
             }))
         if __name__ == "__main__":
             main()
-        """
-    )
+        """)
     (root / "scripts" / "caption.py").write_text(caption_src, encoding="utf-8")
 
 
@@ -75,7 +72,11 @@ def _burn_in(tmp_path, **kwargs):
     srt_path.write_text("1\n00:00:00,000 --> 00:00:01,000\nhi\n\n", encoding="utf-8")
     output_path = tmp_path / "out.mp4"
     return engine.burn_in(
-        video_path=video_path, subtitle_path=srt_path, subtitle_format="srt", output_path=output_path, **kwargs
+        video_path=video_path,
+        subtitle_path=srt_path,
+        subtitle_format="srt",
+        output_path=output_path,
+        **kwargs
     )
 
 
@@ -103,7 +104,9 @@ def test_style_argv_all_unset_style_is_a_no_op():
     "unmapped_field,value",
     [("align", "center"), ("position", 50.0), ("line", 10.0), ("italic", True)],
 )
-def test_style_argv_fields_with_no_caption_equivalent_add_nothing(unmapped_field, value):
+def test_style_argv_fields_with_no_caption_equivalent_add_nothing(
+    unmapped_field, value
+):
     """align/position/line/italic have no caption.py equivalent (see
     engine._style_argv's docstring) -- setting only one of them must not
     add any argv at all, not a guessed-at flag."""
@@ -164,7 +167,10 @@ def test_style_argv_size_percent_of_288_conversion(size_percent, expected_points
     from subtitle_skill.models import SubtitleStyle
 
     assert _ASS_SCRIPT_HEIGHT == 288
-    assert _style_argv(SubtitleStyle(size=size_percent)) == ["--size", str(expected_points)]
+    assert _style_argv(SubtitleStyle(size=size_percent)) == [
+        "--size",
+        str(expected_points),
+    ]
 
 
 @pytest.mark.parametrize("bad_size", [0, -5, math.nan, math.inf, True])
@@ -189,7 +195,9 @@ def test_style_argv_combines_all_three_wired_fields():
 # --- engine.burn_in argv-construction (fake caption.py, full argv capture) -------
 
 
-def test_burn_in_unset_style_produces_identical_argv_to_before_the_change(tmp_path, fake_engine):
+def test_burn_in_unset_style_produces_identical_argv_to_before_the_change(
+    tmp_path, fake_engine
+):
     """The regression guard the task explicitly calls for: an all-default
     (or omitted) style must not add any new flags at all."""
     response_no_kwarg = _burn_in(tmp_path)
@@ -199,15 +207,26 @@ def test_burn_in_unset_style_produces_identical_argv_to_before_the_change(tmp_pa
     argv_explicit_none = _argv_after_video(response_explicit_none, tmp_path)
 
     assert argv_no_kwarg == argv_explicit_none == _base_argv_tail(tmp_path)
-    assert not any(a.startswith("--color") or a.startswith("--bold") or a.startswith("--size") for a in argv_no_kwarg)
+    assert not any(
+        a.startswith("--color") or a.startswith("--bold") or a.startswith("--size")
+        for a in argv_no_kwarg
+    )
 
 
 def test_burn_in_forwards_color_bold_size_for_mode_burn(tmp_path, fake_engine):
     from subtitle_skill.models import SubtitleStyle
 
-    response = _burn_in(tmp_path, style=SubtitleStyle(color="112233", bold=True, size=50))
+    response = _burn_in(
+        tmp_path, style=SubtitleStyle(color="112233", bold=True, size=50)
+    )
     argv = _argv_after_video(response, tmp_path)
-    assert argv == _base_argv_tail(tmp_path) + ["--color", "112233", "--bold", "--size", "144"]
+    assert argv == _base_argv_tail(tmp_path) + [
+        "--color",
+        "112233",
+        "--bold",
+        "--size",
+        "144",
+    ]
 
 
 def test_burn_in_does_not_forward_style_for_mode_mux(tmp_path, fake_engine):
@@ -215,7 +234,9 @@ def test_burn_in_does_not_forward_style_for_mode_mux(tmp_path, fake_engine):
     stream -- mode="mux" must silently not forward it, not error."""
     from subtitle_skill.models import SubtitleStyle
 
-    response = _burn_in(tmp_path, mode="mux", style=SubtitleStyle(color="112233", bold=True, size=50))
+    response = _burn_in(
+        tmp_path, mode="mux", style=SubtitleStyle(color="112233", bold=True, size=50)
+    )
     argv = _argv_after_video(response, tmp_path)
     assert "--color" not in argv and "--bold" not in argv and "--size" not in argv
     assert "--mode" in argv and "mux" in argv

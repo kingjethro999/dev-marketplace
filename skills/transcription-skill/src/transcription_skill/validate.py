@@ -3,50 +3,110 @@
 Checks: required fields, asset identity, timestamp validity and ordering, segment/word containment,
 language validity, confidence range, and leakage (credentials, command/argv, absolute paths).
 """
+
 from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Optional
 
 from .models import LANGUAGE_SOURCES, LANGUAGE_UNKNOWN, TRANSCRIPT_SCHEMA
-from .words import POS_VALUES as WORD_POS_VALUES, TIMING_VALUES as WORD_TIMING_VALUES   # word fields of ADR-039
+from .words import (
+    POS_VALUES as WORD_POS_VALUES,
+    TIMING_VALUES as WORD_TIMING_VALUES,
+)  # word fields of ADR-039
 
-END_TOLERANCE = 0.5          # seconds a segment may overrun the media duration (engine rounding)
+END_TOLERANCE = (
+    0.5  # seconds a segment may overrun the media duration (engine rounding)
+)
 CONTAINMENT_TOLERANCE = 0.01  # seconds a word may sit outside its segment
 LANGUAGE_RE = re.compile(r"^[a-z]{2,3}$")
 FINGERPRINT_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 ISO_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
-REQUIRED_TRANSCRIPT = ("schema", "id", "asset_id", "language", "language_source", "language_confidence", "duration",
-                       "segments", "source", "engine", "engine_version", "created_at", "provenance", "warnings")
-REQUIRED_SEGMENT = ("id", "start", "end", "text", "raw_text", "confidence", "words", "speaker_id")
+REQUIRED_TRANSCRIPT = (
+    "schema",
+    "id",
+    "asset_id",
+    "language",
+    "language_source",
+    "language_confidence",
+    "duration",
+    "segments",
+    "source",
+    "engine",
+    "engine_version",
+    "created_at",
+    "provenance",
+    "warnings",
+)
+REQUIRED_SEGMENT = (
+    "id",
+    "start",
+    "end",
+    "text",
+    "raw_text",
+    "confidence",
+    "words",
+    "speaker_id",
+)
 REQUIRED_WORD = ("start", "end", "text", "confidence")
 REQUIRED_SOURCE = ("filename", "fingerprint", "size_bytes", "media_duration")
-REQUIRED_PROVENANCE = ("engine", "engine_version", "execution_mode", "model", "model_version", "parameters", "parameters_hash",
-                       "cache_key", "created_at", "processing_seconds", "skill_version", "skill", "tool")
+REQUIRED_PROVENANCE = (
+    "engine",
+    "engine_version",
+    "execution_mode",
+    "model",
+    "model_version",
+    "parameters",
+    "parameters_hash",
+    "cache_key",
+    "created_at",
+    "processing_seconds",
+    "skill_version",
+    "skill",
+    "tool",
+)
 EXECUTION_MODES = ("local", "remote")
 
 # keys that must never appear anywhere in a transcript document
-FORBIDDEN_KEYS = {"command", "argv", "cmd", "shell", "api_key", "apikey", "token", "secret", "password", "authorization",
-                  "access_key", "secret_key", "credential", "credentials"}
+FORBIDDEN_KEYS = {
+    "command",
+    "argv",
+    "cmd",
+    "shell",
+    "api_key",
+    "apikey",
+    "token",
+    "secret",
+    "password",
+    "authorization",
+    "access_key",
+    "secret_key",
+    "credential",
+    "credentials",
+}
 # string values that look like credentials
 CREDENTIAL_PATTERNS = [
-    re.compile(r"\bsk-[A-Za-z0-9_\-]{16,}"),                 # OpenAI-style keys
-    re.compile(r"\bsk-ant-[A-Za-z0-9_\-]{16,}"),             # Anthropic-style keys
-    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),                      # AWS access key id
-    re.compile(r"\bhf_[A-Za-z0-9]{20,}"),                     # Hugging Face token
+    re.compile(r"\bsk-[A-Za-z0-9_\-]{16,}"),  # OpenAI-style keys
+    re.compile(r"\bsk-ant-[A-Za-z0-9_\-]{16,}"),  # Anthropic-style keys
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),  # AWS access key id
+    re.compile(r"\bhf_[A-Za-z0-9]{20,}"),  # Hugging Face token
     re.compile(r"\bBearer\s+[A-Za-z0-9._\-]{16,}"),
-    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"),              # GitHub tokens
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"),  # GitHub tokens
     re.compile(r"\b[A-Z_]*(API_KEY|SECRET|TOKEN|PASSWORD)[A-Z_]*=\S+"),
 ]
 # string values that look like shell commands
 COMMAND_PATTERNS = [
-    re.compile(r"^\s*(ffmpeg|ffprobe|whisper|whisper-cli|whisper-cpp|python3?|sh|bash|cmd\.exe|powershell)\b\s+-"),
+    re.compile(
+        r"^\s*(ffmpeg|ffprobe|whisper|whisper-cli|whisper-cpp|python3?|sh|bash|cmd\.exe|powershell)\b\s+-"
+    ),
     re.compile(r"\$\(|`[^`]+`|\|\s*(sh|bash)\b"),
 ]
 ABS_PATH_PATTERNS = [
-    re.compile(r"^(/|~/)[^\s]+/[^\s]*"),                      # POSIX absolute/home path with at least one dir
-    re.compile(r"^[A-Za-z]:\\[^\s]+"),                        # Windows drive path
+    re.compile(
+        r"^(/|~/)[^\s]+/[^\s]*"
+    ),  # POSIX absolute/home path with at least one dir
+    re.compile(r"^[A-Za-z]:\\[^\s]+"),  # Windows drive path
 ]
 # spoken text is still checked for credentials, but may legitimately look like a path or a command
 # (a lecture can literally say "run ffmpeg -i input")
@@ -63,21 +123,36 @@ class ValidationReport:
         return not self.errors
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"ok": self.ok, "errors": list(self.errors), "warnings": list(self.warnings)}
+        return {
+            "ok": self.ok,
+            "errors": list(self.errors),
+            "warnings": list(self.warnings),
+        }
 
 
 def _is_num(v: Any) -> bool:
-    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and v not in (float("inf"), float("-inf"))
+    return (
+        isinstance(v, (int, float))
+        and not isinstance(v, bool)
+        and v == v
+        and v not in (float("inf"), float("-inf"))
+    )
 
 
 def _check_conf(v: Any, where: str, rep: ValidationReport) -> None:
     if v is None:
         return
     if not _is_num(v) or v < 0.0 or v > 1.0:
-        rep.errors.append(f"{where}: confidence must be null or a number in [0, 1], got {v!r}")
+        rep.errors.append(
+            f"{where}: confidence must be null or a number in [0, 1], got {v!r}"
+        )
 
 
-def validate_transcript(doc: Any, expected_asset_id: Optional[str] = None, expected_fingerprint: Optional[str] = None) -> ValidationReport:
+def validate_transcript(
+    doc: Any,
+    expected_asset_id: Optional[str] = None,
+    expected_fingerprint: Optional[str] = None,
+) -> ValidationReport:
     rep = ValidationReport()
     if not isinstance(doc, dict):
         rep.errors.append("transcript must be a JSON object")
@@ -93,23 +168,39 @@ def validate_transcript(doc: Any, expected_asset_id: Optional[str] = None, expec
         if not isinstance(doc[k], str) or not doc[k].strip():
             rep.errors.append(f"{k} must be a non-empty string")
     if not isinstance(doc["created_at"], str) or not ISO_RE.match(doc["created_at"]):
-        rep.errors.append("created_at must be an ISO-8601 UTC timestamp (YYYY-MM-DDTHH:MM:SSZ)")
-    if not isinstance(doc["warnings"], list) or not all(isinstance(w, str) for w in doc["warnings"]):
+        rep.errors.append(
+            "created_at must be an ISO-8601 UTC timestamp (YYYY-MM-DDTHH:MM:SSZ)"
+        )
+    if not isinstance(doc["warnings"], list) or not all(
+        isinstance(w, str) for w in doc["warnings"]
+    ):
         rep.errors.append("warnings must be a list of strings")
 
     # language
-    lang, lsrc, lconf = doc["language"], doc["language_source"], doc["language_confidence"]
-    if not isinstance(lang, str) or not (lang == LANGUAGE_UNKNOWN or LANGUAGE_RE.match(lang)):
-        rep.errors.append(f"language must be an ISO 639 code or 'unknown', got {lang!r}")
+    lang, lsrc, lconf = (
+        doc["language"],
+        doc["language_source"],
+        doc["language_confidence"],
+    )
+    if not isinstance(lang, str) or not (
+        lang == LANGUAGE_UNKNOWN or LANGUAGE_RE.match(lang)
+    ):
+        rep.errors.append(
+            f"language must be an ISO 639 code or 'unknown', got {lang!r}"
+        )
     if lsrc not in LANGUAGE_SOURCES:
-        rep.errors.append(f"language_source must be one of {LANGUAGE_SOURCES}, got {lsrc!r}")
+        rep.errors.append(
+            f"language_source must be one of {LANGUAGE_SOURCES}, got {lsrc!r}"
+        )
     elif lsrc == "unknown" and lang != LANGUAGE_UNKNOWN:
         rep.errors.append("language_source 'unknown' requires language 'unknown'")
     elif lang == LANGUAGE_UNKNOWN and lsrc != "unknown":
         rep.errors.append("language 'unknown' requires language_source 'unknown'")
     _check_conf(lconf, "language_confidence", rep)
     if lsrc == "requested" and lconf is not None:
-        rep.errors.append("language_confidence must be null when the language was requested, not detected")
+        rep.errors.append(
+            "language_confidence must be null when the language was requested, not detected"
+        )
 
     # duration / source
     dur = doc["duration"]
@@ -128,7 +219,12 @@ def validate_transcript(doc: Any, expected_asset_id: Optional[str] = None, expec
             rep.errors.append("source.fingerprint must be 'sha256:<64 hex>'")
         elif expected_fingerprint and fp != expected_fingerprint:
             rep.errors.append("source.fingerprint does not match the input file")
-        if "media_duration" in src and dur is not None and _is_num(src["media_duration"]) and abs(src["media_duration"] - dur) > 1e-6:
+        if (
+            "media_duration" in src
+            and dur is not None
+            and _is_num(src["media_duration"])
+            and abs(src["media_duration"] - dur) > 1e-6
+        ):
             rep.errors.append("duration must equal source.media_duration")
         fn = src.get("filename")
         if not isinstance(fn, str) or not fn:
@@ -138,12 +234,16 @@ def validate_transcript(doc: Any, expected_asset_id: Optional[str] = None, expec
         sb = src.get("size_bytes")
         if not isinstance(sb, int) or isinstance(sb, bool) or sb < 0:
             rep.errors.append("source.size_bytes must be a non-negative integer")
-        if "media_duration" in src and (not _is_num(src["media_duration"]) or src["media_duration"] <= 0):
+        if "media_duration" in src and (
+            not _is_num(src["media_duration"]) or src["media_duration"] <= 0
+        ):
             rep.errors.append("source.media_duration must be a positive number")
         if "has_video" in src and not isinstance(src["has_video"], bool):
             rep.errors.append("source.has_video must be a boolean")
     if expected_asset_id and doc["asset_id"] != expected_asset_id:
-        rep.errors.append(f"asset_id {doc['asset_id']!r} does not match expected {expected_asset_id!r}")
+        rep.errors.append(
+            f"asset_id {doc['asset_id']!r} does not match expected {expected_asset_id!r}"
+        )
 
     # provenance
     prov = doc["provenance"]
@@ -153,22 +253,36 @@ def validate_transcript(doc: Any, expected_asset_id: Optional[str] = None, expec
         for k in REQUIRED_PROVENANCE:
             if k not in prov:
                 rep.errors.append(f"provenance.{k} is required")
-        if prov.get("engine") != doc["engine"] or prov.get("engine_version") != doc["engine_version"]:
-            rep.errors.append("provenance.engine/engine_version must match transcript.engine/engine_version")
+        if (
+            prov.get("engine") != doc["engine"]
+            or prov.get("engine_version") != doc["engine_version"]
+        ):
+            rep.errors.append(
+                "provenance.engine/engine_version must match transcript.engine/engine_version"
+            )
         if prov.get("execution_mode") not in EXECUTION_MODES:
-            rep.errors.append(f"provenance.execution_mode must be one of {EXECUTION_MODES}")
+            rep.errors.append(
+                f"provenance.execution_mode must be one of {EXECUTION_MODES}"
+            )
         if not isinstance(prov.get("parameters"), dict):
             rep.errors.append("provenance.parameters must be an object")
         for k in ("parameters_hash", "cache_key"):
             v = prov.get(k)
             if not isinstance(v, str) or not re.match(r"^[0-9a-f]{64}$", v):
                 rep.errors.append(f"provenance.{k} must be a sha256 hex string")
-        if not _is_num(prov.get("processing_seconds")) or prov["processing_seconds"] < 0:
-            rep.errors.append("provenance.processing_seconds must be a non-negative number")
+        if (
+            not _is_num(prov.get("processing_seconds"))
+            or prov["processing_seconds"] < 0
+        ):
+            rep.errors.append(
+                "provenance.processing_seconds must be a non-negative number"
+            )
         for k in ("skill", "tool", "skill_version", "model"):
             if not isinstance(prov.get(k), str) or not prov.get(k):
                 rep.errors.append(f"provenance.{k} must be a non-empty string")
-        if isinstance(prov.get("tool"), str) and not prov["tool"].startswith("transcription/"):
+        if isinstance(prov.get("tool"), str) and not prov["tool"].startswith(
+            "transcription/"
+        ):
             rep.errors.append("provenance.tool must be a transcription/* tool name")
 
     # segments
@@ -177,7 +291,7 @@ def validate_transcript(doc: Any, expected_asset_id: Optional[str] = None, expec
         rep.errors.append("segments must be a list")
         segs = []
     seen_ids = set()
-    indexed: List[bool] = []   # per word: does it carry `index`
+    indexed: List[bool] = []  # per word: does it carry `index`
     next_index = 0
     prev_end: Optional[float] = None
     prev_start: Optional[float] = None
@@ -204,17 +318,25 @@ def validate_transcript(doc: Any, expected_asset_id: Optional[str] = None, expec
         if e <= s:
             rep.errors.append(f"{where}: end {e} must be > start {s}")
         if dur is not None and e > dur + END_TOLERANCE:
-            rep.errors.append(f"{where}: end {e} exceeds media duration {dur} (+{END_TOLERANCE}s tolerance)")
+            rep.errors.append(
+                f"{where}: end {e} exceeds media duration {dur} (+{END_TOLERANCE}s tolerance)"
+            )
         if prev_start is not None and s < prev_start:
-            rep.errors.append(f"{where}: segments not ordered by start ({s} < {prev_start})")
+            rep.errors.append(
+                f"{where}: segments not ordered by start ({s} < {prev_start})"
+            )
         if prev_end is not None and s < prev_end - CONTAINMENT_TOLERANCE:
-            rep.errors.append(f"{where}: overlaps previous segment (start {s} < previous end {prev_end})")
+            rep.errors.append(
+                f"{where}: overlaps previous segment (start {s} < previous end {prev_end})"
+            )
         prev_start, prev_end = s, e
         for k in ("text", "raw_text"):
             if not isinstance(seg[k], str):
                 rep.errors.append(f"{where}: {k} must be a string")
         _check_conf(seg["confidence"], where, rep)
-        if seg["speaker_id"] is not None and (not isinstance(seg["speaker_id"], str) or not seg["speaker_id"]):
+        if seg["speaker_id"] is not None and (
+            not isinstance(seg["speaker_id"], str) or not seg["speaker_id"]
+        ):
             rep.errors.append(f"{where}: speaker_id must be null or a non-empty string")
         words = seg["words"]
         if words is None:
@@ -235,29 +357,49 @@ def validate_transcript(doc: Any, expected_asset_id: Optional[str] = None, expec
             if we <= ws:
                 rep.errors.append(f"{ww}: end {we} must be > start {ws}")
             if ws < s - CONTAINMENT_TOLERANCE or we > e + CONTAINMENT_TOLERANCE:
-                rep.errors.append(f"{ww}: [{ws}, {we}] not contained in segment [{s}, {e}]")
+                rep.errors.append(
+                    f"{ww}: [{ws}, {we}] not contained in segment [{s}, {e}]"
+                )
             if wprev is not None and ws < wprev - CONTAINMENT_TOLERANCE:
-                rep.errors.append(f"{ww}: words not ordered (start {ws} < previous end {wprev})")
+                rep.errors.append(
+                    f"{ww}: words not ordered (start {ws} < previous end {wprev})"
+                )
             wprev = we
             if not isinstance(w["text"], str):
                 rep.errors.append(f"{ww}: text must be a string")
-            if w.get("speaker_id") is not None and (not isinstance(w["speaker_id"], str) or not w["speaker_id"]):
-                rep.errors.append(f"{ww}: speaker_id must be null or a non-empty string")
+            if w.get("speaker_id") is not None and (
+                not isinstance(w["speaker_id"], str) or not w["speaker_id"]
+            ):
+                rep.errors.append(
+                    f"{ww}: speaker_id must be null or a non-empty string"
+                )
             _check_conf(w["confidence"], ww, rep)
             if "index" in w:
                 indexed.append(True)
-                if not isinstance(w["index"], int) or isinstance(w["index"], bool) or w["index"] != next_index:
-                    rep.errors.append(f"{ww}: index must be {next_index} (0-based, contiguous over the whole transcript), got {w['index']!r}")
+                if (
+                    not isinstance(w["index"], int)
+                    or isinstance(w["index"], bool)
+                    or w["index"] != next_index
+                ):
+                    rep.errors.append(
+                        f"{ww}: index must be {next_index} (0-based, contiguous over the whole transcript), got {w['index']!r}"
+                    )
             else:
                 indexed.append(False)
             next_index += 1
             if "timing" in w and w["timing"] not in WORD_TIMING_VALUES:
-                rep.errors.append(f"{ww}: timing must be one of {WORD_TIMING_VALUES}, got {w['timing']!r}")
+                rep.errors.append(
+                    f"{ww}: timing must be one of {WORD_TIMING_VALUES}, got {w['timing']!r}"
+                )
             if "pos" in w and w["pos"] not in WORD_POS_VALUES:
-                rep.errors.append(f"{ww}: pos must be one of {WORD_POS_VALUES}, got {w['pos']!r}")
+                rep.errors.append(
+                    f"{ww}: pos must be one of {WORD_POS_VALUES}, got {w['pos']!r}"
+                )
 
     if any(indexed) and not all(indexed):
-        rep.errors.append("words: index must be on every word or on none (documents written before word indices carry none)")
+        rep.errors.append(
+            "words: index must be on every word or on none (documents written before word indices carry none)"
+        )
 
     _scan_leakage(doc, "", rep)
     return rep
@@ -268,7 +410,9 @@ def _scan_leakage(node: Any, path: str, rep: ValidationReport) -> None:
     if isinstance(node, dict):
         for k, v in node.items():
             if isinstance(k, str) and k.lower() in FORBIDDEN_KEYS:
-                rep.errors.append(f"forbidden key {path}.{k}: transcripts must not carry commands or credentials")
+                rep.errors.append(
+                    f"forbidden key {path}.{k}: transcripts must not carry commands or credentials"
+                )
             _scan_leakage(v, f"{path}.{k}", rep)
     elif isinstance(node, list):
         for i, v in enumerate(node):

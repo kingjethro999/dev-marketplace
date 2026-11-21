@@ -5,6 +5,7 @@ has no simple, injection-safe representation here (it would require
 inline `<c.class>` markup plus a companion STYLE block) so it is rejected
 rather than silently dropped or turned into free-form CSS.
 """
+
 from __future__ import annotations
 
 from ..errors import SubtitleSkillError
@@ -25,7 +26,8 @@ def _cue_settings(cue: SubtitleCue) -> str:
         return ""
     if cue.style.color is not None:
         raise SubtitleSkillError(
-            "UNSUPPORTED_FORMAT", f"cue {cue.id}: WebVTT generation does not support style.color"
+            "UNSUPPORTED_FORMAT",
+            f"cue {cue.id}: WebVTT generation does not support style.color",
         )
     parts = []
     if cue.style.align is not None:
@@ -48,7 +50,11 @@ def _escape(text: str) -> str:
 def _escape_text(cue: SubtitleCue) -> str:
     # WebVTT has ruby: <ruby>base<rt>reading</rt></ruby>
     text = "".join(
-        _escape(seg) if reading is None else f"<ruby>{_escape(seg)}<rt>{_escape(reading)}</rt></ruby>"
+        (
+            _escape(seg)
+            if reading is None
+            else f"<ruby>{_escape(seg)}<rt>{_escape(reading)}</rt></ruby>"
+        )
         for seg, reading in display_segments(cue)
     )
     if cue.style is not None:
@@ -64,7 +70,9 @@ def generate_vtt(document: SubtitleDocument) -> str:
     lines = ["WEBVTT", ""]
     for cue in ordered:
         lines.append(cue.id)
-        lines.append(f"{_format_timestamp(cue.start)} --> {_format_timestamp(cue.end)}{_cue_settings(cue)}")
+        lines.append(
+            f"{_format_timestamp(cue.start)} --> {_format_timestamp(cue.end)}{_cue_settings(cue)}"
+        )
         lines.append(_escape_text(cue))
         lines.append("")
     return "\n".join(lines) + ("\n" if len(lines) > 2 else "")

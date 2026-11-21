@@ -59,27 +59,59 @@ class ArtifactError(Exception):
 
 
 class ArtifactInputError(ArtifactError):
-    def __init__(self, code: str, message: str, remediation: str | None = None, evidence: dict | None = None):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        remediation: str | None = None,
+        evidence: dict | None = None,
+    ):
         super().__init__(code, ErrorCategory.INPUT, message, remediation, evidence)
 
 
 class ArtifactCapabilityError(ArtifactError):
-    def __init__(self, code: str, message: str, remediation: str | None = None, evidence: dict | None = None):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        remediation: str | None = None,
+        evidence: dict | None = None,
+    ):
         super().__init__(code, ErrorCategory.CAPABILITY, message, remediation, evidence)
 
 
 class ArtifactExecutionError(ArtifactError):
-    def __init__(self, code: str, message: str, remediation: str | None = None, evidence: dict | None = None):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        remediation: str | None = None,
+        evidence: dict | None = None,
+    ):
         super().__init__(code, ErrorCategory.EXECUTION, message, remediation, evidence)
 
 
 class ArtifactVerificationError(ArtifactError):
-    def __init__(self, code: str, message: str, remediation: str | None = None, evidence: dict | None = None):
-        super().__init__(code, ErrorCategory.VERIFICATION, message, remediation, evidence)
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        remediation: str | None = None,
+        evidence: dict | None = None,
+    ):
+        super().__init__(
+            code, ErrorCategory.VERIFICATION, message, remediation, evidence
+        )
 
 
 class ArtifactSecurityError(ArtifactError):
-    def __init__(self, code: str, message: str, remediation: str | None = None, evidence: dict | None = None):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        remediation: str | None = None,
+        evidence: dict | None = None,
+    ):
         super().__init__(code, ErrorCategory.SECURITY, message, remediation, evidence)
 
 

@@ -25,7 +25,9 @@ def register(adapter_cls: type[ArtifactAdapter]) -> type[ArtifactAdapter]:
     return adapter_cls
 
 
-def register_for_types(adapter_cls: type[ArtifactAdapter], types: list[ArtifactType]) -> type[ArtifactAdapter]:
+def register_for_types(
+    adapter_cls: type[ArtifactAdapter], types: list[ArtifactType]
+) -> type[ArtifactAdapter]:
     """For an adapter that handles more than one `ArtifactType` (the image
     adapter covers PNG/JPEG/WebP with one implementation) — `adapter_cls`
     still declares a single nominal `.artifact_type` for its own
@@ -115,7 +117,8 @@ def _register_builtin_adapters() -> None:
     register(EpubAdapter)
     register(MediaAdapter)
     register_for_types(
-        ImageAdapter, [ArtifactType.IMAGE_PNG, ArtifactType.IMAGE_JPEG, ArtifactType.IMAGE_WEBP]
+        ImageAdapter,
+        [ArtifactType.IMAGE_PNG, ArtifactType.IMAGE_JPEG, ArtifactType.IMAGE_WEBP],
     )
 
 

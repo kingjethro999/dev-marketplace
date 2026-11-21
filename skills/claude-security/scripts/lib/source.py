@@ -54,7 +54,9 @@ def quoted_lines(text: str, snippet: str, *, whole: bool) -> set[int]:
     return {row + 1 for first, last in spans for row in range(first, last + 1)}
 
 
-def placing_span(lines: Sequence[str], line: int, snippet: str) -> tuple[int, int] | None:
+def placing_span(
+    lines: Sequence[str], line: int, snippet: str
+) -> tuple[int, int] | None:
     """The (first, last) rows of the occurrence of `snippet` nearest the declared line, or None."""
     declared = line - 1
     return min(

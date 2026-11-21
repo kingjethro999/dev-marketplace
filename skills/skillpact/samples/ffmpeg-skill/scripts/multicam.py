@@ -25,17 +25,39 @@ Examples:
   python3 multicam.py camA.mp4 camB.mp4 recorder.wav --audio 2 --switch "0-20:0,20-40:1" --fix-drift
   python3 multicam.py camA.mp4 camB.mp4 --auto 8 -o edit.mp4              # alternate cameras every 8 s
 """
+
 import argparse
 import json
 import math
 import sys
 from typing import Dict, List, Tuple
 
-from _common import label_chain, matrix_chain, video_args, aac_args, add_common, apply_common, default_output, die, emit, ffmpeg_base, info, time_arg, probe, run, x264_args, X264_PRESETS, fmt_secs, decode_pcm_mono, rms_envelope, STATE
+from _common import (
+    label_chain,
+    matrix_chain,
+    video_args,
+    aac_args,
+    add_common,
+    apply_common,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    time_arg,
+    probe,
+    run,
+    x264_args,
+    X264_PRESETS,
+    fmt_secs,
+    decode_pcm_mono,
+    rms_envelope,
+    STATE,
+)
 from sync import measure_offset
 
 ENERGY_WINDOW_S = 0.25  # --switch energy: loudness measured over this window on the reference timeline
-ENERGY_RATE = 8000      # decode rate for the per-camera loudness envelope
+ENERGY_RATE = 8000  # decode rate for the per-camera loudness envelope
 
 
 def parse_switch(spec: str, n: int) -> List[Tuple[float, float, int]]:
@@ -50,7 +72,9 @@ def parse_switch(spec: str, n: int) -> List[Tuple[float, float, int]]:
             c = int(cam)
         except ValueError:
             die(f"bad switch entry '{raw}' (want START-END:CAM)")
-        s, e = time_arg(a, f"--switch {raw!r} start"), time_arg(b, f"--switch {raw!r} end")
+        s, e = time_arg(a, f"--switch {raw!r} start"), time_arg(
+            b, f"--switch {raw!r} end"
+        )
         if not 0 <= c < n:
             die(f"camera {c} does not exist (inputs are 0..{n - 1})")
         if e <= s:
@@ -60,8 +84,15 @@ def parse_switch(spec: str, n: int) -> List[Tuple[float, float, int]]:
     return out
 
 
-def energy_switch(inputs: List[str], metas: List["Dict"], offsets: List[float], ratios: List[float],
-                  ref_dur: float, min_shot: float, window_s: float = ENERGY_WINDOW_S) -> List[Tuple[float, float, int]]:
+def energy_switch(
+    inputs: List[str],
+    metas: List["Dict"],
+    offsets: List[float],
+    ratios: List[float],
+    ref_dur: float,
+    min_shot: float,
+    window_s: float = ENERGY_WINDOW_S,
+) -> List[Tuple[float, float, int]]:
     """Auto-switch cuts: at every `window_s` step on the reference timeline, cut to whichever
     camera (of those WITH video) measures the loudest audio at that moment, then merge the
     winners into runs and fold any run shorter than `min_shot` into its neighbour. This is a
@@ -70,7 +101,9 @@ def energy_switch(inputs: List[str], metas: List["Dict"], offsets: List[float], 
     quiet subject exactly like scenes.py's own audio ranking does."""
     candidates = [c for c, m in enumerate(metas) if m.get("video")]
     if not candidates:
-        die("no input has video; --switch energy needs at least one camera with a picture")
+        die(
+            "no input has video; --switch energy needs at least one camera with a picture"
+        )
     envs: "Dict[int, List[float]]" = {}
     step = max(1, int(ENERGY_RATE * window_s))
     for c in candidates:
@@ -116,31 +149,69 @@ def energy_switch(inputs: List[str], metas: List["Dict"], offsets: List[float], 
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("inputs", nargs="+", help="reference camera first, then other cameras / recorders")
-    ap.add_argument("-o", "--output", help="output file (default: <reference>_multicam.mp4)")
-    ap.add_argument("--switch", help="switch list START-END:CAM,... on the reference timeline, or "
-                                     "the literal 'energy' to auto-switch to whichever camera is "
-                                     "loudest at each moment (respecting --min-shot)")
-    ap.add_argument("--auto", type=float, help="no switch list: alternate through the cameras every N seconds")
-    ap.add_argument("--min-shot", type=float, default=1.5,
-                    help="--switch energy: never cut to a new camera for less than this many "
-                         "seconds (default 1.5)")
-    ap.add_argument("--edl", help="write the resulting cut list to this file, one START-END per line "
-                                  "(cut.py --segments format); the camera index for each cut is in "
-                                  "the JSON `cuts` field alongside it")
-    ap.add_argument("--write-project", help="also write a render.py-compatible project JSON to this "
-                                            "file, reproducing the exact same cut decision: one "
-                                            "clips[] entry per cut, naming that cut's own camera "
-                                            "file with in/out on THAT camera's timeline (the "
-                                            "reference cut shifted by its measured offset). Running "
-                                            "render.py on it reproduces this same edit; the combined "
-                                            "output above is still written as usual.")
-    ap.add_argument("--audio", type=int, default=0, help="input index to take audio from (default 0 = reference)")
-    ap.add_argument("--offsets-only", action="store_true", help="print the measured offsets and exit")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "inputs",
+        nargs="+",
+        help="reference camera first, then other cameras / recorders",
+    )
+    ap.add_argument(
+        "-o", "--output", help="output file (default: <reference>_multicam.mp4)"
+    )
+    ap.add_argument(
+        "--switch",
+        help="switch list START-END:CAM,... on the reference timeline, or "
+        "the literal 'energy' to auto-switch to whichever camera is "
+        "loudest at each moment (respecting --min-shot)",
+    )
+    ap.add_argument(
+        "--auto",
+        type=float,
+        help="no switch list: alternate through the cameras every N seconds",
+    )
+    ap.add_argument(
+        "--min-shot",
+        type=float,
+        default=1.5,
+        help="--switch energy: never cut to a new camera for less than this many "
+        "seconds (default 1.5)",
+    )
+    ap.add_argument(
+        "--edl",
+        help="write the resulting cut list to this file, one START-END per line "
+        "(cut.py --segments format); the camera index for each cut is in "
+        "the JSON `cuts` field alongside it",
+    )
+    ap.add_argument(
+        "--write-project",
+        help="also write a render.py-compatible project JSON to this "
+        "file, reproducing the exact same cut decision: one "
+        "clips[] entry per cut, naming that cut's own camera "
+        "file with in/out on THAT camera's timeline (the "
+        "reference cut shifted by its measured offset). Running "
+        "render.py on it reproduces this same edit; the combined "
+        "output above is still written as usual.",
+    )
+    ap.add_argument(
+        "--audio",
+        type=int,
+        default=0,
+        help="input index to take audio from (default 0 = reference)",
+    )
+    ap.add_argument(
+        "--offsets-only",
+        action="store_true",
+        help="print the measured offsets and exit",
+    )
     ap.add_argument("--max-offset", type=float, default=30.0)
     ap.add_argument("--analyze-seconds", type=float, default=120.0)
-    ap.add_argument("--fix-drift", action="store_true", help="also correct clock drift of each source (long recordings)")
+    ap.add_argument(
+        "--fix-drift",
+        action="store_true",
+        help="also correct clock drift of each source (long recordings)",
+    )
     ap.add_argument("--width", type=int, help="output width (default: reference)")
     ap.add_argument("--height", type=int, help="output height (default: reference)")
     ap.add_argument("--fps", type=float, help="output fps (default: reference)")
@@ -150,7 +221,9 @@ def main() -> int:
     args = ap.parse_args()
     apply_common(args)
     if args.analyze_seconds > 900:
-        die(f"--analyze-seconds {args.analyze_seconds:g}: the window is decoded into memory; 900 s is the ceiling")
+        die(
+            f"--analyze-seconds {args.analyze_seconds:g}: the window is decoded into memory; 900 s is the ceiling"
+        )
     if args.fps is not None and args.fps <= 0:
         die(f"--fps must be positive, got {args.fps:g}")
     if not 0 <= args.audio < len(args.inputs):
@@ -170,7 +243,9 @@ def main() -> int:
     ratios = [1.0]
     conf = [1.0]
     for p in args.inputs[1:]:
-        off, score = measure_offset(args.inputs[0], p, 0.0, args.analyze_seconds, 20.0, args.max_offset, 1.0)
+        off, score = measure_offset(
+            args.inputs[0], p, 0.0, args.analyze_seconds, 20.0, args.max_offset, 1.0
+        )
         ratio = 1.0
         if args.fix_drift:
             ref_dur = metas[0]["duration"] or 0.0
@@ -185,10 +260,13 @@ def main() -> int:
                     ref_start -= sec_start
                     sec_start = 0.0
                 from sync import decode_mono, envelope, cross_correlate, refine, SR
+
                 ref_s = decode_mono(args.inputs[0], window, ref_start)
                 oth_s = decode_mono(p, window, sec_start)
                 step = int(SR * 0.02)
-                lag, sc = cross_correlate(envelope(ref_s, step), envelope(oth_s, step), int(2.0 * SR / step))
+                lag, sc = cross_correlate(
+                    envelope(ref_s, step), envelope(oth_s, step), int(2.0 * SR / step)
+                )
                 residual = refine(ref_s, oth_s, lag * step / SR, int(SR * 0.001), 0.04)
                 elapsed = (ref_start + window / 2) - head_len / 2
                 if elapsed > 0 and sc > 0.1:
@@ -197,12 +275,20 @@ def main() -> int:
         offsets.append(off)
         ratios.append(ratio)
         conf.append(score)
-        info(f"{p}: offset {off:+.3f}s (confidence {score:.2f})" + (f", drift {(ratio - 1) * 1e6:+.0f} ppm" if args.fix_drift else ""))
+        info(
+            f"{p}: offset {off:+.3f}s (confidence {score:.2f})"
+            + (f", drift {(ratio - 1) * 1e6:+.0f} ppm" if args.fix_drift else "")
+        )
         if score < 0.1:
-            info(f"warning: {p} has low correlation confidence ({score:.2f}); check that it shares an audio event with the reference before trusting this offset")
+            info(
+                f"warning: {p} has low correlation confidence ({score:.2f}); check that it shares an audio event with the reference before trusting this offset"
+            )
 
-    report = {"inputs": args.inputs, "offsets_seconds": [round(o, 4) for o in offsets],
-              "confidence": [round(c, 3) for c in conf]}
+    report = {
+        "inputs": args.inputs,
+        "offsets_seconds": [round(o, 4) for o in offsets],
+        "confidence": [round(c, 3) for c in conf],
+    }
     if args.fix_drift:
         report["drift_ppm"] = [round((r - 1) * 1e6, 1) for r in ratios]
     if args.offsets_only:
@@ -217,7 +303,9 @@ def main() -> int:
     ref_dur = metas[0]["duration"] or 0.0
     energy_mode = args.switch == "energy"
     if energy_mode:
-        cuts = energy_switch(args.inputs, metas, offsets, ratios, ref_dur, args.min_shot)
+        cuts = energy_switch(
+            args.inputs, metas, offsets, ratios, ref_dur, args.min_shot
+        )
     elif args.switch:
         cuts = parse_switch(args.switch, n)
     elif args.auto:
@@ -245,7 +333,9 @@ def main() -> int:
         filled.append((cursor, ref_dur, 0))
     for s, e, c in filled:
         if not metas[c].get("video"):
-            die(f"camera {c} ({args.inputs[c]}) has no video; it can only be used with --audio")
+            die(
+                f"camera {c} ({args.inputs[c]}) has no video; it can only be used with --audio"
+            )
 
     if args.edl:
         if not STATE.dry_run:
@@ -280,11 +370,17 @@ def main() -> int:
         src_s = (s - offsets[c]) * ratios[c]
         src_e = (e - offsets[c]) * ratios[c]
         if src_s < 0:
-            info(f"warning: camera {c} has not started at reference {s:.2f}s; using camera 0 for that range")
+            info(
+                f"warning: camera {c} has not started at reference {s:.2f}s; using camera 0 for that range"
+            )
             c, src_s, src_e = 0, s, e
-        parts.append(f"[{c}:v]trim=start={src_s:.4f}:end={src_e:.4f},setpts=PTS-STARTPTS,{convert[c]}{geo}[v{i}]")
+        parts.append(
+            f"[{c}:v]trim=start={src_s:.4f}:end={src_e:.4f},setpts=PTS-STARTPTS,{convert[c]}{geo}[v{i}]"
+        )
         labels.append(f"[v{i}]")
-        project_clips.append({"src": args.inputs[c], "in": round(src_s, 3), "out": round(src_e, 3)})
+        project_clips.append(
+            {"src": args.inputs[c], "in": round(src_s, 3), "out": round(src_e, 3)}
+        )
     parts.append("".join(labels) + f"concat=n={len(filled)}:v=1:a=0[vout]")
     a = args.audio
     a_start = -offsets[a] if offsets[a] < 0 else 0.0
@@ -298,20 +394,29 @@ def main() -> int:
         afx += [f"asetrate={sr * ratios[a]:.6f}", f"aresample={sr}"]
     if offsets[a] > 0:
         afx.append(f"adelay={int(round(offsets[a] * 1000))}:all=1")
-    afx += [f"atrim=0:{ref_dur:.3f}", "aformat=sample_rates=48000:channel_layouts=stereo"]
+    afx += [
+        f"atrim=0:{ref_dur:.3f}",
+        "aformat=sample_rates=48000:channel_layouts=stereo",
+    ]
     parts.append(f"[{a}:a]{','.join(afx)}[aout]")
 
     output = args.output or default_output(args.inputs[0], "multicam", "mp4")
     cmd += ["-filter_complex", ";".join(parts), "-map", "[vout]", "-map", "[aout]"]
-    cmd += video_args(metas[0], args.crf, args.preset, convert_matrix=False) + aac_args() + ["-t", f"{ref_dur:.3f}", output]
+    cmd += (
+        video_args(metas[0], args.crf, args.preset, convert_matrix=False)
+        + aac_args()
+        + ["-t", f"{ref_dur:.3f}", output]
+    )
 
     if args.write_project:
         # Same cut decision as the combined render above (project_clips was built alongside the
         # filter graph, from the same src_s/src_e/c after the camera-0 fallback), expressed as a
         # render.py project instead of the direct render this tool already does -- additive, not
         # a replacement: the combined output below is still written as usual.
-        project = {"output": default_output(args.inputs[0], "multicam_project", "mp4"),
-                   "clips": project_clips}
+        project = {
+            "output": default_output(args.inputs[0], "multicam_project", "mp4"),
+            "clips": project_clips,
+        }
         if not STATE.dry_run:
             with open(args.write_project, "w", encoding="utf-8") as fh:
                 fh.write(json.dumps(project, indent=2) + "\n")
@@ -319,9 +424,16 @@ def main() -> int:
 
     run(cmd)
     r = probe(output, role="output")
-    info(f"wrote {output} ({fmt_secs(r['duration'])}, {len(filled)} cuts, audio from input {a})")
+    info(
+        f"wrote {output} ({fmt_secs(r['duration'])}, {len(filled)} cuts, audio from input {a})"
+    )
     extra = {"switch_mode": "energy", "min_shot": args.min_shot} if energy_mode else {}
-    emit(output, cuts=[[round(s, 3), round(e, 3), c] for s, e, c in filled], **report, **extra)
+    emit(
+        output,
+        cuts=[[round(s, 3), round(e, 3), c] for s, e, c in filled],
+        **report,
+        **extra,
+    )
     return 0
 
 

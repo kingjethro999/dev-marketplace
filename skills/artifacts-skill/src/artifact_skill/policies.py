@@ -24,7 +24,10 @@ from __future__ import annotations
 from typing import Any
 
 from artifact_skill.adapters.registry import all_adapter_classes
-from artifact_skill.text_checks import TEXT_CHECK_POLICY_KEYS, validate_text_check_policy
+from artifact_skill.text_checks import (
+    TEXT_CHECK_POLICY_KEYS,
+    validate_text_check_policy,
+)
 
 PRESETS: dict[str, dict[str, Any]] = {
     "print-a4": {
@@ -107,7 +110,9 @@ def unknown_policy_keys(policy: dict[str, Any]) -> list[str]:
     return sorted(set(policy) - known_policy_keys())
 
 
-def resolve_policy(preset_name: str | None, explicit_policy: dict[str, Any] | None) -> dict[str, Any]:
+def resolve_policy(
+    preset_name: str | None, explicit_policy: dict[str, Any] | None
+) -> dict[str, Any]:
     """Merge a named preset (if any) with an explicit policy dict (if any).
 
     `explicit_policy`'s keys win on conflict — a caller naming a preset can
@@ -123,7 +128,9 @@ def resolve_policy(preset_name: str | None, explicit_policy: dict[str, Any] | No
     base: dict[str, Any] = {}
     if preset_name:
         if preset_name not in PRESETS:
-            raise KeyError(f"Unknown policy preset '{preset_name}'. Valid presets: {sorted(PRESETS)}.")
+            raise KeyError(
+                f"Unknown policy preset '{preset_name}'. Valid presets: {sorted(PRESETS)}."
+            )
         base = dict(PRESETS[preset_name])
     if explicit_policy:
         base.update(explicit_policy)

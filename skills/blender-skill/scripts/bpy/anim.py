@@ -20,6 +20,7 @@ it imports), and combine would otherwise leak an extra, spurious mesh from the *
 import into an otherwise-correct combined output (each anim source's own copy is already
 discarded anyway, since every object an anim source's import brings in gets deleted).
 """
+
 import sys
 from pathlib import Path
 
@@ -87,7 +88,12 @@ def _combine(args):
         for obj in new_objects:
             bpy.data.objects.remove(obj, do_unlink=True)
 
-    for coll in (bpy.data.meshes, bpy.data.armatures, bpy.data.materials, bpy.data.images):
+    for coll in (
+        bpy.data.meshes,
+        bpy.data.armatures,
+        bpy.data.materials,
+        bpy.data.images,
+    ):
         for block in list(coll):
             if block.users == 0:
                 coll.remove(block)

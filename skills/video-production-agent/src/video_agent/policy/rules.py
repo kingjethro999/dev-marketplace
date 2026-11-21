@@ -1,5 +1,7 @@
 """Policy / Preference / Constraint. Precedence GLOBAL → ORGANIZATION → EVENT → PROJECT → PROFILE → REQUEST;
-CONSTRAINTs are never overridden: a conflicting lower-precedence rule becomes a Conflict for the decision engine."""
+CONSTRAINTs are never overridden: a conflicting lower-precedence rule becomes a Conflict for the decision engine.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -23,7 +25,15 @@ class Rule:
         return self.kind == "CONSTRAINT"
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"id": self.id, "kind": self.kind, "scope": self.scope, "key": self.key, "value": self.value, "source": self.source, "hard": self.hard}
+        return {
+            "id": self.id,
+            "kind": self.kind,
+            "scope": self.scope,
+            "key": self.key,
+            "value": self.value,
+            "source": self.source,
+            "hard": self.hard,
+        }
 
 
 @dataclass
@@ -33,7 +43,11 @@ class Conflict:
     attempted: Rule
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"key": self.key, "constraint": self.constraint.to_dict(), "attempted": self.attempted.to_dict()}
+        return {
+            "key": self.key,
+            "constraint": self.constraint.to_dict(),
+            "attempted": self.attempted.to_dict(),
+        }
 
 
 @dataclass
@@ -53,12 +67,17 @@ class RuleSet:
         return {"REQUEST": "USER", "PROFILE": "PROFILE"}.get(r.scope, "SYSTEM")
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"effective": {k: v.to_dict() for k, v in self.effective.items()}, "conflicts": [c.to_dict() for c in self.conflicts]}
+        return {
+            "effective": {k: v.to_dict() for k, v in self.effective.items()},
+            "conflicts": [c.to_dict() for c in self.conflicts],
+        }
 
 
 def resolve_rules(rules: List[Rule]) -> RuleSet:
     rs = RuleSet(all_rules=list(rules))
-    ordered = sorted(rules, key=lambda r: SCOPES.index(r.scope) if r.scope in SCOPES else -1)
+    ordered = sorted(
+        rules, key=lambda r: SCOPES.index(r.scope) if r.scope in SCOPES else -1
+    )
     for r in ordered:
         cur = rs.effective.get(r.key)
         if cur is not None and cur.hard and not r.hard and cur.value != r.value:
@@ -70,8 +89,36 @@ def resolve_rules(rules: List[Rule]) -> RuleSet:
 
 # Constraints every job carries regardless of profile (MASTER_SPEC §4, §43).
 SYSTEM_CONSTRAINTS = [
-    Rule("sys.preserve_source", "CONSTRAINT", "GLOBAL", "workspace.preserve_source", True, "system"),
-    Rule("sys.workspace_boundary", "CONSTRAINT", "GLOBAL", "workspace.boundary", True, "system"),
-    Rule("sys.no_raw_shell", "CONSTRAINT", "GLOBAL", "execution.no_raw_shell", True, "system"),
-    Rule("sys.max_attempts", "POLICY", "GLOBAL", "execution.recovery.max_attempts", 2, "system"),
+    Rule(
+        "sys.preserve_source",
+        "CONSTRAINT",
+        "GLOBAL",
+        "workspace.preserve_source",
+        True,
+        "system",
+    ),
+    Rule(
+        "sys.workspace_boundary",
+        "CONSTRAINT",
+        "GLOBAL",
+        "workspace.boundary",
+        True,
+        "system",
+    ),
+    Rule(
+        "sys.no_raw_shell",
+        "CONSTRAINT",
+        "GLOBAL",
+        "execution.no_raw_shell",
+        True,
+        "system",
+    ),
+    Rule(
+        "sys.max_attempts",
+        "POLICY",
+        "GLOBAL",
+        "execution.recovery.max_attempts",
+        2,
+        "system",
+    ),
 ]

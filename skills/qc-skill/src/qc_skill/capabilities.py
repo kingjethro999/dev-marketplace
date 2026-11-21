@@ -32,7 +32,9 @@ class CapabilitySet:
     ffprobe_path: str = ""
     ffmpeg_version: str = ""
     ffprobe_version: str = ""
-    filters: Dict[str, str] = field(default_factory=dict)  # name -> available|missing|unknown
+    filters: Dict[str, str] = field(
+        default_factory=dict
+    )  # name -> available|missing|unknown
     # `ffmpeg -buildconf` names --enable-libvmaf: True/False, None = could not be read
     buildconf_libvmaf: Optional[bool] = None
 
@@ -94,7 +96,11 @@ def detect_capabilities() -> CapabilitySet:
                 caps.filters[name] = "available" if name in listed else "missing"
             names = listed_filter_names(listed)
             for name in REFERENCE_METRIC_FILTERS:
-                caps.filters[name] = "available" if name in names else ("missing" if names else "unknown")
+                caps.filters[name] = (
+                    "available"
+                    if name in names
+                    else ("missing" if names else "unknown")
+                )
         else:
             for name in REQUIRED_FILTERS + REFERENCE_METRIC_FILTERS:
                 caps.filters[name] = "unknown"

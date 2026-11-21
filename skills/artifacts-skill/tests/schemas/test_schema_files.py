@@ -31,8 +31,12 @@ def test_real_contract_document_matches_its_schema():
 def test_real_successful_receipt_matches_its_schema(good_pdf, tmp_path):
     schema = _load_schema("artifact-receipt-v1.schema.json")
     result = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "Schema Test"}, tmp_path / "out.pdf",
-        evidence_dir=tmp_path / "reports", dry_run=False,
+        good_pdf,
+        "metadata_set",
+        {"title": "Schema Test"},
+        tmp_path / "out.pdf",
+        evidence_dir=tmp_path / "reports",
+        dry_run=False,
     )
     errors = validate_against_schema(result.receipt.to_dict(), schema)
     assert errors == []
@@ -48,14 +52,20 @@ def test_real_failed_receipt_matches_its_schema(empty_pdf, tmp_path):
     and `error: {...}` shapes."""
     schema = _load_schema("artifact-receipt-v1.schema.json")
     result = run_lifecycle(
-        empty_pdf, "metadata_set", {"title": "x"}, tmp_path / "out.pdf",
-        evidence_dir=tmp_path / "reports", dry_run=False,
+        empty_pdf,
+        "metadata_set",
+        {"title": "x"},
+        tmp_path / "out.pdf",
+        evidence_dir=tmp_path / "reports",
+        dry_run=False,
     )
     errors = validate_against_schema(result.receipt.to_dict(), schema)
     assert errors == []
 
 
-def test_real_receipt_with_a_failed_operation_matches_its_schema(encrypted_pdf, tmp_path):
+def test_real_receipt_with_a_failed_operation_matches_its_schema(
+    encrypted_pdf, tmp_path
+):
     """Drives an operation whose execute() itself raises (metadata_set on
     an encrypted PDF, ARTIFACT_PDF_ENCRYPTED) — inspect()/plan() succeed
     for an encrypted PDF (it's a legitimate, readable file), so this
@@ -68,11 +78,17 @@ def test_real_receipt_with_a_failed_operation_matches_its_schema(encrypted_pdf, 
     """
     schema = _load_schema("artifact-receipt-v1.schema.json")
     result = run_lifecycle(
-        encrypted_pdf, "metadata_set", {"title": "x"}, tmp_path / "out.pdf",
-        evidence_dir=tmp_path / "reports", dry_run=False,
+        encrypted_pdf,
+        "metadata_set",
+        {"title": "x"},
+        tmp_path / "out.pdf",
+        evidence_dir=tmp_path / "reports",
+        dry_run=False,
     )
     assert result.receipt is not None
-    assert result.receipt.operations[0]["error"] is not None  # sanity: this really exercises the null-vs-populated case
+    assert (
+        result.receipt.operations[0]["error"] is not None
+    )  # sanity: this really exercises the null-vs-populated case
     errors = validate_against_schema(result.receipt.to_dict(), schema)
     assert errors == []
 
@@ -82,9 +98,13 @@ def test_real_verify_only_receipt_matches_its_schema(good_pdf, tmp_path):
     execute() call at all is a real, reachable shape now, not just a
     theoretical one the schema happened to already allow."""
     schema = _load_schema("artifact-receipt-v1.schema.json")
-    result = run_lifecycle(good_pdf, None, {}, None, evidence_dir=tmp_path / "reports", dry_run=False)
+    result = run_lifecycle(
+        good_pdf, None, {}, None, evidence_dir=tmp_path / "reports", dry_run=False
+    )
     assert result.receipt is not None
-    assert result.receipt.operations == []  # sanity: this really exercises the empty-operations shape
+    assert (
+        result.receipt.operations == []
+    )  # sanity: this really exercises the empty-operations shape
     errors = validate_against_schema(result.receipt.to_dict(), schema)
     assert errors == []
 

@@ -14,14 +14,20 @@ from artifact_skill.security import subprocess_exec
 
 def test_dry_run_never_calls_subprocess(good_pdf, tmp_path, monkeypatch):
     def _forbidden(*args, **kwargs):
-        raise AssertionError("subprocess_exec.run() must never be called during --dry-run")
+        raise AssertionError(
+            "subprocess_exec.run() must never be called during --dry-run"
+        )
 
     monkeypatch.setattr(subprocess_exec, "run", _forbidden)
 
     output_path = tmp_path / "out.pdf"
     result = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, output_path,
-        evidence_dir=tmp_path / "reports", dry_run=True,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        output_path,
+        evidence_dir=tmp_path / "reports",
+        dry_run=True,
     )
     assert result.receipt is None
 
@@ -32,8 +38,12 @@ def test_dry_run_never_mutates_or_creates_files(good_pdf, tmp_path):
 
     output_path = tmp_path / "out.pdf"
     run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, output_path,
-        evidence_dir=tmp_path / "reports", dry_run=True,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        output_path,
+        evidence_dir=tmp_path / "reports",
+        dry_run=True,
     )
 
     assert sha256_of(good_pdf) == before
@@ -45,11 +55,19 @@ def test_dry_run_output_matches_real_plan(good_pdf, tmp_path):
     follow, not an approximation — otherwise dry-run isn't trustworthy."""
     output_path = tmp_path / "out.pdf"
     dry = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, output_path,
-        evidence_dir=tmp_path / "reports", dry_run=True,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        output_path,
+        evidence_dir=tmp_path / "reports",
+        dry_run=True,
     )
     real = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, output_path,
-        evidence_dir=tmp_path / "reports", dry_run=False,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        output_path,
+        evidence_dir=tmp_path / "reports",
+        dry_run=False,
     )
     assert dry.plan.to_dict() == real.plan.to_dict()

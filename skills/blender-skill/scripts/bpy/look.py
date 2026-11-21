@@ -12,6 +12,7 @@
 - compare: two existing images placed side by side, for a before/after look -- also reports a
   PSNR/SSIM similarity score (see _psnr/_ssim) when both images are the same pixel dimensions.
 """
+
 import math
 import sys
 from pathlib import Path
@@ -41,6 +42,7 @@ def _auto_camera_and_light(scene):
     """Frame every mesh object from a 3/4 angle and add a basic sun light, for files that carry
     no camera of their own (most raw glTF/FBX asset exports)."""
     import mathutils
+
     mesh_objs = [o for o in bpy.data.objects if o.type == "MESH"]
     bbox_min = mathutils.Vector((float("inf"),) * 3)
     bbox_max = mathutils.Vector((float("-inf"),) * 3)
@@ -109,7 +111,7 @@ def _montage(images, tile=(256, 256), columns=4):
     canvas[..., 3] = 1.0
     for i, img in enumerate(images):
         r, c = divmod(i, columns)
-        canvas[r * h:(r + 1) * h, c * w:(c + 1) * w, :] = img
+        canvas[r * h : (r + 1) * h, c * w : (c + 1) * w, :] = img
     return canvas
 
 
@@ -141,7 +143,9 @@ def _mode_textures(args):
     tile = (256, 256)
     tiles = []
     for img in imgs:
-        px = np.array(img.pixels[:], dtype=np.float32).reshape(img.size[1], img.size[0], img.channels)
+        px = np.array(img.pixels[:], dtype=np.float32).reshape(
+            img.size[1], img.size[0], img.channels
+        )
         if img.channels == 3:
             px = np.dstack([px, np.ones(px.shape[:2], dtype=np.float32)])
         elif img.channels == 1:
@@ -154,7 +158,9 @@ def _mode_textures(args):
 
 def _load_pixels(path: str) -> np.ndarray:
     img = bpy.data.images.load(path)
-    px = np.array(img.pixels[:], dtype=np.float32).reshape(img.size[1], img.size[0], img.channels)
+    px = np.array(img.pixels[:], dtype=np.float32).reshape(
+        img.size[1], img.size[0], img.channels
+    )
     if img.channels == 3:
         px = np.dstack([px, np.ones(px.shape[:2], dtype=np.float32)])
     bpy.data.images.remove(img)
@@ -181,7 +187,8 @@ def _psnr(a: np.ndarray, b: np.ndarray) -> float:
     NaN rather than raising: `math.log10(1.0 / mse)` is `math.log10(0.0)` when mse is inf, which
     raises ValueError (confirmed on a real Blender 4.2.23 -- a genuinely non-finite pixel crashes
     this call outright, not just risks an invalid JSON token), so that case is short-circuited
-    before ever reaching log10. Callers must check math.isfinite() before serializing the result."""
+    before ever reaching log10. Callers must check math.isfinite() before serializing the result.
+    """
     mse = float(np.mean((a[..., :3] - b[..., :3]) ** 2))
     if mse == 0.0:
         return _PSNR_IDENTICAL_DB
@@ -216,10 +223,10 @@ def _ssim(a: np.ndarray, b: np.ndarray) -> float:
     var_a = _box_local_mean(la * la, _SSIM_WINDOW) - mu_a * mu_a
     var_b = _box_local_mean(lb * lb, _SSIM_WINDOW) - mu_b * mu_b
     cov_ab = _box_local_mean(la * lb, _SSIM_WINDOW) - mu_a * mu_b
-    c1 = 0.01 ** 2
-    c2 = 0.03 ** 2
+    c1 = 0.01**2
+    c2 = 0.03**2
     ssim_map = ((2 * mu_a * mu_b + c1) * (2 * cov_ab + c2)) / (
-        (mu_a ** 2 + mu_b ** 2 + c1) * (var_a + var_b + c2)
+        (mu_a**2 + mu_b**2 + c1) * (var_a + var_b + c2)
     )
     return float(np.mean(ssim_map))
 
@@ -238,7 +245,9 @@ def _mode_compare(args):
             # blown-out highlight, or a NaN from a divide-by-zero in shading) produced a
             # non-finite score; json.dump would otherwise write the invalid-JSON tokens
             # `Infinity`/`-Infinity`/`NaN` (RFC 8259 permits none of them).
-            score["score_skipped"] = "one or both images contain non-finite (inf/NaN) pixel values"
+            score["score_skipped"] = (
+                "one or both images contain non-finite (inf/NaN) pixel values"
+            )
     else:
         score["score_skipped"] = "images have different pixel dimensions, cannot score"
     h = max(a.shape[0], b.shape[0])
@@ -246,8 +255,8 @@ def _mode_compare(args):
     b_fit = _resize(b, (b.shape[1], h))
     canvas = np.zeros((h, a_fit.shape[1] + b_fit.shape[1] + 4, 4), dtype=np.float32)
     canvas[..., 3] = 1.0
-    canvas[:, :a_fit.shape[1]] = a_fit
-    canvas[:, a_fit.shape[1] + 4:] = b_fit
+    canvas[:, : a_fit.shape[1]] = a_fit
+    canvas[:, a_fit.shape[1] + 4 :] = b_fit
     _save_png(canvas, args["output"])
     return {"width": canvas.shape[1], "height": canvas.shape[0], **score}
 
@@ -262,7 +271,12 @@ def _save_png(pixels: np.ndarray, output: str) -> None:
     bpy.data.images.remove(img)
 
 
-_MODES = {"uv": _mode_uv, "wireframe": _mode_wireframe, "textures": _mode_textures, "compare": _mode_compare}
+_MODES = {
+    "uv": _mode_uv,
+    "wireframe": _mode_wireframe,
+    "textures": _mode_textures,
+    "compare": _mode_compare,
+}
 
 
 def run(args):

@@ -25,7 +25,11 @@ from artifact_skill.adapters.base import ArtifactAdapter, RenderResult
 from artifact_skill.adapters.registry import adapter_for
 from artifact_skill.core.artifact import ArtifactRef
 from artifact_skill.core.capability import CapabilityReport, CapabilityStatus
-from artifact_skill.core.errors import ArtifactCapabilityError, ArtifactError, ArtifactInputError
+from artifact_skill.core.errors import (
+    ArtifactCapabilityError,
+    ArtifactError,
+    ArtifactInputError,
+)
 from artifact_skill.core.operation import OperationPlan, OperationRecord
 from artifact_skill.core.schema_validate import validate_against_schema
 from artifact_skill.core.verification import Check, CheckStatus, VerificationResult
@@ -33,7 +37,10 @@ from artifact_skill.policies import unknown_policy_keys
 from artifact_skill.receipt.model import ArtifactVerificationReceipt, ReceiptBuilder
 from artifact_skill.security.limits import DEFAULT_LIMITS, Limits
 from artifact_skill.security.paths import reject_output_overwrites_input
-from artifact_skill.text_checks import validate_text_check_policy, verify_structural_with_text_checks
+from artifact_skill.text_checks import (
+    validate_text_check_policy,
+    verify_structural_with_text_checks,
+)
 
 
 def _now_iso() -> str:
@@ -43,12 +50,16 @@ def _now_iso() -> str:
 @dataclass
 class LifecycleResult:
     plan: OperationPlan
-    receipt: ArtifactVerificationReceipt | None  # None for a dry-run: no execution happened
+    receipt: (
+        ArtifactVerificationReceipt | None
+    )  # None for a dry-run: no execution happened
     output: ArtifactRef | None
     render: RenderResult | None
 
 
-def build_plan(input_path: Path, operation: str, args: dict[str, Any], output_path: Path) -> tuple[ArtifactRef, ArtifactAdapter, OperationPlan]:
+def build_plan(
+    input_path: Path, operation: str, args: dict[str, Any], output_path: Path
+) -> tuple[ArtifactRef, ArtifactAdapter, OperationPlan]:
     reject_output_overwrites_input(Path(input_path), Path(output_path))
     ref = ArtifactRef.from_path(input_path)
     adapter = adapter_for(ref)
@@ -57,7 +68,9 @@ def build_plan(input_path: Path, operation: str, args: dict[str, Any], output_pa
     return ref, adapter, plan
 
 
-def _validate_operation_args(adapter: ArtifactAdapter, operation: str, args: dict[str, Any]) -> None:
+def _validate_operation_args(
+    adapter: ArtifactAdapter, operation: str, args: dict[str, Any]
+) -> None:
     """Enforce `OperationSpec.args_schema` as a real, checked contract
     rather than descriptive-only metadata (see `core/schema_validate.py`'s
     module docstring for why this matters). An unknown operation is left
@@ -75,7 +88,11 @@ def _validate_operation_args(adapter: ArtifactAdapter, operation: str, args: dic
             message=f"Arguments for '{adapter.id}.{operation}' do not match its declared schema: "
             f"{'; '.join(errors)}",
             remediation="Check `artifacts-skill contract --json` for the expected shape of --args.",
-            evidence={"operation": f"{adapter.id}.{operation}", "errors": errors, "args": args},
+            evidence={
+                "operation": f"{adapter.id}.{operation}",
+                "errors": errors,
+                "args": args,
+            },
         )
 
 
@@ -130,7 +147,10 @@ def run_lifecycle(
             f"(this deployment's Limits.max_fix_iterations), got {max_iterations}.",
             remediation=f"Pass a value in [1, {limits.max_fix_iterations}], or omit max_iterations "
             "entirely to use the default.",
-            evidence={"max_iterations": max_iterations, "limit": limits.max_fix_iterations},
+            evidence={
+                "max_iterations": max_iterations,
+                "limit": limits.max_fix_iterations,
+            },
         )
 
     if operation is None:
@@ -141,8 +161,12 @@ def run_lifecycle(
         # all, rather than an agent hand-assembling one from separate
         # inspect/render/verify calls.
         return _run_verify_only_lifecycle(
-            input_path, policy=policy, evidence_dir=evidence_dir, dry_run=dry_run,
-            capability_report=capability_report, limits=limits,
+            input_path,
+            policy=policy,
+            evidence_dir=evidence_dir,
+            dry_run=dry_run,
+            capability_report=capability_report,
+            limits=limits,
         )
 
     if output_path is None:
@@ -164,7 +188,10 @@ def run_lifecycle(
 
     for cap_id in plan.required_capabilities:
         cap = capability_report.get(cap_id)
-        if cap is not None and cap.status not in (CapabilityStatus.AVAILABLE, CapabilityStatus.NOT_REQUIRED):
+        if cap is not None and cap.status not in (
+            CapabilityStatus.AVAILABLE,
+            CapabilityStatus.NOT_REQUIRED,
+        ):
             raise ArtifactCapabilityError(
                 code="ARTIFACT_CAPABILITY_MISSING",
                 message=f"Operation '{operation}' requires capability '{cap_id}' which is {cap.status.value}.",
@@ -213,8 +240,11 @@ def run_lifecycle(
 
         structural = verify_structural_with_text_checks(adapter, output_ref, policy)
         visual, rendered = _visual_evidence_result(
-            adapter=adapter, ref=output_ref, evidence_dir=evidence_dir,
-            capability_report=capability_report, spec_render_required=bool(spec and spec.render_required),
+            adapter=adapter,
+            ref=output_ref,
+            evidence_dir=evidence_dir,
+            capability_report=capability_report,
+            spec_render_required=bool(spec and spec.render_required),
             limits=limits,
         )
         if rendered is not None:
@@ -223,13 +253,21 @@ def run_lifecycle(
         if spec is not None and not spec.structural_verification_required:
             structural = VerificationResult(
                 kind="structural",
-                checks=[Check(id="not_required", name="Structural verification", status=CheckStatus.SKIPPED,
-                               message="This operation's contract does not require structural verification.")],
+                checks=[
+                    Check(
+                        id="not_required",
+                        name="Structural verification",
+                        status=CheckStatus.SKIPPED,
+                        message="This operation's contract does not require structural verification.",
+                    )
+                ],
             )
         else:
             structural = adapter.refine_structural_with_render(structural, rendered)
 
-        should_retry = structural.status == CheckStatus.FAIL and iteration < max_iterations
+        should_retry = (
+            structural.status == CheckStatus.FAIL and iteration < max_iterations
+        )
         if should_retry:
             fix_args = adapter.fix(ref, operation, args, structural)
             if fix_args is not None and spec is not None:
@@ -270,7 +308,9 @@ def run_lifecycle(
     receipt = builder.build()
     evidence_dir.mkdir(parents=True, exist_ok=True)
     receipt.write(evidence_dir / "receipt.json")
-    return LifecycleResult(plan=plan, receipt=receipt, output=output_ref, render=render_result)
+    return LifecycleResult(
+        plan=plan, receipt=receipt, output=output_ref, render=render_result
+    )
 
 
 def _run_verify_only_lifecycle(
@@ -315,8 +355,12 @@ def _run_verify_only_lifecycle(
     # is the one exception, since it's the one operation that changes page
     # geometry). A missing render capability reports SKIPPED, not UNKNOWN.
     visual, rendered = _visual_evidence_result(
-        adapter=adapter, ref=ref, evidence_dir=evidence_dir,
-        capability_report=capability_report, spec_render_required=False, limits=limits,
+        adapter=adapter,
+        ref=ref,
+        evidence_dir=evidence_dir,
+        capability_report=capability_report,
+        spec_render_required=False,
+        limits=limits,
     )
     structural = adapter.refine_structural_with_render(structural, rendered)
     builder.set_structural(structural)
@@ -352,7 +396,9 @@ def _visual_evidence_result(
     render_cap_id = f"{adapter.id}.render"
     render_cap = capability_report.get(render_cap_id)
     if render_cap is None or render_cap.status != CapabilityStatus.AVAILABLE:
-        status = CheckStatus.SKIPPED if not spec_render_required else CheckStatus.UNKNOWN
+        status = (
+            CheckStatus.SKIPPED if not spec_render_required else CheckStatus.UNKNOWN
+        )
         return (
             VerificationResult(
                 kind="visual",
@@ -384,8 +430,11 @@ def _visual_evidence_result(
                 kind="visual",
                 checks=[
                     Check(
-                        id="visual_evidence", name="Visual evidence produced", status=CheckStatus.UNKNOWN,
-                        message=str(exc), evidence={"remediation": exc.remediation, **exc.evidence},
+                        id="visual_evidence",
+                        name="Visual evidence produced",
+                        status=CheckStatus.UNKNOWN,
+                        message=str(exc),
+                        evidence={"remediation": exc.remediation, **exc.evidence},
                     )
                 ],
             ),

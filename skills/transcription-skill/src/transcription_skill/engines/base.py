@@ -10,6 +10,7 @@ Two layers:
 execution_mode is a fact about where recognition happens, exposed so a consumer can treat it as a
 capability; it is not a hint about quality and the skill never picks an engine by itself.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -17,36 +18,52 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from ..errors import TranscriptionError
 
-EXECUTION_LOCAL = "local"      # recognition runs on this machine
-EXECUTION_REMOTE = "remote"    # recognition runs on another host (a cloud ASR service); none implemented
+EXECUTION_LOCAL = "local"  # recognition runs on this machine
+EXECUTION_REMOTE = (
+    "remote"  # recognition runs on another host (a cloud ASR service); none implemented
+)
 EXECUTION_MODES = (EXECUTION_LOCAL, EXECUTION_REMOTE)
 
 # engine capabilities: the small, closed vocabulary a consumer can filter on
-CAP_LOCAL_EXECUTION = "local_execution"      # execution_mode == local
-CAP_REMOTE_EXECUTION = "remote_execution"    # execution_mode == remote
-CAP_NETWORK_REQUIRED = "network_required"    # recognition itself needs the network (remote engines)
-CAP_LOCAL_MODEL = "local_model"              # models are files on this machine
-CAP_MODEL_DOWNLOAD = "model_download"        # the engine can fetch a missing model (needs network at that time only)
+CAP_LOCAL_EXECUTION = "local_execution"  # execution_mode == local
+CAP_REMOTE_EXECUTION = "remote_execution"  # execution_mode == remote
+CAP_NETWORK_REQUIRED = (
+    "network_required"  # recognition itself needs the network (remote engines)
+)
+CAP_LOCAL_MODEL = "local_model"  # models are files on this machine
+CAP_MODEL_DOWNLOAD = "model_download"  # the engine can fetch a missing model (needs network at that time only)
 CAP_WORD_TIMESTAMPS = "word_timestamps"
 CAP_LANGUAGE_DETECTION = "language_detection"
 CAP_CUSTOM_VOCABULARY = "custom_vocabulary"  # takes a request `vocabulary` ({written form: [readings]}) to bias decoding
-ENGINE_CAPABILITIES = (CAP_LOCAL_EXECUTION, CAP_REMOTE_EXECUTION, CAP_NETWORK_REQUIRED, CAP_LOCAL_MODEL, CAP_MODEL_DOWNLOAD,
-                       CAP_WORD_TIMESTAMPS, CAP_LANGUAGE_DETECTION, CAP_CUSTOM_VOCABULARY)
+ENGINE_CAPABILITIES = (
+    CAP_LOCAL_EXECUTION,
+    CAP_REMOTE_EXECUTION,
+    CAP_NETWORK_REQUIRED,
+    CAP_LOCAL_MODEL,
+    CAP_MODEL_DOWNLOAD,
+    CAP_WORD_TIMESTAMPS,
+    CAP_LANGUAGE_DETECTION,
+    CAP_CUSTOM_VOCABULARY,
+)
 
 # model availability, separate from doctor's AVAILABLE/MISSING/UNKNOWN status
-MODEL_AVAILABLE = "MODEL_AVAILABLE"                  # usable now, no network
+MODEL_AVAILABLE = "MODEL_AVAILABLE"  # usable now, no network
 MODEL_DOWNLOAD_REQUIRED = "MODEL_DOWNLOAD_REQUIRED"  # known model, not on this machine; the engine can fetch it (network)
-MODEL_MISSING = "MODEL_MISSING"                      # known model, not on this machine, and it cannot be fetched (downloads off / offline)
-MODEL_UNKNOWN = "MODEL_UNKNOWN"                      # not a model this engine knows
+MODEL_MISSING = "MODEL_MISSING"  # known model, not on this machine, and it cannot be fetched (downloads off / offline)
+MODEL_UNKNOWN = "MODEL_UNKNOWN"  # not a model this engine knows
 
 
 @dataclass
 class ModelStatus:
     model: str
-    status: str                     # AVAILABLE | MISSING | UNKNOWN (doctor vocabulary)
-    availability: str               # MODEL_AVAILABLE | MODEL_DOWNLOAD_REQUIRED | MODEL_MISSING | MODEL_UNKNOWN
-    source: Optional[str]           # "local" when present on disk, "downloadable" when it could be fetched, None otherwise
-    version: Optional[str]          # snapshot / revision when known
+    status: str  # AVAILABLE | MISSING | UNKNOWN (doctor vocabulary)
+    availability: (
+        str  # MODEL_AVAILABLE | MODEL_DOWNLOAD_REQUIRED | MODEL_MISSING | MODEL_UNKNOWN
+    )
+    source: Optional[
+        str
+    ]  # "local" when present on disk, "downloadable" when it could be fetched, None otherwise
+    version: Optional[str]  # snapshot / revision when known
     detail: str
     download_required: bool = False
 
@@ -57,19 +74,24 @@ class ModelStatus:
 @dataclass
 class EngineSpec:
     """Static contract of one engine. Everything here is safe to publish: no paths, no credentials."""
+
     id: str
-    version: Optional[str]                  # None when the engine is not installed
-    execution_mode: str                     # EXECUTION_MODES
+    version: Optional[str]  # None when the engine is not installed
+    execution_mode: str  # EXECUTION_MODES
     description: str
     available: bool
     unavailable_reason: Optional[str]
-    requires_network: bool                  # for recognition itself (not for a one-time model download)
-    deterministic: bool                     # same input + parameters + version -> same output on the same build
+    requires_network: bool  # for recognition itself (not for a one-time model download)
+    deterministic: (
+        bool  # same input + parameters + version -> same output on the same build
+    )
     capabilities: List[str]
     supported_languages: List[str]
     supported_models: List[str]
     default_model: Optional[str] = None
-    models: List[Dict[str, Any]] = field(default_factory=list)   # ModelStatus.to_dict() for supported models (inspect only)
+    models: List[Dict[str, Any]] = field(
+        default_factory=list
+    )  # ModelStatus.to_dict() for supported models (inspect only)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -80,17 +102,25 @@ class EngineSpec:
 
 @dataclass
 class EngineRequest:
-    audio_path: str                      # mono 16 kHz PCM WAV prepared by media.extract_audio
-    language: Optional[str]              # ISO 639-1 or None for auto-detect
+    audio_path: str  # mono 16 kHz PCM WAV prepared by media.extract_audio
+    language: Optional[str]  # ISO 639-1 or None for auto-detect
     model: str
     word_timestamps: bool
     temperature: float
     initial_prompt: Optional[str]
     beam_size: int
-    offline: bool = False                # hard constraint: the engine must not touch the network (no model download)
-    vad_filter: bool = False             # skip non-speech before decoding (engine capability pass-through; unchanged default)
-    vocabulary: Optional[Dict[str, List[str]]] = None   # written form -> readings; only for engines with custom_vocabulary
-    timeout: Optional[float] = None      # the request's budget.timeout, for an engine that runs a program of its own (ADR-035)
+    offline: bool = (
+        False  # hard constraint: the engine must not touch the network (no model download)
+    )
+    vad_filter: bool = (
+        False  # skip non-speech before decoding (engine capability pass-through; unchanged default)
+    )
+    vocabulary: Optional[Dict[str, List[str]]] = (
+        None  # written form -> readings; only for engines with custom_vocabulary
+    )
+    timeout: Optional[float] = (
+        None  # the request's budget.timeout, for an engine that runs a program of its own (ADR-035)
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -123,12 +153,15 @@ class EngineSegment:
 @dataclass
 class EngineResult:
     """Raw engine output. language is the engine's detection when the request language was None."""
+
     engine_id: str
     engine_version: str
     model: str
     model_version: Optional[str]
     segments: List[EngineSegment]
-    language: Optional[str] = None           # detected code, or None when the engine did not detect
+    language: Optional[str] = (
+        None  # detected code, or None when the engine did not detect
+    )
     language_probability: Optional[float] = None
     warnings: List[str] = field(default_factory=list)
 
@@ -139,26 +172,67 @@ class EngineResult:
     def from_dict(cls, d: Dict[str, Any]) -> "EngineResult":
         segs = []
         for s in d.get("segments") or []:
-            words = None if s.get("words") is None else [EngineWord(**w) for w in s["words"]]
-            segs.append(EngineSegment(start=s["start"], end=s["end"], text=s["text"], confidence=s.get("confidence"), words=words))
-        return cls(engine_id=d["engine_id"], engine_version=d["engine_version"], model=d["model"], model_version=d.get("model_version"),
-                   segments=segs, language=d.get("language"), language_probability=d.get("language_probability"),
-                   warnings=list(d.get("warnings") or []))
+            words = (
+                None
+                if s.get("words") is None
+                else [EngineWord(**w) for w in s["words"]]
+            )
+            segs.append(
+                EngineSegment(
+                    start=s["start"],
+                    end=s["end"],
+                    text=s["text"],
+                    confidence=s.get("confidence"),
+                    words=words,
+                )
+            )
+        return cls(
+            engine_id=d["engine_id"],
+            engine_version=d["engine_version"],
+            model=d["model"],
+            model_version=d.get("model_version"),
+            segments=segs,
+            language=d.get("language"),
+            language_probability=d.get("language_probability"),
+            warnings=list(d.get("warnings") or []),
+        )
 
 
-def refuse_model_language(engine_id: str, model: str, language: Optional[str], languages: Optional[Sequence[str]]) -> None:
+def refuse_model_language(
+    engine_id: str,
+    model: str,
+    language: Optional[str],
+    languages: Optional[Sequence[str]],
+) -> None:
     """INVALID_INPUT when `model` recognizes only `languages` (TranscriptionEngine.model_languages) and the request
     asks for another language (`language_unsupported`) or for none (`language_detection_unsupported`: the skill
-    never supplies a language, ADR-023). Shared by the service's check and the engines' own (ADR-040)."""
+    never supplies a language, ADR-023). Shared by the service's check and the engines' own (ADR-040).
+    """
     if languages is None:
         return
     if language is None:
-        raise TranscriptionError("INVALID_INPUT", f"model {model} of engine {engine_id} recognizes only {', '.join(languages)} and does not "
-                                 "detect the language; pass 'language' explicitly",
-                                 {"engine": engine_id, "model": model, "reason": "language_detection_unsupported", "supported": list(languages)})
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            f"model {model} of engine {engine_id} recognizes only {', '.join(languages)} and does not "
+            "detect the language; pass 'language' explicitly",
+            {
+                "engine": engine_id,
+                "model": model,
+                "reason": "language_detection_unsupported",
+                "supported": list(languages),
+            },
+        )
     if language not in languages:
-        raise TranscriptionError("INVALID_INPUT", f"model {model} of engine {engine_id} does not recognize language {language!r}",
-                                 {"engine": engine_id, "model": model, "reason": "language_unsupported", "supported": list(languages)})
+        raise TranscriptionError(
+            "INVALID_INPUT",
+            f"model {model} of engine {engine_id} does not recognize language {language!r}",
+            {
+                "engine": engine_id,
+                "model": model,
+                "reason": "language_unsupported",
+                "supported": list(languages),
+            },
+        )
 
 
 class TranscriptionEngine:
@@ -167,7 +241,9 @@ class TranscriptionEngine:
 
     id: str = "abstract"
     execution_mode: str = EXECUTION_LOCAL
-    requires_network: bool = False          # recognition needs the network (True for any remote engine)
+    requires_network: bool = (
+        False  # recognition needs the network (True for any remote engine)
+    )
     deterministic: bool = True
     description: str = ""
     default_model: Optional[str] = None
@@ -204,21 +280,24 @@ class TranscriptionEngine:
 
     def unsupported_parameters(self, parameters: Dict[str, Any]) -> List[str]:
         """Names of request parameters (TranscribeRequest.parameters()) set to a value this engine cannot
-        honour; the service refuses such a request instead of silently ignoring them. Default: none."""
+        honour; the service refuses such a request instead of silently ignoring them. Default: none.
+        """
         return []
 
     def model_languages(self, model: str) -> Optional[List[str]]:
         """The languages one model recognizes when that is fewer than the engine's `supported_languages` (an
         English-only checkpoint, one model of a multi-model engine); None when the model takes every one of them
         or the name is unknown. The service refuses a request in another language, or one without a language,
-        before anything runs, and the selector rejects the engine for such a named model (ADR-040). Default: None."""
+        before anything runs, and the selector rejects the engine for such a named model (ADR-040). Default: None.
+        """
         return None
 
     def cache_parameters(self, model: str) -> Dict[str, Any]:
         """What else identifies a run of `model`, known before it runs and not in the request: the pinned revisions of
         the models the engine loads, a second model it always loads (qwen3_asr's forced aligner, ADR-041). The service
         merges it into the request parameters, so it is in `provenance.parameters` and the cache key, only when it is
-        not empty: an engine that returns nothing keeps every cache key it had. Default: {}."""
+        not empty: an engine that returns nothing keeps every cache key it had. Default: {}.
+        """
         return {}
 
     def run_device(self) -> Optional[str]:
@@ -236,7 +315,8 @@ class TranscriptionEngine:
 
     def model_status(self, model: str, offline: bool = False) -> ModelStatus:
         """Availability of one model on this machine. Must not download anything. With offline=True a
-        model that is not present is MODEL_MISSING even if the engine could otherwise fetch it."""
+        model that is not present is MODEL_MISSING even if the engine could otherwise fetch it.
+        """
         raise NotImplementedError
 
     def transcribe(self, request: EngineRequest) -> EngineResult:
@@ -245,7 +325,13 @@ class TranscriptionEngine:
 
     # ---- derived, shared by every engine
     def capabilities(self) -> List[str]:
-        caps = [CAP_LOCAL_EXECUTION if self.execution_mode == EXECUTION_LOCAL else CAP_REMOTE_EXECUTION]
+        caps = [
+            (
+                CAP_LOCAL_EXECUTION
+                if self.execution_mode == EXECUTION_LOCAL
+                else CAP_REMOTE_EXECUTION
+            )
+        ]
         if self.requires_network:
             caps.append(CAP_NETWORK_REQUIRED)
         if not self.available():
@@ -266,12 +352,27 @@ class TranscriptionEngine:
     def spec(self, include_models: bool = False, offline: bool = False) -> EngineSpec:
         avail = self.available()
         return EngineSpec(
-            id=self.id, version=self.version, execution_mode=self.execution_mode, description=self.description, available=avail,
-            unavailable_reason=None if avail else self.unavailable_reason(), requires_network=self.requires_network,
-            deterministic=self.deterministic, capabilities=self.capabilities(),
-            supported_languages=self.supported_languages if avail else [], supported_models=self.supported_models if avail else [],
+            id=self.id,
+            version=self.version,
+            execution_mode=self.execution_mode,
+            description=self.description,
+            available=avail,
+            unavailable_reason=None if avail else self.unavailable_reason(),
+            requires_network=self.requires_network,
+            deterministic=self.deterministic,
+            capabilities=self.capabilities(),
+            supported_languages=self.supported_languages if avail else [],
+            supported_models=self.supported_models if avail else [],
             default_model=self.default_model,
-            models=[self.model_status(m, offline=offline).to_dict() for m in self.supported_models] if (avail and include_models) else [])
+            models=(
+                [
+                    self.model_status(m, offline=offline).to_dict()
+                    for m in self.supported_models
+                ]
+                if (avail and include_models)
+                else []
+            ),
+        )
 
     def describe(self) -> Dict[str, Any]:
         return self.spec().to_dict()

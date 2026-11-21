@@ -14,6 +14,7 @@ not attempt to guess metallic from Phong parameters either, and neither does thi
 reliable signal in Ka/Kd/Ks/Ns alone that distinguishes a metal from a very shiny dielectric, so
 guessing would trade a known gap for an unverifiable, often-wrong claim.
 """
+
 from __future__ import annotations
 
 import math
@@ -99,9 +100,11 @@ def read_materials(obj_path: str) -> Optional[list]:
         if not mtl_path.exists():
             continue
         for mat in _parse_mtl(mtl_path):
-            out.append({
-                "name": mat.get("name"),
-                "source": {k: v for k, v in mat.items() if k != "name"},
-                "pbr_heuristic": _heuristic_pbr(mat),
-            })
+            out.append(
+                {
+                    "name": mat.get("name"),
+                    "source": {k: v for k, v in mat.items() if k != "name"},
+                    "pbr_heuristic": _heuristic_pbr(mat),
+                }
+            )
     return out or None

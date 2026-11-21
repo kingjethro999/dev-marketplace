@@ -28,7 +28,8 @@ def workspace(tmp_path) -> Path:
 def ffmpeg_skill_dir() -> str:
     """Where a real ffmpeg-skill checkout is expected for video_frame tests. Resolution order matches
     the adapter's own: an explicit env var, then a `vendor/ffmpeg-skill` checkout next to this repo
-    (as CI creates), then a sibling checkout. Tests that need it are skipped if none resolves."""
+    (as CI creates), then a sibling checkout. Tests that need it are skipped if none resolves.
+    """
     for candidate in (
         os.environ.get("THUMBNAIL_SKILL_FFMPEG_SKILL_DIR"),
         os.environ.get("VIDEO_AGENT_FFMPEG_SKILL_DIR"),
@@ -58,7 +59,8 @@ def has_cjk_font() -> bool:
 @pytest.fixture(scope="session")
 def qc_skill_dir() -> str:
     """A qc-skill checkout for the variants' contrast check (ADR-16), resolved like ffmpeg_skill_dir: the env var,
-    then `vendor/qc-skill` (as CI creates), then a sibling checkout. Tests that need it skip if none resolves."""
+    then `vendor/qc-skill` (as CI creates), then a sibling checkout. Tests that need it skip if none resolves.
+    """
     for candidate in (
         os.environ.get("THUMBNAIL_SKILL_QC_SKILL_DIR"),
         str(Path(__file__).resolve().parents[1] / "vendor" / "qc-skill"),

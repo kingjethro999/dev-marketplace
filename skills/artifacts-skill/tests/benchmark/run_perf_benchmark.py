@@ -100,13 +100,19 @@ def run() -> list[dict]:
             t, render_result, err = _time_call(adapter.render, ref, out_dir)
             row["render_ms"] = round(t * 1000, 1) if err is None else None
             row["render_error"] = err
-            row["render_files"] = len(render_result.files) if render_result is not None else 0
+            row["render_files"] = (
+                len(render_result.files) if render_result is not None else 0
+            )
 
         if fmt in _EXECUTE_OP:
             op, op_args = _EXECUTE_OP[fmt]
-            with tempfile.TemporaryDirectory(prefix="artifacts-skill-perfbench-exec-") as tmp:
+            with tempfile.TemporaryDirectory(
+                prefix="artifacts-skill-perfbench-exec-"
+            ) as tmp:
                 out_path = Path(tmp) / f"out{_fixture_path(rel).suffix}"
-                t, _result, err = _time_call(adapter.execute, ref, op, op_args, out_path)
+                t, _result, err = _time_call(
+                    adapter.execute, ref, op, op_args, out_path
+                )
                 row["execute_ms"] = round(t * 1000, 1) if err is None else None
                 row["execute_error"] = err
         else:
@@ -121,11 +127,14 @@ def main() -> int:
     rows = run()
 
     print("=" * 100)
-    print("Artifact Skill — performance benchmark (wall-clock, single-call, this machine)")
+    print(
+        "Artifact Skill — performance benchmark (wall-clock, single-call, this machine)"
+    )
     print("=" * 100)
     header = f"{'format':<10} {'inspect':>10} {'verify':>10} {'execute':>12} {'render':>12} {'pages/files':>12}"
     print(header)
     print("-" * len(header))
+
     def _fmt(row: dict, key: str, err_key: str) -> str:
         if row[err_key] is not None:
             return f"{row[err_key]}"[:12]

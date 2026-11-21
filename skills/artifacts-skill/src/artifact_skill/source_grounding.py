@@ -60,35 +60,143 @@ CHECK_NAME = "Numbers, dates, names and terms appear in the source"
 # written form (lower case, after NFKC) -> canonical form used for comparison
 _ASCII_UNITS: dict[str, str] = {
     # compound dosing and lab units
-    "mg/kg/day": "mg/kg/day", "mg/kg/d": "mg/kg/day", "mg/kg": "mg/kg", "μg/kg": "μg/kg", "mcg/kg": "μg/kg",
-    "ug/kg": "μg/kg", "mg/m2": "mg/m2", "mg/dl": "mg/dl", "mg/ml": "mg/ml", "mg/l": "mg/l", "g/dl": "g/dl",
-    "g/l": "g/l", "mmol/l": "mmol/l", "μmol/l": "μmol/l", "nmol/l": "nmol/l", "meq/l": "meq/l", "iu/ml": "iu/ml",
-    "ml/min": "ml/min", "ml/kg": "ml/kg", "ml/h": "ml/h", "l/min": "l/min", "mg/day": "mg/day", "mg/d": "mg/day",
-    "mg/h": "mg/h", "μg/ml": "μg/ml", "mcg/ml": "μg/ml",
+    "mg/kg/day": "mg/kg/day",
+    "mg/kg/d": "mg/kg/day",
+    "mg/kg": "mg/kg",
+    "μg/kg": "μg/kg",
+    "mcg/kg": "μg/kg",
+    "ug/kg": "μg/kg",
+    "mg/m2": "mg/m2",
+    "mg/dl": "mg/dl",
+    "mg/ml": "mg/ml",
+    "mg/l": "mg/l",
+    "g/dl": "g/dl",
+    "g/l": "g/l",
+    "mmol/l": "mmol/l",
+    "μmol/l": "μmol/l",
+    "nmol/l": "nmol/l",
+    "meq/l": "meq/l",
+    "iu/ml": "iu/ml",
+    "ml/min": "ml/min",
+    "ml/kg": "ml/kg",
+    "ml/h": "ml/h",
+    "l/min": "l/min",
+    "mg/day": "mg/day",
+    "mg/d": "mg/day",
+    "mg/h": "mg/h",
+    "μg/ml": "μg/ml",
+    "mcg/ml": "μg/ml",
     # mass and volume
-    "mcg": "μg", "μg": "μg", "ug": "μg", "micrograms": "μg", "microgram": "μg",
-    "mg": "mg", "milligrams": "mg", "milligram": "mg", "ng": "ng", "kg": "kg", "kilograms": "kg", "kilogram": "kg",
-    "g": "g", "grams": "g", "gram": "g", "ml": "ml", "milliliters": "ml", "millilitres": "ml", "milliliter": "ml",
-    "millilitre": "ml", "μl": "μl", "dl": "dl", "l": "l", "liters": "l", "litres": "l", "liter": "l", "litre": "l",
-    "mmol": "mmol", "μmol": "μmol", "nmol": "nmol", "mol": "mol", "meq": "meq", "iu": "iu", "units": "unit",
+    "mcg": "μg",
+    "μg": "μg",
+    "ug": "μg",
+    "micrograms": "μg",
+    "microgram": "μg",
+    "mg": "mg",
+    "milligrams": "mg",
+    "milligram": "mg",
+    "ng": "ng",
+    "kg": "kg",
+    "kilograms": "kg",
+    "kilogram": "kg",
+    "g": "g",
+    "grams": "g",
+    "gram": "g",
+    "ml": "ml",
+    "milliliters": "ml",
+    "millilitres": "ml",
+    "milliliter": "ml",
+    "millilitre": "ml",
+    "μl": "μl",
+    "dl": "dl",
+    "l": "l",
+    "liters": "l",
+    "litres": "l",
+    "liter": "l",
+    "litre": "l",
+    "mmol": "mmol",
+    "μmol": "μmol",
+    "nmol": "nmol",
+    "mol": "mol",
+    "meq": "meq",
+    "iu": "iu",
+    "units": "unit",
     "unit": "unit",
     # vital signs, energy, length, temperature, share
-    "mmhg": "mmhg", "bpm": "bpm", "kcal": "kcal", "cm": "cm", "mm": "mm", "km": "km", "°c": "°c", "°f": "°f",
-    "%": "%", "percent": "%", "per cent": "%",
+    "mmhg": "mmhg",
+    "bpm": "bpm",
+    "kcal": "kcal",
+    "cm": "cm",
+    "mm": "mm",
+    "km": "km",
+    "°c": "°c",
+    "°f": "°f",
+    "%": "%",
+    "percent": "%",
+    "per cent": "%",
     # time
-    "hours": "h", "hour": "h", "hrs": "h", "hr": "h", "h": "h", "minutes": "min", "minute": "min", "mins": "min",
-    "min": "min", "seconds": "s", "second": "s", "sec": "s", "days": "day", "day": "day", "weeks": "week",
-    "week": "week", "wk": "week", "months": "month", "month": "month", "years": "year", "year": "year", "yr": "year",
+    "hours": "h",
+    "hour": "h",
+    "hrs": "h",
+    "hr": "h",
+    "h": "h",
+    "minutes": "min",
+    "minute": "min",
+    "mins": "min",
+    "min": "min",
+    "seconds": "s",
+    "second": "s",
+    "sec": "s",
+    "days": "day",
+    "day": "day",
+    "weeks": "week",
+    "week": "week",
+    "wk": "week",
+    "months": "month",
+    "month": "month",
+    "years": "year",
+    "year": "year",
+    "yr": "year",
     # counts
-    "patients": "patient", "patient": "patient", "participants": "participant", "participant": "participant",
-    "subjects": "subject", "cases": "case", "times": "time", "tablets": "tablet", "tablet": "tablet",
-    "doses": "dose", "dose": "dose", "drops": "drop", "puffs": "puff",
+    "patients": "patient",
+    "patient": "patient",
+    "participants": "participant",
+    "participant": "participant",
+    "subjects": "subject",
+    "cases": "case",
+    "times": "time",
+    "tablets": "tablet",
+    "tablet": "tablet",
+    "doses": "dose",
+    "dose": "dose",
+    "drops": "drop",
+    "puffs": "puff",
 }
 _CJK_UNITS: dict[str, str] = {
-    "パーセント": "%", "日間": "day", "日": "day", "週間": "week", "週": "week", "か月": "month", "ヶ月": "month",
-    "カ月": "month", "ヵ月": "month", "年間": "year", "年": "year", "時間": "h", "分": "min", "秒": "s",
-    "人": "person", "名": "person", "例": "case", "歳": "age", "才": "age", "回": "time", "錠": "tablet",
-    "倍": "times-fold", "円": "yen", "件": "item",
+    "パーセント": "%",
+    "日間": "day",
+    "日": "day",
+    "週間": "week",
+    "週": "week",
+    "か月": "month",
+    "ヶ月": "month",
+    "カ月": "month",
+    "ヵ月": "month",
+    "年間": "year",
+    "年": "year",
+    "時間": "h",
+    "分": "min",
+    "秒": "s",
+    "人": "person",
+    "名": "person",
+    "例": "case",
+    "歳": "age",
+    "才": "age",
+    "回": "time",
+    "錠": "tablet",
+    "倍": "times-fold",
+    "円": "yen",
+    "件": "item",
 }
 
 
@@ -107,25 +215,56 @@ _UNIT = rf"(?:{_alternation(_ASCII_UNITS)})(?:/[a-zμ]+\d?)*(?![a-z/])|(?:{_alte
 # kanji ("1日5mg"), which must still count.
 _LEAD = r"(?<![0-9A-Za-z.,])"
 _RANGE_RE = re.compile(
-    rf"{_LEAD}(?P<a>{_NUM})\s?(?:-|\u2013|\u2014|~|\u301c|to|から)\s?(?P<b>{_NUM})\s?(?P<unit>{_UNIT})", re.IGNORECASE
+    rf"{_LEAD}(?P<a>{_NUM})\s?(?:-|\u2013|\u2014|~|\u301c|to|から)\s?(?P<b>{_NUM})\s?(?P<unit>{_UNIT})",
+    re.IGNORECASE,
 )
 _QUANTITY_RE = re.compile(rf"{_LEAD}(?P<num>{_NUM})\s?(?P<unit>{_UNIT})", re.IGNORECASE)
 
 # ---- dates -----------------------------------------------------------------
 
 _MONTHS = {
-    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6, "july": 7, "august": 8,
-    "september": 9, "october": 10, "november": 11, "december": 12,
-    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "jun": 6, "jul": 7, "aug": 8, "sep": 9, "sept": 9, "oct": 10,
-    "nov": 11, "dec": 12,
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+    "jan": 1,
+    "feb": 2,
+    "mar": 3,
+    "apr": 4,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+    "sept": 9,
+    "oct": 10,
+    "nov": 11,
+    "dec": 12,
 }
 _MONTH = rf"(?P<month>{'|'.join(sorted(_MONTHS, key=len, reverse=True))})\.?"
 _ORD = r"(?:st|nd|rd|th)?"
 _DATE_RES: tuple[re.Pattern[str], ...] = (
-    re.compile(r"(?<!\d)(?P<year>\d{4})[-/.](?P<mnum>\d{1,2})[-/.](?P<day>\d{1,2})(?!\d)"),
-    re.compile(r"(?<!\d)(?P<year>\d{4})\s?年\s?(?P<mnum>\d{1,2})\s?月(?:\s?(?P<day>\d{1,2})\s?日)?"),
-    re.compile(rf"(?<!\d)(?P<day>\d{{1,2}}){_ORD}\s+(?:of\s+)?{_MONTH},?\s+(?P<year>\d{{4}})(?!\d)", re.IGNORECASE),
-    re.compile(rf"\b{_MONTH}\s+(?P<day>\d{{1,2}}){_ORD},?\s+(?P<year>\d{{4}})(?!\d)", re.IGNORECASE),
+    re.compile(
+        r"(?<!\d)(?P<year>\d{4})[-/.](?P<mnum>\d{1,2})[-/.](?P<day>\d{1,2})(?!\d)"
+    ),
+    re.compile(
+        r"(?<!\d)(?P<year>\d{4})\s?年\s?(?P<mnum>\d{1,2})\s?月(?:\s?(?P<day>\d{1,2})\s?日)?"
+    ),
+    re.compile(
+        rf"(?<!\d)(?P<day>\d{{1,2}}){_ORD}\s+(?:of\s+)?{_MONTH},?\s+(?P<year>\d{{4}})(?!\d)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"\b{_MONTH}\s+(?P<day>\d{{1,2}}){_ORD},?\s+(?P<year>\d{{4}})(?!\d)",
+        re.IGNORECASE,
+    ),
     re.compile(rf"\b{_MONTH},?\s+(?P<year>\d{{4}})(?!\d)", re.IGNORECASE),
     re.compile(r"(?<!\d)(?P<mnum>\d{1,2})\s?月\s?(?P<day>\d{1,2})\s?日"),
 )
@@ -133,17 +272,85 @@ _DATE_RES: tuple[re.Pattern[str], ...] = (
 # ---- drugs -----------------------------------------------------------------
 
 _DRUG_STEMS = (
-    "mab", "nib", "parib", "pril", "sartan", "olol", "statin", "cillin", "mycin", "micin", "cycline", "floxacin",
-    "azole", "tidine", "dipine", "oxetine", "triptan", "parin", "vir", "gliptin", "gliflozin", "glutide",
-    "lukast", "semide", "thiazide", "platin", "taxel", "rubicin", "profen", "coxib", "olone", "sone", "zepam",
-    "zolam", "barbital", "caine", "xaban", "gatran", "formin", "grel", "dronate", "terol", "setron", "afil",
+    "mab",
+    "nib",
+    "parib",
+    "pril",
+    "sartan",
+    "olol",
+    "statin",
+    "cillin",
+    "mycin",
+    "micin",
+    "cycline",
+    "floxacin",
+    "azole",
+    "tidine",
+    "dipine",
+    "oxetine",
+    "triptan",
+    "parin",
+    "vir",
+    "gliptin",
+    "gliflozin",
+    "glutide",
+    "lukast",
+    "semide",
+    "thiazide",
+    "platin",
+    "taxel",
+    "rubicin",
+    "profen",
+    "coxib",
+    "olone",
+    "sone",
+    "zepam",
+    "zolam",
+    "barbital",
+    "caine",
+    "xaban",
+    "gatran",
+    "formin",
+    "grel",
+    "dronate",
+    "terol",
+    "setron",
+    "afil",
 )
-_DRUG_NAMES = frozenset({
-    "aspirin", "insulin", "warfarin", "morphine", "paracetamol", "acetaminophen", "digoxin", "levothyroxine",
-    "methotrexate", "cyclosporine", "ciclosporin", "tacrolimus", "adrenaline", "epinephrine", "noradrenaline",
-    "norepinephrine", "nitroglycerin", "codeine", "fentanyl", "oxycodone", "tramadol", "ketamine", "propofol",
-    "naloxone", "amiodarone", "allopurinol", "colchicine", "heparin", "penicillin", "lithium carbonate",
-})
+_DRUG_NAMES = frozenset(
+    {
+        "aspirin",
+        "insulin",
+        "warfarin",
+        "morphine",
+        "paracetamol",
+        "acetaminophen",
+        "digoxin",
+        "levothyroxine",
+        "methotrexate",
+        "cyclosporine",
+        "ciclosporin",
+        "tacrolimus",
+        "adrenaline",
+        "epinephrine",
+        "noradrenaline",
+        "norepinephrine",
+        "nitroglycerin",
+        "codeine",
+        "fentanyl",
+        "oxycodone",
+        "tramadol",
+        "ketamine",
+        "propofol",
+        "naloxone",
+        "amiodarone",
+        "allopurinol",
+        "colchicine",
+        "heparin",
+        "penicillin",
+        "lithium carbonate",
+    }
+)
 # Ordinary words that happen to end in a drug stem.
 _NOT_DRUGS = frozenset({"cholesterol"})
 _WORD_RE = re.compile(r"(?<![A-Za-z])[A-Za-z][A-Za-z-]{4,}(?![A-Za-z])")
@@ -156,7 +363,9 @@ _PERSON_EN_RE = re.compile(
 # The kanji run before the honorific can carry more than the name
 # ("大学山田教授"); the source supports it when any ending of the run, two
 # characters or longer, appears there (see _SourceIndex.supports).
-_PERSON_JA_RE = re.compile(r"(?P<name>[一-鿿々]{2,8})\s?(?:准教授|教授|先生|医師|博士|氏)")
+_PERSON_JA_RE = re.compile(
+    r"(?P<name>[一-鿿々]{2,8})\s?(?:准教授|教授|先生|医師|博士|氏)"
+)
 
 
 @dataclass
@@ -238,7 +447,9 @@ def extract_claims(text: str, terms: list[str] | tuple[str, ...] = ()) -> list[C
     found: dict[tuple[str, Any], Claim] = {}
 
     def add(kind: str, written: str, key: Any, line_no: int) -> None:
-        claim = found.setdefault((kind, key), Claim(kind=kind, text=written.strip(), key=key))
+        claim = found.setdefault(
+            (kind, key), Claim(kind=kind, text=written.strip(), key=key)
+        )
         if line_no not in claim.lines:
             claim.lines.append(line_no)
 
@@ -263,7 +474,12 @@ def extract_claims(text: str, terms: list[str] | tuple[str, ...] = ()) -> list[C
             for part in ("a", "b"):
                 value = _number_key(m.group(part))
                 if value is not None:
-                    add("number", f"{m.group(part)} {m.group('unit')}", (value, unit), line_no)
+                    add(
+                        "number",
+                        f"{m.group(part)} {m.group('unit')}",
+                        (value, unit),
+                        line_no,
+                    )
             line = _mask(line, m.start(), m.end())
         for m in _QUANTITY_RE.finditer(line):
             value = _number_key(m.group("num"))
@@ -296,7 +512,8 @@ class _SourceIndex:
             return claim.key in self.numbers
         if claim.kind == "date":
             return any(
-                all(g is None or g == s for g, s in zip(claim.key, src, strict=True)) for src in self.dates
+                all(g is None or g == s for g, s in zip(claim.key, src, strict=True))
+                for src in self.dates
             )
         if claim.kind == "person" and not claim.key.isascii():
             run = claim.key
@@ -311,7 +528,12 @@ class _SourceIndex:
                 return False
             between = r"(?:\s+[A-Za-z]\.?)*\s+"
             pattern = between.join(re.escape(w) for w in words)
-            return re.search(rf"(?<![A-Za-z]){pattern}(?![A-Za-z])", self.text, re.IGNORECASE) is not None
+            return (
+                re.search(
+                    rf"(?<![A-Za-z]){pattern}(?![A-Za-z])", self.text, re.IGNORECASE
+                )
+                is not None
+            )
         return _text_pattern(claim.key).search(self.text) is not None
 
 
@@ -320,7 +542,11 @@ class _SourceIndex:
 
 def _string_list(policy: dict[str, Any], key: str) -> list[str]:
     value = policy.get(key)
-    if not isinstance(value, list) or not value or not all(isinstance(v, str) and v.strip() for v in value):
+    if (
+        not isinstance(value, list)
+        or not value
+        or not all(isinstance(v, str) and v.strip() for v in value)
+    ):
         raise ArtifactInputError(
             code="ARTIFACT_INVALID_ARGS",
             message=f"Policy key '{key}' must be a non-empty list of non-empty strings, got {value!r}.",
@@ -363,7 +589,9 @@ def _read_source(path_str: str) -> str:
         try:
             text: str | None = path.read_text(encoding="utf-8-sig", errors="strict")
         except UnicodeDecodeError as exc:
-            raise ValueError("not a format this tool reads, and not UTF-8 text") from exc
+            raise ValueError(
+                "not a format this tool reads, and not UTF-8 text"
+            ) from exc
     else:
         text = get_adapter(ref.type).inspect(ref).text
     if text is None:
@@ -380,27 +608,45 @@ def _try_read_source(path_str: str) -> tuple[str | None, str]:
         return None, str(exc)
 
 
-def grounding_check(adapter: ArtifactAdapter, ref: ArtifactRef, policy: dict[str, Any]) -> Check | None:
+def grounding_check(
+    adapter: ArtifactAdapter, ref: ArtifactRef, policy: dict[str, Any]
+) -> Check | None:
     """The `source_grounding` check, or None when the policy asks for none."""
     if "grounding_sources" not in policy:
         return None
     validate_grounding_policy(policy)
     sources = _string_list(policy, "grounding_sources")
-    terms = _string_list(policy, "grounding_terms") if "grounding_terms" in policy else []
+    terms = (
+        _string_list(policy, "grounding_terms") if "grounding_terms" in policy else []
+    )
 
     try:
         text = adapter.inspect(ref).text
     except ArtifactError as exc:
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.UNKNOWN,
-                     message=f"Could not read the document's text: {exc}", evidence={"sources": sources})
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.UNKNOWN,
+            message=f"Could not read the document's text: {exc}",
+            evidence={"sources": sources},
+        )
     if text is None:
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.UNKNOWN,
-                     message=f"The '{adapter.id}' adapter does not extract text, so nothing could be compared.",
-                     evidence={"sources": sources})
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.UNKNOWN,
+            message=f"The '{adapter.id}' adapter does not extract text, so nothing could be compared.",
+            evidence={"sources": sources},
+        )
     if not text.strip():
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.UNKNOWN,
-                     message="No readable text was found in the document (a scanned PDF has none), so nothing "
-                     "could be compared.", evidence={"sources": sources})
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.UNKNOWN,
+            message="No readable text was found in the document (a scanned PDF has none), so nothing "
+            "could be compared.",
+            evidence={"sources": sources},
+        )
 
     source_texts: list[str] = []
     unreadable: list[dict[str, str]] = []
@@ -411,9 +657,13 @@ def grounding_check(adapter: ArtifactAdapter, ref: ArtifactRef, policy: dict[str
         else:
             source_texts.append(source_text)
     if unreadable:
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.UNKNOWN,
-                     message=f"{len(unreadable)} source file(s) could not be read, so the document was not compared.",
-                     evidence={"sources": sources, "unreadable_sources": unreadable})
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.UNKNOWN,
+            message=f"{len(unreadable)} source file(s) could not be read, so the document was not compared.",
+            evidence={"sources": sources, "unreadable_sources": unreadable},
+        )
 
     claims = extract_claims(text, terms)
     index = _SourceIndex.build(source_texts, terms)
@@ -426,12 +676,21 @@ def grounding_check(adapter: ArtifactAdapter, ref: ArtifactRef, policy: dict[str
     if unsupported:
         listed = ", ".join(f"{c.text!r} (line {c.lines[0]})" for c in unsupported[:10])
         more = f" and {len(unsupported) - 10} more" if len(unsupported) > 10 else ""
-        return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.FAIL,
-                     message=f"{len(unsupported)} of {len(claims)} claim(s) do not appear in the source: {listed}{more}. "
-                     "Nothing was changed; check each one against the source.", evidence=evidence)
-    return Check(id=CHECK_ID, name=CHECK_NAME, status=CheckStatus.PASS,
-                 message=f"All {len(claims)} number(s), date(s), name(s) and term(s) found appear in the source.",
-                 evidence=evidence)
+        return Check(
+            id=CHECK_ID,
+            name=CHECK_NAME,
+            status=CheckStatus.FAIL,
+            message=f"{len(unsupported)} of {len(claims)} claim(s) do not appear in the source: {listed}{more}. "
+            "Nothing was changed; check each one against the source.",
+            evidence=evidence,
+        )
+    return Check(
+        id=CHECK_ID,
+        name=CHECK_NAME,
+        status=CheckStatus.PASS,
+        message=f"All {len(claims)} number(s), date(s), name(s) and term(s) found appear in the source.",
+        evidence=evidence,
+    )
 
 
 def verify_structural_with_grounding(

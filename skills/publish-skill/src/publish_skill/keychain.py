@@ -15,6 +15,7 @@ service "publish-skill", account "PUBLISH_YOUTUBE_REFRESH_TOKEN".
 `_import_keyring` is the only place that imports keyring; the tests replace it, so they never reach a real keychain.
 Values are returned to credentials.py only, which records them for the redactor; nothing here prints, logs or puts a
 value into an error."""
+
 from __future__ import annotations
 
 import os
@@ -28,11 +29,17 @@ REQUIREMENT = "keyring>=25.0"
 INSTALL = "pip install 'publish-skill[keychain]'"
 OFF_ENV = "PUBLISH_KEYCHAIN"
 OFF_VALUES = ("0", "off", "false", "no")
-BACKEND_LABELS = ("macOS Keychain", "Windows Credential Manager", "Secret Service (Linux, D-Bus)")
+BACKEND_LABELS = (
+    "macOS Keychain",
+    "Windows Credential Manager",
+    "Secret Service (Linux, D-Bus)",
+)
 
 
 class KeychainUnavailable(Exception):
-    def __init__(self, reason: str, install: Optional[str] = None, library: Optional[str] = None) -> None:
+    def __init__(
+        self, reason: str, install: Optional[str] = None, library: Optional[str] = None
+    ) -> None:
         super().__init__(reason)
         self.reason = reason
         self.install = install
@@ -50,8 +57,11 @@ class Keychain:
 
     def _fail(self, op: str, account: str, e: Exception) -> PublishError:
         # the exception's type only: a backend message is not ours to vouch for
-        return PublishError("KEYCHAIN_ERROR", f"the {self.name} refused to {op} {account} ({type(e).__name__})",
-                            {"backend": self.name, "operation": op, "variable": account})
+        return PublishError(
+            "KEYCHAIN_ERROR",
+            f"the {self.name} refused to {op} {account} ({type(e).__name__})",
+            {"backend": self.name, "operation": op, "variable": account},
+        )
 
     def get(self, account: str) -> str:
         """The stored value, stripped; "" when there is none."""
@@ -87,22 +97,26 @@ def _import_keyring() -> Optional[Dict[str, Any]]:
         return None
     try:
         from importlib.metadata import version
+
         ver = version(keyring.__name__)
     except Exception:
         ver = "unknown"
     classes: List[Tuple[str, Any]] = []
     try:
         from keyring.backends import macOS
+
         classes.append((BACKEND_LABELS[0], macOS.Keyring))
     except ImportError:
         pass
     try:
         from keyring.backends import Windows
+
         classes.append((BACKEND_LABELS[1], Windows.WinVaultKeyring))
     except ImportError:
         pass
     try:
         from keyring.backends import SecretService
+
         classes.append((BACKEND_LABELS[2], SecretService.Keyring))
     except ImportError:
         pass
@@ -123,16 +137,21 @@ def _select(lib: Dict[str, Any]) -> Keychain:
         if best is None or prio > best[0]:
             best = (prio, label, cls)
     if best is None:
-        raise KeychainUnavailable("keyring is installed, but no OS keychain is usable here (" + ", ".join(BACKEND_LABELS)
-                                  + "); on Linux the Secret Service needs a D-Bus session and an unlocked keyring",
-                                  library=library)
+        raise KeychainUnavailable(
+            "keyring is installed, but no OS keychain is usable here ("
+            + ", ".join(BACKEND_LABELS)
+            + "); on Linux the Secret Service needs a D-Bus session and an unlocked keyring",
+            library=library,
+        )
     return Keychain(best[2](), best[1], library)
 
 
 def _discover() -> Keychain:
     lib = _import_keyring()
     if lib is None:
-        raise KeychainUnavailable("the optional keyring library is not installed", install=INSTALL)
+        raise KeychainUnavailable(
+            "the optional keyring library is not installed", install=INSTALL
+        )
     return _select(lib)
 
 
@@ -142,7 +161,9 @@ def disabled() -> bool:
 
 def _resolve() -> Keychain:
     if disabled():
-        raise KeychainUnavailable(f"turned off by {OFF_ENV}={os.environ.get(OFF_ENV, '').strip()}")
+        raise KeychainUnavailable(
+            f"turned off by {OFF_ENV}={os.environ.get(OFF_ENV, '').strip()}"
+        )
     return _discover()
 
 
@@ -159,17 +180,41 @@ def require() -> Keychain:
     try:
         return _resolve()
     except KeychainUnavailable as e:
-        raise PublishError("KEYCHAIN_UNAVAILABLE", f"the OS keychain is unavailable: {e.reason}; credentials come from "
-                           "the environment only" + (f" (install it: {e.install})" if e.install else ""),
-                           {"reason": e.reason, "install": e.install, "library": e.library}) from None
+        raise PublishError(
+            "KEYCHAIN_UNAVAILABLE",
+            f"the OS keychain is unavailable: {e.reason}; credentials come from "
+            "the environment only"
+            + (f" (install it: {e.install})" if e.install else ""),
+            {"reason": e.reason, "install": e.install, "library": e.library},
+        ) from None
 
 
 def availability() -> Dict[str, Any]:
     """Whether the keychain can be used, which backend, and why not. Reads no credential."""
-    base = {"service": SERVICE, "account": "the environment variable's name", "extra": EXTRA, "requirement": REQUIREMENT}
+    base = {
+        "service": SERVICE,
+        "account": "the environment variable's name",
+        "extra": EXTRA,
+        "requirement": REQUIREMENT,
+    }
     try:
         kc = _resolve()
     except KeychainUnavailable as e:
-        return dict(base, status="UNAVAILABLE", backend=None, library=e.library, reason=e.reason, install=e.install,
-                    fallback="credentials come from the environment only")
-    return dict(base, status="OK", backend=kc.name, library=kc.library, reason=None, install=None, fallback=None)
+        return dict(
+            base,
+            status="UNAVAILABLE",
+            backend=None,
+            library=e.library,
+            reason=e.reason,
+            install=e.install,
+            fallback="credentials come from the environment only",
+        )
+    return dict(
+        base,
+        status="OK",
+        backend=kc.name,
+        library=kc.library,
+        reason=None,
+        install=None,
+        fallback=None,
+    )

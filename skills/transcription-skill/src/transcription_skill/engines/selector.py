@@ -4,14 +4,22 @@ This is not a decision engine. It returns every candidate that satisfies the con
 order, and explains per engine why the others do not. Choosing among candidates (quality, cost, speed)
 is the caller's job, for example video-production-agent's decision layer.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
 from ..errors import TranscriptionError
-from .base import (CAP_CUSTOM_VOCABULARY, CAP_LANGUAGE_DETECTION, CAP_WORD_TIMESTAMPS, EXECUTION_MODES, MODEL_AVAILABLE, EngineSpec,
-                   TranscriptionEngine)
+from .base import (
+    CAP_CUSTOM_VOCABULARY,
+    CAP_LANGUAGE_DETECTION,
+    CAP_WORD_TIMESTAMPS,
+    EXECUTION_MODES,
+    MODEL_AVAILABLE,
+    EngineSpec,
+    TranscriptionEngine,
+)
 from .registry import EngineRegistry, default_registry
 
 NETWORK_POLICIES = ("allowed", "forbidden")
@@ -20,21 +28,37 @@ NETWORK_POLICIES = ("allowed", "forbidden")
 @dataclass
 class EngineRequirements:
     """Hard constraints. None means "no constraint"."""
-    execution_mode: Optional[str] = None       # local | remote
-    language: Optional[str] = None             # ISO 639-1; None also means "must support detection" is not required
-    network: str = "allowed"                   # forbidden = engines whose recognition needs the network are excluded
-    offline: bool = False                      # network forbidden AND the model must already be on this machine
+
+    execution_mode: Optional[str] = None  # local | remote
+    language: Optional[str] = (
+        None  # ISO 639-1; None also means "must support detection" is not required
+    )
+    network: str = (
+        "allowed"  # forbidden = engines whose recognition needs the network are excluded
+    )
+    offline: bool = (
+        False  # network forbidden AND the model must already be on this machine
+    )
     word_timestamps: bool = False
     language_detection: bool = False
-    vocabulary: bool = False                   # the engine must take a custom vocabulary
-    model: Optional[str] = None                # when given, the engine must know the model (and, offline, have it)
-    engine_id: Optional[str] = None            # restrict to one engine
+    vocabulary: bool = False  # the engine must take a custom vocabulary
+    model: Optional[str] = (
+        None  # when given, the engine must know the model (and, offline, have it)
+    )
+    engine_id: Optional[str] = None  # restrict to one engine
 
     def __post_init__(self) -> None:
-        if self.execution_mode is not None and self.execution_mode not in EXECUTION_MODES:
-            raise TranscriptionError("INVALID_INPUT", f"execution_mode must be one of {EXECUTION_MODES}")
+        if (
+            self.execution_mode is not None
+            and self.execution_mode not in EXECUTION_MODES
+        ):
+            raise TranscriptionError(
+                "INVALID_INPUT", f"execution_mode must be one of {EXECUTION_MODES}"
+            )
         if self.network not in NETWORK_POLICIES:
-            raise TranscriptionError("INVALID_INPUT", f"network must be one of {NETWORK_POLICIES}")
+            raise TranscriptionError(
+                "INVALID_INPUT", f"network must be one of {NETWORK_POLICIES}"
+            )
         if self.offline:
             self.network = "forbidden"
 
@@ -45,7 +69,7 @@ class EngineRequirements:
 @dataclass
 class Rejection:
     engine_id: str
-    reasons: List[str] = field(default_factory=list)   # machine-readable reason codes
+    reasons: List[str] = field(default_factory=list)  # machine-readable reason codes
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -58,8 +82,11 @@ class Selection:
     requirements: EngineRequirements
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"candidates": [c.to_dict() for c in self.candidates], "rejected": [r.to_dict() for r in self.rejected],
-                "requirements": self.requirements.to_dict()}
+        return {
+            "candidates": [c.to_dict() for c in self.candidates],
+            "rejected": [r.to_dict() for r in self.rejected],
+            "requirements": self.requirements.to_dict(),
+        }
 
 
 # reason codes
@@ -75,7 +102,9 @@ R_MODEL_NOT_LOCAL = "model_not_available_offline"
 R_ENGINE_ID = "engine_id_mismatch"
 
 
-def reject_reasons(engine: TranscriptionEngine, spec: EngineSpec, req: EngineRequirements) -> List[str]:
+def reject_reasons(
+    engine: TranscriptionEngine, spec: EngineSpec, req: EngineRequirements
+) -> List[str]:
     reasons: List[str] = []
     if req.engine_id is not None and spec.id != req.engine_id:
         return [R_ENGINE_ID]
@@ -89,11 +118,16 @@ def reject_reasons(engine: TranscriptionEngine, spec: EngineSpec, req: EngineReq
     # a model the caller names may recognize fewer languages than its engine and detect none (ADR-040); the engine's
     # default model is not checked here, so a requirement that names no model selects as before
     model_langs = engine.model_languages(req.model) if req.model is not None else None
-    if req.language is not None and (req.language not in spec.supported_languages or (model_langs is not None and req.language not in model_langs)):
+    if req.language is not None and (
+        req.language not in spec.supported_languages
+        or (model_langs is not None and req.language not in model_langs)
+    ):
         reasons.append(R_LANGUAGE)
     if req.word_timestamps and not spec.has(CAP_WORD_TIMESTAMPS):
         reasons.append(R_WORD_TIMESTAMPS)
-    if req.language_detection and (not spec.has(CAP_LANGUAGE_DETECTION) or model_langs is not None):
+    if req.language_detection and (
+        not spec.has(CAP_LANGUAGE_DETECTION) or model_langs is not None
+    ):
         reasons.append(R_LANGUAGE_DETECTION)
     if req.vocabulary and not spec.has(CAP_CUSTOM_VOCABULARY):
         reasons.append(R_VOCABULARY)
@@ -107,7 +141,9 @@ def reject_reasons(engine: TranscriptionEngine, spec: EngineSpec, req: EngineReq
     return reasons
 
 
-def select_engines(req: EngineRequirements, registry: Optional[EngineRegistry] = None) -> Selection:
+def select_engines(
+    req: EngineRequirements, registry: Optional[EngineRegistry] = None
+) -> Selection:
     registry = registry or default_registry()
     candidates: List[EngineSpec] = []
     rejected: List[Rejection] = []
@@ -122,10 +158,18 @@ def select_engines(req: EngineRequirements, registry: Optional[EngineRegistry] =
     return Selection(candidates, rejected, req)
 
 
-def require_engine(req: EngineRequirements, registry: Optional[EngineRegistry] = None) -> Selection:
+def require_engine(
+    req: EngineRequirements, registry: Optional[EngineRegistry] = None
+) -> Selection:
     """select_engines, but ENGINE_UNAVAILABLE (with every rejection) when nothing satisfies the constraints."""
     sel = select_engines(req, registry)
     if not sel.candidates:
-        raise TranscriptionError("ENGINE_UNAVAILABLE", "no engine satisfies the requirements",
-                                 {"requirements": req.to_dict(), "rejected": [r.to_dict() for r in sel.rejected]})
+        raise TranscriptionError(
+            "ENGINE_UNAVAILABLE",
+            "no engine satisfies the requirements",
+            {
+                "requirements": req.to_dict(),
+                "rejected": [r.to_dict() for r in sel.rejected],
+            },
+        )
     return sel

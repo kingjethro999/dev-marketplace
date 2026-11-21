@@ -11,6 +11,7 @@ Examples:
   python3 look.py show.mp4 --guides title,action,4:3 --at 10   # broadcast safe-area outlines
 Then view the PNG (Read tool / image viewer) and verify before reporting.
 """
+
 import argparse
 import os
 import sys
@@ -19,12 +20,38 @@ from typing import List, Optional
 
 from _platforms import PLATFORMS, PLATFORM_CHOICES, resolve as resolve_platform
 from _common import still_input_args  # noqa: E402
-from _common import STATE, require_tool, add_common, apply_common, default_font_file, die, emit, escape_drawtext, ffmpeg_base, info, probe, run, run_analysis, time_arg
+from _common import (
+    STATE,
+    require_tool,
+    add_common,
+    apply_common,
+    default_font_file,
+    die,
+    emit,
+    escape_drawtext,
+    ffmpeg_base,
+    info,
+    probe,
+    run,
+    run_analysis,
+    time_arg,
+)
 from _common import drawtext_fontfile  # noqa: E402
 from _common import ffmpeg_filters, filter_missing_hint  # noqa: E402
 from _common.emit import note, record_fallback  # noqa: E402
-from _common.color import bt709_label_filter, bt2020_sdr_to_bt709_chain, hdr_to_sdr_chain, is_bt2020_sdr  # noqa: E402
-from _common.probe import PROBED_VIDEO, display_size, is_still_input, square_pixels, square_pixels_note  # noqa: E402
+from _common.color import (
+    bt709_label_filter,
+    bt2020_sdr_to_bt709_chain,
+    hdr_to_sdr_chain,
+    is_bt2020_sdr,
+)  # noqa: E402
+from _common.probe import (
+    PROBED_VIDEO,
+    display_size,
+    is_still_input,
+    square_pixels,
+    square_pixels_note,
+)  # noqa: E402
 from _common.emit import input_length  # noqa: E402
 
 # --guides: broadcast safe areas as outlines, in fractions of the frame (a tile as much as a frame).
@@ -45,17 +72,27 @@ def guide_boxes(names) -> "tuple":
         if name in GUIDES:
             f = GUIDES[name]
             m = (1 - f) / 2
-            boxes.append(f"drawbox=x=iw*{m:g}:y=ih*{m:g}:w=iw*{f:g}:h=ih*{f:g}:color={GUIDE_COLOURS[name]}@0.9:t={t}")
+            boxes.append(
+                f"drawbox=x=iw*{m:g}:y=ih*{m:g}:w=iw*{f:g}:h=ih*{f:g}:color={GUIDE_COLOURS[name]}@0.9:t={t}"
+            )
             described.append({"guide": name, "fraction": f, "of": "frame"})
         else:  # "4:3": the centre-cut window, then its own action and title safe
             w = "ih*4/3"
             boxes.append(f"drawbox=x=(iw-{w})/2:y=0:w={w}:h=ih:color=white@0.9:t={t}")
             for sub, f in GUIDE_43.items():
                 m = (1 - f) / 2
-                boxes.append(f"drawbox=x=(iw-{w})/2+{w}*{m:g}:y=ih*{m:g}:w={w}*{f:g}:h=ih*{f:g}:"
-                             f"color={GUIDE_COLOURS[sub]}@0.6:t={t}")
-            described.append({"guide": "4:3", "window": "centre 4:3 of the frame", "action": GUIDE_43["action"],
-                              "title": GUIDE_43["title"]})
+                boxes.append(
+                    f"drawbox=x=(iw-{w})/2+{w}*{m:g}:y=ih*{m:g}:w={w}*{f:g}:h=ih*{f:g}:"
+                    f"color={GUIDE_COLOURS[sub]}@0.6:t={t}"
+                )
+            described.append(
+                {
+                    "guide": "4:3",
+                    "window": "centre 4:3 of the frame",
+                    "action": GUIDE_43["action"],
+                    "title": GUIDE_43["title"],
+                }
+            )
     return boxes, described
 
 
@@ -71,20 +108,25 @@ def fmt_hms(sec: float) -> str:
 def timecode_filter(font_prefix: str, offset: float = 0.0) -> str:
     """Burned-in timecode. `offset` is added to each frame's pts: an input-side -ss resets
     timestamps to 0 at the seek point, so a sheet that starts reading mid-slice must add the seek
-    back or every tile is labelled `offset` seconds early (the contact sheet below seeks step/2)."""
+    back or every tile is labelled `offset` seconds early (the contact sheet below seeks step/2).
+    """
     if offset > 0:
         return f"drawtext=text='%{{pts\\:hms\\:{offset:.6f}}}':{font_prefix}{FONT}"
     return f"drawtext=text='%{{pts\\:hms}}':{font_prefix}{FONT}"
 
 
-def _refuse_past_end(t: str, sec: float, meta: dict, path: str, whose: str = "") -> None:
+def _refuse_past_end(
+    t: str, sec: float, meta: dict, path: str, whose: str = ""
+) -> None:
     """--at past the end of the picture it is taken from is refused, kind input, before ffmpeg
     writes nothing (kind output). A still has one picture, at 0: past it, it was not written
     (#531). `whose` names the --compare clip; the main input's message is the one it always was.
     --compare checked neither picture's length."""
     if is_still_input(meta) and sec > 0:
-        die(f"--at {t} is beyond {'the ' + whose if whose else path}, a still picture: it has one picture and no "
-            "length of its own (--at 0 shows it)")
+        die(
+            f"--at {t} is beyond {'the ' + whose if whose else path}, a still picture: it has one picture and no "
+            "length of its own (--at 0 shows it)"
+        )
     dur = meta.get("duration") or 0.0
     if dur and sec > dur:
         of = f"the {whose}'s " if whose else "the "
@@ -93,7 +135,8 @@ def _refuse_past_end(t: str, sec: float, meta: dict, path: str, whose: str = "")
 
 def _seek(sec: float, meta: dict) -> List[str]:
     """The input seek to `sec`, none for a still (its one picture is at 0): image2 given `-ss 0.000`
-    drops a TGA's only frame, which image2 gives a duration, and nothing was written (#531)."""
+    drops a TGA's only frame, which image2 gives a duration, and nothing was written (#531).
+    """
     return [] if is_still_input(meta) else ["-ss", f"{sec:.3f}"]
 
 
@@ -108,8 +151,21 @@ def _png_size(png_path: str) -> "Optional[tuple]":
     # ffprobe/ffmpeg measurement in this codebase, check=False since a probe failure here is
     # an unknown-metric result (has_ink: None), not a reason to die -- a stall still does,
     # exactly like every other measurement's timeout.
-    proc = run_analysis([require_tool("ffprobe"), "-v", "error", "-select_streams", "v:0", "-show_entries",
-                         "stream=width,height", "-of", "csv=p=0", png_path], check=False)
+    proc = run_analysis(
+        [
+            require_tool("ffprobe"),
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "csv=p=0",
+            png_path,
+        ],
+        check=False,
+    )
     parts = proc.stdout.strip().split(",")
     if len(parts) != 2:
         return None
@@ -120,20 +176,37 @@ def _png_size(png_path: str) -> "Optional[tuple]":
 
 
 def _png_pixels(png_path: str, w: int, h: int) -> "Optional[bytes]":
-    proc = run_analysis([require_tool("ffmpeg"), "-v", "error", "-i", png_path, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
-                        check=False, text=False)
+    proc = run_analysis(
+        [
+            require_tool("ffmpeg"),
+            "-v",
+            "error",
+            "-i",
+            png_path,
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+        ],
+        check=False,
+        text=False,
+    )
     data = proc.stdout
     return data if len(data) >= w * h * 3 else None
 
 
-def measure_ink(png_path: str, *, box=None, margin_frac: float = 0.03, threshold: int = 28) -> dict:
+def measure_ink(
+    png_path: str, *, box=None, margin_frac: float = 0.03, threshold: int = 28
+) -> dict:
     """Non-background ink in `png_path` (or the `box` = (x0, y0, w, h) sub-region of it): a pixel-only
     measurement, never a judgement of legibility. The background is estimated as the median RGB of a
     thin strip around the region's own edge (so it works on any frame, not just a black synthetic one);
     a pixel is "ink" when any channel differs from that estimate by more than `threshold`. Returns
     {has_ink, bbox (x0,y0,x1,y1 within the region, or None), ink_fraction, row_bands} -- row_bands are
     gap-merged bands of rows carrying ink, the same convention tests/_fixtures.py's _ass_ink_rows uses,
-    so a caption wrapped onto two lines shows as two bands without measuring any font."""
+    so a caption wrapped onto two lines shows as two bands without measuring any font.
+    """
     size = _png_size(png_path)
     if not size:
         return {"has_ink": None, "bbox": None, "ink_fraction": None, "row_bands": []}
@@ -174,7 +247,11 @@ def measure_ink(png_path: str, *, box=None, margin_frac: float = 0.03, threshold
         row_lit = False
         for x in range(bw):
             r, g, b = px(x, y)
-            if abs(r - bg[0]) > threshold or abs(g - bg[1]) > threshold or abs(b - bg[2]) > threshold:
+            if (
+                abs(r - bg[0]) > threshold
+                or abs(g - bg[1]) > threshold
+                or abs(b - bg[2]) > threshold
+            ):
                 row_lit = True
                 ink_count += 1
                 min_x = x if min_x is None else min(min_x, x)
@@ -202,7 +279,8 @@ def measure_ink(png_path: str, *, box=None, margin_frac: float = 0.03, threshold
 
 def display_conversion(meta: dict, what: str = "source") -> str:
     """The filter that shows `meta`'s frames on an SDR BT.709 display, or "" for a picture that is
-    already one. HDR is tone-mapped so the agent judges representative colours, not raw HLG/PQ."""
+    already one. HDR is tone-mapped so the agent judges representative colours, not raw HLG/PQ.
+    """
     v = meta.get("video") or {}
     if not v.get("bt2020_or_hdr"):
         return ""
@@ -214,27 +292,58 @@ def display_conversion(meta: dict, what: str = "source") -> str:
         info(f"BT.2020 SDR {what}: frames are converted to BT.709 for display")
         return bt2020_sdr_to_bt709_chain(meta)
     info(f"HDR {what}: frames are tone-mapped to SDR for display")
-    return hdr_to_sdr_chain({"video": dict(v, color_transfer=v.get("color_transfer") or "arib-std-b67")}, "hable")
+    return hdr_to_sdr_chain(
+        {"video": dict(v, color_transfer=v.get("color_transfer") or "arib-std-b67")},
+        "hable",
+    )
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="output PNG (contact sheet / compare) or basename for --at frames")
-    ap.add_argument("--at", action="append", help="time of a frame to extract (repeatable)")
-    ap.add_argument("--tiles", default="4x3", help="contact sheet grid COLSxROWS (default 4x3)")
-    ap.add_argument("--width", type=int, default=1280, help="total width of the sheet / compare image (default 1280)")
-    ap.add_argument("--compare", help="second video: place its frame next to the first (needs --at)")
+    ap.add_argument(
+        "-o",
+        "--output",
+        help="output PNG (contact sheet / compare) or basename for --at frames",
+    )
+    ap.add_argument(
+        "--at", action="append", help="time of a frame to extract (repeatable)"
+    )
+    ap.add_argument(
+        "--tiles", default="4x3", help="contact sheet grid COLSxROWS (default 4x3)"
+    )
+    ap.add_argument(
+        "--width",
+        type=int,
+        default=1280,
+        help="total width of the sheet / compare image (default 1280)",
+    )
+    ap.add_argument(
+        "--compare", help="second video: place its frame next to the first (needs --at)"
+    )
     ap.add_argument("--no-timecode", action="store_true")
-    ap.add_argument("--safe", choices=PLATFORM_CHOICES, help="shade the zones this platform's UI covers (its description bar, "
-                                                       "like column, status bar) so you can see whether anything readable is under them")
-    ap.add_argument("--guides", metavar="LIST",
-                    help="draw broadcast safe-area outlines on the PNG (a preview only; nothing is written into a video): "
-                         "a comma list of action (93%%), title (90%%) and 4:3 (the 4:3 centre cut of a 16:9 frame, "
-                         "with its 90%% action and 80%% title safe)")
-    ap.add_argument("--ink", action="store_true", help="measure non-background pixels in each written PNG (bbox, "
-                                                 "ink_fraction, row_bands per tile for a contact sheet) instead of "
-                                                 "just eyeballing it -- a pixel-only signal, not a legibility judgement")
+    ap.add_argument(
+        "--safe",
+        choices=PLATFORM_CHOICES,
+        help="shade the zones this platform's UI covers (its description bar, "
+        "like column, status bar) so you can see whether anything readable is under them",
+    )
+    ap.add_argument(
+        "--guides",
+        metavar="LIST",
+        help="draw broadcast safe-area outlines on the PNG (a preview only; nothing is written into a video): "
+        "a comma list of action (93%%), title (90%%) and 4:3 (the 4:3 centre cut of a 16:9 frame, "
+        "with its 90%% action and 80%% title safe)",
+    )
+    ap.add_argument(
+        "--ink",
+        action="store_true",
+        help="measure non-background pixels in each written PNG (bbox, "
+        "ink_fraction, row_bands per tile for a contact sheet) instead of "
+        "just eyeballing it -- a pixel-only signal, not a legibility judgement",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -247,7 +356,9 @@ def main() -> int:
         die(f"--width must be at least 2 px, got {args.width}")
     dur = meta.get("duration") or 0.0
     stem = Path(args.input).stem
-    outdir = str(Path(args.output).parent) if args.output else str(Path(args.input).parent)
+    outdir = (
+        str(Path(args.output).parent) if args.output else str(Path(args.input).parent)
+    )
     # a resolvable font file, given as fontfile=, is the only form confirmed not to crash drawtext's
     # own fontconfig resolution on some real Windows ffmpeg builds (#100); font= is the fallback when
     # nothing can be resolved, unchanged from before this existed.
@@ -256,11 +367,18 @@ def main() -> int:
         # sheet itself only needs tile: draw it without them and say so, rather than failing the
         # step every picture change ends with (#394)
         args.no_timecode = True
-        record_fallback("this ffmpeg build has no drawtext filter, so the sheet has no timecode stamps "
-                        "(the same as --no-timecode)", "look_no_drawtext")
-        note("no timecode stamps: this ffmpeg build has no drawtext filter (" + filter_missing_hint("drawtext") + ")")
+        record_fallback(
+            "this ffmpeg build has no drawtext filter, so the sheet has no timecode stamps "
+            "(the same as --no-timecode)",
+            "look_no_drawtext",
+        )
+        note(
+            "no timecode stamps: this ffmpeg build has no drawtext filter ("
+            + filter_missing_hint("drawtext")
+            + ")"
+        )
     if args.no_timecode:
-        font_prefix, tc = "", ""   # nothing is drawn, so no font is resolved or copied
+        font_prefix, tc = "", ""  # nothing is drawn, so no font is resolved or copied
     else:
         default_font = default_font_file("DejaVu Sans")
         font_prefix = f"{drawtext_fontfile(default_font)}:" if default_font else ""
@@ -270,31 +388,50 @@ def main() -> int:
     safe_filter = ""
     args.safe = resolve_platform(args.safe)
     if args.safe and not PLATFORMS[args.safe].get("frame"):
-        info(f"--safe {args.safe}: this destination has no frame and no app chrome; nothing to shade")
+        info(
+            f"--safe {args.safe}: this destination has no frame and no app chrome; nothing to shade"
+        )
         args.safe = None
     if args.safe:
         z = PLATFORMS[args.safe]["safe"]
         frame = PLATFORMS[args.safe]["frame"]
         dw, dh = display_size(meta["video"])
         if dw and dh and abs(dw / dh - frame["w"] / frame["h"]) > 0.02:
-            info(f"--safe {args.safe}: this source is {dw}x{dh}, not {args.safe}'s "
-                 f"{frame['w']}x{frame['h']} -- the zones are drawn as fractions of the frame you gave, "
-                 f"so reframe first (fit.py --aspect) to see what the app really covers")
+            info(
+                f"--safe {args.safe}: this source is {dw}x{dh}, not {args.safe}'s "
+                f"{frame['w']}x{frame['h']} -- the zones are drawn as fractions of the frame you gave, "
+                f"so reframe first (fit.py --aspect) to see what the app really covers"
+            )
         boxes = []
-        for edge, frac in (("top", z["top"]), ("bottom", z["bottom"]), ("left", z["left"]), ("right", z["right"])):
+        for edge, frac in (
+            ("top", z["top"]),
+            ("bottom", z["bottom"]),
+            ("left", z["left"]),
+            ("right", z["right"]),
+        ):
             if frac <= 0:
                 continue
             if edge == "top":
-                boxes.append(f"drawbox=x=0:y=0:w=iw:h=ih*{frac:g}:color=red@0.35:t=fill")
+                boxes.append(
+                    f"drawbox=x=0:y=0:w=iw:h=ih*{frac:g}:color=red@0.35:t=fill"
+                )
             elif edge == "bottom":
-                boxes.append(f"drawbox=x=0:y=ih*(1-{frac:g}):w=iw:h=ih*{frac:g}:color=red@0.35:t=fill")
+                boxes.append(
+                    f"drawbox=x=0:y=ih*(1-{frac:g}):w=iw:h=ih*{frac:g}:color=red@0.35:t=fill"
+                )
             elif edge == "left":
-                boxes.append(f"drawbox=x=0:y=0:w=iw*{frac:g}:h=ih:color=red@0.20:t=fill")
+                boxes.append(
+                    f"drawbox=x=0:y=0:w=iw*{frac:g}:h=ih:color=red@0.20:t=fill"
+                )
             else:
-                boxes.append(f"drawbox=x=iw*(1-{frac:g}):y=0:w=iw*{frac:g}:h=ih:color=red@0.20:t=fill")
+                boxes.append(
+                    f"drawbox=x=iw*(1-{frac:g}):y=0:w=iw*{frac:g}:h=ih:color=red@0.20:t=fill"
+                )
         safe_filter = "," + ",".join(boxes) if boxes else ""
-        info(f"--safe {args.safe}: shaded top {z['top'] * 100:.0f}% / bottom {z['bottom'] * 100:.0f}% / "
-             f"left {z['left'] * 100:.0f}% / right {z['right'] * 100:.0f}% of the frame -- keep text out of those")
+        info(
+            f"--safe {args.safe}: shaded top {z['top'] * 100:.0f}% / bottom {z['bottom'] * 100:.0f}% / "
+            f"left {z['left'] * 100:.0f}% / right {z['right'] * 100:.0f}% of the frame -- keep text out of those"
+        )
     guides = None
     if args.guides:
         names = [g.strip() for g in args.guides.split(",") if g.strip()]
@@ -303,11 +440,13 @@ def main() -> int:
             die(f"--guides takes action, title and 4:3, got {args.guides!r}")
         dw, dh = display_size(meta["video"])
         if "4:3" in names and dw and dh and dw / dh < 4 / 3 + 0.01:
-            die(f"--guides 4:3 draws the 4:3 centre cut of a wider frame; this source is {dw}x{dh}")
+            die(
+                f"--guides 4:3 draws the 4:3 centre cut of a wider frame; this source is {dw}x{dh}"
+            )
         boxes, guides = guide_boxes(list(dict.fromkeys(names)))
         safe_filter += "," + ",".join(boxes)
     tc = safe_filter + tc
-    marks = tc   # the boxes and the stamp, without the display conversion (each --compare input has its own)
+    marks = tc  # the boxes and the stamp, without the display conversion (each --compare input has its own)
     tm = display_conversion(meta)
     if tm:
         tc = "," + tm + tc
@@ -332,26 +471,47 @@ def main() -> int:
             # the guides are drawn on both pictures: the second must be wider than 4:3 as well
             cw, ch = display_size(cmeta.get("video") or {})
             if cw and ch and cw / ch < 4 / 3 + 0.01:
-                die(f"--guides 4:3 draws the 4:3 centre cut of a wider frame; the --compare clip is {cw}x{ch}")
+                die(
+                    f"--guides 4:3 draws the 4:3 centre cut of a wider frame; the --compare clip is {cw}x{ch}"
+                )
         # the second picture is converted for display by its own tags: through 3.6.1 the first
         # input's tone map ran on both, so an SDR clip beside a PQ one was read as PQ
         tm2 = display_conversion(cmeta, "--compare clip")
         lab2 = bt709_label_filter(cmeta)
         lab2 = lab2 + "," if lab2 else ""
-        csq = (square_pixels(cmeta.get("video")) + ",") if square_pixels(cmeta.get("video")) else ""
+        csq = (
+            (square_pixels(cmeta.get("video")) + ",")
+            if square_pixels(cmeta.get("video"))
+            else ""
+        )
         for idx, t in enumerate(args.at):
-            sec = time_arg(t, "--at", meta["video"].get("fps") if meta.get("video") else None)
+            sec = time_arg(
+                t, "--at", meta["video"].get("fps") if meta.get("video") else None
+            )
             _refuse_past_end(t, sec, meta, args.input)
             _refuse_past_end(t, sec, cmeta, args.compare, "--compare clip")
-            if args.output and len(args.at) == 1 and Path(args.output).suffix.lower() in IMAGE_EXTS:
-                out = args.output  # one frame, one named image file: the caller's -o is the contract
+            if (
+                args.output
+                and len(args.at) == 1
+                and Path(args.output).suffix.lower() in IMAGE_EXTS
+            ):
+                out = (
+                    args.output
+                )  # one frame, one named image file: the caller's -o is the contract
             else:
                 # several frames, or -o given as a stem/prefix: an occurrence index keeps every
                 # requested --at its own file even when two round to the same millisecond
                 stem_part = (args.output and Path(args.output).stem) or stem
-                out = os.path.join(outdir, f"{stem_part}_vs_{Path(args.compare).stem}_{idx}_{sec:.3f}s.png")
+                out = os.path.join(
+                    outdir,
+                    f"{stem_part}_vs_{Path(args.compare).stem}_{idx}_{sec:.3f}s.png",
+                )
             half = args.width // 2
-            stamp = "" if args.no_timecode else f",drawtext=text='{escape_drawtext(fmt_hms(sec))}':{font_prefix}{FONT}"
+            stamp = (
+                ""
+                if args.no_timecode
+                else f",drawtext=text='{escape_drawtext(fmt_hms(sec))}':{font_prefix}{FONT}"
+            )
             # the tone map and the --safe / --guides boxes go on each picture as scaled, before the
             # pad: drawn after it, a picture letterboxed in the box got guides from the padded
             # height (a 2:1 clip beside a 16:9 one); the timecode stamp is drawn on the box
@@ -359,29 +519,83 @@ def main() -> int:
             # each picture keeps its own aspect inside a half-width box as tall as the taller of the
             # two (letterboxed, not stretched): through 3.1.3 scale2ref forced the first to the
             # second's size, so a 4:3 beside a 16:9 came out squashed (#411)
-            box_h = max(_half_height(half, display_size(meta["video"])),
-                        _half_height(half, display_size(cmeta.get("video"))))
+            box_h = max(
+                _half_height(half, display_size(meta["video"])),
+                _half_height(half, display_size(cmeta.get("video"))),
+            )
+
             def fit(conv):
                 conv = "," + conv if conv else ""
-                return (f"scale={half}:{box_h}:force_original_aspect_ratio=decrease{conv}{pre},"
-                        f"pad={half}:{box_h}:(ow-iw)/2:(oh-ih)/2:color=0x202020,setsar=1{stamp}")
-            fc = (f"[0:{PROBED_VIDEO}]{lab}{sq}{fit(tm)}[a];[1:{PROBED_VIDEO}]{lab2}{csq}{fit(tm2)}[b];"
-                  f"[a][b]hstack=inputs=2[out]")
-            cmd = ffmpeg_base() + [*_seek(sec, meta), *still_input_args(args.input), "-i", args.input, *_seek(sec, cmeta), *still_input_args(args.compare), "-i", args.compare,
-                                   "-filter_complex", fc, "-map", "[out]", "-frames:v", "1", "-update", "1", out]
+                return (
+                    f"scale={half}:{box_h}:force_original_aspect_ratio=decrease{conv}{pre},"
+                    f"pad={half}:{box_h}:(ow-iw)/2:(oh-ih)/2:color=0x202020,setsar=1{stamp}"
+                )
+
+            fc = (
+                f"[0:{PROBED_VIDEO}]{lab}{sq}{fit(tm)}[a];[1:{PROBED_VIDEO}]{lab2}{csq}{fit(tm2)}[b];"
+                f"[a][b]hstack=inputs=2[out]"
+            )
+            cmd = ffmpeg_base() + [
+                *_seek(sec, meta),
+                *still_input_args(args.input),
+                "-i",
+                args.input,
+                *_seek(sec, cmeta),
+                *still_input_args(args.compare),
+                "-i",
+                args.compare,
+                "-filter_complex",
+                fc,
+                "-map",
+                "[out]",
+                "-frames:v",
+                "1",
+                "-update",
+                "1",
+                out,
+            ]
             run(cmd)
             outputs.append(out)
     elif args.at:
         for t in args.at:
-            sec = time_arg(t, "--at", meta["video"].get("fps") if meta.get("video") else None)
+            sec = time_arg(
+                t, "--at", meta["video"].get("fps") if meta.get("video") else None
+            )
             _refuse_past_end(t, sec, meta, args.input)
-            if args.output and len(args.at) == 1 and Path(args.output).suffix.lower() in IMAGE_EXTS:
-                out = args.output  # one frame, one named image file: the caller's -o is the contract
+            if (
+                args.output
+                and len(args.at) == 1
+                and Path(args.output).suffix.lower() in IMAGE_EXTS
+            ):
+                out = (
+                    args.output
+                )  # one frame, one named image file: the caller's -o is the contract
             else:
                 # several frames, or -o given as a stem/prefix without an image extension
-                out = os.path.join(outdir, f"{args.output and Path(args.output).stem or stem}_{sec:.3f}s.png")
-            stamp = "" if args.no_timecode else f",drawtext=text='{escape_drawtext(fmt_hms(sec))}':{font_prefix}{FONT}"
-            cmd = ffmpeg_base() + [*_seek(sec, meta), *still_input_args(args.input), "-i", args.input, "-map", f"0:{PROBED_VIDEO}", "-vf", f"{lab}{sq}scale={args.width}:-2{tc.replace(',' + timecode_filter(font_prefix), '')}{stamp}", "-frames:v", "1", "-update", "1", out]
+                out = os.path.join(
+                    outdir,
+                    f"{args.output and Path(args.output).stem or stem}_{sec:.3f}s.png",
+                )
+            stamp = (
+                ""
+                if args.no_timecode
+                else f",drawtext=text='{escape_drawtext(fmt_hms(sec))}':{font_prefix}{FONT}"
+            )
+            cmd = ffmpeg_base() + [
+                *_seek(sec, meta),
+                *still_input_args(args.input),
+                "-i",
+                args.input,
+                "-map",
+                f"0:{PROBED_VIDEO}",
+                "-vf",
+                f"{lab}{sq}scale={args.width}:-2{tc.replace(',' + timecode_filter(font_prefix), '')}{stamp}",
+                "-frames:v",
+                "1",
+                "-update",
+                "1",
+                out,
+            ]
             run(cmd)
             outputs.append(out)
     else:
@@ -392,9 +606,13 @@ def main() -> int:
         if cols < 1 or rows < 1:
             # A21: 0 columns or rows divided the length by zero (a traceback, no JSON) and a
             # negative count reached ffmpeg's tile filter (kind ffmpeg)
-            die(f"--tiles must be COLSxROWS with both at least 1 (like 4x3), got {args.tiles}")
+            die(
+                f"--tiles must be COLSxROWS with both at least 1 (like 4x3), got {args.tiles}"
+            )
         n = cols * rows
-        dur = input_length(meta)  # the sheet is spread over the length: none stated is refused with the way out (#491)
+        dur = input_length(
+            meta
+        )  # the sheet is spread over the length: none stated is refused with the way out (#491)
         if not dur:
             die("cannot build a contact sheet without a known duration")
         frames_avail = int((meta["video"].get("fps") or 0) * dur) or 1
@@ -402,13 +620,20 @@ def main() -> int:
             # a 2x2 sheet from a one-frame clip: tile waits for frames that never come and writes nothing
             cols, rows = min(cols, frames_avail), 1
             n = cols * rows
-            info(f"only {frames_avail} frame(s) available; sheet reduced to {cols}x{rows}")
+            info(
+                f"only {frames_avail} frame(s) available; sheet reduced to {cols}x{rows}"
+            )
         step = dur / n
         tile_w = max(2, (args.width // cols) // 2 * 2)
         # -o without an image extension is a stem here too (<stem>_sheet.png), as for --at and
         # --compare: given verbatim, ffmpeg could not choose a muxer for it (kind ffmpeg, A159)
-        out = (args.output if args.output and Path(args.output).suffix.lower() in IMAGE_EXTS
-               else os.path.join(outdir, f"{(args.output and Path(args.output).stem) or stem}_sheet.png"))
+        out = (
+            args.output
+            if args.output and Path(args.output).suffix.lower() in IMAGE_EXTS
+            else os.path.join(
+                outdir, f"{(args.output and Path(args.output).stem) or stem}_sheet.png"
+            )
+        )
         # sample at the middle of each slice so the first/last tiles are not black lead-in/out frames
         # with only a handful of frames a mid-slice seek skips past them all: start at 0 instead
         seek = 0.0 if frames_avail < 4 else step / 2
@@ -417,9 +642,28 @@ def main() -> int:
         # resets pts to differs by container: an MPEG-TS (which starts at 1.4 s) came out
         # labelled one seek late when the seek was added back (#411)
         tc_sheet = tc
-        vf = (f"select='isnan(prev_selected_t)+gte(t-prev_selected_t\\,{step * 0.98:.6f})',{lab}{sq}scale={tile_w}:-2{tc_sheet},"
-              f"tile={cols}x{rows}:padding=2:margin=2:color=0x202020")
-        cmd = ffmpeg_base() + ["-copyts", "-start_at_zero", "-ss", f"{seek:.6f}", *still_input_args(args.input), "-i", args.input, "-map", f"0:{PROBED_VIDEO}", "-vf", vf, "-frames:v", "1", "-update", "1", out]
+        vf = (
+            f"select='isnan(prev_selected_t)+gte(t-prev_selected_t\\,{step * 0.98:.6f})',{lab}{sq}scale={tile_w}:-2{tc_sheet},"
+            f"tile={cols}x{rows}:padding=2:margin=2:color=0x202020"
+        )
+        cmd = ffmpeg_base() + [
+            "-copyts",
+            "-start_at_zero",
+            "-ss",
+            f"{seek:.6f}",
+            *still_input_args(args.input),
+            "-i",
+            args.input,
+            "-map",
+            f"0:{PROBED_VIDEO}",
+            "-vf",
+            vf,
+            "-frames:v",
+            "1",
+            "-update",
+            "1",
+            out,
+        ]
         run(cmd)
         outputs.append(out)
         info(f"contact sheet: {n} frames every {step:.2f}s")
@@ -438,7 +682,11 @@ def main() -> int:
             if size:
                 full_w, full_h = size
                 margin, padding = 2, 2
-                th = (full_h - 2 * margin - (rows - 1) * padding) // rows if rows else full_h
+                th = (
+                    (full_h - 2 * margin - (rows - 1) * padding) // rows
+                    if rows
+                    else full_h
+                )
                 tiles = []
                 for r in range(rows):
                     for c in range(cols):
@@ -449,8 +697,12 @@ def main() -> int:
         else:
             ink = {"frames": [measure_ink(o) for o in outputs]}
 
-    emit(outputs[0] if len(outputs) == 1 else None, outputs=outputs, **({"ink": ink} if ink is not None else {}),
-         **({"guides": guides} if guides else {}))
+    emit(
+        outputs[0] if len(outputs) == 1 else None,
+        outputs=outputs,
+        **({"ink": ink} if ink is not None else {}),
+        **({"guides": guides} if guides else {}),
+    )
     if len(outputs) > 1 and not args.json:
         for o in outputs:
             print(o)

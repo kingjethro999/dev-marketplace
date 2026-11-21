@@ -5,6 +5,7 @@ the image wasn't a simple bordered image and --fuzz needs adjusting.
 
 magick only: sips has no border-detection/trim support.
 """
+
 import os
 import sys
 
@@ -29,17 +30,39 @@ from _common import (  # noqa: E402
 def build_parser():
     parser = JSONArgumentParser(description="Trim a solid-color border from an image")
     parser.add_argument("input", help="image file to read (never modified)")
-    parser.add_argument("-o", "--output", required=True, help="file to write; must differ from the input, extension picks the format")
-    parser.add_argument("--fuzz", type=float, default=2.0, help="color similarity tolerance, percent (default 2.0)")
+    parser.add_argument(
+        "-o",
+        "--output",
+        required=True,
+        help="file to write; must differ from the input, extension picks the format",
+    )
+    parser.add_argument(
+        "--fuzz",
+        type=float,
+        default=2.0,
+        help="color similarity tolerance, percent (default 2.0)",
+    )
     parser.add_argument(
         "--max-trim-percent",
         type=float,
         default=90.0,
         help="fail if more than this percent of the area is removed (default 90.0)",
     )
-    parser.add_argument("--overwrite", action="store_true", help="allow replacing an existing output file")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
-    parser.add_argument("--dry-run", action="store_true", help="print the backend command that would run, write nothing")
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow replacing an existing output file",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the backend command that would run, write nothing",
+    )
     add_timeout_arg(parser)
     return parser
 
@@ -52,11 +75,22 @@ def run_trim(args):
 
     magick = which_magick()
     if not magick:
-        raise ImageSkillError("trim requires ImageMagick (magick); sips has no trim/border-detection support")
+        raise ImageSkillError(
+            "trim requires ImageMagick (magick); sips has no trim/border-detection support"
+        )
 
     in_w, in_h = identify_dims(args.input)
 
-    cmd = [magick, args.input, "-auto-orient", "-fuzz", f"{args.fuzz}%", "-trim", "+repage", args.output]
+    cmd = [
+        magick,
+        args.input,
+        "-auto-orient",
+        "-fuzz",
+        f"{args.fuzz}%",
+        "-trim",
+        "+repage",
+        args.output,
+    ]
     run(cmd, dry_run=args.dry_run)
     if args.dry_run:
         return {"dry_run": True, "would_run": cmd}

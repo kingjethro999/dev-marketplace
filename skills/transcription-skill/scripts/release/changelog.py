@@ -14,6 +14,7 @@ Usage:
     python3 scripts/release/changelog.py --repo . --version 1.0.0 --changelog CHANGELOG.md
         (omit --since for the first-ever release: includes the full history)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,11 +27,24 @@ from typing import List, Optional
 HEADER_PREFIX = "## "
 
 
-def commit_subjects(repo: Path, since: Optional[str], exclude_prefix: Optional[str]) -> List[str]:
+def commit_subjects(
+    repo: Path, since: Optional[str], exclude_prefix: Optional[str]
+) -> List[str]:
     rev_range = f"{since}..HEAD" if since else "HEAD"
     proc = subprocess.run(
-        ["git", "-C", str(repo), "log", rev_range, "--no-merges", "--pretty=format:%s\x1f%h"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True,
+        [
+            "git",
+            "-C",
+            str(repo),
+            "log",
+            rev_range,
+            "--no-merges",
+            "--pretty=format:%s\x1f%h",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
     )
     lines = [line for line in proc.stdout.split("\n") if line]
     subjects = []
@@ -42,7 +56,9 @@ def commit_subjects(repo: Path, since: Optional[str], exclude_prefix: Optional[s
     return subjects
 
 
-def render_section(version: str, subjects: List[str], date: Optional[str] = None) -> str:
+def render_section(
+    version: str, subjects: List[str], date: Optional[str] = None
+) -> str:
     date = date or datetime.date.today().isoformat()
     lines = [f"{HEADER_PREFIX}{version} - {date}", ""]
     if subjects:
@@ -54,7 +70,9 @@ def render_section(version: str, subjects: List[str], date: Optional[str] = None
 
 
 def prepend(changelog_path: Path, section: str) -> None:
-    existing = changelog_path.read_text(encoding="utf-8") if changelog_path.exists() else ""
+    existing = (
+        changelog_path.read_text(encoding="utf-8") if changelog_path.exists() else ""
+    )
     if not existing.strip():
         existing = "# Changelog\n\n"
     if existing.startswith("# Changelog"):
@@ -66,13 +84,27 @@ def prepend(changelog_path: Path, section: str) -> None:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--repo", default=".", type=Path)
     ap.add_argument("--version", required=True)
-    ap.add_argument("--since", default=None, help="tag/ref to list commits after (omit for full history)")
-    ap.add_argument("--exclude-subject-prefix", default=None, help="drop commits whose subject starts with this (e.g. our own release-bump commits)")
+    ap.add_argument(
+        "--since",
+        default=None,
+        help="tag/ref to list commits after (omit for full history)",
+    )
+    ap.add_argument(
+        "--exclude-subject-prefix",
+        default=None,
+        help="drop commits whose subject starts with this (e.g. our own release-bump commits)",
+    )
     ap.add_argument("--changelog", required=True, type=Path)
-    ap.add_argument("--print-only", action="store_true", help="print the section to stdout, do not write the file")
+    ap.add_argument(
+        "--print-only",
+        action="store_true",
+        help="print the section to stdout, do not write the file",
+    )
     args = ap.parse_args(argv)
 
     subjects = commit_subjects(args.repo, args.since, args.exclude_subject_prefix)

@@ -4,6 +4,7 @@ Layout (ASC MHL v1.0 sections 5.3, 6.3, 7.3): the scope's top level holds an `as
 manifest per generation, `<NNNN>_<folder>_<YYYY-MM-DD>_<HHMMSS>Z.mhl`, and `ascmhl_chain.xml`, which lists every
 manifest with its C4 ID. See docs/adr/ADR-001-asc-mhl-and-xxhash64.md for what is and is not implemented.
 """
+
 from __future__ import annotations
 
 import os
@@ -24,8 +25,21 @@ CHAIN = "ascmhl_chain.xml"
 VERSION = "2.0"
 # The ASC MHL default ignore patterns (.DS_Store and the ascmhl folder), the card housekeeping ingest never copies,
 # and this tool's own manifest (rewritten on every run, so it cannot have a stable hash record).
-IGNORE_PATTERNS = [".DS_Store", "ascmhl", "ascmhl/", "/ingest-manifest.json", "._*", "Thumbs.db", "desktop.ini",
-                   ".Spotlight-V100", ".Trashes", ".fseventsd", ".TemporaryItems", "System Volume Information", "$RECYCLE.BIN"]
+IGNORE_PATTERNS = [
+    ".DS_Store",
+    "ascmhl",
+    "ascmhl/",
+    "/ingest-manifest.json",
+    "._*",
+    "Thumbs.db",
+    "desktop.ini",
+    ".Spotlight-V100",
+    ".Trashes",
+    ".fseventsd",
+    ".TemporaryItems",
+    "System Volume Information",
+    "$RECYCLE.BIN",
+]
 _NAME = re.compile(r"^(\d{4,})_.*\.mhl$")
 
 
@@ -58,7 +72,12 @@ class History:
 
     def prior(self, path: str) -> List[Tuple[str, str, str]]:
         """(format, value, generation) of every hash recorded for path that is not labelled failed."""
-        return [(fmt, v, r.generation) for r in self.records.get(path, []) for fmt, (v, action) in r.hashes.items() if action != "failed"]
+        return [
+            (fmt, v, r.generation)
+            for r in self.records.get(path, [])
+            for fmt, (v, action) in r.hashes.items()
+            if action != "failed"
+        ]
 
 
 def _q(ns: str, tag: str) -> str:
@@ -78,15 +97,28 @@ def _parse(data: bytes, what: str) -> ET.Element:
 def parse_manifest(data: bytes, name: str) -> List[HashRecord]:
     root = _parse(data, name)
     if root.tag != _q(NS, "hashlist") or root.get("version") != VERSION:
-        raise ValueError(f"{name}: not an ASC MHL {VERSION} hashlist (urn:ASC:MHL:v2.0)")
+        raise ValueError(
+            f"{name}: not an ASC MHL {VERSION} hashlist (urn:ASC:MHL:v2.0)"
+        )
     out: List[HashRecord] = []
     hashes = root.find(_q(NS, "hashes"))
     for h in [] if hashes is None else hashes.findall(_q(NS, "hash")):
         p = h.find(_q(NS, "path"))
         if p is None or not p.text:
             raise ValueError(f"{name}: a hash element without a path")
-        fmts = {c.tag.split("}")[-1]: ((c.text or "").strip(), c.get("action")) for c in h if c.tag.split("}")[-1] in MHL_FORMATS}
-        out.append(HashRecord(p.text, int(p.get("size")) if p.get("size") is not None else None, fmts, name))
+        fmts = {
+            c.tag.split("}")[-1]: ((c.text or "").strip(), c.get("action"))
+            for c in h
+            if c.tag.split("}")[-1] in MHL_FORMATS
+        }
+        out.append(
+            HashRecord(
+                p.text,
+                int(p.get("size")) if p.get("size") is not None else None,
+                fmts,
+                name,
+            )
+        )
     return out
 
 
@@ -100,34 +132,63 @@ def read_history(root: Path) -> History:
     chain = h.folder / CHAIN
     if not chain.is_file():
         if h.folder.exists():
-            h.problems.append({"code": "MHL_INVALID", "detail": f"{h.folder} has no {CHAIN}: not an ASC MHL history"})
+            h.problems.append(
+                {
+                    "code": "MHL_INVALID",
+                    "detail": f"{h.folder} has no {CHAIN}: not an ASC MHL history",
+                }
+            )
         return h
     try:
         doc = _parse(chain.read_bytes(), str(chain))
         if doc.tag != _q(DIR_NS, "ascmhldirectory"):
-            raise ValueError(f"{chain}: not an ascmhldirectory (urn:ASC:MHL:DIRECTORY:v2.0)")
+            raise ValueError(
+                f"{chain}: not an ascmhldirectory (urn:ASC:MHL:DIRECTORY:v2.0)"
+            )
         for el in doc.findall(_q(DIR_NS, "hashlist")):
-            h.entries.append(ChainEntry(int(el.get("sequencenr", "0")), el.findtext(_q(DIR_NS, "path")) or "",
-                                        (el.findtext(_q(DIR_NS, "c4")) or "").strip()))
+            h.entries.append(
+                ChainEntry(
+                    int(el.get("sequencenr", "0")),
+                    el.findtext(_q(DIR_NS, "path")) or "",
+                    (el.findtext(_q(DIR_NS, "c4")) or "").strip(),
+                )
+            )
     except (OSError, ValueError) as e:
         h.problems.append({"code": "MHL_INVALID", "detail": str(e)})
         return h
     if [e.seq for e in h.entries] != list(range(1, len(h.entries) + 1)):
-        h.problems.append({"code": "MHL_INVALID", "detail": f"{chain}: sequencenr is not 1, 2, 3, ..."})
+        h.problems.append(
+            {
+                "code": "MHL_INVALID",
+                "detail": f"{chain}: sequencenr is not 1, 2, 3, ...",
+            }
+        )
     listed = set()
     for e in h.entries:
         p = h.folder / e.path
         listed.add(e.path)
         if not e.path or e.path.startswith("/") or ".." in e.path.split("/"):
-            h.problems.append({"code": "MHL_INVALID", "detail": f"{chain}: generation {e.seq} has an unsafe path {e.path!r}"})
+            h.problems.append(
+                {
+                    "code": "MHL_INVALID",
+                    "detail": f"{chain}: generation {e.seq} has an unsafe path {e.path!r}",
+                }
+            )
             continue
         if not p.is_file():
-            h.problems.append({"code": "MHL_INVALID", "detail": f"{p}: listed in {CHAIN} but missing"})
+            h.problems.append(
+                {"code": "MHL_INVALID", "detail": f"{p}: listed in {CHAIN} but missing"}
+            )
             continue
         data = p.read_bytes()
         actual = hash_bytes(data, "c4")
         if actual != e.c4:
-            h.problems.append({"code": "MHL_INVALID", "detail": f"{p}: C4 {actual} != {e.c4} in {CHAIN} (the manifest was altered)"})
+            h.problems.append(
+                {
+                    "code": "MHL_INVALID",
+                    "detail": f"{p}: C4 {actual} != {e.c4} in {CHAIN} (the manifest was altered)",
+                }
+            )
             continue
         try:
             for r in parse_manifest(data, e.path):
@@ -157,19 +218,34 @@ def _xml(root: ET.Element, ns: str) -> bytes:
         el.tag = el.tag.split("}")[-1]
     root.set("xmlns", ns)
     ET.indent(root, "  ")
-    return b'<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode").encode("utf-8") + b"\n"
+    return (
+        b'<?xml version="1.0" encoding="UTF-8"?>\n'
+        + ET.tostring(root, encoding="unicode").encode("utf-8")
+        + b"\n"
+    )
 
 
 def _dt(ts: datetime) -> str:
     return ts.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
-def write_generation(history: History, items: List[Dict], started: datetime, tool_version: str, process: str = "transfer") -> Tuple[Path, ChainEntry]:
+def write_generation(
+    history: History,
+    items: List[Dict],
+    started: datetime,
+    tool_version: str,
+    process: str = "transfer",
+) -> Tuple[Path, ChainEntry]:
     """Append one manifest generation and its chain entry. `items`: {path, size, mtime, hashes: {format: (value, action)}};
-    `started` is the UTC start of the run (it names the file, section 6.3). The history must have no problems."""
+    `started` is the UTC start of the run (it names the file, section 6.3). The history must have no problems.
+    """
     folder = history.folder
     folder.mkdir(parents=True, exist_ok=True)
-    numbers = [e.seq for e in history.entries] + [int(m.group(1)) for m in (_NAME.match(p.name) for p in folder.glob("*.mhl")) if m]
+    numbers = [e.seq for e in history.entries] + [
+        int(m.group(1))
+        for m in (_NAME.match(p.name) for p in folder.glob("*.mhl"))
+        if m
+    ]
     seq = max(numbers, default=0) + 1
     name = f"{seq:04d}_{history.root.name}_{started.strftime('%Y-%m-%d_%H%M%S')}Z.mhl"
     doc = ET.Element(_q(NS, "hashlist"), {"version": VERSION})
@@ -200,7 +276,11 @@ def write_generation(history: History, items: List[Dict], started: datetime, too
     _atomic_write(path, data)
     entry = ChainEntry(seq, name, hash_bytes(data, "c4"))
     chain = folder / CHAIN
-    croot = _parse(chain.read_bytes(), str(chain)) if chain.is_file() else ET.Element(_q(DIR_NS, "ascmhldirectory"))
+    croot = (
+        _parse(chain.read_bytes(), str(chain))
+        if chain.is_file()
+        else ET.Element(_q(DIR_NS, "ascmhldirectory"))
+    )
     hl = ET.SubElement(croot, _q(DIR_NS, "hashlist"), {"sequencenr": str(seq)})
     ET.SubElement(hl, _q(DIR_NS, "path")).text = name
     ET.SubElement(hl, _q(DIR_NS, "c4")).text = entry.c4

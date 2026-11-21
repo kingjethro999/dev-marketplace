@@ -4,6 +4,7 @@ chunk, a timeout, a 409 offset mismatch, backoff on 5xx and 429, the account's q
 upload link, a file edited mid-upload, and that exactly the metadata the confirmation token bound is what arrives. No
 test contacts Vimeo: the socket guard lets a test reach only the loopback port of the mock it started, and the guard
 tests below assert that it blocks every other host."""
+
 from __future__ import annotations
 
 import hashlib
@@ -12,7 +13,14 @@ import os
 import socket
 from unittest import mock
 
-from helpers import LOOPBACK_PORTS, NetworkAttempted, OfflineTestCase, run_cli, run_cli_raw, vimeo_mock
+from helpers import (
+    LOOPBACK_PORTS,
+    NetworkAttempted,
+    OfflineTestCase,
+    run_cli,
+    run_cli_raw,
+    vimeo_mock,
+)
 
 from publish_skill import credentials as creds
 from publish_skill import limits as L
@@ -32,9 +40,11 @@ PNG = b"\x89PNG\r\n\x1a\n" + bytes(range(256))
 class VimeoTestCase(OfflineTestCase):
     def setUp(self):
         super().setUp()
-        self.video = os.path.join(self.tmp, "final.mp4")         # 2.5 chunks of 256 KiB
+        self.video = os.path.join(self.tmp, "final.mp4")  # 2.5 chunks of 256 KiB
         with open(self.video, "wb") as fh:
-            fh.write(b"\x00\x00\x00\x18ftypmp42" + os.urandom(2 * UNIT + UNIT // 2 - 12))
+            fh.write(
+                b"\x00\x00\x00\x18ftypmp42" + os.urandom(2 * UNIT + UNIT // 2 - 12)
+            )
         self.size = os.path.getsize(self.video)
         p = mock.patch.dict(os.environ, {TOKEN_VAR: TOKEN})
         p.start()
@@ -54,7 +64,15 @@ class VimeoTestCase(OfflineTestCase):
         """Dry run, then the confirmed upload with the same flags; (exit code, document or None, stdout + stderr)."""
         rc, dry = run_cli("upload", self.video, "--platform", "vimeo", *flags, "--json")
         self.assertEqual(rc, 0, dry)
-        argv = ["upload", self.video, "--platform", "vimeo", *flags, "--confirm", dry["confirm_token"]]
+        argv = [
+            "upload",
+            self.video,
+            "--platform",
+            "vimeo",
+            *flags,
+            "--confirm",
+            dry["confirm_token"],
+        ]
         rc, out, err = run_cli_raw(*(argv if human else argv + ["--json"]))
         return rc, (None if human else json.loads(out)), out + err
 
@@ -76,14 +94,22 @@ class VimeoLoopbackOnlyTests(VimeoTestCase):
     def test_the_guard_blocks_every_non_loopback_host_for_vimeo(self):
         m = self.mock()
         self.assertEqual(LOOPBACK_PORTS, {m.port})
-        s = socket.create_connection(("127.0.0.1", m.port))           # the mock: allowed
+        s = socket.create_connection(("127.0.0.1", m.port))  # the mock: allowed
         s.close()
-        for address in (("api.vimeo.com", 443), ("vimeo.com", 443), ("files.tus.vimeo.com", 443),
-                        ("developer.vimeo.com", 443), ("151.101.0.217", 443), ("8.8.8.8", 53),
-                        ("127.0.0.1", m.port + 1), ("::1", m.port), ("0.0.0.0", m.port)):
+        for address in (
+            ("api.vimeo.com", 443),
+            ("vimeo.com", 443),
+            ("files.tus.vimeo.com", 443),
+            ("developer.vimeo.com", 443),
+            ("151.101.0.217", 443),
+            ("8.8.8.8", 53),
+            ("127.0.0.1", m.port + 1),
+            ("::1", m.port),
+            ("0.0.0.0", m.port),
+        ):
             with self.assertRaises(NetworkAttempted, msg=address):
                 socket.create_connection(address)
-        for host in ("api.vimeo.com", "localhost"):                    # no name lookup either
+        for host in ("api.vimeo.com", "localhost"):  # no name lookup either
             with self.assertRaises(NetworkAttempted):
                 socket.getaddrinfo(host, m.port)
         raw = socket.socket()
@@ -94,9 +120,19 @@ class VimeoLoopbackOnlyTests(VimeoTestCase):
     def test_the_real_endpoint_is_vimeos_and_unreachable_from_a_test(self):
         self.assertEqual(vimeo.API_BASE, "https://api.vimeo.com")
         self.assertEqual(get_platform("vimeo").api_base, vimeo.API_BASE)
-        req = UploadRequest("vimeo", self.video, self.size, hashlib.sha256(self.data()).hexdigest(), build().to_dict())
-        with self.assertRaises(NetworkAttempted) as e:                # no mock: the first request is stopped
-            vimeo.VimeoUploader(sleep=lambda s: None).upload(req, creds.Credentials("vimeo", {TOKEN_VAR: TOKEN}))
+        req = UploadRequest(
+            "vimeo",
+            self.video,
+            self.size,
+            hashlib.sha256(self.data()).hexdigest(),
+            build().to_dict(),
+        )
+        with self.assertRaises(
+            NetworkAttempted
+        ) as e:  # no mock: the first request is stopped
+            vimeo.VimeoUploader(sleep=lambda s: None).upload(
+                req, creds.Credentials("vimeo", {TOKEN_VAR: TOKEN})
+            )
         self.assertIn("api.vimeo.com", str(e.exception))
 
     def test_every_request_of_an_upload_went_to_the_mock(self):
@@ -117,15 +153,24 @@ class VimeoLoopbackOnlyTests(VimeoTestCase):
 
     def test_the_upload_link_must_be_https_on_vimeo(self):
         up = vimeo.VimeoUploader()
-        for bad in ("https://evil.example/files/x", "http://files.tus.vimeo.com/x", "https://vimeo.com.evil.example/x",
-                    "https://notvimeo.com/x", "http://127.0.0.1:9/tus/x"):
+        for bad in (
+            "https://evil.example/files/x",
+            "http://files.tus.vimeo.com/x",
+            "https://vimeo.com.evil.example/x",
+            "https://notvimeo.com/x",
+            "http://127.0.0.1:9/tus/x",
+        ):
             with self.assertRaises(PublishError, msg=bad) as e:
                 up._check_upload_link(bad)
             self.assertEqual(e.exception.code, "UPLOAD_REJECTED")
-        up._check_upload_link("https://us-files.tus.vimeo.com/files/vimeo-prod-src-tus-us/abc")
+        up._check_upload_link(
+            "https://us-files.tus.vimeo.com/files/vimeo-prod-src-tus-us/abc"
+        )
 
     def test_an_upload_link_off_the_mock_is_refused_before_any_byte(self):
-        m = self.mock(upload_link_base="http://127.0.0.1:9")            # another loopback port: refused too
+        m = self.mock(
+            upload_link_base="http://127.0.0.1:9"
+        )  # another loopback port: refused too
         rc, doc, text = self.confirmed()
         self.assertEqual((rc, doc["error"]["code"]), (4, "UPLOAD_REJECTED"))
         self.assertEqual(m.kinds(), ["create"])
@@ -142,30 +187,56 @@ class VimeoTusProtocolTests(VimeoTestCase):
         self.assertEqual(m.kinds(), ["create", "patch", "patch", "patch"])
         self.assertEqual(m.offsets(), self.offsets(0, UNIT, 2 * UNIT))
         create = m.requests[0]["headers"]
-        self.assertEqual((create["authorization"], create["accept"], create["content-type"]),
-                         ("bearer " + TOKEN, "application/vnd.vimeo.*+json;version=3.4", "application/json"))
-        for req in m.requests[1:]:                                   # the token goes to the API only, never the link
+        self.assertEqual(
+            (create["authorization"], create["accept"], create["content-type"]),
+            (
+                "bearer " + TOKEN,
+                "application/vnd.vimeo.*+json;version=3.4",
+                "application/json",
+            ),
+        )
+        for req in m.requests[1:]:  # the token goes to the API only, never the link
             self.assertNotIn("authorization", req["headers"])
             self.assertEqual(req["headers"]["tus-resumable"], "1.0.0")
-            self.assertEqual(req["headers"]["content-type"], "application/offset+octet-stream")
-        self.assertEqual((r["uri"], r["url"]), ("/videos/" + r["video_id"], "https://vimeo.com/" + r["video_id"]))
+            self.assertEqual(
+                req["headers"]["content-type"], "application/offset+octet-stream"
+            )
+        self.assertEqual(
+            (r["uri"], r["url"]),
+            ("/videos/" + r["video_id"], "https://vimeo.com/" + r["video_id"]),
+        )
         self.assertEqual((r["privacy"], r["privacy_view"]), ("private", "nobody"))
-        self.assertEqual((r["transfer"]["bytes_sent"], r["transfer"]["retries"], r["transfer"]["resumed"]), (self.size, 0, 0))
+        self.assertEqual(
+            (
+                r["transfer"]["bytes_sent"],
+                r["transfer"]["retries"],
+                r["transfer"]["resumed"],
+            ),
+            (self.size, 0, 0),
+        )
         self.assert_nothing_secret(text)
 
     def test_vimeo_resume_after_an_interrupted_chunk(self):
         m = self.mock()
-        m.faults["patch"] = [None, ("interrupt", 100000)]        # the second chunk: 100000 bytes arrive, then the link drops
+        m.faults["patch"] = [
+            None,
+            ("interrupt", 100000),
+        ]  # the second chunk: 100000 bytes arrive, then the link drops
         rc, doc, text = self.confirmed()
         self.assertEqual(rc, 0, doc)
         self.assertEqual(m.videos[doc["result"]["video_id"]]["data"], self.data())
         resume_at = UNIT + 100000
-        self.assertEqual(m.offsets(), self.offsets(0, UNIT, "HEAD", resume_at, resume_at + UNIT))   # HEAD, then resume
-        self.assertEqual(m.requests[3]["headers"]["accept"], "application/vnd.vimeo.*+json;version=3.4")
+        self.assertEqual(
+            m.offsets(), self.offsets(0, UNIT, "HEAD", resume_at, resume_at + UNIT)
+        )  # HEAD, then resume
+        self.assertEqual(
+            m.requests[3]["headers"]["accept"],
+            "application/vnd.vimeo.*+json;version=3.4",
+        )
         t = doc["result"]["transfer"]
         self.assertEqual((t["retries"], t["resumed"]), (1, 1))
-        self.assertEqual(self.waits, [1.0])                     # backoff: 0.5 (the test's random) * 2**1
-        self.assertEqual(len(m.created), 1)                     # the same video: no second create
+        self.assertEqual(self.waits, [1.0])  # backoff: 0.5 (the test's random) * 2**1
+        self.assertEqual(len(m.created), 1)  # the same video: no second create
         self.assert_nothing_secret(text)
 
     def test_resume_when_nothing_of_the_chunk_arrived(self):
@@ -196,7 +267,10 @@ class VimeoTusProtocolTests(VimeoTestCase):
 
     def test_5xx_and_429_are_retried_with_exponential_backoff_and_retry_after(self):
         m = self.mock()
-        m.faults["create"] = [("status", 503, None), ("status", 429, 9000, {"Retry-After": "7"})]
+        m.faults["create"] = [
+            ("status", 503, None),
+            ("status", 429, 9000, {"Retry-After": "7"}),
+        ]
         m.faults["patch"] = [("status", 502, None)]
         m.faults["head"] = [("status", 500, None)]
         rc, doc, _ = self.confirmed()
@@ -204,7 +278,20 @@ class VimeoTusProtocolTests(VimeoTestCase):
         self.assertEqual(m.videos[doc["result"]["video_id"]]["data"], self.data())
         # create: retry 1 -> 1.0, retry 2 -> max(2.0, Retry-After 7); patch: retry 1 -> 1.0; head: retry 1 -> 1.0
         self.assertEqual(self.waits, [1.0, 7.0, 1.0, 1.0])
-        self.assertEqual(m.kinds(), ["create", "create", "create", "patch", "head", "head", "patch", "patch", "patch"])
+        self.assertEqual(
+            m.kinds(),
+            [
+                "create",
+                "create",
+                "create",
+                "patch",
+                "head",
+                "head",
+                "patch",
+                "patch",
+                "patch",
+            ],
+        )
         self.assertEqual(len(m.created), 1)
 
     def test_backoff_is_capped(self):
@@ -224,11 +311,16 @@ class VimeoTusProtocolTests(VimeoTestCase):
         with mock.patch.object(vimeo.VimeoUploader, "max_retries", 3):
             rc, doc, text = self.confirmed()
         err = doc["error"]
-        self.assertEqual((rc, err["code"], err["retryable"]), (4, "UPLOAD_INTERRUPTED", True))
+        self.assertEqual(
+            (rc, err["code"], err["retryable"]), (4, "UPLOAD_INTERRUPTED", True)
+        )
         self.assertFalse(err["details"]["uploaded"])
         self.assertEqual(err["details"]["last"]["status"], 503)
         self.assertTrue(err["details"]["placeholder"])
-        self.assertEqual(err["details"]["video_uri"], "/videos/" + list(m.uploads.values())[0]["video"])
+        self.assertEqual(
+            err["details"]["video_uri"],
+            "/videos/" + list(m.uploads.values())[0]["video"],
+        )
         self.assertIn("placeholder", err["message"])
         self.assertEqual(m.videos, {})
         self.assertEqual(len(self.waits), 3)
@@ -240,7 +332,9 @@ class VimeoTusProtocolTests(VimeoTestCase):
         with mock.patch.object(vimeo.VimeoUploader, "timeout_s", 0.2):
             rc, doc, _ = self.confirmed()
         self.assertEqual((rc, doc["error"]["code"]), (4, "UPLOAD_INTERRUPTED"))
-        self.assertEqual(m.kinds(), ["create"])                 # a second POST could add a second placeholder
+        self.assertEqual(
+            m.kinds(), ["create"]
+        )  # a second POST could add a second placeholder
         self.assertEqual(self.waits, [])
 
     def test_an_expired_upload_link_is_interrupted_not_restarted(self):
@@ -248,7 +342,9 @@ class VimeoTusProtocolTests(VimeoTestCase):
         m.faults["patch"] = [None, ("expire",)]
         rc, doc, text = self.confirmed()
         err = doc["error"]
-        self.assertEqual((rc, err["code"], err["details"]["status"]), (4, "UPLOAD_INTERRUPTED", 404))
+        self.assertEqual(
+            (rc, err["code"], err["details"]["status"]), (4, "UPLOAD_INTERRUPTED", 404)
+        )
         self.assertEqual(m.kinds(), ["create", "patch", "patch"])
         self.assertEqual(m.videos, {})
         self.assert_nothing_secret(text)
@@ -256,7 +352,7 @@ class VimeoTusProtocolTests(VimeoTestCase):
     def test_a_file_edited_during_the_upload_is_never_completed(self):
         m = self.mock()
 
-        def edit():                                             # same size, one byte changed in the last chunk
+        def edit():  # same size, one byte changed in the last chunk
             with open(self.video, "r+b") as fh:
                 fh.seek(self.size - 1)
                 old = fh.read(1)
@@ -268,7 +364,9 @@ class VimeoTusProtocolTests(VimeoTestCase):
         self.assertEqual((rc, doc["error"]["code"]), (2, "CONFIRM_MISMATCH"))
         self.assertFalse(doc["error"]["details"]["uploaded"])
         self.assertEqual(m.videos, {})
-        self.assertEqual(m.offsets(), self.offsets(0, UNIT))   # the last chunk was never sent
+        self.assertEqual(
+            m.offsets(), self.offsets(0, UNIT)
+        )  # the last chunk was never sent
 
     def test_a_server_that_keeps_none_of_a_chunk_is_retried_boundedly(self):
         m = self.mock()
@@ -279,19 +377,24 @@ class VimeoTusProtocolTests(VimeoTestCase):
         self.assertEqual(m.videos, {})
 
     def test_201_from_create_is_accepted_too(self):
-        m = self.mock(create_status=201)                        # the reference says 201, the guide 200
+        m = self.mock(create_status=201)  # the reference says 201, the guide 200
         rc, doc, _ = self.confirmed()
         self.assertEqual(rc, 0, doc)
         self.assertEqual(m.videos[doc["result"]["video_id"]]["data"], self.data())
 
     def test_offset_parsing_and_protocol_errors(self):
         up = vimeo.VimeoUploader()
-        self.assertEqual(up._offset(vimeo._Response(204, {"upload-offset": "1000"}, b""), "patch"), 1000)
+        self.assertEqual(
+            up._offset(vimeo._Response(204, {"upload-offset": "1000"}, b""), "patch"),
+            1000,
+        )
         for bad in ({}, {"upload-offset": "-1"}, {"upload-offset": "x"}):
             with self.assertRaises(PublishError) as e:
                 up._offset(vimeo._Response(204, bad, b""), "patch")
             self.assertEqual(e.exception.code, "UPLOAD_REJECTED")
-        with self.assertRaises(PublishError) as e:              # more than was sent, or less than was confirmed
+        with self.assertRaises(
+            PublishError
+        ) as e:  # more than was sent, or less than was confirmed
             up._advance(10, b"abc", hashlib.sha256(), 14)
         self.assertEqual(e.exception.code, "UPLOAD_REJECTED")
         with self.assertRaises(PublishError):
@@ -305,11 +408,17 @@ class VimeoAccountErrorTests(VimeoTestCase):
             m.faults["create"] = [("status", 403, code)]
             rc, doc, text = self.confirmed()
             err = doc["error"]
-            self.assertEqual((rc, err["code"], err["retryable"]), (4, "UPLOAD_LIMIT_EXCEEDED", True))
-            self.assertEqual((err["details"]["status"], err["details"]["error_code"]), (403, code))
+            self.assertEqual(
+                (rc, err["code"], err["retryable"]), (4, "UPLOAD_LIMIT_EXCEEDED", True)
+            )
+            self.assertEqual(
+                (err["details"]["status"], err["details"]["error_code"]), (403, code)
+            )
             self.assertIn(period, err["message"])
             self.assertFalse(err["details"]["uploaded"])
-            self.assertEqual(m.kinds(), ["create"])               # no retry, no byte of the video sent
+            self.assertEqual(
+                m.kinds(), ["create"]
+            )  # no retry, no byte of the video sent
             self.assertEqual(self.waits, [])
             self.assert_nothing_secret(text)
 
@@ -318,7 +427,9 @@ class VimeoAccountErrorTests(VimeoTestCase):
         m.faults["create"] = [("status", 403, 4101)]
         rc, doc, _ = self.confirmed()
         err = doc["error"]
-        self.assertEqual((rc, err["code"], err["retryable"]), (4, "UPLOAD_REJECTED", False))
+        self.assertEqual(
+            (rc, err["code"], err["retryable"]), (4, "UPLOAD_REJECTED", False)
+        )
         self.assertIn("storage is full", err["message"])
         self.assertEqual(m.kinds(), ["create"])
 
@@ -328,7 +439,9 @@ class VimeoAccountErrorTests(VimeoTestCase):
         with mock.patch.object(vimeo.VimeoUploader, "max_retries", 2):
             rc, doc, _ = self.confirmed()
         self.assertEqual((rc, doc["error"]["code"]), (4, "UPLOAD_INTERRUPTED"))
-        self.assertEqual(doc["error"]["details"]["last"], {"status": 429, "error_code": 9000})
+        self.assertEqual(
+            doc["error"]["details"]["last"], {"status": 429, "error_code": 9000}
+        )
         self.assertEqual(m.kinds(), ["create"] * 3)
 
     def test_a_refused_access_token(self):
@@ -336,7 +449,10 @@ class VimeoAccountErrorTests(VimeoTestCase):
         with mock.patch.dict(os.environ, {TOKEN_VAR: "vimeo-pat-revoked-0000"}):
             rc, doc, text = self.confirmed()
         err = doc["error"]
-        self.assertEqual((rc, err["code"], err["retryable"], err["details"]["error_code"]), (3, "AUTH_FAILED", False, 8003))
+        self.assertEqual(
+            (rc, err["code"], err["retryable"], err["details"]["error_code"]),
+            (3, "AUTH_FAILED", False, 8003),
+        )
         self.assertEqual(m.kinds(), ["create"])
         self.assertNotIn("vimeo-pat-revoked-0000", text)
         self.assert_nothing_secret(text)
@@ -345,7 +461,10 @@ class VimeoAccountErrorTests(VimeoTestCase):
         m = self.mock()
         m.faults["create"] = [("status", 400, 2204)]
         rc, doc, _ = self.confirmed("--title", "x")
-        self.assertEqual((rc, doc["error"]["code"], doc["error"]["retryable"]), (4, "UPLOAD_REJECTED", False))
+        self.assertEqual(
+            (rc, doc["error"]["code"], doc["error"]["retryable"]),
+            (4, "UPLOAD_REJECTED", False),
+        )
         self.assertEqual(doc["error"]["details"]["error_code"], 2204)
         self.assertEqual(m.kinds(), ["create"])
 
@@ -355,66 +474,143 @@ class VimeoBoundMetadataTests(VimeoTestCase):
         m = self.mock()
         rc, doc, _ = self.confirmed()
         self.assertEqual(rc, 0, doc)
-        self.assertEqual(m.created, [{"upload": {"approach": "tus", "size": str(self.size)}, "privacy": {"view": "nobody"}}])
+        self.assertEqual(
+            m.created,
+            [
+                {
+                    "upload": {"approach": "tus", "size": str(self.size)},
+                    "privacy": {"view": "nobody"},
+                }
+            ],
+        )
         self.assertEqual(doc["result"]["sent"], m.created[0])
 
     def test_each_privacy_maps_to_one_privacy_view(self):
-        for privacy, view in (("private", "nobody"), ("unlisted", "unlisted"), ("public", "anybody")):
+        for privacy, view in (
+            ("private", "nobody"),
+            ("unlisted", "unlisted"),
+            ("public", "anybody"),
+        ):
             m = self.mock()
             rc, doc, _ = self.confirmed("--privacy", privacy)
             self.assertEqual(rc, 0, doc)
             self.assertEqual(m.created[0]["privacy"], {"view": view})
-            self.assertEqual((doc["result"]["privacy"], doc["result"]["privacy_view"]), (privacy, view))
-        self.assertEqual(L.limits_of("vimeo")["privacy.values"]["maps_to"], vimeo.PRIVACY_VIEW)
+            self.assertEqual(
+                (doc["result"]["privacy"], doc["result"]["privacy_view"]),
+                (privacy, view),
+            )
+        self.assertEqual(
+            L.limits_of("vimeo")["privacy.values"]["maps_to"], vimeo.PRIVACY_VIEW
+        )
 
     def test_the_received_upload_reproduces_the_token(self):
         # The bytes and the create body that arrived at the mock, rebuilt into Metadata, give the very token the human
         # confirmed.
         m = self.mock()
-        flags = ("--title", "Keynote 基調講演", "--description", "day 1\nhall A", "--privacy", "unlisted")
+        flags = (
+            "--title",
+            "Keynote 基調講演",
+            "--description",
+            "day 1\nhall A",
+            "--privacy",
+            "unlisted",
+        )
         rc, dry = run_cli("upload", self.video, "--platform", "vimeo", *flags, "--json")
-        rc, out, _ = run_cli_raw("upload", self.video, "--platform", "vimeo", *flags, "--confirm", dry["confirm_token"],
-                                 "--json")
+        rc, out, _ = run_cli_raw(
+            "upload",
+            self.video,
+            "--platform",
+            "vimeo",
+            *flags,
+            "--confirm",
+            dry["confirm_token"],
+            "--json",
+        )
         doc = json.loads(out)
         self.assertEqual(rc, 0, doc)
         got = m.videos[doc["result"]["video_id"]]
         body = got["body"]
-        self.assertEqual(body, {"upload": {"approach": "tus", "size": str(self.size)}, "name": "Keynote 基調講演",
-                                "description": "day 1\nhall A", "privacy": {"view": "unlisted"}})
+        self.assertEqual(
+            body,
+            {
+                "upload": {"approach": "tus", "size": str(self.size)},
+                "name": "Keynote 基調講演",
+                "description": "day 1\nhall A",
+                "privacy": {"view": "unlisted"},
+            },
+        )
         reverse = {v: k for k, v in vimeo.PRIVACY_VIEW.items()}
-        rebuilt = Metadata(title=body["name"], description=body["description"], privacy=reverse[body["privacy"]["view"]])
-        self.assertEqual(confirm_token("vimeo", hashlib.sha256(got["data"]).hexdigest(), len(got["data"]), rebuilt),
-                         dry["confirm_token"])
+        rebuilt = Metadata(
+            title=body["name"],
+            description=body["description"],
+            privacy=reverse[body["privacy"]["view"]],
+        )
+        self.assertEqual(
+            confirm_token(
+                "vimeo",
+                hashlib.sha256(got["data"]).hexdigest(),
+                len(got["data"]),
+                rebuilt,
+            ),
+            dry["confirm_token"],
+        )
         self.assertEqual(doc["confirm_token"], dry["confirm_token"])
 
     def test_the_token_binds_the_platform(self):
-        self.assertNotEqual(confirm_token("vimeo", "a" * 64, 10), confirm_token("youtube", "a" * 64, 10))
+        self.assertNotEqual(
+            confirm_token("vimeo", "a" * 64, 10), confirm_token("youtube", "a" * 64, 10)
+        )
         token = upload(self.video, "youtube")["confirm_token"]
-        rc, doc = run_cli("upload", self.video, "--platform", "vimeo", "--confirm", token, "--json")
+        rc, doc = run_cli(
+            "upload", self.video, "--platform", "vimeo", "--confirm", token, "--json"
+        )
         self.assertEqual((rc, doc["error"]["code"]), (2, "CONFIRM_MISMATCH"))
 
     def test_tags_thumbnail_and_captions_are_refused_before_a_token(self):
         m = self.mock()
-        for flags, field in ((("--tag", "keynote"), "tags"), (("--thumbnail", self.file("t.png", PNG)), "thumbnail"),
-                             (("--caption", self.file("en.srt", SRT), "--caption-language", "en"), "captions")):
-            with mock.patch.object(creds, "load", side_effect=AssertionError("credentials read")):
-                rc, doc = run_cli("upload", self.video, "--platform", "vimeo", *flags, "--json")
+        for flags, field in (
+            (("--tag", "keynote"), "tags"),
+            (("--thumbnail", self.file("t.png", PNG)), "thumbnail"),
+            (
+                ("--caption", self.file("en.srt", SRT), "--caption-language", "en"),
+                "captions",
+            ),
+        ):
+            with mock.patch.object(
+                creds, "load", side_effect=AssertionError("credentials read")
+            ):
+                rc, doc = run_cli(
+                    "upload", self.video, "--platform", "vimeo", *flags, "--json"
+                )
             self.assertEqual((rc, doc["error"]["code"]), (2, "METADATA_INVALID"), flags)
             self.assertNotIn("confirm_token", json.dumps(doc))
-            self.assertEqual([r["check"] for r in doc["error"]["details"]["failed"]], [f"{field} (not sent to Vimeo)"])
+            self.assertEqual(
+                [r["check"] for r in doc["error"]["details"]["failed"]],
+                [f"{field} (not sent to Vimeo)"],
+            )
         self.assertEqual(m.requests, [])
 
     def test_a_privacy_the_platform_changed_is_reported(self):
         self.mock(report_privacy="anybody")
         rc, doc, _ = self.confirmed("--privacy", "private")
         self.assertEqual((rc, doc["result"]["privacy"]), (0, "public"))
-        self.assertTrue(any("'nobody'" in w and "'anybody'" in w for w in doc["result"]["warnings"]))
+        self.assertTrue(
+            any("'nobody'" in w and "'anybody'" in w for w in doc["result"]["warnings"])
+        )
 
     def test_create_body_is_the_bound_metadata_only(self):
-        self.assertEqual(vimeo.create_body(Metadata().to_dict(), 5),
-                         {"upload": {"approach": "tus", "size": "5"}, "privacy": {"view": "nobody"}})
-        self.assertEqual(vimeo.create_body(Metadata(title="", privacy="public").to_dict(), 5),
-                         {"upload": {"approach": "tus", "size": "5"}, "name": "", "privacy": {"view": "anybody"}})
+        self.assertEqual(
+            vimeo.create_body(Metadata().to_dict(), 5),
+            {"upload": {"approach": "tus", "size": "5"}, "privacy": {"view": "nobody"}},
+        )
+        self.assertEqual(
+            vimeo.create_body(Metadata(title="", privacy="public").to_dict(), 5),
+            {
+                "upload": {"approach": "tus", "size": "5"},
+                "name": "",
+                "privacy": {"view": "anybody"},
+            },
+        )
         for md in (Metadata(privacy="everyone"), Metadata(tags=["x"])):
             with self.assertRaises(PublishError):
                 vimeo.create_body(md.to_dict(), 5)
@@ -424,16 +620,71 @@ class VimeoGateAndRedactionTests(VimeoTestCase):
     def test_every_refusal_happens_before_any_request_or_credential(self):
         m = self.mock()
         token = upload(self.video, "vimeo")["confirm_token"]
-        bad = [("upload", self.video, "--platform", "vimeo", "--confirm", token + "0"),
-               ("upload", self.video, "--platform", "vimeo", "--confirm", token, "--title", "edited"),
-               ("upload", self.video, "--platform", "vimeo", "--confirm", token, "--title", "x" * 129),
-               ("upload", self.video, "--platform", "vimeo", "--confirm", token, "--description", "y" * 5001),
-               ("upload", self.video, "--platform", "vimeo", "--confirm", token, "--tag", "t"),
-               ("upload", self.video, "--platform", "vimeo", "--confirm", token, "--privacy", "nobody"),
-               ("upload", self.video, "--platform", "vimeo"),                         # a dry run
-               ("upload", self.file("empty.mp4", b""), "--platform", "vimeo", "--confirm",
-                confirm_token("vimeo", hashlib.sha256(b"").hexdigest(), 0))]
-        with mock.patch.object(creds, "load", side_effect=AssertionError("credentials read")):
+        bad = [
+            ("upload", self.video, "--platform", "vimeo", "--confirm", token + "0"),
+            (
+                "upload",
+                self.video,
+                "--platform",
+                "vimeo",
+                "--confirm",
+                token,
+                "--title",
+                "edited",
+            ),
+            (
+                "upload",
+                self.video,
+                "--platform",
+                "vimeo",
+                "--confirm",
+                token,
+                "--title",
+                "x" * 129,
+            ),
+            (
+                "upload",
+                self.video,
+                "--platform",
+                "vimeo",
+                "--confirm",
+                token,
+                "--description",
+                "y" * 5001,
+            ),
+            (
+                "upload",
+                self.video,
+                "--platform",
+                "vimeo",
+                "--confirm",
+                token,
+                "--tag",
+                "t",
+            ),
+            (
+                "upload",
+                self.video,
+                "--platform",
+                "vimeo",
+                "--confirm",
+                token,
+                "--privacy",
+                "nobody",
+            ),
+            ("upload", self.video, "--platform", "vimeo"),  # a dry run
+            (
+                "upload",
+                self.file("empty.mp4", b""),
+                "--platform",
+                "vimeo",
+                "--confirm",
+                confirm_token("vimeo", hashlib.sha256(b"").hexdigest(), 0),
+            ),
+        ]
+        with mock.patch.object(
+            creds, "load", side_effect=AssertionError("credentials read")
+        ):
             for argv in bad:
                 rc, out, _ = run_cli_raw(*argv, "--json")
                 doc = json.loads(out)
@@ -450,8 +701,13 @@ class VimeoGateAndRedactionTests(VimeoTestCase):
         self.assert_nothing_secret(text)
 
     def test_receipts_and_errors_never_carry_the_token_or_the_upload_link(self):
-        scenarios = [{}, {"patch": [None, ("interrupt", 1000)]}, {"create": [("status", 403, 4102)]},
-                     {"patch": [("status", 503, None)] * 30}, {"patch": [None, ("expire",)]}]
+        scenarios = [
+            {},
+            {"patch": [None, ("interrupt", 1000)]},
+            {"create": [("status", 403, 4102)]},
+            {"patch": [("status", 503, None)] * 30},
+            {"patch": [None, ("expire",)]},
+        ]
         for faults in scenarios:
             for human in (False, True):
                 m = self.mock()
@@ -471,21 +727,51 @@ class VimeoGateAndRedactionTests(VimeoTestCase):
 
 class VimeoPlanTests(VimeoTestCase):
     def test_metadata_rows_use_vimeos_limits(self):
-        rows = {r["check"]: r for r in metadata_checks("vimeo", build(title="x" * 129, description="é" * 5000))}
-        self.assertEqual((rows["title length"]["status"], rows["title length"]["limit"]), ("FAIL", 128))
-        self.assertEqual(rows["title length"]["source"], "https://developer.vimeo.com/api/reference/videos#edit_video")
+        rows = {
+            r["check"]: r
+            for r in metadata_checks(
+                "vimeo", build(title="x" * 129, description="é" * 5000)
+            )
+        }
+        self.assertEqual(
+            (rows["title length"]["status"], rows["title length"]["limit"]),
+            ("FAIL", 128),
+        )
+        self.assertEqual(
+            rows["title length"]["source"],
+            "https://developer.vimeo.com/api/reference/videos#edit_video",
+        )
         # Vimeo counts characters, not bytes: 5000 two-byte characters pass
-        self.assertEqual((rows["description length"]["status"], rows["description length"]["value"]), ("PASS", 5000))
-        self.assertEqual(rows["description length"]["limit_key"], "description.max_chars")
-        self.assertNotIn("title characters", rows)                     # no forbidden characters are stated
+        self.assertEqual(
+            (rows["description length"]["status"], rows["description length"]["value"]),
+            ("PASS", 5000),
+        )
+        self.assertEqual(
+            rows["description length"]["limit_key"], "description.max_chars"
+        )
+        self.assertNotIn("title characters", rows)  # no forbidden characters are stated
         self.assertEqual(rows["privacy"]["status"], "PASS")
-        rows = {r["check"]: r for r in metadata_checks("vimeo", build(description="é" * 5001, privacy="anybody"))}
+        rows = {
+            r["check"]: r
+            for r in metadata_checks(
+                "vimeo", build(description="é" * 5001, privacy="anybody")
+            )
+        }
         self.assertEqual(rows["description length"]["status"], "FAIL")
-        self.assertEqual(rows["privacy"]["status"], "FAIL")            # the skill's names, not privacy.view's
+        self.assertEqual(
+            rows["privacy"]["status"], "FAIL"
+        )  # the skill's names, not privacy.view's
 
     def test_plan_is_incomplete_without_a_delivery_spec(self):
-        doc = plan(self.video, "vimeo", build(title="Keynote"), ffmpeg_skill_dir=os.path.join(self.tmp, "none"))
-        self.assertEqual(doc["verdict"], "INCOMPLETE")                  # never PASS without ffmpeg-skill's spec
+        doc = plan(
+            self.video,
+            "vimeo",
+            build(title="Keynote"),
+            ffmpeg_skill_dir=os.path.join(self.tmp, "none"),
+        )
+        self.assertEqual(
+            doc["verdict"], "INCOMPLETE"
+        )  # never PASS without ffmpeg-skill's spec
         spec = [r for r in doc["checks"] if r["check"] == "delivery spec"][0]
         self.assertEqual((spec["status"], spec["owner"]), ("UNCHECKED", "ffmpeg-skill"))
         self.assertIn("no vimeo delivery spec", spec["fix"])
@@ -495,7 +781,9 @@ class VimeoPlanTests(VimeoTestCase):
         self.assertFalse(doc["network_used"])
 
     def test_plan_fails_an_over_long_title_offline(self):
-        rc, doc = run_cli("plan", self.video, "--platform", "vimeo", "--title", "x" * 129, "--json")
+        rc, doc = run_cli(
+            "plan", self.video, "--platform", "vimeo", "--title", "x" * 129, "--json"
+        )
         self.assertEqual((rc, doc["verdict"]), (1, "FAIL"))
         self.assertFalse(doc["uploaded"])
 
@@ -503,23 +791,43 @@ class VimeoPlanTests(VimeoTestCase):
 class VimeoLimitsTableTests(OfflineTestCase):
     def test_vimeo_values_as_researched(self):
         # Read from the pages cited in limits.py on 2026-10-31; change only together with the quote and the date.
-        want = {"video.max_bytes": 322122547200, "video.max_duration_s": 86400, "title.max_chars": 128,
-                "description.max_chars": 5000, "privacy.values": ["private", "unlisted", "public", "password", "domains"],
-                "upload.content_type": "application/offset+octet-stream"}
+        want = {
+            "video.max_bytes": 322122547200,
+            "video.max_duration_s": 86400,
+            "title.max_chars": 128,
+            "description.max_chars": 5000,
+            "privacy.values": ["private", "unlisted", "public", "password", "domains"],
+            "upload.content_type": "application/offset+octet-stream",
+        }
         for key, v in want.items():
             self.assertEqual(L.value("vimeo", key), v, key)
-        for key in ("video.file_formats", "title.forbidden_chars", "description.forbidden_chars", "storage.max_bytes",
-                    "quota.weekly_uploads", "quota.daily_uploads"):
+        for key in (
+            "video.file_formats",
+            "title.forbidden_chars",
+            "description.forbidden_chars",
+            "storage.max_bytes",
+            "quota.weekly_uploads",
+            "quota.daily_uploads",
+        ):
             self.assertEqual(L.limits_of("vimeo")[key]["status"], "unknown", key)
             self.assertIsNone(L.value("vimeo", key), key)
         for key in ("video.codecs", "video.resolution", "video.aspect", "video.fps"):
             self.assertEqual(L.limits_of("vimeo")[key]["status"], "delegated", key)
         for key in ("video.max_bytes", "title.max_chars", "description.max_chars"):
-            self.assertIn(str(L.value("vimeo", key)), L.limits_of("vimeo")[key]["quote"], key)
+            self.assertIn(
+                str(L.value("vimeo", key)), L.limits_of("vimeo")[key]["quote"], key
+            )
         for code in ("4101", "4102", "4104"):
-            self.assertTrue(any(code in e.get("note", "") for e in L.limits_of("vimeo").values()), code)
-        self.assertEqual(L.value("vimeo", "rate_limit.requests_per_minute")["Vimeo Free"], 25)
-        self.assertEqual(L.limits_of("vimeo")["privacy.values"]["maps_to"]["private"], "nobody")
+            self.assertTrue(
+                any(code in e.get("note", "") for e in L.limits_of("vimeo").values()),
+                code,
+            )
+        self.assertEqual(
+            L.value("vimeo", "rate_limit.requests_per_minute")["Vimeo Free"], 25
+        )
+        self.assertEqual(
+            L.limits_of("vimeo")["privacy.values"]["maps_to"]["private"], "nobody"
+        )
         for e in L.limits_of("vimeo").values():
             for url in [e.get("source")] + list(e.get("searched") or []):
                 if url:

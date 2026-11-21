@@ -12,7 +12,9 @@ its model card states them, the files it needs on disk and the GPU memory this s
 spec's own licence fields describe the default model, so an engine whose caller never picks a model is unchanged.
 
 Statuses (doctor vocabulary): OK (installed and usable), MISSING (not installed, or its weights are absent),
-INCOMPATIBLE (installed, but a version outside the supported range). An engine never downloads anything."""
+INCOMPATIBLE (installed, but a version outside the supported range). An engine never downloads anything.
+"""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -25,26 +27,42 @@ OK, MISSING, INCOMPATIBLE = "OK", "MISSING", "INCOMPATIBLE"
 STATUSES = (OK, MISSING, INCOMPATIBLE)
 OPS = ("bgm", "sfx")
 KINDS = ("python",)
-VRAM_CHECKS = ("warn", "refuse")      # what a model's GPU memory requirement does when it is not met (ADR-016)
+VRAM_CHECKS = (
+    "warn",
+    "refuse",
+)  # what a model's GPU memory requirement does when it is not met (ADR-016)
 
 
 @dataclass(frozen=True)
 class ModelSpec:
     """One selectable model of an engine (ADR-016): static, publishable facts, as checked on `licence_checked`."""
-    id: str                                   # the engine's own name for it (ACE-Step: the checkpoint directory / config_path)
+
+    id: str  # the engine's own name for it (ACE-Step: the checkpoint directory / config_path)
     description: str
-    parameters: str                           # model size as its card states it, e.g. "4B DiT"
-    repository: str                           # where the user downloads its weights (a Hugging Face repository id)
-    revision: Optional[str]                   # the repository commit the facts were read at; None = not pinned
+    parameters: str  # model size as its card states it, e.g. "4B DiT"
+    repository: (
+        str  # where the user downloads its weights (a Hugging Face repository id)
+    )
+    revision: Optional[
+        str
+    ]  # the repository commit the facts were read at; None = not pinned
     weights_license: str
-    output_use: str                           # what its model card says about using the generated audio
-    training_data: str                        # what its model card says it was trained on (a claim, not a check)
-    min_vram_gb: Optional[float]              # GPU memory this skill requires before running it, as it runs it
-    vram_check: str                           # "warn": doctor warns below min_vram_gb; "refuse": INSUFFICIENT_VRAM below it
-    vram_note: str                            # why min_vram_gb is what it is, in a few words (quoted in the refusal)
-    vram_documented: Tuple[str, ...]          # the requirement as the engine documents it, row by row
-    download_gb: Optional[float]              # what the user downloads for it, in GB (10**9 bytes)
-    required_files: Tuple[str, ...]           # relative to the engine's checkpoints directory
+    output_use: str  # what its model card says about using the generated audio
+    training_data: (
+        str  # what its model card says it was trained on (a claim, not a check)
+    )
+    min_vram_gb: Optional[
+        float
+    ]  # GPU memory this skill requires before running it, as it runs it
+    vram_check: str  # "warn": doctor warns below min_vram_gb; "refuse": INSUFFICIENT_VRAM below it
+    vram_note: (
+        str  # why min_vram_gb is what it is, in a few words (quoted in the refusal)
+    )
+    vram_documented: Tuple[
+        str, ...
+    ]  # the requirement as the engine documents it, row by row
+    download_gb: Optional[float]  # what the user downloads for it, in GB (10**9 bytes)
+    required_files: Tuple[str, ...]  # relative to the engine's checkpoints directory
     install: str
     default: bool = False
     licence_checked: str = "2026-10-31 (docs/decisions.md ADR-001)"
@@ -52,9 +70,13 @@ class ModelSpec:
 
     def __post_init__(self) -> None:
         if self.vram_check not in VRAM_CHECKS:
-            raise ValueError(f"model {self.id}: vram_check must be one of {VRAM_CHECKS}")
+            raise ValueError(
+                f"model {self.id}: vram_check must be one of {VRAM_CHECKS}"
+            )
         if self.vram_check == "refuse" and self.min_vram_gb is None:
-            raise ValueError(f"model {self.id}: a refusing memory check needs min_vram_gb")
+            raise ValueError(
+                f"model {self.id}: a refusing memory check needs min_vram_gb"
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         return _lists(asdict(self))
@@ -72,38 +94,58 @@ def _lists(value: Any) -> Any:
 @dataclass(frozen=True)
 class EngineSpec:
     """Static, publishable facts about one engine (no local paths). Licences are as checked in docs/decisions.md
-    ADR-001 on `licence_checked`; they must be re-checked before the supported version range moves."""
+    ADR-001 on `licence_checked`; they must be re-checked before the supported version range moves.
+    """
+
     id: str
     ops: Tuple[str, ...]
     description: str
-    kind: str                                 # "python": run in the worker, ideally under the engine's own interpreter
+    kind: str  # "python": run in the worker, ideally under the engine's own interpreter
     code_license: str
     weights_license: str
-    output_use: str                           # what the licence / model card says about using the generated audio
-    training_data: str                        # what the model card says it was trained on (a claim, not a check)
-    credit: Optional[str]                     # text the published output must carry; None = no credit obligation
+    output_use: (
+        str  # what the licence / model card says about using the generated audio
+    )
+    training_data: (
+        str  # what the model card says it was trained on (a claim, not a check)
+    )
+    credit: Optional[
+        str
+    ]  # text the published output must carry; None = no credit obligation
     credit_required: bool
-    watermark: Optional[str]                  # watermark the engine embeds in every file; None = none
-    duration_range: Tuple[float, float]       # seconds the engine can generate (min, max)
-    devices: Tuple[str, ...]                  # accelerators the engine documents ("cuda", "mps", "rocm", "xpu", "cpu")
-    min_vram_gb: Optional[float]              # smallest documented GPU memory for the default model
-    isolation: str                            # how the engine is kept apart from this MIT package
+    watermark: Optional[str]  # watermark the engine embeds in every file; None = none
+    duration_range: Tuple[float, float]  # seconds the engine can generate (min, max)
+    devices: Tuple[
+        str, ...
+    ]  # accelerators the engine documents ("cuda", "mps", "rocm", "xpu", "cpu")
+    min_vram_gb: Optional[float]  # smallest documented GPU memory for the default model
+    isolation: str  # how the engine is kept apart from this MIT package
     version_range: str
     install: str
     located_by: Tuple[str, ...]
-    roadmap_step: int                         # the step that implements process()
+    roadmap_step: int  # the step that implements process()
     licence_checked: str = "2026-10-31 (docs/decisions.md ADR-001)"
     licence_notes: Tuple[str, ...] = ()
     sources: Tuple[str, ...] = ()
     execution_mode: str = "local"
-    network_required: bool = False            # at run time; no engine registered here needs it
-    deterministic: bool = False               # the seed is fixed and recorded; bit-exact repeats on the real engine are unverified (ADR-004)
-    lm_status: str = ""                       # whether a language-model stage is used, and why (ADR-004)
-    output_warning: Optional[str] = None      # a caution every result from this engine carries (ADR-005); None = none
-    confirmation_flag: Optional[str] = None   # CLI flag the caller must pass before this engine runs (ADR-007); None = none
-    confirmation_reason: Optional[str] = None     # why, in English: what the user acknowledges by passing the flag
+    network_required: bool = False  # at run time; no engine registered here needs it
+    deterministic: bool = (
+        False  # the seed is fixed and recorded; bit-exact repeats on the real engine are unverified (ADR-004)
+    )
+    lm_status: str = ""  # whether a language-model stage is used, and why (ADR-004)
+    output_warning: Optional[str] = (
+        None  # a caution every result from this engine carries (ADR-005); None = none
+    )
+    confirmation_flag: Optional[str] = (
+        None  # CLI flag the caller must pass before this engine runs (ADR-007); None = none
+    )
+    confirmation_reason: Optional[str] = (
+        None  # why, in English: what the user acknowledges by passing the flag
+    )
     confirmation_reason_ja: Optional[str] = None  # the same, in Japanese
-    models: Tuple[ModelSpec, ...] = ()        # selectable models (ADR-016); () = one model, not selectable
+    models: Tuple[
+        ModelSpec, ...
+    ] = ()  # selectable models (ADR-016); () = one model, not selectable
 
     @property
     def confirmation_required(self) -> bool:
@@ -123,9 +165,12 @@ class EngineSpec:
         for m in self.models:
             if m.id == wanted:
                 return m
-        raise SoundDesignError("INVALID_ARGUMENT", f"engine {self.id!r} has no model {model_id!r}; --model must be one of "
-                               f"{', '.join(self.model_ids) or '(none: this engine has one model)'}",
-                               {"engine": self.id, "model": model_id, "models": list(self.model_ids)})
+        raise SoundDesignError(
+            "INVALID_ARGUMENT",
+            f"engine {self.id!r} has no model {model_id!r}; --model must be one of "
+            f"{', '.join(self.model_ids) or '(none: this engine has one model)'}",
+            {"engine": self.id, "model": model_id, "models": list(self.model_ids)},
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         d = _lists(asdict(self))
@@ -137,11 +182,13 @@ class EngineSpec:
 @dataclass
 class EngineRequest:
     op: str
-    prompt: str                               # caption / tags describing the music or effect
-    duration: float                           # target length in seconds
+    prompt: str  # caption / tags describing the music or effect
+    duration: float  # target length in seconds
     output_path: str
-    seed: Optional[int] = None                # None = the engine picks one and reports it
-    lyrics: Optional[str] = None              # None = instrumental (a BGM bed has no vocals by default)
+    seed: Optional[int] = None  # None = the engine picks one and reports it
+    lyrics: Optional[str] = (
+        None  # None = instrumental (a BGM bed has no vocals by default)
+    )
     params: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -167,22 +214,31 @@ class EngineResult:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "EngineResult":
-        return cls(output_path=str(d["output_path"]), engine_version=str(d["engine_version"]),
-                   model=None if d.get("model") is None else str(d["model"]), sample_rate=int(d["sample_rate"]),
-                   seed=int(d["seed"]), duration=float(d["duration"]), extra=dict(d.get("extra") or {}))
+        return cls(
+            output_path=str(d["output_path"]),
+            engine_version=str(d["engine_version"]),
+            model=None if d.get("model") is None else str(d["model"]),
+            sample_rate=int(d["sample_rate"]),
+            seed=int(d["seed"]),
+            duration=float(d["duration"]),
+            extra=dict(d.get("extra") or {}),
+        )
 
 
 def parse_version(text: Optional[str]) -> Optional[Tuple[int, ...]]:
     if not text:
         return None
     import re
+
     m = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", text)
     if not m:
         return None
     return tuple(int(x) for x in m.groups() if x is not None)
 
 
-def in_range(version: Tuple[int, ...], lo: Tuple[int, ...], hi: Tuple[int, ...]) -> bool:
+def in_range(
+    version: Tuple[int, ...], lo: Tuple[int, ...], hi: Tuple[int, ...]
+) -> bool:
     v = (tuple(version) + (0, 0, 0))[:3]
     return (tuple(lo) + (0, 0, 0))[:3] <= v < (tuple(hi) + (0, 0, 0))[:3]
 
@@ -190,6 +246,7 @@ def in_range(version: Tuple[int, ...], lo: Tuple[int, ...], hi: Tuple[int, ...])
 class Engine:
     """Subclass, set `spec`, implement `inspect()`, and register in `engines/__init__.py`. `process` may be slow and
     runs in the worker process."""
+
     spec: EngineSpec
 
     @property
@@ -203,7 +260,10 @@ class Engine:
         """inspect() plus the static facts; with offline=True an engine that needs the network is MISSING."""
         info = dict(self.spec.to_dict(), **self.inspect())
         if offline and self.spec.network_required and info["status"] == OK:
-            info.update(status=MISSING, detail="needs the network at run time; --offline was given")
+            info.update(
+                status=MISSING,
+                detail="needs the network at run time; --offline was given",
+            )
         info["usable_offline"] = not self.spec.network_required
         if info["status"] == OK:
             info["install"] = None
@@ -211,7 +271,8 @@ class Engine:
 
     def model_status(self, model_id: Optional[str] = None) -> Dict[str, Any]:
         """Whether a model's files are on disk: {"status": OK | MISSING, "missing": [...], "detail", "install"}.
-        Engines with selectable models override this; the others have nothing to check beyond inspect()."""
+        Engines with selectable models override this; the others have nothing to check beyond inspect().
+        """
         if model_id is not None:
             self.spec.model(model_id)
         return {"status": OK, "missing": [], "detail": None, "install": None}
@@ -219,37 +280,74 @@ class Engine:
     def require(self) -> Dict[str, Any]:
         info = self.inspect()
         if info["status"] != OK:
-            code = "MODEL_NOT_FOUND" if info.get("missing") == "model" else "ENGINE_UNAVAILABLE"
-            raise SoundDesignError(code, f"engine {self.id!r} is {info['status']}: {info.get('detail')}",
-                                   {"engine": self.id, "install": self.spec.install})
+            code = (
+                "MODEL_NOT_FOUND"
+                if info.get("missing") == "model"
+                else "ENGINE_UNAVAILABLE"
+            )
+            raise SoundDesignError(
+                code,
+                f"engine {self.id!r} is {info['status']}: {info.get('detail')}",
+                {"engine": self.id, "install": self.spec.install},
+            )
         return info
 
     def validate(self, req: EngineRequest) -> None:
         """Request checks that need no engine: the op, the prompt, the duration window and the seed."""
         if req.op not in self.spec.ops:
-            raise SoundDesignError("INVALID_ARGUMENT", f"engine {self.id!r} does not serve op {req.op!r}",
-                                   {"engine": self.id, "ops": list(self.spec.ops)})
+            raise SoundDesignError(
+                "INVALID_ARGUMENT",
+                f"engine {self.id!r} does not serve op {req.op!r}",
+                {"engine": self.id, "ops": list(self.spec.ops)},
+            )
         if not isinstance(req.prompt, str) or not req.prompt.strip():
-            raise SoundDesignError("INVALID_ARGUMENT", "prompt must be a non-empty string", {"engine": self.id})
+            raise SoundDesignError(
+                "INVALID_ARGUMENT",
+                "prompt must be a non-empty string",
+                {"engine": self.id},
+            )
         lo, hi = self.spec.duration_range
-        if isinstance(req.duration, bool) or not isinstance(req.duration, (int, float)) or not lo <= req.duration <= hi:
-            raise SoundDesignError("INVALID_ARGUMENT", f"duration must be between {lo:g} and {hi:g} seconds for {self.id!r}",
-                                   {"engine": self.id, "duration": req.duration, "range": [lo, hi]})
-        if req.seed is not None and (isinstance(req.seed, bool) or not isinstance(req.seed, int) or not 0 <= req.seed < 2 ** 32):
-            raise SoundDesignError("INVALID_ARGUMENT", "seed must be an integer in [0, 2**32)", {"engine": self.id, "seed": req.seed})
+        if (
+            isinstance(req.duration, bool)
+            or not isinstance(req.duration, (int, float))
+            or not lo <= req.duration <= hi
+        ):
+            raise SoundDesignError(
+                "INVALID_ARGUMENT",
+                f"duration must be between {lo:g} and {hi:g} seconds for {self.id!r}",
+                {"engine": self.id, "duration": req.duration, "range": [lo, hi]},
+            )
+        if req.seed is not None and (
+            isinstance(req.seed, bool)
+            or not isinstance(req.seed, int)
+            or not 0 <= req.seed < 2**32
+        ):
+            raise SoundDesignError(
+                "INVALID_ARGUMENT",
+                "seed must be an integer in [0, 2**32)",
+                {"engine": self.id, "seed": req.seed},
+            )
 
     def process(self, req: EngineRequest) -> EngineResult:
         """Overridden by engines that generate (ACE-Step since roadmap step 2, EzAudio since step 3); the default is
         NOT_IMPLEMENTED."""
         self.validate(req)
         self.require()
-        raise SoundDesignError("NOT_IMPLEMENTED", f"engine {self.id!r} is installed, but generation is not implemented yet "
-                               f"(roadmap step {self.spec.roadmap_step})", {"engine": self.id, "op": req.op,
-                                                                            "roadmap_step": self.spec.roadmap_step})
+        raise SoundDesignError(
+            "NOT_IMPLEMENTED",
+            f"engine {self.id!r} is installed, but generation is not implemented yet "
+            f"(roadmap step {self.spec.roadmap_step})",
+            {"engine": self.id, "op": req.op, "roadmap_step": self.spec.roadmap_step},
+        )
 
 
-def model_readiness(engine: Engine, model: ModelSpec, device: Optional[Dict[str, Any]],
-                    engine_status: Optional[str] = OK, requested_device: Optional[str] = None) -> Dict[str, Any]:
+def model_readiness(
+    engine: Engine,
+    model: ModelSpec,
+    device: Optional[Dict[str, Any]],
+    engine_status: Optional[str] = OK,
+    requested_device: Optional[str] = None,
+) -> Dict[str, Any]:
     """Whether `model` can run here (ADR-016), for doctor and for generate-bgm alike: its files (engine.model_status),
     the GPU memory doctor measured (`device`, a device.detect() document; None = not checked) against the model's
     requirement (`requested_device`: the --device asked for, see device.vram_fit), and the engine's own status.
@@ -262,23 +360,62 @@ def model_readiness(engine: Engine, model: ModelSpec, device: Optional[Dict[str,
     install = files.get("install") or model.install
     refusal: Optional[Dict[str, Any]] = None
     if files["status"] != OK:
-        refusal = {"code": "MODEL_NOT_FOUND",
-                   "message": f"model {model.id!r} of engine {engine.id!r} is not on disk: {files['detail']}",
-                   "details": {"engine": engine.id, "model": model.id, "missing": list(files.get("missing") or []),
-                               "install": install, "download_gb": model.download_gb, "default_model": default}}
+        refusal = {
+            "code": "MODEL_NOT_FOUND",
+            "message": f"model {model.id!r} of engine {engine.id!r} is not on disk: {files['detail']}",
+            "details": {
+                "engine": engine.id,
+                "model": model.id,
+                "missing": list(files.get("missing") or []),
+                "install": install,
+                "download_gb": model.download_gb,
+                "default_model": default,
+            },
+        }
     elif model.vram_check == "refuse" and fit["status"] in REFUSED_FITS:
-        fallback = f"; omit --model to use {default}" if default and default != model.id else ""
-        refusal = {"code": "INSUFFICIENT_VRAM",
-                   "message": f"model {model.id!r} needs a GPU with >= {model.min_vram_gb:g} GB ({model.vram_note}); "
-                              f"here: {fit['detail']}{fallback}",
-                   "details": {"engine": engine.id, "model": model.id, "required_gb": model.min_vram_gb, "vram": fit,
-                               "default_model": default, "fallback": None if not fallback else f"omit --model ({default})"}}
-    return {"model": model.id, "default": model.default, "parameters": model.parameters, "status": files["status"],
-            "detail": files["detail"], "missing": list(files.get("missing") or []), "min_vram_gb": model.min_vram_gb,
-            "vram_check": model.vram_check, "vram": fit, "download_gb": model.download_gb,
-            "install": None if files["status"] == OK else install,
-            "ready": engine_status == OK and refusal is None, "refusal": refusal}
+        fallback = (
+            f"; omit --model to use {default}"
+            if default and default != model.id
+            else ""
+        )
+        refusal = {
+            "code": "INSUFFICIENT_VRAM",
+            "message": f"model {model.id!r} needs a GPU with >= {model.min_vram_gb:g} GB ({model.vram_note}); "
+            f"here: {fit['detail']}{fallback}",
+            "details": {
+                "engine": engine.id,
+                "model": model.id,
+                "required_gb": model.min_vram_gb,
+                "vram": fit,
+                "default_model": default,
+                "fallback": None if not fallback else f"omit --model ({default})",
+            },
+        }
+    return {
+        "model": model.id,
+        "default": model.default,
+        "parameters": model.parameters,
+        "status": files["status"],
+        "detail": files["detail"],
+        "missing": list(files.get("missing") or []),
+        "min_vram_gb": model.min_vram_gb,
+        "vram_check": model.vram_check,
+        "vram": fit,
+        "download_gb": model.download_gb,
+        "install": None if files["status"] == OK else install,
+        "ready": engine_status == OK and refusal is None,
+        "refusal": refusal,
+    }
 
 
 def missing(detail: str, what: str, **extra: Any) -> Dict[str, Any]:
-    return dict({"status": MISSING, "version": None, "missing": what, "detail": detail, "model": None}, **extra)
+    return dict(
+        {
+            "status": MISSING,
+            "version": None,
+            "missing": what,
+            "detail": detail,
+            "model": None,
+        },
+        **extra,
+    )

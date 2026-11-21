@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """End-to-end tests for probe, check, verify, scenes, cropdetect, report, look and sync.
 
-    python3 tests/test_analysis.py       # this group alone
-    python3 tests/test_all.py            # every group
+python3 tests/test_analysis.py       # this group alone
+python3 tests/test_all.py            # every group
 """
+
 import json
 import os
 import shutil
@@ -13,7 +14,17 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _fixtures import MediaFixtures, OUT, SCRIPTS, TONES, _is_faststart, _no_fontconfig, png_size, script, sh  # noqa: E402
+from _fixtures import (
+    MediaFixtures,
+    OUT,
+    SCRIPTS,
+    TONES,
+    _is_faststart,
+    _no_fontconfig,
+    png_size,
+    script,
+    sh,
+)  # noqa: E402
 from _common import default_font_file, font_for_script, probe  # noqa: E402
 
 
@@ -36,7 +47,9 @@ class AnalysisTests(MediaFixtures):
         self.assertIn("1280x720", compact)
 
     def test_probe_accepts_common_flags(self):
-        out = script("probe.py", self.src, "--json", "--field", "duration").stdout.strip()
+        out = script(
+            "probe.py", self.src, "--json", "--field", "duration"
+        ).stdout.strip()
         self.assertClose(float(out), 12.0, 0.1)
 
     def test_probe_missing_file_fails(self):
@@ -46,10 +59,25 @@ class AnalysisTests(MediaFixtures):
     # ---------------------------------------------------------------- cropdetect
     def test_cropdetect_reports_a_black_bar_rectangle(self):
         bars = OUT / "cropdetect_bars.mp4"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
-           "-i", "color=black:size=640x480:duration=2,drawbox=y=100:h=280:color=white@1:t=fill",
-           "-r", "10", "-pix_fmt", "yuv420p", bars)
-        proc = script("cropdetect.py", bars, "--seconds", "2", "--samples", "2", "--json")
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=black:size=640x480:duration=2,drawbox=y=100:h=280:color=white@1:t=fill",
+            "-r",
+            "10",
+            "-pix_fmt",
+            "yuv420p",
+            bars,
+        )
+        proc = script(
+            "cropdetect.py", bars, "--seconds", "2", "--samples", "2", "--json"
+        )
         result = json.loads(proc.stdout)
         self.assertIsNotNone(result["crop"])
         self.assertEqual(result["crop"]["width"], 640)
@@ -63,7 +91,11 @@ class AnalysisTests(MediaFixtures):
         v = probe(str(self.rot))["video"]
         self.assertIn(v["rotation"], (90, -90, 270, -270))
         dw, dh = v["height"], v["width"]
-        data = json.loads(script("cropdetect.py", self.rot, "--seconds", "1", "--samples", "1", "--json").stdout)
+        data = json.loads(
+            script(
+                "cropdetect.py", self.rot, "--seconds", "1", "--samples", "1", "--json"
+            ).stdout
+        )
         self.assertEqual((data["source_width"], data["source_height"]), (dw, dh))
         crop = data["crop"]
         self.assertIsNotNone(crop)
@@ -80,8 +112,18 @@ class AnalysisTests(MediaFixtures):
 
     # ---------------------------------------------------------------- 1.18.0: cropdetect.py --motion-centre
     def test_cropdetect_motion_centre_reports_per_second_points(self):
-        data = json.loads(script("cropdetect.py", self.src, "--seconds", "4", "--samples", "2",
-                                 "--motion-centre", "--json").stdout)
+        data = json.loads(
+            script(
+                "cropdetect.py",
+                self.src,
+                "--seconds",
+                "4",
+                "--samples",
+                "2",
+                "--motion-centre",
+                "--json",
+            ).stdout
+        )
         self.assertIn("motion_centre", data)
         self.assertGreater(len(data["motion_centre"]), 0)
         for pt in data["motion_centre"]:
@@ -94,12 +136,23 @@ class AnalysisTests(MediaFixtures):
 
     def test_cropdetect_motion_centre_writes_no_file(self):
         before = set(OUT.iterdir())
-        script("cropdetect.py", self.src, "--seconds", "1", "--samples", "1", "--motion-centre")
+        script(
+            "cropdetect.py",
+            self.src,
+            "--seconds",
+            "1",
+            "--samples",
+            "1",
+            "--motion-centre",
+        )
         self.assertEqual(before, set(OUT.iterdir()))
 
     def test_cropdetect_motion_centre_is_off_by_default(self):
-        data = json.loads(script("cropdetect.py", self.src, "--seconds", "1", "--samples", "1",
-                                 "--json").stdout)
+        data = json.loads(
+            script(
+                "cropdetect.py", self.src, "--seconds", "1", "--samples", "1", "--json"
+            ).stdout
+        )
         self.assertNotIn("motion_centre", data)
 
     def test_fonts_dir_does_not_bypass_the_coverage_check(self):
@@ -119,11 +172,27 @@ class AnalysisTests(MediaFixtures):
         shutil.copyfile(latin_only, latin_dir / latin_only.name)
         cues = OUT / "fontsdir_ko.txt"
         cues.write_text("0:00-0:03 안녕하세요\n", encoding="utf-8")
-        proc = script("caption.py", self._small(), "--text", cues, "--fonts-dir", latin_dir,
-                      "--fast", "-o", OUT / "fontsdir_ko.mp4", "--json")
+        proc = script(
+            "caption.py",
+            self._small(),
+            "--text",
+            cues,
+            "--fonts-dir",
+            latin_dir,
+            "--fast",
+            "-o",
+            OUT / "fontsdir_ko.mp4",
+            "--json",
+        )
         self.assertIn("covers ko", proc.stderr, proc.stderr)
-        self.assertIn("no face in", proc.stderr, "the caller is told the directory does not cover the script")
-        self.assertNotIn("FontName=DejaVu Sans", " ".join(json.loads(proc.stdout)["commands"]))
+        self.assertIn(
+            "no face in",
+            proc.stderr,
+            "the caller is told the directory does not cover the script",
+        )
+        self.assertNotIn(
+            "FontName=DejaVu Sans", " ".join(json.loads(proc.stdout)["commands"])
+        )
 
     def test_probe_hdr_is_the_signal_and_bt2020_sdr_keeps_the_10bit_route(self):
         """2.0 (deprecated in 1.10.0): `hdr` is true only for PQ / HLG / Dolby Vision, equal to
@@ -132,31 +201,75 @@ class AnalysisTests(MediaFixtures):
         route on `bt2020_or_hdr`, so such a source still re-encodes as HEVC Main10 keeping its
         BT.2020 tags -- x264 with BT.709 tags would shift its colours."""
         m = probe(str(self.hdr))["video"]
-        self.assertEqual((m["hdr"], m["hdr_signal"], m["bt2020_or_hdr"]), (True, True, True))
+        self.assertEqual(
+            (m["hdr"], m["hdr_signal"], m["bt2020_or_hdr"]), (True, True, True)
+        )
         m = probe(str(self.src))["video"]
-        self.assertEqual((m["hdr"], m["hdr_signal"], m["bt2020_or_hdr"]), (False, False, False))
+        self.assertEqual(
+            (m["hdr"], m["hdr_signal"], m["bt2020_or_hdr"]), (False, False, False)
+        )
         wide = OUT / "bt2020_sdr.mp4"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=30",
-           "-t", "1", "-vf", "format=yuv420p10le", "-c:v", "libx265", "-preset", "ultrafast",
-           "-x265-params", "colorprim=bt2020:transfer=bt709:colormatrix=bt2020nc:log-level=error", "-tag:v", "hvc1", wide)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x240:rate=30",
+            "-t",
+            "1",
+            "-vf",
+            "format=yuv420p10le",
+            "-c:v",
+            "libx265",
+            "-preset",
+            "ultrafast",
+            "-x265-params",
+            "colorprim=bt2020:transfer=bt709:colormatrix=bt2020nc:log-level=error",
+            "-tag:v",
+            "hvc1",
+            wide,
+        )
         m = probe(str(wide))["video"]
-        self.assertEqual((m["hdr"], m["hdr_signal"], m["bt2020_or_hdr"], m["hdr_format"]), (False, False, True, "BT.2020 SDR"))
+        self.assertEqual(
+            (m["hdr"], m["hdr_signal"], m["bt2020_or_hdr"], m["hdr_format"]),
+            (False, False, True, "BT.2020 SDR"),
+        )
         padded = OUT / "bt2020_sdr_pad.mp4"
-        script("pad.py", wide, "--start", "0.5", "--preset", "ultrafast", "-o", padded, "--overwrite")
+        script(
+            "pad.py",
+            wide,
+            "--start",
+            "0.5",
+            "--preset",
+            "ultrafast",
+            "-o",
+            padded,
+            "--overwrite",
+        )
         m = probe(str(padded))["video"]
-        self.assertEqual((m["codec"], m["bit_depth"], m["color_primaries"]), ("hevc", 10, "bt2020"))
+        self.assertEqual(
+            (m["codec"], m["bit_depth"], m["color_primaries"]), ("hevc", 10, "bt2020")
+        )
 
     # ---------------------------------------------------------------- sync
     def test_sync_detects_offset_and_replaces_audio(self):
         proc = script("sync.py", self.src, self.mic, "--json")
         data = json.loads(proc.stdout)
-        self.assertClose(data["offset_seconds"], 2.5, 0.05, "lav mic started 2.5 s later")
+        self.assertClose(
+            data["offset_seconds"], 2.5, 0.05, "lav mic started 2.5 s later"
+        )
         self.assertIn("later than reference", data["meaning"])
         self.assertGreater(data["confidence"], 0.5)
         out = OUT / "synced.mp4"
         script("sync.py", self.src, self.mic, "--replace-audio", "-o", out)
         again = json.loads(script("sync.py", self.src, out, "--json").stdout)
-        self.assertClose(again["offset_seconds"], 0.0, 0.05, "aligned output has no residual offset")
+        self.assertClose(
+            again["offset_seconds"], 0.0, 0.05, "aligned output has no residual offset"
+        )
 
     def test_sync_zero_offset_says_the_files_start_together(self):
         """A measured offset of 0 used to take the else of `later if offset > 0` and say the
@@ -173,29 +286,76 @@ class AnalysisTests(MediaFixtures):
         mp4 output the same way every other mp4-writing path does."""
         out = OUT / "sync_replace_faststart.mp4"
         script("sync.py", self.src, self.mic, "--replace-audio", "-o", out)
-        self.assertEqual(probe(str(out))["video"]["codec"], "h264", "video stream copied")
-        self.assertTrue(_is_faststart(out), "sync.py --replace-audio must write +faststart")
+        self.assertEqual(
+            probe(str(out))["video"]["codec"], "h264", "video stream copied"
+        )
+        self.assertTrue(
+            _is_faststart(out), "sync.py --replace-audio must write +faststart"
+        )
 
     def test_sync_trim_second_stream_copy_writes_faststart_mp4(self):
         """Same shape as #275/#277, the other stream-copy spot in sync.py: --trim-second's
-        head-trim path (`-c copy`) when the second file has video and started earlier."""
+        head-trim path (`-c copy`) when the second file has video and started earlier.
+        """
         early_video = OUT / "early_video.mp4"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-           "-f", "lavfi", "-i", "color=c=black:s=1280x720:r=30:d=1.5",
-           "-f", "lavfi", "-i", "aevalsrc=0:s=48000:d=1.5",
-           "-i", self.src, "-filter_complex",
-           "[0:v][2:v]concat=n=2:v=1:a=0[v];[1:a][2:a]concat=n=2:v=0:a=1[a]",
-           "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac",
-           str(early_video))
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=1280x720:r=30:d=1.5",
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc=0:s=48000:d=1.5",
+            "-i",
+            self.src,
+            "-filter_complex",
+            "[0:v][2:v]concat=n=2:v=1:a=0[v];[1:a][2:a]concat=n=2:v=0:a=1[a]",
+            "-map",
+            "[v]",
+            "-map",
+            "[a]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-c:a",
+            "aac",
+            str(early_video),
+        )
         out = OUT / "sync_trim_second_faststart.mp4"
         script("sync.py", self.src, early_video, "--trim-second", "-o", out)
-        self.assertEqual(probe(str(out))["video"]["codec"], "h264", "video stream copied")
-        self.assertTrue(_is_faststart(out), "sync.py --trim-second's stream-copy branch must write +faststart")
+        self.assertEqual(
+            probe(str(out))["video"]["codec"], "h264", "video stream copied"
+        )
+        self.assertTrue(
+            _is_faststart(out),
+            "sync.py --trim-second's stream-copy branch must write +faststart",
+        )
 
     def test_sync_negative_offset_trim_second(self):
         early = OUT / "early.wav"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "aevalsrc=0:s=48000:d=1.5",
-           "-i", self.src, "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1", early)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc=0:s=48000:d=1.5",
+            "-i",
+            self.src,
+            "-filter_complex",
+            "[0:a][1:a]concat=n=2:v=0:a=1",
+            early,
+        )
         data = json.loads(script("sync.py", self.src, early, "--json").stdout)
         self.assertClose(data["offset_seconds"], -1.5, 0.05)
         out = OUT / "early_synced.wav"
@@ -210,9 +370,22 @@ class AnalysisTests(MediaFixtures):
         distinct from self.mic's 2.5 s."""
         cam3 = OUT / "sync_cam3.wav"
         if not cam3.exists():
-            sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
-               "-i", "aevalsrc=0:s=48000:d=1.2", "-i", self.src,
-               "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1", cam3)
+            sh(
+                "ffmpeg",
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "aevalsrc=0:s=48000:d=1.2",
+                "-i",
+                self.src,
+                "-filter_complex",
+                "[0:a][1:a]concat=n=2:v=0:a=1",
+                cam3,
+            )
         return cam3
 
     def test_sync_two_sources_keeps_the_original_shape(self):
@@ -226,11 +399,15 @@ class AnalysisTests(MediaFixtures):
         self.assertIn("sources", data)
         self.assertEqual(len(data["sources"]), 1)
         self.assertEqual(data["sources"][0]["path"], str(self.mic))
-        self.assertAlmostEqual(data["sources"][0]["offset_s"], data["offset_seconds"], delta=0.001)
+        self.assertAlmostEqual(
+            data["sources"][0]["offset_s"], data["offset_seconds"], delta=0.001
+        )
 
     def test_sync_three_sources_writes_one_offsets_json(self):
-        data = json.loads(script("sync.py", self.src, self.mic, self._cam3(), "--json").stdout)
-        self.assertNotIn("second", data)         # no single-pair shape for N>1
+        data = json.loads(
+            script("sync.py", self.src, self.mic, self._cam3(), "--json").stdout
+        )
+        self.assertNotIn("second", data)  # no single-pair shape for N>1
         self.assertNotIn("offset_seconds", data)
         self.assertEqual(data["reference"], str(self.src))
         self.assertEqual(len(data["sources"]), 2)
@@ -241,15 +418,32 @@ class AnalysisTests(MediaFixtures):
             self.assertIn("confidence", s)
 
     def test_sync_three_sources_reports_drift_ppm_per_source(self):
-        data = json.loads(script("sync.py", self.long_ref, self.long_drift, self.long_ref,
-                                 "--fix-drift", "--json").stdout)
+        data = json.loads(
+            script(
+                "sync.py",
+                self.long_ref,
+                self.long_drift,
+                self.long_ref,
+                "--fix-drift",
+                "--json",
+            ).stdout
+        )
         drifts = {s["path"]: s["drift_ppm"] for s in data["sources"]}
         self.assertClose(drifts[str(self.long_drift)], 500.0, 60.0)
         self.assertClose(drifts[str(self.long_ref)], 0.0, 60.0)
 
     def test_sync_replace_audio_refuses_multiple_sources(self):
-        r = script("sync.py", self.src, self.mic, self._cam3(), "--replace-audio",
-                   "-o", OUT / "nope.mp4", "--json", expect_fail=True)
+        r = script(
+            "sync.py",
+            self.src,
+            self.mic,
+            self._cam3(),
+            "--replace-audio",
+            "-o",
+            OUT / "nope.mp4",
+            "--json",
+            expect_fail=True,
+        )
         self.assertEqual(json.loads(r.stdout)["error"]["kind"], "input")
 
     def test_sync_three_sources_text_output(self):
@@ -272,64 +466,206 @@ class AnalysisTests(MediaFixtures):
     def _content_clip(self, name, video, audio, seconds=6):
         path = OUT / name
         if not path.exists():
-            sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", video,
-               "-f", "lavfi", "-i", audio, "-t", str(seconds), "-r", "10", "-pix_fmt", "yuv420p",
-               "-c:v", "libx264", "-c:a", "aac", "-shortest", path)
+            sh(
+                "ffmpeg",
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                video,
+                "-f",
+                "lavfi",
+                "-i",
+                audio,
+                "-t",
+                str(seconds),
+                "-r",
+                "10",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                "-shortest",
+                path,
+            )
         return path
 
     def _rows(self, path, *extra):
-        proc = subprocess.run([sys.executable, str(SCRIPTS / "check.py"), str(path), "--platform", "custom",
-                               "--json", *extra], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "check.py"),
+                str(path),
+                "--platform",
+                "custom",
+                "--json",
+                *extra,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
         return {r["check"]: r for r in json.loads(proc.stdout)["checks"]}
 
     def test_check_content_rows(self):
         tone = "sine=frequency=440:sample_rate=48000"
-        normal = self._content_clip("content_normal.mp4", "testsrc2=size=160x90:rate=10", tone)
-        black = self._content_clip("content_black.mp4", "color=black:size=160x90:rate=10", tone)
-        frozen = self._content_clip("content_frozen.mp4", "color=gray:size=160x90:rate=10,drawbox=x=20:y=20:w=40:h=40:color=red:t=fill", tone)
+        normal = self._content_clip(
+            "content_normal.mp4", "testsrc2=size=160x90:rate=10", tone
+        )
+        black = self._content_clip(
+            "content_black.mp4", "color=black:size=160x90:rate=10", tone
+        )
+        frozen = self._content_clip(
+            "content_frozen.mp4",
+            "color=gray:size=160x90:rate=10,drawbox=x=20:y=20:w=40:h=40:color=red:t=fill",
+            tone,
+        )
         # 2 s moving then 4 s held: the held span (4 s) exceeds max(3 s, 30% of 6 s) but is not the whole clip
         part = OUT / "content_part_frozen.mp4"
         if not part.exists():
-            sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
-               "testsrc2=size=160x90:rate=10,trim=duration=2,tpad=stop_mode=clone:stop_duration=4",
-               "-f", "lavfi", "-i", tone, "-t", "6", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-c:a", "aac", part)
-        silent = self._content_clip("content_silent.mp4", "testsrc2=size=160x90:rate=10", "anullsrc=r=48000:cl=mono")
+            sh(
+                "ffmpeg",
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=160x90:rate=10,trim=duration=2,tpad=stop_mode=clone:stop_duration=4",
+                "-f",
+                "lavfi",
+                "-i",
+                tone,
+                "-t",
+                "6",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                part,
+            )
+        silent = self._content_clip(
+            "content_silent.mp4",
+            "testsrc2=size=160x90:rate=10",
+            "anullsrc=r=48000:cl=mono",
+        )
         # 1.5 s black then 4.5 s picture: 25% black -> WARN; tone for 2 s then 4 s silence -> 67% silent -> WARN
         mixed = OUT / "content_mixed.mp4"
         if not mixed.exists():
-            sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
-               "testsrc2=size=160x90:rate=10,drawbox=t=fill:color=black:enable='lt(t,1.5)'",
-               "-f", "lavfi", "-i", tone + ",volume=enable='gte(t,2)':volume=0", "-t", "6",
-               "-pix_fmt", "yuv420p", "-c:v", "libx264", "-c:a", "aac", mixed)
+            sh(
+                "ffmpeg",
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=160x90:rate=10,drawbox=t=fill:color=black:enable='lt(t,1.5)'",
+                "-f",
+                "lavfi",
+                "-i",
+                tone + ",volume=enable='gte(t,2)':volume=0",
+                "-t",
+                "6",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                mixed,
+            )
         r = self._rows(normal, "--content")
-        self.assertEqual([r[k]["status"] for k in ("black", "frozen", "silence")], ["PASS"] * 3, r)
+        self.assertEqual(
+            [r[k]["status"] for k in ("black", "frozen", "silence")], ["PASS"] * 3, r
+        )
         self.assertEqual(self._rows(black, "--content")["black"]["status"], "FAIL")
         self.assertEqual(self._rows(frozen, "--content")["frozen"]["status"], "FAIL")
         self.assertEqual(self._rows(part, "--content")["frozen"]["status"], "WARN")
         self.assertEqual(self._rows(silent, "--content")["silence"]["status"], "FAIL")
         r = self._rows(mixed, "--content")
-        self.assertEqual((r["black"]["status"], r["silence"]["status"]), ("WARN", "WARN"), r)
+        self.assertEqual(
+            (r["black"]["status"], r["silence"]["status"]), ("WARN", "WARN"), r
+        )
 
     def test_check_colour_row_reads_the_matrix_tag(self):
         """#325: the colour row decided "untagged" from primaries and transfer only, so a file whose
         only tag is a BT.601 matrix passed as "untagged (players assume bt709)" while a tag-honouring
-        player decodes it as BT.601. The tags are x264 VUI parameters (a label, no conversion)."""
+        player decodes it as BT.601. The tags are x264 VUI parameters (a label, no conversion).
+        """
         cases = {  # name: (x264 VUI params, status, value)
-            "matrix-only-601": ("colormatrix=smpte170m", "WARN", "smpte170m matrix, primaries/transfer untagged"),
-            "matrix-only-bt470bg": ("colormatrix=bt470bg", "WARN", "bt470bg matrix, primaries/transfer untagged"),
-            "full-601": ("colorprim=smpte170m:transfer=smpte170m:colormatrix=smpte170m", "WARN", "smpte170m/smpte170m"),
-            "709-601-matrix": ("colorprim=bt709:transfer=bt709:colormatrix=smpte170m", "WARN", "bt709/bt709, smpte170m matrix"),
-            "matrix-only-709": ("colormatrix=bt709", "PASS", "bt709 matrix, primaries/transfer untagged (players assume bt709)"),
-            "full-709": ("colorprim=bt709:transfer=bt709:colormatrix=bt709", "PASS", "bt709/bt709"),
+            "matrix-only-601": (
+                "colormatrix=smpte170m",
+                "WARN",
+                "smpte170m matrix, primaries/transfer untagged",
+            ),
+            "matrix-only-bt470bg": (
+                "colormatrix=bt470bg",
+                "WARN",
+                "bt470bg matrix, primaries/transfer untagged",
+            ),
+            "full-601": (
+                "colorprim=smpte170m:transfer=smpte170m:colormatrix=smpte170m",
+                "WARN",
+                "smpte170m/smpte170m",
+            ),
+            "709-601-matrix": (
+                "colorprim=bt709:transfer=bt709:colormatrix=smpte170m",
+                "WARN",
+                "bt709/bt709, smpte170m matrix",
+            ),
+            "matrix-only-709": (
+                "colormatrix=bt709",
+                "PASS",
+                "bt709 matrix, primaries/transfer untagged (players assume bt709)",
+            ),
+            "full-709": (
+                "colorprim=bt709:transfer=bt709:colormatrix=bt709",
+                "PASS",
+                "bt709/bt709",
+            ),
             "untagged": ("scenecut=0", "PASS", "untagged (players assume bt709)"),
         }
         for name, (params, status, value) in cases.items():
             with self.subTest(name):
                 path = OUT / f"colour_{name}.mp4"
                 if not path.exists():
-                    sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=10",
-                       "-f", "lavfi", "-i", "sine=sample_rate=48000", "-t", "1", "-pix_fmt", "yuv420p",
-                       "-c:v", "libx264", "-x264-params", params, "-c:a", "aac", "-shortest", path)
+                    sh(
+                        "ffmpeg",
+                        "-y",
+                        "-hide_banner",
+                        "-loglevel",
+                        "error",
+                        "-f",
+                        "lavfi",
+                        "-i",
+                        "testsrc2=size=320x180:rate=10",
+                        "-f",
+                        "lavfi",
+                        "-i",
+                        "sine=sample_rate=48000",
+                        "-t",
+                        "1",
+                        "-pix_fmt",
+                        "yuv420p",
+                        "-c:v",
+                        "libx264",
+                        "-x264-params",
+                        params,
+                        "-c:a",
+                        "aac",
+                        "-shortest",
+                        path,
+                    )
                 # the later --platform wins over _rows' custom, which passes any colour
                 row = self._rows(path, "--no-loudness", "--platform", "reels")["colour"]
                 self.assertEqual((row["status"], row["value"]), (status, value), row)
@@ -338,21 +674,38 @@ class AnalysisTests(MediaFixtures):
                 else:
                     # every WARN here is a BT.601 matrix: a re-encode converts it (after 2.10.0), --retag bt709
                     # only relabels it, so the fix names the conversion first
-                    self.assertTrue(row["fix"].startswith("export.py (any re-encode here converts the BT.601 matrix to BT.709)"), row)
+                    self.assertTrue(
+                        row["fix"].startswith(
+                            "export.py (any re-encode here converts the BT.601 matrix to BT.709)"
+                        ),
+                        row,
+                    )
                     self.assertIn("--retag bt709 only relabels", row["fix"])
                     self.assertIn("BT.601", row["reason"])
 
     def test_check_default_rows_unchanged_without_content(self):
-        clip = self._content_clip("content_black.mp4", "color=black:size=160x90:rate=10",
-                                  "sine=frequency=440:sample_rate=48000")
+        clip = self._content_clip(
+            "content_black.mp4",
+            "color=black:size=160x90:rate=10",
+            "sine=frequency=440:sample_rate=48000",
+        )
         rows = self._rows(clip, "--no-loudness")
-        self.assertEqual(list(rows), ["duration", "aspect", "vfr", "colour", "audio", "subtitles"])
+        self.assertEqual(
+            list(rows), ["duration", "aspect", "vfr", "colour", "audio", "subtitles"]
+        )
         self.assertEqual(rows["audio"]["status"], "PASS")
 
     def test_check_audio_row_fails_on_silent_track(self):
-        silent = self._content_clip("content_silent.mp4", "testsrc2=size=160x90:rate=10", "anullsrc=r=48000:cl=mono")
+        silent = self._content_clip(
+            "content_silent.mp4",
+            "testsrc2=size=160x90:rate=10",
+            "anullsrc=r=48000:cl=mono",
+        )
         # FAIL under a loudness target; WARN with none (a muted screen recording is legitimate)
-        for extra, status in ((["--lufs", "-14"], "FAIL"), (["--platform", "custom", "--no-loudness"], "WARN")):
+        for extra, status in (
+            (["--lufs", "-14"], "FAIL"),
+            (["--platform", "custom", "--no-loudness"], "WARN"),
+        ):
             row = self._rows(silent, *extra)["audio"]
             self.assertEqual(row["status"], status, (extra, row))
             self.assertIn("silent", row["value"])
@@ -360,12 +713,18 @@ class AnalysisTests(MediaFixtures):
     def test_check_podcast_reports_chapters_and_channel_count(self):
         """1.13: two informational podcast rows. Neither may FAIL a delivery, and neither may
         appear for a platform that does not care."""
-        data = json.loads(script("check.py", self.mic, "--platform", "podcast", "--no-loudness", "--json").stdout)
+        data = json.loads(
+            script(
+                "check.py", self.mic, "--platform", "podcast", "--no-loudness", "--json"
+            ).stdout
+        )
         rows = {r["check"]: r for r in data["checks"]}
         self.assertEqual(rows["chapters"]["status"], "WARN")
         self.assertEqual(rows["chapters"]["value"], "none")
         self.assertIn("metadata.py", rows["chapters"]["fix"])
-        self.assertEqual(rows["channels"]["status"], "PASS", "mono is fine for a podcast")
+        self.assertEqual(
+            rows["channels"]["status"], "PASS", "mono is fine for a podcast"
+        )
         self.assertTrue(data["ok"], "informational rows never fail the delivery")
         # after metadata.py the chapters row passes
         chapters = OUT / "podcast_chapters.txt"
@@ -373,41 +732,100 @@ class AnalysisTests(MediaFixtures):
         tagged = OUT / "podcast_tagged.m4a"
         script("audio.py", self.mic, "-o", OUT / "podcast.m4a")
         script("metadata.py", OUT / "podcast.m4a", "--chapters", chapters, "-o", tagged)
-        rows = {r["check"]: r for r in json.loads(script("check.py", tagged, "--platform", "podcast", "--no-loudness", "--json").stdout)["checks"]}
+        rows = {
+            r["check"]: r
+            for r in json.loads(
+                script(
+                    "check.py",
+                    tagged,
+                    "--platform",
+                    "podcast",
+                    "--no-loudness",
+                    "--json",
+                ).stdout
+            )["checks"]
+        }
         self.assertEqual(rows["chapters"]["status"], "PASS")
         self.assertEqual(rows["chapters"]["value"], "2")
         # 5.1 warns, with the reason a publisher needs
-        rows = {r["check"]: r for r in json.loads(script("check.py", self.surround, "--platform", "podcast", "--no-loudness", "--json").stdout)["checks"]}
+        rows = {
+            r["check"]: r
+            for r in json.loads(
+                script(
+                    "check.py",
+                    self.surround,
+                    "--platform",
+                    "podcast",
+                    "--no-loudness",
+                    "--json",
+                ).stdout
+            )["checks"]
+        }
         self.assertEqual(rows["channels"]["status"], "WARN")
         self.assertIn("downmix", rows["channels"]["reason"])
         # absent for every other platform
         for platform in ("youtube", "reels"):
-            proc = subprocess.run([sys.executable, str(SCRIPTS / "check.py"), str(self.src), "--platform", platform,
-                                   "--no-loudness", "--json"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "check.py"),
+                    str(self.src),
+                    "--platform",
+                    platform,
+                    "--no-loudness",
+                    "--json",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
             names = {r["check"] for r in json.loads(proc.stdout)["checks"]}
             self.assertNotIn("chapters", names, platform)
             self.assertNotIn("channels", names, platform)
 
     def test_sync_fine_resolution_and_drift(self):
-        data = json.loads(script("sync.py", self.long_ref, self.long_drift, "--fix-drift", "--json").stdout)
-        self.assertClose(data["offset_seconds"], 1.2, 0.01, "offset extrapolated to t=0 at 1 ms resolution")
+        data = json.loads(
+            script(
+                "sync.py", self.long_ref, self.long_drift, "--fix-drift", "--json"
+            ).stdout
+        )
+        self.assertClose(
+            data["offset_seconds"],
+            1.2,
+            0.01,
+            "offset extrapolated to t=0 at 1 ms resolution",
+        )
         self.assertClose(data["drift"]["drift_ppm"], 500.0, 40.0)
         out = OUT / "drift_fixed.wav"
-        script("sync.py", self.long_ref, self.long_drift, "--fix-drift", "--trim-second", "-o", out)
-        again = json.loads(script("sync.py", self.long_ref, out, "--fix-drift", "--json").stdout)
+        script(
+            "sync.py",
+            self.long_ref,
+            self.long_drift,
+            "--fix-drift",
+            "--trim-second",
+            "-o",
+            out,
+        )
+        again = json.loads(
+            script("sync.py", self.long_ref, out, "--fix-drift", "--json").stdout
+        )
         self.assertClose(again["offset_seconds"], 0.0, 0.01)
         self.assertClose(again["drift"]["drift_ppm"], 0.0, 40.0)
 
     # ---------------------------------------------------------------- v0.3: look / silence / join / agent flags
     def test_look_contact_sheet_and_frames(self):
         sheet = OUT / "sheet.png"
-        proc = script("look.py", self.src, "--tiles", "4x3", "--width", "1280", "-o", sheet)
+        proc = script(
+            "look.py", self.src, "--tiles", "4x3", "--width", "1280", "-o", sheet
+        )
         self.assertTrue(sheet.exists())
         self.assertIn("12 frames", proc.stderr)
         w, h = png_size(sheet)
         self.assertGreaterEqual(w, 1280)
         self.assertGreater(h, 500, "three rows of 16:9 tiles")
-        proc = script("look.py", self.src, "--at", "2.5", "--at", "0:07", "-o", OUT / "frame")
+        proc = script(
+            "look.py", self.src, "--at", "2.5", "--at", "0:07", "-o", OUT / "frame"
+        )
         frames = [OUT / "frame_2.500s.png", OUT / "frame_7.000s.png"]
         for f in frames:
             self.assertTrue(f.exists(), f)
@@ -416,7 +834,9 @@ class AnalysisTests(MediaFixtures):
         script("look.py", self.src, "--compare", self.src, "--at", "1", "-o", cmp_png)
         self.assertEqual(png_size(cmp_png)[0], 1280)
 
-    def test_look_scenes_overlay_graphics_prefer_fontfile_over_font_when_resolvable(self):
+    def test_look_scenes_overlay_graphics_prefer_fontfile_over_font_when_resolvable(
+        self,
+    ):
         """#100: drawtext's own fontconfig resolution (font=<name>) crashed with an access violation
         on some real Windows ffmpeg builds, with or without a valid fonts.conf; fontfile=<path> is
         the only form confirmed not to crash, since it never touches fontconfig at all. Every
@@ -424,37 +844,92 @@ class AnalysisTests(MediaFixtures):
         and prefers fontfile= whenever one can be found, falling back to font= only when nothing
         resolves. This sandbox has fc-match + DejaVu Sans, so a file is always resolvable here --
         skip rather than false-fail on a machine where it genuinely cannot be (no fc-match, no
-        fonts installed), since font= is still the documented, correct fallback there."""
+        fonts installed), since font= is still the documented, correct fallback there.
+        """
         if not default_font_file("DejaVu Sans"):
-            self.skipTest("no resolvable default font on this machine (no fc-match / no fonts) -- font= fallback is correct here")
+            self.skipTest(
+                "no resolvable default font on this machine (no fc-match / no fonts) -- font= fallback is correct here"
+            )
 
         out = OUT / "fontfile_look.png"
         proc = script("look.py", self.src, "--at", "1", "-o", out, "--json")
         data = json.loads(proc.stdout)
-        self.assertTrue(any("fontfile=" in c for c in data["commands"]), data["commands"])
+        self.assertTrue(
+            any("fontfile=" in c for c in data["commands"]), data["commands"]
+        )
 
         scenes_sheet = OUT / "fontfile_scenes.png"
-        proc = subprocess.run([sys.executable, str(SCRIPTS / "scenes.py"), str(self.src), "--sheet", str(scenes_sheet), "--json"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "scenes.py"),
+                str(self.src),
+                "--sheet",
+                str(scenes_sheet),
+                "--json",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("fontfile=", proc.stderr, "scenes.py --sheet should log a drawtext with fontfile=")
+        self.assertIn(
+            "fontfile=",
+            proc.stderr,
+            "scenes.py --sheet should log a drawtext with fontfile=",
+        )
 
         out2 = OUT / "fontfile_overlay.mp4"
         proc = script("overlay.py", self.src, "--text", "hi", "-o", out2, "--json")
         data2 = json.loads(proc.stdout)
-        self.assertTrue(any("fontfile=" in c for c in data2["commands"]), data2["commands"])
+        self.assertTrue(
+            any("fontfile=" in c for c in data2["commands"]), data2["commands"]
+        )
 
         out3 = OUT / "fontfile_gfx.mp4"
-        proc = script("graphics.py", self.src, "--template", "title", "--title", "hi", "-o", out3, "--json")
+        proc = script(
+            "graphics.py",
+            self.src,
+            "--template",
+            "title",
+            "--title",
+            "hi",
+            "-o",
+            out3,
+            "--json",
+        )
         data3 = json.loads(proc.stdout)
-        self.assertTrue(any("fontfile=" in c for c in data3["commands"]), data3["commands"])
+        self.assertTrue(
+            any("fontfile=" in c for c in data3["commands"]), data3["commands"]
+        )
 
     # ---------------------------------------------------------------- v0.4: verify / multicam / HLG / Log / energy karaoke / progress
     def test_probe_hlg_and_log_detection(self):
         hlg = OUT / "hlg.mp4"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30", "-t", "3",
-           "-vf", "format=yuv420p10le", "-c:v", "libx265", "-preset", "ultrafast",
-           "-x265-params", "colorprim=bt2020:transfer=arib-std-b67:colormatrix=bt2020nc:log-level=error", "-tag:v", "hvc1", hlg)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=1280x720:rate=30",
+            "-t",
+            "3",
+            "-vf",
+            "format=yuv420p10le",
+            "-c:v",
+            "libx265",
+            "-preset",
+            "ultrafast",
+            "-x265-params",
+            "colorprim=bt2020:transfer=arib-std-b67:colormatrix=bt2020nc:log-level=error",
+            "-tag:v",
+            "hvc1",
+            hlg,
+        )
         v = probe(str(hlg))["video"]
         self.assertEqual(v["hdr_format"], "HLG")
         self.assertIsNone(v["dolby_vision"])
@@ -466,8 +941,26 @@ class AnalysisTests(MediaFixtures):
         self.assertIn("filter_units", proc.stderr)
         self.assertEqual(probe(str(nodv))["video"]["hdr_format"], "HLG")
         flat = OUT / "loglike.mp4"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30", "-t", "3",
-           "-vf", "curves=all='0/0.36 1/0.88',hue=s=0.4,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", flat)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=1280x720:rate=30",
+            "-t",
+            "3",
+            "-vf",
+            "curves=all='0/0.36 1/0.88',hue=s=0.4,format=yuv420p",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            flat,
+        )
         data = json.loads(script("probe.py", flat, "--analyze").stdout)
         self.assertTrue(data["levels"]["looks_like_log"])
         data = json.loads(script("probe.py", self.src, "--analyze").stdout)
@@ -481,7 +974,9 @@ class AnalysisTests(MediaFixtures):
         for f in (self.hdr, self.surround, self.vfr):
             (folder / Path(f).name).write_bytes(Path(f).read_bytes())
         report = OUT / "verify.md"
-        data = json.loads(script("verify.py", folder, "--quick", "--report", report, "--json").stdout)
+        data = json.loads(
+            script("verify.py", folder, "--quick", "--report", report, "--json").stdout
+        )
         self.assertEqual(data["failed"], 0)
         self.assertEqual(len(data["files"]), 3)
         text = report.read_text()
@@ -505,13 +1000,25 @@ class AnalysisTests(MediaFixtures):
         (folder / "campaignA" / "clip.mp4").write_bytes(Path(self.src).read_bytes())
         (folder / "campaignB" / "clip.mp4").write_bytes(Path(self.src).read_bytes())
         out = OUT / "verify_collision_out"
-        data = json.loads(script("verify.py", folder, "--quick", "--keep", "--out", out, "--json").stdout)
+        data = json.loads(
+            script(
+                "verify.py", folder, "--quick", "--keep", "--out", out, "--json"
+            ).stdout
+        )
         self.assertEqual(len(data["files"]), 2)
         self.assertTrue(all(s["ok"] for f in data["files"] for s in f["steps"]))
         cut_files = sorted(p.name for p in out.glob("clip*_cut.mp4"))
-        self.assertEqual(len(cut_files), 2, f"expected two distinct 'cut' outputs, one per same-named source file, got {cut_files}")
+        self.assertEqual(
+            len(cut_files),
+            2,
+            f"expected two distinct 'cut' outputs, one per same-named source file, got {cut_files}",
+        )
         cap_files = sorted(p.name for p in out.glob("clip*_cap.mp4"))
-        self.assertEqual(len(cap_files), 2, f"expected two distinct 'caption' outputs, got {cap_files}")
+        self.assertEqual(
+            len(cap_files),
+            2,
+            f"expected two distinct 'caption' outputs, got {cap_files}",
+        )
 
     def test_verify_full_plan_hdr_surround_broken_file_and_timeout(self):
         """verify.py's non---quick plan (overlay, look sheet, probe --analyze, loudness, silence,
@@ -524,43 +1031,104 @@ class AnalysisTests(MediaFixtures):
         folder = OUT / "verify_full"
         folder.mkdir(exist_ok=True)
         (folder / Path(self.hdr).name).write_bytes(Path(self.hdr).read_bytes())
-        (folder / Path(self.surround).name).write_bytes(Path(self.surround).read_bytes())
+        (folder / Path(self.surround).name).write_bytes(
+            Path(self.surround).read_bytes()
+        )
         (folder / "broken.mp4").write_bytes(b"this is not a media file\n" * 64)
         out = OUT / "verify_full_out"
         report = OUT / "verify_full.md"
-        proc = script("verify.py", folder, "--seconds", "2", "--keep", "--out", out, "--report", report, expect_fail=True)
+        proc = script(
+            "verify.py",
+            folder,
+            "--seconds",
+            "2",
+            "--keep",
+            "--out",
+            out,
+            "--report",
+            report,
+            expect_fail=True,
+        )
         text = report.read_text(encoding="utf-8")
-        self.assertIn(text.strip(), proc.stdout.strip(), "without --json the report is printed to stdout")
+        self.assertIn(
+            text.strip(),
+            proc.stdout.strip(),
+            "without --json the report is printed to stdout",
+        )
         self.assertIn("| probe | FAIL | 0s | ffprobe failed |", text)
-        for step in ("overlay text", "look sheet", "probe analyze", "loudness measure", "silence list",
-                     "color to-sdr", "hdr preserved", "audio downmix", "export x"):
-            self.assertIn(f"| {step} | PASS |", text, f"{step} missing or failed:\n{text}")
-        self.assertNotIn("| FAIL |", text.replace("| probe | FAIL | 0s | ffprobe failed |", ""))
+        for step in (
+            "overlay text",
+            "look sheet",
+            "probe analyze",
+            "loudness measure",
+            "silence list",
+            "color to-sdr",
+            "hdr preserved",
+            "audio downmix",
+            "export x",
+        ):
+            self.assertIn(
+                f"| {step} | PASS |", text, f"{step} missing or failed:\n{text}"
+            )
+        self.assertNotIn(
+            "| FAIL |", text.replace("| probe | FAIL | 0s | ffprobe failed |", "")
+        )
         self.assertTrue((out / f"{Path(self.hdr).stem}_sdr.mp4").exists())
         self.assertTrue((out / f"{Path(self.surround).stem}_st.mp4").exists())
         # a per-step timeout is reported per step, never raised
-        data = json.loads(script("verify.py", self.src, "--quick", "--timeout", "0.01", "--json", expect_fail=True).stdout)
-        self.assertEqual((data["status"], data["error"]["kind"]), ("failed", "verification"))
-        timed_out = [s for f in data["files"] for s in f["steps"] if s["error"].startswith("timeout after")]
+        data = json.loads(
+            script(
+                "verify.py",
+                self.src,
+                "--quick",
+                "--timeout",
+                "0.01",
+                "--json",
+                expect_fail=True,
+            ).stdout
+        )
+        self.assertEqual(
+            (data["status"], data["error"]["kind"]), ("failed", "verification")
+        )
+        timed_out = [
+            s
+            for f in data["files"]
+            for s in f["steps"]
+            if s["error"].startswith("timeout after")
+        ]
         self.assertTrue(timed_out, data)
         self.assertEqual(data["failed"], len(timed_out))
 
     def test_check_compliance(self):
         reels = OUT / "export_reels.mp4"
         if not reels.exists():
-            script("export.py", self.src, "--preset", "reels", "--fit", "crop", "-o", reels)
-        data = json.loads(script("check.py", reels, "--platform", "reels", "--json", expect_fail=True).stdout)
+            script(
+                "export.py", self.src, "--preset", "reels", "--fit", "crop", "-o", reels
+            )
+        data = json.loads(
+            script(
+                "check.py", reels, "--platform", "reels", "--json", expect_fail=True
+            ).stdout
+        )
         # a failed check is a failed run: status says so (before 1.4.3 it said "completed" next to exit 1)
-        self.assertEqual((data["status"], data["error"]["kind"], data["error"]["code"]), ("failed", "verification", "VERIFICATION_FAILED"))
+        self.assertEqual(
+            (data["status"], data["error"]["kind"], data["error"]["code"]),
+            ("failed", "verification", "VERIFICATION_FAILED"),
+        )
         self.assertFalse(data["ok"])
         names = {r["check"]: r["status"] for r in data["checks"]}
         kinds = {r["check"]: r["kind"] for r in data["checks"]}
         self.assertEqual(kinds["loudness"], "judgement")
         self.assertEqual(kinds["video codec"], "format")
-        self.assertIn("ambience", [r["fix"] for r in data["checks"] if r["check"] == "loudness"][0])
+        self.assertIn(
+            "ambience",
+            [r["fix"] for r in data["checks"] if r["check"] == "loudness"][0],
+        )
         self.assertEqual(names["aspect"], "PASS")
         self.assertEqual(names["pixel format"], "PASS")
-        self.assertEqual(names["loudness"], "FAIL", "unnormalised test tone is far from -14 LUFS")
+        self.assertEqual(
+            names["loudness"], "FAIL", "unnormalised test tone is far from -14 LUFS"
+        )
         self.assertFalse(data["ok"])
         # FAILs a non-technical caller would ask "so what?" about carry a plain-language reason,
         # distinct from `fix` (the command); PASS rows never carry one
@@ -573,21 +1141,50 @@ class AnalysisTests(MediaFixtures):
         # after loudness.py the same file passes
         norm = OUT / "reels_norm.mp4"
         script("loudness.py", reels, "-o", norm)
-        data = json.loads(script("check.py", norm, "--platform", "reels", "--json").stdout)
-        self.assertTrue(data["ok"], [r for r in data["checks"] if r["status"] != "PASS"])
+        data = json.loads(
+            script("check.py", norm, "--platform", "reels", "--json").stdout
+        )
+        self.assertTrue(
+            data["ok"], [r for r in data["checks"] if r["status"] != "PASS"]
+        )
         # HDR on an SDR-only platform fails the colour check
-        data = json.loads(script("check.py", self.hdr, "--platform", "x", "--no-loudness", "--json", expect_fail=True).stdout)
+        data = json.loads(
+            script(
+                "check.py",
+                self.hdr,
+                "--platform",
+                "x",
+                "--no-loudness",
+                "--json",
+                expect_fail=True,
+            ).stdout
+        )
         colour_row = [r for r in data["checks"] if r["check"] == "colour"][0]
         self.assertEqual(colour_row["status"], "FAIL")
         self.assertTrue(colour_row["reason"])
         # custom overrides
-        data = json.loads(script("check.py", self.src, "--platform", "custom", "--max-duration", "5", "--no-loudness", "--json", expect_fail=True).stdout)
-        self.assertEqual({r["check"]: r["status"] for r in data["checks"]}["duration"], "FAIL")
+        data = json.loads(
+            script(
+                "check.py",
+                self.src,
+                "--platform",
+                "custom",
+                "--max-duration",
+                "5",
+                "--no-loudness",
+                "--json",
+                expect_fail=True,
+            ).stdout
+        )
+        self.assertEqual(
+            {r["check"]: r["status"] for r in data["checks"]}["duration"], "FAIL"
+        )
 
     def test_check_without_a_platform_reports_judgement_rows_as_warn(self):
         """Eval 7: runs that only wanted the format rows got youtube's loudness / true-peak FAILs
         (the default platform) and explained at length why they left them alone. Without a
-        named platform those rows are advisory: WARN, exit 0, and a notes line says so."""
+        named platform those rows are advisory: WARN, exit 0, and a notes line says so.
+        """
         data = json.loads(script("check.py", self.src, "--json").stdout)
         self.assertEqual(data["status"], "completed")
         self.assertTrue(data["ok"])
@@ -598,7 +1195,16 @@ class AnalysisTests(MediaFixtures):
         self.assertEqual(rows["true peak"]["kind"], "judgement")
         self.assertTrue(any("no --platform" in n for n in data["notes"]))
         # the same file with the platform named is the same FAIL as before
-        data = json.loads(script("check.py", self.src, "--platform", "youtube", "--json", expect_fail=True).stdout)
+        data = json.loads(
+            script(
+                "check.py",
+                self.src,
+                "--platform",
+                "youtube",
+                "--json",
+                expect_fail=True,
+            ).stdout
+        )
         self.assertFalse(data["ok"])
         self.assertNotIn("notes", data)
 
@@ -611,38 +1217,100 @@ class AnalysisTests(MediaFixtures):
         crash for a compliance tool. Verify a forced measurement failure surfaces as WARN rows,
         not a vanished check."""
         from unittest.mock import patch
+
         sys.path.insert(0, str(SCRIPTS))
         import check
+
         with patch.object(check, "measure_loudness", return_value={}):
             buf = __import__("io").StringIO()
             import contextlib
+
             with contextlib.redirect_stdout(buf):
-                sys.argv = ["check.py", str(self.src), "--platform", "youtube", "--json"]
+                sys.argv = [
+                    "check.py",
+                    str(self.src),
+                    "--platform",
+                    "youtube",
+                    "--json",
+                ]
                 check.main()
             data = json.loads(buf.getvalue())
         statuses = {r["check"]: r["status"] for r in data["checks"]}
-        self.assertIn("loudness", statuses, "an unmeasurable loudness check must still appear in the report")
+        self.assertIn(
+            "loudness",
+            statuses,
+            "an unmeasurable loudness check must still appear in the report",
+        )
         self.assertIn("true peak", statuses)
         self.assertEqual(statuses["loudness"], "WARN")
         self.assertEqual(statuses["true peak"], "WARN")
 
     def test_scenes_and_highlights(self):
         src = OUT / "scenes_src.mp4"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-           "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:d=4", "-f", "lavfi", "-i", "smptebars=size=640x360:rate=30:d=4",
-           "-f", "lavfi", "-i", "mandelbrot=size=640x360:rate=30",
-           "-f", "lavfi", "-i", "aevalsrc='0.6*sin(2*PI*440*t)*between(t\\,5\\,7)+0.3*sin(2*PI*330*t)*between(t\\,9\\,10)':s=48000",
-           "-filter_complex", "[2:v]trim=0:4,setpts=PTS-STARTPTS[m];[0:v][1:v][m]concat=n=3:v=1:a=0[v]",
-           "-map", "[v]", "-map", "3:a", "-t", "12", "-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac", src)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=640x360:rate=30:d=4",
+            "-f",
+            "lavfi",
+            "-i",
+            "smptebars=size=640x360:rate=30:d=4",
+            "-f",
+            "lavfi",
+            "-i",
+            "mandelbrot=size=640x360:rate=30",
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='0.6*sin(2*PI*440*t)*between(t\\,5\\,7)+0.3*sin(2*PI*330*t)*between(t\\,9\\,10)':s=48000",
+            "-filter_complex",
+            "[2:v]trim=0:4,setpts=PTS-STARTPTS[m];[0:v][1:v][m]concat=n=3:v=1:a=0[v]",
+            "-map",
+            "[v]",
+            "-map",
+            "3:a",
+            "-t",
+            "12",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-c:a",
+            "aac",
+            src,
+        )
         edl = OUT / "picks.txt"
         sheet = OUT / "scenes.png"
-        data = json.loads(script("scenes.py", src, "--highlights", "2", "--target", "6", "--edl", edl, "--sheet", sheet, "--json").stdout)
+        data = json.loads(
+            script(
+                "scenes.py",
+                src,
+                "--highlights",
+                "2",
+                "--target",
+                "6",
+                "--edl",
+                edl,
+                "--sheet",
+                sheet,
+                "--json",
+            ).stdout
+        )
         self.assertEqual(data["scene_count"], 3)
         self.assertEqual([round(sc["start"]) for sc in data["scenes"]], [0, 4, 8])
         self.assertEqual(len(data["highlights"]), 2)
         self.assertClose(data["highlights_total"], 6.0, 0.6)
         # the loudest pick must cover the 5-7 s tone
-        self.assertTrue(any(h["start"] <= 5.5 and h["end"] >= 6.5 for h in data["highlights"]), data["highlights"])
+        self.assertTrue(
+            any(h["start"] <= 5.5 and h["end"] >= 6.5 for h in data["highlights"]),
+            data["highlights"],
+        )
         self.assertTrue(sheet.exists())
         self.assertGreater(png_size(sheet)[0], 1200, "three tiles across")
         # EDL feeds cut.py
@@ -654,34 +1322,95 @@ class AnalysisTests(MediaFixtures):
     def test_scenes_rank_by_duration_picks_longest_scenes_not_loudest(self):
         src = OUT / "scenes_rank_src.mp4"
         # three scenes: 2s, 6s (longest, silent), 4s (loud tone) -- audio and duration ranking must disagree
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-           "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:d=2", "-f", "lavfi", "-i", "smptebars=size=640x360:rate=30:d=6",
-           "-f", "lavfi", "-i", "mandelbrot=size=640x360:rate=30",
-           "-f", "lavfi", "-i", "aevalsrc='0.6*sin(2*PI*440*t)*between(t\\,8\\,11)':s=48000",
-           "-filter_complex", "[2:v]trim=0:4,setpts=PTS-STARTPTS[m];[0:v][1:v][m]concat=n=3:v=1:a=0[v]",
-           "-map", "[v]", "-map", "3:a", "-t", "12", "-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac", src)
-        by_audio = json.loads(script("scenes.py", src, "--highlights", "1", "--json").stdout)
-        by_duration = json.loads(script("scenes.py", src, "--highlights", "1", "--rank-by", "duration", "--json").stdout)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=640x360:rate=30:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "smptebars=size=640x360:rate=30:d=6",
+            "-f",
+            "lavfi",
+            "-i",
+            "mandelbrot=size=640x360:rate=30",
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='0.6*sin(2*PI*440*t)*between(t\\,8\\,11)':s=48000",
+            "-filter_complex",
+            "[2:v]trim=0:4,setpts=PTS-STARTPTS[m];[0:v][1:v][m]concat=n=3:v=1:a=0[v]",
+            "-map",
+            "[v]",
+            "-map",
+            "3:a",
+            "-t",
+            "12",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-c:a",
+            "aac",
+            src,
+        )
+        by_audio = json.loads(
+            script("scenes.py", src, "--highlights", "1", "--json").stdout
+        )
+        by_duration = json.loads(
+            script(
+                "scenes.py", src, "--highlights", "1", "--rank-by", "duration", "--json"
+            ).stdout
+        )
         self.assertEqual(by_audio["highlights_rank_by"], "audio")
         self.assertEqual(by_duration["highlights_rank_by"], "duration")
         # audio ranking picks the loud scene (8-11s window, inside scene 3 at 8-12s)
-        self.assertTrue(any(h["start"] >= 7.5 for h in by_audio["highlights"]), by_audio["highlights"])
+        self.assertTrue(
+            any(h["start"] >= 7.5 for h in by_audio["highlights"]),
+            by_audio["highlights"],
+        )
         # duration ranking picks the longest (silent) scene, which starts at 2s
-        self.assertTrue(any(round(h["start"]) == 2 for h in by_duration["highlights"]), by_duration["highlights"])
+        self.assertTrue(
+            any(round(h["start"]) == 2 for h in by_duration["highlights"]),
+            by_duration["highlights"],
+        )
 
     def test_social_pack_writes_one_file_per_destination_and_a_table(self):
         """--template all / a comma list: one edit, N deliveries, one table. The table is what the
-        user is handed, so it must have exactly one row per destination and name the real files."""
-        doc = json.loads(script("render.py", self.src, "--template", "tiktok,x,linkedin",
-                                "--cues", self.cues, "--fast", "--json").stdout)
-        self.assertEqual([r["platform"] for r in doc["pack"]], ["tiktok", "x", "linkedin"])
+        user is handed, so it must have exactly one row per destination and name the real files.
+        """
+        doc = json.loads(
+            script(
+                "render.py",
+                self.src,
+                "--template",
+                "tiktok,x,linkedin",
+                "--cues",
+                self.cues,
+                "--fast",
+                "--json",
+            ).stdout
+        )
+        self.assertEqual(
+            [r["platform"] for r in doc["pack"]], ["tiktok", "x", "linkedin"]
+        )
         for row in doc["pack"]:
             self.assertTrue(os.path.exists(row["path"]), row)
             self.assertEqual(row["check"], "pass", row)
         pack = Path(doc["output"])
         self.assertTrue(pack.exists())
         body = pack.read_text(encoding="utf-8")
-        rows = [l for l in body.splitlines() if l.startswith("|") and not set(l.strip("| ")) <= set("-: |")]
+        rows = [
+            l
+            for l in body.splitlines()
+            if l.startswith("|") and not set(l.strip("| ")) <= set("-: |")
+        ]
         self.assertEqual(len(rows), 4, "one header row plus one row per destination")
         html_out = OUT / "pack.html"
         script("report.py", "--pack", pack, "-o", html_out)
@@ -691,17 +1420,21 @@ class AnalysisTests(MediaFixtures):
 
     def test_check_and_export_read_one_loudness_spec_per_platform(self):
         """The 1.14 table exists so `export.py --normalize` and `check.py` cannot drift: the
-        loudness a preset normalises to is read from the same entry the check enforces."""
+        loudness a preset normalises to is read from the same entry the check enforces.
+        """
         sys.path.insert(0, str(SCRIPTS))
         import export as export_mod
         from check import SPECS
         from _platforms import loudness_of
+
         for preset, platform in export_mod.PLATFORM_OF.items():
             with self.subTest(preset=preset):
                 spec = SPECS[platform]
                 table = loudness_of(platform)
-                self.assertEqual((spec["lufs"], spec["lufs_tol"], spec["tp"]),
-                                 (table["lufs"], table["lufs_tol"], table["tp"]))
+                self.assertEqual(
+                    (spec["lufs"], spec["lufs_tol"], spec["tp"]),
+                    (table["lufs"], table["lufs_tol"], table["tp"]),
+                )
 
     def test_look_safe_shades_only_the_platforms_occluded_zones(self):
         """`look.py --safe tiktok` is how "is the caption readable" gets answered about the app and
@@ -709,11 +1442,25 @@ class AnalysisTests(MediaFixtures):
         middle of the frame untouched."""
         plain, marked = OUT / "safe_plain.png", OUT / "safe_marked.png"
         script("look.py", self.src, "--at", "2", "--no-timecode", "-o", plain)
-        doc = json.loads(script("look.py", self.src, "--at", "2", "--no-timecode", "--safe", "tiktok",
-                                "-o", marked, "--json").stdout)
+        doc = json.loads(
+            script(
+                "look.py",
+                self.src,
+                "--at",
+                "2",
+                "--no-timecode",
+                "--safe",
+                "tiktok",
+                "-o",
+                marked,
+                "--json",
+            ).stdout
+        )
         self.assertTrue(os.path.exists(doc["output"]))
         self.assertEqual(png_size(plain), png_size(marked))
-        self.assertNotEqual(plain.read_bytes(), marked.read_bytes(), "--safe must mark the frame")
+        self.assertNotEqual(
+            plain.read_bytes(), marked.read_bytes(), "--safe must mark the frame"
+        )
         cmd = [c for c in doc["commands"] if "drawbox" in c]
         self.assertTrue(cmd, doc["commands"])
         self.assertIn("y=ih*(1-0.22)", cmd[0])
@@ -721,29 +1468,73 @@ class AnalysisTests(MediaFixtures):
 
     def test_look_safe_compares_the_displayed_aspect_of_a_rotated_source(self):
         """A 1280x720 file tagged 90 degrees is already 9:16. --safe tiktok used to warn that
-        the stored 16:9 frame was the wrong shape for a destination the picture already matches."""
+        the stored 16:9 frame was the wrong shape for a destination the picture already matches.
+        """
         v = probe(str(self.rot))["video"]
         self.assertIn(v["rotation"], (90, -90, 270, -270))
-        proc = script("look.py", self.rot, "--at", "1", "--no-timecode", "--safe", "tiktok",
-                      "-o", OUT / "safe_rot.png", "--json")
+        proc = script(
+            "look.py",
+            self.rot,
+            "--at",
+            "1",
+            "--no-timecode",
+            "--safe",
+            "tiktok",
+            "-o",
+            OUT / "safe_rot.png",
+            "--json",
+        )
         self.assertNotIn("not tiktok", proc.stderr)
         self.assertNotIn(f"{v['width']}x{v['height']}", proc.stderr)
-        wide = script("look.py", self.src, "--at", "1", "--no-timecode", "--safe", "tiktok",
-                      "-o", OUT / "safe_wide.png", "--json")
+        wide = script(
+            "look.py",
+            self.src,
+            "--at",
+            "1",
+            "--no-timecode",
+            "--safe",
+            "tiktok",
+            "-o",
+            OUT / "safe_wide.png",
+            "--json",
+        )
         self.assertIn(f"{v['width']}x{v['height']}", wide.stderr)
 
     def test_report_html(self):
         reels = OUT / "export_reels.mp4"
         if not reels.exists():
-            script("export.py", self.src, "--preset", "reels", "--fit", "crop", "-o", reels)
+            script(
+                "export.py", self.src, "--preset", "reels", "--fit", "crop", "-o", reels
+            )
         cmds = OUT / "cmds.txt"
         cmds.write_text("python3 export.py source.mp4 --preset reels\n")
         out = OUT / "report.html"
-        data = json.loads(script("report.py", "--before", self.src, "--after", reels, "--platform", "reels", "--commands", cmds, "--title", "Test delivery", "-o", out, "--json").stdout)
+        data = json.loads(
+            script(
+                "report.py",
+                "--before",
+                self.src,
+                "--after",
+                reels,
+                "--platform",
+                "reels",
+                "--commands",
+                cmds,
+                "--title",
+                "Test delivery",
+                "-o",
+                out,
+                "--json",
+            ).stdout
+        )
         self.assertEqual(data["report"], str(out))
         html_text = out.read_text(encoding="utf-8")
         self.assertIn("Test delivery", html_text)
-        self.assertEqual(html_text.count("data:image/png;base64"), 2, "before and after contact sheets")
+        self.assertEqual(
+            html_text.count("data:image/png;base64"),
+            2,
+            "before and after contact sheets",
+        )
         self.assertIn("export.py source.mp4 --preset reels", html_text)
         self.assertIn("class='verdict", html_text)
         self.assertIn("1080×1920", html_text)
@@ -757,22 +1548,81 @@ class AnalysisTests(MediaFixtures):
         loop = OUT / "loop.wav"
         # speech-like: dialogue from the demo tones plus random-looking bursts (incommensurate gates,
         # a slowly drifting pitch and pink-noise "room"), so no two 9 s stretches look alike
-        expr = (TONES + "+0.25*sin(2*PI*(165+30*sin(2*PI*0.031*t))*t)*gt(sin(2*PI*0.113*t+0.4)\\,0.55)"
-                "+0.3*sin(2*PI*(520+80*sin(2*PI*0.017*t+1))*t)*gt(sin(2*PI*0.29*t+2.1)*sin(2*PI*0.073*t)\\,0.35)")
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", f"aevalsrc='{expr}':s=48000",
-           "-f", "lavfi", "-i", "anoisesrc=a=0.02:c=pink:r=48000", "-t", "200", "-filter_complex", "amix=inputs=2:duration=first:normalize=0", "-c:a", "pcm_s16le", loop)
+        expr = (
+            TONES
+            + "+0.25*sin(2*PI*(165+30*sin(2*PI*0.031*t))*t)*gt(sin(2*PI*0.113*t+0.4)\\,0.55)"
+            "+0.3*sin(2*PI*(520+80*sin(2*PI*0.017*t+1))*t)*gt(sin(2*PI*0.29*t+2.1)*sin(2*PI*0.073*t)\\,0.35)"
+        )
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{expr}':s=48000",
+            "-f",
+            "lavfi",
+            "-i",
+            "anoisesrc=a=0.02:c=pink:r=48000",
+            "-t",
+            "200",
+            "-filter_complex",
+            "amix=inputs=2:duration=first:normalize=0",
+            "-c:a",
+            "pcm_s16le",
+            loop,
+        )
         ref = OUT / "loop_ref.wav"
         sec = OUT / "loop_sec.wav"
         # 28 s offset inside a 120 s analysis window (the documented rule: window >= 4x max offset)
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-ss", "40", "-i", loop, "-t", "120", "-c:a", "pcm_s16le", ref)
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-ss", "12", "-i", loop, "-t", "120", "-af", "volume=-8dB,highpass=f=300", "-c:a", "pcm_s16le", sec)
-        data = json.loads(script("sync.py", ref, sec, "--json", "--max-offset", "30").stdout)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-ss",
+            "40",
+            "-i",
+            loop,
+            "-t",
+            "120",
+            "-c:a",
+            "pcm_s16le",
+            ref,
+        )
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-ss",
+            "12",
+            "-i",
+            loop,
+            "-t",
+            "120",
+            "-af",
+            "volume=-8dB,highpass=f=300",
+            "-c:a",
+            "pcm_s16le",
+            sec,
+        )
+        data = json.loads(
+            script("sync.py", ref, sec, "--json", "--max-offset", "30").stdout
+        )
         self.assertClose(data["offset_seconds"], -28.0, 0.02)
         self.assertGreater(data["confidence"], 0.3)
 
     # ------------------------------------------------------ 1.17: the beat grid (scenes --beats)
     def test_scenes_beats_measures_the_tempo(self):
-        data = json.loads(script("scenes.py", self._beats(), "--beats", "--json").stdout)
+        data = json.loads(
+            script("scenes.py", self._beats(), "--beats", "--json").stdout
+        )
         grid = data["beat_grid"]
         self.assertAlmostEqual(grid["tempo_bpm"], 120.0, delta=2.0)
         self.assertTrue(grid["usable"])
@@ -793,30 +1643,54 @@ class AnalysisTests(MediaFixtures):
 
     def test_scenes_beats_reports_a_weak_measurement_rather_than_refusing(self):
         """scenes.py measures; it does not refuse. A low confidence is reported as usable: false
-        -- refusing belongs to the tools that would change a file on the strength of it."""
-        data = json.loads(script("scenes.py", self._silent_clip(), "--beats", "--json").stdout)
+        -- refusing belongs to the tools that would change a file on the strength of it.
+        """
+        data = json.loads(
+            script("scenes.py", self._silent_clip(), "--beats", "--json").stdout
+        )
         self.assertLess(data["beat_grid"]["confidence"], 0.5)
         self.assertFalse(data["beat_grid"]["usable"])
 
     def test_scenes_beats_refuses_without_an_audio_stream(self):
         mute = OUT / "beats_mute.mp4"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", self._beats(),
-           "-an", "-c:v", "copy", mute)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            self._beats(),
+            "-an",
+            "-c:v",
+            "copy",
+            mute,
+        )
         r = script("scenes.py", mute, "--beats", "--json", expect_fail=True)
         data = json.loads(r.stdout)
         self.assertEqual(data["error"]["kind"], "input")
         self.assertIn("audio stream", data["error"]["message"])
 
     def test_scenes_beat_range_is_validated(self):
-        r = script("scenes.py", self._beats(), "--beats", "--beat-range", "notarange",
-                   "--json", expect_fail=True)
+        r = script(
+            "scenes.py",
+            self._beats(),
+            "--beats",
+            "--beat-range",
+            "notarange",
+            "--json",
+            expect_fail=True,
+        )
         self.assertEqual(json.loads(r.stdout)["error"]["kind"], "input")
 
     def test_scenes_beat_range_is_ignored_without_beats(self):
         """--beat-range is a --beats flag: a run that never asked for beats must not be able to
         die on one."""
-        data = json.loads(script("scenes.py", self._beats(), "--beat-range", "notarange",
-                                 "--json").stdout)
+        data = json.loads(
+            script(
+                "scenes.py", self._beats(), "--beat-range", "notarange", "--json"
+            ).stdout
+        )
         self.assertNotIn("beat_grid", data)
 
     # --------------------------------------------------------------- 1.18.0: --shots / --audio-peaks / --speech
@@ -834,16 +1708,42 @@ class AnalysisTests(MediaFixtures):
         """A single unmoving frame held for the whole clip has nothing to flow: static, magnitude 0."""
         still = OUT / "still.mp4"
         if not still.exists():
-            sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
-               "-i", "color=c=gray:s=320x180:rate=10", "-f", "lavfi", "-i", "sine=f=440",
-               "-t", "4", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
-               "-c:a", "aac", still)
+            sh(
+                "ffmpeg",
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=gray:s=320x180:rate=10",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=f=440",
+                "-t",
+                "4",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                still,
+            )
         data = json.loads(script("scenes.py", still, "--shots", "--json").stdout)
         self.assertTrue(all(sh["label"] == "static" for sh in data["shots"]))
         self.assertTrue(all(sh["flow_magnitude"] == 0.0 for sh in data["shots"]))
 
-    def test_scenes_audio_peaks_db_is_measured_in_dbfs_and_separate_from_the_rms_list(self):
-        data = json.loads(script("scenes.py", self.src, "--audio-peaks", "--json").stdout)
+    def test_scenes_audio_peaks_db_is_measured_in_dbfs_and_separate_from_the_rms_list(
+        self,
+    ):
+        data = json.loads(
+            script("scenes.py", self.src, "--audio-peaks", "--json").stdout
+        )
         self.assertIn("audio_peaks_db", data)
         self.assertIn("audio_peaks", data)  # the pre-existing key, unchanged
         for p in data["audio_peaks_db"]:
@@ -861,15 +1761,36 @@ class AnalysisTests(MediaFixtures):
             self.assertGreaterEqual(w["speech_music_ratio"], 0.0)
 
     def test_scenes_shots_audio_peaks_speech_combine_with_beats_and_highlights(self):
-        data = json.loads(script("scenes.py", self._beats(), "--shots", "--audio-peaks", "--speech",
-                                 "--beats", "--highlights", "2", "--json").stdout)
+        data = json.loads(
+            script(
+                "scenes.py",
+                self._beats(),
+                "--shots",
+                "--audio-peaks",
+                "--speech",
+                "--beats",
+                "--highlights",
+                "2",
+                "--json",
+            ).stdout
+        )
         for key in ("shots", "audio_peaks_db", "speech", "beats", "highlights"):
             self.assertIn(key, data)
 
-
     def test_sync_too_short_names_the_file(self):
         blip = OUT / "sync_blip.wav"
-        sh("ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "sine=d=0.1", blip)
+        sh(
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=d=0.1",
+            blip,
+        )
         proc = script("sync.py", self.src, blip, "--json", expect_fail=True)
         doc = json.loads(proc.stdout)
         self.assertIn("not enough audio to analyse", doc["error"]["message"])
@@ -881,6 +1802,7 @@ class ProposeChaptersTests(unittest.TestCase):
 
     def setUp(self):
         from _common import description_block, propose_chapters, fmt_chapter_time
+
         self.propose = propose_chapters
         self.block = description_block
         self.fmt = fmt_chapter_time
@@ -889,8 +1811,10 @@ class ProposeChaptersTests(unittest.TestCase):
         got = self.propose(600, [(190.1, 192.4)], [], min_chapter=60)
         self.assertEqual(got[0]["at"], 0.0)
         self.assertEqual(got[0]["evidence"]["kind"], "start")
-        self.assertEqual(self.propose(600, [], [], min_chapter=60),
-                         [{"at": 0.0, "evidence": {"kind": "start"}, "title": "Chapter 1"}])
+        self.assertEqual(
+            self.propose(600, [], [], min_chapter=60),
+            [{"at": 0.0, "evidence": {"kind": "start"}, "title": "Chapter 1"}],
+        )
 
     def test_propose_chapters_merges_silence_and_scene_evidence(self):
         got = self.propose(600, [(190.1, 192.4)], [192.6], min_chapter=60)
@@ -912,15 +1836,18 @@ class ProposeChaptersTests(unittest.TestCase):
         self.assertTrue(all(a < 600 - 60 for a in ats), ats)
 
     def test_propose_chapters_never_invents_a_title(self):
-        got = self.propose(1200, [(100, 102), (300, 303), (700, 702)], [500.0], min_chapter=60)
+        got = self.propose(
+            1200, [(100, 102), (300, 303), (700, 702)], [500.0], min_chapter=60
+        )
         self.assertGreater(len(got), 2)
         for n, c in enumerate(got, start=1):
             self.assertEqual(c["title"], "Chapter %d" % n)
             self.assertRegex(c["title"], r"^Chapter \d+$")
 
     def test_max_chapters_drops_weakest_evidence_first(self):
-        got = self.propose(1200, [(100, 100.5), (300, 305)], [700.0],
-                           min_chapter=60, max_chapters=3)
+        got = self.propose(
+            1200, [(100, 100.5), (300, 305)], [700.0], min_chapter=60, max_chapters=3
+        )
         self.assertEqual(len(got), 3)
         kinds = [c["evidence"]["kind"] for c in got]
         self.assertEqual(kinds[0], "start")
@@ -930,9 +1857,14 @@ class ProposeChaptersTests(unittest.TestCase):
 
     def test_description_block_format(self):
         self.assertEqual(self.fmt(0), "00:00")
-        self.assertEqual(self.fmt(192.9), "03:12", "the timestamp rounds DOWN to the second")
+        self.assertEqual(
+            self.fmt(192.9), "03:12", "the timestamp rounds DOWN to the second"
+        )
         self.assertEqual(self.fmt(3723.4), "1:02:03")
-        chapters = [{"at": 0.0, "title": "Chapter 1"}, {"at": 192.4, "title": "Chapter 2"}]
+        chapters = [
+            {"at": 0.0, "title": "Chapter 1"},
+            {"at": 192.4, "title": "Chapter 2"},
+        ]
         self.assertEqual(self.block(chapters), "00:00 Chapter 1\n03:12 Chapter 2")
 
 
@@ -944,13 +1876,28 @@ class AutoChaptersTests(MediaFixtures):
         out = OUT / "auto_chapters.mp4"
         chapters_txt = OUT / "auto_chapters.txt"
         desc = OUT / "auto_chapters_desc.txt"
-        res = json.loads(script("metadata.py", gappy, "--auto-chapters", "--min-chapter", "1",
-                                "--chapters-out", chapters_txt, "--description-out", desc,
-                                "--json", "-o", out).stdout)
+        res = json.loads(
+            script(
+                "metadata.py",
+                gappy,
+                "--auto-chapters",
+                "--min-chapter",
+                "1",
+                "--chapters-out",
+                chapters_txt,
+                "--description-out",
+                desc,
+                "--json",
+                "-o",
+                out,
+            ).stdout
+        )
         auto = res["auto_chapters"]
         self.assertEqual(auto["titles"], "placeholder")
         self.assertTrue(res["streams_copied"], "nothing may be re-encoded")
-        written = sh("ffprobe", "-v", "error", "-show_chapters", "-of", "json", out).stdout
+        written = sh(
+            "ffprobe", "-v", "error", "-show_chapters", "-of", "json", out
+        ).stdout
         self.assertEqual(len(json.loads(written)["chapters"]), auto["kept"])
         for n, c in enumerate(auto["chapters"], start=1):
             self.assertEqual(c["title"], "Chapter %d" % n)
@@ -958,15 +1905,37 @@ class AutoChaptersTests(MediaFixtures):
         # the chapters file round-trips through this tool's own --chapters reader
         again = OUT / "auto_chapters_again.mp4"
         script("metadata.py", gappy, "--chapters", chapters_txt, "-o", again)
-        self.assertEqual(len(json.loads(sh("ffprobe", "-v", "error", "-show_chapters",
-                                           "-of", "json", again).stdout)["chapters"]),
-                         auto["kept"])
+        self.assertEqual(
+            len(
+                json.loads(
+                    sh(
+                        "ffprobe", "-v", "error", "-show_chapters", "-of", "json", again
+                    ).stdout
+                )["chapters"]
+            ),
+            auto["kept"],
+        )
 
     def test_auto_chapters_excludes_the_manual_forms(self):
-        script("metadata.py", self._gappy(), "--auto-chapters", "--chapters", "/nope.txt",
-               "-o", OUT / "x_auto.mp4", expect_fail=True)
-        script("metadata.py", self._gappy(), "--auto-chapters", "--clear-chapters",
-               "-o", OUT / "x_auto2.mp4", expect_fail=True)
+        script(
+            "metadata.py",
+            self._gappy(),
+            "--auto-chapters",
+            "--chapters",
+            "/nope.txt",
+            "-o",
+            OUT / "x_auto.mp4",
+            expect_fail=True,
+        )
+        script(
+            "metadata.py",
+            self._gappy(),
+            "--auto-chapters",
+            "--clear-chapters",
+            "-o",
+            OUT / "x_auto2.mp4",
+            expect_fail=True,
+        )
 
 
 class BeatGridTests(unittest.TestCase):
@@ -997,6 +1966,7 @@ class BeatGridTests(unittest.TestCase):
 
     def test_synthetic_120bpm_grid(self):
         from _common import beat_grid
+
         g = beat_grid(self._clicks(0.5), self.STEP)
         self.assertAlmostEqual(g["tempo_bpm"], 120.0, delta=1.0)
         self.assertAlmostEqual(g["interval"], 0.5, delta=0.01)
@@ -1011,16 +1981,19 @@ class BeatGridTests(unittest.TestCase):
         """Impulses every 0.5 s with alternating strength: the grid is 120, not 60 (only the
         strong hits) and not 240 (twice as many points as there are onsets)."""
         from _common import beat_grid
+
         g = beat_grid(self._clicks(0.5, strengths=[1.0, 0.55]), self.STEP)
         self.assertAlmostEqual(g["tempo_bpm"], 120.0, delta=1.0)
 
     def test_a_different_tempo_is_measured_not_assumed(self):
         from _common import beat_grid
-        g = beat_grid(self._clicks(0.4), self.STEP)   # 150 BPM
+
+        g = beat_grid(self._clicks(0.4), self.STEP)  # 150 BPM
         self.assertAlmostEqual(g["tempo_bpm"], 150.0, delta=2.0)
 
     def test_flat_envelope_is_zero_confidence(self):
         from _common import beat_grid
+
         g = beat_grid([0.5] * 1000, self.STEP)
         self.assertEqual(g["beats"], [])
         self.assertIsNone(g["tempo_bpm"])
@@ -1029,6 +2002,7 @@ class BeatGridTests(unittest.TestCase):
 
     def test_empty_envelope_is_zero_confidence(self):
         from _common import beat_grid
+
         self.assertEqual(beat_grid([], self.STEP)["confidence"], 0.0)
         self.assertEqual(beat_grid([0.1, 0.2], self.STEP)["beats"], [])
 
@@ -1037,6 +2011,7 @@ class BeatGridTests(unittest.TestCase):
         as usable at the default threshold."""
         from _common import beat_grid
         import random
+
         rng = random.Random(7)
         env = [rng.random() for _ in range(1000)]
         g = beat_grid(env, self.STEP)
@@ -1045,6 +2020,7 @@ class BeatGridTests(unittest.TestCase):
 
     def test_min_confidence_only_moves_the_usable_flag(self):
         from _common import beat_grid
+
         env = self._clicks(0.5)
         self.assertTrue(beat_grid(env, self.STEP, min_confidence=0.5)["usable"])
         self.assertFalse(beat_grid(env, self.STEP, min_confidence=1.01)["usable"])
@@ -1053,6 +2029,7 @@ class BeatGridTests(unittest.TestCase):
         """A grid must be regular, so a gap in the music still gets grid points -- and they are
         reported as unsupported rather than quietly presented as measured beats."""
         from _common import beat_grid
+
         env = self._clicks(0.5, seconds=5.0) + [0.01] * 500
         g = beat_grid(env, self.STEP)
         self.assertGreater(g["unsupported"], 0)
@@ -1061,12 +2038,14 @@ class BeatGridTests(unittest.TestCase):
     def test_supported_beats_excludes_the_grid_over_a_silent_passage(self):
         """The regular grid runs on through a passage with no music in it -- that is what a grid
         is. `supported_beats` is the subset a measured onset marks, and it is the only list a tool
-        that moves a cut may snap to: 8.0 s here is fifteen seconds into dead silence."""
+        that moves a cut may snap to: 8.0 s here is fifteen seconds into dead silence.
+        """
         from _common import beat_grid, snap_points
+
         env = [0.001] * 2000
-        for i in range(0, 500, 50):        # a 120 BPM click for the first 5 s
+        for i in range(0, 500, 50):  # a 120 BPM click for the first 5 s
             env[i] = 1.0
-        for i in range(500, 2000):         # then 15 s of near-silence
+        for i in range(500, 2000):  # then 15 s of near-silence
             env[i] = 0.0005
         g = beat_grid(env, self.STEP)
         self.assertAlmostEqual(g["tempo_bpm"], 120.0, delta=2.0)
@@ -1080,14 +2059,18 @@ class BeatGridTests(unittest.TestCase):
 
     def test_flat_envelope_has_no_supported_beats(self):
         from _common import beat_grid
+
         self.assertEqual(beat_grid([0.5] * 1000, self.STEP)["supported_beats"], [])
 
     def test_snap_points_never_adds_or_drops_a_point(self):
         from _common import snap_points
         import random
+
         rng = random.Random(11)
         for _ in range(50):
-            beats = sorted(round(rng.uniform(0, 30), 3) for _ in range(rng.randint(0, 20)))
+            beats = sorted(
+                round(rng.uniform(0, 30), 3) for _ in range(rng.randint(0, 20))
+            )
             points = [round(rng.uniform(0, 30), 3) for _ in range(rng.randint(1, 8))]
             out = snap_points(points, beats, rng.uniform(0, 0.5))
             self.assertEqual(len(out), len(points))
@@ -1099,6 +2082,7 @@ class BeatGridTests(unittest.TestCase):
 
     def test_snap_respects_tolerance(self):
         from _common import snap_points
+
         out = snap_points([2.3], [1.0, 2.0, 3.0], 0.12)
         self.assertFalse(out[0]["snapped"])
         self.assertEqual(out[0]["to"], 2.3)
@@ -1110,6 +2094,7 @@ class BeatGridTests(unittest.TestCase):
 
     def test_snap_with_no_beats_changes_nothing(self):
         from _common import snap_points
+
         out = snap_points([1.0, 2.0], [], 1.0)
         self.assertEqual([r["to"] for r in out], [1.0, 2.0])
         self.assertFalse(any(r["snapped"] for r in out))
@@ -1118,12 +2103,19 @@ class BeatGridTests(unittest.TestCase):
         import unittest.mock
         import _common
         from _common import beat_grid, snap_points
+
         def boom(*a, **k):
             raise AssertionError("beat_grid ran a subprocess")
-        with unittest.mock.patch.object(_common, "run", boom), \
-             unittest.mock.patch.object(_common, "run_analysis", boom), \
-             unittest.mock.patch.object(subprocess, "run", boom), \
-             unittest.mock.patch.object(subprocess, "Popen", boom):
+
+        with unittest.mock.patch.object(
+            _common, "run", boom
+        ), unittest.mock.patch.object(
+            _common, "run_analysis", boom
+        ), unittest.mock.patch.object(
+            subprocess, "run", boom
+        ), unittest.mock.patch.object(
+            subprocess, "Popen", boom
+        ):
             g = beat_grid(self._clicks(0.5), self.STEP)
             self.assertAlmostEqual(g["tempo_bpm"], 120.0, delta=1.0)
             self.assertEqual(len(snap_points([1.0], g["beats"], 0.1)), 1)

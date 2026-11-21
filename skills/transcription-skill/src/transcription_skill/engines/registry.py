@@ -1,6 +1,8 @@
 """EngineRegistry: what engines exist and what they offer. It answers "what is there" and "what is
 usable"; it never decides which engine should be used. Engines are registered as classes from this
-package (no dynamic loading, no plugins); the default registry holds only implemented engines."""
+package (no dynamic loading, no plugins); the default registry holds only implemented engines.
+"""
+
 from __future__ import annotations
 
 from typing import Dict, List, Optional, Type, Union
@@ -22,7 +24,9 @@ class EngineRegistry:
         if not isinstance(eid, str) or not eid or eid == "abstract":
             raise ValueError("engine must define a non-empty id")
         if getattr(engine, "execution_mode", None) not in EXECUTION_MODES:
-            raise ValueError(f"engine {eid}: execution_mode must be one of {EXECUTION_MODES}")
+            raise ValueError(
+                f"engine {eid}: execution_mode must be one of {EXECUTION_MODES}"
+            )
         if eid in self._engines:
             raise ValueError(f"engine {eid} already registered")
         self._engines[eid] = engine
@@ -34,7 +38,11 @@ class EngineRegistry:
     def get(self, engine_id: str) -> TranscriptionEngine:
         e = self._engines.get(engine_id)
         if e is None:
-            raise TranscriptionError("ENGINE_UNAVAILABLE", f"unknown engine {engine_id!r}", {"known": self.ids()})
+            raise TranscriptionError(
+                "ENGINE_UNAVAILABLE",
+                f"unknown engine {engine_id!r}",
+                {"known": self.ids()},
+            )
         return e() if isinstance(e, type) else e
 
     def default_model(self, engine_id: str) -> Optional[str]:
@@ -54,21 +62,44 @@ class EngineRegistry:
         return self.get(engine_id).spec(include_models=True, offline=offline)
 
     # ---- filters (facts only; ordering is registration/alphabetical, not preference)
-    def find_by_execution_mode(self, mode: str, available_only: bool = True) -> List[EngineSpec]:
+    def find_by_execution_mode(
+        self, mode: str, available_only: bool = True
+    ) -> List[EngineSpec]:
         if mode not in EXECUTION_MODES:
-            raise TranscriptionError("INVALID_INPUT", f"execution_mode must be one of {EXECUTION_MODES}")
-        return [s for s in (self.available() if available_only else self.list()) if s.execution_mode == mode]
+            raise TranscriptionError(
+                "INVALID_INPUT", f"execution_mode must be one of {EXECUTION_MODES}"
+            )
+        return [
+            s
+            for s in (self.available() if available_only else self.list())
+            if s.execution_mode == mode
+        ]
 
-    def find_by_capability(self, capability: str, available_only: bool = True) -> List[EngineSpec]:
+    def find_by_capability(
+        self, capability: str, available_only: bool = True
+    ) -> List[EngineSpec]:
         if capability not in ENGINE_CAPABILITIES:
-            raise TranscriptionError("INVALID_INPUT", f"unknown capability {capability!r}", {"known": list(ENGINE_CAPABILITIES)})
-        return [s for s in (self.available() if available_only else self.list()) if s.has(capability)]
+            raise TranscriptionError(
+                "INVALID_INPUT",
+                f"unknown capability {capability!r}",
+                {"known": list(ENGINE_CAPABILITIES)},
+            )
+        return [
+            s
+            for s in (self.available() if available_only else self.list())
+            if s.has(capability)
+        ]
 
     def find_by_language(self, language: str) -> List[EngineSpec]:
         return [s for s in self.available() if language in s.supported_languages]
 
-    def to_dict(self, include_models: bool = False, offline: bool = False) -> List[Dict]:
-        return [self.get(eid).spec(include_models=include_models, offline=offline).to_dict() for eid in self.ids()]
+    def to_dict(
+        self, include_models: bool = False, offline: bool = False
+    ) -> List[Dict]:
+        return [
+            self.get(eid).spec(include_models=include_models, offline=offline).to_dict()
+            for eid in self.ids()
+        ]
 
 
 _DEFAULT: Optional[EngineRegistry] = None
@@ -83,6 +114,7 @@ def default_registry() -> EngineRegistry:
         from .qwen3_asr import Qwen3AsrEngine
         from .speechcpp import SpeechCppEngine
         from .whisperx import WhisperXEngine
+
         r = EngineRegistry()
         r.register(FasterWhisperEngine)
         r.register(HaasJaEngine)

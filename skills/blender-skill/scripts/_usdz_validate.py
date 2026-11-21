@@ -11,6 +11,7 @@ Read directly from the file's own zip structure (stdlib `zipfile`/`struct`), ind
 Blender -- this is purely about what convert.py's own USDZ export actually wrote to disk, not
 about the USD scene content.
 """
+
 from __future__ import annotations
 
 import struct
@@ -42,7 +43,7 @@ def validate(path: str) -> Optional[dict]:
         off = info.header_offset
         # Local file header: 30 fixed bytes, then filename, then the extra field.
         try:
-            fname_len, extra_len = struct.unpack("<HH", raw[off + 26:off + 30])
+            fname_len, extra_len = struct.unpack("<HH", raw[off + 26 : off + 30])
         except struct.error:
             issues.append(f"{info.filename}: local file header truncated/corrupt")
             continue
@@ -50,9 +51,20 @@ def validate(path: str) -> Optional[dict]:
         stored = info.compress_type == zipfile.ZIP_STORED
         aligned = (data_start % 64) == 0
         if not stored:
-            issues.append(f"{info.filename}: compressed (Deflate), not stored -- USDZ requires uncompressed entries")
+            issues.append(
+                f"{info.filename}: compressed (Deflate), not stored -- USDZ requires uncompressed entries"
+            )
         if not aligned:
-            issues.append(f"{info.filename}: file data starts at offset {data_start}, not 64-byte-aligned")
-        entries.append({"name": info.filename, "stored": stored, "data_offset": data_start, "aligned": aligned})
+            issues.append(
+                f"{info.filename}: file data starts at offset {data_start}, not 64-byte-aligned"
+            )
+        entries.append(
+            {
+                "name": info.filename,
+                "stored": stored,
+                "data_offset": data_start,
+                "aligned": aligned,
+            }
+        )
 
     return {"valid": not issues, "issues": issues, "entries": entries}

@@ -1,10 +1,26 @@
 """Static analyzer registry: the fixed set of analyzers this package ships. No dynamic loading, no plugins."""
+
 from __future__ import annotations
 
 from typing import Dict, List
 
-from .analyzers import (Analyzer, AudioAnalyzer, EventsAnalyzer, IntegrityAnalyzer, LoudnessAnalyzer, NoiseAnalyzer, ProbeAnalyzer, SceneAnalyzer,
-                        SignalsAnalyzer, SilenceAnalyzer, StreamAnalyzer, StyleAnalyzer, TimingAnalyzer, VadAnalyzer, VideoAnalyzer)
+from .analyzers import (
+    Analyzer,
+    AudioAnalyzer,
+    EventsAnalyzer,
+    IntegrityAnalyzer,
+    LoudnessAnalyzer,
+    NoiseAnalyzer,
+    ProbeAnalyzer,
+    SceneAnalyzer,
+    SignalsAnalyzer,
+    SilenceAnalyzer,
+    StreamAnalyzer,
+    StyleAnalyzer,
+    TimingAnalyzer,
+    VadAnalyzer,
+    VideoAnalyzer,
+)
 from .capabilities import CapabilitySet
 from .contract import KIND_TO_TOOL, TOOL_CAPABILITIES
 from .errors import AnalysisError
@@ -23,7 +39,9 @@ class AnalyzerRegistry:
                     raise ValueError(f"kind {k} served by two analyzers")
                 self._by_kind[k] = a
         # the contract and the registry must agree exactly (no declared-but-unimplemented tools / kinds)
-        if set(self._by_kind) != set(KIND_TO_TOOL) or any(KIND_TO_TOOL[k] != a.id for k, a in self._by_kind.items()):
+        if set(self._by_kind) != set(KIND_TO_TOOL) or any(
+            KIND_TO_TOOL[k] != a.id for k, a in self._by_kind.items()
+        ):
             raise ValueError("analyzer registry does not match contract KIND_TO_TOOL")
         for a in analyzers:
             if list(a.required_capabilities) != TOOL_CAPABILITIES[a.id]:
@@ -45,11 +63,32 @@ class AnalyzerRegistry:
         rows = []
         for a in self.all():
             missing = caps.missing(list(a.required_capabilities))
-            rows.append({**a.to_dict(), "status": "available" if not missing else "unavailable", "missing_capabilities": missing})
+            rows.append(
+                {
+                    **a.to_dict(),
+                    "status": "available" if not missing else "unavailable",
+                    "missing_capabilities": missing,
+                }
+            )
         return rows
 
 
 def default_registry() -> AnalyzerRegistry:
-    return AnalyzerRegistry([ProbeAnalyzer(), StreamAnalyzer(), VideoAnalyzer(), AudioAnalyzer(), SilenceAnalyzer(),
-                             LoudnessAnalyzer(), IntegrityAnalyzer(), SceneAnalyzer(), TimingAnalyzer(), NoiseAnalyzer(),
-                             StyleAnalyzer(), VadAnalyzer(), EventsAnalyzer(), SignalsAnalyzer()])
+    return AnalyzerRegistry(
+        [
+            ProbeAnalyzer(),
+            StreamAnalyzer(),
+            VideoAnalyzer(),
+            AudioAnalyzer(),
+            SilenceAnalyzer(),
+            LoudnessAnalyzer(),
+            IntegrityAnalyzer(),
+            SceneAnalyzer(),
+            TimingAnalyzer(),
+            NoiseAnalyzer(),
+            StyleAnalyzer(),
+            VadAnalyzer(),
+            EventsAnalyzer(),
+            SignalsAnalyzer(),
+        ]
+    )

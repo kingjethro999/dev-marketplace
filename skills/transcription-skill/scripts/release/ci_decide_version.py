@@ -11,6 +11,7 @@ since the latest tag: the version stays at that tag and `already_released=true`,
 (bump, CHANGELOG, tag, GitHub Release, publish) is skipped. Manual mode ignores RELEASABLE: an explicit
 version bump in pyproject.toml always releases. A missing RELEASABLE means true (the old behaviour).
 """
+
 from __future__ import annotations
 
 import os
@@ -33,7 +34,10 @@ def main() -> int:
         resolved = os.environ.get("RESOLVED_VERSION", "")
         new_version = resolved[1:] if resolved.startswith("v") else resolved
         if not SEMVER_RE.match(new_version):
-            print(f"::error::release-drafter returned an unusable resolved-version: {resolved!r}", file=sys.stderr)
+            print(
+                f"::error::release-drafter returned an unusable resolved-version: {resolved!r}",
+                file=sys.stderr,
+            )
             return 1
     else:
         new_version = current_version
@@ -44,7 +48,9 @@ def main() -> int:
         f.write(f"tag=v{new_version}\n")
         f.write(f"bump_file={'true' if mode == 'auto' and releasable else 'false'}\n")
         f.write(f"already_released={'true' if already_released else 'false'}\n")
-    print(f"mode={mode} releasable={releasable} new_version={new_version} already_released={already_released}")
+    print(
+        f"mode={mode} releasable={releasable} new_version={new_version} already_released={already_released}"
+    )
     return 0
 
 

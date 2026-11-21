@@ -103,8 +103,12 @@ def measure_text_pixels(rgb: bytes, width: int, height: int) -> Dict[str, Any]:
     if t is None:
         lum = _median(rel)
         return {
-            "contrast_ratio": 1.0, "ink_luminance": None, "background_luminance": round(lum, 6),
-            "ink_fraction": 0.0, "text_height_px": 0, "line_heights_px": [],
+            "contrast_ratio": 1.0,
+            "ink_luminance": None,
+            "background_luminance": round(lum, 6),
+            "ink_fraction": 0.0,
+            "text_height_px": 0,
+            "line_heights_px": [],
         }
 
     dark = [i for i in range(n) if luma[i] <= t]
@@ -124,7 +128,7 @@ def measure_text_pixels(rgb: bytes, width: int, height: int) -> Dict[str, Any]:
     run = 0
     for row in range(height):
         base = row * width
-        if any(ink_flags[base:base + width]):
+        if any(ink_flags[base : base + width]):
             run += 1
         elif run:
             runs.append(run)
@@ -153,29 +157,53 @@ def analyze_text_regions(
     timeout: float = 60.0,
 ) -> TextResult:
     results: List[Dict[str, Any]] = []
-    short_side = min(frame_width, frame_height) if frame_width and frame_height else None
+    short_side = (
+        min(frame_width, frame_height) if frame_width and frame_height else None
+    )
     for index, region in enumerate(regions):
         x, y, w, h = (int(v) for v in region.box)
-        entry: Dict[str, Any] = {"index": index, "t": region.t, "box": [x, y, w, h], "role": region.role}
+        entry: Dict[str, Any] = {
+            "index": index,
+            "t": region.t,
+            "box": [x, y, w, h],
+            "role": region.role,
+        }
         if frame_width is None or frame_height is None:
             entry.update(measured=False, reason="frame size could not be measured")
             results.append(entry)
             continue
         if x + w > frame_width or y + h > frame_height:
-            entry.update(measured=False, reason=f"box extends outside the {frame_width}x{frame_height} frame")
+            entry.update(
+                measured=False,
+                reason=f"box extends outside the {frame_width}x{frame_height} frame",
+            )
             results.append(entry)
             continue
         argv = ffmpeg_rawvideo_argv(
-            ffmpeg_path, input_path, ["format=rgb24", f"crop={w}:{h}:{x}:{y}"],
-            stream_select=f"0:{video_stream_index}", pix_fmt="rgb24",
-            seek_sec=float(region.t), max_frames=1, log_level="error",
+            ffmpeg_path,
+            input_path,
+            ["format=rgb24", f"crop={w}:{h}:{x}:{y}"],
+            stream_select=f"0:{video_stream_index}",
+            pix_fmt="rgb24",
+            seek_sec=float(region.t),
+            max_frames=1,
+            log_level="error",
         )
         try:
             res = run_argv(argv, timeout=timeout, binary_stdout=True)
         except FileNotFoundError:
-            raise error("DEPENDENCY_ERROR", "ffmpeg executable could not be run", executable=ffmpeg_path)
+            raise error(
+                "DEPENDENCY_ERROR",
+                "ffmpeg executable could not be run",
+                executable=ffmpeg_path,
+            )
         if res.timed_out:
-            raise error("TOOL_ERROR", "ffmpeg text-region frame grab timed out", argv=argv, timeout=timeout)
+            raise error(
+                "TOOL_ERROR",
+                "ffmpeg text-region frame grab timed out",
+                argv=argv,
+                timeout=timeout,
+            )
         raw = res.stdout_bytes
         if len(raw) < w * h * 3:
             entry.update(measured=False, reason=f"no decodable frame at t={region.t}s")
@@ -183,11 +211,22 @@ def analyze_text_regions(
             continue
         facts = measure_text_pixels(raw[: w * h * 3], w, h)
         entry.update(measured=True, **facts)
-        entry["text_height_px_at_1080"] = round(facts["text_height_px"] * 1080.0 / short_side, 2) if short_side else None
+        entry["text_height_px_at_1080"] = (
+            round(facts["text_height_px"] * 1080.0 / short_side, 2)
+            if short_side
+            else None
+        )
         results.append(entry)
 
     return TextResult(
         measurements=[
-            QCMeasurement("video.text_regions", "video", "text_regions", results, source="ffmpeg:crop", notes=TEXT_MEASUREMENT_NOTE)
+            QCMeasurement(
+                "video.text_regions",
+                "video",
+                "text_regions",
+                results,
+                source="ffmpeg:crop",
+                notes=TEXT_MEASUREMENT_NOTE,
+            )
         ]
     )

@@ -16,6 +16,7 @@ explicitly. Offloading copies data onto the user's drives, so nothing is copied 
   ingest-skill's version, the job). The agent's own analysis (probe / silence / loudness) then runs on the verified copies when the
   media engine can read them.
 """
+
 from __future__ import annotations
 
 import os
@@ -27,7 +28,13 @@ from ..models import Observation
 from ..tools.ingest.adapter import NAME_BY, NAME_RE, TOOL_INVENTORY, TOOL_OFFLOAD
 
 PREFIX = "ingest."
-KEY_DEST, KEY_PROJECT, KEY_HASH, KEY_NAME_BY, KEY_REEL = "ingest.dest", "ingest.project", "ingest.hash", "ingest.name_by", "ingest.reel"
+KEY_DEST, KEY_PROJECT, KEY_HASH, KEY_NAME_BY, KEY_REEL = (
+    "ingest.dest",
+    "ingest.project",
+    "ingest.hash",
+    "ingest.name_by",
+    "ingest.reel",
+)
 REQUIREMENT_KEYS = (KEY_DEST, KEY_PROJECT, KEY_HASH, KEY_NAME_BY, KEY_REEL)
 HASHES = ("sha256", "xxh64")
 SKILL = "media_offload"
@@ -57,7 +64,13 @@ class OffloadRequest:
 
     def args(self, dry_run: bool = False) -> Dict[str, Any]:
         """The typed `ingest/offload` arguments (tools/ingest/adapter.py OFFLOAD_ARGS)."""
-        out: Dict[str, Any] = {"source": self.source, "destinations": list(self.destinations), "hash": self.hash, "name_by": self.name_by, "dry_run": dry_run}
+        out: Dict[str, Any] = {
+            "source": self.source,
+            "destinations": list(self.destinations),
+            "hash": self.hash,
+            "name_by": self.name_by,
+            "dry_run": dry_run,
+        }
         if self.project:
             out["project"] = self.project
         if self.reel:
@@ -80,86 +93,162 @@ def _destinations(v: Any) -> List[str]:
     elif isinstance(v, (list, tuple)):
         items = [x.strip() if isinstance(x, str) else x for x in v]
     else:
-        raise OffloadRequirementError(f"{KEY_DEST} must be a directory, a comma-separated list or a JSON list of directories, got {v!r}")
+        raise OffloadRequirementError(
+            f"{KEY_DEST} must be a directory, a comma-separated list or a JSON list of directories, got {v!r}"
+        )
     if not items or any(not isinstance(x, str) or not x for x in items):
-        raise OffloadRequirementError(f"{KEY_DEST} has an empty or non-text entry: {v!r}")
+        raise OffloadRequirementError(
+            f"{KEY_DEST} has an empty or non-text entry: {v!r}"
+        )
     return items
 
 
 def parse_offload_requirements(source: str, reqs: Dict[str, Any]) -> OffloadRequest:
     """The offload a card plan asks for, or OffloadRequirementError naming what is wrong. Every destination must already exist as a
     directory (a mount point of a drive that is not mounted is never created on the system disk), be given once, and neither contain
-    the card nor sit inside it. Two destinations on one volume, or a single destination, are planned with a warning: not a backup."""
+    the card nor sit inside it. Two destinations on one volume, or a single destination, are planned with a warning: not a backup.
+    """
     reqs = dict(reqs or {})
     unknown = sorted(k for k in reqs if k not in REQUIREMENT_KEYS)
     if unknown:
-        raise OffloadRequirementError(f"an offload plan takes only {', '.join(REQUIREMENT_KEYS)}; got {', '.join(unknown)} "
-                                      "(plan the edit on the verified copies once the offload has run)")
+        raise OffloadRequirementError(
+            f"an offload plan takes only {', '.join(REQUIREMENT_KEYS)}; got {', '.join(unknown)} "
+            "(plan the edit on the verified copies once the offload has run)"
+        )
     if not is_card_input(source):
-        raise OffloadRequirementError(f"{source} is not a directory: an offload copies a card / recorder folder")
+        raise OffloadRequirementError(
+            f"{source} is not a directory: an offload copies a card / recorder folder"
+        )
     if reqs.get(KEY_DEST) in (None, "", []):
-        raise OffloadRequirementError(f"an offload copies the card onto your drives, so nothing is copied unless you name every destination: "
-                                      f"--set {KEY_DEST}=/Volumes/SSD1/Footage --set {KEY_DEST}=/Volumes/SSD2/Footage (or a comma-separated / JSON list)")
+        raise OffloadRequirementError(
+            f"an offload copies the card onto your drives, so nothing is copied unless you name every destination: "
+            f"--set {KEY_DEST}=/Volumes/SSD1/Footage --set {KEY_DEST}=/Volumes/SSD2/Footage (or a comma-separated / JSON list)"
+        )
     src = Path(source).resolve()
     dests: List[str] = []
     for raw in _destinations(reqs[KEY_DEST]):
         p = Path(os.path.expanduser(raw))
         if not p.is_absolute():
-            raise OffloadRequirementError(f"destination {raw!r} is not an absolute path")
+            raise OffloadRequirementError(
+                f"destination {raw!r} is not an absolute path"
+            )
         if not p.is_dir():
-            raise OffloadRequirementError(f"destination {raw} does not exist as a directory (is the drive mounted?); it is never created")
+            raise OffloadRequirementError(
+                f"destination {raw} does not exist as a directory (is the drive mounted?); it is never created"
+            )
         r = p.resolve()
         if str(r) in dests:
-            raise OffloadRequirementError(f"destination {raw} is given twice; a second copy must be on a different path (ideally a different drive)")
+            raise OffloadRequirementError(
+                f"destination {raw} is given twice; a second copy must be on a different path (ideally a different drive)"
+            )
         if r == src or src in r.parents or r in src.parents:
-            raise OffloadRequirementError(f"destination {raw} and the card {source} contain one another")
+            raise OffloadRequirementError(
+                f"destination {raw} and the card {source} contain one another"
+            )
         dests.append(str(r))
     h = reqs.get(KEY_HASH, "sha256")
     if h not in HASHES:
-        raise OffloadRequirementError(f"{KEY_HASH} must be one of {', '.join(HASHES)}, got {h!r}")
+        raise OffloadRequirementError(
+            f"{KEY_HASH} must be one of {', '.join(HASHES)}, got {h!r}"
+        )
     nb = reqs.get(KEY_NAME_BY, "folder")
     if nb not in NAME_BY:
-        raise OffloadRequirementError(f"{KEY_NAME_BY} must be one of {', '.join(NAME_BY)}, got {nb!r}")
+        raise OffloadRequirementError(
+            f"{KEY_NAME_BY} must be one of {', '.join(NAME_BY)}, got {nb!r}"
+        )
     for k in (KEY_PROJECT, KEY_REEL):
         v = reqs.get(k)
         if v is not None and (not isinstance(v, str) or not NAME_RE.match(v)):
-            raise OffloadRequirementError(f"{k} must be one folder name (1-64 letters, digits, '.', '_' or '-', starting with a letter or digit), got {v!r}")
-    out = OffloadRequest(str(src), dests, reqs.get(KEY_PROJECT), h, nb, reqs.get(KEY_REEL))
+            raise OffloadRequirementError(
+                f"{k} must be one folder name (1-64 letters, digits, '.', '_' or '-', starting with a letter or digit), got {v!r}"
+            )
+    out = OffloadRequest(
+        str(src), dests, reqs.get(KEY_PROJECT), h, nb, reqs.get(KEY_REEL)
+    )
     if len(dests) == 1:
-        out.warnings.append(f"one destination ({dests[0]}): there is no second copy; a backup needs a second drive")
+        out.warnings.append(
+            f"one destination ({dests[0]}): there is no second copy; a backup needs a second drive"
+        )
     devs: Dict[int, str] = {}
     for d in dests:
         dev = os.stat(d).st_dev
         if dev in devs:
-            out.warnings.append(f"{devs[dev]} and {d} are on the same volume: two copies on one drive are not a backup")
+            out.warnings.append(
+                f"{devs[dev]} and {d} are on the same volume: two copies on one drive are not a backup"
+            )
         devs.setdefault(dev, d)
     return out
 
 
 def plan_summary(summary: Dict[str, Any]) -> Dict[str, Any]:
     """What the dry run says will happen (OBSERVED, nothing written): file count, bytes, the reel / card id and each copy's folder."""
-    return {"files": summary.get("files"), "bytes_total": summary.get("bytes_total"), "skipped": summary.get("skipped"), "hash": summary.get("hash"),
-            "card": summary.get("card"), "roots": [d.get("root") for d in summary.get("destinations") or []], "source": summary.get("source")}
+    return {
+        "files": summary.get("files"),
+        "bytes_total": summary.get("bytes_total"),
+        "skipped": summary.get("skipped"),
+        "hash": summary.get("hash"),
+        "card": summary.get("card"),
+        "roots": [d.get("root") for d in summary.get("destinations") or []],
+        "source": summary.get("source"),
+    }
 
 
 def card_summary(inv: Dict[str, Any]) -> Dict[str, Any]:
     """The card's inventory as planned (OBSERVED, read on the card): structures, reel, the recordings with their members."""
-    return {"card": inv.get("card"), "clip_count": inv.get("clip_count"), "file_count": inv.get("file_count"), "spanned_count": inv.get("spanned_count"),
-            "total_duration_s": inv.get("total_duration_s"), "warnings": list(inv.get("warnings") or []), "probe": inv.get("probe"),
-            "clips": [{"clip_id": c.get("clip_id"), "structure": c.get("structure"), "spanned": c.get("spanned"), "incomplete": c.get("incomplete"),
-                       "duration_s": c.get("duration_s"), "members": [{"path": m.get("path"), "size": m.get("size")} for m in c.get("members") or []]}
-                      for c in inv.get("clips") or [] if isinstance(c, dict)]}
+    return {
+        "card": inv.get("card"),
+        "clip_count": inv.get("clip_count"),
+        "file_count": inv.get("file_count"),
+        "spanned_count": inv.get("spanned_count"),
+        "total_duration_s": inv.get("total_duration_s"),
+        "warnings": list(inv.get("warnings") or []),
+        "probe": inv.get("probe"),
+        "clips": [
+            {
+                "clip_id": c.get("clip_id"),
+                "structure": c.get("structure"),
+                "spanned": c.get("spanned"),
+                "incomplete": c.get("incomplete"),
+                "duration_s": c.get("duration_s"),
+                "members": [
+                    {"path": m.get("path"), "size": m.get("size")}
+                    for m in c.get("members") or []
+                ],
+            }
+            for c in inv.get("clips") or []
+            if isinstance(c, dict)
+        ],
+    }
 
 
-FACT_KEYS = ("probed", "container", "video_codec", "width", "height", "frame_rate", "audio_codec", "audio_channels", "sample_rate", "timecode", "creation_time")
+FACT_KEYS = (
+    "probed",
+    "container",
+    "video_codec",
+    "width",
+    "height",
+    "frame_rate",
+    "audio_codec",
+    "audio_channels",
+    "sample_rate",
+    "timecode",
+    "creation_time",
+)
 
 
-def clip_observations(inv: Dict[str, Any], report: Dict[str, Any], summary: Dict[str, Any], asset_of: Dict[str, str], version: str,
-                      provenance: Dict[str, Any]) -> List[Observation]:
+def clip_observations(
+    inv: Dict[str, Any],
+    report: Dict[str, Any],
+    summary: Dict[str, Any],
+    asset_of: Dict[str, str],
+    version: str,
+    provenance: Dict[str, Any],
+) -> List[Observation]:
     """One OBSERVED `ingest_clip` observation per member file of every recording, on the asset that file became (asset_of: relative
     member path → asset id). The data is ingest-skill's, as it reported it: the clip, its members in recording order with their sizes
     and hashes, the reel / card id and its source, the card structures, the camera sidecars, proxies and related files, the facts
-    ingest-skill measured (unknown stays None), and where every copy is (each destination's file, manifest and ASC MHL generation)."""
+    ingest-skill measured (unknown stays None), and where every copy is (each destination's file, manifest and ASC MHL generation).
+    """
     card = inv.get("card") or {}
     dests = summary.get("destinations") or []
     out: List[Observation] = []
@@ -171,16 +260,63 @@ def clip_observations(inv: Dict[str, Any], report: Dict[str, Any], summary: Dict
             if aid is None:
                 continue
             h = m.get("hash") if isinstance(m.get("hash"), dict) else None
-            data = {"clip_id": c.get("clip_id"), "structure": c.get("structure"), "spanned": bool(c.get("spanned")), "incomplete": bool(c.get("incomplete")),
-                    "member_index": i, "member_count": len(members), "path": rel,
-                    "members": [{"path": x.get("path"), "size": x.get("size"), "hash": x.get("hash")} for x in members],
-                    "size": m.get("size"), "hash": h, "member_duration_s": m.get("duration_s"), "duration_s": c.get("duration_s"),
-                    "facts": {k: c.get(k) for k in FACT_KEYS}, "sidecars": c.get("sidecars") or [], "proxies": c.get("proxies") or [], "related": c.get("related") or [],
-                    "metadata": c.get("metadata") or {}, "reel": card.get("reel"), "structures": card.get("structures") or [],
-                    "copies": [{"root": d.get("root"), "file": str(Path(str(d.get("root"))) / rel), "manifest": d.get("manifest"), "mhl": d.get("mhl")} for d in dests],
-                    "card_source": report.get("source"), "hash_algorithm": report.get("hash"), "inventory_warnings": list(inv.get("warnings") or []),
-                    "ingest_version": version, **provenance}
-            out.append(Observation(kind=CLIP_OBS_KIND, asset_id=aid, source=f"{TOOL_INVENTORY}@{version or 'unknown'}", data=data, skill="ingest", skill_version=version,
-                                   tool=TOOL_INVENTORY, external_id=str(c.get("clip_id") or ""), fingerprint=str((h or {}).get("value") or ""),
-                                   parameters={"target": dests[0].get("root") if dests else None, "offload_tool": TOOL_OFFLOAD}))
+            data = {
+                "clip_id": c.get("clip_id"),
+                "structure": c.get("structure"),
+                "spanned": bool(c.get("spanned")),
+                "incomplete": bool(c.get("incomplete")),
+                "member_index": i,
+                "member_count": len(members),
+                "path": rel,
+                "members": [
+                    {
+                        "path": x.get("path"),
+                        "size": x.get("size"),
+                        "hash": x.get("hash"),
+                    }
+                    for x in members
+                ],
+                "size": m.get("size"),
+                "hash": h,
+                "member_duration_s": m.get("duration_s"),
+                "duration_s": c.get("duration_s"),
+                "facts": {k: c.get(k) for k in FACT_KEYS},
+                "sidecars": c.get("sidecars") or [],
+                "proxies": c.get("proxies") or [],
+                "related": c.get("related") or [],
+                "metadata": c.get("metadata") or {},
+                "reel": card.get("reel"),
+                "structures": card.get("structures") or [],
+                "copies": [
+                    {
+                        "root": d.get("root"),
+                        "file": str(Path(str(d.get("root"))) / rel),
+                        "manifest": d.get("manifest"),
+                        "mhl": d.get("mhl"),
+                    }
+                    for d in dests
+                ],
+                "card_source": report.get("source"),
+                "hash_algorithm": report.get("hash"),
+                "inventory_warnings": list(inv.get("warnings") or []),
+                "ingest_version": version,
+                **provenance,
+            }
+            out.append(
+                Observation(
+                    kind=CLIP_OBS_KIND,
+                    asset_id=aid,
+                    source=f"{TOOL_INVENTORY}@{version or 'unknown'}",
+                    data=data,
+                    skill="ingest",
+                    skill_version=version,
+                    tool=TOOL_INVENTORY,
+                    external_id=str(c.get("clip_id") or ""),
+                    fingerprint=str((h or {}).get("value") or ""),
+                    parameters={
+                        "target": dests[0].get("root") if dests else None,
+                        "offload_tool": TOOL_OFFLOAD,
+                    },
+                )
+            )
     return out

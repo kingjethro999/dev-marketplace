@@ -4,6 +4,7 @@ SRT/VTT/TSV here are plain timed-text renderings of the segments: one cue/row pe
 normalized text as-is. No line breaking, styling, positioning, reading-speed logic or burn-in: those
 belong to subtitle-skill. The transcript's data model is JSON; the other formats are lossy views of it.
 """
+
 from __future__ import annotations
 
 import json
@@ -26,14 +27,18 @@ def _ts(seconds: float, sep: str) -> str:
 def to_srt(transcript: Dict[str, Any]) -> str:
     out = []
     for i, seg in enumerate(transcript["segments"], 1):
-        out.append(f"{i}\n{_ts(seg['start'], ',')} --> {_ts(seg['end'], ',')}\n{seg['text']}\n")
+        out.append(
+            f"{i}\n{_ts(seg['start'], ',')} --> {_ts(seg['end'], ',')}\n{seg['text']}\n"
+        )
     return "\n".join(out)
 
 
 def to_vtt(transcript: Dict[str, Any]) -> str:
     out = ["WEBVTT", ""]
     for seg in transcript["segments"]:
-        out.append(f"{_ts(seg['start'], '.')} --> {_ts(seg['end'], '.')}\n{seg['text']}\n")
+        out.append(
+            f"{_ts(seg['start'], '.')} --> {_ts(seg['end'], '.')}\n{seg['text']}\n"
+        )
     return "\n".join(out)
 
 
@@ -43,7 +48,8 @@ def to_json(transcript: Dict[str, Any]) -> str:
 
 def to_tsv(transcript: Dict[str, Any]) -> str:
     """start\tend\ttext per segment, times in integer milliseconds (whisper's own reference tsv
-    convention) so this rendering can be dropped into the same tooling that convention already has."""
+    convention) so this rendering can be dropped into the same tooling that convention already has.
+    """
     out = ["start\tend\ttext"]
     for seg in transcript["segments"]:
         start_ms = int(round(seg["start"] * 1000))
@@ -59,19 +65,41 @@ def to_txt(transcript: Dict[str, Any]) -> str:
 
 def render(transcript: Dict[str, Any], fmt: str) -> str:
     if fmt not in FORMATS:
-        raise TranscriptionError("INVALID_INPUT", f"format must be one of {FORMATS}, got {fmt!r}")
+        raise TranscriptionError(
+            "INVALID_INPUT", f"format must be one of {FORMATS}, got {fmt!r}"
+        )
     rep = validate_transcript(transcript)
     if not rep.ok:
-        raise TranscriptionError("VERIFICATION_FAILED", "transcript is not valid; refusing to export", {"errors": rep.errors[:10]})
-    return {"json": to_json, "srt": to_srt, "vtt": to_vtt, "tsv": to_tsv, "txt": to_txt}[fmt](transcript)
+        raise TranscriptionError(
+            "VERIFICATION_FAILED",
+            "transcript is not valid; refusing to export",
+            {"errors": rep.errors[:10]},
+        )
+    return {
+        "json": to_json,
+        "srt": to_srt,
+        "vtt": to_vtt,
+        "tsv": to_tsv,
+        "txt": to_txt,
+    }[fmt](transcript)
 
 
-def write(transcript: Dict[str, Any], fmt: str, output: str, forbid: Any = None, allowed_output_roots: Any = None) -> str:
+def write(
+    transcript: Dict[str, Any],
+    fmt: str,
+    output: str,
+    forbid: Any = None,
+    allowed_output_roots: Any = None,
+) -> str:
     """Write the rendering to `output` through the output policy. Never overwrites `forbid` (the transcript
-    file / media input); with `allowed_output_roots`, the resolved destination must sit inside one of them."""
+    file / media input); with `allowed_output_roots`, the resolved destination must sit inside one of them.
+    """
     from .paths import OutputPolicy
+
     text = render(transcript, fmt)
-    out = OutputPolicy(allowed_output_roots).resolve_output(output, forbid=[f for f in (forbid or []) if f])
+    out = OutputPolicy(allowed_output_roots).resolve_output(
+        output, forbid=[f for f in (forbid or []) if f]
+    )
     with open(out, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(text)
     return out

@@ -7,7 +7,11 @@ import pytest
 
 from artifact_skill.adapters.docx.adapter import DocxAdapter
 from artifact_skill.core.artifact import ArtifactRef, ArtifactType
-from artifact_skill.core.errors import ArtifactExecutionError, ArtifactInputError, ArtifactSecurityError
+from artifact_skill.core.errors import (
+    ArtifactExecutionError,
+    ArtifactInputError,
+    ArtifactSecurityError,
+)
 from artifact_skill.core.verification import CheckStatus
 
 
@@ -29,7 +33,9 @@ def adapter() -> DocxAdapter:
     return DocxAdapter()
 
 
-def _probe_docx_render_works(adapter: DocxAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+def _probe_docx_render_works(
+    adapter: DocxAdapter, ref: ArtifactRef, tmp_path: Path
+) -> bool:
     """See the identical helper in test_pptx_adapter.py — LibreOffice being
     on PATH doesn't guarantee it can convert a document in this environment."""
     try:
@@ -73,7 +79,9 @@ def test_verify_good_docx_has_no_leftover_placeholder_text(good_docx, adapter):
     assert check.status == CheckStatus.PASS
 
 
-def test_verify_leftover_placeholder_docx_warns_by_default(leftover_placeholder_docx, adapter):
+def test_verify_leftover_placeholder_docx_warns_by_default(
+    leftover_placeholder_docx, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_docx)
     result = adapter.verify_structural(ref, {})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -83,7 +91,9 @@ def test_verify_leftover_placeholder_docx_warns_by_default(leftover_placeholder_
     assert "todo" in check.evidence["markers"]
 
 
-def test_verify_leftover_placeholder_docx_fails_under_strict_policy(leftover_placeholder_docx, adapter):
+def test_verify_leftover_placeholder_docx_fails_under_strict_policy(
+    leftover_placeholder_docx, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_docx)
     result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -131,19 +141,29 @@ def test_verify_good_doc_paragraph_count_requirement(good_docx, adapter):
     n = report.details["paragraph_count"]
 
     ok = adapter.verify_structural(ref, {"require_paragraph_count": n})
-    assert next(c for c in ok.checks if c.id == "paragraph_count_requirement").status == CheckStatus.PASS
+    assert (
+        next(c for c in ok.checks if c.id == "paragraph_count_requirement").status
+        == CheckStatus.PASS
+    )
 
     mismatch = adapter.verify_structural(ref, {"require_paragraph_count": n + 100})
-    assert next(c for c in mismatch.checks if c.id == "paragraph_count_requirement").status == CheckStatus.FAIL
+    assert (
+        next(c for c in mismatch.checks if c.id == "paragraph_count_requirement").status
+        == CheckStatus.FAIL
+    )
 
 
-def test_execute_metadata_set_preserves_input_and_paragraph_count(good_docx, adapter, tmp_path):
+def test_execute_metadata_set_preserves_input_and_paragraph_count(
+    good_docx, adapter, tmp_path
+):
     ref = ArtifactRef.from_path(good_docx)
     before_hash = ref.sha256
     before_report = adapter.inspect(ref)
     output_path = tmp_path / "out.docx"
 
-    result_ref = adapter.execute(ref, "metadata_set", {"title": "New Title", "author": "QA"}, output_path)
+    result_ref = adapter.execute(
+        ref, "metadata_set", {"title": "New Title", "author": "QA"}, output_path
+    )
 
     assert output_path.exists()
     assert result_ref.sha256 != before_hash
@@ -152,7 +172,10 @@ def test_execute_metadata_set_preserves_input_and_paragraph_count(good_docx, ada
     out_report = adapter.inspect(result_ref)
     assert out_report.details["metadata"]["title"] == "New Title"
     assert out_report.details["metadata"]["author"] == "QA"
-    assert out_report.details["paragraph_count"] == before_report.details["paragraph_count"]
+    assert (
+        out_report.details["paragraph_count"]
+        == before_report.details["paragraph_count"]
+    )
 
 
 def test_execute_unknown_operation_raises(good_docx, adapter, tmp_path):
@@ -167,8 +190,14 @@ def test_capabilities_report_never_lies_about_probe_result(adapter):
     caps = {c.id: c for c in adapter.capabilities()}
     assert "docx.structural" in caps
     assert "docx.render" in caps
-    assert caps["docx.structural"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
-    assert caps["docx.render"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["docx.structural"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
+    assert caps["docx.render"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
 
 
 def test_render_propagates_backend_failure(good_docx, adapter, tmp_path, monkeypatch):
@@ -176,7 +205,8 @@ def test_render_propagates_backend_failure(good_docx, adapter, tmp_path, monkeyp
 
     def _fake_convert(input_path, pdf_out_dir, **kwargs):
         raise ArtifactExecutionError(
-            code="ARTIFACT_RENDER_BACKEND_FAILED", message="fake failure for testing",
+            code="ARTIFACT_RENDER_BACKEND_FAILED",
+            message="fake failure for testing",
             evidence={"stderr": "fake soffice failure for testing"},
         )
 
@@ -188,7 +218,9 @@ def test_render_propagates_backend_failure(good_docx, adapter, tmp_path, monkeyp
     assert exc_info.value.code == "ARTIFACT_RENDER_BACKEND_FAILED"
 
 
-def test_render_honors_a_custom_limits_max_pages(good_docx, adapter, tmp_path, monkeypatch):
+def test_render_honors_a_custom_limits_max_pages(
+    good_docx, adapter, tmp_path, monkeypatch
+):
     """Grok review P0-3: limits must reach render_pdf_pages() through the
     intermediate PDF conversion step. Fakes convert_to_pdf() with a real,
     pre-made multi-page PDF rather than requiring a working LibreOffice
@@ -220,7 +252,9 @@ def test_render_honors_a_custom_limits_max_pages(good_docx, adapter, tmp_path, m
 def test_render_happy_path_when_backend_actually_works(good_docx, adapter, tmp_path):
     ref = ArtifactRef.from_path(good_docx)
     if not _probe_docx_render_works(adapter, ref, tmp_path):
-        pytest.skip("LibreOffice in this environment cannot convert documents (soffice present but non-functional)")
+        pytest.skip(
+            "LibreOffice in this environment cannot convert documents (soffice present but non-functional)"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) >= 1
     assert all(f.exists() for f in result.files)
@@ -242,12 +276,16 @@ def test_refine_with_empty_render_leaves_page_count_unknown(good_docx, adapter):
 
     ref = ArtifactRef.from_path(good_docx)
     structural = adapter.verify_structural(ref, {})
-    refined = adapter.refine_structural_with_render(structural, RenderResult(kind="page_images", files=[], backend="pypdfium2"))
+    refined = adapter.refine_structural_with_render(
+        structural, RenderResult(kind="page_images", files=[], backend="pypdfium2")
+    )
     check = next(c for c in refined.checks if c.id == "page_count")
     assert check.status == CheckStatus.UNKNOWN
 
 
-def test_refine_with_real_render_upgrades_page_count_to_pass(good_docx, adapter, tmp_path):
+def test_refine_with_real_render_upgrades_page_count_to_pass(
+    good_docx, adapter, tmp_path
+):
     """Unit-tests the refinement logic directly with a synthetic
     RenderResult (files that don't need to actually exist for this) so it
     doesn't depend on LibreOffice actually working in this environment —
@@ -259,7 +297,8 @@ def test_refine_with_real_render_upgrades_page_count_to_pass(good_docx, adapter,
     structural = adapter.verify_structural(ref, {})
     fake_pages = [tmp_path / "page-001.png", tmp_path / "page-002.png"]
     refined = adapter.refine_structural_with_render(
-        structural, RenderResult(kind="page_images", files=fake_pages, backend="pypdfium2")
+        structural,
+        RenderResult(kind="page_images", files=fake_pages, backend="pypdfium2"),
     )
     check = next(c for c in refined.checks if c.id == "page_count")
     assert check.status == CheckStatus.PASS
@@ -270,7 +309,9 @@ def test_refine_with_real_render_upgrades_page_count_to_pass(good_docx, adapter,
     assert other_ids_before == other_ids_after
 
 
-def test_docx_receipt_measures_real_page_count_when_render_works(good_docx, adapter, tmp_path):
+def test_docx_receipt_measures_real_page_count_when_render_works(
+    good_docx, adapter, tmp_path
+):
     """End-to-end: run_lifecycle() (execute/receipt path) should upgrade
     DOCX's page_count from UNKNOWN to a real, PASS, measured value when
     LibreOffice actually renders successfully as part of the same run."""
@@ -278,11 +319,17 @@ def test_docx_receipt_measures_real_page_count_when_render_works(good_docx, adap
 
     ref = ArtifactRef.from_path(good_docx)
     if not _probe_docx_render_works(adapter, ref, tmp_path / "_probe"):
-        pytest.skip("LibreOffice in this environment cannot convert documents (soffice present but non-functional)")
+        pytest.skip(
+            "LibreOffice in this environment cannot convert documents (soffice present but non-functional)"
+        )
 
     result = run_lifecycle(
-        good_docx, "metadata_set", {"title": "x"}, tmp_path / "out.docx",
-        evidence_dir=tmp_path / "reports", dry_run=False,
+        good_docx,
+        "metadata_set",
+        {"title": "x"},
+        tmp_path / "out.docx",
+        evidence_dir=tmp_path / "reports",
+        dry_run=False,
     )
     structural = result.receipt.verification["structural"]
     check = next(c for c in structural["checks"] if c["id"] == "page_count")
@@ -299,7 +346,9 @@ def test_limitations_names_the_real_known_caveats(adapter):
     assert "LibreOffice install" in text
 
 
-def test_inspect_rejects_entity_declaration_before_opening(good_docx, adapter, tmp_path):
+def test_inspect_rejects_entity_declaration_before_opening(
+    good_docx, adapter, tmp_path
+):
     """Grok-review finding, verified against current code: `security/
     xml_safety.py`'s module docstring claims its zip-level entity pre-scan
     protects PPTX/DOCX too, but it was only ever wired into the XLSX
@@ -314,7 +363,9 @@ def test_inspect_rejects_entity_declaration_before_opening(good_docx, adapter, t
     assert exc_info.value.code == "ARTIFACT_XML_ENTITY_DECLARATION_REJECTED"
 
 
-def test_execute_rejects_entity_declaration_before_opening(good_docx, adapter, tmp_path):
+def test_execute_rejects_entity_declaration_before_opening(
+    good_docx, adapter, tmp_path
+):
     hostile = tmp_path / "hostile.docx"
     _with_entity_declaration_injected(good_docx, hostile, "word/document.xml")
     ref = ArtifactRef.from_path(hostile)

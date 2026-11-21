@@ -46,6 +46,7 @@ Every fixture has a known construction so expected values in tests and evals are
                   amplitude 0.05, under a raised-cosine envelope of 4 syllables per second, 8 per second for t = 7..10 s
                   (a speaking-rate change), the amplitude x4 (+12 dB) for t = 11..12.5 s (an energy peak)
 """
+
 from __future__ import annotations
 
 import math
@@ -64,19 +65,32 @@ TONE = "0.1*sin(2*PI*1000*t)"
 STYLE_A_SHOTS = (12, 25, 37, 50, 62)
 STYLE_B_SHOTS = (10, 10, 20, 30, 30, 40, 40)
 STYLE_COLOURS = ("red", "lime", "blue", "white", "black", "yellow", "magenta")
-STYLE_B_SRT = ("1\n00:00:00,500 --> 00:00:01,500\nFirst line.\n\n2\n00:00:02,000 --> 00:00:03,000\nSecond line.\n\n"
-               "3\n00:00:04,000 --> 00:00:05,000\nThird line.\n\n4\n00:00:06,000 --> 00:00:07,000\n{\\an8}Top line.\n\n")
+STYLE_B_SRT = (
+    "1\n00:00:00,500 --> 00:00:01,500\nFirst line.\n\n2\n00:00:02,000 --> 00:00:03,000\nSecond line.\n\n"
+    "3\n00:00:04,000 --> 00:00:05,000\nThird line.\n\n4\n00:00:06,000 --> 00:00:07,000\n{\\an8}Top line.\n\n"
+)
 BURSTS = "0.5*sin(2*PI*440*t)*lt(mod(t\\,1)\\,0.5)"
 
 # speech fixtures (ADR-035): utterance start time and words, one syllable per vowel letter
-SPEECH_UTTERANCES = ((1.0, ("aio", "eu", "oa")), (4.6, ("ie", "ou")), (7.5, ("aeo", "ia", "ue", "oi")))
+SPEECH_UTTERANCES = (
+    (1.0, ("aio", "eu", "oa")),
+    (4.6, ("ie", "ou")),
+    (7.5, ("aeo", "ia", "ue", "oi")),
+)
 SPEECH_SECONDS = 12.0
 SPEECH_RATE = 16000
 _NOTE = "(220+55*floor(mod(t*4\\,6)))"
-MUSIC = (f"0.15*exp(-5*mod(t\\,0.25))*(sin(2*PI*{_NOTE}*t)+0.5*sin(4*PI*{_NOTE}*t)+0.3*sin(6*PI*{_NOTE}*t))"
-         "+0.06*sin(2*PI*110*t)")
-_VOWELS = {"a": (730, 1090, 2440, 3400), "i": (270, 2290, 3010, 3700), "u": (300, 870, 2240, 3300),
-           "e": (530, 1840, 2480, 3500), "o": (570, 840, 2410, 3400)}
+MUSIC = (
+    f"0.15*exp(-5*mod(t\\,0.25))*(sin(2*PI*{_NOTE}*t)+0.5*sin(4*PI*{_NOTE}*t)+0.3*sin(6*PI*{_NOTE}*t))"
+    "+0.06*sin(2*PI*110*t)"
+)
+_VOWELS = {
+    "a": (730, 1090, 2440, 3400),
+    "i": (270, 2290, 3010, 3700),
+    "u": (300, 870, 2240, 3300),
+    "e": (530, 1840, 2480, 3500),
+    "o": (570, 840, 2410, 3400),
+}
 _BANDWIDTHS = (80, 100, 140, 200)
 _GAINS = (1.0, 0.6, 0.3, 0.15)
 
@@ -91,7 +105,8 @@ def _resonator(freq: float, bw: float) -> Tuple[float, float, float]:
 def synth_utterance(words, f0: float, seed: int) -> List[float]:
     """A speech-like signal with the structure a voice-activity model keys on: a glottal pulse train (with intonation
     and jitter) through four vowel formants that glide towards the next vowel, a 40 ms noise burst before each
-    syllable, 60 ms gaps between words. Standard library only, deterministic for a seed; peak-normalised to 1."""
+    syllable, 60 ms gaps between words. Standard library only, deterministic for a seed; peak-normalised to 1.
+    """
     rng = random.Random(seed)
     out: List[float] = []
     formant_state = [[0.0, 0.0] for _ in range(4)]
@@ -110,14 +125,24 @@ def synth_utterance(words, f0: float, seed: int) -> List[float]:
             nxt = _VOWELS[word[si + 1]] if si + 1 < len(word) else _VOWELS[v]
             for j in range(n):
                 x = j / n
-                f = f0 * (1 + 0.12 * math.sin(2 * math.pi * (k * 0.37 + x * 0.8))) * (1 + 0.01 * rng.uniform(-1, 1))
+                f = (
+                    f0
+                    * (1 + 0.12 * math.sin(2 * math.pi * (k * 0.37 + x * 0.8)))
+                    * (1 + 0.01 * rng.uniform(-1, 1))
+                )
                 phase += f / SPEECH_RATE
                 p = phase % 1.0
-                g = 0.5 * (1 - math.cos(math.pi * p / 0.4)) if p < 0.4 else (math.cos(math.pi * (p - 0.4) / 0.32) if p < 0.56 else 0.0)
+                g = (
+                    0.5 * (1 - math.cos(math.pi * p / 0.4))
+                    if p < 0.4
+                    else (math.cos(math.pi * (p - 0.4) / 0.32) if p < 0.56 else 0.0)
+                )
                 src = g + 0.02 * rng.uniform(-1, 1)
                 sample = 0.0
                 for q in range(4):
-                    a, b, c = _resonator(_VOWELS[v][q] * (1 - 0.3 * x) + nxt[q] * 0.3 * x, _BANDWIDTHS[q])
+                    a, b, c = _resonator(
+                        _VOWELS[v][q] * (1 - 0.3 * x) + nxt[q] * 0.3 * x, _BANDWIDTHS[q]
+                    )
                     y = a * src + b * formant_state[q][0] + c * formant_state[q][1]
                     formant_state[q] = [y, formant_state[q][0]]
                     sample += _GAINS[q] * y
@@ -152,7 +177,12 @@ def write_speech(path: Path) -> List[Tuple[float, float]]:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(SPEECH_RATE)
-        w.writeframes(b"".join(struct.pack("<h", max(-32767, min(32767, int(round(v * 32767))))) for v in buf))
+        w.writeframes(
+            b"".join(
+                struct.pack("<h", max(-32767, min(32767, int(round(v * 32767)))))
+                for v in buf
+            )
+        )
     return labels
 
 
@@ -162,18 +192,34 @@ REACTIONS = (("laughter", "laugh.opus", 3.0), ("applause", "applause.opus", 11.0
 REACTIONS_SECONDS = 20.0
 # highlight_signals fixture (ADR-036)
 SIGNALS_SHOTS = (150, 10, 10, 10, 10, 10, 150)
-SIGNALS_AUDIO = ("0.05*(1+3*between(t\\,11\\,12.5))*sin(2*PI*500*t)*(0.5-0.5*cos(2*PI*if(between(t\\,7\\,10)\\,8\\,4)*t))")
+SIGNALS_AUDIO = "0.05*(1+3*between(t\\,11\\,12.5))*sin(2*PI*500*t)*(0.5-0.5*cos(2*PI*if(between(t\\,7\\,10)\\,8\\,4)*t))"
 
 
 def _decoded_seconds(path: Path) -> float:
-    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-                       capture_output=True, text=True, check=True)
+    r = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     return float(r.stdout.strip())
 
 
 def reaction_labels() -> Dict[str, Tuple[float, float]]:
     """True extents of the laugh and the applause in reactions.wav, in seconds."""
-    return {name: (start, round(start + _decoded_seconds(MEDIA / clip), 4)) for name, clip, start in REACTIONS}
+    return {
+        name: (start, round(start + _decoded_seconds(MEDIA / clip), 4))
+        for name, clip, start in REACTIONS
+    }
 
 
 def available() -> bool:
@@ -181,16 +227,26 @@ def available() -> bool:
 
 
 def _run(args):
-    subprocess.run(FF + args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    subprocess.run(
+        FF + args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+    )
 
 
 def _shots_video(shots):
     """Hard cuts between solid colours, each shot exactly the given number of frames at 25 fps."""
     inputs, chains = [], []
     for i, frames in enumerate(shots):
-        inputs += ["-f", "lavfi", "-i", f"color=c={STYLE_COLOURS[i % len(STYLE_COLOURS)]}:size=320x180:rate=25"]
+        inputs += [
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c={STYLE_COLOURS[i % len(STYLE_COLOURS)]}:size=320x180:rate=25",
+        ]
         chains.append(f"[{i}:v]trim=end_frame={frames},setpts=PTS-STARTPTS[v{i}]")
-    concat = "".join(f"[v{i}]" for i in range(len(shots))) + f"concat=n={len(shots)}:v=1:a=0[v]"
+    concat = (
+        "".join(f"[v{i}]" for i in range(len(shots)))
+        + f"concat=n={len(shots)}:v=1:a=0[v]"
+    )
     return inputs, ";".join(chains) + ";" + concat
 
 
@@ -200,79 +256,438 @@ def _glyph_bars(x0, y, n, enable, outline=False):
     for i in range(n):
         x = x0 + i * 11
         if outline:
-            out.append(f"drawbox=x={x - 2}:y={y - 2}:w=10:h=28:color=black:t=fill:enable='{enable}'")
+            out.append(
+                f"drawbox=x={x - 2}:y={y - 2}:w=10:h=28:color=black:t=fill:enable='{enable}'"
+            )
         out.append(f"drawbox=x={x}:y={y}:w=6:h=24:color=white:t=fill:enable='{enable}'")
     return out
 
 
-BURNED_IN = ",".join(["drawbox=x=150:y=286:w=340:h=48:color=black:t=fill:enable='between(t,1,4)'", *_glyph_bars(170, 298, 28, "between(t,1,4)"),
-                      *_glyph_bars(220, 298, 18, "between(t,5,8)", outline=True), *_glyph_bars(250, 30, 12, "between(t,8.5,9.5)")])
+BURNED_IN = ",".join(
+    [
+        "drawbox=x=150:y=286:w=340:h=48:color=black:t=fill:enable='between(t,1,4)'",
+        *_glyph_bars(170, 298, 28, "between(t,1,4)"),
+        *_glyph_bars(220, 298, 18, "between(t,5,8)", outline=True),
+        *_glyph_bars(250, 30, 12, "between(t,8.5,9.5)"),
+    ]
+)
 
 
 def build_all(directory: Path) -> Dict[str, Path]:
     d = Path(directory)
     d.mkdir(parents=True, exist_ok=True)
-    f: Dict[str, Path] = {k: d / v for k, v in {
-        "av": "av.mp4", "video_only": "video_only.mp4", "stereo": "stereo.wav", "mono": "mono.wav", "silence": "silence.wav",
-        "multi": "multi.mp4", "loud": "loud.wav", "short": "short.mp4", "scenes": "scenes.mp4", "corrupt": "corrupt.mp4",
-        "noisy": "noisy.wav", "cleaned": "cleaned.wav", "av_offset": "av_offset.mkv",
-        "style_a": "style_a.mp4", "style_b": "style_b.mkv", "portrait": "portrait.mp4", "talk": "talk.wav",
-        "burned": "burned.mp4", "clean": "clean.mp4", "speech": "speech.wav", "speech_music": "speech_music.wav",
-        "speech_noise": "speech_noise.wav", "music": "music.wav", "reactions": "reactions.wav", "signals": "signals.mp4"}.items()}
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25", "-f", "lavfi", "-i", f"aevalsrc='{TONE_GATED}':s=48000", "-t", "6",
-          *X264, "-c:a", "aac", "-shortest", str(f["av"])])
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25", "-t", "4", *X264, str(f["video_only"])])
-    _run(["-f", "lavfi", "-i", f"aevalsrc='{TONE}|{TONE}':s=48000:c=stereo", "-t", "3", "-c:a", "pcm_s24le", str(f["stereo"])])
-    _run(["-f", "lavfi", "-i", "aevalsrc='0.1*sin(2*PI*440*t)':s=44100:c=mono", "-t", "3", "-c:a", "pcm_s24le", str(f["mono"])])
-    _run(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", "2", "-c:a", "pcm_s16le", str(f["silence"])])
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25", "-f", "lavfi", "-i", "smptebars=size=160x90:rate=30",
-          "-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000", "-f", "lavfi", "-i", f"aevalsrc='{TONE}|{TONE}':s=44100:c=stereo",
-          "-map", "0:v", "-map", "1:v", "-map", "2:a", "-map", "3:a", "-t", "4", *X264, "-c:a", "aac",
-          "-metadata:s:a:0", "language=eng", "-metadata:s:a:1", "language=jpn", str(f["multi"])])
-    _run(["-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000", "-t", "5", "-c:a", "pcm_s16le", str(f["loud"])])
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25", "-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000", "-t", "0.4",
-          *X264, "-c:a", "aac", "-shortest", str(f["short"])])
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25:d=2", "-f", "lavfi", "-i", "smptebars=size=320x180:rate=25:d=2",
-          "-f", "lavfi", "-i", "color=c=blue:size=320x180:rate=25:d=2", "-filter_complex", "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]",
-          "-map", "[v]", *X264, str(f["scenes"])])
+    f: Dict[str, Path] = {
+        k: d / v
+        for k, v in {
+            "av": "av.mp4",
+            "video_only": "video_only.mp4",
+            "stereo": "stereo.wav",
+            "mono": "mono.wav",
+            "silence": "silence.wav",
+            "multi": "multi.mp4",
+            "loud": "loud.wav",
+            "short": "short.mp4",
+            "scenes": "scenes.mp4",
+            "corrupt": "corrupt.mp4",
+            "noisy": "noisy.wav",
+            "cleaned": "cleaned.wav",
+            "av_offset": "av_offset.mkv",
+            "style_a": "style_a.mp4",
+            "style_b": "style_b.mkv",
+            "portrait": "portrait.mp4",
+            "talk": "talk.wav",
+            "burned": "burned.mp4",
+            "clean": "clean.mp4",
+            "speech": "speech.wav",
+            "speech_music": "speech_music.wav",
+            "speech_noise": "speech_noise.wav",
+            "music": "music.wav",
+            "reactions": "reactions.wav",
+            "signals": "signals.mp4",
+        }.items()
+    }
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25",
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE_GATED}':s=48000",
+            "-t",
+            "6",
+            *X264,
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(f["av"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25",
+            "-t",
+            "4",
+            *X264,
+            str(f["video_only"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}|{TONE}':s=48000:c=stereo",
+            "-t",
+            "3",
+            "-c:a",
+            "pcm_s24le",
+            str(f["stereo"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='0.1*sin(2*PI*440*t)':s=44100:c=mono",
+            "-t",
+            "3",
+            "-c:a",
+            "pcm_s24le",
+            str(f["mono"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=48000:cl=mono",
+            "-t",
+            "2",
+            "-c:a",
+            "pcm_s16le",
+            str(f["silence"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25",
+            "-f",
+            "lavfi",
+            "-i",
+            "smptebars=size=160x90:rate=30",
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}':s=48000",
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}|{TONE}':s=44100:c=stereo",
+            "-map",
+            "0:v",
+            "-map",
+            "1:v",
+            "-map",
+            "2:a",
+            "-map",
+            "3:a",
+            "-t",
+            "4",
+            *X264,
+            "-c:a",
+            "aac",
+            "-metadata:s:a:0",
+            "language=eng",
+            "-metadata:s:a:1",
+            "language=jpn",
+            str(f["multi"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}':s=48000",
+            "-t",
+            "5",
+            "-c:a",
+            "pcm_s16le",
+            str(f["loud"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25",
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}':s=48000",
+            "-t",
+            "0.4",
+            *X264,
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(f["short"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "smptebars=size=320x180:rate=25:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:size=320x180:rate=25:d=2",
+            "-filter_complex",
+            "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]",
+            "-map",
+            "[v]",
+            *X264,
+            str(f["scenes"]),
+        ]
+    )
     for key, noise_amp in (("noisy", "0.01"), ("cleaned", "0.001")):
-        _run(["-f", "lavfi", "-i", f"aevalsrc='{BURSTS}':s=48000", "-f", "lavfi", "-i", f"anoisesrc=r=48000:a={noise_amp}:c=white:seed=1",
-              "-filter_complex", "[0:a][1:a]amix=inputs=2:normalize=0", "-t", "4", "-c:a", "pcm_s16le", str(f[key])])
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25", "-itsoffset", "0.5", "-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000",
-          "-t", "3", *X264, "-c:a", "pcm_s16le", str(f["av_offset"])])
+        _run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                f"aevalsrc='{BURSTS}':s=48000",
+                "-f",
+                "lavfi",
+                "-i",
+                f"anoisesrc=r=48000:a={noise_amp}:c=white:seed=1",
+                "-filter_complex",
+                "[0:a][1:a]amix=inputs=2:normalize=0",
+                "-t",
+                "4",
+                "-c:a",
+                "pcm_s16le",
+                str(f[key]),
+            ]
+        )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25",
+            "-itsoffset",
+            "0.5",
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}':s=48000",
+            "-t",
+            "3",
+            *X264,
+            "-c:a",
+            "pcm_s16le",
+            str(f["av_offset"]),
+        ]
+    )
     inputs, graph = _shots_video(STYLE_A_SHOTS)
-    _run([*inputs, "-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000", "-filter_complex", graph, "-map", "[v]",
-          "-map", f"{len(STYLE_A_SHOTS)}:a", "-t", "7.44", *X264, "-c:a", "aac", str(f["style_a"])])
+    _run(
+        [
+            *inputs,
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}':s=48000",
+            "-filter_complex",
+            graph,
+            "-map",
+            "[v]",
+            "-map",
+            f"{len(STYLE_A_SHOTS)}:a",
+            "-t",
+            "7.44",
+            *X264,
+            "-c:a",
+            "aac",
+            str(f["style_a"]),
+        ]
+    )
     srt = d / "style_b.srt"
     srt.write_text(STYLE_B_SRT, encoding="utf-8")
     inputs, graph = _shots_video(STYLE_B_SHOTS)
     n = len(STYLE_B_SHOTS)
-    _run([*inputs, "-f", "lavfi", "-i", "aevalsrc='0.2*sin(2*PI*1000*t)*lt(t\\,4)':s=48000", "-i", str(srt), "-filter_complex", graph,
-          "-map", "[v]", "-map", f"{n}:a", "-map", f"{n + 1}:s", "-t", "7.2", *X264, "-c:a", "pcm_s16le", "-c:s", "srt", str(f["style_b"])])
-    _run(["-f", "lavfi", "-i", "testsrc2=size=180x320:rate=30", "-t", "2", *X264, str(f["portrait"])])
-    _run(["-f", "lavfi", "-i", "aevalsrc='0.05*sin(2*PI*220*t)*(1+3*between(t\\,90\\,110))':s=8000",
-          "-f", "lavfi", "-i", "anoisesrc=r=8000:a=0.3:c=white:seed=2", "-filter_complex",
-          "[1:a]volume=0:enable='not(between(t\\,110.2\\,113))'[n];[0:a][n]amix=inputs=2:normalize=0", "-t", "180",
-          "-c:a", "pcm_s16le", str(f["talk"])])
+    _run(
+        [
+            *inputs,
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='0.2*sin(2*PI*1000*t)*lt(t\\,4)':s=48000",
+            "-i",
+            str(srt),
+            "-filter_complex",
+            graph,
+            "-map",
+            "[v]",
+            "-map",
+            f"{n}:a",
+            "-map",
+            f"{n + 1}:s",
+            "-t",
+            "7.2",
+            *X264,
+            "-c:a",
+            "pcm_s16le",
+            "-c:s",
+            "srt",
+            str(f["style_b"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=180x320:rate=30",
+            "-t",
+            "2",
+            *X264,
+            str(f["portrait"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='0.05*sin(2*PI*220*t)*(1+3*between(t\\,90\\,110))':s=8000",
+            "-f",
+            "lavfi",
+            "-i",
+            "anoisesrc=r=8000:a=0.3:c=white:seed=2",
+            "-filter_complex",
+            "[1:a]volume=0:enable='not(between(t\\,110.2\\,113))'[n];[0:a][n]amix=inputs=2:normalize=0",
+            "-t",
+            "180",
+            "-c:a",
+            "pcm_s16le",
+            str(f["talk"]),
+        ]
+    )
     for key, extra in (("burned", ["-vf", BURNED_IN]), ("clean", [])):
-        _run(["-f", "lavfi", "-i", "color=c=0x808080:size=640x360:rate=25", *extra, "-t", "10", *X264, str(f[key])])
+        _run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=0x808080:size=640x360:rate=25",
+                *extra,
+                "-t",
+                "10",
+                *X264,
+                str(f[key]),
+            ]
+        )
     write_speech(f["speech"])
     bed = f"{SPEECH_SECONDS:g}"
-    _run(["-f", "lavfi", "-i", f"aevalsrc='{MUSIC}':s=48000:d={bed}", "-c:a", "pcm_s16le", str(f["music"])])
-    for key, bed_input in (("speech_music", ["-i", str(f["music"])]),
-                           ("speech_noise", ["-f", "lavfi", "-i", f"anoisesrc=c=pink:a=0.25:r=48000:seed=3:d={bed}"])):
-        _run(["-i", str(f["speech"]), *bed_input, "-filter_complex", "[0:a]aresample=48000[s];[s][1:a]amix=inputs=2:duration=first:normalize=0",
-              "-c:a", "pcm_s16le", "-ar", "48000", str(f[key])])
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{MUSIC}':s=48000:d={bed}",
+            "-c:a",
+            "pcm_s16le",
+            str(f["music"]),
+        ]
+    )
+    for key, bed_input in (
+        ("speech_music", ["-i", str(f["music"])]),
+        (
+            "speech_noise",
+            ["-f", "lavfi", "-i", f"anoisesrc=c=pink:a=0.25:r=48000:seed=3:d={bed}"],
+        ),
+    ):
+        _run(
+            [
+                "-i",
+                str(f["speech"]),
+                *bed_input,
+                "-filter_complex",
+                "[0:a]aresample=48000[s];[s][1:a]amix=inputs=2:duration=first:normalize=0",
+                "-c:a",
+                "pcm_s16le",
+                "-ar",
+                "48000",
+                str(f[key]),
+            ]
+        )
     clips = [arg for _, clip, _ in REACTIONS for arg in ("-i", str(MEDIA / clip))]
-    delays = ";".join(f"[{i + 1}:a]aresample=16000,adelay={int(start * 1000)}:all=1[r{i}]" for i, (_, _, start) in enumerate(REACTIONS))
-    _run(["-f", "lavfi", "-i", f"anoisesrc=c=pink:a=0.001:r=16000:seed=5:d={REACTIONS_SECONDS:g}", *clips, "-filter_complex",
-          delays + ";[0:a]" + "".join(f"[r{i}]" for i in range(len(REACTIONS))) + f"amix=inputs={len(REACTIONS) + 1}:duration=first:normalize=0",
-          "-c:a", "pcm_s16le", "-ar", "16000", str(f["reactions"])])
+    delays = ";".join(
+        f"[{i + 1}:a]aresample=16000,adelay={int(start * 1000)}:all=1[r{i}]"
+        for i, (_, _, start) in enumerate(REACTIONS)
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            f"anoisesrc=c=pink:a=0.001:r=16000:seed=5:d={REACTIONS_SECONDS:g}",
+            *clips,
+            "-filter_complex",
+            delays
+            + ";[0:a]"
+            + "".join(f"[r{i}]" for i in range(len(REACTIONS)))
+            + f"amix=inputs={len(REACTIONS) + 1}:duration=first:normalize=0",
+            "-c:a",
+            "pcm_s16le",
+            "-ar",
+            "16000",
+            str(f["reactions"]),
+        ]
+    )
     inputs, graph = _shots_video(SIGNALS_SHOTS)
-    _run([*inputs, "-f", "lavfi", "-i", f"aevalsrc='{SIGNALS_AUDIO}':s=48000", "-filter_complex", graph, "-map", "[v]",
-          "-map", f"{len(SIGNALS_SHOTS)}:a", "-t", "14", *X264, "-c:a", "aac", str(f["signals"])])
+    _run(
+        [
+            *inputs,
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{SIGNALS_AUDIO}':s=48000",
+            "-filter_complex",
+            graph,
+            "-map",
+            "[v]",
+            "-map",
+            f"{len(SIGNALS_SHOTS)}:a",
+            "-t",
+            "14",
+            *X264,
+            "-c:a",
+            "aac",
+            str(f["signals"]),
+        ]
+    )
     data = bytearray(f["av"].read_bytes())
     mid = len(data) // 2
-    data[mid:mid + 3000] = b"\x00" * 3000
+    data[mid : mid + 3000] = b"\x00" * 3000
     f["corrupt"].write_bytes(bytes(data))
     return f

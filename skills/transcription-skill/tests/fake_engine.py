@@ -2,20 +2,47 @@
 registry, so nothing outside the test suite can select it. It exercises the engine contract, the
 service, the cache, budgets, validation and, through `execution_mode`/`requires_network`, the
 local/remote parts of the contract without any model and without any network."""
+
 from __future__ import annotations
 
 import time
 from typing import Any, Dict, List, Optional
 
-from transcription_skill.engines.base import (EXECUTION_LOCAL, MODEL_AVAILABLE, MODEL_DOWNLOAD_REQUIRED, MODEL_MISSING, MODEL_UNKNOWN,
-                                              CAP_LOCAL_MODEL, CAP_MODEL_DOWNLOAD, EngineRequest, EngineResult, EngineSegment, EngineWord,
-                                              ModelStatus, TranscriptionEngine)
+from transcription_skill.engines.base import (
+    EXECUTION_LOCAL,
+    MODEL_AVAILABLE,
+    MODEL_DOWNLOAD_REQUIRED,
+    MODEL_MISSING,
+    MODEL_UNKNOWN,
+    CAP_LOCAL_MODEL,
+    CAP_MODEL_DOWNLOAD,
+    EngineRequest,
+    EngineResult,
+    EngineSegment,
+    EngineWord,
+    ModelStatus,
+    TranscriptionEngine,
+)
 
 FAKE_SEGMENTS: List[Dict[str, Any]] = [
-    {"start": 1.0, "end": 3.0, "text": " 本日の講演を始めます。 ", "confidence": 0.9,
-     "words": [(1.0, 1.6, "本日の", 0.95), (1.6, 2.4, "講演を", 0.9), (2.4, 3.0, "始めます。", 0.92)]},
-    {"start": 3.5, "end": 5.0, "text": "よろしく\tお願いします。", "confidence": 0.8,
-     "words": [(3.5, 4.2, "よろしく", 0.85), (4.2, 5.0, "お願いします。", 0.9)]},
+    {
+        "start": 1.0,
+        "end": 3.0,
+        "text": " 本日の講演を始めます。 ",
+        "confidence": 0.9,
+        "words": [
+            (1.0, 1.6, "本日の", 0.95),
+            (1.6, 2.4, "講演を", 0.9),
+            (2.4, 3.0, "始めます。", 0.92),
+        ],
+    },
+    {
+        "start": 3.5,
+        "end": 5.0,
+        "text": "よろしく\tお願いします。",
+        "confidence": 0.8,
+        "words": [(3.5, 4.2, "よろしく", 0.85), (4.2, 5.0, "お願いします。", 0.9)],
+    },
 ]
 
 
@@ -26,13 +53,27 @@ class FakeEngine(TranscriptionEngine):
     description = "test-only engine"
     default_model = "fake-model"
 
-    def __init__(self, segments: Optional[List[Dict[str, Any]]] = None, delay: float = 0.0, language: Optional[str] = "ja",
-                 language_probability: Optional[float] = 0.99, version: str = "1.0", available: bool = True, words: bool = True,
-                 fail: Optional[Exception] = None, local_models: Optional[List[str]] = None, downloadable: bool = False,
-                 execution_mode: Optional[str] = None, requires_network: Optional[bool] = None, engine_id: Optional[str] = None,
-                 model_langs: Optional[Dict[str, List[str]]] = None):
+    def __init__(
+        self,
+        segments: Optional[List[Dict[str, Any]]] = None,
+        delay: float = 0.0,
+        language: Optional[str] = "ja",
+        language_probability: Optional[float] = 0.99,
+        version: str = "1.0",
+        available: bool = True,
+        words: bool = True,
+        fail: Optional[Exception] = None,
+        local_models: Optional[List[str]] = None,
+        downloadable: bool = False,
+        execution_mode: Optional[str] = None,
+        requires_network: Optional[bool] = None,
+        engine_id: Optional[str] = None,
+        model_langs: Optional[Dict[str, List[str]]] = None,
+    ):
         self.segments = FAKE_SEGMENTS if segments is None else segments
-        self.model_langs = model_langs or {}       # model -> the languages it is limited to (ADR-040)
+        self.model_langs = (
+            model_langs or {}
+        )  # model -> the languages it is limited to (ADR-040)
         self.delay = delay
         self.language = language
         self.language_probability = language_probability
@@ -40,7 +81,9 @@ class FakeEngine(TranscriptionEngine):
         self._available = available
         self._words = words
         self.fail = fail
-        self.local_models = ["fake-model", "base"] if local_models is None else local_models
+        self.local_models = (
+            ["fake-model", "base"] if local_models is None else local_models
+        )
         self.downloadable = downloadable
         if execution_mode is not None:
             self.execution_mode = execution_mode
@@ -84,12 +127,36 @@ class FakeEngine(TranscriptionEngine):
 
     def model_status(self, model: str, offline: bool = False) -> ModelStatus:
         if model not in self.supported_models:
-            return ModelStatus(model, "UNKNOWN", MODEL_UNKNOWN, None, None, "unknown fake model")
+            return ModelStatus(
+                model, "UNKNOWN", MODEL_UNKNOWN, None, None, "unknown fake model"
+            )
         if model in self.local_models:
-            return ModelStatus(model, "AVAILABLE", MODEL_AVAILABLE, "local", "fake-snapshot", "built in")
+            return ModelStatus(
+                model,
+                "AVAILABLE",
+                MODEL_AVAILABLE,
+                "local",
+                "fake-snapshot",
+                "built in",
+            )
         if self.downloadable and not offline:
-            return ModelStatus(model, "MISSING", MODEL_DOWNLOAD_REQUIRED, "downloadable", None, "would download", download_required=True)
-        return ModelStatus(model, "MISSING", MODEL_MISSING, None, None, "not local" + (" (offline)" if offline else ""))
+            return ModelStatus(
+                model,
+                "MISSING",
+                MODEL_DOWNLOAD_REQUIRED,
+                "downloadable",
+                None,
+                "would download",
+                download_required=True,
+            )
+        return ModelStatus(
+            model,
+            "MISSING",
+            MODEL_MISSING,
+            None,
+            None,
+            "not local" + (" (offline)" if offline else ""),
+        )
 
     def transcribe(self, request: EngineRequest) -> EngineResult:
         self.calls.append(request)
@@ -101,9 +168,27 @@ class FakeEngine(TranscriptionEngine):
         for s in self.segments:
             words = None
             if request.word_timestamps and s.get("words") is not None:
-                words = [EngineWord(start=a, end=b, text=t, confidence=c) for a, b, t, c in s["words"]]
-            segs.append(EngineSegment(start=s["start"], end=s["end"], text=s["text"], confidence=s.get("confidence"), words=words))
+                words = [
+                    EngineWord(start=a, end=b, text=t, confidence=c)
+                    for a, b, t, c in s["words"]
+                ]
+            segs.append(
+                EngineSegment(
+                    start=s["start"],
+                    end=s["end"],
+                    text=s["text"],
+                    confidence=s.get("confidence"),
+                    words=words,
+                )
+            )
         detected = None if request.language else self.language
         prob = None if request.language else self.language_probability
-        return EngineResult(engine_id=self.id, engine_version=self._version, model=request.model, model_version="fake-snapshot",
-                            segments=segs, language=detected, language_probability=prob)
+        return EngineResult(
+            engine_id=self.id,
+            engine_version=self._version,
+            model=request.model,
+            model_version="fake-snapshot",
+            segments=segs,
+            language=detected,
+            language_probability=prob,
+        )

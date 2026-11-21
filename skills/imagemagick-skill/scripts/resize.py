@@ -2,6 +2,7 @@
 """resize.py - resize an image using fit (default, no distortion), fill (crop to
 cover), or exact (force size, may distort). Verifies the output dimensions against
 what was promised before reporting success."""
+
 import os
 import sys
 
@@ -27,19 +28,51 @@ from _common import (  # noqa: E402
 def build_parser():
     parser = JSONArgumentParser(description="Resize an image (fit, fill, or exact)")
     parser.add_argument("input", help="image file to read (never modified)")
-    parser.add_argument("-o", "--output", required=True, help="file to write; must differ from the input, extension picks the format")
-    parser.add_argument("--width", type=int, required=True, help="target width in pixels (the box width for fit)")
-    parser.add_argument("--height", type=int, required=True, help="target height in pixels (the box height for fit)")
+    parser.add_argument(
+        "-o",
+        "--output",
+        required=True,
+        help="file to write; must differ from the input, extension picks the format",
+    )
+    parser.add_argument(
+        "--width",
+        type=int,
+        required=True,
+        help="target width in pixels (the box width for fit)",
+    )
+    parser.add_argument(
+        "--height",
+        type=int,
+        required=True,
+        help="target height in pixels (the box height for fit)",
+    )
     parser.add_argument(
         "--mode",
         choices=["fit", "fill", "exact"],
         default="fit",
         help="fit: inside the box, no distortion; fill: cover the box and center-crop; exact: force the size",
     )
-    parser.add_argument("--quality", type=int, default=None, help="0-100 encoder quality for lossy formats (JPEG/WebP)")
-    parser.add_argument("--overwrite", action="store_true", help="allow replacing an existing output file")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
-    parser.add_argument("--dry-run", action="store_true", help="print the backend command that would run, write nothing")
+    parser.add_argument(
+        "--quality",
+        type=int,
+        default=None,
+        help="0-100 encoder quality for lossy formats (JPEG/WebP)",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow replacing an existing output file",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the backend command that would run, write nothing",
+    )
     add_timeout_arg(parser)
     return parser
 
@@ -56,7 +89,9 @@ def _sips_fit_dims(in_w, in_h, box_w, box_h):
     return new_w, new_h
 
 
-def _build_cmd(backend, backend_bin, input_path, output_path, width, height, mode, quality):
+def _build_cmd(
+    backend, backend_bin, input_path, output_path, width, height, mode, quality
+):
     box = f"{width}x{height}"
 
     if backend == "magick":
@@ -118,9 +153,20 @@ def run_resize(args):
     elif sips:
         backend, backend_bin = "sips", sips
     else:
-        raise ImageSkillError("no usable backend: install ImageMagick (magick) or, on macOS, use sips")
+        raise ImageSkillError(
+            "no usable backend: install ImageMagick (magick) or, on macOS, use sips"
+        )
 
-    cmd = _build_cmd(backend, backend_bin, args.input, args.output, args.width, args.height, args.mode, args.quality)
+    cmd = _build_cmd(
+        backend,
+        backend_bin,
+        args.input,
+        args.output,
+        args.width,
+        args.height,
+        args.mode,
+        args.quality,
+    )
     run(cmd, dry_run=args.dry_run)
     if args.dry_run:
         return {"dry_run": True, "would_run": cmd}

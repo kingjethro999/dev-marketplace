@@ -1,4 +1,5 @@
 """JSON process boundary: `contract --json`, `doctor --json`, `run - --json`."""
+
 from __future__ import annotations
 
 import argparse
@@ -55,7 +56,9 @@ def _cmd_run(args: argparse.Namespace) -> int:
     except SubtitleSkillError as exc:
         _print_json({"status": "error", "error": exc.to_dict()})
         return 1
-    except Exception as exc:  # noqa: BLE001 - convert any unexpected failure to a typed envelope
+    except (
+        Exception
+    ) as exc:  # noqa: BLE001 - convert any unexpected failure to a typed envelope
         _print_json(
             {
                 "status": "error",
@@ -89,7 +92,9 @@ def _cmd_install(args: argparse.Namespace) -> int:
         verb = "removed" if args.uninstall else "installed SKILL.md to"
         for r in results:
             if r.action == "failed":
-                print(f"failed for {r.label} ({r.directory}): {r.error}", file=sys.stderr)
+                print(
+                    f"failed for {r.label} ({r.directory}): {r.error}", file=sys.stderr
+                )
             else:
                 print(f"{verb} {r.label}: {r.directory}")
         if not args.uninstall:
@@ -105,12 +110,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="subtitle-skill")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_contract = sub.add_parser("contract", help="print the machine-readable capability contract")
-    p_contract.add_argument("--json", action="store_true", help="output as JSON (default)")
+    p_contract = sub.add_parser(
+        "contract", help="print the machine-readable capability contract"
+    )
+    p_contract.add_argument(
+        "--json", action="store_true", help="output as JSON (default)"
+    )
     p_contract.set_defaults(func=_cmd_contract)
 
     p_doctor = sub.add_parser("doctor", help="print dependency/health status")
-    p_doctor.add_argument("--json", action="store_true", help="output as JSON (default)")
+    p_doctor.add_argument(
+        "--json", action="store_true", help="output as JSON (default)"
+    )
     p_doctor.set_defaults(func=_cmd_doctor)
 
     p_run = sub.add_parser("run", help="execute an operation from a JSON request")
@@ -118,14 +129,29 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--json", action="store_true", help="output as JSON (default)")
     p_run.set_defaults(func=_cmd_run)
 
-    p_install = sub.add_parser("install", help="place SKILL.md for agent discovery (Claude Code / Cursor / Codex)")
-    p_install.add_argument("--claude", action="store_true", help="~/.claude/skills/subtitle-skill")
-    p_install.add_argument("--cursor", action="store_true", help="~/.cursor/skills/subtitle-skill")
-    p_install.add_argument("--codex", action="store_true", help="~/.codex/skills/subtitle-skill")
+    p_install = sub.add_parser(
+        "install",
+        help="place SKILL.md for agent discovery (Claude Code / Cursor / Codex)",
+    )
+    p_install.add_argument(
+        "--claude", action="store_true", help="~/.claude/skills/subtitle-skill"
+    )
+    p_install.add_argument(
+        "--cursor", action="store_true", help="~/.cursor/skills/subtitle-skill"
+    )
+    p_install.add_argument(
+        "--codex", action="store_true", help="~/.codex/skills/subtitle-skill"
+    )
     p_install.add_argument("--all", action="store_true", help="claude + cursor + codex")
-    p_install.add_argument("--project", action="store_true", help="./.claude/skills/subtitle-skill in the current directory")
+    p_install.add_argument(
+        "--project",
+        action="store_true",
+        help="./.claude/skills/subtitle-skill in the current directory",
+    )
     p_install.add_argument("--dir", help="custom parent directory")
-    p_install.add_argument("--uninstall", action="store_true", help="remove from the selected targets")
+    p_install.add_argument(
+        "--uninstall", action="store_true", help="remove from the selected targets"
+    )
     p_install.add_argument("--json", action="store_true", help="output as JSON")
     p_install.set_defaults(func=_cmd_install)
 

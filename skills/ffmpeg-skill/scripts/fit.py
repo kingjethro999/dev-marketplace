@@ -33,6 +33,7 @@ Examples:
   python3 fit.py input.mp4 --rotate 90                           # rotate 90 degrees clockwise
   python3 fit.py input.mp4 --flip h                              # mirror horizontally
 """
+
 import argparse
 import sys
 from fractions import Fraction
@@ -40,11 +41,52 @@ from typing import Any, List, Optional
 
 from _common.color import bt709_matrix_filter
 from _common.runner import require_tool, run_analysis
-from _common.decision import SEEK_MARGIN, atempo_chain_with_lead, keeps_source_tags, delivered_rate, frame_durations, frame_rate, grid_at_or_after, length_output_t, stream_starts
+from _common.decision import (
+    SEEK_MARGIN,
+    atempo_chain_with_lead,
+    keeps_source_tags,
+    delivered_rate,
+    frame_durations,
+    frame_rate,
+    grid_at_or_after,
+    length_output_t,
+    stream_starts,
+)
 from _common.timeline import exact_rate, output_timecode_args
-from _common import video_args, STATE, add_common, apply_common, emit, aac_args, aspect_ratio, cfr_args, cfr_filter, default_output, die, ffmpeg_base, info, probe, run, run_keeping_subtitles, validate_color, pad_filters, add_pad_fill_args, X264_PRESETS, time_arg, fmt_secs, frame_size, display_size, square_pixels, square_pixels_note, note
+from _common import (
+    video_args,
+    STATE,
+    add_common,
+    apply_common,
+    emit,
+    aac_args,
+    aspect_ratio,
+    cfr_args,
+    cfr_filter,
+    default_output,
+    die,
+    ffmpeg_base,
+    info,
+    probe,
+    run,
+    run_keeping_subtitles,
+    validate_color,
+    pad_filters,
+    add_pad_fill_args,
+    X264_PRESETS,
+    time_arg,
+    fmt_secs,
+    frame_size,
+    display_size,
+    square_pixels,
+    square_pixels_note,
+    note,
+)
 from _common.emit import input_length, refuse_still
-BLUR_DARKEN = 0.15  # how much --fit blur dims the blurred background copy (eq brightness)
+
+BLUR_DARKEN = (
+    0.15  # how much --fit blur dims the blurred background copy (eq brightness)
+)
 
 
 def parse_aspect(value: str) -> Fraction:
@@ -84,14 +126,23 @@ def picture_output_t(target: float, meta: dict) -> str:
     rate = frame_rate(meta)
     if not rate or (meta.get("video") or {}).get("variable_frame_rate_suspected"):
         return text
-    out = grid_at_or_after(target, stream_starts(meta)[0], rate)  # the first frame left out
+    out = grid_at_or_after(
+        target, stream_starts(meta)[0], rate
+    )  # the first frame left out
     if out - 1 / rate + 1e-6 < float(text) <= out + 1e-9:
         return text
     return f"{out - 0.5 / rate:.6f}"
 
 
-def _picture_rows(path_meta: dict, chain: str, colour: str, sw: int, sh: int, size: int,
-                  out_pix: "Optional[str]") -> "Optional[bytes]":
+def _picture_rows(
+    path_meta: dict,
+    chain: str,
+    colour: str,
+    sw: int,
+    sh: int,
+    size: int,
+    out_pix: "Optional[str]",
+) -> "Optional[bytes]":
     """One frame of `colour` at the source's displayed size and pixel format through `chain`, as
     8-bit grey bytes, or None when ffmpeg did not give exactly one frame of `size` bytes. The chain
     ends in the written file's pixel format, as the encoder line makes it end: pad rounds its
@@ -102,20 +153,44 @@ def _picture_rows(path_meta: dict, chain: str, colour: str, sw: int, sh: int, si
     # one filter thread: with slice threads FFmpeg 8.0.1 once gave a white frame's band of rows
     # (128-217 of 640, a fifth of the frame down to the picture) a value the black frame's did not
     # have, and the picture was reported 90 rows taller than the file held it (#543 CI)
-    cmd = [require_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-filter_threads", "1",
-           "-f", "lavfi", "-i", src,
-           "-vf", chain + (f",format={out_pix}" if out_pix else "") + ",format=gray", "-frames:v", "1", "-f", "rawvideo", "-"]
+    cmd = [
+        require_tool("ffmpeg"),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-nostdin",
+        "-filter_threads",
+        "1",
+        "-f",
+        "lavfi",
+        "-i",
+        src,
+        "-vf",
+        chain + (f",format={out_pix}" if out_pix else "") + ",format=gray",
+        "-frames:v",
+        "1",
+        "-f",
+        "rawvideo",
+        "-",
+    ]
     proc = run_analysis(cmd, check=False, text=False)
-    return proc.stdout if proc.returncode == 0 and len(proc.stdout or b"") == size else None
+    return (
+        proc.stdout
+        if proc.returncode == 0 and len(proc.stdout or b"") == size
+        else None
+    )
 
 
-def measure_picture(geometry, meta: dict, sw: int, sh: int, out_video: dict, sized: bool) -> dict:
+def measure_picture(
+    geometry, meta: dict, sw: int, sh: int, out_video: dict, sized: bool
+) -> dict:
     """Where the picture sits in the written frame (#519): measured, not judged. ffmpeg runs the
     frame's own filters (the scale and pad, the blur graph with its background drawn black, or the
     scale and crop) on one white and one black frame of the source's displayed size and pixel
     format, after the colour conversion the encoder line adds; the picture is where the two
     differ, and the frame is the written file's. No frame of the source is decoded. Whether the
-    subject is inside that rectangle is still a look (subject_framing stays unverified)."""
+    subject is inside that rectangle is still a look (subject_framing stays unverified).
+    """
     filters, crop_scale, cropped = geometry
     W, H = int(out_video.get("width") or 0), int(out_video.get("height") or 0)
     why = None
@@ -126,70 +201,155 @@ def measure_picture(geometry, meta: dict, sw: int, sh: int, out_video: dict, siz
         chain = ",".join(([conv] if conv else []) + list(filters))
         out_pix = out_video.get("pix_fmt")
         white = _picture_rows(meta, chain, "white", sw, sh, W * H, out_pix)
-        black = _picture_rows(meta, chain, "black", sw, sh, W * H, out_pix) if white is not None else None
+        black = (
+            _picture_rows(meta, chain, "black", sw, sh, W * H, out_pix)
+            if white is not None
+            else None
+        )
         if white is None or black is None:
             why = f"ffmpeg did not give one {W}x{H} frame of the frame's filters (the written frame's size)"
     if why:
         note(f"picture: not measured: {why}")
         return {"measured": False, "reason": why}
-    rows = [r for r in range(H) if white[r * W:(r + 1) * W] != black[r * W:(r + 1) * W]]
+    rows = [
+        r for r in range(H) if white[r * W : (r + 1) * W] != black[r * W : (r + 1) * W]
+    ]
     if not rows:
         note("picture: not measured: no pixel of the frame changed with the picture")
-        return {"measured": False, "reason": "no pixel of the frame changed with the picture"}
+        return {
+            "measured": False,
+            "reason": "no pixel of the frame changed with the picture",
+        }
     left, right = W, -1
     for r in rows:
         # the row's difference as one integer: its leading zero bytes are the columns before the
         # first differing pixel, its trailing ones those after the last (no per-pixel loop)
-        d = int.from_bytes(white[r * W:(r + 1) * W], "big") ^ int.from_bytes(black[r * W:(r + 1) * W], "big")
+        d = int.from_bytes(white[r * W : (r + 1) * W], "big") ^ int.from_bytes(
+            black[r * W : (r + 1) * W], "big"
+        )
         x0 = W - (d.bit_length() + 7) // 8
         x1 = W - 1 - ((d & -d).bit_length() - 1) // 8
         left, right = min(left, x0), max(right, x1)
     x, y, w, h = left, rows[0], right - left + 1, rows[-1] - rows[0] + 1
     scale = crop_scale if crop_scale is not None else w / sw
-    pic = {"measured": True, "x": x, "y": y, "width": w, "height": h, "frame_width": W, "frame_height": H,
-           "frame_share": round(w * h / (W * H), 4), "scale": round(scale, 4),
-           "cropped": cropped or {"left": 0, "right": 0, "top": 0, "bottom": 0}}
+    pic = {
+        "measured": True,
+        "x": x,
+        "y": y,
+        "width": w,
+        "height": h,
+        "frame_width": W,
+        "frame_height": H,
+        "frame_share": round(w * h / (W * H), 4),
+        "scale": round(scale, 4),
+        "cropped": cropped or {"left": 0, "right": 0, "top": 0, "bottom": 0},
+    }
     if scale < 1 and not sized:
-        note(f"picture: scaled to {scale:.1%} of the source's width ({w}x{h} in a {W}x{H} frame): with no --width or "
-             "--height the frame keeps the source's height or width (give --width/--height for a larger frame)")
+        note(
+            f"picture: scaled to {scale:.1%} of the source's width ({w}x{h} in a {W}x{H} frame): with no --width or "
+            "--height the frame keeps the source's height or width (give --width/--height for a larger frame)"
+        )
     return pic
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_fit.<ext>)")
-    ap.add_argument("--audio-stream", type=int, default=0,
-                     help="which audio stream of the input to keep, 0-based in file order (probe.py lists them under "
-                          "audio_streams) -- matters on a multi-track input (dubbed languages, M&E stems); default 0, "
-                          "the first track, same as leaving it unset always did")
+    ap.add_argument(
+        "--audio-stream",
+        type=int,
+        default=0,
+        help="which audio stream of the input to keep, 0-based in file order (probe.py lists them under "
+        "audio_streams) -- matters on a multi-track input (dubbed languages, M&E stems); default 0, "
+        "the first track, same as leaving it unset always did",
+    )
     d = ap.add_argument_group("duration")
     d.add_argument("--duration", help="target duration (seconds or mm:ss)")
-    d.add_argument("--method", choices=["speed", "trim"], default="speed", help="how to reach the duration (default speed)")
-    d.add_argument("--from-center", action="store_true", help="with --method trim, keep the middle instead of the start")
-    d.add_argument("--max-speed", type=float, default=4.0, help="refuse speed factors above this (default 4x)")
-    d.add_argument("--smooth", choices=["none", "blend", "interpolate"], default="none",
-                   help="slow-motion quality: blend (frame blending) or interpolate (motion-compensated, slow but fluid). default none = duplicate frames")
+    d.add_argument(
+        "--method",
+        choices=["speed", "trim"],
+        default="speed",
+        help="how to reach the duration (default speed)",
+    )
+    d.add_argument(
+        "--from-center",
+        action="store_true",
+        help="with --method trim, keep the middle instead of the start",
+    )
+    d.add_argument(
+        "--max-speed",
+        type=float,
+        default=4.0,
+        help="refuse speed factors above this (default 4x)",
+    )
+    d.add_argument(
+        "--smooth",
+        choices=["none", "blend", "interpolate"],
+        default="none",
+        help="slow-motion quality: blend (frame blending) or interpolate (motion-compensated, slow but fluid). default none = duplicate frames",
+    )
     a = ap.add_argument_group("aspect")
     a.add_argument("--aspect", help="target aspect ratio, e.g. 16:9, 9:16, 1:1, 4:5")
-    a.add_argument("--fit", choices=["pad", "crop", "blur"], default="pad",
-                   help="how to reach the aspect: pad (letterbox), crop, or blur -- the whole picture centred on a "
-                        "blurred, darkened copy of itself filling the rest (the phone-editor vertical, 1.14). "
-                        "The darkening is applied to SDR sources only: on an HDR source the background is blurred "
-                        "but left at its own levels, since an eq on PQ/HLG code values is not a -15%% perceptual dim")
-    a.add_argument("--width", type=int, help="output width in px (default: keep source width or the width implied by the aspect); with --height also given, both are used directly")
-    a.add_argument("--height", type=int, help="output height in px (default: keep source height or the height implied by the aspect); with --width also given, both are used directly")
-    a.add_argument("--pad-color", default="black", help="pad colour, e.g. black, white, 0x101010 (default black)")
+    a.add_argument(
+        "--fit",
+        choices=["pad", "crop", "blur"],
+        default="pad",
+        help="how to reach the aspect: pad (letterbox), crop, or blur -- the whole picture centred on a "
+        "blurred, darkened copy of itself filling the rest (the phone-editor vertical, 1.14). "
+        "The darkening is applied to SDR sources only: on an HDR source the background is blurred "
+        "but left at its own levels, since an eq on PQ/HLG code values is not a -15%% perceptual dim",
+    )
+    a.add_argument(
+        "--width",
+        type=int,
+        help="output width in px (default: keep source width or the width implied by the aspect); with --height also given, both are used directly",
+    )
+    a.add_argument(
+        "--height",
+        type=int,
+        help="output height in px (default: keep source height or the height implied by the aspect); with --width also given, both are used directly",
+    )
+    a.add_argument(
+        "--pad-color",
+        default="black",
+        help="pad colour, e.g. black, white, 0x101010 (default black)",
+    )
     add_pad_fill_args(a)
-    a.add_argument("--crop-x", type=float, default=0.5, help="with --fit crop, horizontal anchor 0=left, 0.5=centre (default), 1=right")
-    a.add_argument("--crop-y", type=float, default=0.5, help="with --fit crop, vertical anchor 0=top, 0.5=centre (default), 1=bottom")
+    a.add_argument(
+        "--crop-x",
+        type=float,
+        default=0.5,
+        help="with --fit crop, horizontal anchor 0=left, 0.5=centre (default), 1=right",
+    )
+    a.add_argument(
+        "--crop-y",
+        type=float,
+        default=0.5,
+        help="with --fit crop, vertical anchor 0=top, 0.5=centre (default), 1=bottom",
+    )
     r = ap.add_argument_group("rotate / flip")
-    r.add_argument("--rotate", type=int, choices=[90, 180, 270], help="rotate the picture clockwise by this many degrees")
-    r.add_argument("--flip", choices=["h", "v"], help="mirror the picture horizontally (h) or vertically (v)")
+    r.add_argument(
+        "--rotate",
+        type=int,
+        choices=[90, 180, 270],
+        help="rotate the picture clockwise by this many degrees",
+    )
+    r.add_argument(
+        "--flip",
+        choices=["h", "v"],
+        help="mirror the picture horizontally (h) or vertically (v)",
+    )
     e = ap.add_argument_group("encoding")
     e.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
     e.add_argument("--preset", default="medium", choices=X264_PRESETS)
-    e.add_argument("--fps", type=float, help="force a constant output frame rate (recommended for VFR sources)")
+    e.add_argument(
+        "--fps",
+        type=float,
+        help="force a constant output frame rate (recommended for VFR sources)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -201,8 +361,18 @@ def main() -> int:
         # "nothing to do") and a negative size reached ffmpeg's pad as kind ffmpeg
         if value is not None and value < 1:
             die(f"{flag} must be a positive number of pixels, got {value}")
-    if not args.duration and not args.aspect and not args.width and not args.height and not args.fps and not args.rotate and not args.flip:
-        die("nothing to do: give --duration, --aspect, --width/--height, --rotate/--flip and/or --fps")
+    if (
+        not args.duration
+        and not args.aspect
+        and not args.width
+        and not args.height
+        and not args.fps
+        and not args.rotate
+        and not args.flip
+    ):
+        die(
+            "nothing to do: give --duration, --aspect, --width/--height, --rotate/--flip and/or --fps"
+        )
     if not 0.0 <= args.crop_x <= 1.0:
         die(f"--crop-x must be 0..1, got {args.crop_x}")
     if not 0.0 <= args.crop_y <= 1.0:
@@ -216,7 +386,9 @@ def main() -> int:
         die("input has no video stream")
     audio_streams = meta.get("audio_streams") or []
     if audio_streams and not (0 <= args.audio_stream < len(audio_streams)):
-        die(f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}")
+        die(
+            f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}"
+        )
     if args.audio_stream and not audio_streams:
         die("--audio-stream needs an input with audio streams")
     src_dur = meta["duration"] or 0.0
@@ -249,11 +421,19 @@ def main() -> int:
 
     # ---- duration
     if args.duration:
-        target = time_arg(args.duration, "--duration", meta["video"].get("fps") if meta.get("video") else None)
+        target = time_arg(
+            args.duration,
+            "--duration",
+            meta["video"].get("fps") if meta.get("video") else None,
+        )
         if target <= 0:
             die("target duration must be > 0")
         # speed refused it as "0.00x", and trim wrote one frame as verified (#531)
-        refuse_still(meta, args.input, "--duration retimes or trims the input's length, and a still has none")
+        refuse_still(
+            meta,
+            args.input,
+            "--duration retimes or trims the input's length, and a still has none",
+        )
         # speed and trim are both computed from the source's length: one that states none is refused
         # (#491). Not under --dry-run, where render.py plans a clip's speed stage on the source in
         # place of a cut that does not exist yet and records the stand-in itself (A97)
@@ -263,13 +443,21 @@ def main() -> int:
         # of that track's rate, not to the millisecond: `-t 1.234` wrote 59244 samples (48 kHz)
         # as 59232 and `-t 1.235` wrote 59261 as 59280 (length_output_t). No sound, or a dry
         # run's pending input, has no rate and keeps the millisecond.
-        rate = (audio_streams[args.audio_stream].get("sample_rate") if has_audio and audio_streams else None)
+        rate = (
+            audio_streams[args.audio_stream].get("sample_rate")
+            if has_audio and audio_streams
+            else None
+        )
         if args.method == "speed":
             if src_dur <= 0 and STATE.dry_run:
-                src_dur = target  # planning against an intermediate that does not exist yet
+                src_dur = (
+                    target  # planning against an intermediate that does not exist yet
+                )
             factor = src_dur / target  # >1 = speed up
             if factor > args.max_speed or factor < 1 / args.max_speed:
-                die(f"required speed factor {factor:.2f}x exceeds --max-speed {args.max_speed}x; use --method trim or raise the limit")
+                die(
+                    f"required speed factor {factor:.2f}x exceeds --max-speed {args.max_speed}x; use --method trim or raise the limit"
+                )
             if abs(factor - 1.0) > 1e-4:
                 vf.append(f"setpts={1/factor:.8f}*PTS")
                 src_fps = meta["video"].get("fps") or 30.0
@@ -277,7 +465,9 @@ def main() -> int:
                     # the new frames are made at the rate delivered: made at the source's 30 and
                     # then put on --fps 60 by the fps filter below, every other frame of the slow
                     # motion was a repeat (#527). Without --fps it is the source's rate, as before
-                    vf.append(f"minterpolate=fps={args.fps or src_fps:g}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1")
+                    vf.append(
+                        f"minterpolate=fps={args.fps or src_fps:g}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"
+                    )
                 elif factor < 1.0 and args.smooth == "blend":
                     vf.append(f"fps={src_fps:g}")
                     vf.append("tblend=all_mode=average")
@@ -288,7 +478,11 @@ def main() -> int:
                     # A rate the caller names is that grid (the conform below): conformed here to
                     # the source's 30 first, a 2x speed-up to --fps 60 dropped every other picture
                     # and the second fps filter repeated the rest
-                    vf.append(frame_durations(meta, delivered_rate(meta) or frame_rate(meta) or src_fps))
+                    vf.append(
+                        frame_durations(
+                            meta, delivered_rate(meta) or frame_rate(meta) or src_fps
+                        )
+                    )
                     regridded = True
                 if has_audio:
                     af.append(atempo_chain(factor, rate))
@@ -301,8 +495,22 @@ def main() -> int:
             # a trim, counted in frames; one that is retimed, or regridded by --fps, keeps the
             # millisecond
             retimed = abs(factor - 1.0) > 1e-4
-            post += ["-t", f"{target:.3f}" if af else length_output_t(target, rate, runs_on=True) if rate
-                     else f"{target:.3f}" if retimed or args.fps or has_audio else picture_output_t(target, meta)]
+            post += [
+                "-t",
+                (
+                    f"{target:.3f}"
+                    if af
+                    else (
+                        length_output_t(target, rate, runs_on=True)
+                        if rate
+                        else (
+                            f"{target:.3f}"
+                            if retimed or args.fps or has_audio
+                            else picture_output_t(target, meta)
+                        )
+                    )
+                ),
+            ]
             STATE.duration_hint = target
         else:
             if target < src_dur:
@@ -318,8 +526,11 @@ def main() -> int:
                 # without sound the -t only counts frames (picture_output_t). Not from the centre:
                 # there the output's clock starts at the seek, between two frames, and the encoder
                 # rounds each frame to its own tick
-                keep = (picture_output_t(target, meta) if not rate and not args.fps and not args.from_center
-                        else length_output_t(target, rate, runs_on=True))
+                keep = (
+                    picture_output_t(target, meta)
+                    if not rate and not args.fps and not args.from_center
+                    else length_output_t(target, rate, runs_on=True)
+                )
                 post += (["-ss", f"{m:.3f}"] if m > 0 else []) + ["-t", keep]
                 out_seek = round(m, 3) if m > 0 else 0.0
                 # the output starts on the first frame at or after the seek (a seek before a
@@ -328,7 +539,9 @@ def main() -> int:
                 v0, rate = stream_starts(meta)[0], frame_rate(meta)
                 tc_first = grid_at_or_after(max(round(start, 3), v0), v0, rate) - v0
             else:
-                info(f"source ({src_dur:.2f}s) is already shorter than {target:.2f}s; trim does nothing")
+                info(
+                    f"source ({src_dur:.2f}s) is already shorter than {target:.2f}s; trim does nothing"
+                )
 
     # ---- the output's rate: after any retiming, ahead of the frame's own filters. --fit blur and
     # --pad-fill blur are a split/overlay graph, and FFmpeg 6.1's overlay ends its output at its
@@ -339,7 +552,9 @@ def main() -> int:
     elif meta["video"].get("variable_frame_rate_suspected"):
         # said whichever filter conforms it: a speed change's regrid above is that conform, and the
         # line was missing there (#527)
-        info("source looks variable-frame-rate; conforming to constant fps automatically")
+        info(
+            "source looks variable-frame-rate; conforming to constant fps automatically"
+        )
         if not regridded:
             # the conform is the fps filter, as --fps is: -fps_mode cfr alone let a frame run up to
             # two frames late against the sound (#512), its grid laid from the output-side seek
@@ -350,7 +565,13 @@ def main() -> int:
     geometry = None  # (the frame's filters with every fill drawn black, scale, cropped) for the picture measurement
     if args.aspect or args.width or args.height:
         # the one sizing rule, shared with render.py --export-timeline's sequence frame
-        out_w, out_h = frame_size(parse_aspect(args.aspect) if args.aspect else None, args.width, args.height, sw, sh)
+        out_w, out_h = frame_size(
+            parse_aspect(args.aspect) if args.aspect else None,
+            args.width,
+            args.height,
+            sw,
+            sh,
+        )
         if args.fit == "crop" and sw and sh:
             # The scaled frame's margin on each axis is a multiple of 4 and the offset is computed
             # here, to even: crop floors an odd offset to the chroma grid of a 4:2:0 frame, so
@@ -362,23 +583,43 @@ def main() -> int:
             sc_w = max(out_w, (2 * out_h * sw + sh) // (2 * sh))
             sc_h = max(out_h, (2 * out_w * sh + sw) // (2 * sw))
             mx, my = (-(-(sc - o) // 4) * 4 for sc, o in ((sc_w, out_w), (sc_h, out_h)))
-            ox, oy = (int(m * f / 2 + 0.5) * 2 for m, f in ((mx, args.crop_x), (my, args.crop_y)))
-            for axis, m, f, got in (("x", mx, args.crop_x, ox), ("y", my, args.crop_y, oy)):
+            ox, oy = (
+                int(m * f / 2 + 0.5) * 2
+                for m, f in ((mx, args.crop_x), (my, args.crop_y))
+            )
+            for axis, m, f, got in (
+                ("x", mx, args.crop_x, ox),
+                ("y", my, args.crop_y, oy),
+            ):
                 if abs(m * f - got) > 1e-9:
                     # the offset is kept even (the chroma grid); a caller who asked for another one
                     # is told which it got, as proxy.py says which width it wrote
-                    note(f"--crop-{axis} {f:g}: crop offset {got}px, not {m * f:g}px: the offset is kept even "
-                         f"(4:2:0 chroma), on a {m}px margin")
+                    note(
+                        f"--crop-{axis} {f:g}: crop offset {got}px, not {m * f:g}px: the offset is kept even "
+                        f"(4:2:0 chroma), on a {m}px margin"
+                    )
             vf.append(f"scale={out_w + mx}:{out_h + my}")
             vf.append(f"crop={out_w}:{out_h}:{ox}:{oy}")
             # the source pixels the crop leaves out on each side, at the scale it was cut at: each
             # axis by its own, since the margin widened to a multiple of 4 scales the two apart
             kx, ky = sw / (out_w + mx), sh / (out_h + my)
-            geometry = (vf[-2:], (out_w + mx) / sw, {"left": round(ox * kx), "right": round((mx - ox) * kx),
-                                                     "top": round(oy * ky), "bottom": round((my - oy) * ky)})
-        elif args.fit == "crop":  # a dry run's pending input has no size: the expressions, planned only
+            geometry = (
+                vf[-2:],
+                (out_w + mx) / sw,
+                {
+                    "left": round(ox * kx),
+                    "right": round((mx - ox) * kx),
+                    "top": round(oy * ky),
+                    "bottom": round((my - oy) * ky),
+                },
+            )
+        elif (
+            args.fit == "crop"
+        ):  # a dry run's pending input has no size: the expressions, planned only
             vf.append(f"scale={out_w}:{out_h}:force_original_aspect_ratio=increase")
-            vf.append(f"crop={out_w}:{out_h}:(in_w-out_w)*{args.crop_x:g}:(in_h-out_h)*{args.crop_y:g}")
+            vf.append(
+                f"crop={out_w}:{out_h}:(in_w-out_w)*{args.crop_x:g}:(in_h-out_h)*{args.crop_y:g}"
+            )
         elif args.fit == "blur":
             # nothing is cropped and nothing is a black bar: the picture keeps its own aspect in
             # the middle of a blurred, dimmed copy of itself (BLUR_DARKEN) filling the frame.
@@ -388,14 +629,55 @@ def main() -> int:
             # (review 12). The blur itself is neutral either way, and no tone mapping happens.
             darken = 0.0 if meta["video"].get("bt2020_or_hdr") else BLUR_DARKEN
             if not darken:
-                info("--fit blur: HDR source, so the blurred background is not dimmed "
-                     "(an eq on PQ/HLG code values is not the -15% dim it is on SDR); "
-                     "run color.py --to-sdr first for the SDR look")
-            vf.append(pad_filters(out_w, out_h, "blur", args.pad_color, args.pad_blur, darken))
-            geometry = ([pad_filters(out_w, out_h, "blur", args.pad_color, args.pad_blur, darken, blank=True)], None, None)
+                info(
+                    "--fit blur: HDR source, so the blurred background is not dimmed "
+                    "(an eq on PQ/HLG code values is not the -15% dim it is on SDR); "
+                    "run color.py --to-sdr first for the SDR look"
+                )
+            vf.append(
+                pad_filters(out_w, out_h, "blur", args.pad_color, args.pad_blur, darken)
+            )
+            geometry = (
+                [
+                    pad_filters(
+                        out_w,
+                        out_h,
+                        "blur",
+                        args.pad_color,
+                        args.pad_blur,
+                        darken,
+                        blank=True,
+                    )
+                ],
+                None,
+                None,
+            )
         else:
-            vf.append(pad_filters(out_w, out_h, args.pad_fill, args.pad_color, args.pad_blur, meta=meta))
-            geometry = ([pad_filters(out_w, out_h, args.pad_fill, args.pad_color, args.pad_blur, meta=meta, blank=True)], None, None)
+            vf.append(
+                pad_filters(
+                    out_w,
+                    out_h,
+                    args.pad_fill,
+                    args.pad_color,
+                    args.pad_blur,
+                    meta=meta,
+                )
+            )
+            geometry = (
+                [
+                    pad_filters(
+                        out_w,
+                        out_h,
+                        args.pad_fill,
+                        args.pad_color,
+                        args.pad_blur,
+                        meta=meta,
+                        blank=True,
+                    )
+                ],
+                None,
+                None,
+            )
         vf.append("setsar=1")
         # a non-square-pixel source is made square at its display aspect before anything else
         # (the size above is computed in that frame), so the fitted picture is not squashed
@@ -408,7 +690,11 @@ def main() -> int:
     # is also how a render.py clip cut at its own rate reaches the project's frame.fps
     out_rate = args.fps or delivered_rate(meta)
     src_fps = meta["video"].get("fps")
-    rate_changed = bool(out_rate and src_fps and exact_rate(float(out_rate)) != exact_rate(float(src_fps)))
+    rate_changed = bool(
+        out_rate
+        and src_fps
+        and exact_rate(float(out_rate)) != exact_rate(float(src_fps))
+    )
     relabel = tc_first is not None or rate_changed
     if relabel:
         post += output_timecode_args(meta, tc_first or 0.0, out_rate)
@@ -448,7 +734,14 @@ def main() -> int:
     info(msg)
     extra = {}
     if geometry and not STATE.dry_run:
-        extra["picture"] = measure_picture(geometry, meta, sw, sh, result["video"], sized=bool(args.width or args.height))
+        extra["picture"] = measure_picture(
+            geometry,
+            meta,
+            sw,
+            sh,
+            result["video"],
+            sized=bool(args.width or args.height),
+        )
     emit(output, dropped_non_av_streams=dropped_streams, **extra)
     return 0
 

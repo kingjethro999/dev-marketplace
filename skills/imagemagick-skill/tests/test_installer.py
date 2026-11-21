@@ -2,6 +2,7 @@
 migration away from the old "image-skill" name. A legacy directory is removed only
 when it is provably this project's; anything else (the unrelated npm package that
 owns the "image-skill" name, a user's own files) must survive, with a warning."""
+
 import json
 import os
 import shutil
@@ -15,18 +16,31 @@ INSTALL_JS = os.path.join(ROOT, "bin", "install.js")
 NODE = shutil.which("node")
 
 
-def make_legacy_install(path, with_package_json=True, repo="https://github.com/kajisho5/image-skill"):
+def make_legacy_install(
+    path, with_package_json=True, repo="https://github.com/kajisho5/image-skill"
+):
     """Recreate the layout 0.1.x (no package.json) and 0.2.x (with one) installed."""
     os.makedirs(os.path.join(path, "scripts", "__pycache__"))
     with open(os.path.join(path, "SKILL.md"), "w") as f:
-        f.write("---\nname: image-skill\ndescription: Local image editing\n---\n\n# image-skill\n")
+        f.write(
+            "---\nname: image-skill\ndescription: Local image editing\n---\n\n# image-skill\n"
+        )
     with open(os.path.join(path, "scripts", "_contract.py"), "w") as f:
-        f.write('parser = JSONArgumentParser(description="image-skill contract/doctor")\n')
+        f.write(
+            'parser = JSONArgumentParser(description="image-skill contract/doctor")\n'
+        )
     with open(os.path.join(path, "scripts", "probe.py"), "w") as f:
         f.write("print('probe')\n")
     if with_package_json:
         with open(os.path.join(path, "package.json"), "w") as f:
-            json.dump({"name": "image-skill", "version": "0.2.2", "repository": {"url": repo}}, f)
+            json.dump(
+                {
+                    "name": "image-skill",
+                    "version": "0.2.2",
+                    "repository": {"url": repo},
+                },
+                f,
+            )
 
 
 def make_foreign_install(path):
@@ -51,7 +65,12 @@ class InstallerTests(unittest.TestCase):
     def install(self, *flags):
         env = dict(os.environ, HOME=self.home, USERPROFILE=self.home)
         return subprocess.run(
-            [NODE, INSTALL_JS, *flags], cwd=self.cwd, env=env, capture_output=True, text=True, timeout=60
+            [NODE, INSTALL_JS, *flags],
+            cwd=self.cwd,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
 
     def home_path(self, *parts):
@@ -72,14 +91,32 @@ class InstallerTests(unittest.TestCase):
         skill_md = self.home_path(".claude", "skills", "imagemagick-skill", "SKILL.md")
         with open(skill_md) as f:
             self.assertIn("name: imagemagick-skill", f.read())
-        self.assertTrue(os.path.isfile(self.home_path(".claude", "skills", "imagemagick-skill", "scripts", "_contract.py")))
-        self.assertTrue(os.path.isfile(self.home_path(".claude", "skills", "imagemagick-skill", "mcp", "server.py")))
+        self.assertTrue(
+            os.path.isfile(
+                self.home_path(
+                    ".claude", "skills", "imagemagick-skill", "scripts", "_contract.py"
+                )
+            )
+        )
+        self.assertTrue(
+            os.path.isfile(
+                self.home_path(
+                    ".claude", "skills", "imagemagick-skill", "mcp", "server.py"
+                )
+            )
+        )
 
     def test_codex_installs_where_codex_reads_user_skills(self):
         r = self.install("--codex")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(os.path.isfile(self.home_path(".agents", "skills", "imagemagick-skill", "SKILL.md")))
-        self.assertFalse(os.path.exists(self.home_path(".codex", "skills", "imagemagick-skill")))
+        self.assertTrue(
+            os.path.isfile(
+                self.home_path(".agents", "skills", "imagemagick-skill", "SKILL.md")
+            )
+        )
+        self.assertFalse(
+            os.path.exists(self.home_path(".codex", "skills", "imagemagick-skill"))
+        )
 
     def test_own_legacy_install_is_removed(self):
         for variant in ("0.2.x", "0.1.x"):
@@ -145,8 +182,14 @@ class InstallerTests(unittest.TestCase):
 
         r = self.install("--all", "--uninstall")
         self.assertEqual(r.returncode, 0, r.stderr)
-        for agent_dir in ((".claude", "skills"), (".cursor", "skills"), (".agents", "skills")):
-            self.assertFalse(os.path.exists(self.home_path(*agent_dir, "imagemagick-skill")))
+        for agent_dir in (
+            (".claude", "skills"),
+            (".cursor", "skills"),
+            (".agents", "skills"),
+        ):
+            self.assertFalse(
+                os.path.exists(self.home_path(*agent_dir, "imagemagick-skill"))
+            )
         self.assertFalse(os.path.exists(own))
         self.assertTrue(os.path.isfile(os.path.join(foreign, "SKILL.md")))
 
@@ -163,14 +206,22 @@ class InstallerTests(unittest.TestCase):
         make_legacy_install(os.path.join(parent, "image-skill"))
         r = self.install("--dir", parent)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(os.path.isfile(os.path.join(parent, "imagemagick-skill", "SKILL.md")))
+        self.assertTrue(
+            os.path.isfile(os.path.join(parent, "imagemagick-skill", "SKILL.md"))
+        )
         self.assertFalse(os.path.exists(os.path.join(parent, "image-skill")))
 
         project_legacy = os.path.join(self.cwd, ".claude", "skills", "image-skill")
         make_legacy_install(project_legacy, with_package_json=False)
         r = self.install("--project")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(os.path.isfile(os.path.join(self.cwd, ".claude", "skills", "imagemagick-skill", "SKILL.md")))
+        self.assertTrue(
+            os.path.isfile(
+                os.path.join(
+                    self.cwd, ".claude", "skills", "imagemagick-skill", "SKILL.md"
+                )
+            )
+        )
         self.assertFalse(os.path.exists(project_legacy))
 
 
@@ -182,7 +233,11 @@ def path_with_only_python():
     tmp = tempfile.mkdtemp()
     if os.name == "nt":
         venv = os.path.join(tmp, "venv")
-        subprocess.run([sys.executable, "-m", "venv", "--without-pip", venv], check=True, timeout=120)
+        subprocess.run(
+            [sys.executable, "-m", "venv", "--without-pip", venv],
+            check=True,
+            timeout=120,
+        )
         bindir = os.path.join(venv, "Scripts")
     else:
         bindir = os.path.join(tmp, "bin")
@@ -197,7 +252,8 @@ def path_with_only_python():
 @unittest.skipUnless(NODE, "requires node")
 class InstallerPythonLookupTests(unittest.TestCase):
     """bin/install.js must find Python 3 under the names a user actually has, not only
-    `python3`. Node is run by its absolute path, so PATH holds nothing but the fixture."""
+    `python3`. Node is run by its absolute path, so PATH holds nothing but the fixture.
+    """
 
     def setUp(self):
         self.tmp, self.bindir = path_with_only_python()
@@ -208,7 +264,12 @@ class InstallerPythonLookupTests(unittest.TestCase):
         os.makedirs(home, exist_ok=True)
         env = dict(os.environ, PATH=path, HOME=home, USERPROFILE=home)
         return subprocess.run(
-            [NODE, INSTALL_JS, *args], cwd=self.tmp, env=env, capture_output=True, text=True, timeout=120
+            [NODE, INSTALL_JS, *args],
+            cwd=self.tmp,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
         )
 
     def test_contract_and_doctor_work_without_python3_on_path(self):
@@ -220,12 +281,15 @@ class InstallerPythonLookupTests(unittest.TestCase):
         r = self.run_installer(self.bindir, "doctor", "--json")
         self.assertIn("backends", json.loads(r.stdout), r.stdout + r.stderr)
 
-    @unittest.skipIf(os.name == "nt", "Node runs only .exe files from PATH on Windows; a fake one needs a script")
+    @unittest.skipIf(
+        os.name == "nt",
+        "Node runs only .exe files from PATH on Windows; a fake one needs a script",
+    )
     def test_an_interpreter_that_is_not_python_3_is_passed_over(self):
         # `python3` first in the lookup, but it answers like Python 2: `python` must be used.
         fake = os.path.join(self.bindir, "python3")
         with open(fake, "w") as f:
-            f.write('#!/bin/sh\necho 2\n')
+            f.write("#!/bin/sh\necho 2\n")
         os.chmod(fake, 0o755)
         r = self.run_installer(self.bindir, "contract", "--json")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
@@ -245,8 +309,9 @@ class InstallerPythonLookupTests(unittest.TestCase):
         self.assertIn("Python 3", r.stderr)
 
 
-
-NPM = shutil.which("npm")  # npm.cmd on Windows, which CreateProcess finds only by its full name
+NPM = shutil.which(
+    "npm"
+)  # npm.cmd on Windows, which CreateProcess finds only by its full name
 
 
 @unittest.skipUnless(NPM, "requires npm")
@@ -255,13 +320,23 @@ class PackageContentsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as cache:
             proc = subprocess.run(
                 [NPM, "pack", "--dry-run", "--json", "--cache", cache],
-                cwd=ROOT, capture_output=True, text=True, timeout=120,
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                timeout=120,
             )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         files = {f["path"] for f in json.loads(proc.stdout)[0]["files"]}
         self.assertFalse([f for f in files if f.endswith(".pyc") or "__pycache__" in f])
-        for required in ("bin/install.js", "SKILL.md", "package.json", "scripts/_contract.py", "scripts/_common.py",
-                         "scripts/presets.json", "mcp/server.py"):
+        for required in (
+            "bin/install.js",
+            "SKILL.md",
+            "package.json",
+            "scripts/_contract.py",
+            "scripts/_common.py",
+            "scripts/presets.json",
+            "mcp/server.py",
+        ):
             self.assertIn(required, files)
 
 

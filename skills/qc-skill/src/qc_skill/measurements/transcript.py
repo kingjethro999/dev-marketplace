@@ -70,7 +70,10 @@ def _raw_word_entries(doc: Any) -> Optional[List[Any]]:
         if isinstance(doc.get("words"), list):
             top_words = doc["words"]
     elif isinstance(doc, list):
-        if any(isinstance(item, dict) and isinstance(item.get("words"), list) for item in doc):
+        if any(
+            isinstance(item, dict) and isinstance(item.get("words"), list)
+            for item in doc
+        ):
             segments = doc
         else:
             top_words = doc
@@ -97,7 +100,9 @@ def read_transcript(path: Path) -> TranscriptReadResult:
 
     entries = _raw_word_entries(doc)
     if entries is None:
-        return TranscriptReadResult(error="transcript has neither 'segments' nor 'words'")
+        return TranscriptReadResult(
+            error="transcript has neither 'segments' nor 'words'"
+        )
 
     result = TranscriptReadResult()
     for position, entry in enumerate(entries):
@@ -115,18 +120,28 @@ def read_transcript(path: Path) -> TranscriptReadResult:
             continue
         index = entry.get("index")
         pos = entry.get("pos")
-        result.words.append({
-            "position": position,
-            "index": index if isinstance(index, int) and not isinstance(index, bool) else None,
-            "text": text,
-            "start": start,
-            "end": end,
-            "pos": pos.strip().lower() if isinstance(pos, str) and pos.strip() else None,
-            "interpolated": (
-                entry.get("timing") == "interpolated"
-                or any(entry.get(flag) is True for flag in _INTERPOLATION_FLAGS)
-            ),
-        })
+        result.words.append(
+            {
+                "position": position,
+                "index": (
+                    index
+                    if isinstance(index, int) and not isinstance(index, bool)
+                    else None
+                ),
+                "text": text,
+                "start": start,
+                "end": end,
+                "pos": (
+                    pos.strip().lower()
+                    if isinstance(pos, str) and pos.strip()
+                    else None
+                ),
+                "interpolated": (
+                    entry.get("timing") == "interpolated"
+                    or any(entry.get(flag) is True for flag in _INTERPOLATION_FLAGS)
+                ),
+            }
+        )
     if not result.words:
         # e.g. a transcript made without word timestamps: segments but no words.
         # Zero words would make every speech check pass vacuously.
@@ -142,29 +157,60 @@ def measure_transcript(path: Path) -> List[QCMeasurement]:
     if result.error is not None:
         return [
             QCMeasurement(
-                "subtitle.transcript_words", "subtitle", "transcript_words", None,
-                source="transcript", notes=result.error,
+                "subtitle.transcript_words",
+                "subtitle",
+                "transcript_words",
+                None,
+                source="transcript",
+                notes=result.error,
             ),
-            QCMeasurement("subtitle.transcript_word_count", "subtitle", "transcript_word_count", None, source="transcript", notes=result.error),
+            QCMeasurement(
+                "subtitle.transcript_word_count",
+                "subtitle",
+                "transcript_word_count",
+                None,
+                source="transcript",
+                notes=result.error,
+            ),
         ]
     words = result.words
     return [
         QCMeasurement(
-            "subtitle.transcript_words", "subtitle", "transcript_words", words, source="transcript",
+            "subtitle.transcript_words",
+            "subtitle",
+            "transcript_words",
+            words,
+            source="transcript",
             notes="timed words in transcript order: position (0-based reading order), index (the transcript's own, or null), "
-                  "text, start, end, pos (or null), interpolated",
-        ),
-        QCMeasurement("subtitle.transcript_word_count", "subtitle", "transcript_word_count", len(words), source="transcript"),
-        QCMeasurement(
-            "subtitle.transcript_skipped_word_count", "subtitle", "transcript_skipped_word_count", result.skipped_word_count,
-            source="transcript", notes="word entries without text or usable start/end timing",
+            "text, start, end, pos (or null), interpolated",
         ),
         QCMeasurement(
-            "subtitle.transcript_pos_word_count", "subtitle", "transcript_pos_word_count",
-            sum(1 for w in words if w["pos"] is not None), source="transcript",
+            "subtitle.transcript_word_count",
+            "subtitle",
+            "transcript_word_count",
+            len(words),
+            source="transcript",
         ),
         QCMeasurement(
-            "subtitle.transcript_interpolated_word_count", "subtitle", "transcript_interpolated_word_count",
-            sum(1 for w in words if w["interpolated"]), source="transcript",
+            "subtitle.transcript_skipped_word_count",
+            "subtitle",
+            "transcript_skipped_word_count",
+            result.skipped_word_count,
+            source="transcript",
+            notes="word entries without text or usable start/end timing",
+        ),
+        QCMeasurement(
+            "subtitle.transcript_pos_word_count",
+            "subtitle",
+            "transcript_pos_word_count",
+            sum(1 for w in words if w["pos"] is not None),
+            source="transcript",
+        ),
+        QCMeasurement(
+            "subtitle.transcript_interpolated_word_count",
+            "subtitle",
+            "transcript_interpolated_word_count",
+            sum(1 for w in words if w["interpolated"]),
+            source="transcript",
         ),
     ]

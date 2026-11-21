@@ -6,7 +6,11 @@ import pytest
 
 from artifact_skill.adapters.svg.adapter import SvgAdapter
 from artifact_skill.core.artifact import ArtifactRef, ArtifactType
-from artifact_skill.core.errors import ArtifactExecutionError, ArtifactInputError, ArtifactSecurityError
+from artifact_skill.core.errors import (
+    ArtifactExecutionError,
+    ArtifactInputError,
+    ArtifactSecurityError,
+)
 from artifact_skill.core.verification import CheckStatus
 
 
@@ -15,7 +19,9 @@ def adapter() -> SvgAdapter:
     return SvgAdapter()
 
 
-def _probe_svg_render_works(adapter: SvgAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+def _probe_svg_render_works(
+    adapter: SvgAdapter, ref: ArtifactRef, tmp_path: Path
+) -> bool:
     """Same pattern as the HTML/LibreOffice adapters' render probes — a
     present playwright/Chromium doesn't guarantee it actually renders."""
     try:
@@ -86,7 +92,9 @@ def test_verify_external_resources_warns_by_default(external_resource_svg, adapt
     assert check.status == CheckStatus.WARN
 
 
-def test_verify_external_resources_fails_under_strict_policy(external_resource_svg, adapter):
+def test_verify_external_resources_fails_under_strict_policy(
+    external_resource_svg, adapter
+):
     ref = ArtifactRef.from_path(external_resource_svg)
     result = adapter.verify_structural(ref, {"forbid_external_resources": True})
     check = next(c for c in result.checks if c.id == "external_resources")
@@ -107,7 +115,9 @@ def test_verify_good_svg_has_no_leftover_placeholder_text(good_svg, adapter):
     assert check.status == CheckStatus.PASS
 
 
-def test_verify_leftover_placeholder_svg_warns_by_default(leftover_placeholder_svg, adapter):
+def test_verify_leftover_placeholder_svg_warns_by_default(
+    leftover_placeholder_svg, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_svg)
     result = adapter.verify_structural(ref, {})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -117,7 +127,9 @@ def test_verify_leftover_placeholder_svg_warns_by_default(leftover_placeholder_s
     assert "todo" in check.evidence["markers"]
 
 
-def test_verify_leftover_placeholder_svg_fails_under_strict_policy(leftover_placeholder_svg, adapter):
+def test_verify_leftover_placeholder_svg_fails_under_strict_policy(
+    leftover_placeholder_svg, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_svg)
     result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -139,9 +151,14 @@ def test_capabilities_report_never_lies_about_probe_result(adapter):
 
     caps = {c.id: c for c in adapter.capabilities()}
     assert "svg.structural" in caps
-    assert caps["svg.structural"].status == CapabilityStatus.AVAILABLE  # stdlib-only, always available
+    assert (
+        caps["svg.structural"].status == CapabilityStatus.AVAILABLE
+    )  # stdlib-only, always available
     assert "svg.render" in caps
-    assert caps["svg.render"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["svg.render"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
 
 
 def test_render_propagates_backend_failure(good_svg, adapter, tmp_path, monkeypatch):
@@ -165,7 +182,9 @@ def test_render_happy_path_when_backend_actually_works(good_svg, adapter, tmp_pa
     actually complete."""
     ref = ArtifactRef.from_path(good_svg)
     if not _probe_svg_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) == 1
     assert result.files[0].exists()

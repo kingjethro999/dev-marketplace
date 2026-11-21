@@ -15,11 +15,27 @@ Examples:
   python3 speedramp.py action.mp4 --segment 0-3:1.0 --segment 3-4:0.25 --segment 4-8:2.0
   python3 speedramp.py clip.mp4 --segment 0-2:2.0 --segment 2-6:1.0
 """
+
 import argparse
 import sys
 from typing import List, Tuple
 
-from _common import add_common, apply_common, aac_args, default_output, die, emit, ffmpeg_base, info, probe, run, video_args, X264_PRESETS, fmt_secs, time_arg
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+    time_arg,
+)
 
 MAX_SPEED = 20.0
 MIN_SPEED = 0.05
@@ -46,7 +62,9 @@ def parse_segment(raw: str) -> Tuple[float, float, float]:
         factor = float(factor_s)
     except ValueError:
         die(f"--segment must look like START-END:FACTOR, got '{raw}'")
-    start, end = time_arg(start_s, f"--segment {raw!r} start"), time_arg(end_s, f"--segment {raw!r} end")
+    start, end = time_arg(start_s, f"--segment {raw!r} start"), time_arg(
+        end_s, f"--segment {raw!r} end"
+    )
     if end <= start:
         die(f"--segment {raw}: END must be after START")
     if not MIN_SPEED <= factor <= MAX_SPEED:
@@ -55,13 +73,22 @@ def parse_segment(raw: str) -> Tuple[float, float, float]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_ramp.<ext>)")
-    ap.add_argument("--segment", action="append", required=True, dest="segments",
-                     help=f"START-END:FACTOR, repeatable; segments must cover 0..duration with no gaps or overlaps, in order. FACTOR is {MIN_SPEED}..{MAX_SPEED} (2.0 = twice as fast, 0.5 = half speed)")
+    ap.add_argument(
+        "--segment",
+        action="append",
+        required=True,
+        dest="segments",
+        help=f"START-END:FACTOR, repeatable; segments must cover 0..duration with no gaps or overlaps, in order. FACTOR is {MIN_SPEED}..{MAX_SPEED} (2.0 = twice as fast, 0.5 = half speed)",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -75,11 +102,15 @@ def main() -> int:
     if abs(segments[0][0] - 0.0) > 0.01:
         die(f"segments must start at 0, first segment starts at {segments[0][0]:g}")
     if abs(segments[-1][1] - dur) > 0.5:
-        die(f"segments must cover the whole clip (0..{dur:.3f}), last segment ends at {segments[-1][1]:g}")
+        die(
+            f"segments must cover the whole clip (0..{dur:.3f}), last segment ends at {segments[-1][1]:g}"
+        )
     for i in range(len(segments) - 1):
         if abs(segments[i][1] - segments[i + 1][0]) > 0.01:
-            die(f"segments must be contiguous with no gap/overlap: segment {i} ends at {segments[i][1]:g}, "
-                f"segment {i + 1} starts at {segments[i + 1][0]:g}")
+            die(
+                f"segments must be contiguous with no gap/overlap: segment {i} ends at {segments[i][1]:g}, "
+                f"segment {i + 1} starts at {segments[i + 1][0]:g}"
+            )
     has_audio = bool(meta.get("audio"))
     output = args.output or default_output(args.input, "ramp")
 
@@ -91,21 +122,32 @@ def main() -> int:
     last_runs_to_eof = abs(segments[-1][1] - dur) <= 0.05
     for i, (start, end, factor) in enumerate(segments):
         vlabel, alabel = f"v{i}", f"a{i}"
-        end_expr = f"{end:.3f}" if not (i == len(segments) - 1 and last_runs_to_eof) else None
+        end_expr = (
+            f"{end:.3f}" if not (i == len(segments) - 1 and last_runs_to_eof) else None
+        )
         trim = f"trim=start={start:.3f}" + (f":end={end_expr}" if end_expr else "")
         vparts.append(f"[0:v]{trim},setpts=(PTS-STARTPTS)/{factor:.6f}[{vlabel}]")
         labels.append(f"[{vlabel}]")
         if has_audio:
-            atrim = f"atrim=start={start:.3f}" + (f":end={end_expr}" if end_expr else "")
-            aparts.append(f"[0:a]{atrim},asetpts=PTS-STARTPTS,{atempo_chain(factor)}[{alabel}]")
+            atrim = f"atrim=start={start:.3f}" + (
+                f":end={end_expr}" if end_expr else ""
+            )
+            aparts.append(
+                f"[0:a]{atrim},asetpts=PTS-STARTPTS,{atempo_chain(factor)}[{alabel}]"
+            )
 
     if has_audio:
         concat_inputs = "".join(f"[v{i}][a{i}]" for i in range(len(segments)))
-        fc = ";".join(vparts + aparts) + f";{concat_inputs}concat=n={len(segments)}:v=1:a=1[outv][outa]"
+        fc = (
+            ";".join(vparts + aparts)
+            + f";{concat_inputs}concat=n={len(segments)}:v=1:a=1[outv][outa]"
+        )
         maps = ["-map", "[outv]", "-map", "[outa]"]
     else:
         concat_inputs = "".join(f"[v{i}]" for i in range(len(segments)))
-        fc = ";".join(vparts) + f";{concat_inputs}concat=n={len(segments)}:v=1:a=0[outv]"
+        fc = (
+            ";".join(vparts) + f";{concat_inputs}concat=n={len(segments)}:v=1:a=0[outv]"
+        )
         maps = ["-map", "[outv]"]
 
     cmd = ffmpeg_base() + ["-i", args.input, "-filter_complex", fc] + maps
@@ -120,8 +162,15 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {len(segments)} speed segments)")
-    emit(output, dropped_non_av_streams=bool(meta.get("subtitle_streams") or meta.get("data_streams")))
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {len(segments)} speed segments)"
+    )
+    emit(
+        output,
+        dropped_non_av_streams=bool(
+            meta.get("subtitle_streams") or meta.get("data_streams")
+        ),
+    )
     return 0
 
 

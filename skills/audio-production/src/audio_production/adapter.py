@@ -28,6 +28,7 @@ Which ffmpeg-skill tools are used, and for what (docs/ffmpeg-skill.md):
 TRIM/CUT/SILENCE_REMOVE (cut.py), NORMALIZE (loudness.py) and CONCAT (join.py) have no --audio-stream flag in
 ffmpeg-skill (0.12.0 CHANGELOG: combining separate files is "a different problem shape"); MIX does not get one
 either, for the same reason."""
+
 from __future__ import annotations
 
 import json
@@ -53,14 +54,52 @@ TOOLS_USED = ("probe", "audio", "cut", "loudness", "join")
 # flags of the ffmpeg-skill input_schema this adapter emits; checked against the live contract in doctor
 FLAGS_USED: Dict[str, Tuple[str, ...]] = {
     "probe": ("inputs",),
-    "audio": ("input", "output", "gain", "fade_in", "fade_out", "mono", "stereo", "downmix", "denoise", "denoise_strength", "voice", "music", "music_volume", "json",
-              "compress", "comp_threshold", "comp_ratio", "comp_attack", "comp_release", "comp_makeup", "comp_knee",
-              "limit", "limit_ceiling", "limit_attack", "limit_release",
-              "gate", "gate_threshold", "gate_ratio", "gate_attack", "gate_release", "gate_range", "gate_knee",
-              "audio_stream"),
+    "audio": (
+        "input",
+        "output",
+        "gain",
+        "fade_in",
+        "fade_out",
+        "mono",
+        "stereo",
+        "downmix",
+        "denoise",
+        "denoise_strength",
+        "voice",
+        "music",
+        "music_volume",
+        "json",
+        "compress",
+        "comp_threshold",
+        "comp_ratio",
+        "comp_attack",
+        "comp_release",
+        "comp_makeup",
+        "comp_knee",
+        "limit",
+        "limit_ceiling",
+        "limit_attack",
+        "limit_release",
+        "gate",
+        "gate_threshold",
+        "gate_ratio",
+        "gate_attack",
+        "gate_release",
+        "gate_range",
+        "gate_knee",
+        "audio_stream",
+    ),
     "cut": ("input", "output", "start", "end", "segments", "accurate", "json"),
     "loudness": ("input", "output", "lufs", "tp", "lra", "sample_rate", "json"),
-    "join": ("inputs", "output", "transition", "duration", "sample_rate", "channels", "json"),
+    "join": (
+        "inputs",
+        "output",
+        "transition",
+        "duration",
+        "sample_rate",
+        "channels",
+        "json",
+    ),
 }
 # flags emitted only when the located ffmpeg-skill declares them (capability detection, ADR-15):
 #   audio.overwrite        ffmpeg-skill >= 1.10 refuses to replace an existing output without --overwrite; older
@@ -79,12 +118,36 @@ FLAGS_USED: Dict[str, Tuple[str, ...]] = {
 #   cut.declick_ms         FILLER_REMOVE.declick_ms (fade at each --segments join); a value above 0 is refused at
 #                          planning when undeclared, 0 or omitted needs nothing (ADR-18).
 OPTIONAL_FLAGS_USED: Dict[str, Tuple[str, ...]] = {
-    "audio": ("overwrite", "duck", "duck_amount", "duck_threshold", "duck_attack", "duck_release", "replace"),
+    "audio": (
+        "overwrite",
+        "duck",
+        "duck_amount",
+        "duck_threshold",
+        "duck_attack",
+        "duck_release",
+        "replace",
+    ),
     "cut": ("declick_ms",),
     "loudness": ("measure_only",),
 }
-_ENV_KEEP = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "TERM",
-             "SYSTEMROOT", "SYSTEMDRIVE", "PATHEXT", "COMSPEC", "USERPROFILE", "LOCALAPPDATA", "APPDATA", "PROGRAMDATA")
+_ENV_KEEP = (
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "PATHEXT",
+    "COMSPEC",
+    "USERPROFILE",
+    "LOCALAPPDATA",
+    "APPDATA",
+    "PROGRAMDATA",
+)
 
 
 def _clean_env() -> Dict[str, str]:
@@ -102,7 +165,11 @@ def _group_kwargs() -> Dict[str, Any]:
 
 def kill_tree(proc: subprocess.Popen) -> None:
     if os.name == "nt":
-        subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         proc.kill()
     else:
         try:
@@ -117,7 +184,12 @@ def kill_tree(proc: subprocess.Popen) -> None:
 
 def fmt_seconds(value: float) -> str:
     """Seconds as a plain decimal string with millisecond precision (ffmpeg-skill parse_time accepts it)."""
-    if not isinstance(value, (int, float)) or value != value or value in (float("inf"), float("-inf")) or value < 0:
+    if (
+        not isinstance(value, (int, float))
+        or value != value
+        or value in (float("inf"), float("-inf"))
+        or value < 0
+    ):
         raise AudioError("INTERNAL_ERROR", f"bad time value {value!r}")
     return f"{float(value):.3f}"
 
@@ -168,7 +240,8 @@ class SkillInfo:
 
     def voice_levels(self) -> List[str]:
         """VOICE_CLEANUP levels this checkout can run: the `--voice` enum (ffmpeg-skill >= 1.13), or only `medium` when
-        `--voice` is the older boolean switch, whose one chain is the medium chain (ADR-16); [] without the flag."""
+        `--voice` is the older boolean switch, whose one chain is the medium chain (ADR-16); [] without the flag.
+        """
         choices = self.flag_choices("audio", "voice")
         if choices is not None:
             return choices
@@ -176,7 +249,10 @@ class SkillInfo:
 
     def optional_flags(self) -> Dict[str, Dict[str, bool]]:
         """OPTIONAL_FLAGS_USED -> detected (True / False) on this checkout; what doctor reports."""
-        return {tool: {f: self.takes_flag(tool, f) for f in flags} for tool, flags in OPTIONAL_FLAGS_USED.items()}
+        return {
+            tool: {f: self.takes_flag(tool, f) for f in flags}
+            for tool, flags in OPTIONAL_FLAGS_USED.items()
+        }
 
 
 class FfmpegSkill:
@@ -194,7 +270,9 @@ class FfmpegSkill:
     def candidates(explicit: Optional[str] = None) -> List[Path]:
         out: List[Path] = []
         if explicit:
-            return [Path(explicit)]      # an explicit directory is never silently replaced by a fallback
+            return [
+                Path(explicit)
+            ]  # an explicit directory is never silently replaced by a fallback
         for key in ENV_DIR_KEYS:
             v = os.environ.get(key)
             if v:
@@ -205,18 +283,28 @@ class FfmpegSkill:
         return out
 
     @classmethod
-    def locate(cls, explicit: Optional[str] = None, timeout: float = 600.0) -> "FfmpegSkill":
+    def locate(
+        cls, explicit: Optional[str] = None, timeout: float = 600.0
+    ) -> "FfmpegSkill":
         tried = []
         for c in cls.candidates(explicit):
             tried.append(str(c))
-            if (c / "scripts" / "_contract.py").is_file() and all((c / "scripts" / f"{t}.py").is_file() for t in TOOLS_USED):
+            if (c / "scripts" / "_contract.py").is_file() and all(
+                (c / "scripts" / f"{t}.py").is_file() for t in TOOLS_USED
+            ):
                 return cls(c.resolve(), timeout)
-        raise AudioError("TOOL_ERROR", "ffmpeg-skill not found (need scripts/_contract.py and scripts/{probe,audio,cut,loudness}.py)",
-                         {"reason": "ffmpeg_skill_missing", "tried": tried}, retryable=False)
+        raise AudioError(
+            "TOOL_ERROR",
+            "ffmpeg-skill not found (need scripts/_contract.py and scripts/{probe,audio,cut,loudness}.py)",
+            {"reason": "ffmpeg_skill_missing", "tried": tried},
+            retryable=False,
+        )
 
     def script(self, tool: str) -> str:
         if tool not in TOOLS_USED:
-            raise AudioError("INTERNAL_ERROR", f"tool {tool!r} is not on the adapter allowlist")
+            raise AudioError(
+                "INTERNAL_ERROR", f"tool {tool!r} is not on the adapter allowlist"
+            )
         return str(self.directory / "scripts" / f"{tool}.py")
 
     # ---- contract of the located skill
@@ -225,32 +313,54 @@ class FfmpegSkill:
             return self._info
         problems: List[str] = []
         version, contract_version, tools = "unknown", "unknown", {}
-        argv = [sys.executable, str(self.directory / "scripts" / "_contract.py"), "--json", "--static"]
+        argv = [
+            sys.executable,
+            str(self.directory / "scripts" / "_contract.py"),
+            "--json",
+            "--static",
+        ]
         try:
             r = self._popen(argv, timeout)
             doc = json.loads(r[1] or "{}")
             version = str(doc.get("skill", {}).get("version", "unknown"))
             contract_version = str(doc.get("contract_version", "unknown"))
-            tools = {t["name"]: t for t in doc.get("tools", []) if isinstance(t, dict) and "name" in t}
+            tools = {
+                t["name"]: t
+                for t in doc.get("tools", [])
+                if isinstance(t, dict) and "name" in t
+            }
         except (AudioError, ValueError, OSError) as e:
-            problems.append(f"cannot read ffmpeg-skill contract: {getattr(e, 'message', str(e))}")
+            problems.append(
+                f"cannot read ffmpeg-skill contract: {getattr(e, 'message', str(e))}"
+            )
         warnings: List[str] = []
         # No version window: the version string is reported as found, and compatibility is the flag check below.
-        if contract_version != "unknown" and contract_version.split(".")[0] not in {v.split(".")[0] for v in KNOWN_CONTRACT_VERSIONS}:
-            warnings.append(f"ffmpeg-skill contract_version {contract_version} is not one of {', '.join(KNOWN_CONTRACT_VERSIONS)}; "
-                            "compatibility was decided by the tool / flag check, not by this number")
+        if contract_version != "unknown" and contract_version.split(".")[0] not in {
+            v.split(".")[0] for v in KNOWN_CONTRACT_VERSIONS
+        }:
+            warnings.append(
+                f"ffmpeg-skill contract_version {contract_version} is not one of {', '.join(KNOWN_CONTRACT_VERSIONS)}; "
+                "compatibility was decided by the tool / flag check, not by this number"
+            )
         for tool, flags in FLAGS_USED.items():
             spec = tools.get(tool)
             if spec is None:
-                problems.append(f"ffmpeg-skill tool {tool!r} is missing from its contract")
+                problems.append(
+                    f"ffmpeg-skill tool {tool!r} is missing from its contract"
+                )
                 continue
             props = spec.get("input_schema", {}).get("properties", {})
             missing = [f for f in flags if f not in props]
             if missing:
                 problems.append(f"ffmpeg-skill/{tool} lacks flag(s) {missing}")
-            if tool in ("audio", "cut", "loudness", "join") and spec.get("audio_only") is not True:
+            if (
+                tool in ("audio", "cut", "loudness", "join")
+                and spec.get("audio_only") is not True
+            ):
                 problems.append(f"ffmpeg-skill/{tool} does not declare audio_only")
-        self._info = SkillInfo(self.directory, version, contract_version, tools, problems, warnings)
+        self._info = SkillInfo(
+            self.directory, version, contract_version, tools, problems, warnings
+        )
         return self._info
 
     def takes_flag(self, tool: str, flag: str) -> bool:
@@ -260,7 +370,9 @@ class FfmpegSkill:
     def cancel(self) -> None:
         self._cancelled = True
 
-    def _popen(self, argv: Sequence[str], timeout: Optional[float]) -> Tuple[int, str, str, float]:
+    def _popen(
+        self, argv: Sequence[str], timeout: Optional[float]
+    ) -> Tuple[int, str, str, float]:
         for a in argv:
             if not isinstance(a, str) or "\x00" in a:
                 raise AudioError("INTERNAL_ERROR", "argv element is not a clean string")
@@ -268,33 +380,85 @@ class FfmpegSkill:
             raise AudioError("CANCELLED", "cancelled before the tool started")
         t0 = time.monotonic()
         try:
-            proc = subprocess.Popen(list(argv), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    text=True, errors="replace", env=_clean_env(), cwd=str(self.directory), **_group_kwargs())
+            proc = subprocess.Popen(
+                list(argv),
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                errors="replace",
+                env=_clean_env(),
+                cwd=str(self.directory),
+                **_group_kwargs(),
+            )
         except FileNotFoundError as e:
-            raise AudioError("TOOL_ERROR", f"cannot start {os.path.basename(argv[0])}: {e}", {"reason": "executable_missing"}, retryable=False)
+            raise AudioError(
+                "TOOL_ERROR",
+                f"cannot start {os.path.basename(argv[0])}: {e}",
+                {"reason": "executable_missing"},
+                retryable=False,
+            )
         try:
             out, err = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             kill_tree(proc)
-            raise AudioError("TOOL_ERROR", f"{os.path.basename(argv[1]) if len(argv) > 1 else argv[0]} exceeded {timeout}s", {"reason": "timeout", "timeout": timeout})
+            raise AudioError(
+                "TOOL_ERROR",
+                f"{os.path.basename(argv[1]) if len(argv) > 1 else argv[0]} exceeded {timeout}s",
+                {"reason": "timeout", "timeout": timeout},
+            )
         except KeyboardInterrupt:
             kill_tree(proc)
             self._cancelled = True
-            raise AudioError("CANCELLED", "interrupted while a tool was running", {"reason": "signal"})
+            raise AudioError(
+                "CANCELLED",
+                "interrupted while a tool was running",
+                {"reason": "signal"},
+            )
         return proc.returncode, out or "", err or "", round(time.monotonic() - t0, 3)
 
-    def run_tool(self, tool: str, args: Sequence[str], timeout: Optional[float] = None) -> ToolRun:
+    def run_tool(
+        self, tool: str, args: Sequence[str], timeout: Optional[float] = None
+    ) -> ToolRun:
         argv = [sys.executable, self.script(tool), *args, "--json"]
         code, out, err, seconds = self._popen(argv, timeout or self.timeout)
         data = _parse_json(out)
         tail = "\n".join(err.strip().splitlines()[-12:])
-        run = ToolRun(tool, argv, code, data, tail, seconds, list(data.get("commands", [])) if isinstance(data.get("commands"), list) else [])
+        run = ToolRun(
+            tool,
+            argv,
+            code,
+            data,
+            tail,
+            seconds,
+            (
+                list(data.get("commands", []))
+                if isinstance(data.get("commands"), list)
+                else []
+            ),
+        )
         self.runs.append(run)
         if code != 0 or (isinstance(data, dict) and data.get("status") == "failed"):
-            msg = (data.get("error") or {}).get("message") if isinstance(data.get("error"), dict) else None
-            raise AudioError("TOOL_ERROR", f"ffmpeg-skill/{tool} failed (exit {code}): {msg or tail or 'no message'}",
-                             {"reason": "tool_failed", "tool": f"ffmpeg-skill/{tool}", "exit_code": code, "stderr_tail": tail,
-                              "error_kind": (data.get("error") or {}).get("kind") if isinstance(data.get("error"), dict) else None})
+            msg = (
+                (data.get("error") or {}).get("message")
+                if isinstance(data.get("error"), dict)
+                else None
+            )
+            raise AudioError(
+                "TOOL_ERROR",
+                f"ffmpeg-skill/{tool} failed (exit {code}): {msg or tail or 'no message'}",
+                {
+                    "reason": "tool_failed",
+                    "tool": f"ffmpeg-skill/{tool}",
+                    "exit_code": code,
+                    "stderr_tail": tail,
+                    "error_kind": (
+                        (data.get("error") or {}).get("kind")
+                        if isinstance(data.get("error"), dict)
+                        else None
+                    ),
+                },
+            )
         return run
 
     # ---- typed helpers
@@ -303,10 +467,22 @@ class FfmpegSkill:
         argv = [sys.executable, self.script("probe"), path]
         code, out, err, seconds = self._popen(argv, timeout or min(self.timeout, 120.0))
         data = _parse_json(out)
-        self.runs.append(ToolRun("probe", argv, code, data, "\n".join(err.strip().splitlines()[-12:]), seconds))
+        self.runs.append(
+            ToolRun(
+                "probe",
+                argv,
+                code,
+                data,
+                "\n".join(err.strip().splitlines()[-12:]),
+                seconds,
+            )
+        )
         if code != 0 or not isinstance(data, dict) or "duration" not in data:
-            raise AudioError("INVALID_INPUT", f"ffmpeg-skill/probe could not read {os.path.basename(path)}: {err.strip().splitlines()[-1] if err.strip() else 'no output'}",
-                             {"reason": "unreadable_media", "path": path, "exit_code": code})
+            raise AudioError(
+                "INVALID_INPUT",
+                f"ffmpeg-skill/probe could not read {os.path.basename(path)}: {err.strip().splitlines()[-1] if err.strip() else 'no output'}",
+                {"reason": "unreadable_media", "path": path, "exit_code": code},
+            )
         return data
 
 

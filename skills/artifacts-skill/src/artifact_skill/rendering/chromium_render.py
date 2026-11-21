@@ -114,8 +114,12 @@ def render_local_file(
     this is the equivalent knob for the Chromium-backed one.
     """
     files = render_local_files(
-        [source_path], [out_path], capability_id=capability_id, full_page=full_page,
-        limits=limits, allowed_root=allowed_root,
+        [source_path],
+        [out_path],
+        capability_id=capability_id,
+        full_page=full_page,
+        limits=limits,
+        allowed_root=allowed_root,
     )
     return files[0]
 
@@ -145,7 +149,9 @@ def render_local_files(
     around this.
     """
     if len(source_paths) != len(out_paths):
-        raise ValueError(f"source_paths ({len(source_paths)}) and out_paths ({len(out_paths)}) must match 1:1.")
+        raise ValueError(
+            f"source_paths ({len(source_paths)}) and out_paths ({len(out_paths)}) must match 1:1."
+        )
     require_playwright(capability_id)
     from playwright.sync_api import Error as PlaywrightError
     from playwright.sync_api import sync_playwright
@@ -179,7 +185,11 @@ def render_local_files(
             browser = pw.chromium.launch()
             try:
                 for source_path, out_path in zip(source_paths, out_paths, strict=True):
-                    root = allowed_root if allowed_root is not None else source_path.resolve().parent
+                    root = (
+                        allowed_root
+                        if allowed_root is not None
+                        else source_path.resolve().parent
+                    )
                     out_path.parent.mkdir(parents=True, exist_ok=True)
                     page = browser.new_page(viewport=_VIEWPORT)
                     try:
@@ -193,8 +203,16 @@ def render_local_files(
                         # net::ERR_FILE_NOT_FOUND, not merely a
                         # theoretical concern. Also the only correct way
                         # to build a Windows file:// URI ("file:///C:/...").
-                        page.goto(source_path.resolve().as_uri(), wait_until="load", timeout=nav_timeout_ms)
-                        page.screenshot(path=str(out_path), full_page=full_page, timeout=nav_timeout_ms)
+                        page.goto(
+                            source_path.resolve().as_uri(),
+                            wait_until="load",
+                            timeout=nav_timeout_ms,
+                        )
+                        page.screenshot(
+                            path=str(out_path),
+                            full_page=full_page,
+                            timeout=nav_timeout_ms,
+                        )
                         produced.append(out_path)
                     finally:
                         page.close()

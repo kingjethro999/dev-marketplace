@@ -6,6 +6,7 @@ magick is the primary backend and reports every field. sips (macOS) can only
 report width/height/format; colorspace/has_alpha/has_gps come back as null
 with a note.
 """
+
 import os
 import sys
 
@@ -30,8 +31,16 @@ def build_parser():
         description="Probe an image: dimensions, format, colorspace, alpha, GPS presence"
     )
     parser.add_argument("input", help="image file to read (never modified)")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
-    parser.add_argument("--dry-run", action="store_true", help="print the backend command that would run, write nothing")
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the backend command that would run, write nothing",
+    )
     add_timeout_arg(parser)
     return parser
 
@@ -57,7 +66,9 @@ def _probe_with_magick(magick, path, dry_run):
         "backend": "magick",
     }
     if has_gps is None:
-        payload["note"] = "the file has an EXIF block this tool could not parse; GPS presence is unknown - strip it to be safe"
+        payload["note"] = (
+            "the file has an EXIF block this tool could not parse; GPS presence is unknown - strip it to be safe"
+        )
     return payload
 
 
@@ -101,7 +112,9 @@ def run_probe(args):
     elif sips:
         payload = _probe_with_sips(sips, args.input, args.dry_run)
     else:
-        raise ImageSkillError("no usable backend: install ImageMagick (magick) or, on macOS, use sips")
+        raise ImageSkillError(
+            "no usable backend: install ImageMagick (magick) or, on macOS, use sips"
+        )
 
     if args.dry_run:
         return {"dry_run": True, "would_run": payload["command"]}

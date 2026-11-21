@@ -15,7 +15,11 @@ import sys
 from typing import Any, Dict
 
 from . import CONTRACT_VERSION, PACKAGE_NAME, SKILL_ID, VERSION
-from .capabilities import REFERENCE_METRIC_FILTERS, REQUIRED_FILTERS, detect_capabilities
+from .capabilities import (
+    REFERENCE_METRIC_FILTERS,
+    REQUIRED_FILTERS,
+    detect_capabilities,
+)
 from .errors import ERROR_CODES
 from .rules import (
     ALPHA_MODES,
@@ -44,99 +48,228 @@ from .rules import (
     VideoRule,
 )
 from .measurements.loop_seam import (
-    BAND_BASE_HZ, BAND_RANGE_DB, CLICK_CONTEXT_PERCENTILE, CLICK_CONTEXT_SEC, CLICK_WINDOW_SEC, LEVEL_FLOOR_DB,
+    BAND_BASE_HZ,
+    BAND_RANGE_DB,
+    CLICK_CONTEXT_PERCENTILE,
+    CLICK_CONTEXT_SEC,
+    CLICK_WINDOW_SEC,
+    LEVEL_FLOOR_DB,
 )
-from .measurements.alpha_edge import DEFAULT_SAMPLE_FRAMES, FRINGE_TOLERANCE, MAX_EDGE_DEPTH, MODE_TOLERANCE
+from .measurements.alpha_edge import (
+    DEFAULT_SAMPLE_FRAMES,
+    FRINGE_TOLERANCE,
+    MAX_EDGE_DEPTH,
+    MODE_TOLERANCE,
+)
 from .measurements.key_fill import DEFAULT_TOLERANCE as KEY_FILL_DEFAULT_TOLERANCE
 from .measurements.stinger import ALPHA_SCALE, OPAQUE_MIN_ALPHA
-from .measurements.video_loop_seam import DEFAULT_WINDOW_FRAMES, MAX_WINDOW_FRAMES, MIN_LOOP_FRAMES
+from .measurements.video_loop_seam import (
+    DEFAULT_WINDOW_FRAMES,
+    MAX_WINDOW_FRAMES,
+    MIN_LOOP_FRAMES,
+)
 from .schemas import VALID_ARTIFACT_TYPES
 
 SUPPORTED_OPERATIONS = ["inspect", "check", "validate"]
 SUPPORTED_KINDS = ["video", "audio", "subtitle", "delivery", "delivery_package"]
 
 SUPPORTED_VIDEO_MEASUREMENTS = [
-    "container.format_name", "container.duration_sec", "container.size_bytes", "container.bit_rate",
-    "video.stream_present", "video.stream_count", "video.codec", "video.width", "video.height",
-    "video.aspect_ratio", "video.frame_rate", "video.variable_frame_rate_suspected", "video.frame_count", "video.pixel_format",
-    "video.color_range", "video.color_space", "video.color_transfer", "video.color_primaries", "video.field_order",
-    "video.black_segments", "video.freeze_segments", "video.luminance_excursions", "video.decoded_frame_count",
-    "video.decode_error_count", "video.decode_errors", "video.frame_count_delta",
+    "container.format_name",
+    "container.duration_sec",
+    "container.size_bytes",
+    "container.bit_rate",
+    "video.stream_present",
+    "video.stream_count",
+    "video.codec",
+    "video.width",
+    "video.height",
+    "video.aspect_ratio",
+    "video.frame_rate",
+    "video.variable_frame_rate_suspected",
+    "video.frame_count",
+    "video.pixel_format",
+    "video.color_range",
+    "video.color_space",
+    "video.color_transfer",
+    "video.color_primaries",
+    "video.field_order",
+    "video.black_segments",
+    "video.freeze_segments",
+    "video.luminance_excursions",
+    "video.decoded_frame_count",
+    "video.decode_error_count",
+    "video.decode_errors",
+    "video.frame_count_delta",
     # opt-in, only when a VideoRule asks for them (ADR-016/017/018)
-    "video.flash_per_second", "video.flash_worst_window", "video.red_flash_count",
-    "video.scene_cuts", "video.text_regions",
+    "video.flash_per_second",
+    "video.flash_worst_window",
+    "video.red_flash_count",
+    "video.scene_cuts",
+    "video.text_regions",
     # opt-in, only when VideoRule.reference_metrics is set (ADR-021)
-    "video.reference_alignment", "video.vmaf", "video.ssim", "video.psnr_db",
+    "video.reference_alignment",
+    "video.vmaf",
+    "video.ssim",
+    "video.psnr_db",
     # opt-in, only when VideoRule.stinger is set (ADR-024)
-    "video.stinger_cut_point_alpha", "video.stinger_cut_frames",
+    "video.stinger_cut_point_alpha",
+    "video.stinger_cut_frames",
     # opt-in, only when VideoRule.loop_seam / alpha_edge / key_fill is set (ADR-026/027/028)
-    "video.loop_seam", "video.alpha_edges", "video.key_fill_pair", "video.key_fill_frames",
+    "video.loop_seam",
+    "video.alpha_edges",
+    "video.key_fill_pair",
+    "video.key_fill_frames",
 ]
 
 SUPPORTED_AUDIO_MEASUREMENTS = [
-    "audio.stream_present", "audio.stream_count", "audio.codec", "audio.sample_rate",
-    "audio.channels", "audio.channel_layout", "audio.duration_sec",
-    "audio.peak_level_dbfs", "audio.rms_level_dbfs", "audio.clipping_detected", "audio.per_channel_levels",
-    "audio.integrated_loudness_lufs", "audio.loudness_range_lu", "audio.true_peak_dbfs",
-    "audio.silence_segments", "audio.leading_silence_sec", "audio.trailing_silence_sec",
-    "audio.internal_silence_segments", "audio.decode_error_count", "audio.decode_errors",
+    "audio.stream_present",
+    "audio.stream_count",
+    "audio.codec",
+    "audio.sample_rate",
+    "audio.channels",
+    "audio.channel_layout",
+    "audio.duration_sec",
+    "audio.peak_level_dbfs",
+    "audio.rms_level_dbfs",
+    "audio.clipping_detected",
+    "audio.per_channel_levels",
+    "audio.integrated_loudness_lufs",
+    "audio.loudness_range_lu",
+    "audio.true_peak_dbfs",
+    "audio.silence_segments",
+    "audio.leading_silence_sec",
+    "audio.trailing_silence_sec",
+    "audio.internal_silence_segments",
+    "audio.decode_error_count",
+    "audio.decode_errors",
     # opt-in, only when AudioRule.loop_seam is set (ADR-025)
     "audio.loop_seams",
 ]
 
 SUPPORTED_SUBTITLE_MEASUREMENTS = [
-    "subtitle.exists", "subtitle.format", "subtitle.cue_count", "subtitle.cues", "subtitle.invalid_timestamps",
-    "subtitle.overlapping_cues", "subtitle.empty_cues", "subtitle.duplicate_ids",
-    "subtitle.invalid_control_characters", "subtitle.duration_sec", "subtitle.coverage_ratio",
-    "subtitle.duration_delta_sec", "subtitle.cue_density_per_min", "subtitle.excessive_line_length",
-    "subtitle.excessive_cue_duration", "subtitle.gaps",
+    "subtitle.exists",
+    "subtitle.format",
+    "subtitle.cue_count",
+    "subtitle.cues",
+    "subtitle.invalid_timestamps",
+    "subtitle.overlapping_cues",
+    "subtitle.empty_cues",
+    "subtitle.duplicate_ids",
+    "subtitle.invalid_control_characters",
+    "subtitle.duration_sec",
+    "subtitle.coverage_ratio",
+    "subtitle.duration_delta_sec",
+    "subtitle.cue_density_per_min",
+    "subtitle.excessive_line_length",
+    "subtitle.excessive_cue_duration",
+    "subtitle.gaps",
     # opt-in, only when a SubtitleRule asks for a cue-text or speech check / names a transcript (ADR-023)
-    "subtitle.cue_texts", "subtitle.transcript_words", "subtitle.transcript_word_count",
-    "subtitle.transcript_skipped_word_count", "subtitle.transcript_pos_word_count",
+    "subtitle.cue_texts",
+    "subtitle.transcript_words",
+    "subtitle.transcript_word_count",
+    "subtitle.transcript_skipped_word_count",
+    "subtitle.transcript_pos_word_count",
     "subtitle.transcript_interpolated_word_count",
 ]
 
-SUPPORTED_DELIVERY_MEASUREMENTS = ["delivery.extension"] + SUPPORTED_VIDEO_MEASUREMENTS + SUPPORTED_AUDIO_MEASUREMENTS + SUPPORTED_SUBTITLE_MEASUREMENTS
+SUPPORTED_DELIVERY_MEASUREMENTS = (
+    ["delivery.extension"]
+    + SUPPORTED_VIDEO_MEASUREMENTS
+    + SUPPORTED_AUDIO_MEASUREMENTS
+    + SUPPORTED_SUBTITLE_MEASUREMENTS
+)
 
-SUPPORTED_DELIVERY_PACKAGE_MEASUREMENTS = [
-    "delivery_package.artifact_present", "delivery_package.artifact_size_bytes",
-    "delivery_package.artifact_extension", "delivery_package.artifact_fingerprint",
-] + SUPPORTED_VIDEO_MEASUREMENTS + SUPPORTED_AUDIO_MEASUREMENTS + SUPPORTED_SUBTITLE_MEASUREMENTS
+SUPPORTED_DELIVERY_PACKAGE_MEASUREMENTS = (
+    [
+        "delivery_package.artifact_present",
+        "delivery_package.artifact_size_bytes",
+        "delivery_package.artifact_extension",
+        "delivery_package.artifact_fingerprint",
+    ]
+    + SUPPORTED_VIDEO_MEASUREMENTS
+    + SUPPORTED_AUDIO_MEASUREMENTS
+    + SUPPORTED_SUBTITLE_MEASUREMENTS
+)
 
 SUPPORTED_CHECKS = [
-    "video.stream_present", "video.decodes_without_errors", "video.duration_within_limit",
-    "video.resolution_matches_expected", "video.resolution_meets_minimum",
-    "video.frame_rate_matches_expected", "video.frame_rate_is_constant", "video.codec_matches_expected",
-    "video.pixel_format_matches_expected", "video.aspect_ratio_matches_expected",
-    "video.color_range_matches_expected", "video.color_space_matches_expected",
-    "video.color_transfer_matches_expected", "video.color_primaries_matches_expected",
-    "video.black_frames_within_tolerance", "video.freeze_frames_within_tolerance",
+    "video.stream_present",
+    "video.decodes_without_errors",
+    "video.duration_within_limit",
+    "video.resolution_matches_expected",
+    "video.resolution_meets_minimum",
+    "video.frame_rate_matches_expected",
+    "video.frame_rate_is_constant",
+    "video.codec_matches_expected",
+    "video.pixel_format_matches_expected",
+    "video.aspect_ratio_matches_expected",
+    "video.color_range_matches_expected",
+    "video.color_space_matches_expected",
+    "video.color_transfer_matches_expected",
+    "video.color_primaries_matches_expected",
+    "video.black_frames_within_tolerance",
+    "video.freeze_frames_within_tolerance",
     "video.luminance_within_legal_range",
-    "video.photosensitive_flash_within_limit", "video.cuts_match_expected", "video.text_legible",
-    "video.vmaf_meets_minimum", "video.ssim_meets_minimum", "video.psnr_meets_minimum",
-    "video.stinger_cut_point_in_cover", "video.stinger_opaque_at_cut_point", "video.stinger_cut_frame_matches",
-    "video.loop_seam_within_limit", "video.alpha_mode_consistent", "video.alpha_edge_clean", "video.key_fill_match",
-    "audio.stream_present_matches_expected", "audio.decodes_without_errors", "audio.no_clipping",
-    "audio.sample_rate_matches_expected", "audio.channels_match_expected", "audio.channel_layout_matches_expected",
-    "audio.leading_silence_within_tolerance", "audio.trailing_silence_within_tolerance",
-    "audio.internal_silence_within_tolerance", "audio.integrated_loudness_within_tolerance",
-    "audio.true_peak_within_tolerance", "audio.loudness_range_within_tolerance", "audio.channel_balance_within_tolerance",
-    "audio.loop_seam_click_within_limit", "audio.loop_seam_level_within_limit", "audio.loop_seam_spectrum_within_limit",
-    "subtitle.presence_matches_expected", "subtitle.timestamps_valid", "subtitle.no_empty_cues",
-    "subtitle.no_duplicate_ids", "subtitle.no_control_characters", "subtitle.no_overlapping_cues",
-    "subtitle.line_length_within_limit", "subtitle.cue_duration_within_limit", "subtitle.gaps_within_limit",
-    "subtitle.duration_matches_video", "subtitle.coverage_within_limit",
+    "video.photosensitive_flash_within_limit",
+    "video.cuts_match_expected",
+    "video.text_legible",
+    "video.vmaf_meets_minimum",
+    "video.ssim_meets_minimum",
+    "video.psnr_meets_minimum",
+    "video.stinger_cut_point_in_cover",
+    "video.stinger_opaque_at_cut_point",
+    "video.stinger_cut_frame_matches",
+    "video.loop_seam_within_limit",
+    "video.alpha_mode_consistent",
+    "video.alpha_edge_clean",
+    "video.key_fill_match",
+    "audio.stream_present_matches_expected",
+    "audio.decodes_without_errors",
+    "audio.no_clipping",
+    "audio.sample_rate_matches_expected",
+    "audio.channels_match_expected",
+    "audio.channel_layout_matches_expected",
+    "audio.leading_silence_within_tolerance",
+    "audio.trailing_silence_within_tolerance",
+    "audio.internal_silence_within_tolerance",
+    "audio.integrated_loudness_within_tolerance",
+    "audio.true_peak_within_tolerance",
+    "audio.loudness_range_within_tolerance",
+    "audio.channel_balance_within_tolerance",
+    "audio.loop_seam_click_within_limit",
+    "audio.loop_seam_level_within_limit",
+    "audio.loop_seam_spectrum_within_limit",
+    "subtitle.presence_matches_expected",
+    "subtitle.timestamps_valid",
+    "subtitle.no_empty_cues",
+    "subtitle.no_duplicate_ids",
+    "subtitle.no_control_characters",
+    "subtitle.no_overlapping_cues",
+    "subtitle.line_length_within_limit",
+    "subtitle.cue_duration_within_limit",
+    "subtitle.gaps_within_limit",
+    "subtitle.duration_matches_video",
+    "subtitle.coverage_within_limit",
     "subtitle.timeline_mapping_matches_source",
-    "subtitle.cue_boundaries_on_word_boundaries", "subtitle.cue_not_early", "subtitle.speech_covered",
-    "subtitle.no_forbidden_line_start", "subtitle.total_chars_within_limit", "subtitle.cue_chars_meet_minimum",
-    "delivery.file_size_within_limit", "delivery.extension_matches_expected", "delivery.container_matches_expected",
-    "delivery_package.artifact_present", "delivery_package.artifact_size_within_limit",
+    "subtitle.cue_boundaries_on_word_boundaries",
+    "subtitle.cue_not_early",
+    "subtitle.speech_covered",
+    "subtitle.no_forbidden_line_start",
+    "subtitle.total_chars_within_limit",
+    "subtitle.cue_chars_meet_minimum",
+    "delivery.file_size_within_limit",
+    "delivery.extension_matches_expected",
+    "delivery.container_matches_expected",
+    "delivery_package.artifact_present",
+    "delivery_package.artifact_size_within_limit",
     "delivery_package.artifact_extension_matches_expected",
-    "delivery_package.duration_consistent", "delivery_package.dependency_satisfied",
+    "delivery_package.duration_consistent",
+    "delivery_package.dependency_satisfied",
 ]
 
 SUPPORTED_FORMATS = {
-    "video_containers": ["any container ffprobe/ffmpeg on this host can demux (detected by doctor, not assumed)"],
+    "video_containers": [
+        "any container ffprobe/ffmpeg on this host can demux (detected by doctor, not assumed)"
+    ],
     "subtitle_formats": ["srt", "vtt", "ass", "ssa"],
 }
 
@@ -246,33 +379,55 @@ CAPABILITY_CHECK_GROUPS: Dict[str, list] = {
     "measure.video.freeze": ["video.freeze_frames_within_tolerance"],
     "measure.video.black_frame": ["video.black_frames_within_tolerance"],
     "measure.video.format": [
-        "video.resolution_matches_expected", "video.frame_rate_matches_expected", "video.codec_matches_expected",
-        "video.pixel_format_matches_expected", "video.aspect_ratio_matches_expected",
-        "video.color_range_matches_expected", "video.color_space_matches_expected",
-        "video.color_transfer_matches_expected", "video.color_primaries_matches_expected",
+        "video.resolution_matches_expected",
+        "video.frame_rate_matches_expected",
+        "video.codec_matches_expected",
+        "video.pixel_format_matches_expected",
+        "video.aspect_ratio_matches_expected",
+        "video.color_range_matches_expected",
+        "video.color_space_matches_expected",
+        "video.color_transfer_matches_expected",
+        "video.color_primaries_matches_expected",
     ],
     "measure.audio.integrity": [
-        "video.stream_present", "video.decodes_without_errors",
-        "audio.stream_present_matches_expected", "audio.decodes_without_errors",
+        "video.stream_present",
+        "video.decodes_without_errors",
+        "audio.stream_present_matches_expected",
+        "audio.decodes_without_errors",
     ],
     "measure.audio.clipping_and_dynamics": [
-        "audio.no_clipping", "audio.true_peak_within_tolerance", "audio.loudness_range_within_tolerance",
+        "audio.no_clipping",
+        "audio.true_peak_within_tolerance",
+        "audio.loudness_range_within_tolerance",
     ],
     "measure.audio.channel_layout": [
-        "audio.channels_match_expected", "audio.channel_layout_matches_expected", "audio.channel_balance_within_tolerance",
+        "audio.channels_match_expected",
+        "audio.channel_layout_matches_expected",
+        "audio.channel_balance_within_tolerance",
     ],
     "measure.audio.silence": [
-        "audio.leading_silence_within_tolerance", "audio.trailing_silence_within_tolerance", "audio.internal_silence_within_tolerance",
+        "audio.leading_silence_within_tolerance",
+        "audio.trailing_silence_within_tolerance",
+        "audio.internal_silence_within_tolerance",
     ],
     "measure.audio.loudness": ["audio.integrated_loudness_within_tolerance"],
     "measure.subtitle.timing": [
-        "subtitle.presence_matches_expected", "subtitle.timestamps_valid", "subtitle.no_empty_cues",
-        "subtitle.no_duplicate_ids", "subtitle.no_control_characters", "subtitle.no_overlapping_cues",
-        "subtitle.line_length_within_limit", "subtitle.cue_duration_within_limit", "subtitle.gaps_within_limit",
-        "subtitle.duration_matches_video", "subtitle.coverage_within_limit",
+        "subtitle.presence_matches_expected",
+        "subtitle.timestamps_valid",
+        "subtitle.no_empty_cues",
+        "subtitle.no_duplicate_ids",
+        "subtitle.no_control_characters",
+        "subtitle.no_overlapping_cues",
+        "subtitle.line_length_within_limit",
+        "subtitle.cue_duration_within_limit",
+        "subtitle.gaps_within_limit",
+        "subtitle.duration_matches_video",
+        "subtitle.coverage_within_limit",
     ],
     "measure.delivery.integrity": [
-        "delivery.file_size_within_limit", "delivery.extension_matches_expected", "delivery.container_matches_expected",
+        "delivery.file_size_within_limit",
+        "delivery.extension_matches_expected",
+        "delivery.container_matches_expected",
     ],
 }
 
@@ -343,7 +498,7 @@ TOOLS = [
         "tool_id": TOOL_CHECK,
         "operations": ["check", "validate"],
         "description": "measure one artifact (or one delivery_package) and evaluate caller-supplied rules; "
-                       "PASS/WARN/FAIL/UNKNOWN per check ('validate' is the same pipeline)",
+        "PASS/WARN/FAIL/UNKNOWN per check ('validate' is the same pipeline)",
         "produces": ["measurements", "checks", "findings"],
     },
     {
@@ -357,7 +512,7 @@ TOOLS = [
         "operations": list(SUPPORTED_OPERATIONS),
         "alias": True,
         "description": "the `qc run` subcommand itself, which takes any operation in the request; kept as an "
-                       "alias so a consumer pinned to the pre-ADR-022 provides[] tool id keeps resolving",
+        "alias so a consumer pinned to the pre-ADR-022 provides[] tool id keeps resolving",
         "produces": ["measurements", "checks", "findings"],
     },
 ]
@@ -368,19 +523,33 @@ def capability_provides() -> list:
     checks (`qc/check`); `tool_ids` lists every per-operation tool that serves the
     Capability (`qc/inspect` returns the same measurements without a verdict);
     `alias_tool_ids` keeps `qc/run` resolvable (ADR-022)."""
-    return [{"id": cap_id, "lifecycle": "EXPERIMENTAL", "tool_id": TOOL_CHECK,
-             "tool_ids": [TOOL_CHECK, TOOL_INSPECT], "alias_tool_ids": [TOOL_RUN_ALIAS],
-             "checks": sorted(checks)}
-            for cap_id, checks in sorted(CAPABILITY_CHECK_GROUPS.items())]
+    return [
+        {
+            "id": cap_id,
+            "lifecycle": "EXPERIMENTAL",
+            "tool_id": TOOL_CHECK,
+            "tool_ids": [TOOL_CHECK, TOOL_INSPECT],
+            "alias_tool_ids": [TOOL_RUN_ALIAS],
+            "checks": sorted(checks),
+        }
+        for cap_id, checks in sorted(CAPABILITY_CHECK_GROUPS.items())
+    ]
 
 
-_CATEGORY_PREFIXES = {"TEXT": "video", "VIDEO": "video", "AUDIO": "audio", "SUBTITLE": "subtitle", "DELIVERY": "delivery"}
+_CATEGORY_PREFIXES = {
+    "TEXT": "video",
+    "VIDEO": "video",
+    "AUDIO": "audio",
+    "SUBTITLE": "subtitle",
+    "DELIVERY": "delivery",
+}
 
 
 def _finding_category(code: str) -> str:
     if code.startswith("DELIVERY_PACKAGE_"):
         return "delivery_package"
     return _CATEGORY_PREFIXES[code.split("_", 1)[0]]
+
 
 NOT_PROVIDED = [
     "production decisions (publish/re-render/block)",
@@ -395,7 +564,9 @@ NOT_PROVIDED = [
 
 
 _NESTED_RULE_NAMES = {
-    VideoRule: "video", AudioRule: "audio", SubtitleRule: "subtitle",
+    VideoRule: "video",
+    AudioRule: "audio",
+    SubtitleRule: "subtitle",
     DeliveryArtifactRule: "delivery_package_artifact",
     CrossArtifactRule: "delivery_package_cross_artifact",
     ArtifactDurationConsistencyRule: "delivery_package_duration_consistency",
@@ -447,7 +618,9 @@ def rules_contract_schema() -> Dict[str, Any]:
         "delivery_package": _rule_schema(DeliveryPackageRule),
         "delivery_package_artifact": _rule_schema(DeliveryArtifactRule),
         "delivery_package_cross_artifact": _rule_schema(CrossArtifactRule),
-        "delivery_package_duration_consistency": _rule_schema(ArtifactDurationConsistencyRule),
+        "delivery_package_duration_consistency": _rule_schema(
+            ArtifactDurationConsistencyRule
+        ),
         "delivery_package_dependency": _rule_schema(ArtifactDependencyRule),
         "timeline_integrity": _rule_schema(TimelineIntegrityRule),
         "timeline_segment": _rule_schema(TimelineSegment),
@@ -465,13 +638,22 @@ def rules_contract_schema() -> Dict[str, Any]:
 
 def findings_contract_catalog() -> list:
     return [
-        {"code": code, "category": _finding_category(code), "default_severity": severity}
+        {
+            "code": code,
+            "category": _finding_category(code),
+            "default_severity": severity,
+        }
         for code, severity in FINDING_CATALOG
     ]
 
 
 def tool_spec(check_id: str, category: str) -> Dict[str, Any]:
-    return {"tool_id": f"{SKILL_ID}/{check_id}", "skill_id": SKILL_ID, "version": VERSION, "category": category}
+    return {
+        "tool_id": f"{SKILL_ID}/{check_id}",
+        "skill_id": SKILL_ID,
+        "version": VERSION,
+        "category": category,
+    }
 
 
 def skill_contract() -> Dict[str, Any]:
@@ -495,9 +677,21 @@ def skill_contract() -> Dict[str, Any]:
         "provides": capability_provides(),
         "capabilities": {
             "required": ["ffprobe"],
-            "optional": ["ffmpeg", "filter:blackdetect", "filter:freezedetect", "filter:ebur128", "filter:astats", "filter:silencedetect",
-                         "filter:scdet", "filter:extractplanes", "filter:showinfo", "filter:crop",
-                         "filter:libvmaf", "filter:ssim", "filter:psnr"],
+            "optional": [
+                "ffmpeg",
+                "filter:blackdetect",
+                "filter:freezedetect",
+                "filter:ebur128",
+                "filter:astats",
+                "filter:silencedetect",
+                "filter:scdet",
+                "filter:extractplanes",
+                "filter:showinfo",
+                "filter:crop",
+                "filter:libvmaf",
+                "filter:ssim",
+                "filter:psnr",
+            ],
         },
         "inputs": {
             "input": "media or subtitle file path (one primary artifact per request; not accepted for kind=delivery_package)",
@@ -520,11 +714,20 @@ def skill_contract() -> Dict[str, Any]:
         "outputs": ["report"],
         "parameters": sorted(
             {
-                "black_min_duration_sec", "black_pixel_threshold", "freeze_noise_db", "freeze_min_duration_sec",
-                "luminance_legal_min", "luminance_legal_max",
-                "silence_threshold_db", "silence_min_duration_sec", "clipping_threshold_dbfs",
-                "max_line_length", "max_cue_duration_sec", "max_gap_sec",
-                "flash_area_fraction", "scene_cut_threshold",
+                "black_min_duration_sec",
+                "black_pixel_threshold",
+                "freeze_noise_db",
+                "freeze_min_duration_sec",
+                "luminance_legal_min",
+                "luminance_legal_max",
+                "silence_threshold_db",
+                "silence_min_duration_sec",
+                "clipping_threshold_dbfs",
+                "max_line_length",
+                "max_cue_duration_sec",
+                "max_gap_sec",
+                "flash_area_fraction",
+                "scene_cut_threshold",
             }
         ),
         "measurements": {
@@ -548,9 +751,9 @@ def skill_contract() -> Dict[str, Any]:
             "rule": "rules.video.stinger: {cut_point, cover?: {start, end}, file?, cut_at?: [seconds], max_cut_frame_difference?} (ADR-024)",
             "cut_point": "seconds on the stinger's own timeline, from its stinger.json; must be on a frame (within 1/1000 of one)",
             "opaque_rule": f"every pixel of the stinger's frame at cut_point has alpha >= {OPAQUE_MIN_ALPHA}/{ALPHA_SCALE} "
-                           "(alpha * 255 >= 253 * max at its native bit depth; video-editing-skill's rule)",
+            "(alpha * 255 >= 253 * max at its native bit depth; video-editing-skill's rule)",
             "cut_frames": "with file + cut_at: mean absolute difference (8-bit RGB, 0-255) of the input's frame at each cut_at and "
-                          "the stinger's frame at cut_point scaled to the input's size; no default for max_cut_frame_difference",
+            "the stinger's frame at cut_point scaled to the input's size; no default for max_cut_frame_difference",
         },
         "video_material": {
             "loop_seam": (
@@ -576,12 +779,12 @@ def skill_contract() -> Dict[str, Any]:
         },
         "loop_seam": {
             "rule": "rules.audio.loop_seam: {window_sec?, seams?: [seconds], include_wrap (default true), max_click_ratio?, "
-                    "max_level_diff_db?, max_band_diff_db?} - no limit has a default (ADR-025)",
+            "max_level_diff_db?, max_band_diff_db?} - no limit has a default (ADR-025)",
             "click": f"max |second difference| within +-{CLICK_WINDOW_SEC * 1000:g} ms of the seam over its "
-                     f"{CLICK_CONTEXT_PERCENTILE}th percentile within +-{CLICK_CONTEXT_SEC * 1000:g} ms outside that, worst channel",
+            f"{CLICK_CONTEXT_PERCENTILE}th percentile within +-{CLICK_CONTEXT_SEC * 1000:g} ms outside that, worst channel",
             "level": f"RMS dBFS of window_sec on each side, worst channel, floored at {LEVEL_FLOOR_DB:g}",
             "spectrum": f"octave bands centred on {BAND_BASE_HZ:g} Hz * 2^k of the same windows, each relative to its side's "
-                        f"total (shape, not level); bands within {BAND_RANGE_DB:g} dB of the loudest are compared, worst channel",
+            f"total (shape, not level); bands within {BAND_RANGE_DB:g} dB of the loudest are compared, worst channel",
         },
         "findings": findings_contract_catalog(),
         "formats": SUPPORTED_FORMATS,
@@ -603,11 +806,22 @@ def skill_contract() -> Dict[str, Any]:
         },
         "deterministic": True,
         "identity": {
-            "components": ["asset_fingerprint(sha256 of content)", "kind", "operation", "effective_parameters", "rules", "ffmpeg_version", "ffprobe_version"],
+            "components": [
+                "asset_fingerprint(sha256 of content)",
+                "kind",
+                "operation",
+                "effective_parameters",
+                "rules",
+                "ffmpeg_version",
+                "ffprobe_version",
+            ],
             "excludes": ["timestamps", "machine-local paths", "request_id"],
             "canonical_json": True,
         },
-        "cache": {"policies": ["use", "bypass", "only"], "statuses": ["hit", "miss", "invalid", "disabled"]},
+        "cache": {
+            "policies": ["use", "bypass", "only"],
+            "statuses": ["hit", "miss", "invalid", "disabled"],
+        },
         "provenance": "OBSERVED",
         "errors": {
             "codes": sorted(ERROR_CODES),
@@ -618,7 +832,11 @@ def skill_contract() -> Dict[str, Any]:
 
 
 def _python_info() -> Dict[str, Any]:
-    return {"version": sys.version.split()[0], "implementation": platform.python_implementation(), "platform": platform.platform()}
+    return {
+        "version": sys.version.split()[0],
+        "implementation": platform.python_implementation(),
+        "platform": platform.platform(),
+    }
 
 
 def doctor_report(path_policy_workspace: str) -> Dict[str, Any]:
@@ -632,26 +850,46 @@ def doctor_report(path_policy_workspace: str) -> Dict[str, Any]:
     }
 
     checks["ffprobe"] = (
-        {"status": "AVAILABLE", "version": caps.ffprobe_version, "path": caps.ffprobe_path}
+        {
+            "status": "AVAILABLE",
+            "version": caps.ffprobe_version,
+            "path": caps.ffprobe_path,
+        }
         if caps.ffprobe_available
         else {"status": "MISSING", "detail": "ffprobe was not found on PATH"}
     )
     checks["ffmpeg"] = (
-        {"status": "AVAILABLE", "version": caps.ffmpeg_version, "path": caps.ffmpeg_path}
+        {
+            "status": "AVAILABLE",
+            "version": caps.ffmpeg_version,
+            "path": caps.ffmpeg_path,
+        }
         if caps.ffmpeg_available
-        else {"status": "MISSING", "detail": "ffmpeg was not found on PATH; video/audio defect analysis is degraded to metadata-only"}
+        else {
+            "status": "MISSING",
+            "detail": "ffmpeg was not found on PATH; video/audio defect analysis is degraded to metadata-only",
+        }
     )
 
     for name in REQUIRED_FILTERS:
         state = caps.filters.get(name, "unknown")
-        status = {"available": "AVAILABLE", "missing": "MISSING", "unknown": "UNKNOWN"}[state]
+        status = {"available": "AVAILABLE", "missing": "MISSING", "unknown": "UNKNOWN"}[
+            state
+        ]
         checks[f"filter:{name}"] = {"status": status}
 
     # Optional full-reference metric filters (ADR-021): reported, never a
     # reason for "degraded" - only an opt-in reference_metrics rule needs them.
     for name in REFERENCE_METRIC_FILTERS:
         state = caps.filters.get(name, "unknown")
-        entry: Dict[str, Any] = {"status": {"available": "AVAILABLE", "missing": "MISSING", "unknown": "UNKNOWN"}[state], "optional": True}
+        entry: Dict[str, Any] = {
+            "status": {
+                "available": "AVAILABLE",
+                "missing": "MISSING",
+                "unknown": "UNKNOWN",
+            }[state],
+            "optional": True,
+        }
         if name == "libvmaf":
             entry["buildconf_enable_libvmaf"] = caps.buildconf_libvmaf
             if state != "available":
@@ -664,7 +902,11 @@ def doctor_report(path_policy_workspace: str) -> Dict[str, Any]:
     try:
         contract = skill_contract()
         json.dumps(contract)  # round-trip: every value must be JSON-serializable
-        checks["contract"] = {"status": "AVAILABLE", "schema": contract["schema"], "checks": len(contract["checks"])}
+        checks["contract"] = {
+            "status": "AVAILABLE",
+            "schema": contract["schema"],
+            "checks": len(contract["checks"]),
+        }
         contract_ok = True
     except Exception as exc:  # pragma: no cover - defensive
         checks["contract"] = {"status": "MISSING", "detail": str(exc)}
@@ -693,7 +935,9 @@ def doctor_report(path_policy_workspace: str) -> Dict[str, Any]:
 
     if not caps.ffprobe_available or not contract_ok:
         status = "fail"
-    elif not caps.ffmpeg_available or any(caps.filters.get(n) == "unknown" for n in REQUIRED_FILTERS):
+    elif not caps.ffmpeg_available or any(
+        caps.filters.get(n) == "unknown" for n in REQUIRED_FILTERS
+    ):
         status = "degraded"
     else:
         status = "ok"

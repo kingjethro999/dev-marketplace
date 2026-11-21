@@ -15,7 +15,9 @@ shipped `find` (ADR-107 addendum 15): every timed hit of a phrase in the transcr
   refuse is refused before anything runs.
 - **Without the Skill** (or its engine: Tesseract for text, PySceneDetect for shots, the doctor says which) the measurement is not run. The plan
   records the ask and BLOCKs with a handoff naming the package and how to install it (agent/handoffs.py `decide_measurement_handoffs`), the
-  route `speakers.diarize` takes. A measurement that ran and failed blocks with the Skill's own code."""
+  route `speakers.diarize` takes. A measurement that ran and failed blocks with the Skill's own code.
+"""
+
 from __future__ import annotations
 
 import re
@@ -25,8 +27,10 @@ from .editing import EditRequirementError
 
 _ON = (True, "true", "yes", "on", "1")
 _OFF = (False, None, "false", "no", "off", "0", "none")
-LANG_RE = re.compile(r"^[a-z]{3}(?:_[a-z]{3,4})?(?:\+[a-z]{3}(?:_[a-z]{3,4})?){0,7}$")   # detection-skill's --lang: Tesseract codes joined by +
-TEXT_EVERY_DEFAULT = 1.0   # one frame a second: on-screen text (a lower third, a slide) stays up longer than that
+LANG_RE = re.compile(
+    r"^[a-z]{3}(?:_[a-z]{3,4})?(?:\+[a-z]{3}(?:_[a-z]{3,4})?){0,7}$"
+)  # detection-skill's --lang: Tesseract codes joined by +
+TEXT_EVERY_DEFAULT = 1.0  # one frame a second: on-screen text (a lower third, a slide) stays up longer than that
 
 
 def _number(v: Any, key: str, lo: float, hi: float, lo_open: bool = False) -> float:
@@ -35,7 +39,9 @@ def _number(v: Any, key: str, lo: float, hi: float, lo_open: bool = False) -> fl
     except (TypeError, ValueError):
         raise EditRequirementError(f"{key} must be a number, got {v!r}")
     if isinstance(v, bool) or f != f or (f <= lo if lo_open else f < lo) or f > hi:
-        raise EditRequirementError(f"{key} must be in {'(' if lo_open else '['}{lo:g}, {hi:g}], got {v!r}")
+        raise EditRequirementError(
+            f"{key} must be in {'(' if lo_open else '['}{lo:g}, {hi:g}], got {v!r}"
+        )
     return f
 
 
@@ -43,59 +49,113 @@ def _int(v: Any, key: str, lo: int, hi: int) -> int:
     if isinstance(v, str) and v.strip().isdigit():
         v = int(v.strip())
     if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
-        raise EditRequirementError(f"{key} must be an integer in [{lo}, {hi}], got {v!r}")
+        raise EditRequirementError(
+            f"{key} must be an integer in [{lo}, {hi}], got {v!r}"
+        )
     return v
 
 
 def _text(v: Any, key: str) -> str:
     if not isinstance(v, str) or not LANG_RE.match(v.strip()):
-        raise EditRequirementError(f"{key} must be Tesseract language codes joined by + (e.g. jpn+eng, jpn_vert), got {v!r}")
+        raise EditRequirementError(
+            f"{key} must be Tesseract language codes joined by + (e.g. jpn+eng, jpn_vert), got {v!r}"
+        )
     return v.strip()
 
 
 # switch → (registry skill, analysis kind, what is measured, {refinement key: (analysis parameter, parser)})
 MEASUREMENTS: Dict[str, Tuple[str, str, str, Dict[str, Tuple[str, Any]]]] = {
-    "text.detect": ("text_detection", "screen_text", "text on screen (OCR lines with their boxes) on every input with video", {
-        "text.every": ("text_every", lambda v, k: _number(v, k, 0.0, 60.0, lo_open=True)),
-        "text.lang": ("text_lang", _text),
-        "text.min_score": ("text_min_score", lambda v, k: _number(v, k, 0.0, 1.0)),
-    }),
-    "shots.detect": ("shot_detection", "shot_table", "the frame-accurate shot table on every input with video", {
-        "shots.threshold": ("shot_threshold", lambda v, k: _number(v, k, 0.0, 255.0, lo_open=True)),
-        "shots.min_shot_frames": ("shot_min_frames", lambda v, k: _int(v, k, 1, 100000)),
-    }),
-    "speech_regions.detect": ("speech_region_analysis", "speech_regions", "speech regions (a voice-activity model) on every input with audio", {}),
+    "text.detect": (
+        "text_detection",
+        "screen_text",
+        "text on screen (OCR lines with their boxes) on every input with video",
+        {
+            "text.every": (
+                "text_every",
+                lambda v, k: _number(v, k, 0.0, 60.0, lo_open=True),
+            ),
+            "text.lang": ("text_lang", _text),
+            "text.min_score": ("text_min_score", lambda v, k: _number(v, k, 0.0, 1.0)),
+        },
+    ),
+    "shots.detect": (
+        "shot_detection",
+        "shot_table",
+        "the frame-accurate shot table on every input with video",
+        {
+            "shots.threshold": (
+                "shot_threshold",
+                lambda v, k: _number(v, k, 0.0, 255.0, lo_open=True),
+            ),
+            "shots.min_shot_frames": (
+                "shot_min_frames",
+                lambda v, k: _int(v, k, 1, 100000),
+            ),
+        },
+    ),
+    "speech_regions.detect": (
+        "speech_region_analysis",
+        "speech_regions",
+        "speech regions (a voice-activity model) on every input with audio",
+        {},
+    ),
     # the one key that carries a value instead of a switch: the phrase itself (the transcript it is searched in is measured for it)
-    "transcript.find": ("transcript_search", "transcript_hits", "every timed hit of the phrase in the transcript of every input with audio", {
-        "transcript.find.fuzzy": ("find_fuzzy", lambda v, k: _number(v, k, 0.5, 1.0)),
-        "transcript.find.context": ("find_context", lambda v, k: _int(v, k, 0, 10)),
-    }),
+    "transcript.find": (
+        "transcript_search",
+        "transcript_hits",
+        "every timed hit of the phrase in the transcript of every input with audio",
+        {
+            "transcript.find.fuzzy": (
+                "find_fuzzy",
+                lambda v, k: _number(v, k, 0.5, 1.0),
+            ),
+            "transcript.find.context": ("find_context", lambda v, k: _int(v, k, 0, 10)),
+        },
+    ),
 }
 VALUE_KEYS = ("transcript.find",)
 PREFIXES = tuple(sorted({k.split(".", 1)[0] + "." for k in MEASUREMENTS}))
-REQUIREMENT_KEYS = tuple(sorted(set(MEASUREMENTS) | {r for m in MEASUREMENTS.values() for r in m[3]}))
+REQUIREMENT_KEYS = tuple(
+    sorted(set(MEASUREMENTS) | {r for m in MEASUREMENTS.values() for r in m[3]})
+)
 
 
 def _switch(given: Dict[str, Any], key: str) -> bool:
-    v = given[key].strip().lower() if isinstance(given.get(key), str) else given.get(key)
+    v = (
+        given[key].strip().lower()
+        if isinstance(given.get(key), str)
+        else given.get(key)
+    )
     if v not in _ON + _OFF:
-        raise EditRequirementError(f"{key} is a switch (true / false), got {given[key]!r}")
+        raise EditRequirementError(
+            f"{key} is a switch (true / false), got {given[key]!r}"
+        )
     return v in _ON
 
 
-def parse_measurement(user_requirements: Dict[str, Any], switch: str) -> Optional[Tuple[str, Dict[str, Any]]]:
+def parse_measurement(
+    user_requirements: Dict[str, Any], switch: str
+) -> Optional[Tuple[str, Dict[str, Any]]]:
     """(analysis kind, its parameters) when `switch` is on, else None; EditRequirementError on anything the Skill would refuse."""
     skill, kind, _, refinements = MEASUREMENTS[switch]
     prefix = switch.split(".", 1)[0] + "."
     given = {k: v for k, v in (user_requirements or {}).items() if k.startswith(prefix)}
     unknown = sorted(k for k in given if k not in REQUIREMENT_KEYS)
     if unknown:
-        raise EditRequirementError(f"unknown requirement key(s): {', '.join(unknown)}; known: {', '.join(k for k in REQUIREMENT_KEYS if k.startswith(prefix))}")
+        raise EditRequirementError(
+            f"unknown requirement key(s): {', '.join(unknown)}; known: {', '.join(k for k in REQUIREMENT_KEYS if k.startswith(prefix))}"
+        )
     params: Dict[str, Any] = {}
     if switch in VALUE_KEYS:
         v = given.get(switch)
-        if v is not None and v is not False and (not isinstance(v, str) or not v.strip() or len(v) > 500 or "\x00" in v):
-            raise EditRequirementError(f"{switch} is the phrase to find (1..500 characters), got {v!r}")
+        if (
+            v is not None
+            and v is not False
+            and (not isinstance(v, str) or not v.strip() or len(v) > 500 or "\x00" in v)
+        ):
+            raise EditRequirementError(
+                f"{switch} is the phrase to find (1..500 characters), got {v!r}"
+            )
         on = isinstance(v, str) and bool(v.strip())
         if on:
             params["find_phrase"] = v
@@ -104,10 +164,14 @@ def parse_measurement(user_requirements: Dict[str, Any], switch: str) -> Optiona
     for key, (param, parse) in refinements.items():
         if given.get(key) is not None:
             if not on:
-                raise EditRequirementError(f"{key} refines {switch}, which is not set to true")
+                raise EditRequirementError(
+                    f"{key} refines {switch}, which is not set to true"
+                )
             params[param] = parse(given[key], key)
     if on and kind == "screen_text":
-        params.setdefault("text_every", TEXT_EVERY_DEFAULT)   # the agent always says how densely frames are sampled (detection-skill needs it)
+        params.setdefault(
+            "text_every", TEXT_EVERY_DEFAULT
+        )  # the agent always says how densely frames are sampled (detection-skill needs it)
     return (kind, params) if on else None
 
 
@@ -117,7 +181,9 @@ def check_measurement_keys(user_requirements: Dict[str, Any]) -> None:
         parse_measurement(user_requirements, switch)
 
 
-def requested_kinds(user_requirements: Dict[str, Any]) -> Dict[str, Tuple[str, Dict[str, Any]]]:
+def requested_kinds(
+    user_requirements: Dict[str, Any],
+) -> Dict[str, Tuple[str, Dict[str, Any]]]:
     """{registry skill: (analysis kind, parameters)} for every measurement switched on."""
     out = {}
     for switch, (skill, _, _, _) in MEASUREMENTS.items():

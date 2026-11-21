@@ -1,4 +1,11 @@
-from qc_skill.models import FindingSeverity, QCCheck, QCFinding, QCMeasurement, QCReport, QCStatus
+from qc_skill.models import (
+    FindingSeverity,
+    QCCheck,
+    QCFinding,
+    QCMeasurement,
+    QCReport,
+    QCStatus,
+)
 
 
 def test_status_aggregate_empty_is_unknown():
@@ -6,11 +13,19 @@ def test_status_aggregate_empty_is_unknown():
 
 
 def test_status_aggregate_fail_dominates():
-    assert QCStatus.aggregate([QCStatus.PASS, QCStatus.WARN, QCStatus.FAIL, QCStatus.UNKNOWN]) == QCStatus.FAIL
+    assert (
+        QCStatus.aggregate(
+            [QCStatus.PASS, QCStatus.WARN, QCStatus.FAIL, QCStatus.UNKNOWN]
+        )
+        == QCStatus.FAIL
+    )
 
 
 def test_status_aggregate_unknown_beats_warn():
-    assert QCStatus.aggregate([QCStatus.PASS, QCStatus.WARN, QCStatus.UNKNOWN]) == QCStatus.UNKNOWN
+    assert (
+        QCStatus.aggregate([QCStatus.PASS, QCStatus.WARN, QCStatus.UNKNOWN])
+        == QCStatus.UNKNOWN
+    )
 
 
 def test_status_aggregate_all_pass():
@@ -24,7 +39,11 @@ def test_report_overall_status_no_checks_is_unknown():
 
 def test_report_overall_status_reflects_worst_check():
     report = QCReport(
-        id="r1", version="1", operation="check", kind="video", input={},
+        id="r1",
+        version="1",
+        operation="check",
+        kind="video",
+        input={},
         checks=[
             QCCheck("a", "video", QCStatus.PASS),
             QCCheck("b", "video", QCStatus.WARN),
@@ -43,7 +62,15 @@ def test_measurement_to_dict_omits_none_optional_fields():
 
 
 def test_measurement_to_dict_includes_set_optional_fields():
-    m = QCMeasurement(id="video.width", category="video", name="width", value=1920, unit="px", stream=0, notes="n")
+    m = QCMeasurement(
+        id="video.width",
+        category="video",
+        name="width",
+        value=1920,
+        unit="px",
+        stream=0,
+        notes="n",
+    )
     d = m.to_dict()
     assert d["unit"] == "px"
     assert d["stream"] == 0
@@ -51,7 +78,9 @@ def test_measurement_to_dict_includes_set_optional_fields():
 
 
 def test_finding_to_dict_shape():
-    f = QCFinding(code="X", severity=FindingSeverity.FAIL, message="boom", evidence={"a": 1})
+    f = QCFinding(
+        code="X", severity=FindingSeverity.FAIL, message="boom", evidence={"a": 1}
+    )
     d = f.to_dict()
     assert d["code"] == "X"
     assert d["severity"] == "FAIL"
@@ -60,7 +89,11 @@ def test_finding_to_dict_shape():
 
 def test_report_to_dict_is_json_shaped():
     report = QCReport(
-        id="r1", version="1", operation="check", kind="audio", input={"path": "x"},
+        id="r1",
+        version="1",
+        operation="check",
+        kind="audio",
+        input={"path": "x"},
         checks=[QCCheck("c1", "audio", QCStatus.FAIL, finding_codes=["F1"])],
         measurements=[QCMeasurement("m1", "audio", "m1", 1)],
         findings=[QCFinding("F1", FindingSeverity.FAIL, "bad")],

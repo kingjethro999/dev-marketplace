@@ -5,6 +5,7 @@ fallback. Standard library only - no third-party Python packages, no network
 calls. Subprocess commands are always argv lists (never a shell string), so
 no user-supplied path or filter string can be interpreted as shell syntax.
 """
+
 import argparse
 import json
 import os
@@ -70,7 +71,12 @@ def timeout_fields(error):
 def fail_error(error, as_json, **extra):
     """ok:false for an ImageSkillError: exit 1, or exit 124 with code "timeout"."""
     extra.update(timeout_fields(error))
-    fail(str(error), as_json, exit_code=TIMEOUT_EXIT_CODE if "code" in extra else 1, **extra)
+    fail(
+        str(error),
+        as_json,
+        exit_code=TIMEOUT_EXIT_CODE if "code" in extra else 1,
+        **extra,
+    )
 
 
 def succeed(payload, as_json):
@@ -115,7 +121,9 @@ def _im6_convert():
         return None
     if path not in _IM6_CONVERT_CHECKED:
         try:
-            out = subprocess.run([path, "-version"], capture_output=True, text=True, timeout=10).stdout
+            out = subprocess.run(
+                [path, "-version"], capture_output=True, text=True, timeout=10
+            ).stdout
         except (OSError, subprocess.TimeoutExpired):
             out = ""
         first = out.strip().splitlines()[0] if out.strip() else ""
@@ -131,7 +139,7 @@ def which_magick():
 
 
 def magick_kind():
-    """"magick", "imagemagick6" (convert/identify, no magick command) or None."""
+    """ "magick", "imagemagick6" (convert/identify, no magick command) or None."""
     if shutil.which("magick"):
         return "magick"
     return "imagemagick6" if _im6_convert() else None
@@ -146,7 +154,11 @@ def magick_argv(cmd):
         return cmd
     if isinstance(cmd[0], list):
         return [magick_argv(c) for c in cmd]
-    if len(cmd) < 2 or cmd[1] not in IM6_SUBCOMMANDS or os.path.basename(cmd[0]) != "convert":
+    if (
+        len(cmd) < 2
+        or cmd[1] not in IM6_SUBCOMMANDS
+        or os.path.basename(cmd[0]) != "convert"
+    ):
         return cmd
     if shutil.which("magick") or cmd[0] != _im6_convert():
         return cmd
@@ -170,7 +182,9 @@ def check_output_not_input(input_path, output_path):
 
 def check_output_not_exists(output_path, allow_overwrite=False):
     if not allow_overwrite and os.path.exists(output_path):
-        raise ImageSkillError(f"output already exists: {output_path} (refusing to overwrite)")
+        raise ImageSkillError(
+            f"output already exists: {output_path} (refusing to overwrite)"
+        )
 
 
 def timeout_seconds(value):
@@ -180,7 +194,9 @@ def timeout_seconds(value):
     except ValueError:
         raise argparse.ArgumentTypeError(f"expected a number of seconds, got {value!r}")
     if not n > 0 or n != n or n == float("inf"):
-        raise argparse.ArgumentTypeError(f"must be a number of seconds greater than 0, got {value}")
+        raise argparse.ArgumentTypeError(
+            f"must be a number of seconds greater than 0, got {value}"
+        )
     return n
 
 
@@ -193,7 +209,7 @@ def add_timeout_arg(parser, scope="the whole run"):
         type=timeout_seconds,
         default=DEFAULT_TIMEOUT,
         help=f"seconds {scope} may take (default {DEFAULT_TIMEOUT}); when it runs out, ImageMagick and "
-             f"everything it started are killed and the tool fails with code \"timeout\", exit {TIMEOUT_EXIT_CODE}",
+        f'everything it started are killed and the tool fails with code "timeout", exit {TIMEOUT_EXIT_CODE}',
     )
 
 
@@ -263,7 +279,11 @@ def kill_process_tree(proc):
     raises: the child may already be gone."""
     if os.name == "nt":
         try:
-            subprocess.run([_taskkill(), "/T", "/F", "/PID", str(proc.pid)], capture_output=True, timeout=10)
+            subprocess.run(
+                [_taskkill(), "/T", "/F", "/PID", str(proc.pid)],
+                capture_output=True,
+                timeout=10,
+            )
         except Exception:
             pass
     else:
@@ -326,8 +346,13 @@ def run_process(cmd, timeout=None, text=True):
     limit = remaining if budget_binds else timeout
     _install_terminate_handler()
     try:
-        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                **_group_kwargs())
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            **_group_kwargs(),
+        )
     except FileNotFoundError:
         raise ImageSkillError(f"command not found: {cmd[0]}")
     _ACTIVE.add(proc)
@@ -338,7 +363,9 @@ def run_process(cmd, timeout=None, text=True):
             kill_process_tree(proc)
             try:
                 proc.communicate(timeout=10)
-            except subprocess.TimeoutExpired:  # a pipe still held open by something the kill missed
+            except (
+                subprocess.TimeoutExpired
+            ):  # a pipe still held open by something the kill missed
                 proc.kill()
                 proc.wait()
             if budget_binds:
@@ -433,16 +460,38 @@ def identify_dims(path):
                 height = int(line.split(":", 1)[1].strip())
         return width, height
 
-    raise ImageSkillError("no usable backend: install ImageMagick (magick) or, on macOS, use sips")
+    raise ImageSkillError(
+        "no usable backend: install ImageMagick (magick) or, on macOS, use sips"
+    )
 
 
 NO_BACKEND = "no usable backend: install ImageMagick (magick) or, on macOS, use sips"
 
-GRAVITIES = ("northwest", "north", "northeast", "west", "center", "east", "southwest", "south", "southeast")
+GRAVITIES = (
+    "northwest",
+    "north",
+    "northeast",
+    "west",
+    "center",
+    "east",
+    "southwest",
+    "south",
+    "southeast",
+)
 
 # Output formats that can carry an alpha channel; a transparent fill into anything
 # else (JPEG, BMP) would silently turn black or white, so tools refuse it instead.
-ALPHA_CAPABLE_EXTS = {"png", "webp", "gif", "tif", "tiff", "heic", "heif", "avif", "ico"}
+ALPHA_CAPABLE_EXTS = {
+    "png",
+    "webp",
+    "gif",
+    "tif",
+    "tiff",
+    "heic",
+    "heif",
+    "avif",
+    "ico",
+}
 
 
 def ext_of(path):
@@ -470,11 +519,24 @@ def add_output_args(parser, output_required=True, output_help=None):
         "-o",
         "--output",
         required=output_required,
-        help=output_help or "file to write; must differ from the input, extension picks the format",
+        help=output_help
+        or "file to write; must differ from the input, extension picks the format",
     )
-    parser.add_argument("--overwrite", action="store_true", help="allow replacing an existing output file")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
-    parser.add_argument("--dry-run", action="store_true", help="print the backend command that would run, write nothing")
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow replacing an existing output file",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the backend command that would run, write nothing",
+    )
     add_timeout_arg(parser)
 
 
@@ -494,14 +556,20 @@ def select_backend(sips_ok):
 
 def finish_output(path, backend):
     if not os.path.isfile(path) or os.path.getsize(path) == 0:
-        raise ImageSkillError(f"backend reported success but {path} is missing or empty")
+        raise ImageSkillError(
+            f"backend reported success but {path} is missing or empty"
+        )
     verify_output_format(path, backend)
 
 
 def magick_info(magick, path, fmt, auto_orient=True):
     """Read properties of the first frame, as displayed (EXIF orientation applied),
     through `magick in[0] -auto-orient -format FMT info:`."""
-    cmd = [magick, f"{path}[0]"] + (["-auto-orient"] if auto_orient else []) + ["-format", fmt, "info:"]
+    cmd = (
+        [magick, f"{path}[0]"]
+        + (["-auto-orient"] if auto_orient else [])
+        + ["-format", fmt, "info:"]
+    )
     return run(cmd)["stdout"]
 
 
@@ -544,7 +612,9 @@ def color_is_transparent(color):
     if m:
         alpha = m.group(1).split(",")[-1]
         try:
-            return (float(alpha[:-1]) / 100 if alpha.endswith("%") else float(alpha)) < 1
+            return (
+                float(alpha[:-1]) / 100 if alpha.endswith("%") else float(alpha)
+            ) < 1
         except ValueError:
             return True
     return False
@@ -554,7 +624,9 @@ def ratio_arg(value):
     """argparse type for an aspect ratio "W:H" (e.g. 16:9, 1:1, 1.91:1)."""
     m = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*:\s*([0-9]*\.?[0-9]+)\s*", value)
     if not m or float(m.group(1)) <= 0 or float(m.group(2)) <= 0:
-        raise argparse.ArgumentTypeError(f"invalid aspect ratio {value!r}: use W:H, e.g. 16:9")
+        raise argparse.ArgumentTypeError(
+            f"invalid aspect ratio {value!r}: use W:H, e.g. 16:9"
+        )
     return float(m.group(1)), float(m.group(2))
 
 
@@ -581,8 +653,16 @@ def non_negative_int(value):
 def gravity_offset(gravity, outer_w, outer_h, inner_w, inner_h):
     """Top-left (x, y) of an inner box placed inside an outer one by gravity."""
     free_w, free_h = outer_w - inner_w, outer_h - inner_h
-    x = 0 if gravity.endswith("west") else free_w if gravity.endswith("east") else free_w // 2
-    y = 0 if gravity.startswith("north") else free_h if gravity.startswith("south") else free_h // 2
+    x = (
+        0
+        if gravity.endswith("west")
+        else free_w if gravity.endswith("east") else free_w // 2
+    )
+    y = (
+        0
+        if gravity.startswith("north")
+        else free_h if gravity.startswith("south") else free_h // 2
+    )
     return x, y
 
 
@@ -623,11 +703,16 @@ FONT_CANDIDATES = {
     ],
 }
 
-_CJK_RE = re.compile("[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uff66-\uff9f]")
+_CJK_RE = re.compile(
+    "[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uff66-\uff9f]"
+)
 
 
 def find_fonts():
-    return {kind: next((p for p in paths if os.path.isfile(p)), None) for kind, paths in FONT_CANDIDATES.items()}
+    return {
+        kind: next((p for p in paths if os.path.isfile(p)), None)
+        for kind, paths in FONT_CANDIDATES.items()
+    }
 
 
 def needs_cjk_font(text):
@@ -650,7 +735,9 @@ def resolve_font(text, explicit=None):
             )
         return fonts["cjk"]
     if not fonts["default"]:
-        raise ImageSkillError("no usable font found; pass --font /path/to/font.ttf (doctor --json lists fonts)")
+        raise ImageSkillError(
+            "no usable font found; pass --font /path/to/font.ttf (doctor --json lists fonts)"
+        )
     return fonts["default"]
 
 
@@ -662,25 +749,30 @@ def exif_blob_has_gps(blob):
     empty for HEIC even when the file carries GPS."""
     if not blob:
         return False
-    starts = [i for i in (0, 4, 6, 10) if blob[i:i + 4] in (b"II*\x00", b"MM\x00*")]
+    starts = [i for i in (0, 4, 6, 10) if blob[i : i + 4] in (b"II*\x00", b"MM\x00*")]
     if not starts:
         return None
-    tiff = blob[starts[0]:]
+    tiff = blob[starts[0] :]
     try:
         endian = "<" if tiff[:2] == b"II" else ">"
         (ifd0,) = struct.unpack(endian + "I", tiff[4:8])
-        (count,) = struct.unpack(endian + "H", tiff[ifd0:ifd0 + 2])
+        (count,) = struct.unpack(endian + "H", tiff[ifd0 : ifd0 + 2])
         gps_ifd = None
         for n in range(count):
-            entry = tiff[ifd0 + 2 + 12 * n: ifd0 + 14 + 12 * n]
+            entry = tiff[ifd0 + 2 + 12 * n : ifd0 + 14 + 12 * n]
             tag, _type, _count, value = struct.unpack(endian + "HHII", entry)
             if tag == 0x8825:
                 gps_ifd = value
                 break
         if gps_ifd is None:
             return False
-        (gps_count,) = struct.unpack(endian + "H", tiff[gps_ifd:gps_ifd + 2])
-        tags = {struct.unpack(endian + "H", tiff[gps_ifd + 2 + 12 * n: gps_ifd + 4 + 12 * n])[0] for n in range(gps_count)}
+        (gps_count,) = struct.unpack(endian + "H", tiff[gps_ifd : gps_ifd + 2])
+        tags = {
+            struct.unpack(
+                endian + "H", tiff[gps_ifd + 2 + 12 * n : gps_ifd + 4 + 12 * n]
+            )[0]
+            for n in range(gps_count)
+        }
     except struct.error:
         return None
     return bool(tags & {2, 4})  # GPSLatitude / GPSLongitude

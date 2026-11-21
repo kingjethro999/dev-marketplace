@@ -28,11 +28,15 @@ from .release_version import read_version
 @dataclass(frozen=True)
 class ReleaseDecision:
     new_version: str
-    needs_pyproject_bump: bool  # was the version auto-resolved (must be written to pyproject.toml)?
+    needs_pyproject_bump: (
+        bool  # was the version auto-resolved (must be written to pyproject.toml)?
+    )
 
 
 def decide_release(
-    current_version: str, latest_tag_version: Optional[str], resolved_version: Optional[str]
+    current_version: str,
+    latest_tag_version: Optional[str],
+    resolved_version: Optional[str],
 ) -> ReleaseDecision:
     if latest_tag_version is not None and current_version == latest_tag_version:
         if not resolved_version:
@@ -49,7 +53,10 @@ def decide_release(
 def latest_tag_version(git_dir: Path = Path(".")) -> Optional[str]:
     result = subprocess.run(
         ["git", "tag", "--list", "v[0-9]*", "--sort=-v:refname"],
-        cwd=git_dir, capture_output=True, text=True, check=True,
+        cwd=git_dir,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     tags = [line for line in result.stdout.splitlines() if line]
     if not tags:
@@ -60,7 +67,9 @@ def latest_tag_version(git_dir: Path = Path(".")) -> Optional[str]:
 def tag_exists(tag: str, git_dir: Path = Path(".")) -> bool:
     result = subprocess.run(
         ["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"],
-        cwd=git_dir, capture_output=True, text=True,
+        cwd=git_dir,
+        capture_output=True,
+        text=True,
     )
     return result.returncode == 0
 
@@ -68,8 +77,17 @@ def tag_exists(tag: str, git_dir: Path = Path(".")) -> bool:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pyproject", default="pyproject.toml", type=Path)
-    parser.add_argument("--resolved-version", default=None, help="release-drafter's resolved_version output, if the auto-bump step ran")
-    parser.add_argument("--github-output", default=None, type=Path, help="path to append GITHUB_OUTPUT-style key=value lines to")
+    parser.add_argument(
+        "--resolved-version",
+        default=None,
+        help="release-drafter's resolved_version output, if the auto-bump step ran",
+    )
+    parser.add_argument(
+        "--github-output",
+        default=None,
+        type=Path,
+        help="path to append GITHUB_OUTPUT-style key=value lines to",
+    )
     args = parser.parse_args(argv)
 
     current = read_version(args.pyproject)
@@ -77,8 +95,18 @@ def main(argv=None) -> int:
     if latest_tag is not None and current == latest_tag and not args.resolved_version:
         # nothing merged since the last tag resolves to a version (CI-only or chore PRs): no
         # release, and the run says so instead of failing
-        lines = [f"new_version={current}", f"tag=v{current}", "needs_pyproject_bump=false", "needs_release=false"]
-        print("\n".join(lines) + "\nnothing to release: no merged PR since v" + current + " resolves to a version")
+        lines = [
+            f"new_version={current}",
+            f"tag=v{current}",
+            "needs_pyproject_bump=false",
+            "needs_release=false",
+        ]
+        print(
+            "\n".join(lines)
+            + "\nnothing to release: no merged PR since v"
+            + current
+            + " resolves to a version"
+        )
         if args.github_output is not None:
             with open(args.github_output, "a", encoding="utf-8") as fh:
                 fh.write("\n".join(lines) + "\n")

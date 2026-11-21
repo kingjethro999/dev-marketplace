@@ -13,6 +13,7 @@ flattened onto white (alpha is not compared), and must have the same size.
   K2=0.03 (scikit-image's defaults), after Wang et al.'s recommended downsampling so
   the shorter side is about 256 pixels (ssim_scale reports the factor).
 """
+
 import math
 import os
 import sys
@@ -38,14 +39,27 @@ from _common import (  # noqa: E402
 
 FLATTEN = ["-auto-orient", "-background", "white", "-alpha", "remove", "-alpha", "off"]
 HEAT_CLUT = [
-    "(", "-size", "1x86", "gradient:black-blue", "gradient:blue-red", "gradient:red-yellow", "-append", ")",
+    "(",
+    "-size",
+    "1x86",
+    "gradient:black-blue",
+    "gradient:blue-red",
+    "gradient:red-yellow",
+    "-append",
+    ")",
 ]
 
 
 def build_parser():
-    parser = JSONArgumentParser(description="Measure the difference between two images (SSIM, PSNR, changed pixels)")
-    parser.add_argument("a", help="first image, e.g. the original or the expected result (only read)")
-    parser.add_argument("b", help="second image, e.g. the edited or the actual result (only read)")
+    parser = JSONArgumentParser(
+        description="Measure the difference between two images (SSIM, PSNR, changed pixels)"
+    )
+    parser.add_argument(
+        "a", help="first image, e.g. the original or the expected result (only read)"
+    )
+    parser.add_argument(
+        "b", help="second image, e.g. the edited or the actual result (only read)"
+    )
     add_output_args(
         parser,
         output_required=False,
@@ -69,12 +83,22 @@ def build_parser():
 def _gray_bytes(magick, path, width, height, factor):
     cmd = [magick, f"{path}[0]"] + FLATTEN
     if factor > 1:
-        cmd += ["-filter", "box", "-resize", f"{max(1, width // factor)}x{max(1, height // factor)}!"]
+        cmd += [
+            "-filter",
+            "box",
+            "-resize",
+            f"{max(1, width // factor)}x{max(1, height // factor)}!",
+        ]
     cmd += ["-depth", "8", "rgb:-"]
     returncode, rgb, stderr = run_process(cmd, text=False)
     if returncode != 0:
-        raise ImageSkillError(f"could not read pixels of {path}: {stderr.decode(errors='replace').strip()}")
-    return [(299 * rgb[i] + 587 * rgb[i + 1] + 114 * rgb[i + 2]) / 1000.0 for i in range(0, len(rgb), 3)]
+        raise ImageSkillError(
+            f"could not read pixels of {path}: {stderr.decode(errors='replace').strip()}"
+        )
+    return [
+        (299 * rgb[i] + 587 * rgb[i + 1] + 114 * rgb[i + 2]) / 1000.0
+        for i in range(0, len(rgb), 3)
+    ]
 
 
 def _integral(values, w, h):
@@ -94,7 +118,9 @@ def _integral(values, w, h):
 def ssim(x, y, w, h, win=7, k1=0.01, k2=0.03, data_range=255.0):
     """Mean SSIM over every win x win window fully inside the image (sample covariance)."""
     if w < win or h < win:
-        raise ImageSkillError(f"images are too small for SSIM ({w}x{h} after downsampling, need {win}x{win})")
+        raise ImageSkillError(
+            f"images are too small for SSIM ({w}x{h} after downsampling, need {win}x{win})"
+        )
     n = win * win
     cov_norm = n / (n - 1)
     c1 = (k1 * data_range) ** 2
@@ -117,7 +143,9 @@ def ssim(x, y, w, h, win=7, k1=0.01, k2=0.03, data_range=255.0):
             vx = cov_norm * ((sxx[d] - sxx[b] - sxx[c] + sxx[a]) / n - mx * mx)
             vy = cov_norm * ((syy[d] - syy[b] - syy[c] + syy[a]) / n - my * my)
             vxy = cov_norm * ((sxy[d] - sxy[b] - sxy[c] + sxy[a]) / n - mx * my)
-            total += ((2 * mx * my + c1) * (2 * vxy + c2)) / ((mx * mx + my * my + c1) * (vx + vy + c2))
+            total += ((2 * mx * my + c1) * (2 * vxy + c2)) / (
+                (mx * mx + my * my + c1) * (vx + vy + c2)
+            )
             count += 1
     return total / count
 
@@ -130,10 +158,36 @@ def _fx(magick, args):
 def heatmap_command(magick, a, b, output):
     return [
         magick,
-        "(", f"{a}[0]", *FLATTEN, "-colorspace", "gray", "-evaluate", "multiply", "0.5", "-colorspace", "sRGB", ")",
-        "(", f"{a}[0]", *FLATTEN, f"{b}[0]", *FLATTEN, "-compose", "difference", "-composite",
-        "-separate", "-evaluate-sequence", "max", "-auto-level", *HEAT_CLUT, "-clut", ")",
-        "-compose", "screen", "-composite", output,
+        "(",
+        f"{a}[0]",
+        *FLATTEN,
+        "-colorspace",
+        "gray",
+        "-evaluate",
+        "multiply",
+        "0.5",
+        "-colorspace",
+        "sRGB",
+        ")",
+        "(",
+        f"{a}[0]",
+        *FLATTEN,
+        f"{b}[0]",
+        *FLATTEN,
+        "-compose",
+        "difference",
+        "-composite",
+        "-separate",
+        "-evaluate-sequence",
+        "max",
+        "-auto-level",
+        *HEAT_CLUT,
+        "-clut",
+        ")",
+        "-compose",
+        "screen",
+        "-composite",
+        output,
     ]
 
 
@@ -149,7 +203,14 @@ def run_compare(args):
     backend, magick = select_backend("sips cannot compare images")
 
     if args.dry_run:
-        return {"dry_run": True, "would_run": heatmap_command(magick, args.a, args.b, args.output) if args.output else []}
+        return {
+            "dry_run": True,
+            "would_run": (
+                heatmap_command(magick, args.a, args.b, args.output)
+                if args.output
+                else []
+            ),
+        }
 
     wa, ha = (int(v) for v in magick_info(magick, args.a, "%w %h").split())
     wb, hb = (int(v) for v in magick_info(magick, args.b, "%w %h").split())
@@ -159,9 +220,28 @@ def run_compare(args):
             "resize or crop one to match first"
         )
 
-    diff = ["(", f"{args.a}[0]", *FLATTEN, ")", "(", f"{args.b}[0]", *FLATTEN, ")", "-compose", "difference", "-composite"]
-    diff_ratio = _fx(magick, diff + ["-separate", "-evaluate-sequence", "max", "-threshold", f"{args.fuzz}%"])
-    mse = _fx(magick, diff + ["-evaluate", "pow", "2", "-separate", "-evaluate-sequence", "mean"])
+    diff = [
+        "(",
+        f"{args.a}[0]",
+        *FLATTEN,
+        ")",
+        "(",
+        f"{args.b}[0]",
+        *FLATTEN,
+        ")",
+        "-compose",
+        "difference",
+        "-composite",
+    ]
+    diff_ratio = _fx(
+        magick,
+        diff
+        + ["-separate", "-evaluate-sequence", "max", "-threshold", f"{args.fuzz}%"],
+    )
+    mse = _fx(
+        magick,
+        diff + ["-evaluate", "pow", "2", "-separate", "-evaluate-sequence", "mean"],
+    )
     identical = mse == 0.0
     psnr = None if identical else round(10 * math.log10(1.0 / mse), 4)
 
@@ -193,7 +273,9 @@ def run_compare(args):
         payload["fail_below"] = args.fail_below
         payload["passed"] = score >= args.fail_below
         if not payload["passed"]:
-            raise CompareFailed(f"SSIM {score} is below --fail-below {args.fail_below}", payload)
+            raise CompareFailed(
+                f"SSIM {score} is below --fail-below {args.fail_below}", payload
+            )
     return payload
 
 

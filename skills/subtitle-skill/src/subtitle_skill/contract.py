@@ -1,4 +1,5 @@
 """Machine-readable capability contract (`contract --json`)."""
+
 from __future__ import annotations
 
 from . import CONTRACT_VERSION, SKILL_ID, SKILL_VERSION
@@ -47,7 +48,6 @@ PROVIDES = {
 TOOL_ID_PREFIX = "subtitle"
 
 
-
 def dependencies() -> list:
     """The AI Video Production OS registry's `dependencies` (kajisho5/AI-video-production-OS
     registry/capability_contract.schema.json): ffmpeg-skill, as a range of its contract_version,
@@ -83,24 +83,40 @@ def build_contract() -> dict:
                     "document is checked against its profile's structural rules before it is written and the "
                     "response carries `conformance`. Cue `ruby` is IMSC ruby in TTML, `<ruby>` in WebVTT and "
                     "the reading in brackets in SRT/EBU-TT-D (RUBY_AS_TEXT); `style.vertical` is TTML "
-                    "`tts:writingMode=\"tbrl\"` / WebVTT `vertical:rl`. `regional_profile` (opt-in, "
+                    '`tts:writingMode="tbrl"` / WebVTT `vertical:rl`. `regional_profile` (opt-in, '
                     "docs/adr/ADR-008-regional-profiles.md; first: `ja-broadcast`) applies a region's broadcast "
                     "conventions: speaker colours where the format carries colour, line limits."
                 ),
-                "inputs": ["subtitle", "format", "output_path", "constraints?", "regional_profile?"],
-                "outputs": ["output", "sha256", "size", "timeline", "observation", "conformance?"],
+                "inputs": [
+                    "subtitle",
+                    "format",
+                    "output_path",
+                    "constraints?",
+                    "regional_profile?",
+                ],
+                "outputs": [
+                    "output",
+                    "sha256",
+                    "size",
+                    "timeline",
+                    "observation",
+                    "conformance?",
+                ],
                 "formats": list(SUPPORTED_FORMATS),
-                "ttml_profiles": {"ttml": IMSC11_TEXT_PROFILE, "ebu-tt-d": EBU_TT_D_STANDARD},
+                "ttml_profiles": {
+                    "ttml": IMSC11_TEXT_PROFILE,
+                    "ebu-tt-d": EBU_TT_D_STANDARD,
+                },
             },
             "render": {
                 "description": (
                     "Burn a subtitle document into a video, or mux it in as a soft "
                     "(player-toggleable) subtitle stream, by delegating to ffmpeg-skill's "
                     "`caption` tool (scripts/caption.py). format must be 'srt': ffmpeg-skill's "
-                    "caption tool burns SRT or ASS, never WebVTT. `mode: \"mux\"` copies the "
+                    'caption tool burns SRT or ASS, never WebVTT. `mode: "mux"` copies the '
                     "video/audio streams untouched and forwards `subtitle.language` as the new "
                     "subtitle stream's language tag; `audio_stream` selects which 0-based audio "
-                    "track of a multi-track input is kept, for either mode. For `mode: \"burn\"` "
+                    'track of a multi-track input is kept, for either mode. For `mode: "burn"` '
                     "only, cue `style.color`/`style.bold`/`style.size` are forwarded to "
                     "caption.py's own `--color`/`--bold`/`--size` (a single, whole-burn setting, "
                     "so every cue that sets one of these fields must agree on its value); "
@@ -115,7 +131,7 @@ def build_contract() -> dict:
                     "A burn then goes through ffmpeg-skill `caption --ass` with per-event alignment; "
                     "a soft track gets `{\\an8}` on the moved cues. `regional_profile` (burn: speaker "
                     "colours per cue) and cue `ruby` (drawn over its base) also burn through that ASS; "
-                    "`style.vertical` is not burned (UNSUPPORTED_FORMAT). `caption_profile: \"shorts\"` "
+                    '`style.vertical` is not burned (UNSUPPORTED_FORMAT). `caption_profile: "shorts"` '
                     "(docs/adr/ADR-009-shorts-captions.md; burn, vertical video) splits the cues into one- or "
                     "two-word cues from `cue.words` and burns them in large type inside the safe zone shared "
                     "by TikTok, YouTube Shorts and Instagram Reels, avoiding faces with `placement`. `fonts_dir` "
@@ -130,7 +146,7 @@ def build_contract() -> dict:
                     "--karaoke-style`, which draws them; `karaoke` times each word from `cue.words` and is refused "
                     "(INVALID_INPUT, the field named) for a cue without them. A soft track, a burn through this "
                     "skill's own ASS (`placement`, `regional_profile`, cue `ruby`, `caption_profile`) and `animate` "
-                    "with `karaoke: \"word\"` are refused with the reason; the response's `animation` records the "
+                    'with `karaoke: "word"` are refused with the reason; the response\'s `animation` records the '
                     "values and the caption flags sent. Without either field the call to ffmpeg-skill is unchanged."
                 ),
                 "inputs": [
@@ -149,8 +165,18 @@ def build_contract() -> dict:
                     "karaoke?",
                 ],
                 "outputs": [
-                    "output", "sha256", "size", "timeline", "observation", "engine", "mode", "placement?",
-                    "regional_profile?", "caption_profile?", "fonts_dir?", "animation?",
+                    "output",
+                    "sha256",
+                    "size",
+                    "timeline",
+                    "observation",
+                    "engine",
+                    "mode",
+                    "placement?",
+                    "regional_profile?",
+                    "caption_profile?",
+                    "fonts_dir?",
+                    "animation?",
                 ],
                 "formats": list(RENDER_SUPPORTED_FORMATS),
                 "delegates_to": {"skill_id": "ffmpeg-skill", "tool": "caption"},
@@ -164,7 +190,12 @@ def build_contract() -> dict:
                     "animate": list(ANIMATE_MODES),
                     "karaoke": list(KARAOKE_STYLES),
                     "for": "mode 'burn' of an SRT; karaoke needs every cue's words",
-                    "engine_flags": ["--animate", "--karaoke", "--karaoke-style", "--karaoke-timing"],
+                    "engine_flags": [
+                        "--animate",
+                        "--karaoke",
+                        "--karaoke-style",
+                        "--karaoke-timing",
+                    ],
                 },
             },
             "translate": {
@@ -235,14 +266,27 @@ def build_contract() -> dict:
                     "constraints?",
                     "format?",
                 ],
-                "outputs": ["output", "sha256", "size", "timeline", "observation", "engine", "mode", "tracks"],
+                "outputs": [
+                    "output",
+                    "sha256",
+                    "size",
+                    "timeline",
+                    "observation",
+                    "engine",
+                    "mode",
+                    "tracks",
+                ],
                 "formats": list(RENDER_SUPPORTED_FORMATS),
                 "containers": sorted(MUX_CONTAINERS),
                 "delegates_to": {"skill_id": "ffmpeg-skill", "tool": "caption"},
             },
         },
         "provides": [
-            {"id": PROVIDES[op], "lifecycle": "EXPERIMENTAL", "tool_id": f"{TOOL_ID_PREFIX}/{op}"}
+            {
+                "id": PROVIDES[op],
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": f"{TOOL_ID_PREFIX}/{op}",
+            }
             for op in OPERATIONS
         ],
         "dependencies": dependencies(),
@@ -269,8 +313,27 @@ def build_contract() -> dict:
                 "max_duration",
                 "reading_speed_cps",
             ],
-            "style": ["align", "position", "line", "size", "bold", "italic", "color", "vertical"],
-            "cue": ["id", "start", "end", "text", "speaker", "style", "metadata", "ruby", "words"],
+            "style": [
+                "align",
+                "position",
+                "line",
+                "size",
+                "bold",
+                "italic",
+                "color",
+                "vertical",
+            ],
+            "cue": [
+                "id",
+                "start",
+                "end",
+                "text",
+                "speaker",
+                "style",
+                "metadata",
+                "ruby",
+                "words",
+            ],
             "caption_profiles": {
                 "shorts": {
                     "for": "render mode 'burn', vertical video, every cue with words",
@@ -280,12 +343,25 @@ def build_contract() -> dict:
                     "font_height": SHORTS_FONT_HEIGHT,
                 },
             },
-            "regional_profiles": {name: p.to_dict() for name, p in sorted(REGIONAL_PROFILES.items())},
+            "regional_profiles": {
+                name: p.to_dict() for name, p in sorted(REGIONAL_PROFILES.items())
+            },
             "render": [
-                "mode", "audio_stream", "placement", "regional_profile", "caption_profile", "fonts_dir", "animate",
+                "mode",
+                "audio_stream",
+                "placement",
+                "regional_profile",
+                "caption_profile",
+                "fonts_dir",
+                "animate",
                 "karaoke",
             ],
-            "translate": ["target_language", "engine", "glossary", "translation_memory"],
+            "translate": [
+                "target_language",
+                "engine",
+                "glossary",
+                "translation_memory",
+            ],
             "mux": ["tracks", "default_language", "audio_stream"],
         },
         "errors": {

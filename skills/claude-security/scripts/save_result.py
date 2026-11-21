@@ -101,7 +101,9 @@ class NotAResultError(Exception):
 class CannotContinueError(Exception):
     """The run directory cannot take this result; the message names why."""
 
-    fallback: str = "stop; nothing was recorded, so say so and name the report directory"
+    fallback: str = (
+        "stop; nothing was recorded, so say so and name the report directory"
+    )
 
 
 def count(record: JsonMap, key: str) -> int:
@@ -150,7 +152,8 @@ def recorded(run_dir: Path) -> Records | None:
     if not os.path.isfile(run_dir / "votes.json"):
         return None
     findings, votes, coverage = (
-        strictjson.load(run_dir / name) for name in ("findings.json", "votes.json", "coverage.json")
+        strictjson.load(run_dir / name)
+        for name in ("findings.json", "votes.json", "coverage.json")
     )
     if not is_list(findings) or not is_map(votes) or not is_map(coverage):
         msg = "the run directory's records are not the shapes this script wrote"
@@ -186,7 +189,9 @@ def records_in(result: JsonMap) -> tuple[Records, dict[int, JsonMap]]:
     raw, votes, coverage, pending = (
         result.get(key) for key in ("findings", "votes", "coverage", "pending")
     )
-    findings = [f for f in raw if is_map(f) and is_str(f.get("id"))] if is_list(raw) else []
+    findings = (
+        [f for f in raw if is_map(f) and is_str(f.get("id"))] if is_list(raw) else []
+    )
     if not is_list(raw) or len(findings) != len(raw):
         msg = "'findings' is not a list of findings with ids"
         raise NotAResultError(msg)
@@ -220,7 +225,8 @@ def ancestry(path: str) -> list[str]:
 
 def checked(coverage: JsonMap, meta: JsonMap, run_dir: Path) -> JsonMap:
     """`coverage` carrying, under `research.tree`, its coverage accounts counted against the
-    scan target's tracked files; `coverage` as given when the accounts are not checkable."""
+    scan target's tracked files; `coverage` as given when the accounts are not checkable.
+    """
     research = coverage.get("research")
     if not is_map(research) or research.get("checkable") is not True:
         return coverage
@@ -231,7 +237,9 @@ def checked(coverage: JsonMap, meta: JsonMap, run_dir: Path) -> JsonMap:
         sys.stderr.write(f"save_result.py: coverage account not checked: {error}\n")
         return coverage
     if not is_list(listed):
-        sys.stderr.write(f"save_result.py: coverage account not checked: {listing} is not a list\n")
+        sys.stderr.write(
+            f"save_result.py: coverage account not checked: {listing} is not a list\n"
+        )
         return coverage
     files = [path for path in listed if is_str(path)]
     names = {name for path in files for name in ancestry(path)}
@@ -242,14 +250,24 @@ def checked(coverage: JsonMap, meta: JsonMap, run_dir: Path) -> JsonMap:
     def named(path: str) -> str:
         slashed = path.replace("\\", "/")
         folded = (
-            (slashed + "/").removeprefix(root).strip("/") for root in (scan_prefix, scan_root)
+            (slashed + "/").removeprefix(root).strip("/")
+            for root in (scan_prefix, scan_root)
         )
         return next((s for s in (path, slashed, *folded) if s in names), path)
 
     accounts = [account for account in texts(research, "components") if is_map(account)]
-    inside = {named(p) for account in accounts for p in texts(account, "paths") if is_str(p)}
-    read = {named(p) for account in accounts for p in texts(account, "filesRead") if is_str(p)}
-    declared = (e.get("path") for a in accounts for e in texts(a, "notReached") if is_map(e))
+    inside = {
+        named(p) for account in accounts for p in texts(account, "paths") if is_str(p)
+    }
+    read = {
+        named(p)
+        for account in accounts
+        for p in texts(account, "filesRead")
+        if is_str(p)
+    }
+    declared = (
+        e.get("path") for a in accounts for e in texts(a, "notReached") if is_map(e)
+    )
     missed = {named(p) for p in declared if is_str(p)}
     assigned = [f for f in files if not inside.isdisjoint(["", *ancestry(f)])]
     unread = [f for f in assigned if f not in read]
@@ -288,7 +306,9 @@ def placed(finding: JsonMap, meta: JsonMap) -> JsonMap:
     ):
         return finding
     try:
-        file = file_field(finding, finding_id, scan_root, prefix, meta.get("mode") == "scan")
+        file = file_field(
+            finding, finding_id, scan_root, prefix, meta.get("mode") == "scan"
+        )
         via_change = link_field(finding, finding_id, scan_root, prefix)
     except FindingError:
         return {**finding, "line": line, "declared_line": line}
@@ -305,20 +325,22 @@ def report_order(finding: JsonMap) -> tuple[int, int]:
     """Sort key: severity, then confidence, strongest first; unknown values last."""
     severity = Severity.of(finding)
     confidence = str(finding.get("confidence", "")).lower()
-    return -(severity.value if severity else 0), -Confidence.__members__.get(confidence, 0)
+    return -(severity.value if severity else 0), -Confidence.__members__.get(
+        confidence, 0
+    )
 
 
 def merged(scan: Records, run: Records) -> Records:
     """The scan's records with one further verification run folded in."""
     handed = pending_ranks(scan.chain)
     if run.chain["shard"] != scan.chain["shard"] + 1:
-        msg = (
-            f"this is run {run.chain['shard']} but run {scan.chain['shard']} was the last recorded"
-        )
+        msg = f"this is run {run.chain['shard']} but run {scan.chain['shard']} was the last recorded"
         raise CannotContinueError(msg)
     if run.coverage.get("received") != len(handed):
         received = run.coverage.get("received")
-        msg = f"the run was handed {received!r} candidates, not the {len(handed)} pending"
+        msg = (
+            f"the run was handed {received!r} candidates, not the {len(handed)} pending"
+        )
         raise CannotContinueError(msg)
     if run.coverage.get("effort") != scan.coverage.get("effort"):
         msg = "the run's effort is not the scan's"
@@ -338,7 +360,11 @@ def merged(scan: Records, run: Records) -> Records:
     rounds = {
         rid: r
         for rid, r in scan_rounds.items()
-        if not (is_map(r) and r.get("continued") is True and r.get("candidate") in repanelled)
+        if not (
+            is_map(r)
+            and r.get("continued") is True
+            and r.get("candidate") in repanelled
+        )
     }
     if rounds.keys() & run_rounds.keys():
         msg = "the run reuses a round id the scan already has"
@@ -346,7 +372,8 @@ def merged(scan: Records, run: Records) -> Records:
 
     votes = {
         **scan.votes,
-        "panel_votes": count(scan.votes, "panel_votes") + count(run.votes, "panel_votes"),
+        "panel_votes": count(scan.votes, "panel_votes")
+        + count(run.votes, "panel_votes"),
         "unreviewed_candidate_sites": count(scan.votes, "unreviewed_candidate_sites")
         - len(handed)
         + count(run.votes, "unreviewed_candidate_sites"),
@@ -364,7 +391,8 @@ def merged(scan: Records, run: Records) -> Records:
             + texts(run.coverage, "lostCandidates"),
             "severityLowered": texts(scan.coverage, "severityLowered")
             + texts(run.coverage, "severityLowered"),
-            "preExisting": texts(scan.coverage, "preExisting") + texts(run.coverage, "preExisting"),
+            "preExisting": texts(scan.coverage, "preExisting")
+            + texts(run.coverage, "preExisting"),
             "outsideScope": texts(scan.coverage, "outsideScope")
             + texts(run.coverage, "outsideScope"),
             "dispatchRefusals": count(scan.coverage, "dispatchRefusals")
@@ -405,8 +433,12 @@ def summary(records: Records) -> str:
     finding's tally, or "?" when its panel is not complete, in findings.json's order.
     """
     counts = records.severity_counts()
-    by_severity = ", ".join(f"{counts[severity]} {severity.name}" for severity in Severity)
-    tallies = [f"{i} {p['true']}/{p['voters']}" if p else f"{i} ?" for i, p in records.panels()]
+    by_severity = ", ".join(
+        f"{counts[severity]} {severity.name}" for severity in Severity
+    )
+    tallies = [
+        f"{i} {p['true']}/{p['voters']}" if p else f"{i} ?" for i, p in records.panels()
+    ]
     return (
         f"recorded verification run {records.chain['shard']}: {len(records.findings)} findings "
         f"({by_severity}), "
@@ -451,7 +483,9 @@ def otherwise(run_dir: Path, fallback: str) -> str:
     return f"next: {fallback}"
 
 
-def standing(run_dir: Path, meta: JsonMap, scan: Records | None, result: JsonMap) -> Records:
+def standing(
+    run_dir: Path, meta: JsonMap, scan: Records | None, result: JsonMap
+) -> Records:
     """The scan's records once `result` is taken into account, written if that changed them.
 
     `meta` is the scan's settings (scan_settings), which placing a finding reads.
@@ -505,7 +539,9 @@ def argument_parser() -> argparse.ArgumentParser:
         description="Record a scan workflow's result in its run directory and say what to do next.",
         allow_abbrev=False,
     )
-    parser.add_argument("output_file", help="the file the workflow's completion notice names")
+    parser.add_argument(
+        "output_file", help="the file the workflow's completion notice names"
+    )
     parser.add_argument("run_dir", help="the scan's run directory")
     return parser
 
@@ -522,7 +558,9 @@ def main(argv: list[str]) -> int:
         print(otherwise(run_dir, error.fallback))
         return 1
     except (OSError, ValueError) as error:
-        sys.stderr.write(f"save_result.py: could not read or write the run's files: {error}\n")
+        sys.stderr.write(
+            f"save_result.py: could not read or write the run's files: {error}\n"
+        )
         print(otherwise(run_dir, CannotContinueError.fallback))
         return 1
     return 0

@@ -28,7 +28,9 @@ def _contains(parent, child):
         return False
     if rel == os.curdir:
         return True
-    return not (rel == os.pardir or rel.startswith(os.pardir + os.sep) or os.path.isabs(rel))
+    return not (
+        rel == os.pardir or rel.startswith(os.pardir + os.sep) or os.path.isabs(rel)
+    )
 
 
 def _expand_home(entry):
@@ -60,7 +62,9 @@ def _extensions():
     if sys.platform != "win32":
         return [""]
     listed = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
-    return list(dict.fromkeys([".exe"] + [ext.strip().lower() for ext in listed if ext.strip()]))
+    return list(
+        dict.fromkeys([".exe"] + [ext.strip().lower() for ext in listed if ext.strip()])
+    )
 
 
 def find_program(name):

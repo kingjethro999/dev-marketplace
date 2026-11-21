@@ -19,25 +19,64 @@ Examples:
   python3 crop.py input.mp4 --x 100 --y 0 --width 1080 --height 1920
   python3 crop.py input.mp4 --x 0 --y 140 --width 1920 --height 800 -o cropped.mp4
 """
+
 import argparse
 import sys
 
-from _common import add_common, apply_common, aac_args, cfr_args, with_cfr, default_output, die, emit, ffmpeg_base, info, probe, run_keeping_subtitles, video_args, X264_PRESETS, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    with_cfr,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+)
 from _common.probe import display_size, probed_maps, square_pixels, square_pixels_note
 from _common.emit import note
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_crop.<ext>)")
-    ap.add_argument("--x", type=int, required=True, help="left edge of the crop rectangle, in source pixels")
-    ap.add_argument("--y", type=int, required=True, help="top edge of the crop rectangle, in source pixels")
-    ap.add_argument("--width", type=int, required=True, help="crop width in px (must be even)")
-    ap.add_argument("--height", type=int, required=True, help="crop height in px (must be even)")
+    ap.add_argument(
+        "--x",
+        type=int,
+        required=True,
+        help="left edge of the crop rectangle, in source pixels",
+    )
+    ap.add_argument(
+        "--y",
+        type=int,
+        required=True,
+        help="top edge of the crop rectangle, in source pixels",
+    )
+    ap.add_argument(
+        "--width", type=int, required=True, help="crop width in px (must be even)"
+    )
+    ap.add_argument(
+        "--height", type=int, required=True, help="crop height in px (must be even)"
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
-    ap.add_argument("--fps", type=float, help="force a constant output frame rate (recommended for VFR sources)")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
+    ap.add_argument(
+        "--fps",
+        type=float,
+        help="force a constant output frame rate (recommended for VFR sources)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -47,9 +86,13 @@ def main() -> int:
     if args.x < 0 or args.y < 0:
         die(f"--x/--y must be >= 0, got x={args.x} y={args.y}")
     if args.width <= 0 or args.height <= 0:
-        die(f"--width/--height must be > 0, got width={args.width} height={args.height}")
+        die(
+            f"--width/--height must be > 0, got width={args.width} height={args.height}"
+        )
     if args.width % 2 or args.height % 2:
-        die(f"--width/--height must be even (4:2:0 chroma), got width={args.width} height={args.height}")
+        die(
+            f"--width/--height must be even (4:2:0 chroma), got width={args.width} height={args.height}"
+        )
 
     meta = probe(args.input)
     if not meta.get("video"):
@@ -58,7 +101,9 @@ def main() -> int:
     # non-square-pixel source squared at its display aspect first (#411)
     sw, sh = display_size(meta["video"])
     if args.x + args.width > sw or args.y + args.height > sh:
-        die(f"crop rectangle ({args.x},{args.y},{args.width}x{args.height}) exceeds the source frame ({sw}x{sh})")
+        die(
+            f"crop rectangle ({args.x},{args.y},{args.width}x{args.height}) exceeds the source frame ({sw}x{sh})"
+        )
     has_audio = bool(meta.get("audio"))
 
     output = args.output or default_output(args.input, "crop")
@@ -69,7 +114,12 @@ def main() -> int:
         vf.insert(0, square_pixels(meta["video"]))
         note(square_pixels_note(meta["video"]))
     # the picture the rectangle was checked against, not the largest one default selection takes
-    cmd = ffmpeg_base() + ["-i", args.input] + probed_maps(meta) + ["-vf", with_cfr(",".join(vf), meta, args.fps)]
+    cmd = (
+        ffmpeg_base()
+        + ["-i", args.input]
+        + probed_maps(meta)
+        + ["-vf", with_cfr(",".join(vf), meta, args.fps)]
+    )
     cmd += video_args(meta, args.crf, args.preset)
     cmd += cfr_args(meta, args.fps)
     if has_audio:

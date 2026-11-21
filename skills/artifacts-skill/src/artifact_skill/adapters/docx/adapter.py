@@ -111,7 +111,10 @@ class DocxAdapter(ArtifactAdapter):
                 structural_verification_required=True,
                 visual_verification_required=False,
                 render_required=False,
-                postconditions=["output paragraph count == input paragraph count", "requested metadata fields match"],
+                postconditions=[
+                    "output paragraph count == input paragraph count",
+                    "requested metadata fields match",
+                ],
             ),
         }
 
@@ -135,7 +138,11 @@ class DocxAdapter(ArtifactAdapter):
             )
         else:
             caps.append(
-                Capability(id="docx.structural", status=CapabilityStatus.MISSING, detail="python-docx not importable.")
+                Capability(
+                    id="docx.structural",
+                    status=CapabilityStatus.MISSING,
+                    detail="python-docx not importable.",
+                )
             )
 
         soffice = soffice_binary()
@@ -173,10 +180,15 @@ class DocxAdapter(ArtifactAdapter):
         ]
 
     def recognized_policy_keys(self) -> frozenset[str]:
-        return frozenset({
-            "require_paragraph_count", "min_paragraphs", "max_paragraphs", "forbid_placeholder_text",
-            "require_metadata",
-        })
+        return frozenset(
+            {
+                "require_paragraph_count",
+                "min_paragraphs",
+                "max_paragraphs",
+                "forbid_placeholder_text",
+                "require_metadata",
+            }
+        )
 
     # ---- inspect ---------------------------------------------------
 
@@ -249,11 +261,15 @@ class DocxAdapter(ArtifactAdapter):
             # document's entire body just to report this one signal.
             "leftover_markers": find_leftover_markers(all_text),
         }
-        return InspectionReport(artifact=ref, details=details, warnings=warnings, text=all_text)
+        return InspectionReport(
+            artifact=ref, details=details, warnings=warnings, text=all_text
+        )
 
     # ---- plan --------------------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         specs = self.operations()
         if operation not in specs:
             raise ArtifactInputError(
@@ -266,17 +282,24 @@ class DocxAdapter(ArtifactAdapter):
         report = self.inspect(ref)
         risks: list[str] = []
         if report.details["broken_media"]:
-            risks.append(f"{len(report.details['broken_media'])} embedded image(s) are unreadable.")
+            risks.append(
+                f"{len(report.details['broken_media'])} embedded image(s) are unreadable."
+            )
 
         return OperationPlan(
             operation=f"docx.{operation}",
             adapter=self.id,
             input=ref.to_dict(),
             output_path=str(output_path),
-            required_capabilities=["docx.structural"] + (["docx.render"] if spec.render_required else []),
+            required_capabilities=["docx.structural"]
+            + (["docx.render"] if spec.render_required else []),
             files_touched=[],
             files_created=[str(output_path)],
-            rendering_strategy="soffice -> PDF -> pypdfium2 page images" if spec.render_required else None,
+            rendering_strategy=(
+                "soffice -> PDF -> pypdfium2 page images"
+                if spec.render_required
+                else None
+            ),
             verification_strategy={
                 "structural_required": spec.structural_verification_required,
                 "visual_required": spec.visual_verification_required,
@@ -287,7 +310,9 @@ class DocxAdapter(ArtifactAdapter):
 
     # ---- execute -------------------------------------------------------
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         docx = _require_docx()
         if operation != "metadata_set":
             raise ArtifactInputError(
@@ -308,7 +333,9 @@ class DocxAdapter(ArtifactAdapter):
             meta.keywords = args["keywords"]
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(dir=str(output_path.parent), suffix=".docx.tmp", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(
+            dir=str(output_path.parent), suffix=".docx.tmp", delete=False
+        ) as tmp:
             tmp_path = Path(tmp.name)
         try:
             document.save(str(tmp_path))
@@ -319,22 +346,35 @@ class DocxAdapter(ArtifactAdapter):
 
     # ---- render ----------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         with tempfile.TemporaryDirectory(prefix="artifacts-skill-docx-render-") as tmp:
             pdf_path = convert_to_pdf(ref.path, Path(tmp) / "pdf", limits=limits)
             return render_pdf_pages(pdf_path, out_dir, limits=limits)
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="docx_validity", name="DOCX is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="docx_validity",
+                    name="DOCX is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="docx_validity", name="DOCX is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(id="docx_validity", name="DOCX is readable", status=CheckStatus.PASS)
+        )
 
         details = report.details
         paragraph_count = details["paragraph_count"]
@@ -385,7 +425,13 @@ class DocxAdapter(ArtifactAdapter):
                 )
             )
         else:
-            checks.append(Check(id="broken_media", name="No broken media references", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="broken_media",
+                    name="No broken media references",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         leftover_markers = details["leftover_markers"]
         if leftover_markers:
@@ -393,14 +439,22 @@ class DocxAdapter(ArtifactAdapter):
                 Check(
                     id="leftover_placeholder_text",
                     name="No leftover generation placeholder text",
-                    status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_placeholder_text")
+                        else CheckStatus.WARN
+                    ),
                     message=f"Found likely-unreviewed placeholder text: {leftover_markers}.",
                     evidence={"markers": leftover_markers},
                 )
             )
         else:
             checks.append(
-                Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                Check(
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=CheckStatus.PASS,
+                )
             )
 
         if paragraph_count > 0:
@@ -468,17 +522,22 @@ class DocxAdapter(ArtifactAdapter):
         if render is None or not render.files:
             return structural
         new_checks = [
-            Check(
-                id="page_count",
-                name="Page count (measured via render)",
-                status=CheckStatus.PASS,
-                message=f"{len(render.files)} page(s), as measured by this machine's LibreOffice-based render "
-                "pipeline just now. Not a structural (format-intrinsic) fact — a different machine's "
-                "LibreOffice version/fonts could measure a different count for the same input.",
-                evidence={"page_count": len(render.files), "measured_via": render.backend},
+            (
+                Check(
+                    id="page_count",
+                    name="Page count (measured via render)",
+                    status=CheckStatus.PASS,
+                    message=f"{len(render.files)} page(s), as measured by this machine's LibreOffice-based render "
+                    "pipeline just now. Not a structural (format-intrinsic) fact — a different machine's "
+                    "LibreOffice version/fonts could measure a different count for the same input.",
+                    evidence={
+                        "page_count": len(render.files),
+                        "measured_via": render.backend,
+                    },
+                )
+                if c.id == "page_count"
+                else c
             )
-            if c.id == "page_count"
-            else c
             for c in structural.checks
         ]
         return VerificationResult(

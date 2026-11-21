@@ -16,6 +16,7 @@ Like speech.cpp, it keeps models under SPEECH_MODEL_DIR at <owner>--<name>/<sha2
 test of "never download at run time". The test drives it through `fake_speech.json` in SPEECH_MODEL_DIR and reads
 `calls.jsonl` there (one argv per run). Failures are `speech: <code> (<option>): <message>` on stderr with exit 1.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -27,25 +28,110 @@ import wave
 
 # a subset of speech.cpp 0.10.0's tools/catalog/catalog.json: the models the engine knows, and the detector
 CATALOG = [
-    ("reazonspeech-v2", "sakasegawa/reazonspeech-nemo-v2-GGUF", ["ja"], "recognition", "q8_0",
-     [("q8_0", "reazonspeech-nemo-619M-v2-Q8_0.gguf", 660910656), ("f16", "reazonspeech-nemo-619M-v2-F16.gguf", 1240465696),
-      ("q4_k", "reazonspeech-nemo-619M-v2-Q4_K.gguf", 357216832)]),
-    ("parakeet-tdt_ctc-0.6b-ja", "sakasegawa/parakeet-tdt_ctc-0.6b-ja-GGUF", ["ja"], "recognition", "q8_0",
-     [("q8_0", "parakeet-tdt_ctc-0.6B-ja-Q8_0.gguf", 661012416), ("q4_k", "parakeet-tdt_ctc-0.6B-ja-Q4_K.gguf", 357318592)]),
-    ("parakeet-tdt-0.6b-v3", "sakasegawa/parakeet-tdt-0.6b-v3-GGUF",
-     ["bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt", "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl",
-      "sv", "uk"], "recognition", "f16",
-     [("f16", "parakeet-tdt-0.6B-v3-F16.gguf", 1255370688), ("q8_0", "parakeet-tdt-0.6B-v3-Q8_0.gguf", 668107680),
-      ("q4_k", "parakeet-tdt-0.6B-v3-Q4_K.gguf", 363627424)]),
-    ("haas-ja-v1.0", "sakasegawa/Haas-ja-v1.0-GGUF", ["ja"], "recognition", "q8_0",
-     [("q8_0", "Haas-616M-ja-v1.0-Q8_0.gguf", 656381472)]),
-    ("qwen3-asr-0.6b", "sakasegawa/Qwen3-ASR-0.6B-GGUF", ["en", "ja", "zh"], "recognition", "q8_0",
-     [("q8_0", "Qwen3-ASR-0.6B-Q8_0.gguf", 841502336), ("q4_k", "Qwen3-ASR-0.6B-Q4_K.gguf", 511168128)]),
-    ("qwen3-asr-1.7b", "sakasegawa/Qwen3-ASR-1.7B-GGUF", ["en", "ja", "zh"], "recognition", "q8_0",
-     [("q8_0", "Qwen3-ASR-1.7B-Q8_0.gguf", 2176109216)]),
-    ("silero-vad", "sakasegawa/silero-vad-GGUF", [], "detection", "f32", [("f32", "silero-vad-309K-v6.2-F32.gguf", 1238624)]),
-    ("qwen3-tts-0.6b", "sakasegawa/Qwen3-TTS-12Hz-0.6B-CustomVoice-GGUF", ["en", "ja"], "synthesis", "q8_0",
-     [("q8_0", "Qwen3-TTS-12Hz-0.6B-CustomVoice-Q8_0.gguf", 1210000000)]),
+    (
+        "reazonspeech-v2",
+        "sakasegawa/reazonspeech-nemo-v2-GGUF",
+        ["ja"],
+        "recognition",
+        "q8_0",
+        [
+            ("q8_0", "reazonspeech-nemo-619M-v2-Q8_0.gguf", 660910656),
+            ("f16", "reazonspeech-nemo-619M-v2-F16.gguf", 1240465696),
+            ("q4_k", "reazonspeech-nemo-619M-v2-Q4_K.gguf", 357216832),
+        ],
+    ),
+    (
+        "parakeet-tdt_ctc-0.6b-ja",
+        "sakasegawa/parakeet-tdt_ctc-0.6b-ja-GGUF",
+        ["ja"],
+        "recognition",
+        "q8_0",
+        [
+            ("q8_0", "parakeet-tdt_ctc-0.6B-ja-Q8_0.gguf", 661012416),
+            ("q4_k", "parakeet-tdt_ctc-0.6B-ja-Q4_K.gguf", 357318592),
+        ],
+    ),
+    (
+        "parakeet-tdt-0.6b-v3",
+        "sakasegawa/parakeet-tdt-0.6b-v3-GGUF",
+        [
+            "bg",
+            "cs",
+            "da",
+            "de",
+            "el",
+            "en",
+            "es",
+            "et",
+            "fi",
+            "fr",
+            "hr",
+            "hu",
+            "it",
+            "lt",
+            "lv",
+            "mt",
+            "nl",
+            "pl",
+            "pt",
+            "ro",
+            "ru",
+            "sk",
+            "sl",
+            "sv",
+            "uk",
+        ],
+        "recognition",
+        "f16",
+        [
+            ("f16", "parakeet-tdt-0.6B-v3-F16.gguf", 1255370688),
+            ("q8_0", "parakeet-tdt-0.6B-v3-Q8_0.gguf", 668107680),
+            ("q4_k", "parakeet-tdt-0.6B-v3-Q4_K.gguf", 363627424),
+        ],
+    ),
+    (
+        "haas-ja-v1.0",
+        "sakasegawa/Haas-ja-v1.0-GGUF",
+        ["ja"],
+        "recognition",
+        "q8_0",
+        [("q8_0", "Haas-616M-ja-v1.0-Q8_0.gguf", 656381472)],
+    ),
+    (
+        "qwen3-asr-0.6b",
+        "sakasegawa/Qwen3-ASR-0.6B-GGUF",
+        ["en", "ja", "zh"],
+        "recognition",
+        "q8_0",
+        [
+            ("q8_0", "Qwen3-ASR-0.6B-Q8_0.gguf", 841502336),
+            ("q4_k", "Qwen3-ASR-0.6B-Q4_K.gguf", 511168128),
+        ],
+    ),
+    (
+        "qwen3-asr-1.7b",
+        "sakasegawa/Qwen3-ASR-1.7B-GGUF",
+        ["en", "ja", "zh"],
+        "recognition",
+        "q8_0",
+        [("q8_0", "Qwen3-ASR-1.7B-Q8_0.gguf", 2176109216)],
+    ),
+    (
+        "silero-vad",
+        "sakasegawa/silero-vad-GGUF",
+        [],
+        "detection",
+        "f32",
+        [("f32", "silero-vad-309K-v6.2-F32.gguf", 1238624)],
+    ),
+    (
+        "qwen3-tts-0.6b",
+        "sakasegawa/Qwen3-TTS-12Hz-0.6B-CustomVoice-GGUF",
+        ["en", "ja"],
+        "synthesis",
+        "q8_0",
+        [("q8_0", "Qwen3-TTS-12Hz-0.6B-CustomVoice-Q8_0.gguf", 1210000000)],
+    ),
 ]
 
 
@@ -74,21 +160,29 @@ def config() -> dict:
 
 
 def fail(code: str, option: str, message: str, status: int = 1) -> None:
-    sys.stderr.write(f"speech: {code}{' (' + option + ')' if option else ''}: {message}\n")
+    sys.stderr.write(
+        f"speech: {code}{' (' + option + ')' if option else ''}: {message}\n"
+    )
     sys.exit(status)
 
 
 def out(doc) -> None:
     """speech.cpp writes UTF-8 on every platform (stdout is binary on Windows)."""
     sys.stdout.flush()
-    sys.stdout.buffer.write((json.dumps(doc, ensure_ascii=False) + "\n").encode("utf-8"))
+    sys.stdout.buffer.write(
+        (json.dumps(doc, ensure_ascii=False) + "\n").encode("utf-8")
+    )
     sys.stdout.buffer.flush()
 
 
 def known_file(path: str):
     """The catalog row of a model file given by its path; a name or an unknown file is refused."""
     if not path.endswith(".gguf"):
-        fail("model_file", "", f"{path}: the fake refuses a model named instead of given as a .gguf path (speech.cpp would fetch it)")
+        fail(
+            "model_file",
+            "",
+            f"{path}: the fake refuses a model named instead of given as a .gguf path (speech.cpp would fetch it)",
+        )
     if not os.path.isfile(path):
         fail("model_file", "", f"cannot open {path}")
     for name, repo, langs, task, _, files in CATALOG:
@@ -100,8 +194,17 @@ def known_file(path: str):
 
 def flags(args):
     """(positional, {flag: value or True}) the way speech.cpp parses them: a value follows its flag."""
-    valued = {"--format", "--language", "--threshold", "--speech-pad-ms", "--min-silence-duration-ms", "--max-speech-duration-s",
-              "--min-speech-duration-ms", "--device", "--threads"}
+    valued = {
+        "--format",
+        "--language",
+        "--threshold",
+        "--speech-pad-ms",
+        "--min-silence-duration-ms",
+        "--max-speech-duration-s",
+        "--min-speech-duration-ms",
+        "--device",
+        "--threads",
+    }
     pos, opts, i = [], {}, 0
     while i < len(args):
         a = args[i]
@@ -130,8 +233,19 @@ def duration(path: str) -> float:
 def main(argv) -> None:
     cfg = config()
     with open(os.path.join(model_dir(), "calls.jsonl"), "a", encoding="utf-8") as fh:
-        fh.write(json.dumps({"argv": argv, "cwd": os.getcwd(), "pid": os.getpid(),
-                             "env": sorted(k for k in os.environ if k not in ("PWD", "SHLVL", "_"))}) + "\n")
+        fh.write(
+            json.dumps(
+                {
+                    "argv": argv,
+                    "cwd": os.getcwd(),
+                    "pid": os.getpid(),
+                    "env": sorted(
+                        k for k in os.environ if k not in ("PWD", "SHLVL", "_")
+                    ),
+                }
+            )
+            + "\n"
+        )
     if not argv:
         sys.exit(2)
     if argv == ["--version"]:
@@ -148,14 +262,52 @@ def main(argv) -> None:
     if sub == "models" and rest == ["--json"]:
         models = []
         for name, repo, langs, task, typ, files in CATALOG:
-            models.append({"name": name, "repository": repo, "revision": "0" * 40, "task": task, "languages": langs, "voice_files": False,
-                           "start": [], "type": typ,
-                           "files": [{"type": t, "file": f, "size": size, "sha256": sha_of(f), "url": f"https://huggingface.co/{repo}/resolve/x/{f}",
-                                      "path": path_of(repo, f), "fetched": os.path.isfile(path_of(repo, f)), "partial": 0} for t, f, size in files]})
-        out({"version": "0.10.0", "directory": model_dir(), "models": models, "old": []})
+            models.append(
+                {
+                    "name": name,
+                    "repository": repo,
+                    "revision": "0" * 40,
+                    "task": task,
+                    "languages": langs,
+                    "voice_files": False,
+                    "start": [],
+                    "type": typ,
+                    "files": [
+                        {
+                            "type": t,
+                            "file": f,
+                            "size": size,
+                            "sha256": sha_of(f),
+                            "url": f"https://huggingface.co/{repo}/resolve/x/{f}",
+                            "path": path_of(repo, f),
+                            "fetched": os.path.isfile(path_of(repo, f)),
+                            "partial": 0,
+                        }
+                        for t, f, size in files
+                    ],
+                }
+            )
+        out(
+            {"version": "0.10.0", "directory": model_dir(), "models": models, "old": []}
+        )
         return
     if sub == "devices" and rest == ["--json"]:
-        out({"devices": cfg.get("devices", [{"name": "CPU", "description": "Fake CPU", "kind": "cpu", "memory_total": 1, "memory_free": 1}])})
+        out(
+            {
+                "devices": cfg.get(
+                    "devices",
+                    [
+                        {
+                            "name": "CPU",
+                            "description": "Fake CPU",
+                            "kind": "cpu",
+                            "memory_total": 1,
+                            "memory_free": 1,
+                        }
+                    ],
+                )
+            }
+        )
         return
     if sub == "vad":
         pos, opts = flags(rest)
@@ -164,7 +316,12 @@ def main(argv) -> None:
             fail("unsupported", "", f"{name} is not a detection model")
         if opts.get("--format") != "json":
             fail("invalid_argument", "--format", "the fake writes json only")
-        want = {"--threshold": "0.5", "--speech-pad-ms": "300", "--min-silence-duration-ms": "500", "--max-speech-duration-s": "10"}
+        want = {
+            "--threshold": "0.5",
+            "--speech-pad-ms": "300",
+            "--min-silence-duration-ms": "500",
+            "--max-speech-duration-s": "10",
+        }
         for k, v in want.items():
             if opts.get(k) != v:
                 fail("invalid_argument", k, f"expected {v}, got {opts.get(k)!r}")
@@ -173,7 +330,12 @@ def main(argv) -> None:
             regions = cfg.get("regions")
             if regions is None:
                 regions = [[0.0, d]]
-            out({"file": f, "regions": [{"start": s, "end": min(e, d)} for s, e in regions]})
+            out(
+                {
+                    "file": f,
+                    "regions": [{"start": s, "end": min(e, d)} for s, e in regions],
+                }
+            )
         return
     if sub == "asr":
         pos, opts = flags(rest)
@@ -192,7 +354,11 @@ def main(argv) -> None:
         status = 0
         for k, f in enumerate(pos[1:]):
             if os.path.isabs(f) or os.sep in f:
-                fail("invalid_argument", "", f"the engine passes region files by name in its folder, got {f}")
+                fail(
+                    "invalid_argument",
+                    "",
+                    f"the engine passes region files by name in its folder, got {f}",
+                )
             d = duration(f)
             text = texts.get(f, "テストです。")
             stop = "model_limit" if f in cfg.get("model_limit", []) else "complete"
@@ -205,7 +371,9 @@ def main(argv) -> None:
                 if f in cfg.get("untimed", []):
                     rec["untimed"] = "the fake cannot time this file"
                 else:
-                    rec["segments"], rec["tokens"] = timing(text, d, cfg.get("zero_tokens", False))
+                    rec["segments"], rec["tokens"] = timing(
+                        text, d, cfg.get("zero_tokens", False)
+                    )
             out(rec)
         sys.exit(status)
     sys.stderr.write(f"speech: there is no subcommand {sub}\n")
@@ -229,10 +397,22 @@ def timing(text: str, d: float, zero: bool):
     for t in tokens:
         cur.append(t)
         if t["text"] in "。？！.?!":
-            segments.append({"start": cur[0]["start"], "end": cur[-1]["end"], "text": "".join(x["text"] for x in cur)})
+            segments.append(
+                {
+                    "start": cur[0]["start"],
+                    "end": cur[-1]["end"],
+                    "text": "".join(x["text"] for x in cur),
+                }
+            )
             cur = []
     if cur:
-        segments.append({"start": cur[0]["start"], "end": cur[-1]["end"], "text": "".join(x["text"] for x in cur)})
+        segments.append(
+            {
+                "start": cur[0]["start"],
+                "end": cur[-1]["end"],
+                "text": "".join(x["text"] for x in cur),
+            }
+        )
     return segments, tokens
 
 

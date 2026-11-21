@@ -2,7 +2,9 @@
 supported | unsupported | unknown, never a guess. Detection goes through ffmpeg-skill (`_contract.py doctor --json`
 and `_contract.py --json --static`): this skill runs no ffmpeg of its own. Font availability is checked with
 `fc-list` (fixed argv, no shell) when present; if fontconfig itself is unavailable, font status is "unknown", not
-"unsupported" -- ffmpeg still accepts a font name it cannot enumerate through fc-list on some platforms."""
+"unsupported" -- ffmpeg still accepts a font name it cannot enumerate through fc-list on some platforms.
+"""
+
 from __future__ import annotations
 
 import json
@@ -15,16 +17,32 @@ from . import DOCTOR_SCHEMA_VERSION, SKILL_ID, VERSION
 from .adapter import GENERATOR_TOOLS, TEMPLATE_FLAGS, FfmpegSkill
 from .errors import MotionGraphicsError
 from .fonts import FONT_REGISTRY
-from .model import ANIMATION_KINDS, ELEMENT_TYPES, UNSUPPORTED_ANIMATIONS, UNSUPPORTED_ELEMENT_TYPES
+from .model import (
+    ANIMATION_KINDS,
+    ELEMENT_TYPES,
+    UNSUPPORTED_ANIMATIONS,
+    UNSUPPORTED_ELEMENT_TYPES,
+)
 from .security import PathPolicy
 
 DOCTOR_SCHEMA_ID = f"{SKILL_ID}/doctor@{DOCTOR_SCHEMA_VERSION}"
-CORE_CAPABILITIES = ("filter:drawtext", "filter:drawbox", "filter:overlay", "filter:color", "filter:scale", "filter:colorchannelmixer", "filter:chromakey", "encoder:libx264", "encoder:aac")
+CORE_CAPABILITIES = (
+    "filter:drawtext",
+    "filter:drawbox",
+    "filter:overlay",
+    "filter:color",
+    "filter:scale",
+    "filter:colorchannelmixer",
+    "filter:chromakey",
+    "encoder:libx264",
+    "encoder:aac",
+)
 
 
 def ffmpeg_skill_doctor(skill: FfmpegSkill, timeout: float = 120.0) -> Dict[str, Any]:
     """ffmpeg-skill's own environment detection. A checkout without `_contract.py doctor` yields {"_unavailable": True}:
-    every capability is then `unknown` (not detected either way), never `unsupported`."""
+    every capability is then `unknown` (not detected either way), never `unsupported`.
+    """
     script = skill.directory / "scripts" / "_contract.py"
     if not script.is_file():
         return {"_exit_code": None, "_unavailable": True}
@@ -40,7 +58,9 @@ def ffmpeg_skill_doctor(skill: FfmpegSkill, timeout: float = 120.0) -> Dict[str,
     return doc
 
 
-def capability_status(skill_info: Optional[Any], ffdoc: Dict[str, Any]) -> Dict[str, str]:
+def capability_status(
+    skill_info: Optional[Any], ffdoc: Dict[str, Any]
+) -> Dict[str, str]:
     """capability name -> supported | unsupported | unknown."""
     status: Dict[str, str] = {}
     have_skill = skill_info is not None and skill_info.supported
@@ -48,19 +68,38 @@ def capability_status(skill_info: Optional[Any], ffdoc: Dict[str, Any]) -> Dict[
     # graphics templates that only newer ffmpeg-skill releases have: detected from the checkout's own `--template` choices
     # and flags (adapter.check_tools), so an older checkout reports sticker/hook/meme unsupported rather than failing a run
     for template in TEMPLATE_FLAGS:
-        found = skill_info.template_support(template) if skill_info is not None and have_skill else False
-        status[f"graphics-template:{template}"] = "unknown" if found is None else ("supported" if found else "unsupported")
+        found = (
+            skill_info.template_support(template)
+            if skill_info is not None and have_skill
+            else False
+        )
+        status[f"graphics-template:{template}"] = (
+            "unknown" if found is None else ("supported" if found else "unsupported")
+        )
     # optional generator tools (ADR-22: background, for shape): detected from the checkout's contract / --help, like templates
     for tool in GENERATOR_TOOLS:
-        found = skill_info.tool_support(tool) if skill_info is not None and have_skill else False
-        status[f"ffmpeg-skill-tool:{tool}"] = "unknown" if found is None else ("supported" if found else "unsupported")
+        found = (
+            skill_info.tool_support(tool)
+            if skill_info is not None and have_skill
+            else False
+        )
+        status[f"ffmpeg-skill-tool:{tool}"] = (
+            "unknown" if found is None else ("supported" if found else "unsupported")
+        )
     # optional flags one element type needs (ADR-25: overlay --place, for rendered_layer)
     takes_place = getattr(skill_info, "takes_place", None)
-    status["ffmpeg-skill-flag:overlay.place"] = "supported" if have_skill and callable(takes_place) and takes_place() else "unsupported"
+    status["ffmpeg-skill-flag:overlay.place"] = (
+        "supported"
+        if have_skill and callable(takes_place) and takes_place()
+        else "unsupported"
+    )
     # a request option rather than an element type (ADR-30: options.layer_export): background --transparent and graphics / overlay --keep-alpha
     layer_export = getattr(skill_info, "layer_export", None)
-    status["ffmpeg-skill-feature:layer_export"] = ("supported" if have_skill and callable(layer_export) and layer_export().get("supported")
-                                                   else "unsupported")
+    status["ffmpeg-skill-feature:layer_export"] = (
+        "supported"
+        if have_skill and callable(layer_export) and layer_export().get("supported")
+        else "unsupported"
+    )
     if have_skill and ffdoc.get("_unavailable"):
         # this ffmpeg-skill has no doctor to ask: nothing detected either way; output validation reports the truth per run
         for cap in ["ffmpeg", "ffprobe", *CORE_CAPABILITIES]:
@@ -101,9 +140,22 @@ def element_type_status(caps: Dict[str, str]) -> Dict[str, Any]:
     element_types: Dict[str, Any] = {}
     for etype, spec in ELEMENT_TYPES.items():
         need = spec["required_capabilities"]
-        st = "unsupported" if any(caps.get(c) == "unsupported" for c in need) else ("unknown" if any(caps.get(c) == "unknown" for c in need) else "supported")
-        element_types[etype] = {"status": st, "tool": f"ffmpeg-skill/{spec['tool']}", "required_capabilities": need,
-                                "missing": [c for c in need if caps.get(c) == "unsupported"], "unknown": [c for c in need if caps.get(c) == "unknown"]}
+        st = (
+            "unsupported"
+            if any(caps.get(c) == "unsupported" for c in need)
+            else (
+                "unknown"
+                if any(caps.get(c) == "unknown" for c in need)
+                else "supported"
+            )
+        )
+        element_types[etype] = {
+            "status": st,
+            "tool": f"ffmpeg-skill/{spec['tool']}",
+            "required_capabilities": need,
+            "missing": [c for c in need if caps.get(c) == "unsupported"],
+            "unknown": [c for c in need if caps.get(c) == "unknown"],
+        }
         if spec.get("generator"):
             element_types[etype]["generator"] = f"ffmpeg-skill/{spec['generator']}"
     return element_types
@@ -112,11 +164,16 @@ def element_type_status(caps: Dict[str, str]) -> Dict[str, Any]:
 def animation_status(element_types: Dict[str, Any]) -> Dict[str, Any]:
     """animation kind -> {status, applies_to}. An animation's status is the worst of every element type it
     actually applies to (contract.animation_specs() computes the same "applies_to" set from the same table):
-    "fade" is useless in practice if the element type it would attach to can't render at all."""
+    "fade" is useless in practice if the element type it would attach to can't render at all.
+    """
     animations: Dict[str, Any] = {}
     for kind in ANIMATION_KINDS:
-        applies_to = [t for t, s in ELEMENT_TYPES.items() if s.get("animation") == "configurable"]
-        statuses = [element_types[t]["status"] for t in applies_to if t in element_types]
+        applies_to = [
+            t for t, s in ELEMENT_TYPES.items() if s.get("animation") == "configurable"
+        ]
+        statuses = [
+            element_types[t]["status"] for t in applies_to if t in element_types
+        ]
         worst = max(statuses, key=lambda s: _STATUS_RANK[s]) if statuses else "unknown"
         animations[kind] = {"status": worst, "applies_to": applies_to}
     return animations
@@ -124,23 +181,48 @@ def animation_status(element_types: Dict[str, Any]) -> Dict[str, Any]:
 
 def font_status() -> Dict[str, Any]:
     try:
-        r = subprocess.run(["fc-list", ":family"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15)
+        r = subprocess.run(
+            ["fc-list", ":family"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=15,
+        )
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-        return {"detection": "unavailable (fc-list not found or failed)", "fonts": {fid: "unknown" for fid in FONT_REGISTRY}}
+        return {
+            "detection": "unavailable (fc-list not found or failed)",
+            "fonts": {fid: "unknown" for fid in FONT_REGISTRY},
+        }
     if r.returncode != 0:
-        return {"detection": "unavailable (fc-list exited non-zero)", "fonts": {fid: "unknown" for fid in FONT_REGISTRY}}
+        return {
+            "detection": "unavailable (fc-list exited non-zero)",
+            "fonts": {fid: "unknown" for fid in FONT_REGISTRY},
+        }
     families = {line.strip() for line in r.stdout.splitlines() if line.strip()}
     fonts: Dict[str, str] = {}
     for fid, spec in FONT_REGISTRY.items():
-        fonts[fid] = "supported" if any(spec["family"] in fam for fam in families) else "unsupported"
+        fonts[fid] = (
+            "supported"
+            if any(spec["family"] in fam for fam in families)
+            else "unsupported"
+        )
     return {"detection": "fc-list", "fonts": fonts}
 
 
-def doctor_report(ffmpeg_skill_dir: Optional[str] = None, workspace: Optional[str] = None, allowed_input: Optional[List[str]] = None) -> Dict[str, Any]:
+def doctor_report(
+    ffmpeg_skill_dir: Optional[str] = None,
+    workspace: Optional[str] = None,
+    allowed_input: Optional[List[str]] = None,
+) -> Dict[str, Any]:
     checks: Dict[str, Any] = {}
     problems: List[str] = []
     warnings: List[str] = []
-    checks["python"] = {"status": "ok", "version": platform.python_version(), "implementation": platform.python_implementation(), "platform": platform.system()}
+    checks["python"] = {
+        "status": "ok",
+        "version": platform.python_version(),
+        "implementation": platform.python_implementation(),
+        "platform": platform.system(),
+    }
 
     skill: Optional[FfmpegSkill] = None
     info = None
@@ -148,40 +230,99 @@ def doctor_report(ffmpeg_skill_dir: Optional[str] = None, workspace: Optional[st
     try:
         skill = FfmpegSkill.locate(ffmpeg_skill_dir)
         info = skill.info()
-        checks["ffmpeg_skill"] = {"status": "ok" if info.supported else "fail", "directory": str(info.directory), "version": info.version,
-                                  "contract_version": info.contract_version, "tools_used": sorted(info.tools.keys() & set(("probe", "graphics", "overlay"))),
-                                  "compatibility": "capability detection (no version window)", "detected": dict(info.features),
-                                  "problems": info.problems}
+        checks["ffmpeg_skill"] = {
+            "status": "ok" if info.supported else "fail",
+            "directory": str(info.directory),
+            "version": info.version,
+            "contract_version": info.contract_version,
+            "tools_used": sorted(
+                info.tools.keys() & set(("probe", "graphics", "overlay"))
+            ),
+            "compatibility": "capability detection (no version window)",
+            "detected": dict(info.features),
+            "problems": info.problems,
+        }
         problems += ["ffmpeg-skill: " + p for p in info.problems]
         ffdoc = ffmpeg_skill_doctor(skill)
-        checks["ffmpeg"] = {"status": "ok" if ffdoc.get("ffmpeg") else "missing", "version": ffdoc.get("ffmpeg"), "detected_by": "ffmpeg-skill doctor"}
-        checks["ffprobe"] = {"status": "ok" if ffdoc.get("ffprobe") else "missing", "version": ffdoc.get("ffprobe"), "detected_by": "ffmpeg-skill doctor"}
+        checks["ffmpeg"] = {
+            "status": "ok" if ffdoc.get("ffmpeg") else "missing",
+            "version": ffdoc.get("ffmpeg"),
+            "detected_by": "ffmpeg-skill doctor",
+        }
+        checks["ffprobe"] = {
+            "status": "ok" if ffdoc.get("ffprobe") else "missing",
+            "version": ffdoc.get("ffprobe"),
+            "detected_by": "ffmpeg-skill doctor",
+        }
         if ffdoc.get("_unavailable"):
-            checks["ffmpeg"] = {"status": "unknown", "detail": "this ffmpeg-skill has no `_contract.py doctor`; verified per run"}
-            checks["ffprobe"] = {"status": "unknown", "detail": "this ffmpeg-skill has no `_contract.py doctor`; verified per run"}
-            warnings.append("ffmpeg-skill offers no doctor command; ffmpeg/filter capabilities are unknown until a run")
+            checks["ffmpeg"] = {
+                "status": "unknown",
+                "detail": "this ffmpeg-skill has no `_contract.py doctor`; verified per run",
+            }
+            checks["ffprobe"] = {
+                "status": "unknown",
+                "detail": "this ffmpeg-skill has no `_contract.py doctor`; verified per run",
+            }
+            warnings.append(
+                "ffmpeg-skill offers no doctor command; ffmpeg/filter capabilities are unknown until a run"
+            )
         elif not ffdoc.get("ffmpeg") or not ffdoc.get("ffprobe"):
             problems.append("ffmpeg / ffprobe not detected by ffmpeg-skill doctor")
     except MotionGraphicsError as e:
-        checks["ffmpeg_skill"] = {"status": "missing", "detail": e.message, "tried": e.details.get("tried")}
-        checks["ffmpeg"] = {"status": "unknown", "detail": "not checked: ffmpeg-skill missing"}
-        checks["ffprobe"] = {"status": "unknown", "detail": "not checked: ffmpeg-skill missing"}
+        checks["ffmpeg_skill"] = {
+            "status": "missing",
+            "detail": e.message,
+            "tried": e.details.get("tried"),
+        }
+        checks["ffmpeg"] = {
+            "status": "unknown",
+            "detail": "not checked: ffmpeg-skill missing",
+        }
+        checks["ffprobe"] = {
+            "status": "unknown",
+            "detail": "not checked: ffmpeg-skill missing",
+        }
         problems.append("ffmpeg-skill: " + e.message)
 
     caps = capability_status(info, ffdoc)
     checks["capabilities"] = caps
-    if ffdoc.get("ffmpeg") and not any(c.startswith("filter:") for c in ffdoc.get("available") or []):
-        checks["filter_detection"] = {"status": "unknown", "detail": "ffmpeg-skill doctor detected no filters at all; filter capabilities are reported unknown and verified per run by output validation"}
-        warnings.append("filter detection through ffmpeg-skill doctor is unreliable on this ffmpeg; filter capabilities are unknown")
+    if ffdoc.get("ffmpeg") and not any(
+        c.startswith("filter:") for c in ffdoc.get("available") or []
+    ):
+        checks["filter_detection"] = {
+            "status": "unknown",
+            "detail": "ffmpeg-skill doctor detected no filters at all; filter capabilities are reported unknown and verified per run by output validation",
+        }
+        warnings.append(
+            "filter detection through ffmpeg-skill doctor is unreliable on this ffmpeg; filter capabilities are unknown"
+        )
     else:
-        checks["filter_detection"] = {"status": "ok" if ffdoc.get("ffmpeg") else "unknown", "detail": "filters detected by ffmpeg-skill doctor" if ffdoc.get("ffmpeg") else "ffmpeg not available"}
+        checks["filter_detection"] = {
+            "status": "ok" if ffdoc.get("ffmpeg") else "unknown",
+            "detail": (
+                "filters detected by ffmpeg-skill doctor"
+                if ffdoc.get("ffmpeg")
+                else "ffmpeg not available"
+            ),
+        }
 
     element_types = element_type_status(caps)
     checks["element_types"] = element_types
     # ADR-30: whether options.layer_export can be carried out, and with which alpha codecs
-    support = info.layer_export() if info is not None and info.supported else {"supported": False, "missing": ["ffmpeg-skill not usable"], "alpha_codecs": None}
-    checks["layer_export"] = {"status": "supported" if support.get("supported") else "unsupported", "missing": list(support.get("missing") or []),
-                              "alpha_codecs": support.get("alpha_codecs")}
+    support = (
+        info.layer_export()
+        if info is not None and info.supported
+        else {
+            "supported": False,
+            "missing": ["ffmpeg-skill not usable"],
+            "alpha_codecs": None,
+        }
+    )
+    checks["layer_export"] = {
+        "status": "supported" if support.get("supported") else "unsupported",
+        "missing": list(support.get("missing") or []),
+        "alpha_codecs": support.get("alpha_codecs"),
+    }
     checks["unsupported_element_types"] = dict(UNSUPPORTED_ELEMENT_TYPES)
     checks["animations"] = animation_status(element_types)
     checks["unsupported_animations"] = dict(UNSUPPORTED_ANIMATIONS)
@@ -189,19 +330,37 @@ def doctor_report(ffmpeg_skill_dir: Optional[str] = None, workspace: Optional[st
 
     try:
         policy = PathPolicy(workspace, allowed_input)
-        checks["path_policy"] = {"status": "ok", "workspace": str(policy.workspace),
-                                 "allowed_input_roots": [str(r) for r in policy.allowed_input_roots] if policy.allowed_input_roots else None,
-                                 "work_dir": str(policy.workspace / ".motion-graphics"),
-                                 "input_rule": "regular files (symlinks resolved)" + (" under allowed roots" if policy.allowed_input_roots else ""),
-                                 "output_rule": "inside the workspace, never the input, never an existing file unless overwrite"}
+        checks["path_policy"] = {
+            "status": "ok",
+            "workspace": str(policy.workspace),
+            "allowed_input_roots": (
+                [str(r) for r in policy.allowed_input_roots]
+                if policy.allowed_input_roots
+                else None
+            ),
+            "work_dir": str(policy.workspace / ".motion-graphics"),
+            "input_rule": "regular files (symlinks resolved)"
+            + (" under allowed roots" if policy.allowed_input_roots else ""),
+            "output_rule": "inside the workspace, never the input, never an existing file unless overwrite",
+        }
     except MotionGraphicsError as e:
         checks["path_policy"] = {"status": "fail", "detail": e.message}
         problems.append("path policy: " + e.message)
 
-    unsupported = sorted(t for t, o in element_types.items() if o["status"] == "unsupported")
+    unsupported = sorted(
+        t for t, o in element_types.items() if o["status"] == "unsupported"
+    )
     status = "fail" if problems else ("degraded" if unsupported else "ok")
-    return {"schema": DOCTOR_SCHEMA_ID, "skill": {"id": SKILL_ID, "version": VERSION}, "status": status, "checks": checks,
-            "unavailable_element_types": unsupported, "problems": problems, "warnings": warnings, "secrets_shown": False}
+    return {
+        "schema": DOCTOR_SCHEMA_ID,
+        "skill": {"id": SKILL_ID, "version": VERSION},
+        "status": status,
+        "checks": checks,
+        "unavailable_element_types": unsupported,
+        "problems": problems,
+        "warnings": warnings,
+        "secrets_shown": False,
+    }
 
 
 def runtime_context(ffmpeg_skill_dir: Optional[str], timeout: float) -> Any:
@@ -209,8 +368,20 @@ def runtime_context(ffmpeg_skill_dir: Optional[str], timeout: float) -> Any:
     skill = FfmpegSkill.locate(ffmpeg_skill_dir, timeout)
     info = skill.info()
     if not info.supported:
-        raise MotionGraphicsError("TOOL_ERROR", "ffmpeg-skill at " + str(info.directory) + " is not usable: " + "; ".join(info.problems),
-                                   {"reason": "ffmpeg_skill_incompatible", "problems": info.problems}, retryable=False)
+        raise MotionGraphicsError(
+            "TOOL_ERROR",
+            "ffmpeg-skill at "
+            + str(info.directory)
+            + " is not usable: "
+            + "; ".join(info.problems),
+            {"reason": "ffmpeg_skill_incompatible", "problems": info.problems},
+            retryable=False,
+        )
     ffdoc = ffmpeg_skill_doctor(skill)
-    versions = {"ffmpeg-skill": info.version, "ffmpeg-skill_contract": info.contract_version, "ffmpeg": ffdoc.get("ffmpeg") or "unknown", "ffprobe": ffdoc.get("ffprobe") or "unknown"}
+    versions = {
+        "ffmpeg-skill": info.version,
+        "ffmpeg-skill_contract": info.contract_version,
+        "ffmpeg": ffdoc.get("ffmpeg") or "unknown",
+        "ffprobe": ffdoc.get("ffprobe") or "unknown",
+    }
     return skill, versions, capability_status(info, ffdoc)

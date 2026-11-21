@@ -50,9 +50,19 @@ def test_contract_exposes_render_mode_and_audio_stream(tmp_path):
 def test_doctor_json_shape():
     proc = run_cli(["doctor", "--json"])
     data = json.loads(proc.stdout)
-    for key in ("skill", "version", "supported_operations", "supported_formats", "dependencies", "problems"):
+    for key in (
+        "skill",
+        "version",
+        "supported_operations",
+        "supported_formats",
+        "dependencies",
+        "problems",
+    ):
         assert key in data
-    assert "render" not in data["supported_operations"] or data["dependencies"]["ffmpeg-skill"]["available"]
+    assert (
+        "render" not in data["supported_operations"]
+        or data["dependencies"]["ffmpeg-skill"]["available"]
+    )
 
 
 def test_run_generate_srt(tmp_path):
@@ -118,7 +128,11 @@ def test_run_unsupported_operation(tmp_path):
         "workspace": str(tmp_path),
         "format": "srt",
         "output_path": "o.srt",
-        "subtitle": {"id": "d", "language": "en", "cues": [{"id": "c1", "start": 0, "end": 1, "text": "x"}]},
+        "subtitle": {
+            "id": "d",
+            "language": "en",
+            "cues": [{"id": "c1", "start": 0, "end": 1, "text": "x"}],
+        },
     }
     proc = run_cli(["run", "-", "--json"], stdin=json.dumps(request))
     data = json.loads(proc.stdout)
@@ -131,7 +145,11 @@ def test_run_negative_start_rejected(tmp_path):
         "workspace": str(tmp_path),
         "format": "srt",
         "output_path": "o.srt",
-        "subtitle": {"id": "d", "language": "en", "cues": [{"id": "c1", "start": -1, "end": 1, "text": "x"}]},
+        "subtitle": {
+            "id": "d",
+            "language": "en",
+            "cues": [{"id": "c1", "start": -1, "end": 1, "text": "x"}],
+        },
     }
     proc = run_cli(["run", "-", "--json"], stdin=json.dumps(request))
     data = json.loads(proc.stdout)
@@ -147,7 +165,11 @@ def test_run_render_without_engine_reports_dependency_error(tmp_path):
         "format": "srt",
         "output_path": "out.mp4",
         "video_input": "in.mp4",
-        "subtitle": {"id": "d", "language": "en", "cues": [{"id": "c1", "start": 0, "end": 1, "text": "x"}]},
+        "subtitle": {
+            "id": "d",
+            "language": "en",
+            "cues": [{"id": "c1", "start": 0, "end": 1, "text": "x"}],
+        },
     }
     proc = run_cli(["run", "-", "--json"], stdin=json.dumps(request))
     data = json.loads(proc.stdout)

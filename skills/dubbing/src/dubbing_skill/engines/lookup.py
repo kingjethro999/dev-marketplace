@@ -9,6 +9,7 @@ machine:
   Style-Bert-VITS2 API server): the availability GET, and VOICEVOX synthesis (ADR-006). Any other host is refused
   before a connection is made, so `--offline` holds for every engine. This is the only module that does HTTP.
 """
+
 from __future__ import annotations
 
 import http.client
@@ -24,26 +25,43 @@ from . import pkgprobe
 LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
-def python_packages(dists: Sequence[str], modules: Sequence[str], interpreter_env: Optional[str] = None,
-                    timeout: float = 30.0) -> Dict[str, Any]:
+def python_packages(
+    dists: Sequence[str],
+    modules: Sequence[str],
+    interpreter_env: Optional[str] = None,
+    timeout: float = 30.0,
+) -> Dict[str, Any]:
     """{"python", "dists": {name: version|None}, "modules": {name: bool}, "interpreter", "error"}. With
-    `interpreter_env` set in the environment, the lookup runs under that interpreter (`-I`, fixed argv)."""
+    `interpreter_env` set in the environment, the lookup runs under that interpreter (`-I`, fixed argv).
+    """
     explicit = os.environ.get(interpreter_env) if interpreter_env else None
     if not explicit:
         out = pkgprobe.probe(list(dists), list(modules))
         out.update(interpreter="this Python", error=None)
         return out
-    empty = {"python": None, "dists": {d: None for d in dists}, "modules": {m: False for m in modules}, "interpreter": explicit}
+    empty = {
+        "python": None,
+        "dists": {d: None for d in dists},
+        "modules": {m: False for m in modules},
+        "interpreter": explicit,
+    }
     if not (os.path.isfile(explicit) and os.access(explicit, os.X_OK)):
-        return dict(empty, error=f"{interpreter_env}={explicit} is not an executable file")
-    code, out, err = run_process_group([explicit, "-I", pkgprobe.__file__, ",".join(dists), ",".join(modules)], timeout)
+        return dict(
+            empty, error=f"{interpreter_env}={explicit} is not an executable file"
+        )
+    code, out, err = run_process_group(
+        [explicit, "-I", pkgprobe.__file__, ",".join(dists), ",".join(modules)], timeout
+    )
     try:
         doc = json.loads(out.strip().splitlines()[-1]) if out.strip() else None
     except ValueError:
         doc = None
     if code != 0 or not isinstance(doc, dict):
         tail = err.strip().splitlines()[-1] if err.strip() else "no output"
-        return dict(empty, error=f"{interpreter_env}: package lookup failed (exit {code}): {tail}")
+        return dict(
+            empty,
+            error=f"{interpreter_env}: package lookup failed (exit {code}): {tail}",
+        )
     doc.update(interpreter=explicit, error=None)
     return doc
 
@@ -60,7 +78,9 @@ def hf_cache_dirs() -> List[Path]:
     return out
 
 
-def hf_cached_file(repo_id: str, filename: str, model_dir_env: Optional[str] = None) -> Optional[Path]:
+def hf_cached_file(
+    repo_id: str, filename: str, model_dir_env: Optional[str] = None
+) -> Optional[Path]:
     """The weights file, from an explicit model directory (`model_dir_env`) or a Hugging Face cache snapshot."""
     explicit = os.environ.get(model_dir_env) if model_dir_env else None
     if explicit:
@@ -75,9 +95,12 @@ def hf_cached_file(repo_id: str, filename: str, model_dir_env: Optional[str] = N
     return None
 
 
-def hf_cached_snapshot(repo_id: str, filenames: Sequence[str], model_dir_env: Optional[str] = None) -> Tuple[Optional[Path], List[str]]:
+def hf_cached_snapshot(
+    repo_id: str, filenames: Sequence[str], model_dir_env: Optional[str] = None
+) -> Tuple[Optional[Path], List[str]]:
     """The one directory that holds every file in `filenames`: the explicit model directory (`model_dir_env`), else a
-    Hugging Face cache snapshot of `repo_id`. Returns (directory | None, the files missing from the best candidate)."""
+    Hugging Face cache snapshot of `repo_id`. Returns (directory | None, the files missing from the best candidate).
+    """
     explicit = os.environ.get(model_dir_env) if model_dir_env else None
     if explicit:
         d = Path(explicit)
@@ -101,13 +124,23 @@ def check_loopback_url(url: str) -> Tuple[str, int]:
     if parts.scheme != "http" or not parts.hostname:
         raise ValueError(f"{url!r} is not an http:// URL")
     if parts.hostname not in LOOPBACK_HOSTS:
-        raise ValueError(f"{url!r} is not on this machine (allowed hosts: {', '.join(LOOPBACK_HOSTS)})")
+        raise ValueError(
+            f"{url!r} is not on this machine (allowed hosts: {', '.join(LOOPBACK_HOSTS)})"
+        )
     return parts.hostname, parts.port or 80
 
 
-def loopback_request(url: str, method: str, path: str, query: Optional[Dict[str, Any]] = None, body: Optional[bytes] = None,
-                     content_type: Optional[str] = None, accept: str = "application/json", timeout: float = 2.0,
-                     max_bytes: int = 1 << 20) -> Tuple[Optional[int], Optional[str], bytes, Optional[str]]:
+def loopback_request(
+    url: str,
+    method: str,
+    path: str,
+    query: Optional[Dict[str, Any]] = None,
+    body: Optional[bytes] = None,
+    content_type: Optional[str] = None,
+    accept: str = "application/json",
+    timeout: float = 2.0,
+    max_bytes: int = 1 << 20,
+) -> Tuple[Optional[int], Optional[str], bytes, Optional[str]]:
     """<method> <url><path>?<query> on loopback. Returns (HTTP status | None, response Content-Type | None, body, error |
     None). The host is checked before any connection (ValueError for a non-loopback URL); a body longer than
     `max_bytes` is an error, not a truncated result."""
@@ -118,7 +151,12 @@ def loopback_request(url: str, method: str, path: str, query: Optional[Dict[str,
         headers["Content-Type"] = content_type or "application/octet-stream"
     conn = http.client.HTTPConnection(host, port, timeout=timeout)
     try:
-        conn.request(method, target, body=body if body is not None else (b"" if method == "POST" else None), headers=headers)
+        conn.request(
+            method,
+            target,
+            body=body if body is not None else (b"" if method == "POST" else None),
+            headers=headers,
+        )
         resp = conn.getresponse()
         data = resp.read(max_bytes + 1)
         ctype = resp.getheader("Content-Type")
@@ -131,9 +169,13 @@ def loopback_request(url: str, method: str, path: str, query: Optional[Dict[str,
     return resp.status, ctype, data, None
 
 
-def loopback_get_json(url: str, path: str, timeout: float = 2.0, max_bytes: int = 1 << 20) -> Tuple[Optional[int], Any, Optional[str]]:
+def loopback_get_json(
+    url: str, path: str, timeout: float = 2.0, max_bytes: int = 1 << 20
+) -> Tuple[Optional[int], Any, Optional[str]]:
     """GET <url><path> on loopback. Returns (HTTP status | None, parsed JSON | None, error | None)."""
-    status, _, body, err = loopback_request(url, "GET", path, timeout=timeout, max_bytes=max_bytes)
+    status, _, body, err = loopback_request(
+        url, "GET", path, timeout=timeout, max_bytes=max_bytes
+    )
     if err is not None and status is None:
         return None, None, err
     try:

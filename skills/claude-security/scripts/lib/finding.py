@@ -123,7 +123,9 @@ def cwe_parsed(declared: str, finding_id: str, field: str) -> int:
         r"(?:CWE-)?0*([1-9][0-9]{0,4})", declared.strip().upper().replace("_", "-")
     )
     if not matched:
-        msg = f"finding {finding_id} {field} {declared!r} is not a CWE id such as CWE-89"
+        msg = (
+            f"finding {finding_id} {field} {declared!r} is not a CWE id such as CWE-89"
+        )
         raise FindingError(msg)
     return int(matched[1])
 
@@ -132,7 +134,9 @@ def cwe_parsed(declared: str, finding_id: str, field: str) -> int:
 LINK_SITE = re.compile(r"(.+?):([1-9][0-9]{0,14})(?:-([1-9][0-9]{0,14}))?\b")
 
 
-def link_field(item: JsonMap, finding_id: str, scan_root: str, scan_prefix: str) -> str | None:
+def link_field(
+    item: JsonMap, finding_id: str, scan_root: str, scan_prefix: str
+) -> str | None:
     """A change scan's via_change with its leading file normalised like `file`; None when absent.
 
     A link that does not open with a file:line the scan can place is kept as written.
@@ -142,7 +146,9 @@ def link_field(item: JsonMap, finding_id: str, scan_root: str, scan_prefix: str)
     if not (link and matched):
         return link
     try:
-        file = relative_path(matched[1], finding_id, scan_root, scan_prefix, must_exist=False)
+        file = relative_path(
+            matched[1], finding_id, scan_root, scan_prefix, must_exist=False
+        )
     except FindingPathError:
         return link
     return file + link[matched.end(1) :]
@@ -319,7 +325,9 @@ def located(spelled: str, *, root: Path, top: Path) -> Path | None:
             if file.exists():
                 return file
             files.append(file)
-    if not files and ".." not in dropwhile(lambda part: part == "..", Path(spelled).parts):
+    if not files and ".." not in dropwhile(
+        lambda part: part == "..", Path(spelled).parts
+    ):
         files = [Path(os.path.realpath(Path(root, spelled)))]
     return next(iter(files), None)
 
@@ -356,14 +364,18 @@ def relative_path(
     if top not in file.parents:
         raise FindingPathError(finding_id, declared=declared, wrong=escapes)
     if root.is_relative_to(file):
-        raise FindingPathError(finding_id, declared=declared, wrong="names a folder, not a file")
+        raise FindingPathError(
+            finding_id, declared=declared, wrong="names a folder, not a file"
+        )
     relative = Path(os.path.relpath(file, root)).as_posix()
     if leaked_spelling(relative, first=relative.split("/")[0], scan_root=scan_root):
         raise FindingPathError(finding_id, declared=declared, wrong=escapes)
     try:
         exists = file.exists()
     except OSError as error:
-        raise FindingPathError(finding_id, declared=declared, wrong=unresolved) from error
+        raise FindingPathError(
+            finding_id, declared=declared, wrong=unresolved
+        ) from error
     if exists:
         return relative
     if must_exist:
@@ -373,7 +385,9 @@ def relative_path(
     try:
         again = located(relative, root=root, top=top)
     except OSError as error:
-        raise FindingPathError(finding_id, declared=declared, wrong=unresolved) from error
+        raise FindingPathError(
+            finding_id, declared=declared, wrong=unresolved
+        ) from error
     if (
         again is None
         or top not in again.parents
@@ -424,7 +438,9 @@ def build_finding(
             msg = f"finding {finding_id} preconditions must be a list"
             raise FindingError(msg)
         preconditions = [item for item in declared if is_str(item)]
-        if len(preconditions) != len(declared) or any(map(has_lone_surrogate, preconditions)):
+        if len(preconditions) != len(declared) or any(
+            map(has_lone_surrogate, preconditions)
+        ):
             msg = f"finding {finding_id} preconditions must be a list of strings"
             raise FindingError(msg)
 

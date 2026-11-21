@@ -38,7 +38,9 @@ _TYPE_MAP: dict[str, type | tuple[type, ...]] = {
 }
 
 
-def validate_against_schema(value: Any, schema: dict[str, Any] | None, *, path: str = "$") -> list[str]:
+def validate_against_schema(
+    value: Any, schema: dict[str, Any] | None, *, path: str = "$"
+) -> list[str]:
     """Return a list of human-readable violations. Empty list == valid."""
     errors: list[str] = []
     if schema:
@@ -49,7 +51,9 @@ def validate_against_schema(value: Any, schema: dict[str, Any] | None, *, path: 
 def _validate(value: Any, schema: dict[str, Any], path: str, errors: list[str]) -> None:
     schema_type = schema.get("type")
     if schema_type is not None and not _type_matches(value, schema_type):
-        errors.append(f"{path}: expected type '{schema_type}', got '{type(value).__name__}'")
+        errors.append(
+            f"{path}: expected type '{schema_type}', got '{type(value).__name__}'"
+        )
         return  # further checks against a wrong-typed value would be noise
 
     if "enum" in schema and value not in schema["enum"]:
@@ -88,12 +92,16 @@ def _check_type(value: Any, schema_type: str) -> bool:
     return isinstance(value, expected)
 
 
-def _validate_object(value: Any, schema: dict[str, Any], path: str, errors: list[str]) -> None:
+def _validate_object(
+    value: Any, schema: dict[str, Any], path: str, errors: list[str]
+) -> None:
     if not isinstance(value, dict):
         return
     properties: dict[str, Any] = schema.get("properties", {})
     errors.extend(
-        f"{path}: missing required property '{key}'" for key in schema.get("required", []) if key not in value
+        f"{path}: missing required property '{key}'"
+        for key in schema.get("required", [])
+        if key not in value
     )
     additional = schema.get("additionalProperties")
     if additional is False:
@@ -113,22 +121,30 @@ def _validate_object(value: Any, schema: dict[str, Any], path: str, errors: list
             _validate(value[key], sub_schema, f"{path}.{key}", errors)
 
 
-def _validate_array(value: Any, schema: dict[str, Any], path: str, errors: list[str]) -> None:
+def _validate_array(
+    value: Any, schema: dict[str, Any], path: str, errors: list[str]
+) -> None:
     if not isinstance(value, list):
         return
     min_items = schema.get("minItems")
     if min_items is not None and len(value) < min_items:
-        errors.append(f"{path}: expected at least {min_items} item(s), got {len(value)}")
+        errors.append(
+            f"{path}: expected at least {min_items} item(s), got {len(value)}"
+        )
     item_schema = schema.get("items")
     if item_schema:
         for i, item in enumerate(value):
             _validate(item, item_schema, f"{path}[{i}]", errors)
 
 
-def _validate_number(value: Any, schema: dict[str, Any], path: str, errors: list[str]) -> None:
+def _validate_number(
+    value: Any, schema: dict[str, Any], path: str, errors: list[str]
+) -> None:
     if "minimum" in schema and value < schema["minimum"]:
         errors.append(f"{path}: {value} is below minimum {schema['minimum']}")
     if "maximum" in schema and value > schema["maximum"]:
         errors.append(f"{path}: {value} is above maximum {schema['maximum']}")
     if "exclusiveMinimum" in schema and value <= schema["exclusiveMinimum"]:
-        errors.append(f"{path}: {value} must be strictly greater than {schema['exclusiveMinimum']}")
+        errors.append(
+            f"{path}: {value} must be strictly greater than {schema['exclusiveMinimum']}"
+        )

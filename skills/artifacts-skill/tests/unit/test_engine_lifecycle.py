@@ -12,8 +12,12 @@ def test_dry_run_performs_no_io(good_pdf, tmp_path):
     evidence_dir = tmp_path / "reports"
 
     result = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, output_path,
-        evidence_dir=evidence_dir, dry_run=True,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        output_path,
+        evidence_dir=evidence_dir,
+        dry_run=True,
     )
 
     assert result.receipt is None
@@ -28,8 +32,12 @@ def test_real_run_produces_receipt_and_evidence(good_pdf, tmp_path):
     evidence_dir = tmp_path / "reports"
 
     result = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, output_path,
-        evidence_dir=evidence_dir, dry_run=False,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        output_path,
+        evidence_dir=evidence_dir,
+        dry_run=False,
     )
 
     assert result.receipt is not None
@@ -46,7 +54,9 @@ def test_verify_only_lifecycle_dry_run_performs_no_io(good_pdf, tmp_path):
     means zero I/O, same contract as the mutating path."""
     evidence_dir = tmp_path / "reports"
 
-    result = run_lifecycle(good_pdf, None, {}, None, evidence_dir=evidence_dir, dry_run=True)
+    result = run_lifecycle(
+        good_pdf, None, {}, None, evidence_dir=evidence_dir, dry_run=True
+    )
 
     assert result.receipt is None
     assert result.output is None
@@ -58,7 +68,9 @@ def test_verify_only_lifecycle_dry_run_performs_no_io(good_pdf, tmp_path):
 def test_verify_only_lifecycle_produces_receipt_and_evidence(good_pdf, tmp_path):
     evidence_dir = tmp_path / "reports"
 
-    result = run_lifecycle(good_pdf, None, {}, None, evidence_dir=evidence_dir, dry_run=False)
+    result = run_lifecycle(
+        good_pdf, None, {}, None, evidence_dir=evidence_dir, dry_run=False
+    )
 
     assert result.receipt is not None
     assert result.output is None
@@ -78,7 +90,9 @@ def test_verify_only_lifecycle_reflects_structural_failure(empty_pdf, tmp_path):
     no verification happens."""
     evidence_dir = tmp_path / "reports"
 
-    result = run_lifecycle(empty_pdf, None, {}, None, evidence_dir=evidence_dir, dry_run=False)
+    result = run_lifecycle(
+        empty_pdf, None, {}, None, evidence_dir=evidence_dir, dry_run=False
+    )
 
     assert result.receipt.status == CheckStatus.FAIL
     assert result.receipt.operations == []
@@ -95,7 +109,9 @@ def test_verify_only_lifecycle_never_calls_execute(good_pdf, tmp_path, monkeypat
 
     monkeypatch.setattr(pdf_adapter_module.PdfAdapter, "execute", _fail_if_called)
 
-    result = run_lifecycle(good_pdf, None, {}, None, evidence_dir=tmp_path / "reports", dry_run=False)
+    result = run_lifecycle(
+        good_pdf, None, {}, None, evidence_dir=tmp_path / "reports", dry_run=False
+    )
     assert result.receipt is not None  # didn't raise -> execute() was never reached
 
 
@@ -108,8 +124,13 @@ def test_fix_loop_stops_at_one_iteration_when_no_fixer_registered(empty_pdf, tmp
     evidence_dir = tmp_path / "reports"
 
     result = run_lifecycle(
-        empty_pdf, "metadata_set", {"title": "x"}, output_path,
-        evidence_dir=evidence_dir, dry_run=False, max_iterations=3,
+        empty_pdf,
+        "metadata_set",
+        {"title": "x"},
+        output_path,
+        evidence_dir=evidence_dir,
+        dry_run=False,
+        max_iterations=3,
     )
 
     assert result.receipt is not None
@@ -122,8 +143,12 @@ def test_receipt_status_reflects_structural_failure(empty_pdf, tmp_path):
     output_path = tmp_path / "out.pdf"
     evidence_dir = tmp_path / "reports"
     result = run_lifecycle(
-        empty_pdf, "metadata_set", {"title": "x"}, output_path,
-        evidence_dir=evidence_dir, dry_run=False,
+        empty_pdf,
+        "metadata_set",
+        {"title": "x"},
+        output_path,
+        evidence_dir=evidence_dir,
+        dry_run=False,
     )
     assert result.receipt.status == CheckStatus.FAIL
 
@@ -140,9 +165,14 @@ def test_fix_loop_actually_fixes_page_size_mismatch(good_pdf, tmp_path):
     evidence_dir = tmp_path / "reports"
 
     result = run_lifecycle(
-        good_pdf, "fit_page_size", {"width_pt": 100, "height_pt": 100}, output_path,
+        good_pdf,
+        "fit_page_size",
+        {"width_pt": 100, "height_pt": 100},
+        output_path,
         policy={"require_page_size_pt": (612, 792), "page_size_tolerance_pt": 1.0},
-        evidence_dir=evidence_dir, dry_run=False, max_iterations=3,
+        evidence_dir=evidence_dir,
+        dry_run=False,
+        max_iterations=3,
     )
 
     assert result.receipt is not None
@@ -167,9 +197,13 @@ def test_fix_loop_runs_by_default_without_max_iterations_passed(good_pdf, tmp_pa
     evidence_dir = tmp_path / "reports"
 
     result = run_lifecycle(
-        good_pdf, "fit_page_size", {"width_pt": 100, "height_pt": 100}, output_path,
+        good_pdf,
+        "fit_page_size",
+        {"width_pt": 100, "height_pt": 100},
+        output_path,
         policy={"require_page_size_pt": (612, 792), "page_size_tolerance_pt": 1.0},
-        evidence_dir=evidence_dir, dry_run=False,
+        evidence_dir=evidence_dir,
+        dry_run=False,
     )
 
     assert result.receipt.iterations == 2
@@ -183,9 +217,14 @@ def test_fix_loop_gives_up_honestly_when_max_iterations_too_low(good_pdf, tmp_pa
     evidence_dir = tmp_path / "reports"
 
     result = run_lifecycle(
-        good_pdf, "fit_page_size", {"width_pt": 100, "height_pt": 100}, output_path,
+        good_pdf,
+        "fit_page_size",
+        {"width_pt": 100, "height_pt": 100},
+        output_path,
         policy={"require_page_size_pt": (612, 792), "page_size_tolerance_pt": 1.0},
-        evidence_dir=evidence_dir, dry_run=False, max_iterations=1,
+        evidence_dir=evidence_dir,
+        dry_run=False,
+        max_iterations=1,
     )
 
     assert result.receipt.iterations == 1
@@ -205,11 +244,18 @@ def test_fix_loop_gives_up_honestly_when_max_iterations_too_low(good_pdf, tmp_pa
 # iterations), not 10, with zero error or warning surfaced anywhere.
 
 
-def test_max_iterations_above_the_limit_is_rejected_not_silently_clamped(good_pdf, tmp_path):
+def test_max_iterations_above_the_limit_is_rejected_not_silently_clamped(
+    good_pdf, tmp_path
+):
     with pytest.raises(ArtifactInputError) as exc_info:
         run_lifecycle(
-            good_pdf, "metadata_set", {"title": "x"}, tmp_path / "out.pdf",
-            evidence_dir=tmp_path / "reports", dry_run=False, max_iterations=10,
+            good_pdf,
+            "metadata_set",
+            {"title": "x"},
+            tmp_path / "out.pdf",
+            evidence_dir=tmp_path / "reports",
+            dry_run=False,
+            max_iterations=10,
         )
     assert exc_info.value.code == "ARTIFACT_INVALID_ARGS"
     assert "max_iterations" in exc_info.value.message
@@ -218,22 +264,34 @@ def test_max_iterations_above_the_limit_is_rejected_not_silently_clamped(good_pd
 def test_max_iterations_zero_is_rejected_not_silently_raised_to_one(good_pdf, tmp_path):
     with pytest.raises(ArtifactInputError) as exc_info:
         run_lifecycle(
-            good_pdf, "metadata_set", {"title": "x"}, tmp_path / "out.pdf",
-            evidence_dir=tmp_path / "reports", dry_run=False, max_iterations=0,
+            good_pdf,
+            "metadata_set",
+            {"title": "x"},
+            tmp_path / "out.pdf",
+            evidence_dir=tmp_path / "reports",
+            dry_run=False,
+            max_iterations=0,
         )
     assert exc_info.value.code == "ARTIFACT_INVALID_ARGS"
 
 
 def test_max_iterations_within_range_still_works(good_pdf, tmp_path):
     result = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, tmp_path / "out.pdf",
-        evidence_dir=tmp_path / "reports", dry_run=False, max_iterations=2,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        tmp_path / "out.pdf",
+        evidence_dir=tmp_path / "reports",
+        dry_run=False,
+        max_iterations=2,
     )
     assert result.receipt is not None
     assert result.receipt.status == CheckStatus.PASS
 
 
-def test_a_fixer_that_never_converges_is_still_capped_at_the_real_limit(good_pdf, tmp_path, monkeypatch):
+def test_a_fixer_that_never_converges_is_still_capped_at_the_real_limit(
+    good_pdf, tmp_path, monkeypatch
+):
     """Proves the true ceiling (not just that out-of-range values are now
     rejected): a fixer that always returns a schema-valid but still-failing
     fix must stop at exactly Limits.max_fix_iterations, never fewer, never
@@ -245,18 +303,25 @@ def test_a_fixer_that_never_converges_is_still_capped_at_the_real_limit(good_pdf
 
     def _always_fail(self, ref, policy):
         return VerificationResult(
-            kind="structural", checks=[Check(id="x", name="x", status=CS.FAIL, message="always fails")]
+            kind="structural",
+            checks=[Check(id="x", name="x", status=CS.FAIL, message="always fails")],
         )
 
     def _always_fix(self, ref, operation, args, structural):
         return {"title": "retry"}
 
-    monkeypatch.setattr(pdf_adapter_module.PdfAdapter, "verify_structural", _always_fail)
+    monkeypatch.setattr(
+        pdf_adapter_module.PdfAdapter, "verify_structural", _always_fail
+    )
     monkeypatch.setattr(pdf_adapter_module.PdfAdapter, "fix", _always_fix)
 
     result = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, tmp_path / "out.pdf",
-        evidence_dir=tmp_path / "reports", dry_run=False,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        tmp_path / "out.pdf",
+        evidence_dir=tmp_path / "reports",
+        dry_run=False,
     )
     assert result.receipt.iterations == DEFAULT_LIMITS.max_fix_iterations
 
@@ -267,20 +332,29 @@ def test_build_plan_rejects_args_violating_the_operation_schema(good_pdf, tmp_pa
     build_plan() validates args before ever calling adapter.plan()."""
     output_path = tmp_path / "out.pdf"
     with pytest.raises(ArtifactInputError) as exc_info:
-        build_plan(good_pdf, "fit_page_size", {"width_pt": "not a number", "height_pt": 100}, output_path)
+        build_plan(
+            good_pdf,
+            "fit_page_size",
+            {"width_pt": "not a number", "height_pt": 100},
+            output_path,
+        )
     assert exc_info.value.code == "ARTIFACT_INVALID_ARGS"
 
 
 def test_build_plan_rejects_missing_required_arg(good_pdf, tmp_path):
     output_path = tmp_path / "out.pdf"
     with pytest.raises(ArtifactInputError) as exc_info:
-        build_plan(good_pdf, "fit_page_size", {"width_pt": 100}, output_path)  # missing height_pt
+        build_plan(
+            good_pdf, "fit_page_size", {"width_pt": 100}, output_path
+        )  # missing height_pt
     assert exc_info.value.code == "ARTIFACT_INVALID_ARGS"
 
 
 def test_build_plan_allows_valid_args_through(good_pdf, tmp_path):
     output_path = tmp_path / "out.pdf"
-    _ref, _adapter, plan = build_plan(good_pdf, "fit_page_size", {"width_pt": 100, "height_pt": 100}, output_path)
+    _ref, _adapter, plan = build_plan(
+        good_pdf, "fit_page_size", {"width_pt": 100, "height_pt": 100}, output_path
+    )
     assert plan.operation == "pdf.fit_page_size"
 
 
@@ -294,8 +368,12 @@ def test_render_result_reports_the_real_backend_not_a_hardcoded_one(good_png, tm
     evidence_dir = tmp_path / "reports"
 
     result = run_lifecycle(
-        good_png, "resize", {"width": 10, "height": 10}, output_path,
-        evidence_dir=evidence_dir, dry_run=False,
+        good_png,
+        "resize",
+        {"width": 10, "height": 10},
+        output_path,
+        evidence_dir=evidence_dir,
+        dry_run=False,
     )
 
     assert result.render is not None
@@ -307,15 +385,21 @@ def test_run_lifecycle_rejects_invalid_args_before_touching_disk(good_pdf, tmp_p
     evidence_dir = tmp_path / "reports"
     with pytest.raises(ArtifactInputError) as exc_info:
         run_lifecycle(
-            good_pdf, "fit_page_size", {"width_pt": -5, "height_pt": 100}, output_path,
-            evidence_dir=evidence_dir, dry_run=False,
+            good_pdf,
+            "fit_page_size",
+            {"width_pt": -5, "height_pt": 100},
+            output_path,
+            evidence_dir=evidence_dir,
+            dry_run=False,
         )
     assert exc_info.value.code == "ARTIFACT_INVALID_ARGS"
     assert not output_path.exists()
     assert not evidence_dir.exists()
 
 
-def test_run_lifecycle_rejects_a_misspelled_policy_key_before_touching_disk(good_pdf, tmp_path):
+def test_run_lifecycle_rejects_a_misspelled_policy_key_before_touching_disk(
+    good_pdf, tmp_path
+):
     """Issue #24: a policy dict passed directly to run_lifecycle() (bypassing
     the CLI's/MCP's resolve_policy() call) must still be checked - callers
     that import run_lifecycle() directly get the same protection against a
@@ -324,8 +408,13 @@ def test_run_lifecycle_rejects_a_misspelled_policy_key_before_touching_disk(good
     evidence_dir = tmp_path / "reports"
     with pytest.raises(ArtifactInputError) as exc_info:
         run_lifecycle(
-            good_pdf, "metadata_set", {"title": "x"}, output_path,
-            policy={"min_pagess": 1}, evidence_dir=evidence_dir, dry_run=False,
+            good_pdf,
+            "metadata_set",
+            {"title": "x"},
+            output_path,
+            policy={"min_pagess": 1},
+            evidence_dir=evidence_dir,
+            dry_run=False,
         )
     assert exc_info.value.code == "ARTIFACT_INVALID_ARGS"
     assert "min_pagess" in exc_info.value.message
@@ -333,7 +422,9 @@ def test_run_lifecycle_rejects_a_misspelled_policy_key_before_touching_disk(good
     assert not evidence_dir.exists()
 
 
-def test_visual_evidence_check_preserves_remediation_and_evidence_on_render_failure(good_pdf, tmp_path, monkeypatch):
+def test_visual_evidence_check_preserves_remediation_and_evidence_on_render_failure(
+    good_pdf, tmp_path, monkeypatch
+):
     """Self-audit finding (a real end-to-end walkthrough triggering a real
     LibreOffice render failure, not a curated unit fixture): the visual_
     evidence check used to set message=str(exc), and ArtifactError.__str__
@@ -350,18 +441,29 @@ def test_visual_evidence_check_preserves_remediation_and_evidence_on_render_fail
             code="ARTIFACT_RENDER_BACKEND_FAILED",
             message="fake backend failure for this test",
             remediation="See evidence.stdout/stderr for the backend's own diagnostic.",
-            evidence={"returncode": 1, "stdout": "", "stderr": "fake stderr diagnostic"},
+            evidence={
+                "returncode": 1,
+                "stdout": "",
+                "stderr": "fake stderr diagnostic",
+            },
         )
 
     monkeypatch.setattr(pdf_adapter_module.PdfAdapter, "render", _fail_to_render)
 
     result = run_lifecycle(
-        good_pdf, "metadata_set", {"title": "x"}, tmp_path / "out.pdf",
-        evidence_dir=tmp_path / "reports", dry_run=False,
+        good_pdf,
+        "metadata_set",
+        {"title": "x"},
+        tmp_path / "out.pdf",
+        evidence_dir=tmp_path / "reports",
+        dry_run=False,
     )
 
     visual_checks = result.receipt.verification["visual"]["checks"]
     check = next(c for c in visual_checks if c["id"] == "visual_evidence")
     assert check["status"] == "unknown"
-    assert check["evidence"]["remediation"] == "See evidence.stdout/stderr for the backend's own diagnostic."
+    assert (
+        check["evidence"]["remediation"]
+        == "See evidence.stdout/stderr for the backend's own diagnostic."
+    )
     assert check["evidence"]["stderr"] == "fake stderr diagnostic"

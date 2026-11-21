@@ -57,8 +57,12 @@ from artifact_skill.core.verification import CheckStatus
 
 FIXTURES_ROOT = "tests/fixtures"
 # Absolute, so the grounding cases do not depend on the working directory.
-_GROUNDING_SOURCE = str(Path(__file__).resolve().parent.parent / "fixtures" / "grounding" / "transcript.txt")
-_LICENCE_RECORDS = str(Path(__file__).resolve().parent.parent / "fixtures" / "credits" / "licences.json")
+_GROUNDING_SOURCE = str(
+    Path(__file__).resolve().parent.parent / "fixtures" / "grounding" / "transcript.txt"
+)
+_LICENCE_RECORDS = str(
+    Path(__file__).resolve().parent.parent / "fixtures" / "credits" / "licences.json"
+)
 
 
 @dataclass(frozen=True)
@@ -112,32 +116,74 @@ class TypeDetectionCase:
 
 
 TYPE_REJECTED_CASES: list[TypeRejectedCase] = [
-    TypeRejectedCase("docx/corrupt.docx", "Garbage bytes no longer sniff as a valid zip/OOXML container."),
-    TypeRejectedCase("pptx/corrupt.pptx", "Garbage bytes no longer sniff as a valid zip/OOXML container."),
-    TypeRejectedCase("xlsx/corrupt.xlsx", "Garbage bytes no longer sniff as a valid zip/OOXML container."),
-    TypeRejectedCase("html/binary_garbage.html", "Binary content doesn't sniff as HTML despite the extension."),
-    TypeRejectedCase("credits/licences.json", "Licence records (JSON): read only as the credits check's input, not verified itself."),
-    TypeRejectedCase("grounding/transcript.txt", "Plain-text transcript: read only as a grounding source, not verified itself."),
+    TypeRejectedCase(
+        "docx/corrupt.docx",
+        "Garbage bytes no longer sniff as a valid zip/OOXML container.",
+    ),
+    TypeRejectedCase(
+        "pptx/corrupt.pptx",
+        "Garbage bytes no longer sniff as a valid zip/OOXML container.",
+    ),
+    TypeRejectedCase(
+        "xlsx/corrupt.xlsx",
+        "Garbage bytes no longer sniff as a valid zip/OOXML container.",
+    ),
+    TypeRejectedCase(
+        "html/binary_garbage.html",
+        "Binary content doesn't sniff as HTML despite the extension.",
+    ),
+    TypeRejectedCase(
+        "credits/licences.json",
+        "Licence records (JSON): read only as the credits check's input, not verified itself.",
+    ),
+    TypeRejectedCase(
+        "grounding/transcript.txt",
+        "Plain-text transcript: read only as a grounding source, not verified itself.",
+    ),
 ]
 
 STRUCTURAL_DEFECT_CASES: list[StructuralDefectCase] = [
-    StructuralDefectCase("pdf/corrupt.pdf", CheckStatus.FAIL, "Truncated/garbage PDF body; pdf_validity."),
-    StructuralDefectCase("pdf/empty_0page.pdf", CheckStatus.FAIL, "Zero pages; page_count."),
     StructuralDefectCase(
-        "pdf/blank_page.pdf", CheckStatus.WARN,
+        "pdf/corrupt.pdf", CheckStatus.FAIL, "Truncated/garbage PDF body; pdf_validity."
+    ),
+    StructuralDefectCase(
+        "pdf/empty_0page.pdf", CheckStatus.FAIL, "Zero pages; page_count."
+    ),
+    StructuralDefectCase(
+        "pdf/blank_page.pdf",
+        CheckStatus.WARN,
         "3 pages, the middle one has no extractable text and no embedded image; blank_pages (WARN by default) "
         "- a different failure mode from empty_0page.pdf (zero pages total).",
     ),
-    StructuralDefectCase("pdf/encrypted.pdf", CheckStatus.WARN, "Encrypted; encryption (WARN by default)."),
     StructuralDefectCase(
-        "pdf/nonembedded_custom_font.pdf", CheckStatus.WARN, "Non-standard font not embedded; font_embedding."
+        "pdf/encrypted.pdf",
+        CheckStatus.WARN,
+        "Encrypted; encryption (WARN by default).",
     ),
-    StructuralDefectCase("pptx/empty_placeholder.pptx", CheckStatus.WARN, "Unfilled placeholder; empty_placeholders."),
-    StructuralDefectCase("pptx/zero_slide.pptx", CheckStatus.FAIL, "Zero slides; slide_count."),
-    StructuralDefectCase("docx/empty.docx", CheckStatus.FAIL, "No paragraphs; paragraph_count."),
-    StructuralDefectCase("xlsx/formula_error.xlsx", CheckStatus.FAIL, "Cached #REF! error; formula_cached_errors."),
     StructuralDefectCase(
-        "xlsx/external_link.xlsx", CheckStatus.UNKNOWN,
+        "pdf/nonembedded_custom_font.pdf",
+        CheckStatus.WARN,
+        "Non-standard font not embedded; font_embedding.",
+    ),
+    StructuralDefectCase(
+        "pptx/empty_placeholder.pptx",
+        CheckStatus.WARN,
+        "Unfilled placeholder; empty_placeholders.",
+    ),
+    StructuralDefectCase(
+        "pptx/zero_slide.pptx", CheckStatus.FAIL, "Zero slides; slide_count."
+    ),
+    StructuralDefectCase(
+        "docx/empty.docx", CheckStatus.FAIL, "No paragraphs; paragraph_count."
+    ),
+    StructuralDefectCase(
+        "xlsx/formula_error.xlsx",
+        CheckStatus.FAIL,
+        "Cached #REF! error; formula_cached_errors.",
+    ),
+    StructuralDefectCase(
+        "xlsx/external_link.xlsx",
+        CheckStatus.UNKNOWN,
         "External workbook reference; external_links is WARN by default, but the formula "
         "referencing that external sheet has no cached value (openpyxl's writer never adds one "
         "for a formula it didn't compute), so formula_cached_errors/formula_recalculation are "
@@ -145,113 +191,166 @@ STRUCTURAL_DEFECT_CASES: list[StructuralDefectCase] = [
         "overall status UNKNOWN, not WARN.",
     ),
     StructuralDefectCase(
-        "docx/leftover_placeholder.docx", CheckStatus.UNKNOWN,
+        "docx/leftover_placeholder.docx",
+        CheckStatus.UNKNOWN,
         "Contains 'Click to add title'/'Lorem ipsum'/'TODO'; leftover_placeholder_text is WARN by default, "
         "but page_count is always UNKNOWN for DOCX without a render (see docx/adapter.py), which outranks "
         "WARN in aggregation, making the overall status UNKNOWN, not WARN.",
     ),
     StructuralDefectCase(
-        "pptx/leftover_placeholder_text.pptx", CheckStatus.WARN,
+        "pptx/leftover_placeholder_text.pptx",
+        CheckStatus.WARN,
         "Filled-in placeholders containing 'Click to add title'/'Lorem ipsum'; leftover_placeholder_text "
         "(WARN by default) — a different case from empty_placeholder.pptx (placeholders left blank).",
     ),
     StructuralDefectCase(
-        "pdf/leftover_placeholder.pdf", CheckStatus.WARN,
+        "pdf/leftover_placeholder.pdf",
+        CheckStatus.WARN,
         "Contains 'Click to add title'/'Lorem ipsum'/'TODO' in extracted page text; leftover_placeholder_text "
         "(WARN by default) — unlike DOCX, PDF's page_count is never UNKNOWN, so this rolls up to WARN cleanly.",
     ),
     StructuralDefectCase(
-        "xlsx/leftover_placeholder.xlsx", CheckStatus.WARN,
+        "xlsx/leftover_placeholder.xlsx",
+        CheckStatus.WARN,
         "Contains 'Click to add title'/'TODO'/'Lorem ipsum' in cell text; leftover_placeholder_text (WARN by "
         "default) — no formulas present, so formula_cached_errors/formula_recalculation are SKIPPED (not "
         "UNKNOWN), unlike xlsx/external_link.xlsx below, so this rolls up to WARN cleanly.",
     ),
     StructuralDefectCase(
-        "svg/leftover_placeholder.svg", CheckStatus.WARN,
+        "svg/leftover_placeholder.svg",
+        CheckStatus.WARN,
         "Contains 'Click to add title'/'Lorem ipsum'/'TODO' across <text> elements; leftover_placeholder_text "
         "(WARN by default).",
     ),
-    StructuralDefectCase("image/corrupt.png", CheckStatus.FAIL, "Truncated/garbage PNG; image_validity."),
-    StructuralDefectCase("image/exif_rotated.jpg", CheckStatus.WARN, "EXIF orientation != 1; exif_orientation."),
     StructuralDefectCase(
-        "html/missing_local_resource.html", CheckStatus.FAIL, "Local <img> target doesn't exist; local_resources."
+        "image/corrupt.png", CheckStatus.FAIL, "Truncated/garbage PNG; image_validity."
     ),
     StructuralDefectCase(
-        "html/leftover_placeholder.html", CheckStatus.WARN,
+        "image/exif_rotated.jpg",
+        CheckStatus.WARN,
+        "EXIF orientation != 1; exif_orientation.",
+    ),
+    StructuralDefectCase(
+        "html/missing_local_resource.html",
+        CheckStatus.FAIL,
+        "Local <img> target doesn't exist; local_resources.",
+    ),
+    StructuralDefectCase(
+        "html/leftover_placeholder.html",
+        CheckStatus.WARN,
         "Contains 'Click to add title'/'Lorem ipsum' in body text (a 'TODO' inside <script> is correctly "
         "excluded - code, not document text); leftover_placeholder_text (WARN by default).",
     ),
     StructuralDefectCase(
-        "html/external_resource.html", CheckStatus.WARN, "External resource reference; external_resources (WARN by default)."
+        "html/external_resource.html",
+        CheckStatus.WARN,
+        "External resource reference; external_resources (WARN by default).",
     ),
     StructuralDefectCase(
-        "html/no_title.html", CheckStatus.FAIL, "No <title>; title_presence.", policy={"require_title": True}
+        "html/no_title.html",
+        CheckStatus.FAIL,
+        "No <title>; title_presence.",
+        policy={"require_title": True},
     ),
-    StructuralDefectCase("svg/malformed.svg", CheckStatus.FAIL, "Malformed XML; svg_validity."),
     StructuralDefectCase(
-        "svg/missing_local_resource.svg", CheckStatus.FAIL, "Local resource target doesn't exist; local_resources."
+        "svg/malformed.svg", CheckStatus.FAIL, "Malformed XML; svg_validity."
     ),
     StructuralDefectCase(
-        "svg/external_resource.svg", CheckStatus.WARN, "External resource reference; external_resources (WARN by default)."
+        "svg/missing_local_resource.svg",
+        CheckStatus.FAIL,
+        "Local resource target doesn't exist; local_resources.",
     ),
-    StructuralDefectCase("svg/no_size.svg", CheckStatus.WARN, "No width/height/viewBox; explicit_size."),
-    StructuralDefectCase("csv/ragged.csv", CheckStatus.FAIL, "One row has a different column count; column_count_consistency."),
     StructuralDefectCase(
-        "csv/leftover_placeholder.csv", CheckStatus.WARN,
+        "svg/external_resource.svg",
+        CheckStatus.WARN,
+        "External resource reference; external_resources (WARN by default).",
+    ),
+    StructuralDefectCase(
+        "svg/no_size.svg", CheckStatus.WARN, "No width/height/viewBox; explicit_size."
+    ),
+    StructuralDefectCase(
+        "csv/ragged.csv",
+        CheckStatus.FAIL,
+        "One row has a different column count; column_count_consistency.",
+    ),
+    StructuralDefectCase(
+        "csv/leftover_placeholder.csv",
+        CheckStatus.WARN,
         "Contains 'TODO'/'Lorem ipsum' in cell text; leftover_placeholder_text (WARN by default).",
     ),
-    StructuralDefectCase("markdown/unclosed_fence.md", CheckStatus.WARN, "Odd fence-line count; fenced_code_block_balance."),
     StructuralDefectCase(
-        "markdown/missing_local_resource.md", CheckStatus.FAIL, "Local image target doesn't exist; local_resources."
+        "markdown/unclosed_fence.md",
+        CheckStatus.WARN,
+        "Odd fence-line count; fenced_code_block_balance.",
     ),
     StructuralDefectCase(
-        "markdown/external_resource.md", CheckStatus.WARN, "External link reference; external_resources (WARN by default)."
+        "markdown/missing_local_resource.md",
+        CheckStatus.FAIL,
+        "Local image target doesn't exist; local_resources.",
     ),
     StructuralDefectCase(
-        "markdown/leftover_placeholder.md", CheckStatus.WARN,
+        "markdown/external_resource.md",
+        CheckStatus.WARN,
+        "External link reference; external_resources (WARN by default).",
+    ),
+    StructuralDefectCase(
+        "markdown/leftover_placeholder.md",
+        CheckStatus.WARN,
         "Contains 'TODO'/'Lorem ipsum' in body text; leftover_placeholder_text (WARN by default).",
     ),
     StructuralDefectCase(
-        "epub/broken_manifest.epub", CheckStatus.FAIL, "Manifest item references a missing archive member; manifest_references_resolve."
+        "epub/broken_manifest.epub",
+        CheckStatus.FAIL,
+        "Manifest item references a missing archive member; manifest_references_resolve.",
     ),
     StructuralDefectCase(
-        "epub/broken_spine.epub", CheckStatus.FAIL, "Spine itemref references an unknown manifest id; spine_references_resolve."
+        "epub/broken_spine.epub",
+        CheckStatus.FAIL,
+        "Spine itemref references an unknown manifest id; spine_references_resolve.",
     ),
     StructuralDefectCase(
-        "epub/leftover_placeholder.epub", CheckStatus.WARN,
+        "epub/leftover_placeholder.epub",
+        CheckStatus.WARN,
         "Contains 'TODO'/'Lorem ipsum' in chapter text; leftover_placeholder_text (WARN by default).",
     ),
     StructuralDefectCase(
-        "epub/mimetype_not_first.epub", CheckStatus.WARN,
+        "epub/mimetype_not_first.epub",
+        CheckStatus.WARN,
         "mimetype is present but not the archive's first entry, or not stored uncompressed; "
         "mimetype_first_and_stored (WARN by default — most real-world reading systems tolerate this).",
     ),
     StructuralDefectCase(
-        "epub/missing_container.epub", CheckStatus.FAIL,
+        "epub/missing_container.epub",
+        CheckStatus.FAIL,
         "No META-INF/container.xml at all; epub_validity — caught as ArtifactInputError, not a security "
         "control, so (unlike entity_bomb.epub below) this is a Check, not an exception.",
     ),
     StructuralDefectCase(
-        "media/leftover_placeholder.wav", CheckStatus.WARN,
+        "media/leftover_placeholder.wav",
+        CheckStatus.WARN,
         "Container metadata title tag contains 'TODO'; leftover_placeholder_text (WARN by default).",
     ),
     StructuralDefectCase(
-        "media/corrupt_truncated.mp4", CheckStatus.FAIL,
+        "media/corrupt_truncated.mp4",
+        CheckStatus.FAIL,
         "A real MP4 truncated mid-stream; media_readable — ffprobe refuses it, caught as ArtifactInputError "
         "and reported as a Check, same shape as epub/missing_container.epub above.",
     ),
     StructuralDefectCase(
-        "media/garbage_too_short.mp4", CheckStatus.FAIL,
+        "media/garbage_too_short.mp4",
+        CheckStatus.FAIL,
         "Only the first 20 bytes of a real MP4 (still enough to match the 'ftyp' magic-byte check at the "
         "type-detection layer); media_readable — ffprobe has nowhere near enough data to read anything.",
     ),
     StructuralDefectCase(
-        "grounding/summary_invented_dosage.md", CheckStatus.FAIL,
+        "grounding/summary_invented_dosage.md",
+        CheckStatus.FAIL,
         "One dosage (apixaban 10 mg) is not in the transcript; source_grounding.",
         policy={"grounding_sources": [_GROUNDING_SOURCE]},
     ),
     StructuralDefectCase(
-        "credits/end_roll_missing_one.md", CheckStatus.FAIL,
+        "credits/end_roll_missing_one.md",
+        CheckStatus.FAIL,
         "One CC BY sound effect is not credited; credits_attribution.",
         policy={"licence_records": _LICENCE_RECORDS},
     ),
@@ -286,71 +385,157 @@ EXCEPTION_CASES: list[ExceptionCase] = [
 
 KNOWN_GOOD_CASES: list[KnownGoodCase] = [
     KnownGoodCase("pdf/good_2page.pdf", CheckStatus.PASS, "Clean 2-page PDF."),
-    KnownGoodCase("pdf/embedded_font.pdf", CheckStatus.PASS, "Custom font, properly embedded."),
+    KnownGoodCase(
+        "pdf/embedded_font.pdf", CheckStatus.PASS, "Custom font, properly embedded."
+    ),
     KnownGoodCase("pptx/good_2slide.pptx", CheckStatus.PASS, "Clean 2-slide deck."),
     KnownGoodCase(
-        "docx/good.docx", CheckStatus.UNKNOWN, "Valid document; page_count is honestly UNKNOWN by design (no fixed pagination in the XML)."
+        "docx/good.docx",
+        CheckStatus.UNKNOWN,
+        "Valid document; page_count is honestly UNKNOWN by design (no fixed pagination in the XML).",
     ),
     KnownGoodCase(
-        "xlsx/good.xlsx", CheckStatus.UNKNOWN,
+        "xlsx/good.xlsx",
+        CheckStatus.UNKNOWN,
         "Valid workbook with formulas; formula_recalculation is honestly UNKNOWN by design (openpyxl never recalculates).",
     ),
-    KnownGoodCase("xlsx/no_formula.xlsx", CheckStatus.PASS, "Valid workbook with no formulas at all."),
+    KnownGoodCase(
+        "xlsx/no_formula.xlsx",
+        CheckStatus.PASS,
+        "Valid workbook with no formulas at all.",
+    ),
     KnownGoodCase("image/good.png", CheckStatus.PASS, "Clean RGB PNG."),
     KnownGoodCase("image/alpha.png", CheckStatus.PASS, "Clean RGBA PNG."),
-    KnownGoodCase("html/good.html", CheckStatus.PASS, "Clean HTML with a title.", policy={"require_title": True}),
-    KnownGoodCase("html/no_title.html", CheckStatus.PASS, "No title, but title_presence isn't checked without the policy."),
+    KnownGoodCase(
+        "html/good.html",
+        CheckStatus.PASS,
+        "Clean HTML with a title.",
+        policy={"require_title": True},
+    ),
+    KnownGoodCase(
+        "html/no_title.html",
+        CheckStatus.PASS,
+        "No title, but title_presence isn't checked without the policy.",
+    ),
     KnownGoodCase("svg/good.svg", CheckStatus.PASS, "Clean, self-contained SVG."),
     KnownGoodCase("csv/good.csv", CheckStatus.PASS, "Clean, consistent-column CSV."),
-    KnownGoodCase("markdown/good.md", CheckStatus.PASS, "Clean Markdown with a heading, list, and fenced code block."),
     KnownGoodCase(
-        "markdown/leftover_in_code_fence.md", CheckStatus.PASS,
+        "markdown/good.md",
+        CheckStatus.PASS,
+        "Clean Markdown with a heading, list, and fenced code block.",
+    ),
+    KnownGoodCase(
+        "markdown/leftover_in_code_fence.md",
+        CheckStatus.PASS,
         "A 'TODO' that appears only inside a fenced code block's body is correctly excluded from the "
         "leftover-text scan (code, not document text) — proves the exclusion works, not just that clean text passes.",
     ),
-    KnownGoodCase("epub/good.epub", CheckStatus.PASS, "Clean EPUB: one spine chapter, valid manifest, mimetype first and stored."),
-    KnownGoodCase("media/good.mp4", CheckStatus.PASS, "Clean MP4: H.264 video + AAC audio, both streams readable."),
-    KnownGoodCase("media/good.webm", CheckStatus.PASS, "Clean WebM: VP9 video, no audio track."),
-    KnownGoodCase("media/good.wav", CheckStatus.PASS, "Clean WAV: audio-only, no video stream at all."),
     KnownGoodCase(
-        "media/audio_only.mp4", CheckStatus.PASS,
+        "epub/good.epub",
+        CheckStatus.PASS,
+        "Clean EPUB: one spine chapter, valid manifest, mimetype first and stored.",
+    ),
+    KnownGoodCase(
+        "media/good.mp4",
+        CheckStatus.PASS,
+        "Clean MP4: H.264 video + AAC audio, both streams readable.",
+    ),
+    KnownGoodCase(
+        "media/good.webm", CheckStatus.PASS, "Clean WebM: VP9 video, no audio track."
+    ),
+    KnownGoodCase(
+        "media/good.wav",
+        CheckStatus.PASS,
+        "Clean WAV: audio-only, no video stream at all.",
+    ),
+    KnownGoodCase(
+        "media/audio_only.mp4",
+        CheckStatus.PASS,
         "An MP4/M4A-family container that is genuinely audio-only — proves has_video/has_audio come from "
         "the real probed streams, not assumed from the container family.",
     ),
     KnownGoodCase(
-        "media/audio_with_cover.m4a", CheckStatus.PASS,
+        "media/audio_with_cover.m4a",
+        CheckStatus.PASS,
         "Audio + an mjpeg attached-picture (cover art) stream — proves has_video correctly excludes "
         "disposition.attached_pic streams rather than treating cover art as real video content "
         "(adversarial-review finding, verified by direct reproduction).",
     ),
     KnownGoodCase(
-        "media/single_frame.mp4", CheckStatus.PASS,
+        "media/single_frame.mp4",
+        CheckStatus.PASS,
         "A 0.01s single-frame clip with a real frame only at t=0 — proves render() falls back to seeking "
         "t=0 when the computed midpoint has no frame, instead of raising (adversarial-review finding, "
         "verified by direct reproduction).",
     ),
     KnownGoodCase(
-        "grounding/summary_faithful.md", CheckStatus.PASS,
+        "grounding/summary_faithful.md",
+        CheckStatus.PASS,
         "Every number, date, drug and name in the summary appears in the transcript; source_grounding.",
         policy={"grounding_sources": [_GROUNDING_SOURCE]},
     ),
     KnownGoodCase(
-        "credits/end_roll_complete.md", CheckStatus.PASS,
+        "credits/end_roll_complete.md",
+        CheckStatus.PASS,
         "Every attribution the assets' licences ask for is in the end roll; credits_attribution.",
         policy={"licence_records": _LICENCE_RECORDS},
     ),
 ]
 
 TYPE_DETECTION_CASES: list[TypeDetectionCase] = [
-    TypeDetectionCase("pdf/mislabeled_html.pdf", ArtifactType.HTML, "Real HTML content, misleading .pdf extension."),
-    TypeDetectionCase("pptx/mislabeled_pdf.pptx", ArtifactType.PDF, "Real PDF content, misleading .pptx extension."),
-    TypeDetectionCase("docx/mislabeled_pdf.docx", ArtifactType.PDF, "Real PDF content, misleading .docx extension."),
-    TypeDetectionCase("xlsx/mislabeled_pdf.xlsx", ArtifactType.PDF, "Real PDF content, misleading .xlsx extension."),
-    TypeDetectionCase("image/mislabeled_pdf.png", ArtifactType.PDF, "Real PDF content, misleading .png extension."),
-    TypeDetectionCase("html/mislabeled_pdf.html", ArtifactType.PDF, "Real PDF content, misleading .html extension."),
-    TypeDetectionCase("svg/mislabeled_pdf.svg", ArtifactType.PDF, "Real PDF content, misleading .svg extension."),
-    TypeDetectionCase("csv/mislabeled_pdf.csv", ArtifactType.PDF, "Real PDF content, misleading .csv extension."),
-    TypeDetectionCase("markdown/mislabeled_pdf.md", ArtifactType.PDF, "Real PDF content, misleading .md extension."),
-    TypeDetectionCase("epub/mislabeled_pdf.epub", ArtifactType.PDF, "Real PDF content, misleading .epub extension."),
-    TypeDetectionCase("media/mislabeled_pdf.mp4", ArtifactType.PDF, "Real PDF content, misleading .mp4 extension."),
+    TypeDetectionCase(
+        "pdf/mislabeled_html.pdf",
+        ArtifactType.HTML,
+        "Real HTML content, misleading .pdf extension.",
+    ),
+    TypeDetectionCase(
+        "pptx/mislabeled_pdf.pptx",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .pptx extension.",
+    ),
+    TypeDetectionCase(
+        "docx/mislabeled_pdf.docx",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .docx extension.",
+    ),
+    TypeDetectionCase(
+        "xlsx/mislabeled_pdf.xlsx",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .xlsx extension.",
+    ),
+    TypeDetectionCase(
+        "image/mislabeled_pdf.png",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .png extension.",
+    ),
+    TypeDetectionCase(
+        "html/mislabeled_pdf.html",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .html extension.",
+    ),
+    TypeDetectionCase(
+        "svg/mislabeled_pdf.svg",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .svg extension.",
+    ),
+    TypeDetectionCase(
+        "csv/mislabeled_pdf.csv",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .csv extension.",
+    ),
+    TypeDetectionCase(
+        "markdown/mislabeled_pdf.md",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .md extension.",
+    ),
+    TypeDetectionCase(
+        "epub/mislabeled_pdf.epub",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .epub extension.",
+    ),
+    TypeDetectionCase(
+        "media/mislabeled_pdf.mp4",
+        ArtifactType.PDF,
+        "Real PDF content, misleading .mp4 extension.",
+    ),
 ]

@@ -13,21 +13,53 @@ Examples:
   python3 pad.py clip.mp4 --end 2                      # 2s of black+silence after the clip
   python3 pad.py clip.mp4 --start 1 --end 1 --color 0x101010
 """
+
 import argparse
 import sys
 
-from _common import add_common, apply_common, aac_args, cfr_args, default_output, die, drawn_chain, emit, ffmpeg_base, info, probe, run_keeping_subtitles, validate_color, video_args, X264_PRESETS, time_arg, fmt_secs, run
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    default_output,
+    die,
+    drawn_chain,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    validate_color,
+    video_args,
+    X264_PRESETS,
+    time_arg,
+    fmt_secs,
+    run,
+)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_pad.<ext>)")
-    ap.add_argument("--start", default="0", help="padding to add before the clip: seconds or mm:ss (default 0)")
-    ap.add_argument("--end", default="0", help="padding to add after the clip: seconds or mm:ss (default 0)")
+    ap.add_argument(
+        "--start",
+        default="0",
+        help="padding to add before the clip: seconds or mm:ss (default 0)",
+    )
+    ap.add_argument(
+        "--end",
+        default="0",
+        help="padding to add after the clip: seconds or mm:ss (default 0)",
+    )
     ap.add_argument("--color", default="black", help="padding colour (default black)")
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -70,7 +102,9 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, +{args.start:g}s start / +{args.end:g}s end)")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, +{args.start:g}s start / +{args.end:g}s end)"
+    )
     emit(output, dropped_non_av_streams=dropped_streams)
     return 0
 

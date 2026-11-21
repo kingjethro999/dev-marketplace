@@ -26,7 +26,10 @@ def commit_subjects_since(ref: Optional[str], git_dir: Path = Path(".")) -> list
     range_arg = f"{ref}..HEAD" if ref else "HEAD"
     result = subprocess.run(
         ["git", "log", range_arg, "--pretty=format:%s\t%h", "--no-merges"],
-        cwd=git_dir, capture_output=True, text=True, check=True,
+        cwd=git_dir,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     subjects = []
     for line in result.stdout.splitlines():
@@ -51,7 +54,11 @@ def render_entry(version: str, date: str, subjects: list) -> str:
 def prepend_to_changelog(changelog_path: Path, entry: str) -> None:
     if changelog_path.exists():
         existing = changelog_path.read_text(encoding="utf-8")
-        previous_entries = existing[len(_CHANGELOG_HEADER):] if existing.startswith(_CHANGELOG_HEADER) else existing
+        previous_entries = (
+            existing[len(_CHANGELOG_HEADER) :]
+            if existing.startswith(_CHANGELOG_HEADER)
+            else existing
+        )
         previous_entries = previous_entries.strip("\n")
     else:
         previous_entries = ""
@@ -64,11 +71,24 @@ def prepend_to_changelog(changelog_path: Path, entry: str) -> None:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--version", required=True, help="the version being released, e.g. 1.2.3 (no leading v)")
+    parser.add_argument(
+        "--version",
+        required=True,
+        help="the version being released, e.g. 1.2.3 (no leading v)",
+    )
     parser.add_argument("--date", required=True, help="release date, YYYY-MM-DD")
-    parser.add_argument("--since", default=None, help="previous tag (e.g. v1.2.2); omit for full history")
+    parser.add_argument(
+        "--since",
+        default=None,
+        help="previous tag (e.g. v1.2.2); omit for full history",
+    )
     parser.add_argument("--changelog", default="CHANGELOG.md", type=Path)
-    parser.add_argument("--notes-out", default=None, type=Path, help="also write just this release's entry to a standalone file (for use as GH release notes)")
+    parser.add_argument(
+        "--notes-out",
+        default=None,
+        type=Path,
+        help="also write just this release's entry to a standalone file (for use as GH release notes)",
+    )
     args = parser.parse_args(argv)
 
     subjects = commit_subjects_since(args.since)

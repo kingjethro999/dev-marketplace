@@ -7,6 +7,7 @@ the wall time and how many bytes were read from the source.
 the source is read at whatever the local disk and page cache give, which says little about a card on location.
 --src runs another checkout's src/ (e.g. the version before ADR-004) for a before / after comparison.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -61,19 +62,32 @@ def main() -> None:
 
     def opener(file, mode="r", *x, **k):
         f = real_open(file, mode, *x, **k)
-        return Throttled(f) if not isinstance(file, int) and "r" in mode and "b" in mode and card in Path(os.fspath(file)).resolve().parents else f
+        return (
+            Throttled(f)
+            if not isinstance(file, int)
+            and "r" in mode
+            and "b" in mode
+            and card in Path(os.fspath(file)).resolve().parents
+            else f
+        )
 
     builtins.open = opener
     try:
         t = time.perf_counter()
-        r = offload(str(card.parent), [str(tmp / f"ssd{i + 1}") for i in range(a.dests)], hash_algorithm=a.hash)
+        r = offload(
+            str(card.parent),
+            [str(tmp / f"ssd{i + 1}") for i in range(a.dests)],
+            hash_algorithm=a.hash,
+        )
         dt = time.perf_counter() - t
     finally:
         builtins.open = real_open
         shutil.rmtree(tmp, ignore_errors=True)
     total = a.files * per
-    print(f"ok={r.ok} hash={a.hash} dests={a.dests} size={total / 1e6:.0f} MB reader={a.reader_mbps or 'unthrottled'} MB/s "
-          f"time={dt:.2f} s source_read={read[0] / total:.2f}x ({read[0] / 1e6:.0f} MB)")
+    print(
+        f"ok={r.ok} hash={a.hash} dests={a.dests} size={total / 1e6:.0f} MB reader={a.reader_mbps or 'unthrottled'} MB/s "
+        f"time={dt:.2f} s source_read={read[0] / total:.2f}x ({read[0] / 1e6:.0f} MB)"
+    )
 
 
 if __name__ == "__main__":

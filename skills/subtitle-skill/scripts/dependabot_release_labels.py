@@ -17,6 +17,7 @@ Only label names, logins and event types are read from the API, never pull reque
 A failed API call fails the step, and with it the release: no version is resolved from labels
 this script could not check.
 """
+
 import json
 import os
 import subprocess
@@ -37,7 +38,9 @@ def applied_by_person(events, label):
             continue
         if ((event.get("label") or {}).get("name") or "").lower() != label.lower():
             continue
-        if newest is None or (event.get("created_at") or "") >= (newest.get("created_at") or ""):
+        if newest is None or (event.get("created_at") or "") >= (
+            newest.get("created_at") or ""
+        ):
             newest = event
     actor = (newest or {}).get("actor") or {}
     return actor.get("type") == "User"
@@ -49,7 +52,8 @@ def labels_to_remove(pull, events):
         return []
     names = [label.get("name") or "" for label in pull.get("labels") or []]
     return [
-        name for name in names
+        name
+        for name in names
         if name.lower() in RELEASE_LEVEL_LABELS and not applied_by_person(events, name)
     ]
 
@@ -57,7 +61,9 @@ def labels_to_remove(pull, events):
 def _gh_items(path):
     out = subprocess.run(
         ["gh", "api", "--paginate", path, "--jq", ".[] | @json"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     return [json.loads(line) for line in out.splitlines() if line.strip()]
 
@@ -75,12 +81,23 @@ def main():
         events = _gh_items(f"repos/{repo}/issues/{number}/events?per_page=100")
         for name in labels_to_remove(pulls[number], events):
             subprocess.run(
-                ["gh", "api", "-X", "DELETE", f"repos/{repo}/issues/{number}/labels/{quote(name)}", "--silent"],
+                [
+                    "gh",
+                    "api",
+                    "-X",
+                    "DELETE",
+                    f"repos/{repo}/issues/{number}/labels/{quote(name)}",
+                    "--silent",
+                ],
                 check=True,
             )
-            print(f"#{number}: removed `{name}` (put there by a bot on a Dependabot pull request)")
+            print(
+                f"#{number}: removed `{name}` (put there by a bot on a Dependabot pull request)"
+            )
             removed += 1
-    print(f"{len(pulls)} Dependabot pull request(s) carried a release-level label; {removed} label(s) removed")
+    print(
+        f"{len(pulls)} Dependabot pull request(s) carried a release-level label; {removed} label(s) removed"
+    )
     return 0
 
 

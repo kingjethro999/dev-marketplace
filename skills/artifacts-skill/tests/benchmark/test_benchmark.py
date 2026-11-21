@@ -76,8 +76,16 @@ def test_every_fixture_file_is_covered_by_exactly_one_category_or_known_twice():
                 on_disk.add(f"{fmt_dir.name}/{f.name}")
 
     referenced: set[str] = set()
-    for case in (*TYPE_REJECTED_CASES, *STRUCTURAL_DEFECT_CASES, *EXCEPTION_CASES, *KNOWN_GOOD_CASES, *TYPE_DETECTION_CASES):
-        assert (repo_root / FIXTURES_ROOT / case.fixture).is_file(), f"benchmark case points at a missing file: {case.fixture}"
+    for case in (
+        *TYPE_REJECTED_CASES,
+        *STRUCTURAL_DEFECT_CASES,
+        *EXCEPTION_CASES,
+        *KNOWN_GOOD_CASES,
+        *TYPE_DETECTION_CASES,
+    ):
+        assert (
+            repo_root / FIXTURES_ROOT / case.fixture
+        ).is_file(), f"benchmark case points at a missing file: {case.fixture}"
         referenced.add(case.fixture)
 
     missing_from_benchmark = on_disk - referenced

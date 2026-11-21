@@ -15,7 +15,9 @@ def adapter() -> HtmlAdapter:
     return HtmlAdapter()
 
 
-def _probe_html_render_works(adapter: HtmlAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+def _probe_html_render_works(
+    adapter: HtmlAdapter, ref: ArtifactRef, tmp_path: Path
+) -> bool:
     """Playwright being pip-installed doesn't guarantee a matching Chromium
     build is present (a real version-mismatch failure this project hit
     directly while developing this adapter) — probe once per test instead
@@ -70,7 +72,9 @@ def test_verify_external_resources_warns_by_default(external_resource_html, adap
     assert check.status == CheckStatus.WARN
 
 
-def test_verify_external_resources_fails_under_strict_policy(external_resource_html, adapter):
+def test_verify_external_resources_fails_under_strict_policy(
+    external_resource_html, adapter
+):
     ref = ArtifactRef.from_path(external_resource_html)
     result = adapter.verify_structural(ref, {"forbid_external_resources": True})
     check = next(c for c in result.checks if c.id == "external_resources")
@@ -87,7 +91,9 @@ def test_verify_external_resources_fails_under_strict_policy(external_resource_h
 # a request, so nothing here ever affected what render() actually blocks.
 
 
-def test_verify_detects_external_references_beyond_the_original_five_attributes(tmp_path, adapter):
+def test_verify_detects_external_references_beyond_the_original_five_attributes(
+    tmp_path, adapter
+):
     html_path = tmp_path / "broad.html"
     html_path.write_text(
         "<!doctype html><html><head><style>\n"
@@ -120,18 +126,24 @@ def test_verify_detects_external_references_beyond_the_original_five_attributes(
     }
 
 
-def test_verify_does_not_treat_a_plain_anchor_href_as_a_fetched_resource(tmp_path, adapter):
+def test_verify_does_not_treat_a_plain_anchor_href_as_a_fetched_resource(
+    tmp_path, adapter
+):
     """A real browser never auto-fetches an <a href> target (only
     navigates there on click) - it must stay out of scope, unlike
     img/script/link/iframe."""
     html_path = tmp_path / "anchor.html"
-    html_path.write_text('<!doctype html><html><body><a href="https://example.com/page">link</a></body></html>')
+    html_path.write_text(
+        '<!doctype html><html><body><a href="https://example.com/page">link</a></body></html>'
+    )
     ref = ArtifactRef.from_path(html_path)
     report = adapter.inspect(ref)
     assert report.details["external_resources"] == []
 
 
-def test_verify_local_srcset_and_css_url_references_are_still_checked_for_existence(tmp_path, adapter):
+def test_verify_local_srcset_and_css_url_references_are_still_checked_for_existence(
+    tmp_path, adapter
+):
     html_path = tmp_path / "local.html"
     html_path.write_text(
         '<!doctype html><html><body><img srcset="missing.jpg 1x">'
@@ -164,7 +176,9 @@ def test_verify_good_html_has_no_leftover_placeholder_text(good_html, adapter):
     assert check.status == CheckStatus.PASS
 
 
-def test_verify_leftover_placeholder_html_warns_by_default(leftover_placeholder_html, adapter):
+def test_verify_leftover_placeholder_html_warns_by_default(
+    leftover_placeholder_html, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_html)
     result = adapter.verify_structural(ref, {})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -175,7 +189,9 @@ def test_verify_leftover_placeholder_html_warns_by_default(leftover_placeholder_
     assert "todo" not in check.evidence["markers"]
 
 
-def test_verify_leftover_placeholder_html_fails_under_strict_policy(leftover_placeholder_html, adapter):
+def test_verify_leftover_placeholder_html_fails_under_strict_policy(
+    leftover_placeholder_html, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_html)
     result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -199,9 +215,14 @@ def test_capabilities_report_never_lies_about_probe_result(adapter):
 
     caps = {c.id: c for c in adapter.capabilities()}
     assert "html.structural" in caps
-    assert caps["html.structural"].status == CapabilityStatus.AVAILABLE  # stdlib-only, always available
+    assert (
+        caps["html.structural"].status == CapabilityStatus.AVAILABLE
+    )  # stdlib-only, always available
     assert "html.render" in caps
-    assert caps["html.render"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["html.render"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
 
 
 def test_render_propagates_backend_failure(good_html, adapter, tmp_path, monkeypatch):
@@ -227,7 +248,9 @@ def test_render_propagates_backend_failure(good_html, adapter, tmp_path, monkeyp
 def test_render_happy_path_when_backend_actually_works(good_html, adapter, tmp_path):
     ref = ArtifactRef.from_path(good_html)
     if not _probe_html_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) == 1
     assert result.files[0].exists()
@@ -245,7 +268,9 @@ def test_render_succeeds_for_a_filename_containing_a_hash_character(tmp_path, ad
     html_path.write_text("<!doctype html><html><body>real content</body></html>")
     ref = ArtifactRef.from_path(html_path)
     if not _probe_html_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) == 1
     assert result.files[0].exists()
@@ -262,7 +287,9 @@ def test_render_blocks_external_requests_when_backend_works(tmp_path, adapter):
     )
     ref = ArtifactRef.from_path(html_path)
     if not _probe_html_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
 
     # A second, real render (the probe already consumed one) with network
     # request tracking to prove no external request was ever issued.
@@ -292,7 +319,9 @@ def test_render_blocks_external_requests_when_backend_works(tmp_path, adapter):
             browser.close()
 
     assert any(u.startswith("file://") for u in requests_seen)
-    assert any("example.invalid" in u for u in requests_seen)  # the request was attempted...
+    assert any(
+        "example.invalid" in u for u in requests_seen
+    )  # the request was attempted...
     # ...but aborted, not fulfilled — verified functionally by
     # test_render_happy_path producing a broken-image render rather than
     # this test needing to inspect pixel data.
@@ -311,11 +340,15 @@ def test_render_blocks_a_file_url_escaping_the_document_directory(tmp_path, adap
     outside_secret = tmp_path / "outside_secret.txt"
     outside_secret.write_text("TOP SECRET - must never be fetched")
     html_path = doc_dir / "escape.html"
-    html_path.write_text(f'<!doctype html><html><body><iframe src="file://{outside_secret}" id="leak"></iframe></body></html>')
+    html_path.write_text(
+        f'<!doctype html><html><body><iframe src="file://{outside_secret}" id="leak"></iframe></body></html>'
+    )
 
     ref = ArtifactRef.from_path(html_path)
     if not _probe_html_render_works(adapter, ref, tmp_path):
-        pytest.skip("Playwright/Chromium in this environment cannot render (see adapter docstring)")
+        pytest.skip(
+            "Playwright/Chromium in this environment cannot render (see adapter docstring)"
+        )
 
     from playwright.sync_api import sync_playwright
 
@@ -336,7 +369,9 @@ def test_render_blocks_a_file_url_escaping_the_document_directory(tmp_path, adap
 
             def _block_external(route):
                 url = route.request.url
-                if url.startswith(("data:", "about:")) or _file_url_is_within(url, allowed_root):
+                if url.startswith(("data:", "about:")) or _file_url_is_within(
+                    url, allowed_root
+                ):
                     route.continue_()
                 else:
                     aborted.append(url)
@@ -347,8 +382,12 @@ def test_render_blocks_a_file_url_escaping_the_document_directory(tmp_path, adap
         finally:
             browser.close()
 
-    assert any(str(outside_secret) in u for u in requests_seen)  # the request was attempted...
-    assert any(str(outside_secret) in u for u in aborted)  # ...but aborted, not fulfilled.
+    assert any(
+        str(outside_secret) in u for u in requests_seen
+    )  # the request was attempted...
+    assert any(
+        str(outside_secret) in u for u in aborted
+    )  # ...but aborted, not fulfilled.
 
 
 def test_limitations_names_the_real_known_caveats(adapter):

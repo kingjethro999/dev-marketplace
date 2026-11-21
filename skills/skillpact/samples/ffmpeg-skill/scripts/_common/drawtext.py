@@ -2,6 +2,7 @@
 font-name escape and the shaping-library probe that decides drawtext vs libass per script.
 Split out of _common.text in the refactor after 1.17.3; every body is byte-identical.
 """
+
 from __future__ import annotations
 
 import os
@@ -10,13 +11,20 @@ import shutil
 import subprocess
 from typing import Dict, Optional
 from _common.decision import escape_filter_path
-from _common.runner import STATE, _DRAWTEXT_PENDING, _drawtext_tmpdir, ffmpeg_exe, ffmpeg_version
+from _common.runner import (
+    STATE,
+    _DRAWTEXT_PENDING,
+    _drawtext_tmpdir,
+    ffmpeg_exe,
+    ffmpeg_version,
+)
 
 
 def drawtext_boxborderw(vertical: int, horizontal: int) -> str:
     """drawtext's per-side `boxborderw=top|right|bottom|left` (and the two-value `v|h` form)
     arrived in FFmpeg 6.1; 5.x and 6.0 reject the `|` with "Error setting option boxborderw"
-    (found by the FFmpeg 5.1.1 CI job, #146). Older builds get the larger single value."""
+    (found by the FFmpeg 5.1.1 CI job, #146). Older builds get the larger single value.
+    """
     if ffmpeg_version() >= (6, 1):
         return f"{vertical}|{horizontal}"
     return str(max(vertical, horizontal))
@@ -28,7 +36,9 @@ def drawtext_boxborderw(vertical: int, horizontal: int) -> str:
 # these come out wrong through drawtext on every build and must go through libass. Arabic and
 # Hebrew are NOT here: drawtext's text_shaping uses fribidi, which does bidi and Arabic joining
 # correctly -- they only join this set on a build compiled without fribidi.
-SHAPING_SCRIPTS = frozenset({"hi", "bn", "ta", "te", "kn", "ml", "gu", "pa", "si", "th", "lo", "km", "my"})
+SHAPING_SCRIPTS = frozenset(
+    {"hi", "bn", "ta", "te", "kn", "ml", "gu", "pa", "si", "th", "lo", "km", "my"}
+)
 
 
 BIDI_SCRIPTS = frozenset({"ar", "he"})
@@ -47,15 +57,26 @@ def drawtext_shaping() -> "Dict[str, bool]":
     if exe:
         for flag in ("-buildconf", "-version"):
             try:
-                proc = subprocess.run([exe, "-hide_banner", flag], stdout=subprocess.PIPE,
-                                      stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", timeout=10)
+                proc = subprocess.run(
+                    [exe, "-hide_banner", flag],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=10,
+                )
             except (subprocess.TimeoutExpired, OSError):
                 break
             if proc.returncode == 0 and proc.stdout.strip():
                 text = proc.stdout
                 break
-    _SHAPING_BUILD_CACHE.update({"fribidi": "--enable-libfribidi" in text,
-                                 "harfbuzz": "--enable-libharfbuzz" in text})
+    _SHAPING_BUILD_CACHE.update(
+        {
+            "fribidi": "--enable-libfribidi" in text,
+            "harfbuzz": "--enable-libharfbuzz" in text,
+        }
+    )
     return dict(_SHAPING_BUILD_CACHE)
 
 
@@ -126,11 +147,14 @@ def drawtext_text_opts(text: str, tmpdir: "Optional[str]" = None) -> str:
     same promise every other temp file in this skill makes.
     """
     cleaned = (text or "").replace("\r\n", "\n").replace("\r", "\n")
-    cleaned = re.sub(r"[\x00-\x08\x0e-\x1f\x7f]", "", re.sub(r"[\t\x0b\x0c]", " ", cleaned))
+    cleaned = re.sub(
+        r"[\x00-\x08\x0e-\x1f\x7f]", "", re.sub(r"[\t\x0b\x0c]", " ", cleaned)
+    )
     # drawtext ignores one trailing newline and draws a second as a blank line, which would
     # centre the block half a line too high; a label that is only newlines stays as it is
     cleaned = cleaned.rstrip("\n") or cleaned
     import hashlib
+
     name = "t_" + hashlib.sha256(cleaned.encode("utf-8")).hexdigest()[:16] + ".txt"
     if tmpdir is None:
         tmpdir = _drawtext_tmpdir(create=not STATE.dry_run)

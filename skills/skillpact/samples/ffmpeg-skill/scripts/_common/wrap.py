@@ -2,13 +2,13 @@
 advance table, the phrase/measured wrapper and fit_size(). Pure -- no subprocess, no probe.
 Split out of _common.text in the refactor after 1.17.3; every body is byte-identical.
 """
+
 from __future__ import annotations
 
 import unicodedata
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from _common.emoji import emoji_clusters
 from _common.fonts import char_script
-
 
 # --------------------------------------------------------------------------- text measurement (1.12)
 # Moved here in 1.15 so graphics.py's ASS route and the emoji placement share caption.py's table.
@@ -18,8 +18,18 @@ from _common.fonts import char_script
 # real advance needs a font parser (no stdlib one) and would still be wrong for libass's own
 # shaping, while a cue wrapped from an average is right to within a character on every line.
 # (Latin is measured per character from LATIN_EM below, not from this average.)
-ADVANCE_EM = {"ja": 1.0, "zh": 1.0, "ko": 1.0, "th": 1.0, "hi": 0.7, "ar": 0.6, "he": 0.6,
-              "ru": 0.55, "el": 0.55, "latin": 0.55}
+ADVANCE_EM = {
+    "ja": 1.0,
+    "zh": 1.0,
+    "ko": 1.0,
+    "th": 1.0,
+    "hi": 0.7,
+    "ar": 0.6,
+    "he": 0.6,
+    "ru": 0.55,
+    "el": 0.55,
+    "latin": 0.55,
+}
 
 
 # Scripts written without spaces: a line breaks between any two characters.
@@ -30,7 +40,9 @@ ADVANCE_EM = {"ja": 1.0, "zh": 1.0, "ko": 1.0, "th": 1.0, "hi": 0.7, "ar": 0.6, 
 # writer put there; an over-long run stays long on its own line, the rule long Latin words
 # already follow.
 NO_SPACE_SCRIPTS = ("ja", "zh", "ko")
-NO_BOUNDARY_SCRIPTS = ("th",)   # per-character breaking would chop words: keep the run whole
+NO_BOUNDARY_SCRIPTS = (
+    "th",
+)  # per-character breaking would chop words: keep the run whole
 
 
 # Per-character Latin advances in em, read off DejaVu Sans (the default caption family, and close
@@ -41,18 +53,101 @@ NO_BOUNDARY_SCRIPTS = ("th",)   # per-character breaking would chop words: keep 
 # un-wraps a short one. Characters outside the table fall back by class (0.7 uppercase/digit,
 # 0.57 lowercase and anything else Latin-ish).
 LATIN_EM = {
-    ' ': 0.32, '!': 0.41, '"': 0.46, '#': 0.84, '$': 0.64, '%': 0.96, '&': 0.78, "'": 0.28,
-    '(': 0.4, ')': 0.4, '*': 0.5, '+': 0.84, ',': 0.32, '-': 0.37, '.': 0.32, '/': 0.34, '0': 0.64,
-    '1': 0.64, '2': 0.64, '3': 0.64, '4': 0.64, '5': 0.64, '6': 0.64, '7': 0.64, '8': 0.64,
-    '9': 0.64, ':': 0.34, ';': 0.34, '<': 0.84, '=': 0.84, '>': 0.84, '?': 0.54, '@': 1.0,
-    'A': 0.69, 'B': 0.69, 'C': 0.7, 'D': 0.78, 'E': 0.64, 'F': 0.58, 'G': 0.78, 'H': 0.76,
-    'I': 0.3, 'J': 0.3, 'K': 0.66, 'L': 0.56, 'M': 0.87, 'N': 0.75, 'O': 0.79, 'P': 0.61,
-    'Q': 0.79, 'R': 0.7, 'S': 0.64, 'T': 0.62, 'U': 0.74, 'V': 0.69, 'W': 0.99, 'X': 0.69,
-    'Y': 0.62, 'Z': 0.69, '[': 0.4, '\\': 0.34, ']': 0.4, '^': 0.84, '_': 0.5, '`': 0.5, 'a': 0.62,
-    'b': 0.64, 'c': 0.55, 'd': 0.64, 'e': 0.62, 'f': 0.36, 'g': 0.64, 'h': 0.64, 'i': 0.28,
-    'j': 0.28, 'k': 0.58, 'l': 0.28, 'm': 0.98, 'n': 0.64, 'o': 0.62, 'p': 0.64, 'q': 0.64,
-    'r': 0.42, 's': 0.53, 't': 0.4, 'u': 0.64, 'v': 0.6, 'w': 0.82, 'x': 0.6, 'y': 0.6, 'z': 0.53,
-    '{': 0.64, '|': 0.34, '}': 0.64, '~': 0.84
+    " ": 0.32,
+    "!": 0.41,
+    '"': 0.46,
+    "#": 0.84,
+    "$": 0.64,
+    "%": 0.96,
+    "&": 0.78,
+    "'": 0.28,
+    "(": 0.4,
+    ")": 0.4,
+    "*": 0.5,
+    "+": 0.84,
+    ",": 0.32,
+    "-": 0.37,
+    ".": 0.32,
+    "/": 0.34,
+    "0": 0.64,
+    "1": 0.64,
+    "2": 0.64,
+    "3": 0.64,
+    "4": 0.64,
+    "5": 0.64,
+    "6": 0.64,
+    "7": 0.64,
+    "8": 0.64,
+    "9": 0.64,
+    ":": 0.34,
+    ";": 0.34,
+    "<": 0.84,
+    "=": 0.84,
+    ">": 0.84,
+    "?": 0.54,
+    "@": 1.0,
+    "A": 0.69,
+    "B": 0.69,
+    "C": 0.7,
+    "D": 0.78,
+    "E": 0.64,
+    "F": 0.58,
+    "G": 0.78,
+    "H": 0.76,
+    "I": 0.3,
+    "J": 0.3,
+    "K": 0.66,
+    "L": 0.56,
+    "M": 0.87,
+    "N": 0.75,
+    "O": 0.79,
+    "P": 0.61,
+    "Q": 0.79,
+    "R": 0.7,
+    "S": 0.64,
+    "T": 0.62,
+    "U": 0.74,
+    "V": 0.69,
+    "W": 0.99,
+    "X": 0.69,
+    "Y": 0.62,
+    "Z": 0.69,
+    "[": 0.4,
+    "\\": 0.34,
+    "]": 0.4,
+    "^": 0.84,
+    "_": 0.5,
+    "`": 0.5,
+    "a": 0.62,
+    "b": 0.64,
+    "c": 0.55,
+    "d": 0.64,
+    "e": 0.62,
+    "f": 0.36,
+    "g": 0.64,
+    "h": 0.64,
+    "i": 0.28,
+    "j": 0.28,
+    "k": 0.58,
+    "l": 0.28,
+    "m": 0.98,
+    "n": 0.64,
+    "o": 0.62,
+    "p": 0.64,
+    "q": 0.64,
+    "r": 0.42,
+    "s": 0.53,
+    "t": 0.4,
+    "u": 0.64,
+    "v": 0.6,
+    "w": 0.82,
+    "x": 0.6,
+    "y": 0.6,
+    "z": 0.53,
+    "{": 0.64,
+    "|": 0.34,
+    "}": 0.64,
+    "~": 0.84,
 }
 
 
@@ -63,7 +158,8 @@ LEADING_VOWELS = set(range(0x0E40, 0x0E45)) | set(range(0x0EC0, 0x0EC5))
 
 def _is_mark(ch: str) -> bool:
     """A character that hangs off the one before it: a combining mark (any script) or one of the
-    Thai/Lao vowel signs and tone marks, which are Mn/Mc but carry no combining class."""
+    Thai/Lao vowel signs and tone marks, which are Mn/Mc but carry no combining class.
+    """
     return unicodedata.combining(ch) != 0 or unicodedata.category(ch) in ("Mn", "Mc")
 
 
@@ -96,7 +192,8 @@ def _char_em(ch: str) -> float:
 
 def text_width_em(text: str, emoji_em: float = 1.0) -> float:
     """Width of `text` in em, from the per-script average advance table. `emoji_em` is what one
-    emoji cluster costs (--emoji-scale), so a wrap counts the box that will actually be drawn."""
+    emoji cluster costs (--emoji-scale), so a wrap counts the box that will actually be drawn.
+    """
     total = 0.0
     spans = {i: len(c) for i, c in emoji_clusters(text)}
     i = 0
@@ -136,16 +233,18 @@ WRAP_MODES = ("phrase", "measured")
 # task brief (は が を に で と の へ) plus も や から まで より, which a reader of Japanese would
 # add for the same reason. It is a judgement call with no upstream source; treat it as tunable
 # data, not as grammar.
-JA_PARTICLES = "はがをにでとのへもや"              # a break AFTER one of these is preferred, BEFORE one forbidden
+JA_PARTICLES = "はがをにでとのへもや"  # a break AFTER one of these is preferred, BEFORE one forbidden
 # The multi-character members of the same table. They are matched as whole strings against the
 # text on each side of a candidate break -- putting them in the character string above turned
 # か, ら, ま, で, よ and り into one-character particles of their own, which none of them is.
 JA_PARTICLE_WORDS = ("から", "まで", "より")
-JA_SENTENCE_END = "。、！？」』）"                  # a break AFTER one of these is preferred
+JA_SENTENCE_END = "。、！？」』）"  # a break AFTER one of these is preferred
 # Characters that may never start a line: small kana, the prolonged sound mark, closing brackets
 # and the Japanese punctuation that hangs on the end of the line before it.
-JA_NO_LINE_START = "ぁぃぅぇぉっゃゅょァィゥェォッャュョーヽヾゝゞ、。！？）」』】〕》’”％"
-JA_NO_LINE_END = "（「『【〔《‘“"                   # ... and the ones that may never end a line
+JA_NO_LINE_START = (
+    "ぁぃぅぇぉっゃゅょァィゥェォッャュョーヽヾゝゞ、。！？）」』】〕》’”％"
+)
+JA_NO_LINE_END = "（「『【〔《‘“"  # ... and the ones that may never end a line
 
 # R4. Function words belong to the phrase that FOLLOWS them: an article or preposition begins the
 # noun phrase it governs, so a break before one is the good break (the word opens the next line
@@ -156,32 +255,184 @@ JA_NO_LINE_END = "（「『【〔《‘“"                   # ... and the ones
 # word in several sets means the same thing structurally in each, so the union is used when no
 # --lang was given.
 FUNCTION_WORDS = {
-    "en": {"a", "an", "the", "of", "to", "in", "on", "at", "for", "with", "by", "from", "and",
-           "or", "as", "is", "it", "its", "this", "that", "into", "than", "but", "so"},
-    "es": {"el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "al", "en", "con",
-           "por", "para", "y", "o", "que", "su", "sus", "lo", "se", "es"},
-    "pt": {"o", "a", "os", "as", "um", "uma", "de", "do", "da", "dos", "das", "em", "no", "na",
-           "nos", "nas", "com", "por", "para", "e", "que", "se", "ao", "aos"},
-    "fr": {"le", "la", "les", "un", "une", "de", "du", "des", "à", "au", "aux", "en", "dans",
-           "et", "ou", "que", "qui", "ce", "ces", "son", "sa", "ses", "par", "pour", "avec", "sur"},
-    "de": {"der", "die", "das", "ein", "eine", "einen", "einem", "einer", "den", "dem", "des",
-           "zu", "in", "im", "auf", "mit", "und", "oder", "von", "vom", "für", "aus", "an"},
-    "it": {"il", "lo", "la", "i", "gli", "le", "un", "una", "uno", "di", "del", "della", "da",
-           "in", "nel", "con", "per", "e", "che", "su", "al", "ai"},
+    "en": {
+        "a",
+        "an",
+        "the",
+        "of",
+        "to",
+        "in",
+        "on",
+        "at",
+        "for",
+        "with",
+        "by",
+        "from",
+        "and",
+        "or",
+        "as",
+        "is",
+        "it",
+        "its",
+        "this",
+        "that",
+        "into",
+        "than",
+        "but",
+        "so",
+    },
+    "es": {
+        "el",
+        "la",
+        "los",
+        "las",
+        "un",
+        "una",
+        "unos",
+        "unas",
+        "de",
+        "del",
+        "al",
+        "en",
+        "con",
+        "por",
+        "para",
+        "y",
+        "o",
+        "que",
+        "su",
+        "sus",
+        "lo",
+        "se",
+        "es",
+    },
+    "pt": {
+        "o",
+        "a",
+        "os",
+        "as",
+        "um",
+        "uma",
+        "de",
+        "do",
+        "da",
+        "dos",
+        "das",
+        "em",
+        "no",
+        "na",
+        "nos",
+        "nas",
+        "com",
+        "por",
+        "para",
+        "e",
+        "que",
+        "se",
+        "ao",
+        "aos",
+    },
+    "fr": {
+        "le",
+        "la",
+        "les",
+        "un",
+        "une",
+        "de",
+        "du",
+        "des",
+        "à",
+        "au",
+        "aux",
+        "en",
+        "dans",
+        "et",
+        "ou",
+        "que",
+        "qui",
+        "ce",
+        "ces",
+        "son",
+        "sa",
+        "ses",
+        "par",
+        "pour",
+        "avec",
+        "sur",
+    },
+    "de": {
+        "der",
+        "die",
+        "das",
+        "ein",
+        "eine",
+        "einen",
+        "einem",
+        "einer",
+        "den",
+        "dem",
+        "des",
+        "zu",
+        "in",
+        "im",
+        "auf",
+        "mit",
+        "und",
+        "oder",
+        "von",
+        "vom",
+        "für",
+        "aus",
+        "an",
+    },
+    "it": {
+        "il",
+        "lo",
+        "la",
+        "i",
+        "gli",
+        "le",
+        "un",
+        "una",
+        "uno",
+        "di",
+        "del",
+        "della",
+        "da",
+        "in",
+        "nel",
+        "con",
+        "per",
+        "e",
+        "che",
+        "su",
+        "al",
+        "ai",
+    },
 }
 _FUNCTION_WORDS_ANY = frozenset().union(*FUNCTION_WORDS.values())
 
 # Penalty scores. Only the ordering matters; 1.0 means "never choose this if anything else fits".
 PENALTY_FORBIDDEN = 1.0
-PENALTY_OKURIGANA = 0.9       # between a kanji stem and the hiragana that inflects it
-PENALTY_FUNCTION_WORD = 0.8   # R4: the line before the break ends in an article/preposition
-PENALTY_IDEOGRAPHS = 0.6      # between two kanji: no evidence either way, mildly discouraged
-PENALTY_NEUTRAL = 0.5         # between two content words, or two characters with nothing to say
-PENALTY_FUNCTION_WORD_START = 0.2  # R4: the next line opens with the article/preposition it governs
-PENALTY_PARTICLE = 0.2        # R3: after a particle, so the particle stays with the word it marks
-PENALTY_SENTENCE_END = 0.0    # R3: after 。、！？ -- the one break a reader expects
+PENALTY_OKURIGANA = 0.9  # between a kanji stem and the hiragana that inflects it
+PENALTY_FUNCTION_WORD = (
+    0.8  # R4: the line before the break ends in an article/preposition
+)
+PENALTY_IDEOGRAPHS = (
+    0.6  # between two kanji: no evidence either way, mildly discouraged
+)
+PENALTY_NEUTRAL = (
+    0.5  # between two content words, or two characters with nothing to say
+)
+PENALTY_FUNCTION_WORD_START = (
+    0.2  # R4: the next line opens with the article/preposition it governs
+)
+PENALTY_PARTICLE = (
+    0.2  # R3: after a particle, so the particle stays with the word it marks
+)
+PENALTY_SENTENCE_END = 0.0  # R3: after 。、！？ -- the one break a reader expects
 
-_HYPHENS = ("-", "‐")    # ‑ (non-breaking hyphen) is deliberately NOT here
+_HYPHENS = ("-", "‐")  # ‑ (non-breaking hyphen) is deliberately NOT here
 
 
 def _atoms(line: str) -> "List[Tuple[str, bool]]":
@@ -191,9 +442,9 @@ def _atoms(line: str) -> "List[Tuple[str, bool]]":
     exactly as written: "Hello 世界" keeps its space, "世界です" gains none."""
     out: "List[Tuple[str, bool]]" = []
     word = ""
-    spaced = False        # a space stands before the atom being built
-    pending = False       # a space stands before the NEXT atom
-    attach_next = False   # a leading Thai/Lao vowel is waiting for its base consonant
+    spaced = False  # a space stands before the atom being built
+    pending = False  # a space stands before the NEXT atom
+    attach_next = False  # a leading Thai/Lao vowel is waiting for its base consonant
     # An emoji cluster is one atom: a wrap must never land inside a ZWJ sequence, a flag pair or
     # between a base and its skin-tone modifier (the same rule combining marks already follow).
     clusters = {i: len(cl) for i, cl in emoji_clusters(line)}
@@ -201,7 +452,7 @@ def _atoms(line: str) -> "List[Tuple[str, bool]]":
     while i < len(line):
         ch = line[i]
         if i in clusters:
-            cluster = line[i:i + clusters[i]]
+            cluster = line[i : i + clusters[i]]
             if word:
                 out.append((word, spaced))
                 word = ""
@@ -215,7 +466,12 @@ def _atoms(line: str) -> "List[Tuple[str, bool]]":
             if word:
                 out.append((word, spaced))
                 word = ""
-            if out and not pending and _is_katakana_run(ch) and _is_katakana_run(out[-1][0][-1]):
+            if (
+                out
+                and not pending
+                and _is_katakana_run(ch)
+                and _is_katakana_run(out[-1][0][-1])
+            ):
                 # a katakana word (タイミング, コンピューター) is one atom: eval 17 saw タイ|ミング
                 out[-1] = (out[-1][0] + ch, out[-1][1])
             elif out and (attach_next or _is_mark(ch)):
@@ -280,8 +536,8 @@ def _slice_atom(atom: str, max_em: float) -> "List[str]":
         return [atom]
     for i in range(len(atom) - 2, 0, -1):
         # latest hyphen whose left side still fits -- keeps the left half as large as possible
-        if atom[i] in _HYPHENS and text_width_em(atom[:i + 1]) <= max_em:
-            return [atom[:i + 1]] + _slice_atom(atom[i + 1:], max_em)
+        if atom[i] in _HYPHENS and text_width_em(atom[: i + 1]) <= max_em:
+            return [atom[: i + 1]] + _slice_atom(atom[i + 1 :], max_em)
     pieces: "List[str]" = []
     cur = ""
     for ch in atom:
@@ -306,11 +562,16 @@ def _join(left: str, atom: str, spaced: bool) -> str:
 def _break_spaced(first: str, second: str) -> bool:
     """Did a space stand at the break between these two wrapped lines? Only spaced scripts put one
     there -- a CJK/Thai break sits between two characters that were written with nothing between
-    them, and re-joining them with a space would insert a character the cue never had."""
+    them, and re-joining them with a space would insert a character the cue never had.
+    """
     if not first or not second:
         return False
-    return char_script(first[-1]) not in NO_SPACE_SCRIPTS and char_script(second[0]) not in NO_SPACE_SCRIPTS \
-        and char_script(first[-1]) != "emoji" and char_script(second[0]) != "emoji"
+    return (
+        char_script(first[-1]) not in NO_SPACE_SCRIPTS
+        and char_script(second[0]) not in NO_SPACE_SCRIPTS
+        and char_script(first[-1]) != "emoji"
+        and char_script(second[0]) != "emoji"
+    )
 
 
 def _is_kana(ch: str) -> bool:
@@ -320,7 +581,12 @@ def _is_kana(ch: str) -> bool:
 def _is_katakana_run(ch: str) -> bool:
     """Katakana proper plus the prolonged-sound mark: the characters one loan word is made of."""
     cp = ord(ch)
-    return (0x30A1 <= cp <= 0x30FA) or cp == 0x30FC or (0x31F0 <= cp <= 0x31FF) or (0xFF66 <= cp <= 0xFF9F)
+    return (
+        (0x30A1 <= cp <= 0x30FA)
+        or cp == 0x30FC
+        or (0x31F0 <= cp <= 0x31FF)
+        or (0xFF66 <= cp <= 0xFF9F)
+    )
 
 
 def _is_hiragana(ch: str) -> bool:
@@ -348,7 +614,9 @@ def _is_weak_line(line: str) -> "bool":
         return True
     if len(stripped) == 1 and text_width_em(stripped) < ORPHAN_MIN_EM:
         return True
-    if len(stripped) <= 2 and all(unicodedata.category(c)[0] in "NPS" for c in stripped):
+    if len(stripped) <= 2 and all(
+        unicodedata.category(c)[0] in "NPS" for c in stripped
+    ):
         return True
     if len(stripped) == 1 and char_script(stripped) == "ja" and _is_kana(stripped):
         return True
@@ -366,7 +634,9 @@ def _function_words(lang: "Optional[str]") -> "frozenset":
 
 
 def _bare_word(atom: str) -> str:
-    return "".join(c for c in (atom or "") if c.isalpha() or c == "'").strip("'").lower()
+    return (
+        "".join(c for c in (atom or "") if c.isalpha() or c == "'").strip("'").lower()
+    )
 
 
 def _particle_starts(text: str) -> bool:
@@ -383,8 +653,13 @@ def _particle_ends(text: str) -> bool:
     return text[-1] in JA_PARTICLES or text.endswith(JA_PARTICLE_WORDS)
 
 
-def break_penalty(prev_char: str, next_char: str, lang: "Optional[str]" = None,
-                  before: str = "", after: str = "") -> float:
+def break_penalty(
+    prev_char: str,
+    next_char: str,
+    lang: "Optional[str]" = None,
+    before: str = "",
+    after: str = "",
+) -> float:
     """How bad a break between these two characters is, 0.0 (preferred) to 1.0 (forbidden).
 
     Only consulted among break positions that already fit `max_em`, so a preference can never
@@ -409,7 +684,11 @@ def break_penalty(prev_char: str, next_char: str, lang: "Optional[str]" = None,
             script = char_script(next_char)
             if script not in ("ja", "zh"):
                 script = char_script(prev_char)
-    if next_char in JA_NO_LINE_START or prev_char in JA_NO_LINE_END or _is_mark(next_char):
+    if (
+        next_char in JA_NO_LINE_START
+        or prev_char in JA_NO_LINE_END
+        or _is_mark(next_char)
+    ):
         return PENALTY_FORBIDDEN
     if script not in ("ja", "zh"):
         return PENALTY_NEUTRAL
@@ -428,7 +707,9 @@ def break_penalty(prev_char: str, next_char: str, lang: "Optional[str]" = None,
     return PENALTY_NEUTRAL
 
 
-def _cut_penalty(atoms: "Sequence[Tuple[str, bool]]", cut: int, lang: "Optional[str]") -> float:
+def _cut_penalty(
+    atoms: "Sequence[Tuple[str, bool]]", cut: int, lang: "Optional[str]"
+) -> float:
     """The penalty of breaking `atoms` before index `cut`."""
     prev_atom = atoms[cut - 1][0]
     next_atom = atoms[cut][0]
@@ -437,23 +718,24 @@ def _cut_penalty(atoms: "Sequence[Tuple[str, bool]]", cut: int, lang: "Optional[
     if atoms[cut][1]:
         # a space stood here: a spaced script, so R4 is the rule that applies, in both directions
         if all(not ch.isalnum() for ch in next_atom):
-            return PENALTY_FORBIDDEN   # never strand punctuation at the start of a line
+            return PENALTY_FORBIDDEN  # never strand punctuation at the start of a line
         words = _function_words(lang)
         if _bare_word(prev_atom) in words:
-            return PENALTY_FUNCTION_WORD        # stranded at the end of a line, away from its noun
+            return PENALTY_FUNCTION_WORD  # stranded at the end of a line, away from its noun
         if _bare_word(next_atom) in words:
             return PENALTY_FUNCTION_WORD_START  # opens the next line with the phrase it governs
         return PENALTY_NEUTRAL
     if prev_atom.endswith(_HYPHENS):
-        return PENALTY_NEUTRAL         # R1: a hyphen is a legitimate break point
+        return PENALTY_NEUTRAL  # R1: a hyphen is a legitimate break point
     # the text on each side, so a two-character particle (から/まで/より) is seen as one
     before = "".join(a for a, _sp in atoms[:cut])
     after = "".join(a for a, _sp in atoms[cut:])
     return break_penalty(prev_atom[-1], next_atom[0], lang, before=before, after=after)
 
 
-def best_break(atoms: "Sequence[Tuple[str, bool]]", max_em: float,
-               lang: "Optional[str]" = None) -> "Optional[int]":
+def best_break(
+    atoms: "Sequence[Tuple[str, bool]]", max_em: float, lang: "Optional[str]" = None
+) -> "Optional[int]":
     """The index to break `atoms` at so they become two lines, or None when none fits.
 
     Among every position whose two halves both fit `max_em`, the one minimising
@@ -512,7 +794,8 @@ def _fix_weak_lines(lines: "List[str]", max_em: float) -> "List[str]":
     1.15 only ever looked at the last line, so a stranded digit or kana in the middle of a
     three-line cue survived. Walking upward from the last line, while a line is weak the last atom
     of the line above moves down onto it -- with 1.15's two guards intact (the result must still
-    fit, and the line above must not itself become weak), so the line count never changes."""
+    fit, and the line above must not itself become weak), so the line count never changes.
+    """
     lines = list(lines)
     for i in range(len(lines) - 1, 0, -1):
         for _ in range(len(lines)):
@@ -526,8 +809,11 @@ def _fix_weak_lines(lines: "List[str]", max_em: float) -> "List[str]":
             for atom, sp in prev[:-1]:
                 new_prev = _join(new_prev, atom, sp)
             new_last = _join(moved, lines[i], _break_spaced(lines[i - 1], lines[i]))
-            if text_width_em(new_last) > max_em or _is_weak_line(new_prev) \
-                    or text_width_em(new_prev) < ORPHAN_MIN_EM:
+            if (
+                text_width_em(new_last) > max_em
+                or _is_weak_line(new_prev)
+                or text_width_em(new_prev) < ORPHAN_MIN_EM
+            ):
                 break
             lines[i - 1], lines[i] = new_prev, new_last
     return lines
@@ -550,7 +836,9 @@ def _rebalance(lines: "List[str]", max_em: float) -> "List[str]":
         if tail_atoms:
             tail_atoms[0] = (tail_atoms[0][0], _break_spaced(first, second))
         atoms = _atoms(first) + tail_atoms
-        if not atoms or any(char_script(ch) in NO_SPACE_SCRIPTS for ch in first + second):
+        if not atoms or any(
+            char_script(ch) in NO_SPACE_SCRIPTS for ch in first + second
+        ):
             continue
         best = None
         for cut in range(1, len(atoms)):
@@ -574,11 +862,14 @@ def _rebalance(lines: "List[str]", max_em: float) -> "List[str]":
     return out
 
 
-def _rebalance_phrase(lines: "List[str]", max_em: float, lang: "Optional[str]") -> "Tuple[List[str], int]":
+def _rebalance_phrase(
+    lines: "List[str]", max_em: float, lang: "Optional[str]"
+) -> "Tuple[List[str], int]":
     """_rebalance with R1-R4 deciding, for every script rather than spaced ones only.
 
     Returns the new lines and how many breaks a phrase rule moved away from the position 1.15's
-    widest-line rule alone would have chosen -- the `phrase_breaks` count in the result."""
+    widest-line rule alone would have chosen -- the `phrase_breaks` count in the result.
+    """
     if len(lines) < 2:
         return list(lines), 0
     out = list(lines)
@@ -605,8 +896,13 @@ def _rebalance_phrase(lines: "List[str]", max_em: float, lang: "Optional[str]") 
     return out, moved
 
 
-def _greedy_chunks(raw: str, max_em: float, *, slice_overlong: bool = False,
-                   sliced: "Optional[List[int]]" = None) -> "List[str]":
+def _greedy_chunks(
+    raw: str,
+    max_em: float,
+    *,
+    slice_overlong: bool = False,
+    sliced: "Optional[List[int]]" = None,
+) -> "List[str]":
     """The greedy fill on its own: the line count every mode must keep.
 
     `slice_overlong` (off by default -- only caption.py's final burn-in pass turns it on, never
@@ -644,7 +940,9 @@ def _greedy_chunks(raw: str, max_em: float, *, slice_overlong: bool = False,
     return chunk
 
 
-def _balance(chunk: "List[str]", max_em: float, mode: str, lang: "Optional[str]") -> "List[str]":
+def _balance(
+    chunk: "List[str]", max_em: float, mode: str, lang: "Optional[str]"
+) -> "List[str]":
     """The post-passes for one greedy chunk, in the mode's own order. Never changes the count:
     a pass that would is discarded, exactly as 1.15 did."""
     if len(chunk) < 2:
@@ -661,9 +959,16 @@ def _balance(chunk: "List[str]", max_em: float, mode: str, lang: "Optional[str]"
     return fixed if len(fixed) == len(chunk) else chunk
 
 
-def wrap_text(text: str, max_em: float, *, balance: bool = True, mode: str = "phrase",
-              lang: "Optional[str]" = None, slice_overlong: bool = False,
-              sliced: "Optional[List[int]]" = None) -> "List[str]":
+def wrap_text(
+    text: str,
+    max_em: float,
+    *,
+    balance: bool = True,
+    mode: str = "phrase",
+    lang: "Optional[str]" = None,
+    slice_overlong: bool = False,
+    sliced: "Optional[List[int]]" = None,
+) -> "List[str]":
     """Wrap `text` to lines no wider than `max_em` em, keeping the manual breaks it already has.
 
     An atom wider than the whole line (one very long word) is left alone on its line rather than
@@ -681,12 +986,22 @@ def wrap_text(text: str, max_em: float, *, balance: bool = True, mode: str = "ph
     for raw in text.split("\n"):
         if not raw.strip():
             continue
-        chunk = _greedy_chunks(raw, max_em, slice_overlong=slice_overlong, sliced=sliced)
+        chunk = _greedy_chunks(
+            raw, max_em, slice_overlong=slice_overlong, sliced=sliced
+        )
         lines.extend(_balance(chunk, max_em, mode, lang) if balance else chunk)
     return lines or [text]
-def wrap_variants(text: str, max_em: float, *, mode: str = "phrase",
-                  lang: "Optional[str]" = None, slice_overlong: bool = False,
-                  sliced: "Optional[List[int]]" = None) -> "Tuple[List[str], List[str], List[str]]":
+
+
+def wrap_variants(
+    text: str,
+    max_em: float,
+    *,
+    mode: str = "phrase",
+    lang: "Optional[str]" = None,
+    slice_overlong: bool = False,
+    sliced: "Optional[List[int]]" = None,
+) -> "Tuple[List[str], List[str], List[str]]":
     """`(wrapped, greedy, measured)` for one cue from a single greedy fill.
 
     layout_cues needs all three -- `wrapped` is what is burnt in, `greedy` is what `rebalanced`
@@ -701,10 +1016,16 @@ def wrap_variants(text: str, max_em: float, *, mode: str = "phrase",
     for raw in text.split("\n"):
         if not raw.strip():
             continue
-        chunk = _greedy_chunks(raw, max_em, slice_overlong=slice_overlong, sliced=sliced)
+        chunk = _greedy_chunks(
+            raw, max_em, slice_overlong=slice_overlong, sliced=sliced
+        )
         greedy.extend(chunk)
         wrapped.extend(_balance(list(chunk), max_em, mode, lang))
-        measured.extend(chunk if mode == "measured" else _balance(list(chunk), max_em, "measured", None))
+        measured.extend(
+            chunk
+            if mode == "measured"
+            else _balance(list(chunk), max_em, "measured", None)
+        )
     if not greedy:
         greedy = [text]
     return (wrapped or [text], greedy, measured or [text])
@@ -717,12 +1038,19 @@ def wrap_variants(text: str, max_em: float, *, mode: str = "phrase",
 # Nothing per-platform is measured, so nothing per-platform is claimed. (The eval-17 cues happen
 # to land exactly on it: 13 is the smallest size at which every one of them fits two lines.)
 MIN_CAPTION_FRACTION = 0.045
-ASS_SCRIPT_HEIGHT = 288  # caption.py's --size/--margin reference grid; mirrors _platforms
+ASS_SCRIPT_HEIGHT = (
+    288  # caption.py's --size/--margin reference grid; mirrors _platforms
+)
 
 
-def line_em_for_size(size: float, play_w: "Optional[int]", play_h: "Optional[int]", *,
-                     safe_fraction: float = SAFE_WIDTH_FRACTION,
-                     script_height: int = ASS_SCRIPT_HEIGHT) -> "Optional[float]":
+def line_em_for_size(
+    size: float,
+    play_w: "Optional[int]",
+    play_h: "Optional[int]",
+    *,
+    safe_fraction: float = SAFE_WIDTH_FRACTION,
+    script_height: int = ASS_SCRIPT_HEIGHT,
+) -> "Optional[float]":
     """How many em fit on one caption line at `size`, or None without geometry.
 
     `size` is in ASS points against a `script_height`-line script (what libass's force_style
@@ -737,11 +1065,21 @@ def line_em_for_size(size: float, play_w: "Optional[int]", play_h: "Optional[int
     return (play_w * safe_fraction) / size_px
 
 
-def fit_size(cues, *, size: int, min_size: "Optional[int]" = None, max_lines: int = 2,
-             play_w: "Optional[int]" = None, play_h: "Optional[int]" = None,
-             safe_fraction: float = SAFE_WIDTH_FRACTION, mode: str = "phrase",
-             lang: "Optional[str]" = None, script_height: int = ASS_SCRIPT_HEIGHT,
-             step: int = 1, scope: str = "file") -> "Dict[str, Any]":
+def fit_size(
+    cues,
+    *,
+    size: int,
+    min_size: "Optional[int]" = None,
+    max_lines: int = 2,
+    play_w: "Optional[int]" = None,
+    play_h: "Optional[int]" = None,
+    safe_fraction: float = SAFE_WIDTH_FRACTION,
+    mode: str = "phrase",
+    lang: "Optional[str]" = None,
+    script_height: int = ASS_SCRIPT_HEIGHT,
+    step: int = 1,
+    scope: str = "file",
+) -> "Dict[str, Any]":
     """The largest size in [min_size, size] at which every cue wraps to <= max_lines lines.
 
     Pure: strings and integers in, a dict out. No ffmpeg, no ffprobe, no I/O -- the caption size
@@ -772,15 +1110,27 @@ def fit_size(cues, *, size: int, min_size: "Optional[int]" = None, max_lines: in
         texts.append(raw if raw and str(raw).strip() else None)
     measurable = [t for t in texts if t is not None]
     requested = int(size)
-    floor = int(min_size) if min_size is not None else ass_units_local(MIN_CAPTION_FRACTION,
-                                                                      script_height)
+    floor = (
+        int(min_size)
+        if min_size is not None
+        else ass_units_local(MIN_CAPTION_FRACTION, script_height)
+    )
     floor = max(1, min(floor, requested))
     step = max(1, int(step))
-    result: "Dict[str, Any]" = {"size": requested, "floor": floor, "requested": requested,
-                                "scope": scope, "shrunk": 0, "fits": True, "per_cue": {},
-                                "max_em": None, "steps": 0}
-    em_at = lambda sz: line_em_for_size(sz, play_w, play_h, safe_fraction=safe_fraction,
-                                        script_height=script_height)
+    result: "Dict[str, Any]" = {
+        "size": requested,
+        "floor": floor,
+        "requested": requested,
+        "scope": scope,
+        "shrunk": 0,
+        "fits": True,
+        "per_cue": {},
+        "max_em": None,
+        "steps": 0,
+    }
+    em_at = lambda sz: line_em_for_size(
+        sz, play_w, play_h, safe_fraction=safe_fraction, script_height=script_height
+    )
     base_em = em_at(requested)
     result["max_em"] = base_em
     if not measurable or base_em is None or max_lines < 1:
@@ -811,7 +1161,9 @@ def fit_size(cues, *, size: int, min_size: "Optional[int]" = None, max_lines: in
         fits_all = True
         for i, t in enumerate(texts):
             if t is None:
-                per_cue[i] = requested    # a blank cue draws nothing; it constrains nothing
+                per_cue[i] = (
+                    requested  # a blank cue draws nothing; it constrains nothing
+                )
                 continue
             sz, ok = best_for([t])
             per_cue[i] = sz

@@ -16,22 +16,57 @@ Examples:
   python3 freeze.py sketch.mp4 --at 12.5 --hold 1.5                # 1.5s freeze inserted at 12.5s
   python3 freeze.py outro.mp4 --hold 3 --mode extend                # extend only the very end by 3s
 """
+
 import argparse
 import sys
 
-from _common import add_common, apply_common, aac_args, cfr_args, default_output, die, emit, ffmpeg_base, info, probe, run_keeping_subtitles, video_args, X264_PRESETS, MissingFpsError, time_arg, fmt_secs, run
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    video_args,
+    X264_PRESETS,
+    MissingFpsError,
+    time_arg,
+    fmt_secs,
+    run,
+)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_freeze.<ext>)")
-    ap.add_argument("--at", help="timestamp to freeze: seconds, mm:ss, hh:mm:ss.ms or SMPTE hh:mm:ss:ff (default: the last frame)")
-    ap.add_argument("--hold", type=float, required=True, help="how long the freeze lasts, in seconds")
-    ap.add_argument("--mode", choices=["insert", "extend"], default="insert",
-                     help="insert (default): hold pushes the rest of the clip later; extend: only valid at/after the clip's end, makes the last frame last longer with nothing pushed")
+    ap.add_argument(
+        "--at",
+        help="timestamp to freeze: seconds, mm:ss, hh:mm:ss.ms or SMPTE hh:mm:ss:ff (default: the last frame)",
+    )
+    ap.add_argument(
+        "--hold",
+        type=float,
+        required=True,
+        help="how long the freeze lasts, in seconds",
+    )
+    ap.add_argument(
+        "--mode",
+        choices=["insert", "extend"],
+        default="insert",
+        help="insert (default): hold pushes the rest of the clip later; extend: only valid at/after the clip's end, makes the last frame last longer with nothing pushed",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -51,7 +86,9 @@ def main() -> int:
     if at < 0 or at > dur:
         die(f"--at {at:g} is outside the clip (0..{dur:.3f})")
     if args.mode == "extend" and at < dur - 0.01:
-        die(f"--mode extend needs --at at or after the clip's end ({dur:.3f}), got {at:g}")
+        die(
+            f"--mode extend needs --at at or after the clip's end ({dur:.3f}), got {at:g}"
+        )
     has_audio = bool(meta.get("audio"))
     output = args.output or default_output(args.input, "freeze")
 
@@ -81,17 +118,37 @@ def main() -> int:
         # the video actually holds for, a permanent A/V drift from this point on. Pad audio by
         # the same, frame-rounded duration the video actually gets.
         actual_hold = n / fps
-        vf = (f"[0:v]split[a][b];[a]trim=end={at:.3f},setpts=PTS-STARTPTS[head];"
-              f"[b]trim=start={at:.3f},setpts=PTS-STARTPTS[tail];"
-              f"[head]tpad=stop_mode=clone:stop={n}[frozen];"
-              f"[frozen][tail]concat=n=2:v=1:a=0[outv]")
-        cmd = ffmpeg_base() + ["-i", args.input, "-filter_complex", vf, "-map", "[outv]"]
+        vf = (
+            f"[0:v]split[a][b];[a]trim=end={at:.3f},setpts=PTS-STARTPTS[head];"
+            f"[b]trim=start={at:.3f},setpts=PTS-STARTPTS[tail];"
+            f"[head]tpad=stop_mode=clone:stop={n}[frozen];"
+            f"[frozen][tail]concat=n=2:v=1:a=0[outv]"
+        )
+        cmd = ffmpeg_base() + [
+            "-i",
+            args.input,
+            "-filter_complex",
+            vf,
+            "-map",
+            "[outv]",
+        ]
         if has_audio:
-            af = (f"[0:a]asplit[aa][ab];[aa]atrim=end={at:.3f},asetpts=PTS-STARTPTS[ahead];"
-                  f"[ab]atrim=start={at:.3f},asetpts=PTS-STARTPTS[atail];"
-                  f"[ahead]apad=pad_dur={actual_hold:.6f}[afrozen];"
-                  f"[afrozen][atail]concat=n=2:v=0:a=1[outa]")
-            cmd = ffmpeg_base() + ["-i", args.input, "-filter_complex", f"{vf};{af}", "-map", "[outv]", "-map", "[outa]"]
+            af = (
+                f"[0:a]asplit[aa][ab];[aa]atrim=end={at:.3f},asetpts=PTS-STARTPTS[ahead];"
+                f"[ab]atrim=start={at:.3f},asetpts=PTS-STARTPTS[atail];"
+                f"[ahead]apad=pad_dur={actual_hold:.6f}[afrozen];"
+                f"[afrozen][atail]concat=n=2:v=0:a=1[outa]"
+            )
+            cmd = ffmpeg_base() + [
+                "-i",
+                args.input,
+                "-filter_complex",
+                f"{vf};{af}",
+                "-map",
+                "[outv]",
+                "-map",
+                "[outa]",
+            ]
     cmd += video_args(meta, args.crf, args.preset)
     cmd += cfr_args(meta)
     if has_audio:
@@ -109,7 +166,9 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, froze {args.hold:g}s at {at:g}s, mode={args.mode})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, froze {args.hold:g}s at {at:g}s, mode={args.mode})"
+    )
     emit(output, dropped_non_av_streams=dropped_streams)
     return 0
 

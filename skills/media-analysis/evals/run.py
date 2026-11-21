@@ -6,6 +6,7 @@ the Observation with expected values and tolerances. Expected values are derived
     python3 evals/run.py            # table on stdout, exit 1 on any failure
     python3 evals/run.py --json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -43,7 +44,11 @@ def check(actual: Any, exp: Dict[str, Any]) -> bool:
     if op == "eq":
         return actual == v
     if op == "approx":
-        return isinstance(actual, (int, float)) and actual is not None and abs(actual - v) <= exp["tolerance"]
+        return (
+            isinstance(actual, (int, float))
+            and actual is not None
+            and abs(actual - v) <= exp["tolerance"]
+        )
     if op == "gte":
         return isinstance(actual, (int, float)) and actual >= v
     if op == "lte":
@@ -53,8 +58,15 @@ def check(actual: Any, exp: Dict[str, Any]) -> bool:
     raise ValueError(f"unknown op {op}")
 
 
-def run_case(engine: AnalysisEngine, fixtures: Dict[str, Path], case: Dict[str, Any]) -> Dict[str, Any]:
-    req = {"asset_id": case["id"], "input": str(fixtures[case["fixture"]]), "kind": case["kind"], "parameters": case.get("parameters", {})}
+def run_case(
+    engine: AnalysisEngine, fixtures: Dict[str, Path], case: Dict[str, Any]
+) -> Dict[str, Any]:
+    req = {
+        "asset_id": case["id"],
+        "input": str(fixtures[case["fixture"]]),
+        "kind": case["kind"],
+        "parameters": case.get("parameters", {}),
+    }
     try:
         obs = engine.analyze(req)["observation"]
     except AnalysisError as e:
@@ -66,8 +78,15 @@ def run_case(engine: AnalysisEngine, fixtures: Dict[str, Path], case: Dict[str, 
             ok = check(actual, exp)
         except (KeyError, IndexError, TypeError):
             actual, ok = "<missing>", False
-        checks.append({"path": exp["path"], "expected": exp, "actual": actual, "ok": ok})
-    return {"id": case["id"], "ok": all(c["ok"] for c in checks), "checks": checks, "source": obs["source"]}
+        checks.append(
+            {"path": exp["path"], "expected": exp, "actual": actual, "ok": ok}
+        )
+    return {
+        "id": case["id"],
+        "ok": all(c["ok"] for c in checks),
+        "checks": checks,
+        "source": obs["source"],
+    }
 
 
 def run_all(cases_dir: Path = HERE / "cases") -> List[Dict[str, Any]]:
@@ -76,7 +95,10 @@ def run_all(cases_dir: Path = HERE / "cases") -> List[Dict[str, Any]]:
     with tempfile.TemporaryDirectory(prefix="media-analysis-evals-") as tmp:
         fixtures = build_all(Path(tmp) / "fixtures")
         engine = AnalysisEngine(policy=PathPolicy(workspace=tmp))
-        cases = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(cases_dir.glob("*.json"))]
+        cases = [
+            json.loads(p.read_text(encoding="utf-8"))
+            for p in sorted(cases_dir.glob("*.json"))
+        ]
         return [run_case(engine, fixtures, c) for c in cases]
 
 
@@ -86,13 +108,24 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     results = run_all()
     if args.json:
-        print(json.dumps({"passed": sum(r["ok"] for r in results), "total": len(results), "results": results}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "passed": sum(r["ok"] for r in results),
+                    "total": len(results),
+                    "results": results,
+                },
+                indent=2,
+            )
+        )
     else:
         for r in results:
             print(f"{'PASS' if r['ok'] else 'FAIL'}  {r['id']}")
             for c in r["checks"]:
                 if not c["ok"]:
-                    print(f"      {c['path']}: expected {c['expected']} got {c['actual']!r}")
+                    print(
+                        f"      {c['path']}: expected {c['expected']} got {c['actual']!r}"
+                    )
             if r.get("error"):
                 print(f"      error: {r['error']}")
         print(f"{sum(r['ok'] for r in results)}/{len(results)} passed")

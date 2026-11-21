@@ -76,8 +76,12 @@ def test_mcp_receipt_calls_get_separate_directories(good_pdf, tmp_path, monkeypa
 
     result = call_tool(
         f"{CAPABILITY_PREFIX}.execute",
-        {"input": str(good_pdf), "operation": "metadata_set", "args": {"title": "x"},
-         "output": str(tmp_path / "out.pdf")},
+        {
+            "input": str(good_pdf),
+            "operation": "metadata_set",
+            "args": {"title": "x"},
+            "output": str(tmp_path / "out.pdf"),
+        },
     )
     payload = json.loads(result["content"][0]["text"])
     assert (Path(payload["evidence_dir"]) / "receipt.json").exists()

@@ -37,5 +37,7 @@ def test_worst_status_wins(statuses, expected):
 def test_verification_result_status_property_matches_aggregate():
     from artifact_skill.core.verification import VerificationResult
 
-    result = VerificationResult(kind="structural", checks=[_check(CheckStatus.PASS), _check(CheckStatus.FAIL)])
+    result = VerificationResult(
+        kind="structural", checks=[_check(CheckStatus.PASS), _check(CheckStatus.FAIL)]
+    )
     assert result.status == CheckStatus.FAIL

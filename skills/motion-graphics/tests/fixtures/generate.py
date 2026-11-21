@@ -12,6 +12,7 @@ ffmpeg directly; the skill under test never does.
   font.ttf        a copy of a real font already on this machine (DejaVu preferred; any .ttf/.ttc otherwise),
                   for the font_file path -- the test only needs valid font bytes, not a specific family
   text.txt        not media"""
+
 from __future__ import annotations
 
 import shutil
@@ -25,11 +26,11 @@ FF = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-nostdin"]
 SYSTEM_FONT_CANDIDATES = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/dejavu/DejaVuSans.ttf",
-    "/System/Library/Fonts/Supplemental/Arial.ttf",     # macOS
-    "/System/Library/Fonts/Helvetica.ttc",              # macOS
-    "/Library/Fonts/Arial.ttf",                         # macOS (older layout)
-    "C:\\Windows\\Fonts\\arial.ttf",                    # Windows
-    "C:\\Windows\\Fonts\\calibri.ttf",                  # Windows
+    "/System/Library/Fonts/Supplemental/Arial.ttf",  # macOS
+    "/System/Library/Fonts/Helvetica.ttc",  # macOS
+    "/Library/Fonts/Arial.ttf",  # macOS (older layout)
+    "C:\\Windows\\Fonts\\arial.ttf",  # Windows
+    "C:\\Windows\\Fonts\\calibri.ttf",  # Windows
 )
 
 
@@ -38,22 +39,110 @@ def available() -> bool:
 
 
 def _run(args):
-    subprocess.run(FF + args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    subprocess.run(
+        FF + args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+    )
 
 
 def build_all(directory: Path) -> Dict[str, Path]:
     d = Path(directory)
     d.mkdir(parents=True, exist_ok=True)
-    f = {k: d / v for k, v in {"video": "video.mp4", "video_short": "video_short.mp4", "video_dual_audio": "video_dual_audio.mp4",
-                               "logo": "logo.png", "font": "font.ttf", "text": "text.txt"}.items()}
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25", "-f", "lavfi", "-i", "aevalsrc='0.1*sin(2*PI*440*t)':s=48000",
-          "-t", "6", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(f["video"])])
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25", "-t", "2", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", str(f["video_short"])])
-    _run(["-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono",
-          "-f", "lavfi", "-i", "aevalsrc='0.5*sin(2*PI*440*t)':s=48000",
-          "-map", "0:v", "-map", "1:a", "-map", "2:a", "-t", "3",
-          "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", str(f["video_dual_audio"])])
-    _run(["-f", "lavfi", "-i", "color=c=red@0.6:s=64x64", "-frames:v", "1", str(f["logo"])])
+    f = {
+        k: d / v
+        for k, v in {
+            "video": "video.mp4",
+            "video_short": "video_short.mp4",
+            "video_dual_audio": "video_dual_audio.mp4",
+            "logo": "logo.png",
+            "font": "font.ttf",
+            "text": "text.txt",
+        }.items()
+    }
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25",
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='0.1*sin(2*PI*440*t)':s=48000",
+            "-t",
+            "6",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(f["video"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25",
+            "-t",
+            "2",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            str(f["video_short"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=48000:cl=mono",
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='0.5*sin(2*PI*440*t)':s=48000",
+            "-map",
+            "0:v",
+            "-map",
+            "1:a",
+            "-map",
+            "2:a",
+            "-t",
+            "3",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            str(f["video_dual_audio"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red@0.6:s=64x64",
+            "-frames:v",
+            "1",
+            str(f["logo"]),
+        ]
+    )
     for cand in SYSTEM_FONT_CANDIDATES:
         if Path(cand).is_file():
             shutil.copy(cand, f["font"])

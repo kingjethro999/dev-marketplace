@@ -6,7 +6,10 @@ import re
 from typing import Dict, List
 
 _ERROR_CATEGORY_PATTERNS = [
-    ("missing_reference", re.compile(r"missing reference|reference picture missing", re.I)),
+    (
+        "missing_reference",
+        re.compile(r"missing reference|reference picture missing", re.I),
+    ),
     (
         "corrupt_data",
         re.compile(
@@ -21,10 +24,18 @@ _ERROR_CATEGORY_PATTERNS = [
 ]
 
 _TRIGGER_TOKENS = (
-    "invalid nal", "invalid data found", "corrupt decoded frame",
-    "missing reference", "reference picture missing", "missing picture in access unit",
-    "error splitting the input", "error submitting packet to decoder",
-    "concealing", "mmco:", "non-monotonic", "invalid timestamp",
+    "invalid nal",
+    "invalid data found",
+    "corrupt decoded frame",
+    "missing reference",
+    "reference picture missing",
+    "missing picture in access unit",
+    "error splitting the input",
+    "error submitting packet to decoder",
+    "concealing",
+    "mmco:",
+    "non-monotonic",
+    "invalid timestamp",
 )
 
 

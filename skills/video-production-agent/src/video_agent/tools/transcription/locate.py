@@ -1,6 +1,8 @@
 """Locate an installed transcription-skill (kajisho5/transcription-skill). Two shapes are accepted: a source checkout
 (<dir>/src/transcription_skill/cli.py, run as `python -m transcription_skill.cli` (without the current directory on sys.path, ADR-074) with PYTHONPATH=<dir>/src) or the
-installed console script `transcription` on PATH. The agent never imports the package and never runs an ASR engine."""
+installed console script `transcription` on PATH. The agent never imports the package and never runs an ASR engine.
+"""
+
 from __future__ import annotations
 
 import os
@@ -16,9 +18,13 @@ ENV_DIR = "VIDEO_AGENT_TRANSCRIPTION_DIR"
 
 @dataclass
 class TranscriptionSkill:
-    command: List[str]            # argv prefix, e.g. [python, "-m", "transcription_skill.cli"] or ["transcription"]
-    root: Optional[Path]          # checkout root when run from source
-    env: Dict[str, str]           # extra environment for the child (PYTHONPATH for a checkout); never credentials
+    command: List[
+        str
+    ]  # argv prefix, e.g. [python, "-m", "transcription_skill.cli"] or ["transcription"]
+    root: Optional[Path]  # checkout root when run from source
+    env: Dict[
+        str, str
+    ]  # extra environment for the child (PYTHONPATH for a checkout); never credentials
 
     def describe(self) -> str:
         return str(self.root) if self.root else self.command[0]
@@ -27,11 +33,17 @@ class TranscriptionSkill:
 def _from_checkout(root: Path) -> Optional[TranscriptionSkill]:
     cli = root / "src" / "transcription_skill" / "cli.py"
     if cli.is_file():
-        return TranscriptionSkill(python_module_command("transcription_skill.cli"), root, {"PYTHONPATH": str(root / "src")})
+        return TranscriptionSkill(
+            python_module_command("transcription_skill.cli"),
+            root,
+            {"PYTHONPATH": str(root / "src")},
+        )
     return None
 
 
-def locate_transcription(explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None) -> Optional[TranscriptionSkill]:
+def locate_transcription(
+    explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None
+) -> Optional[TranscriptionSkill]:
     env = os.environ if env is None else env
     authoritative: List[Path] = []
     if explicit:

@@ -26,23 +26,34 @@ class TestVerifyOutputFormat(unittest.TestCase):
         with open(output, "wb") as f:
             f.write(b"not actually heic")
 
-        with mock.patch.object(_common, "which_magick", return_value="/usr/bin/magick"), mock.patch.object(
-            _common, "run", return_value={"dry_run": False, "stdout": "PNG\n", "stderr": ""}
+        with mock.patch.object(
+            _common, "which_magick", return_value="/usr/bin/magick"
+        ), mock.patch.object(
+            _common,
+            "run",
+            return_value={"dry_run": False, "stdout": "PNG\n", "stderr": ""},
         ):
             with self.assertRaises(_common.ImageSkillError) as ctx:
                 _common.verify_output_format(output, "magick")
 
         self.assertIn("HEIC", str(ctx.exception))
         self.assertIn("PNG", str(ctx.exception))
-        self.assertFalse(os.path.exists(output), "the mislabeled file should be removed, not left behind")
+        self.assertFalse(
+            os.path.exists(output),
+            "the mislabeled file should be removed, not left behind",
+        )
 
     def test_passes_when_format_matches(self):
         output = os.path.join(self.tmp.name, "photo.jpg")
         with open(output, "wb") as f:
             f.write(b"pretend jpeg bytes")
 
-        with mock.patch.object(_common, "which_magick", return_value="/usr/bin/magick"), mock.patch.object(
-            _common, "run", return_value={"dry_run": False, "stdout": "JPEG\n", "stderr": ""}
+        with mock.patch.object(
+            _common, "which_magick", return_value="/usr/bin/magick"
+        ), mock.patch.object(
+            _common,
+            "run",
+            return_value={"dry_run": False, "stdout": "JPEG\n", "stderr": ""},
         ):
             _common.verify_output_format(output, "magick")  # must not raise
 
@@ -85,8 +96,12 @@ class TestDoctorFormatCapabilities(unittest.TestCase):
         self.assertEqual(caps["WEBP"], (True, True))
 
     def test_doctor_reports_heic_write_false_when_read_only(self):
-        formats_out = "     HEIC            r--   Apple High efficiency Image Format (1.17.6)\n"
-        with mock.patch.object(_contract, "which_magick", return_value="/usr/bin/magick"), mock.patch.object(
+        formats_out = (
+            "     HEIC            r--   Apple High efficiency Image Format (1.17.6)\n"
+        )
+        with mock.patch.object(
+            _contract, "which_magick", return_value="/usr/bin/magick"
+        ), mock.patch.object(
             _contract, "which_sips", return_value=None
         ), mock.patch.object(
             _contract,

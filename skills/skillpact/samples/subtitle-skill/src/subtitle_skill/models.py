@@ -3,6 +3,7 @@
 subtitle-skill never processes subtitles as bare dicts. Every cue and
 document is a typed, immutable value object built by `from_dict`.
 """
+
 from __future__ import annotations
 
 import math
@@ -99,7 +100,11 @@ class SubtitleCue:
         _require(end > start, "INVALID_TIME_RANGE", f"cue {cue_id}: end <= start")
 
         text = data["text"]
-        _require(isinstance(text, str), "INVALID_INPUT", f"cue {cue_id}: text must be a string")
+        _require(
+            isinstance(text, str),
+            "INVALID_INPUT",
+            f"cue {cue_id}: text must be a string",
+        )
 
         speaker = data.get("speaker")
         if speaker is not None:
@@ -114,11 +119,25 @@ class SubtitleCue:
 
         metadata = data.get("metadata", {})
         _require(
-            isinstance(metadata, Mapping), "INVALID_INPUT", f"cue {cue_id}: metadata must be an object"
+            isinstance(metadata, Mapping),
+            "INVALID_INPUT",
+            f"cue {cue_id}: metadata must be an object",
         )
 
-        unknown = set(data) - {"id", "start", "end", "text", "speaker", "style", "metadata"}
-        _require(not unknown, "INVALID_INPUT", f"cue {cue_id}: unknown field(s) {sorted(unknown)}")
+        unknown = set(data) - {
+            "id",
+            "start",
+            "end",
+            "text",
+            "speaker",
+            "style",
+            "metadata",
+        }
+        _require(
+            not unknown,
+            "INVALID_INPUT",
+            f"cue {cue_id}: unknown field(s) {sorted(unknown)}",
+        )
 
         return SubtitleCue(
             id=cue_id,
@@ -135,7 +154,12 @@ class SubtitleCue:
         return self.end - self.start
 
     def to_dict(self) -> dict:
-        d: dict = {"id": self.id, "start": self.start, "end": self.end, "text": self.text}
+        d: dict = {
+            "id": self.id,
+            "start": self.start,
+            "end": self.end,
+            "text": self.text,
+        }
         if self.speaker is not None:
             d["speaker"] = self.speaker
         if self.style is not None:
@@ -155,9 +179,15 @@ class SubtitleDocument:
 
     @staticmethod
     def from_dict(data: Mapping[str, Any]) -> "SubtitleDocument":
-        _require(isinstance(data, Mapping), "INVALID_INPUT", "subtitle document must be an object")
+        _require(
+            isinstance(data, Mapping),
+            "INVALID_INPUT",
+            "subtitle document must be an object",
+        )
         for req in ("id", "language", "cues"):
-            _require(req in data, "MISSING_INPUT", f"subtitle document missing field: {req}")
+            _require(
+                req in data, "MISSING_INPUT", f"subtitle document missing field: {req}"
+            )
 
         doc_id = data["id"]
         _require(
@@ -181,7 +211,11 @@ class SubtitleDocument:
         )
 
         raw_cues = data["cues"]
-        _require(isinstance(raw_cues, list) and len(raw_cues) > 0, "MISSING_INPUT", "document.cues must be a non-empty array")
+        _require(
+            isinstance(raw_cues, list) and len(raw_cues) > 0,
+            "MISSING_INPUT",
+            "document.cues must be a non-empty array",
+        )
 
         cues = tuple(SubtitleCue.from_dict(c) for c in raw_cues)
 
@@ -191,13 +225,23 @@ class SubtitleDocument:
             seen.add(c.id)
 
         metadata = data.get("metadata", {})
-        _require(isinstance(metadata, Mapping), "INVALID_INPUT", "document.metadata must be an object")
+        _require(
+            isinstance(metadata, Mapping),
+            "INVALID_INPUT",
+            "document.metadata must be an object",
+        )
 
         unknown = set(data) - {"id", "version", "language", "cues", "metadata"}
-        _require(not unknown, "INVALID_INPUT", f"unknown document field(s) {sorted(unknown)}")
+        _require(
+            not unknown, "INVALID_INPUT", f"unknown document field(s) {sorted(unknown)}"
+        )
 
         return SubtitleDocument(
-            id=doc_id, version=version, language=language, cues=cues, metadata=dict(metadata)
+            id=doc_id,
+            version=version,
+            language=language,
+            cues=cues,
+            metadata=dict(metadata),
         )
 
     def to_dict(self) -> dict:
@@ -210,7 +254,9 @@ class SubtitleDocument:
         }
 
     def sorted_by_start(self) -> "SubtitleDocument":
-        return replace(self, cues=tuple(sorted(self.cues, key=lambda c: (c.start, c.end, c.id))))
+        return replace(
+            self, cues=tuple(sorted(self.cues, key=lambda c: (c.start, c.end, c.id)))
+        )
 
 
 def _is_bcp47_ish(tag: str) -> bool:

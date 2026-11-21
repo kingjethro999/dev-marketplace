@@ -5,7 +5,9 @@ Everything here is boundary mechanics only: locating a checkout, invoking the CL
 reading one document, recomputing a file hash, and the generic pieces every adapter of this family shares (contract drift,
 error → recovery class, the failed ToolResult shape). No adapter here decides anything, builds a command from a request,
 or imports a Skill's package. The five earlier adapters (ffmpeg-skill / media-analysis / transcription / video-editing /
-audio-production) keep their own code; this module exists so the Phase 3 adapters do not copy it a sixth time."""
+audio-production) keep their own code; this module exists so the Phase 3 adapters do not copy it a sixth time.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -32,6 +34,7 @@ class CliSkill:
     """A located Skill: argv prefix (a checkout run as `python -m <module>` without the current directory on sys.path,
     ADR-074, or a console script) plus the child environment
     it needs (PYTHONPATH for a checkout, never credentials)."""
+
     skill_id: str
     command: List[str]
     root: Optional[Path]
@@ -41,8 +44,16 @@ class CliSkill:
         return str(self.root) if self.root else self.command[0]
 
 
-def locate_cli_skill(skill_id: str, module: str, package_dir: str, console: str, env_var: str, explicit: Optional[str] = None,
-                     env: Optional[Mapping[str, str]] = None, checkout_names: Tuple[str, ...] = ()) -> Optional[CliSkill]:
+def locate_cli_skill(
+    skill_id: str,
+    module: str,
+    package_dir: str,
+    console: str,
+    env_var: str,
+    explicit: Optional[str] = None,
+    env: Optional[Mapping[str, str]] = None,
+    checkout_names: Tuple[str, ...] = (),
+) -> Optional[CliSkill]:
     """Find a checkout (<dir>/src/<package_dir>/cli.py or __init__.py, run with PYTHONPATH=<dir>/src) or a console script on
     PATH. Order: explicit dir, the env var, ~/.claude/skills/<name>, the sibling <name> of this agent's own source checkout
     (never the current directory, ADR-069), then PATH. An explicit dir
@@ -63,16 +74,28 @@ def locate_cli_skill(skill_id: str, module: str, package_dir: str, console: str,
     for c in cands:
         pkg = c / "src" / package_dir
         if (pkg / "cli.py").is_file() or (pkg / "__init__.py").is_file():
-            return CliSkill(skill_id, python_module_command(module), c, {"PYTHONPATH": str(c / "src")})
+            return CliSkill(
+                skill_id,
+                python_module_command(module),
+                c,
+                {"PYTHONPATH": str(c / "src")},
+            )
     exe = shutil.which(console, path=env_map.get("PATH"))
     if exe:
         return CliSkill(skill_id, [exe], None, {})
     return None
 
 
-def invoke(skill: CliSkill, argv: List[str], stdin: Optional[str] = None, timeout: Optional[float] = None, extra_env: Optional[Dict[str, str]] = None) -> Tuple[int, str, str]:
+def invoke(
+    skill: CliSkill,
+    argv: List[str],
+    stdin: Optional[str] = None,
+    timeout: Optional[float] = None,
+    extra_env: Optional[Dict[str, str]] = None,
+) -> Tuple[int, str, str]:
     """Run the Skill CLI once (process group, timeout → exit 124). The child's extra environment is the checkout's PYTHONPATH
-    and, where a Skill only takes its engine location from the environment, that directory; nothing else is added."""
+    and, where a Skill only takes its engine location from the environment, that directory; nothing else is added.
+    """
     env_backup: Dict[str, Optional[str]] = {}
     merged = dict(skill.env)
     merged.update(extra_env or {})
@@ -80,7 +103,9 @@ def invoke(skill: CliSkill, argv: List[str], stdin: Optional[str] = None, timeou
         for k, v in merged.items():
             env_backup[k] = os.environ.get(k)
             os.environ[k] = v
-        return run_process_group(list(skill.command) + list(argv), timeout=timeout, stdin=stdin)
+        return run_process_group(
+            list(skill.command) + list(argv), timeout=timeout, stdin=stdin
+        )
     finally:
         for k, old in env_backup.items():
             if old is None:
@@ -120,7 +145,9 @@ def strip_sha_prefix(v: Any) -> str:
 
 def same_file(a: str, b: str) -> bool:
     try:
-        return os.path.normcase(os.path.realpath(a)) == os.path.normcase(os.path.realpath(b))
+        return os.path.normcase(os.path.realpath(a)) == os.path.normcase(
+            os.path.realpath(b)
+        )
     except OSError:
         return False
 
@@ -137,13 +164,57 @@ def remove_fresh(path: Optional[str], t0: float) -> None:
 
 
 # the agent's boundary vocabulary: never forwarded as a request key, never accepted as a parameter name (each Skill adds its own forbidden fields)
-FORBIDDEN_ARG_KEYS = ("command", "commands", "argv", "cmd", "cmdline", "shell", "exec", "args", "script", "binary", "executable", "executables", "env", "environment", "cwd",
-                      "filter", "filters", "filter_complex", "vf", "af", "ffmpeg", "ffprobe", "api_key", "apikey", "token", "secret", "password", "credentials", "eval",
-                      "expression", "html", "javascript", "css", "workspace", "allowed_input", "allowed_inputs", "allowed_input_roots", "allowed-input", "allowed_lut",
-                      "ffmpeg_skill", "ffmpeg-skill", "ffmpeg_skill_dir", "path", "paths")
+FORBIDDEN_ARG_KEYS = (
+    "command",
+    "commands",
+    "argv",
+    "cmd",
+    "cmdline",
+    "shell",
+    "exec",
+    "args",
+    "script",
+    "binary",
+    "executable",
+    "executables",
+    "env",
+    "environment",
+    "cwd",
+    "filter",
+    "filters",
+    "filter_complex",
+    "vf",
+    "af",
+    "ffmpeg",
+    "ffprobe",
+    "api_key",
+    "apikey",
+    "token",
+    "secret",
+    "password",
+    "credentials",
+    "eval",
+    "expression",
+    "html",
+    "javascript",
+    "css",
+    "workspace",
+    "allowed_input",
+    "allowed_inputs",
+    "allowed_input_roots",
+    "allowed-input",
+    "allowed_lut",
+    "ffmpeg_skill",
+    "ffmpeg-skill",
+    "ffmpeg_skill_dir",
+    "path",
+    "paths",
+)
 
 
-def scan_forbidden(obj: Any, forbidden: Tuple[str, ...], where: str = "args") -> Optional[str]:
+def scan_forbidden(
+    obj: Any, forbidden: Tuple[str, ...], where: str = "args"
+) -> Optional[str]:
     """First forbidden key anywhere in a document (by name, case-insensitive), or None."""
     fb = {f.lower() for f in forbidden}
     if isinstance(obj, dict):
@@ -166,20 +237,45 @@ def scrub(obj: Any, forbidden: Tuple[str, ...]) -> Dict[str, Any]:
     if not isinstance(obj, dict):
         return {}
     fb = {f.lower() for f in forbidden}
-    return {str(k): (v if isinstance(v, (str, int, float, bool)) or v is None else json.dumps(v, default=str)[:300]) for k, v in obj.items() if str(k).lower() not in fb}
+    return {
+        str(k): (
+            v
+            if isinstance(v, (str, int, float, bool)) or v is None
+            else json.dumps(v, default=str)[:300]
+        )
+        for k, v in obj.items()
+        if str(k).lower() not in fb
+    }
 
 
-def drift_report(live: Dict[str, Any], pinned: Dict[str, Any], keys: Tuple[str, ...], list_key: Optional[str] = None, item_id: str = "type",
-                 item_keys: Tuple[str, ...] = ()) -> List[str]:
+def drift_report(
+    live: Dict[str, Any],
+    pinned: Dict[str, Any],
+    keys: Tuple[str, ...],
+    list_key: Optional[str] = None,
+    item_id: str = "type",
+    item_keys: Tuple[str, ...] = (),
+) -> List[str]:
     """Differences between the installed contract and the pinned one on the fields the agent depends on (top-level keys, and
-    per item of one list keyed by `item_id`). Non-empty = the adapter's expectations are stale: reported, never silently kept."""
+    per item of one list keyed by `item_id`). Non-empty = the adapter's expectations are stale: reported, never silently kept.
+    """
     out: List[str] = []
     for k in keys:
         if live.get(k) != pinned.get(k):
-            out.append(f"{k}: pinned {json.dumps(pinned.get(k), sort_keys=True, default=str)[:160]} != live {json.dumps(live.get(k), sort_keys=True, default=str)[:160]}")
+            out.append(
+                f"{k}: pinned {json.dumps(pinned.get(k), sort_keys=True, default=str)[:160]} != live {json.dumps(live.get(k), sort_keys=True, default=str)[:160]}"
+            )
     if list_key:
-        lo = {str(o.get(item_id)): o for o in live.get(list_key) or [] if isinstance(o, dict)}
-        po = {str(o.get(item_id)): o for o in pinned.get(list_key) or [] if isinstance(o, dict)}
+        lo = {
+            str(o.get(item_id)): o
+            for o in live.get(list_key) or []
+            if isinstance(o, dict)
+        }
+        po = {
+            str(o.get(item_id)): o
+            for o in pinned.get(list_key) or []
+            if isinstance(o, dict)
+        }
         for t in sorted(set(lo) | set(po)):
             if t not in lo:
                 out.append(f"{list_key} {t}: pinned but not in the installed contract")
@@ -188,12 +284,20 @@ def drift_report(live: Dict[str, Any], pinned: Dict[str, Any], keys: Tuple[str, 
             else:
                 for k in item_keys:
                     if lo[t].get(k) != po[t].get(k):
-                        out.append(f"{list_key} {t}.{k}: pinned {json.dumps(po[t].get(k), sort_keys=True, default=str)[:120]} != live {json.dumps(lo[t].get(k), sort_keys=True, default=str)[:120]}")
+                        out.append(
+                            f"{list_key} {t}.{k}: pinned {json.dumps(po[t].get(k), sort_keys=True, default=str)[:120]} != live {json.dumps(lo[t].get(k), sort_keys=True, default=str)[:120]}"
+                        )
     return out
 
 
-def breaking_drift(live: Dict[str, Any], pinned: Dict[str, Any], fatal_keys: Tuple[str, ...], list_key: Optional[str] = None, item_id: str = "type",
-                   fatal_item_keys: Tuple[str, ...] = ()) -> List[str]:
+def breaking_drift(
+    live: Dict[str, Any],
+    pinned: Dict[str, Any],
+    fatal_keys: Tuple[str, ...],
+    list_key: Optional[str] = None,
+    item_id: str = "type",
+    fatal_item_keys: Tuple[str, ...] = (),
+) -> List[str]:
     """The subset of `drift_report`'s differences that can actually change this adapter's behaviour: a change to a
     field it depends on for the wire protocol or for assumptions baked in outside per-call validation (`fatal_keys` /
     `fatal_item_keys`), or an item the adapter already relies on disappearing from the live contract. A satellite
@@ -201,21 +305,34 @@ def breaking_drift(live: Dict[str, Any], pinned: Dict[str, Any], fatal_keys: Tup
     capability than the pinned snapshot knew about), or a change confined to a field the adapter re-validates
     against the live contract on every call (an operation's `parameters` schema, for one) is still visible via
     `drift_report`/`.drift()` for operators, but a purely additive Skill release must not flip a capability from
-    AVAILABLE to MISSING by itself — only a genuine `fatal_keys` finding does that (ADR-045)."""
+    AVAILABLE to MISSING by itself — only a genuine `fatal_keys` finding does that (ADR-045).
+    """
     out: List[str] = []
     for k in fatal_keys:
         if live.get(k) != pinned.get(k):
-            out.append(f"{k}: pinned {json.dumps(pinned.get(k), sort_keys=True, default=str)[:160]} != live {json.dumps(live.get(k), sort_keys=True, default=str)[:160]}")
+            out.append(
+                f"{k}: pinned {json.dumps(pinned.get(k), sort_keys=True, default=str)[:160]} != live {json.dumps(live.get(k), sort_keys=True, default=str)[:160]}"
+            )
     if list_key:
-        lo = {str(o.get(item_id)): o for o in live.get(list_key) or [] if isinstance(o, dict)}
-        po = {str(o.get(item_id)): o for o in pinned.get(list_key) or [] if isinstance(o, dict)}
+        lo = {
+            str(o.get(item_id)): o
+            for o in live.get(list_key) or []
+            if isinstance(o, dict)
+        }
+        po = {
+            str(o.get(item_id)): o
+            for o in pinned.get(list_key) or []
+            if isinstance(o, dict)
+        }
         for t in sorted(po):
             if t not in lo:
                 out.append(f"{list_key} {t}: pinned but not in the installed contract")
         for t in sorted(set(lo) & set(po)):
             for k in fatal_item_keys:
                 if lo[t].get(k) != po[t].get(k):
-                    out.append(f"{list_key} {t}.{k}: pinned {json.dumps(po[t].get(k), sort_keys=True, default=str)[:120]} != live {json.dumps(lo[t].get(k), sort_keys=True, default=str)[:120]}")
+                    out.append(
+                        f"{list_key} {t}.{k}: pinned {json.dumps(po[t].get(k), sort_keys=True, default=str)[:120]} != live {json.dumps(lo[t].get(k), sort_keys=True, default=str)[:120]}"
+                    )
     return out
 
 
@@ -230,10 +347,14 @@ def engine_compat_errors(fs: Dict[str, Any], field: str = "ffmpeg_skill") -> Lis
     result in its own doctor, which the resolver already requires to be ok). Either way the Skill, not this adapter,
     owns the engine check; what is refused is a contract that declares neither."""
     if str(fs.get("contract_version")) not in ENGINE_CONTRACT_VERSIONS:
-        return [f"{field}.contract_version {fs.get('contract_version')!r} not in {ENGINE_CONTRACT_VERSIONS}"]
+        return [
+            f"{field}.contract_version {fs.get('contract_version')!r} not in {ENGINE_CONTRACT_VERSIONS}"
+        ]
     if isinstance(fs.get("version_window"), dict) or fs.get("compatibility"):
         return []
-    return [f"{field}: neither version_window nor compatibility declared (the Skill must say how it stays compatible with its engine)"]
+    return [
+        f"{field}: neither version_window nor compatibility declared (the Skill must say how it stays compatible with its engine)"
+    ]
 
 
 def engine_compat(fs: Dict[str, Any]) -> Any:
@@ -247,7 +368,8 @@ def engine_compat(fs: Dict[str, Any]) -> Any:
 
 def error_table(contract: Dict[str, Any]) -> Tuple[Dict[str, bool], Dict[str, int]]:
     """(code → retryable, code → exit code) from a contract's `errors` block. Two shapes exist in the ecosystem: a `retryable`
-    map (audio-production family) or a `non_retryable` list (subtitle-skill); both are read, nothing is assumed."""
+    map (audio-production family) or a `non_retryable` list (subtitle-skill); both are read, nothing is assumed.
+    """
     errs = contract.get("errors") or {}
     codes = [str(c) for c in errs.get("codes") or []]
     if isinstance(errs.get("retryable"), dict):
@@ -257,29 +379,78 @@ def error_table(contract: Dict[str, Any]) -> Tuple[Dict[str, bool], Dict[str, in
         retry = {c: c not in nr for c in codes}
     else:
         retry = {c: False for c in codes}
-    exit_codes = {str(k): int(v) for k, v in (errs.get("exit_codes") or {}).items()} if isinstance(errs.get("exit_codes"), dict) else {}
+    exit_codes = (
+        {str(k): int(v) for k, v in (errs.get("exit_codes") or {}).items()}
+        if isinstance(errs.get("exit_codes"), dict)
+        else {}
+    )
     return retry, exit_codes
 
 
 # the agent's reading of the ecosystem's shared error vocabulary (recovery class); a Skill's own retryable verdict is kept beside it
 RECOVERY_CLASS: Dict[str, str] = {
-    "INVALID_REQUEST": "INVALID_ARGS", "UNSUPPORTED_OPERATION": "INVALID_ARGS", "UNSUPPORTED_FORMAT": "INVALID_ARGS", "INVALID_TIME_RANGE": "INVALID_ARGS",
-    "DEPENDENCY_ERROR": "INVALID_ARGS", "INVALID_INPUT": "INPUT_MISSING", "PATH_NOT_ALLOWED": "INPUT_MISSING", "MISSING_INPUT": "INPUT_MISSING",
-    "TOOL_ERROR": "UNKNOWN", "CANCELLED": "TIMEOUT", "TIMEOUT": "TIMEOUT", "OUTPUT_ERROR": "SKILL_ERROR", "VALIDATION_ERROR": "SKILL_ERROR", "INTERNAL_ERROR": "SKILL_ERROR",
+    "INVALID_REQUEST": "INVALID_ARGS",
+    "UNSUPPORTED_OPERATION": "INVALID_ARGS",
+    "UNSUPPORTED_FORMAT": "INVALID_ARGS",
+    "INVALID_TIME_RANGE": "INVALID_ARGS",
+    "DEPENDENCY_ERROR": "INVALID_ARGS",
+    "INVALID_INPUT": "INPUT_MISSING",
+    "PATH_NOT_ALLOWED": "INPUT_MISSING",
+    "MISSING_INPUT": "INPUT_MISSING",
+    "TOOL_ERROR": "UNKNOWN",
+    "CANCELLED": "TIMEOUT",
+    "TIMEOUT": "TIMEOUT",
+    "OUTPUT_ERROR": "SKILL_ERROR",
+    "VALIDATION_ERROR": "SKILL_ERROR",
+    "INTERNAL_ERROR": "SKILL_ERROR",
     "INVALID_RESULT": "SKILL_ERROR",
 }
 
 
-def failed_result(op: Operation, skill_id: str, version: str, attempt: int, dry_run: bool, t0: float, code: int, errc: str, message: str, retryable: bool,
-                  details: Optional[Dict[str, Any]] = None, extra: Optional[Dict[str, Any]] = None) -> ToolResult:
+def failed_result(
+    op: Operation,
+    skill_id: str,
+    version: str,
+    attempt: int,
+    dry_run: bool,
+    t0: float,
+    code: int,
+    errc: str,
+    message: str,
+    retryable: bool,
+    details: Optional[Dict[str, Any]] = None,
+    extra: Optional[Dict[str, Any]] = None,
+) -> ToolResult:
     """The failed ToolResult every adapter of this family returns: the Skill's code / message / retryable verdict, the exit code,
-    and the agent's recovery class (recovery.py prefers this structured error over stderr heuristics)."""
-    data: Dict[str, Any] = {"skill": {"id": skill_id, "version": version}, "status": "failed",
-                            "error": {"code": errc, "message": message, "retryable": bool(retryable), "details": details or {}, "exit_code": code,
-                                      "recovery_class": RECOVERY_CLASS.get(errc, "SKILL_ERROR")}}
+    and the agent's recovery class (recovery.py prefers this structured error over stderr heuristics).
+    """
+    data: Dict[str, Any] = {
+        "skill": {"id": skill_id, "version": version},
+        "status": "failed",
+        "error": {
+            "code": errc,
+            "message": message,
+            "retryable": bool(retryable),
+            "details": details or {},
+            "exit_code": code,
+            "recovery_class": RECOVERY_CLASS.get(errc, "SKILL_ERROR"),
+        },
+    }
     if extra:
         data.update(extra)
-    return ToolResult(op.id, op.tool, False, code, None, data, list(data.get("commands") or []), f"{skill_id} [{errc}] {message}", round(time.time() - t0, 3), attempt, dry_run)
+    return ToolResult(
+        op.id,
+        op.tool,
+        False,
+        code,
+        None,
+        data,
+        list(data.get("commands") or []),
+        f"{skill_id} [{errc}] {message}",
+        round(time.time() - t0, 3),
+        attempt,
+        dry_run,
+    )
 
 
 def as_dict(v: Any) -> Dict[str, Any]:

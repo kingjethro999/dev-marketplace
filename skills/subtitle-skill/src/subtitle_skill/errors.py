@@ -4,10 +4,10 @@ Error codes follow the shared Skill-ecosystem convention (typed, stable
 identifiers rather than free-form strings) so callers such as
 video-production-agent can branch on `code` instead of parsing messages.
 """
+
 from __future__ import annotations
 
 from typing import Any
-
 
 #: Error codes that must never be produced by normal operation without a
 #: caller-actionable reason. Every raised error picks exactly one of these.

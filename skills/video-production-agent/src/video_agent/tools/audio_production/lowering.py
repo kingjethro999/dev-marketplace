@@ -11,7 +11,9 @@ Strings (ADR-072): a contract string with an `enum` must be one of its values; a
 text and lexicon words, NORMALIZE.profile) may be any script — えー, um — but never empty, longer than its `max_length`, or carrying a
 control / format character (newline, NUL, bidi override). Nothing else becomes non-ASCII. Arrays are bounded by the contract's own
 `max_items` (FILLER_REMOVE.words: a transcript's words, 100000), otherwise by 32. The request travels as UTF-8 JSON on stdin (the
-Skill reads UTF-8 and answers in ASCII JSON), so a long word list is data in the request document, never argv."""
+Skill reads UTF-8 and answers in ASCII JSON), so a long word list is data in the request document, never argv.
+"""
+
 from __future__ import annotations
 
 import os
@@ -31,22 +33,70 @@ OUTPUT_ID = "out"
 PROJECT_ID_FALLBACK = "op"
 # agent-side argument keys every operation takes (references, output format, output expectations); parameters come from the contract
 COMMON_ARGS = ("operation", "input", "inputs", "output", "format", "expect")
-EXPECT_KEYS = ("channels", "sample_rate", "channel_layout", "duration", "duration_tolerance")
+EXPECT_KEYS = (
+    "channels",
+    "sample_rate",
+    "channel_layout",
+    "duration",
+    "duration_tolerance",
+)
 COMMON_KEYS = ("timeout",)
 # the Skill's own forbidden fields plus the agent's boundary vocabulary: never forwarded, never accepted as a parameter name
-FORBIDDEN_ARG_KEYS = ("command", "commands", "argv", "cmd", "shell", "exec", "args", "script", "binary", "executable", "executables", "env", "environment", "cwd",
-                      "filter", "filters", "filter_complex", "af", "ffmpeg", "ffprobe", "api_key", "apikey", "token", "secret", "password", "credentials",
-                      "workspace", "allowed_input", "allowed_inputs", "allowed_input_roots", "allowed-input", "ffmpeg_skill", "ffmpeg-skill", "ffmpeg_skill_dir", "path", "paths")
+FORBIDDEN_ARG_KEYS = (
+    "command",
+    "commands",
+    "argv",
+    "cmd",
+    "shell",
+    "exec",
+    "args",
+    "script",
+    "binary",
+    "executable",
+    "executables",
+    "env",
+    "environment",
+    "cwd",
+    "filter",
+    "filters",
+    "filter_complex",
+    "af",
+    "ffmpeg",
+    "ffprobe",
+    "api_key",
+    "apikey",
+    "token",
+    "secret",
+    "password",
+    "credentials",
+    "workspace",
+    "allowed_input",
+    "allowed_inputs",
+    "allowed_input_roots",
+    "allowed-input",
+    "ffmpeg_skill",
+    "ffmpeg-skill",
+    "ffmpeg_skill_dir",
+    "path",
+    "paths",
+)
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _RANGE_PARAMS = ("remove", "ranges")
-DEFAULT_MAX_ITEMS = 32   # an array the contract does not bound (levels, ranges, presets) never carries more than this
+DEFAULT_MAX_ITEMS = 32  # an array the contract does not bound (levels, ranges, presets) never carries more than this
 
 
 def _text(v: Any, spec: Dict[str, Any], what: str) -> str:
     """A free-text contract string: printable in any script, 1..max_length characters, no control / format / unassigned code point."""
     limit = int(spec.get("max_length") or 64)
-    if not isinstance(v, str) or not v or len(v) > limit or any(unicodedata.category(c).startswith("C") for c in v):
-        raise ToolError(f"audio-production: {what} must be a printable string of 1..{limit} characters")
+    if (
+        not isinstance(v, str)
+        or not v
+        or len(v) > limit
+        or any(unicodedata.category(c).startswith("C") for c in v)
+    ):
+        raise ToolError(
+            f"audio-production: {what} must be a printable string of 1..{limit} characters"
+        )
     return v
 
 
@@ -56,7 +106,12 @@ def safe_id(raw: str, fallback: str = PROJECT_ID_FALLBACK) -> str:
 
 
 def _finite(v: Any, what: str) -> float:
-    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v in (float("inf"), float("-inf")):
+    if (
+        isinstance(v, bool)
+        or not isinstance(v, (int, float))
+        or v != v
+        or v in (float("inf"), float("-inf"))
+    ):
         raise ToolError(f"audio-production: {what} must be a finite number")
     return float(v)
 
@@ -68,9 +123,13 @@ def _number(v: Any, spec: Dict[str, Any], what: str) -> Any:
             raise ToolError(f"audio-production: {what} must be an integer")
         x = int(x)
     if "min" in spec and x < spec["min"]:
-        raise ToolError(f"audio-production: {what} {x} is below the contract minimum {spec['min']}")
+        raise ToolError(
+            f"audio-production: {what} {x} is below the contract minimum {spec['min']}"
+        )
     if "max" in spec and x > spec["max"]:
-        raise ToolError(f"audio-production: {what} {x} is above the contract maximum {spec['max']}")
+        raise ToolError(
+            f"audio-production: {what} {x} is above the contract maximum {spec['max']}"
+        )
     if "enum" in spec and x not in spec["enum"]:
         raise ToolError(f"audio-production: {what} {x} is not one of {spec['enum']}")
     return x
@@ -90,7 +149,9 @@ def _ranges(v: Any, what: str) -> List[Dict[str, float]]:
             raise ToolError(f"audio-production: {what}[{i}] must be [start, end]")
         s, e = _finite(s, f"{what}[{i}].start"), _finite(e, f"{what}[{i}].end")
         if s < 0 or not s < e:
-            raise ToolError(f"audio-production: {what}[{i}] must satisfy 0 <= start < end")
+            raise ToolError(
+                f"audio-production: {what}[{i}] must satisfy 0 <= start < end"
+            )
         out.append({"start": round(s, 6), "end": round(e, 6)})
     return out
 
@@ -100,9 +161,11 @@ def _value(v: Any, spec: Dict[str, Any], what: str) -> Any:
     if t in ("number", "integer"):
         return _number(v, spec, what)
     if t == "string":
-        if "enum" in spec:   # a closed vocabulary: exactly one of the contract's values
+        if "enum" in spec:  # a closed vocabulary: exactly one of the contract's values
             if not isinstance(v, str) or v not in spec["enum"]:
-                raise ToolError(f"audio-production: {what} {v!r} is not one of {spec['enum']}")
+                raise ToolError(
+                    f"audio-production: {what} {v!r} is not one of {spec['enum']}"
+                )
             return v
         return _text(v, spec, what)
     if t == "boolean":
@@ -116,14 +179,18 @@ def _value(v: Any, spec: Dict[str, Any], what: str) -> Any:
             return _ranges(v, what)
         limit = int(spec.get("max_items") or DEFAULT_MAX_ITEMS)
         if not isinstance(v, list) or len(v) > limit:
-            raise ToolError(f"audio-production: {what} must be a list of at most {limit} items")
+            raise ToolError(
+                f"audio-production: {what} must be a list of at most {limit} items"
+            )
         return [_value(x, items, f"{what}[{i}]") for i, x in enumerate(v)]
     if t == "object":
         props = spec.get("properties") or {}
         if not props and spec.get("schema"):
             # ADR-072: another Skill's document (FILLER_REMOVE.transcript, transcription-skill/transcript/0.1) is not forwarded: the agent sends the
             # transcript's words instead, carried onto the timeline of the audio it cuts (the transcript's own times are the source's)
-            raise ToolError(f"audio-production: {what} ({spec['schema']}) is not sent by this adapter; send the word timings as `words`")
+            raise ToolError(
+                f"audio-production: {what} ({spec['schema']}) is not sent by this adapter; send the word timings as `words`"
+            )
         if not isinstance(v, dict):
             raise ToolError(f"audio-production: {what} must be an object")
         out = {}
@@ -131,27 +198,56 @@ def _value(v: Any, spec: Dict[str, Any], what: str) -> Any:
             if not isinstance(k, str) or k.lower() in FORBIDDEN_ARG_KEYS:
                 raise ToolError(f"audio-production: refusing key {k!r} under {what}")
             if k not in props:
-                raise ToolError(f"audio-production: {what}.{k} is not declared by the contract")
+                raise ToolError(
+                    f"audio-production: {what}.{k} is not declared by the contract"
+                )
             out[k] = _value(x, props[k], f"{what}.{k}")
         # required members: an object's `required` list / `required_properties`, or a member's own `required: true` (MIX.duck input / amount_db)
-        need = [str(k) for k in (spec.get("required_properties") or (spec["required"] if isinstance(spec.get("required"), list) else []))]
-        need += [k for k, ps in props.items() if isinstance(ps, dict) and ps.get("required") is True and k not in need]
+        need = [
+            str(k)
+            for k in (
+                spec.get("required_properties")
+                or (spec["required"] if isinstance(spec.get("required"), list) else [])
+            )
+        ]
+        need += [
+            k
+            for k, ps in props.items()
+            if isinstance(ps, dict) and ps.get("required") is True and k not in need
+        ]
         missing = [k for k in need if k not in out]
         if missing:
             raise ToolError(f"audio-production: {what} needs {missing}")
         return out
-    raise ToolError(f"audio-production: {what}: contract type {t!r} is not lowered by this adapter")
+    raise ToolError(
+        f"audio-production: {what}: contract type {t!r} is not lowered by this adapter"
+    )
 
 
 class Lowering:
     """Builds requests for one contract: operations, their parameter schemas, output formats and forbidden fields come from it."""
 
     def __init__(self, contract: Dict[str, Any], workspace: Optional[str] = None):
-        self.operations: Dict[str, Dict[str, Any]] = {o["type"]: o for o in contract.get("operations") or [] if isinstance(o, dict) and o.get("type")}
-        self.unsupported: List[str] = [str(u.get("type")) for u in contract.get("unsupported_operations") or [] if isinstance(u, dict) and u.get("type")]
-        self.formats: Dict[str, Dict[str, Any]] = dict(contract.get("output_formats") or {})
-        self.request_schema = str((contract.get("request") or {}).get("schema") or REQUEST_SCHEMA)
-        self.forbidden = tuple(set(FORBIDDEN_ARG_KEYS) | set((contract.get("request") or {}).get("forbidden_fields") or []))
+        self.operations: Dict[str, Dict[str, Any]] = {
+            o["type"]: o
+            for o in contract.get("operations") or []
+            if isinstance(o, dict) and o.get("type")
+        }
+        self.unsupported: List[str] = [
+            str(u.get("type"))
+            for u in contract.get("unsupported_operations") or []
+            if isinstance(u, dict) and u.get("type")
+        ]
+        self.formats: Dict[str, Dict[str, Any]] = dict(
+            contract.get("output_formats") or {}
+        )
+        self.request_schema = str(
+            (contract.get("request") or {}).get("schema") or REQUEST_SCHEMA
+        )
+        self.forbidden = tuple(
+            set(FORBIDDEN_ARG_KEYS)
+            | set((contract.get("request") or {}).get("forbidden_fields") or [])
+        )
         self.workspace = str(Path(workspace).resolve()) if workspace else None
 
     def supported_types(self) -> List[str]:
@@ -166,9 +262,13 @@ class Lowering:
             if k in COMMON_ARGS or k in COMMON_KEYS:
                 continue
             if str(k).lower() in self.forbidden:
-                raise ToolError(f"audio-production: refusing argument {k!r} (commands, argv, filters, executables, environment, path policy and credentials never cross the Skill boundary)")
+                raise ToolError(
+                    f"audio-production: refusing argument {k!r} (commands, argv, filters, executables, environment, path policy and credentials never cross the Skill boundary)"
+                )
             if k not in schema:
-                raise ToolError(f"audio-production: {t} does not take parameter {k!r} (contract parameters: {sorted(schema)})")
+                raise ToolError(
+                    f"audio-production: {t} does not take parameter {k!r} (contract parameters: {sorted(schema)})"
+                )
             if v is None:
                 continue
             params[k] = _value(v, schema[k], f"{t}.{k}")
@@ -182,24 +282,40 @@ class Lowering:
         try:
             rel = os.path.relpath(str(Path(path).resolve()), ws)
         except ValueError as e:
-            raise ToolError(f"audio-production: output must be inside the workspace {ws}: {e}")
+            raise ToolError(
+                f"audio-production: output must be inside the workspace {ws}: {e}"
+            )
         if rel == "." or rel.startswith("..") or os.path.isabs(rel):
-            raise ToolError(f"audio-production: output {path} is outside the workspace {ws}")
+            raise ToolError(
+                f"audio-production: output {path} is outside the workspace {ws}"
+            )
         return rel.replace(os.sep, "/")
 
-    def build_request(self, args: Dict[str, Any], paths: Dict[str, str], op_id: str = "op", timeout: Optional[float] = None,
-                      workspace: Optional[str] = None) -> Tuple[Dict[str, Any], str, List[str], str]:
+    def build_request(
+        self,
+        args: Dict[str, Any],
+        paths: Dict[str, str],
+        op_id: str = "op",
+        timeout: Optional[float] = None,
+        workspace: Optional[str] = None,
+    ) -> Tuple[Dict[str, Any], str, List[str], str]:
         """(request document, absolute output path, absolute input paths, operation type)."""
         t = args.get("operation")
         if not isinstance(t, str) or not t:
             raise ToolError("audio-production: an `operation` type is required")
         if t in self.unsupported:
-            raise ToolError(f"audio-production: operation {t} is declared unsupported by the installed contract (not implemented by the Skill)")
+            raise ToolError(
+                f"audio-production: operation {t} is declared unsupported by the installed contract (not implemented by the Skill)"
+            )
         if t not in self.operations:
-            raise ToolError(f"audio-production: operation {t} is not declared by the installed contract (unsupported operation)")
+            raise ToolError(
+                f"audio-production: operation {t} is not declared by the installed contract (unsupported operation)"
+            )
         for k in args:
             if str(k).lower() in self.forbidden:
-                raise ToolError(f"audio-production: refusing argument {k!r} (commands, argv, filters, executables, environment, path policy and credentials never cross the Skill boundary)")
+                raise ToolError(
+                    f"audio-production: refusing argument {k!r} (commands, argv, filters, executables, environment, path policy and credentials never cross the Skill boundary)"
+                )
         params = self.params_for(t, args)
         arity = self.operations[t].get("inputs") or {}
         lo, hi = int(arity.get("min", 1)), int(arity.get("max", 1))
@@ -211,35 +327,71 @@ class Lowering:
         else:
             raise ToolError(f"audio-production: {t} needs an `input` (or `inputs`)")
         if not (lo <= len(ids) <= hi) or not all(i for i in ids):
-            raise ToolError(f"audio-production: {t} takes {lo}..{hi} input(s), got {len(ids)}")
+            raise ToolError(
+                f"audio-production: {t} takes {lo}..{hi} input(s), got {len(ids)}"
+            )
         in_paths: List[str] = [str(Path(str(paths.get(i, i))).resolve()) for i in ids]
         fmt = args.get("format") or "wav"
         if fmt not in self.formats:
-            raise ToolError(f"audio-production: output format {fmt!r} is not declared by the contract ({sorted(self.formats)})")
+            raise ToolError(
+                f"audio-production: output format {fmt!r} is not declared by the contract ({sorted(self.formats)})"
+            )
         if not isinstance(args.get("output"), str) or not args["output"]:
             raise ToolError(f"audio-production: {t} needs an `output`")
         out_path = os.path.abspath(paths.get(args["output"], args["output"]))
-        if Path(out_path).suffix.lower() != str(self.formats[fmt].get("extension") or "").lower():
-            raise ToolError(f"audio-production: output extension {Path(out_path).suffix!r} does not match format {fmt!r}")
+        if (
+            Path(out_path).suffix.lower()
+            != str(self.formats[fmt].get("extension") or "").lower()
+        ):
+            raise ToolError(
+                f"audio-production: output extension {Path(out_path).suffix!r} does not match format {fmt!r}"
+            )
         expect: Dict[str, Any] = {}
         if args.get("expect") is not None:
             if not isinstance(args["expect"], dict):
                 raise ToolError("audio-production: expect must be an object")
             for k, v in args["expect"].items():
                 if k not in EXPECT_KEYS:
-                    raise ToolError(f"audio-production: expect.{k} is not an output expectation")
+                    raise ToolError(
+                        f"audio-production: expect.{k} is not an output expectation"
+                    )
                 expect[k] = v if k == "channel_layout" else _finite(v, f"expect.{k}")
                 if k in ("channels", "sample_rate"):
                     expect[k] = int(expect[k])
-        sources = [{"source_id": SOURCE_ID.format(n=n), "path": p} for n, p in enumerate(in_paths)]
-        tracks = [{"track_id": TRACK_ID.format(n=n), "source_id": SOURCE_ID.format(n=n)} for n in range(len(in_paths))]
-        operation = {"op_id": OPERATION_ID, "type": t, "inputs": [f"track:{TRACK_ID.format(n=n)}" for n in range(len(in_paths))], "parameters": params}
-        output: Dict[str, Any] = {"output_id": OUTPUT_ID, "operation": f"op:{OPERATION_ID}", "path": self.relative_output(out_path, workspace), "format": fmt, "overwrite": True}
+        sources = [
+            {"source_id": SOURCE_ID.format(n=n), "path": p}
+            for n, p in enumerate(in_paths)
+        ]
+        tracks = [
+            {"track_id": TRACK_ID.format(n=n), "source_id": SOURCE_ID.format(n=n)}
+            for n in range(len(in_paths))
+        ]
+        operation = {
+            "op_id": OPERATION_ID,
+            "type": t,
+            "inputs": [f"track:{TRACK_ID.format(n=n)}" for n in range(len(in_paths))],
+            "parameters": params,
+        }
+        output: Dict[str, Any] = {
+            "output_id": OUTPUT_ID,
+            "operation": f"op:{OPERATION_ID}",
+            "path": self.relative_output(out_path, workspace),
+            "format": fmt,
+            "overwrite": True,
+        }
         if expect:
             output["expect"] = expect
-        req: Dict[str, Any] = {"schema": self.request_schema,
-                               "project": {"project_id": safe_id(op_id), "sources": sources, "tracks": tracks, "operations": [operation], "outputs": [output]},
-                               "options": {"reuse_intermediates": True}}
+        req: Dict[str, Any] = {
+            "schema": self.request_schema,
+            "project": {
+                "project_id": safe_id(op_id),
+                "sources": sources,
+                "tracks": tracks,
+                "operations": [operation],
+                "outputs": [output],
+            },
+            "options": {"reuse_intermediates": True},
+        }
         if timeout is not None and timeout > 0:
             req["options"]["timeout"] = int(min(max(1, timeout), 86400))
         return req, out_path, in_paths, t

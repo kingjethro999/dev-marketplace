@@ -29,58 +29,165 @@ invented: give an image or a colour.
   python3 waveform.py ep.m4a --image cover.png --platform reels --position strip -o ep.mp4
   python3 waveform.py ep.m4a --image cover.png --srt ep.srt --title "Episode 12" -o ep.mp4
 """
+
 import argparse
 import json
 import os
 import sys
 
 from _platforms import PLATFORMS, PLATFORM_CHOICES, resolve as resolve_platform
-from _common import (add_common, apply_common, aac_args, default_output, die, draws_chroma, emit, ffmpeg_base,
-                     info, load_brand, pad_filters, probe, rgb_chain_to_bt709, run, STATE, validate_color, video_args, X264_PRESETS,
-                     fmt_secs, child_args, run_tool, measured_level_dbfs)
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    default_output,
+    die,
+    draws_chroma,
+    emit,
+    ffmpeg_base,
+    info,
+    load_brand,
+    pad_filters,
+    probe,
+    rgb_chain_to_bt709,
+    run,
+    STATE,
+    validate_color,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+    child_args,
+    run_tool,
+    measured_level_dbfs,
+)
 from _common.emit import absorb_stage_hw
 
 WAVEFORM_MODES = ["point", "line", "p2p", "cline"]
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="output file (default: <name>_waveform.<ext>)")
-    ap.add_argument("--style", choices=["waveform", "spectrum"], default="waveform", help="waveform (default) or spectrum visualization")
-    ap.add_argument("--width", type=int, default=1920, help="output width in px, must be even (default 1920)")
-    ap.add_argument("--height", type=int, default=1080, help="output height in px, must be even (default 1080)")
-    ap.add_argument("--fps", type=float, default=25.0, help="output frame rate (default 25)")
-    ap.add_argument("--color", default="lime", help="channel colour(s), pipe-separated per channel, e.g. 'lime' or 'cyan|magenta' (default lime)")
-    ap.add_argument("--background", default="black", help="background colour (default black)")
-    ap.add_argument("--waveform-mode", choices=WAVEFORM_MODES, default="line", help="--style waveform only: how each sample is drawn (default line)")
-    ap.add_argument("--split-channels", action="store_true", help="draw each channel in its own lane instead of summing to one")
-    ap.add_argument("--audio-stream", type=int, default=0,
-                     help="which audio stream of the input to render, 0-based in file order (default 0)")
-    ap.add_argument("--on-silent", choices=["warn", "fail"], default="warn",
-                    help="input audio whose peak is at or below --silence-threshold (the render would be a flat "
-                         "line): warn (default: render it, report `silent: true`) or fail (refuse before ffmpeg runs)")
-    ap.add_argument("--silence-threshold", type=float, default=-50.0, metavar="DBFS",
-                    help="peak level in dBFS at or below which the input counts as silent (default -50)")
-    ag = ap.add_argument_group("audiogram (1.16)",
-                               "The visualisation over a picture, for an episode that has no video. The image is a "
-                               "local file you give: this skill has no network access and never invents cover art.")
-    ag.add_argument("--image", help="still image or brand plate to put behind the visualisation (a local file; scaled to cover the frame and centre-cropped)")
-    ag.add_argument("--image-fit", choices=["cover", "contain", "blur"], default="cover",
-                    help="how a still of the wrong aspect fills the frame: cover (default, crop the overflow), contain (bars in --background), blur (bars are a blurred copy, as fit.py)")
-    ag.add_argument("--position", choices=["bottom", "centre", "center", "top", "strip"], default="strip",
-                    help="where the visualisation sits over the plate (default strip: a band of --vis-height along the bottom, the podcast-audiogram convention)")
-    ag.add_argument("--vis-height", type=float, default=0.35,
-                    help="height of the visualisation band as a fraction of the frame (default 0.35)")
-    ag.add_argument("--opacity", type=float, default=1.0, help="visualisation alpha over the plate, 0..1 (default 1)")
-    ag.add_argument("--platform", choices=PLATFORM_CHOICES, default=None,
-                    help="take the frame size and fps from this destination instead of --width/--height/--fps")
-    ag.add_argument("--srt", help="burn these captions into the render afterwards, by running caption.py (never re-implemented here)")
+    ap.add_argument(
+        "-o", "--output", help="output file (default: <name>_waveform.<ext>)"
+    )
+    ap.add_argument(
+        "--style",
+        choices=["waveform", "spectrum"],
+        default="waveform",
+        help="waveform (default) or spectrum visualization",
+    )
+    ap.add_argument(
+        "--width",
+        type=int,
+        default=1920,
+        help="output width in px, must be even (default 1920)",
+    )
+    ap.add_argument(
+        "--height",
+        type=int,
+        default=1080,
+        help="output height in px, must be even (default 1080)",
+    )
+    ap.add_argument(
+        "--fps", type=float, default=25.0, help="output frame rate (default 25)"
+    )
+    ap.add_argument(
+        "--color",
+        default="lime",
+        help="channel colour(s), pipe-separated per channel, e.g. 'lime' or 'cyan|magenta' (default lime)",
+    )
+    ap.add_argument(
+        "--background", default="black", help="background colour (default black)"
+    )
+    ap.add_argument(
+        "--waveform-mode",
+        choices=WAVEFORM_MODES,
+        default="line",
+        help="--style waveform only: how each sample is drawn (default line)",
+    )
+    ap.add_argument(
+        "--split-channels",
+        action="store_true",
+        help="draw each channel in its own lane instead of summing to one",
+    )
+    ap.add_argument(
+        "--audio-stream",
+        type=int,
+        default=0,
+        help="which audio stream of the input to render, 0-based in file order (default 0)",
+    )
+    ap.add_argument(
+        "--on-silent",
+        choices=["warn", "fail"],
+        default="warn",
+        help="input audio whose peak is at or below --silence-threshold (the render would be a flat "
+        "line): warn (default: render it, report `silent: true`) or fail (refuse before ffmpeg runs)",
+    )
+    ap.add_argument(
+        "--silence-threshold",
+        type=float,
+        default=-50.0,
+        metavar="DBFS",
+        help="peak level in dBFS at or below which the input counts as silent (default -50)",
+    )
+    ag = ap.add_argument_group(
+        "audiogram (1.16)",
+        "The visualisation over a picture, for an episode that has no video. The image is a "
+        "local file you give: this skill has no network access and never invents cover art.",
+    )
+    ag.add_argument(
+        "--image",
+        help="still image or brand plate to put behind the visualisation (a local file; scaled to cover the frame and centre-cropped)",
+    )
+    ag.add_argument(
+        "--image-fit",
+        choices=["cover", "contain", "blur"],
+        default="cover",
+        help="how a still of the wrong aspect fills the frame: cover (default, crop the overflow), contain (bars in --background), blur (bars are a blurred copy, as fit.py)",
+    )
+    ag.add_argument(
+        "--position",
+        choices=["bottom", "centre", "center", "top", "strip"],
+        default="strip",
+        help="where the visualisation sits over the plate (default strip: a band of --vis-height along the bottom, the podcast-audiogram convention)",
+    )
+    ag.add_argument(
+        "--vis-height",
+        type=float,
+        default=0.35,
+        help="height of the visualisation band as a fraction of the frame (default 0.35)",
+    )
+    ag.add_argument(
+        "--opacity",
+        type=float,
+        default=1.0,
+        help="visualisation alpha over the plate, 0..1 (default 1)",
+    )
+    ag.add_argument(
+        "--platform",
+        choices=PLATFORM_CHOICES,
+        default=None,
+        help="take the frame size and fps from this destination instead of --width/--height/--fps",
+    )
+    ag.add_argument(
+        "--srt",
+        help="burn these captions into the render afterwards, by running caption.py (never re-implemented here)",
+    )
     ag.add_argument("--text", help="plain cue file to burn, same as caption.py --text")
-    ag.add_argument("--title", help="one static label drawn over the plate, through graphics.py's sticker template")
-    ag.add_argument("--brand", help="brand.json: --color / --background / font defaults")
+    ag.add_argument(
+        "--title",
+        help="one static label drawn over the plate, through graphics.py's sticker template",
+    )
+    ag.add_argument(
+        "--brand", help="brand.json: --color / --background / font defaults"
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -89,11 +196,16 @@ def main() -> int:
     if args.platform:
         frame = PLATFORMS[args.platform].get("frame")
         if not frame:
-            die(f"--platform {args.platform}: that destination has no frame (it is an audio spec); "
-                "give --width/--height, or name a destination that has a picture", kind="input")
+            die(
+                f"--platform {args.platform}: that destination has no frame (it is an audio spec); "
+                "give --width/--height, or name a destination that has a picture",
+                kind="input",
+            )
         args.width, args.height = frame["w"], frame["h"]
         args.fps = float(PLATFORMS[args.platform].get("fps") or args.fps)
-        info(f"--platform {args.platform}: {args.width}x{args.height} @ {args.fps:g}fps")
+        info(
+            f"--platform {args.platform}: {args.width}x{args.height} @ {args.fps:g}fps"
+        )
     brand = load_brand(args.brand) if args.brand else None
     if brand:
         bc = brand.get("colors") or {}
@@ -103,17 +215,26 @@ def main() -> int:
             args.background = bc["background"]
     if args.image:
         if "://" in args.image:
-            die("--image must be a readable local file; this skill has no network access, so save "
-                "the image locally and pass its path", kind="input")
+            die(
+                "--image must be a readable local file; this skill has no network access, so save "
+                "the image locally and pass its path",
+                kind="input",
+            )
         if not os.path.exists(args.image):
             die(f"--image file not found: {args.image}", kind="input")
         if not STATE.dry_run:
             plate = probe(args.image, role="input")
             if not (plate.get("video") or {}).get("width"):
-                die(f"--image is not an image ffmpeg can decode: {args.image}", kind="input")
+                die(
+                    f"--image is not an image ffmpeg can decode: {args.image}",
+                    kind="input",
+                )
         if args.background != "black":
-            die("--image and a non-default --background exclude each other: the plate is either "
-                "the picture or the colour", kind="input")
+            die(
+                "--image and a non-default --background exclude each other: the plate is either "
+                "the picture or the colour",
+                kind="input",
+            )
     if not 0.0 <= args.opacity <= 1.0:
         die(f"--opacity must be between 0 and 1, got {args.opacity:g}")
     if not 0.0 < args.vis_height <= 1.0:
@@ -127,9 +248,13 @@ def main() -> int:
             die(f"{flag} file not found: {path}", kind="input")
 
     if args.width <= 0 or args.height <= 0:
-        die(f"--width/--height must be > 0, got width={args.width} height={args.height}")
+        die(
+            f"--width/--height must be > 0, got width={args.width} height={args.height}"
+        )
     if args.width % 2 or args.height % 2:
-        die(f"--width/--height must be even (4:2:0 chroma), got width={args.width} height={args.height}")
+        die(
+            f"--width/--height must be even (4:2:0 chroma), got width={args.width} height={args.height}"
+        )
     for token in args.color.split("|"):
         validate_color(token, "--color")
     validate_color(args.background, "--background")
@@ -141,20 +266,29 @@ def main() -> int:
         die("input has no audio stream")
     audio_streams = meta.get("audio_streams") or []
     if audio_streams and not (0 <= args.audio_stream < len(audio_streams)):
-        die(f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}")
+        die(
+            f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}"
+        )
     if args.silence_threshold >= 0:
-        die(f"--silence-threshold is a peak level in dBFS and must be negative, got {args.silence_threshold:g}")
+        die(
+            f"--silence-threshold is a peak level in dBFS and must be negative, got {args.silence_threshold:g}"
+        )
     # silent input draws a flat line that used to be reported as verified; a writing tool's dry
     # run runs no ffmpeg (docs/contract.md), so only the real run measures
     silent_peak = None
     if not STATE.dry_run:
-        level = measured_level_dbfs(args.input, seconds=None, audio_stream=args.audio_stream)
+        level = measured_level_dbfs(
+            args.input, seconds=None, audio_stream=args.audio_stream
+        )
         if level is not None and level["peak_dbfs"] <= args.silence_threshold:
             silent_peak = level["peak_dbfs"]
             if args.on_silent == "fail":
-                die(f"{args.input} is silent (audio stream {args.audio_stream} peaks at {silent_peak:g} dBFS, at or below "
+                die(
+                    f"{args.input} is silent (audio stream {args.audio_stream} peaks at {silent_peak:g} dBFS, at or below "
                     f"--silence-threshold {args.silence_threshold:g}): the visualisation would be a flat line",
-                    kind="input", hint="check the audio, or pass --on-silent warn to render it anyway")
+                    kind="input",
+                    hint="check the audio, or pass --on-silent warn to render it anyway",
+                )
     output = args.output or default_output(args.input, "waveform")
 
     # The visualisation's own band. Without --image/--position it fills the frame, which is what
@@ -164,25 +298,39 @@ def main() -> int:
     if args.image:
         vis_h = max(2, int(round(args.height * args.vis_height)) // 2 * 2)
         pos = "centre" if args.position == "center" else args.position
-        vis_y = {"top": 0, "centre": (args.height - vis_h) // 2,
-                 "bottom": args.height - vis_h, "strip": args.height - vis_h}[pos]
+        vis_y = {
+            "top": 0,
+            "centre": (args.height - vis_h) // 2,
+            "bottom": args.height - vis_h,
+            "strip": args.height - vis_h,
+        }[pos]
 
     if args.style == "waveform":
-        vf = (f"showwaves=s={args.width}x{vis_h}:mode={args.waveform_mode}:rate={args.fps:g}:"
-              f"split_channels={1 if args.split_channels else 0}:colors={args.color}")
+        vf = (
+            f"showwaves=s={args.width}x{vis_h}:mode={args.waveform_mode}:rate={args.fps:g}:"
+            f"split_channels={1 if args.split_channels else 0}:colors={args.color}"
+        )
     else:
         vf = f"showspectrum=s={args.width}x{vis_h}:mode={'separate' if args.split_channels else 'combined'}:fps={args.fps:g}"
     if args.image:
         # One filter_complex, one encode: the still gets a timeline with -loop 1, is scaled to the
         # frame by --image-fit, and the visualisation is overlaid on it at --opacity.
         if args.image_fit == "cover":
-            plate = (f"scale={args.width}:{args.height}:force_original_aspect_ratio=increase,"
-                     f"crop={args.width}:{args.height},setsar=1")
+            plate = (
+                f"scale={args.width}:{args.height}:force_original_aspect_ratio=increase,"
+                f"crop={args.width}:{args.height},setsar=1"
+            )
         else:
-            plate = pad_filters(args.width, args.height,
-                                "blur" if args.image_fit == "blur" else "color",
-                                args.background, 20)
-        graph = f"[1:v]{plate},format=rgba[plate];[0:a:{args.audio_stream}]{vf},format=rgba"
+            plate = pad_filters(
+                args.width,
+                args.height,
+                "blur" if args.image_fit == "blur" else "color",
+                args.background,
+                20,
+            )
+        graph = (
+            f"[1:v]{plate},format=rgba[plate];[0:a:{args.audio_stream}]{vf},format=rgba"
+        )
         if args.opacity < 1.0:
             graph += f",colorchannelmixer=aa={args.opacity:g}"
         # the composite is RGBA (the plate is): converted to the BT.709 the output is tagged with,
@@ -193,14 +341,27 @@ def main() -> int:
         # showwaves/showspectrum paint the visualization on a transparent-black canvas; composite
         # it over an explicit solid background instead of assuming that canvas already matches
         # --background.
-        bg, vis = f"color=c={args.background}:s={args.width}x{args.height}:r={args.fps:g}", vf
-        if draws_chroma([args.background] + (args.color.split("|") if args.style == "waveform" else []), None):
+        bg, vis = (
+            f"color=c={args.background}:s={args.width}x{args.height}:r={args.fps:g}",
+            vf,
+        )
+        if draws_chroma(
+            [args.background]
+            + (args.color.split("|") if args.style == "waveform" else []),
+            None,
+        ):
             # the background and the RGBA waves are converted to the BT.709 the output is tagged
             # with (the encoder line's own RGB-to-YUV step used BT.601); the spectrum is YUV of its
             # own and only gets the label the background carries, so 7.1+'s overlay converts neither
             bg += ",format=rgb24" + rgb_chain_to_bt709(None, "yuv420p")
-            vis += rgb_chain_to_bt709(None, "yuva420p") if args.style == "waveform" else ",setparams=colorspace=bt709"
-        vf = f"{bg}[bg];[0:a:{args.audio_stream}]{vis}[vis];[bg][vis]overlay=format=auto"
+            vis += (
+                rgb_chain_to_bt709(None, "yuva420p")
+                if args.style == "waveform"
+                else ",setparams=colorspace=bt709"
+            )
+        vf = (
+            f"{bg}[bg];[0:a:{args.audio_stream}]{vis}[vis];[bg][vis]overlay=format=auto"
+        )
 
     render = output
     if args.title or args.srt or args.text:
@@ -218,7 +379,9 @@ def main() -> int:
     if args.image:
         cmd += ["-map", "[v]"]
     cmd += ["-map", f"0:a:{args.audio_stream}"]
-    cmd += video_args(None, args.crf, args.preset)  # the one encoder line, so --codec / --quality reach it (review 7)
+    cmd += video_args(
+        None, args.crf, args.preset
+    )  # the one encoder line, so --codec / --quality reach it (review 7)
     cmd += aac_args()
     # -shortest alone is not enough on FFmpeg 5.x: showwaves keeps emitting frames after the
     # audio ends (a 12 s source came out 14.08 s on 5.1.1, #146), so the output is also capped
@@ -238,16 +401,36 @@ def main() -> int:
             # a dry run rendered no _vis file for graphics.py to probe, so its default --end (the
             # clip's end) came out 0 and the plan failed: give it the source's duration, which
             # is what -t caps the render at. A real run is unchanged.
-            end = (["--end", f"{float(meta['duration']):.3f}"]
-                   if STATE.dry_run and meta.get("duration") else [])
-            _child("graphics.py", [current, "--template", "sticker", "--text", args.title,
-                                   "--position", "top-left"] + end + ["-o", titled]
-                   + (["--brand", args.brand] if args.brand else []))
+            end = (
+                ["--end", f"{float(meta['duration']):.3f}"]
+                if STATE.dry_run and meta.get("duration")
+                else []
+            )
+            _child(
+                "graphics.py",
+                [
+                    current,
+                    "--template",
+                    "sticker",
+                    "--text",
+                    args.title,
+                    "--position",
+                    "top-left",
+                ]
+                + end
+                + ["-o", titled]
+                + (["--brand", args.brand] if args.brand else []),
+            )
             stages.append("title")
             current = titled
         if args.srt or args.text:
-            _child("caption.py", [current] + (["--srt", args.srt] if args.srt else ["--text", args.text])
-                   + (["--platform", args.platform] if args.platform else []) + ["-o", output])
+            _child(
+                "caption.py",
+                [current]
+                + (["--srt", args.srt] if args.srt else ["--text", args.text])
+                + (["--platform", args.platform] if args.platform else [])
+                + ["-o", output],
+            )
             stages.append("captions")
             current = output
         if current != output and not STATE.dry_run:
@@ -268,47 +451,71 @@ def main() -> int:
         safe_px = int(round(PLATFORMS[args.platform]["safe"]["bottom"] * args.height))
         overlap = (vis_h + safe_px) - args.height
         if args.position in ("strip", "bottom") and overlap > 0:
-            notes.append(f"the visualisation band and {args.platform}'s bottom safe zone overlap by "
-                         f"{overlap}px: the captions or the app's own UI will sit over the waveform "
-                         f"(lower --vis-height to {max(0.05, (args.height - safe_px) / args.height):.2f})")
+            notes.append(
+                f"the visualisation band and {args.platform}'s bottom safe zone overlap by "
+                f"{overlap}px: the captions or the app's own UI will sit over the waveform "
+                f"(lower --vis-height to {max(0.05, (args.height - safe_px) / args.height):.2f})"
+            )
     if silent_peak is not None:
-        info(f"warning: {args.input} is silent (peak {silent_peak:g} dBFS); the visualisation is a flat line")
-        notes.append(f"the input audio is silent (peak {silent_peak:g} dBFS, at or below --silence-threshold "
-                     f"{args.silence_threshold:g}): the visualisation is a flat line; pass --on-silent fail to refuse instead")
+        info(
+            f"warning: {args.input} is silent (peak {silent_peak:g} dBFS); the visualisation is a flat line"
+        )
+        notes.append(
+            f"the input audio is silent (peak {silent_peak:g} dBFS, at or below --silence-threshold "
+            f"{args.silence_threshold:g}): the visualisation is a flat line; pass --on-silent fail to refuse instead"
+        )
     duration_ok = True
     if not STATE.dry_run and meta.get("duration") and result.get("duration"):
         duration_ok = abs(float(result["duration"]) - float(meta["duration"])) <= 0.05
         if not duration_ok:
-            notes.append("the render is " + fmt_secs(result.get("duration")) + " against "
-                         + fmt_secs(meta.get("duration")) + " of audio")
-    size_ok = (v.get("width"), v.get("height")) == (args.width, args.height) or STATE.dry_run
+            notes.append(
+                "the render is "
+                + fmt_secs(result.get("duration"))
+                + " against "
+                + fmt_secs(meta.get("duration"))
+                + " of audio"
+            )
+    size_ok = (v.get("width"), v.get("height")) == (
+        args.width,
+        args.height,
+    ) or STATE.dry_run
     # the rate the run announced is the rate the file must carry: the audiogram path builds the
     # plate as a second input, so getting this wrong is silent (see the -framerate above)
     fps_ok = True
     if not STATE.dry_run and v.get("fps"):
         fps_ok = abs(float(v["fps"]) - float(args.fps)) <= 0.01
         if not fps_ok:
-            notes.append(f"the render is {float(v['fps']):g} fps against the {args.fps:g} fps asked for")
+            notes.append(
+                f"the render is {float(v['fps']):g} fps against the {args.fps:g} fps asked for"
+            )
     # reported on every run, not only an audiogram one: a caller that keys on `audiogram.background`
     # should not have to guess whether the key exists (`"color"` is the plain-waveform answer).
-    extra = {"silent": None if STATE.dry_run else silent_peak is not None, "audiogram": {
-        "style": args.style,
-        "background": "image" if args.image else "color",
-        "image": args.image,
-        "position": args.position if args.image else None,
-        "vis_height": args.vis_height if args.image else 1.0,
-        "platform": args.platform,
-        "captions": (args.srt or args.text) if (args.srt or args.text) else None,
-        "title": args.title,
-        "stages": stages,
-        # a dry run rendered nothing, so there is nothing to have verified -- the common
-        # top-level `verified` says false for the same run and these two must not disagree
-        "verified": False if STATE.dry_run else bool(duration_ok and size_ok and fps_ok),
-    }}
+    extra = {
+        "silent": None if STATE.dry_run else silent_peak is not None,
+        "audiogram": {
+            "style": args.style,
+            "background": "image" if args.image else "color",
+            "image": args.image,
+            "position": args.position if args.image else None,
+            "vis_height": args.vis_height if args.image else 1.0,
+            "platform": args.platform,
+            "captions": (args.srt or args.text) if (args.srt or args.text) else None,
+            "title": args.title,
+            "stages": stages,
+            # a dry run rendered nothing, so there is nothing to have verified -- the common
+            # top-level `verified` says false for the same run and these two must not disagree
+            "verified": (
+                False if STATE.dry_run else bool(duration_ok and size_ok and fps_ok)
+            ),
+        },
+    }
     if notes:
         extra["notes"] = notes
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v.get('width')}x{v.get('height')}, {args.style}"
-         + (", audiogram" if args.image else "") + ")")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v.get('width')}x{v.get('height')}, {args.style}"
+        + (", audiogram" if args.image else "")
+        + ")"
+    )
     emit(output, **extra)
     return 0
 
@@ -325,8 +532,19 @@ def _child(script_name: str, argv: "list") -> None:
     file delivered rather than the intermediate render."""
     here = os.path.dirname(os.path.abspath(__file__))
     hw = (["--hw"] if STATE.hw else ["--no-hw"]) if STATE.hw_source == "flag" else []
-    cmd = [os.path.join(here, script_name)] + [str(a) for a in argv] + hw + child_args() + ["--json"]
-    info("-> " + " ".join(os.path.basename(c) if c.endswith(".py") else str(c) for c in cmd[:-1]))
+    cmd = (
+        [os.path.join(here, script_name)]
+        + [str(a) for a in argv]
+        + hw
+        + child_args()
+        + ["--json"]
+    )
+    info(
+        "-> "
+        + " ".join(
+            os.path.basename(c) if c.endswith(".py") else str(c) for c in cmd[:-1]
+        )
+    )
     proc = run_tool(cmd)
     try:
         doc = json.loads(proc.stdout.strip() or "{}")
@@ -341,8 +559,14 @@ def _child(script_name: str, argv: "list") -> None:
         extra = {"hint": err["hint"]} if err.get("hint") else {}
         if doc.get("encoder"):
             extra["encoder"] = doc["encoder"]
-        die(f"{script_name} failed: {err.get('message') or (proc.stderr.strip().splitlines() or ['?'])[-1][:300]}",
-            code=int(doc.get("exit_code") or 1), kind=err.get("kind") or "input", stage=script_name, **extra)
+        die(
+            f"{script_name} failed: {err.get('message') or (proc.stderr.strip().splitlines() or ['?'])[-1][:300]}",
+            code=int(doc.get("exit_code") or 1),
+            kind=err.get("kind") or "input",
+            stage=script_name,
+            **extra,
+        )
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -43,11 +43,12 @@ With a layout, a tool exits 2 (argparse "unrecognized arguments") on any flag it
 name contains "bt2020" is BT.2020 SDR: the engine routes it like HDR (hevc), and only 2.x/help-only probe say hdr: false.
 A source whose name contains "sdrhevc" is an SDR HEVC file (codec hevc, hdr false: a phone clip).
 """
+
 import json
 import os
 import textwrap
 
-SCRIPT = textwrap.dedent('''
+SCRIPT = textwrap.dedent("""
     import json, os, sys, time
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     mode = open(os.path.join(ROOT, "MODE"), encoding="utf-8").read().strip()
@@ -263,10 +264,10 @@ SCRIPT = textwrap.dedent('''
                      "smart": {"applied": True, "parts": parts, "reencoded_frames": re, "copied_frames": cp,
                                "checks": {"frames": re + cp, "grid_worst_seconds": 0.0, "copied_packets_equal": cp, "frames_decoded_equal": re + cp}}}
     emit({"status": "completed", "output": out, "dry_run": False, "commands": ["ffmpeg -i x " + out], **extra})
-''')
+""")
 
 
-DOCTOR = textwrap.dedent('''
+DOCTOR = textwrap.dedent("""
     import json, os, sys
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     mode = open(os.path.join(ROOT, "MODE"), encoding="utf-8").read().strip()
@@ -282,31 +283,110 @@ DOCTOR = textwrap.dedent('''
         available = [a for a in available if not a.startswith("filter:xfade") and not a.startswith("filter:acrossfade")]
         print(json.dumps({"ok": True, "ffmpeg": "fake-6.0", "ffprobe": "fake-6.0", "missing": ["filter:xfade", "filter:acrossfade"], "available": available, "python": "3"})); sys.exit(0)
     print(json.dumps({"ok": True, "ffmpeg": "fake-6.0", "ffprobe": "fake-6.0", "missing": [], "available": available, "python": "3"}))
-''')
+""")
 
 
-_BASE_FLAGS = {"probe": [], "cut": ["--start", "--end", "--segments", "--accurate", "--tolerance"],
-               "join": ["--transition", "--duration", "--width", "--height", "--fps", "--fit", "--pad-color"],
-               "fit": ["--duration", "--method", "--max-speed", "--smooth", "--aspect", "--fit", "--width", "--pad-color", "--crop-x", "--crop-y", "--fps",
-                       "--rotate", "--flip"],
-               "overlay": ["--image", "--video", "--position", "--margin", "--scale", "--opacity", "--start", "--end", "--fade"],
-               "broll": ["--insert", "--at", "--duration", "--audio"], "audio": ["--replace"],
-               "silence": ["--list", "--threshold", "--min-silence"], "scenes": [], "export": ["--preset", "--no-scale", "--allow-long"],
-               "freeze": ["--at", "--hold", "--mode"], "reverse": ["--no-audio"],
-               "insert": ["--duration", "--width", "--height", "--fps", "--zoom", "--zoom-amount", "--pan"],
-               "crop": ["--x", "--y", "--width", "--height", "--fps"], "look": ["--at", "--width", "--no-timecode"]}
+_BASE_FLAGS = {
+    "probe": [],
+    "cut": ["--start", "--end", "--segments", "--accurate", "--tolerance"],
+    "join": [
+        "--transition",
+        "--duration",
+        "--width",
+        "--height",
+        "--fps",
+        "--fit",
+        "--pad-color",
+    ],
+    "fit": [
+        "--duration",
+        "--method",
+        "--max-speed",
+        "--smooth",
+        "--aspect",
+        "--fit",
+        "--width",
+        "--pad-color",
+        "--crop-x",
+        "--crop-y",
+        "--fps",
+        "--rotate",
+        "--flip",
+    ],
+    "overlay": [
+        "--image",
+        "--video",
+        "--position",
+        "--margin",
+        "--scale",
+        "--opacity",
+        "--start",
+        "--end",
+        "--fade",
+    ],
+    "broll": ["--insert", "--at", "--duration", "--audio"],
+    "audio": ["--replace"],
+    "silence": ["--list", "--threshold", "--min-silence"],
+    "scenes": [],
+    "export": ["--preset", "--no-scale", "--allow-long"],
+    "freeze": ["--at", "--hold", "--mode"],
+    "reverse": ["--no-audio"],
+    "insert": [
+        "--duration",
+        "--width",
+        "--height",
+        "--fps",
+        "--zoom",
+        "--zoom-amount",
+        "--pan",
+    ],
+    "crop": ["--x", "--y", "--width", "--height", "--fps"],
+    "look": ["--at", "--width", "--no-timecode"],
+}
 # tools a layout's checkout does not ship (ffmpeg-skill: reverse.py, insert.py and crop.py from 0.11.0, freeze.py from 0.16.0)
 # broll.py from 2.x (stinger sound, ADR-023); audio.py is in every release
-_LAYOUT_ABSENT = {"0.10": ("freeze", "reverse", "insert", "crop", "broll"), "0.x": ("freeze", "broll")}
-_LAYOUT_FLAGS = {"0.10": ["--crf", "--preset"], "0.x": ["--crf", "--preset"], "1.x": ["--crf", "--quality", "--preset", "--overwrite"],
-                 "2.x": ["--quality", "--preset", "--overwrite"], "help-only": ["--quality", "--preset", "--overwrite"],
-                 "3.x": ["--quality", "--preset", "--overwrite"]}
+_LAYOUT_ABSENT = {
+    "0.10": ("freeze", "reverse", "insert", "crop", "broll"),
+    "0.x": ("freeze", "broll"),
+}
+_LAYOUT_FLAGS = {
+    "0.10": ["--crf", "--preset"],
+    "0.x": ["--crf", "--preset"],
+    "1.x": ["--crf", "--quality", "--preset", "--overwrite"],
+    "2.x": ["--quality", "--preset", "--overwrite"],
+    "help-only": ["--quality", "--preset", "--overwrite"],
+    "3.x": ["--quality", "--preset", "--overwrite"],
+}
 # join.py --copy from 2.24.0 (segment cache, ADR-018): every 2.x / 3.x layout here stands for a current release
 # overlay.py --place from 2.x (stinger, ADR-023)
-_LAYOUT_EXTRA = {"2.x": {"join": ["--copy"], "overlay": ["--place"], "scenes": ["--shots"], "export": ["--max-mb"]},
-                 "help-only": {"join": ["--copy"], "overlay": ["--place"], "scenes": ["--shots"], "export": ["--max-mb"]},
-                 "3.x": {"cut": ["--keep-hevc", "--no-keep-hevc", "--edit-list", "--no-edit-list", "--vfr-guard", "--smart"], "join": ["--copy"], "overlay": ["--place"],
-                         "scenes": ["--shots"], "export": ["--max-mb"]}}
+_LAYOUT_EXTRA = {
+    "2.x": {
+        "join": ["--copy"],
+        "overlay": ["--place"],
+        "scenes": ["--shots"],
+        "export": ["--max-mb"],
+    },
+    "help-only": {
+        "join": ["--copy"],
+        "overlay": ["--place"],
+        "scenes": ["--shots"],
+        "export": ["--max-mb"],
+    },
+    "3.x": {
+        "cut": [
+            "--keep-hevc",
+            "--no-keep-hevc",
+            "--edit-list",
+            "--no-edit-list",
+            "--vfr-guard",
+            "--smart",
+        ],
+        "join": ["--copy"],
+        "overlay": ["--place"],
+        "scenes": ["--shots"],
+        "export": ["--max-mb"],
+    },
+}
 
 
 def layout_flags(layout: str) -> dict:
@@ -324,14 +404,40 @@ def layout_flags(layout: str) -> dict:
     return out
 
 
-def make_fake_skill(root: str, mode: str = "ok", version: str = "0.10.0", layout=None, absent=None, extra=()) -> str:
+def make_fake_skill(
+    root: str,
+    mode: str = "ok",
+    version: str = "0.10.0",
+    layout=None,
+    absent=None,
+    extra=(),
+) -> str:
     """`absent`: tools not written (default: what the layout's release did not ship); `extra`: further tool names written as
     the same fake."""
     scripts = os.path.join(root, "scripts")
     os.makedirs(scripts, exist_ok=True)
     skip = _LAYOUT_ABSENT.get(layout, ()) if absent is None else tuple(absent)
-    for name in [t for t in ("probe", "cut", "join", "fit", "overlay", "freeze", "reverse", "insert", "crop", "broll", "audio", "silence", "scenes", "export", "look")
-                 if t not in skip] + list(extra):
+    for name in [
+        t
+        for t in (
+            "probe",
+            "cut",
+            "join",
+            "fit",
+            "overlay",
+            "freeze",
+            "reverse",
+            "insert",
+            "crop",
+            "broll",
+            "audio",
+            "silence",
+            "scenes",
+            "export",
+            "look",
+        )
+        if t not in skip
+    ] + list(extra):
         with open(os.path.join(scripts, name + ".py"), "w", encoding="utf-8") as fh:
             fh.write(SCRIPT)
     with open(os.path.join(scripts, "_contract.py"), "w", encoding="utf-8") as fh:

@@ -6,6 +6,7 @@ problems (e.g. overlapping cues) are never auto-fixed -- they are reported
 as `ValidationIssue`s in the response so the caller (video-production-agent
 or a human) decides what to do.
 """
+
 from __future__ import annotations
 
 import unicodedata
@@ -28,7 +29,13 @@ DEFAULT_MAX_DURATION = 10.0
 DEFAULT_READING_SPEED_CPS = 20.0  # characters per second
 
 _ALLOWED_CONSTRAINT_KEYS = frozenset(
-    {"max_chars_per_line", "max_lines", "min_duration", "max_duration", "reading_speed_cps"}
+    {
+        "max_chars_per_line",
+        "max_lines",
+        "min_duration",
+        "max_duration",
+        "reading_speed_cps",
+    }
 )
 
 _CONTROL_CHAR_ALLOW = {"\n"}
@@ -50,15 +57,29 @@ class SubtitleConstraints:
             raise SubtitleSkillError("INVALID_INPUT", "constraints must be an object")
         unknown = set(data) - _ALLOWED_CONSTRAINT_KEYS
         if unknown:
-            raise SubtitleSkillError("INVALID_INPUT", f"unknown constraint field(s): {sorted(unknown)}")
+            raise SubtitleSkillError(
+                "INVALID_INPUT", f"unknown constraint field(s): {sorted(unknown)}"
+            )
         for key in ("max_chars_per_line", "max_lines"):
             if key in data and data[key] is not None:
-                if not isinstance(data[key], int) or isinstance(data[key], bool) or data[key] <= 0:
-                    raise SubtitleSkillError("INVALID_INPUT", f"constraints.{key} must be a positive integer")
+                if (
+                    not isinstance(data[key], int)
+                    or isinstance(data[key], bool)
+                    or data[key] <= 0
+                ):
+                    raise SubtitleSkillError(
+                        "INVALID_INPUT", f"constraints.{key} must be a positive integer"
+                    )
         for key in ("min_duration", "max_duration", "reading_speed_cps"):
             if key in data and data[key] is not None:
-                if not isinstance(data[key], (int, float)) or isinstance(data[key], bool) or data[key] <= 0:
-                    raise SubtitleSkillError("INVALID_INPUT", f"constraints.{key} must be a positive number")
+                if (
+                    not isinstance(data[key], (int, float))
+                    or isinstance(data[key], bool)
+                    or data[key] <= 0
+                ):
+                    raise SubtitleSkillError(
+                        "INVALID_INPUT", f"constraints.{key} must be a positive number"
+                    )
         return SubtitleConstraints(**{k: data.get(k) for k in _ALLOWED_CONSTRAINT_KEYS})
 
 
@@ -82,13 +103,19 @@ class ValidationIssue:
 
 
 def _validate_text(
-    cue: SubtitleCue, constraints: SubtitleConstraints, profile: Optional[LocaleProfile] = None
+    cue: SubtitleCue,
+    constraints: SubtitleConstraints,
+    profile: Optional[LocaleProfile] = None,
 ) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     text = cue.text
 
     if text.strip() == "":
-        issues.append(ValidationIssue("error", "EMPTY_TEXT", cue.id, "cue text is empty or whitespace-only"))
+        issues.append(
+            ValidationIssue(
+                "error", "EMPTY_TEXT", cue.id, "cue text is empty or whitespace-only"
+            )
+        )
         return issues
 
     for ch in text:
@@ -96,21 +123,33 @@ def _validate_text(
             continue
         if unicodedata.category(ch) == "Cc":
             issues.append(
-                ValidationIssue("error", "INVALID_CONTROL_CHARACTER", cue.id, f"disallowed control character: {ch!r}")
+                ValidationIssue(
+                    "error",
+                    "INVALID_CONTROL_CHARACTER",
+                    cue.id,
+                    f"disallowed control character: {ch!r}",
+                )
             )
             break
 
     try:
         text.encode("utf-8")
     except UnicodeEncodeError:
-        issues.append(ValidationIssue("error", "INVALID_UNICODE", cue.id, "text is not valid Unicode"))
+        issues.append(
+            ValidationIssue(
+                "error", "INVALID_UNICODE", cue.id, "text is not valid Unicode"
+            )
+        )
 
     lines = text.split("\n")
     max_lines = constraints.max_lines or DEFAULT_MAX_LINES
     if len(lines) > max_lines:
         issues.append(
             ValidationIssue(
-                "warning", "TOO_MANY_LINES", cue.id, f"{len(lines)} lines exceeds max_lines={max_lines}"
+                "warning",
+                "TOO_MANY_LINES",
+                cue.id,
+                f"{len(lines)} lines exceeds max_lines={max_lines}",
             )
         )
 
@@ -180,23 +219,40 @@ def _validate_locale_lines(
         and all(profile.text_width(line) <= max_chars for line in suggested)
         and not kinsoku_violations(suggested, profile)
     )
-    suggested_text = "\n".join(suggested) if fits and "\n".join(suggested) != cue.text else None
-    return [ValidationIssue("warning", code, cue.id, message, suggested_text) for code, message in found]
+    suggested_text = (
+        "\n".join(suggested) if fits and "\n".join(suggested) != cue.text else None
+    )
+    return [
+        ValidationIssue("warning", code, cue.id, message, suggested_text)
+        for code, message in found
+    ]
 
 
 def _validate_duration(
-    cue: SubtitleCue, constraints: SubtitleConstraints, profile: Optional[LocaleProfile] = None
+    cue: SubtitleCue,
+    constraints: SubtitleConstraints,
+    profile: Optional[LocaleProfile] = None,
 ) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     min_d = constraints.min_duration or DEFAULT_MIN_DURATION
     max_d = constraints.max_duration or DEFAULT_MAX_DURATION
     if cue.duration < min_d:
         issues.append(
-            ValidationIssue("warning", "CUE_TOO_SHORT", cue.id, f"duration {cue.duration:.3f}s < min_duration={min_d}")
+            ValidationIssue(
+                "warning",
+                "CUE_TOO_SHORT",
+                cue.id,
+                f"duration {cue.duration:.3f}s < min_duration={min_d}",
+            )
         )
     if cue.duration > max_d:
         issues.append(
-            ValidationIssue("warning", "CUE_TOO_LONG", cue.id, f"duration {cue.duration:.3f}s > max_duration={max_d}")
+            ValidationIssue(
+                "warning",
+                "CUE_TOO_LONG",
+                cue.id,
+                f"duration {cue.duration:.3f}s > max_duration={max_d}",
+            )
         )
 
     if profile is None:

@@ -5,6 +5,7 @@ the recognition for real, and so an engine crash cannot take the caller down. Th
 the only variable parts are two file paths inside the workspace. Errors are written as structured
 JSON to the result file, never as free text on stdout.
 """
+
 from __future__ import annotations
 
 import json
@@ -33,9 +34,17 @@ def main(argv=None) -> int:
     except TranscriptionError as exc:
         payload = exc.to_dict()
         code = 1
-    except Exception as exc:  # anything else is an engine failure, reported structurally
-        payload = {"ok": False, "error": {"code": "TRANSCRIPTION_FAILED", "message": f"{type(exc).__name__}: {exc}",
-                                          "details": {"traceback": traceback.format_exc().splitlines()[-6:]}}}
+    except (
+        Exception
+    ) as exc:  # anything else is an engine failure, reported structurally
+        payload = {
+            "ok": False,
+            "error": {
+                "code": "TRANSCRIPTION_FAILED",
+                "message": f"{type(exc).__name__}: {exc}",
+                "details": {"traceback": traceback.format_exc().splitlines()[-6:]},
+            },
+        }
         code = 1
     tmp = out_path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:

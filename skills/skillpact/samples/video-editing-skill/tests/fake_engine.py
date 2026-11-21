@@ -36,11 +36,12 @@ Layouts (make_fake_skill(layout=...), written to <root>/LAYOUT; ADR-013's capabi
 With a layout, a tool exits 2 (argparse "unrecognized arguments") on any flag its layout does not list. A source whose
 name contains "bt2020" is BT.2020 SDR: the engine routes it like HDR (hevc), and only 2.x/help-only probe say hdr: false.
 """
+
 import json
 import os
 import textwrap
 
-SCRIPT = textwrap.dedent('''
+SCRIPT = textwrap.dedent("""
     import json, os, sys, time
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     mode = open(os.path.join(ROOT, "MODE")).read().strip()
@@ -195,10 +196,10 @@ SCRIPT = textwrap.dedent('''
     if mode == "noisy":
         sys.stdout.write("some junk line\\n")
     emit({"status": "completed", "output": out, "dry_run": False, "commands": ["ffmpeg -i x " + out]})
-''')
+""")
 
 
-DOCTOR = textwrap.dedent('''
+DOCTOR = textwrap.dedent("""
     import json, os, sys
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     mode = open(os.path.join(ROOT, "MODE")).read().strip()
@@ -214,16 +215,54 @@ DOCTOR = textwrap.dedent('''
         available = [a for a in available if not a.startswith("filter:xfade") and not a.startswith("filter:acrossfade")]
         print(json.dumps({"ok": True, "ffmpeg": "fake-6.0", "ffprobe": "fake-6.0", "missing": ["filter:xfade", "filter:acrossfade"], "available": available, "python": "3"})); sys.exit(0)
     print(json.dumps({"ok": True, "ffmpeg": "fake-6.0", "ffprobe": "fake-6.0", "missing": [], "available": available, "python": "3"}))
-''')
+""")
 
 
-_BASE_FLAGS = {"probe": [], "cut": ["--start", "--end", "--segments", "--accurate"],
-               "join": ["--transition", "--duration", "--width", "--height", "--fps", "--fit", "--pad-color"],
-               "fit": ["--duration", "--method", "--max-speed", "--smooth", "--aspect", "--fit", "--width", "--pad-color", "--crop-x", "--crop-y", "--fps",
-                       "--rotate", "--flip"],
-               "overlay": ["--image", "--position", "--margin", "--scale", "--opacity", "--start", "--end", "--fade"]}
-_LAYOUT_FLAGS = {"0.10": ["--crf", "--preset"], "0.x": ["--crf", "--preset"], "1.x": ["--crf", "--quality", "--preset", "--overwrite"],
-                 "2.x": ["--quality", "--preset", "--overwrite"], "help-only": ["--quality", "--preset", "--overwrite"]}
+_BASE_FLAGS = {
+    "probe": [],
+    "cut": ["--start", "--end", "--segments", "--accurate"],
+    "join": [
+        "--transition",
+        "--duration",
+        "--width",
+        "--height",
+        "--fps",
+        "--fit",
+        "--pad-color",
+    ],
+    "fit": [
+        "--duration",
+        "--method",
+        "--max-speed",
+        "--smooth",
+        "--aspect",
+        "--fit",
+        "--width",
+        "--pad-color",
+        "--crop-x",
+        "--crop-y",
+        "--fps",
+        "--rotate",
+        "--flip",
+    ],
+    "overlay": [
+        "--image",
+        "--position",
+        "--margin",
+        "--scale",
+        "--opacity",
+        "--start",
+        "--end",
+        "--fade",
+    ],
+}
+_LAYOUT_FLAGS = {
+    "0.10": ["--crf", "--preset"],
+    "0.x": ["--crf", "--preset"],
+    "1.x": ["--crf", "--quality", "--preset", "--overwrite"],
+    "2.x": ["--quality", "--preset", "--overwrite"],
+    "help-only": ["--quality", "--preset", "--overwrite"],
+}
 
 
 def layout_flags(layout: str) -> dict:
@@ -238,7 +277,9 @@ def layout_flags(layout: str) -> dict:
     return out
 
 
-def make_fake_skill(root: str, mode: str = "ok", version: str = "0.10.0", layout=None) -> str:
+def make_fake_skill(
+    root: str, mode: str = "ok", version: str = "0.10.0", layout=None
+) -> str:
     scripts = os.path.join(root, "scripts")
     os.makedirs(scripts, exist_ok=True)
     for name in ("probe", "cut", "join", "fit", "overlay"):

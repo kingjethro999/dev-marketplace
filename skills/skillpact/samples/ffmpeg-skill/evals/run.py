@@ -23,6 +23,7 @@ whether the output is actually good.
 
 Pair with skill-creator's eval runner for automated, multi-run measurement.
 """
+
 import argparse
 import json
 import re
@@ -49,14 +50,16 @@ def load_tasks(prompts_path: Path) -> list:
     items = raw["tasks"] if isinstance(raw, dict) and "tasks" in raw else raw
     tasks = []
     for t in items:
-        tasks.append({
-            "id": t["id"],
-            "request": t.get("request") or t.get("prompt") or "",
-            "expect": t.get("expect") or [],
-            "grader_expect": t.get("grader_expect"),
-            "grader_not": t.get("grader_not"),
-            "refuse": bool(t.get("refuse")),
-        })
+        tasks.append(
+            {
+                "id": t["id"],
+                "request": t.get("request") or t.get("prompt") or "",
+                "expect": t.get("expect") or [],
+                "grader_expect": t.get("grader_expect"),
+                "grader_not": t.get("grader_not"),
+                "refuse": bool(t.get("refuse")),
+            }
+        )
     return tasks
 
 
@@ -106,20 +109,37 @@ def _find_transcript(folder: Path, task_id) -> Path:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("target", nargs="?", help="transcript file or folder of <id>.txt/<id>.md files")
-    ap.add_argument("--task", help="task id for a single transcript (int for tasks.json, string for agent_prompts*.json)")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "target", nargs="?", help="transcript file or folder of <id>.txt/<id>.md files"
+    )
+    ap.add_argument(
+        "--task",
+        help="task id for a single transcript (int for tasks.json, string for agent_prompts*.json)",
+    )
     ap.add_argument("--list", action="store_true")
-    ap.add_argument("--prompts", type=Path, default=DEFAULT_PROMPTS,
-                     help="eval corpus JSON to grade against (default: evals/tasks.json)")
-    ap.add_argument("--json", action="store_true", help="print machine-readable results instead of text")
+    ap.add_argument(
+        "--prompts",
+        type=Path,
+        default=DEFAULT_PROMPTS,
+        help="eval corpus JSON to grade against (default: evals/tasks.json)",
+    )
+    ap.add_argument(
+        "--json",
+        action="store_true",
+        help="print machine-readable results instead of text",
+    )
     args = ap.parse_args()
 
     tasks = load_tasks(args.prompts)
 
     if args.list:
         for t in tasks:
-            print(f"{t['id']}. {t['request']}    -> {', '.join(t['expect']) or '(refusal, no expected script)'}")
+            print(
+                f"{t['id']}. {t['request']}    -> {', '.join(t['expect']) or '(refusal, no expected script)'}"
+            )
         return 0
     if not args.target:
         ap.error("give a transcript file/folder or --list")
@@ -150,16 +170,25 @@ def main() -> int:
             "passed": passed,
             "total": len(results),
             "results": [
-                {"id": t["id"], "request": t["request"], "passed": ok, "reasons": reasons}
+                {
+                    "id": t["id"],
+                    "request": t["request"],
+                    "passed": ok,
+                    "reasons": reasons,
+                }
                 for t, ok, reasons in results
             ],
         }
         print(json.dumps(out, indent=2))
     else:
         for t, ok, reasons in results:
-            print(f"{'PASS' if ok else 'FAIL'} {str(t['id']):>4s} {t['request'][:60]:60s}" +
-                  ("" if ok else "  " + "; ".join(reasons)))
-        print(f"{passed}/{len(results)} passed  (grading: regex-only, {args.prompts.name})")
+            print(
+                f"{'PASS' if ok else 'FAIL'} {str(t['id']):>4s} {t['request'][:60]:60s}"
+                + ("" if ok else "  " + "; ".join(reasons))
+            )
+        print(
+            f"{passed}/{len(results)} passed  (grading: regex-only, {args.prompts.name})"
+        )
 
     return 0 if results and passed == len(results) else 1
 

@@ -55,7 +55,9 @@ CLICK_CONTEXT_PERCENTILE = 99
 LEVEL_FLOOR_DB = -120.0
 BAND_RANGE_DB = 30.0
 BAND_BASE_HZ = 62.5
-MAX_DECODED_BYTES = 128 * 1024 * 1024  # 32-bit float samples held at once (ffmpeg stops writing past it)
+MAX_DECODED_BYTES = (
+    128 * 1024 * 1024
+)  # 32-bit float samples held at once (ffmpeg stops writing past it)
 
 LOOP_SEAM_NOTE = (
     f"click_ratio = max |second difference| within +-{CLICK_WINDOW_SEC * 1000:g} ms of the seam / its "
@@ -82,7 +84,9 @@ def click_spans(sample_rate: int) -> Tuple[int, int]:
     return window, max(window + 2, int(round(CLICK_CONTEXT_SEC * sample_rate)))
 
 
-def click_ratio(signal: Sequence[float], junction: int, sample_rate: int) -> Dict[str, Any]:
+def click_ratio(
+    signal: Sequence[float], junction: int, sample_rate: int
+) -> Dict[str, Any]:
     """The click measurement at ``junction`` (the index of the first
     sample after the seam) of one channel. ``signal`` must hold the
     click context plus one sample on both sides of the junction."""
@@ -106,7 +110,10 @@ def click_ratio(signal: Sequence[float], junction: int, sample_rate: int) -> Dic
         ratio = 0.0 if peak == 0 else None
         from_silence = peak > 0
     return {
-        "ratio": ratio, "from_silence": from_silence, "peak": round(peak, 9), "reference": round(reference, 9),
+        "ratio": ratio,
+        "from_silence": from_silence,
+        "peak": round(peak, 9),
+        "reference": round(reference, 9),
         "step": round(step, 9),
     }
 
@@ -133,7 +140,9 @@ def _fft_tables(n: int) -> Tuple[List[int], List[complex], List[float]]:
     return _FFT_CACHE[n]
 
 
-def _fft(values: List[complex], rev: List[int], twiddles: List[complex]) -> List[complex]:
+def _fft(
+    values: List[complex], rev: List[int], twiddles: List[complex]
+) -> List[complex]:
     n = len(values)
     out = [values[r] for r in rev]
     size = 2
@@ -161,7 +170,9 @@ def frame_length(sample_rate: int, window_samples: int) -> int:
     return n
 
 
-def band_levels(samples: Sequence[float], sample_rate: int, frame: int) -> List[Tuple[float, float]]:
+def band_levels(
+    samples: Sequence[float], sample_rate: int, frame: int
+) -> List[Tuple[float, float]]:
     """``[(centre_hz, level_db)]``: octave-band mean-square levels of one
     mono window, from Hann-windowed non-overlapping frames of ``frame``
     samples (a power of two). Levels are floored at ``LEVEL_FLOOR_DB``."""
@@ -172,7 +183,9 @@ def band_levels(samples: Sequence[float], sample_rate: int, frame: int) -> List[
     power = [0.0] * (half + 1)
     for f in range(frames):
         base = f * frame
-        spectrum = _fft([complex(samples[base + i] * hann[i]) for i in range(frame)], rev, twiddles)
+        spectrum = _fft(
+            [complex(samples[base + i] * hann[i]) for i in range(frame)], rev, twiddles
+        )
         for k in range(1, half + 1):
             c = spectrum[k]
             power[k] += c.real * c.real + c.imag * c.imag
@@ -181,7 +194,9 @@ def band_levels(samples: Sequence[float], sample_rate: int, frame: int) -> List[
     bin_hz = sample_rate / frame
     out: List[Tuple[float, float]] = []
     centre = BAND_BASE_HZ
-    while centre / math.sqrt(2.0) < nyquist:  # the top band may end at the Nyquist frequency, part of an octave
+    while (
+        centre / math.sqrt(2.0) < nyquist
+    ):  # the top band may end at the Nyquist frequency, part of an octave
         low, high = centre / math.sqrt(2.0), centre * math.sqrt(2.0)
         bins = [k for k in range(1, half + 1) if low <= k * bin_hz < high]
         if bins:
@@ -194,10 +209,14 @@ def band_levels(samples: Sequence[float], sample_rate: int, frame: int) -> List[
 
 def _total_db(levels: List[Tuple[float, float]]) -> float:
     total = math.fsum(10.0 ** (lvl / 10.0) for _, lvl in levels if lvl > LEVEL_FLOOR_DB)
-    return max(LEVEL_FLOOR_DB, 10.0 * math.log10(total)) if total > 0 else LEVEL_FLOOR_DB
+    return (
+        max(LEVEL_FLOOR_DB, 10.0 * math.log10(total)) if total > 0 else LEVEL_FLOOR_DB
+    )
 
 
-def spectrum_difference(before: Sequence[float], after: Sequence[float], sample_rate: int) -> Dict[str, Any]:
+def spectrum_difference(
+    before: Sequence[float], after: Sequence[float], sample_rate: int
+) -> Dict[str, Any]:
     """The spectral shape of one channel on each side of a seam: each
     band's level relative to that side's total (so a level change alone
     does not count here - that is the level check's job), compared over
@@ -208,13 +227,21 @@ def spectrum_difference(before: Sequence[float], after: Sequence[float], sample_
     frame = frame_length(sample_rate, min(len(before), len(after)))
     # whole frames only, the ones next to the seam: the end of "before", the start of "after"
     used = (min(len(before), len(after)) // frame) * frame
-    a = band_levels(before[len(before) - used:], sample_rate, frame)
+    a = band_levels(before[len(before) - used :], sample_rate, frame)
     b = band_levels(after[:used], sample_rate, frame)
     total_a, total_b = _total_db(a), _total_db(b)
-    out: Dict[str, Any] = {"frame_samples": frame, "before_total_db": round(total_a, 4), "after_total_db": round(total_b, 4)}
+    out: Dict[str, Any] = {
+        "frame_samples": frame,
+        "before_total_db": round(total_a, 4),
+        "after_total_db": round(total_b, 4),
+    }
     silent_a, silent_b = total_a <= LEVEL_FLOOR_DB, total_b <= LEVEL_FLOOR_DB
     if silent_a or silent_b:
-        out.update(bands=[], bands_compared=0, max_diff_db=0.0 if (silent_a and silent_b) else None)
+        out.update(
+            bands=[],
+            bands_compared=0,
+            max_diff_db=0.0 if (silent_a and silent_b) else None,
+        )
         if silent_a != silent_b:
             out["silent_side"] = "before" if silent_a else "after"
         return out
@@ -226,10 +253,22 @@ def spectrum_difference(before: Sequence[float], after: Sequence[float], sample_
     for (centre, la), (_, lb) in zip(rel_a, rel_b):
         compared = max(la, lb) >= loudest - BAND_RANGE_DB
         diff = round(abs(la - lb), 4)
-        bands.append({"centre_hz": centre, "before_db": la, "after_db": lb, "diff_db": diff, "compared": compared})
+        bands.append(
+            {
+                "centre_hz": centre,
+                "before_db": la,
+                "after_db": lb,
+                "diff_db": diff,
+                "compared": compared,
+            }
+        )
         if compared:
             worst = max(worst, diff)
-    out.update(bands=bands, bands_compared=sum(1 for x in bands if x["compared"]), max_diff_db=worst)
+    out.update(
+        bands=bands,
+        bands_compared=sum(1 for x in bands if x["compared"]),
+        max_diff_db=worst,
+    )
     return out
 
 
@@ -237,11 +276,17 @@ def spectrum_difference(before: Sequence[float], after: Sequence[float], sample_
 
 
 def _channel(data: Any, channels: int, ch: int, start: int, end: int) -> List[float]:
-    return list(data[start * channels + ch:end * channels:channels])
+    return list(data[start * channels + ch : end * channels : channels])
 
 
 def _measure_seam(
-    data: Any, channels: int, sample_rate: int, total: int, label: Any, junction: Optional[int], window: Optional[int],
+    data: Any,
+    channels: int,
+    sample_rate: int,
+    total: int,
+    label: Any,
+    junction: Optional[int],
+    window: Optional[int],
 ) -> Dict[str, Any]:
     """One seam. ``junction=None`` is the wrap: the end of the file, then
     its start."""
@@ -251,20 +296,37 @@ def _measure_seam(
     entry: Dict[str, Any] = {"seam": "wrap" if wrap else label, "time_sec": time_sec}
     if not wrap and junction > total:
         reason = f"the seam at {label}s is past the end of the audio ({round(total / sample_rate, 6)}s)"
-        return {**entry, "click": {"measured": False, "reason": reason}, "level": {"measured": False, "reason": reason},
-                "spectrum": {"measured": False, "reason": reason}}
+        return {
+            **entry,
+            "click": {"measured": False, "reason": reason},
+            "level": {"measured": False, "reason": reason},
+            "spectrum": {"measured": False, "reason": reason},
+        }
 
     def sides(span: int) -> Optional[Tuple[List[List[float]], List[List[float]]]]:
         """``span`` samples before and after the seam, per channel."""
         if wrap:
             if 2 * span > total:
                 return None
-            return ([_channel(data, channels, c, total - span, total) for c in range(channels)],
-                    [_channel(data, channels, c, 0, span) for c in range(channels)])
+            return (
+                [
+                    _channel(data, channels, c, total - span, total)
+                    for c in range(channels)
+                ],
+                [_channel(data, channels, c, 0, span) for c in range(channels)],
+            )
         if junction - span < 0 or junction + span > total:
             return None
-        return ([_channel(data, channels, c, junction - span, junction) for c in range(channels)],
-                [_channel(data, channels, c, junction, junction + span) for c in range(channels)])
+        return (
+            [
+                _channel(data, channels, c, junction - span, junction)
+                for c in range(channels)
+            ],
+            [
+                _channel(data, channels, c, junction, junction + span)
+                for c in range(channels)
+            ],
+        )
 
     def finite(got: Tuple[List[List[float]], List[List[float]]]) -> bool:
         return all(math.isfinite(v) for side in got for ch in side for v in ch)
@@ -273,7 +335,10 @@ def _measure_seam(
     reach = click_spans(sample_rate)[1] + 1
     got = sides(reach)
     if got is None:
-        entry["click"] = {"measured": False, "reason": f"the audio does not reach {CLICK_CONTEXT_SEC * 1000:g} ms on both sides of the seam"}
+        entry["click"] = {
+            "measured": False,
+            "reason": f"the audio does not reach {CLICK_CONTEXT_SEC * 1000:g} ms on both sides of the seam",
+        }
     elif not finite(got):
         entry["click"] = {"measured": False, "reason": non_finite}
     else:
@@ -287,13 +352,21 @@ def _measure_seam(
         entry["click"] = {"measured": True, **worst[1]}
 
     if window is None or window < 2:
-        reason = "no window_sec was given" if window is None else "window_sec is shorter than two samples"
+        reason = (
+            "no window_sec was given"
+            if window is None
+            else "window_sec is shorter than two samples"
+        )
         entry["level"] = {"measured": False, "reason": reason}
         entry["spectrum"] = {"measured": False, "reason": reason}
         return entry
     got = sides(window)
     if got is None:
-        where = "the file is shorter than two windows" if wrap else "the windows do not fit inside the file"
+        where = (
+            "the file is shorter than two windows"
+            if wrap
+            else "the windows do not fit inside the file"
+        )
         reason = f"{where} ({window} samples on each side)"
         entry["level"] = {"measured": False, "reason": reason}
         entry["spectrum"] = {"measured": False, "reason": reason}
@@ -307,7 +380,13 @@ def _measure_seam(
         before, after = rms_dbfs(got[0][c]), rms_dbfs(got[1][c])
         diff = round(abs(before - after), 4)
         if level is None or diff > level["diff_db"]:
-            level = {"measured": True, "before_dbfs": before, "after_dbfs": after, "diff_db": diff, "channel": c}
+            level = {
+                "measured": True,
+                "before_dbfs": before,
+                "after_dbfs": after,
+                "diff_db": diff,
+                "channel": c,
+            }
     entry["level"] = level
     spectrum = None
     for c in range(channels):
@@ -337,38 +416,74 @@ def analyze_loop_seams(
     ``include_wrap`` is false) and every listed seam time."""
 
     def result(value: Dict[str, Any]) -> List[QCMeasurement]:
-        return [QCMeasurement("audio.loop_seams", "audio", "loop_seams", value, source="ffmpeg:pcm_f32le", notes=LOOP_SEAM_NOTE)]
+        return [
+            QCMeasurement(
+                "audio.loop_seams",
+                "audio",
+                "loop_seams",
+                value,
+                source="ffmpeg:pcm_f32le",
+                notes=LOOP_SEAM_NOTE,
+            )
+        ]
 
     try:
         sample_rate = int(audio_stream.get("sample_rate"))
         channels = int(audio_stream.get("channels"))
     except (TypeError, ValueError):
-        return result(_not_measured("the audio stream's sample rate or channel count could not be measured"))
+        return result(
+            _not_measured(
+                "the audio stream's sample rate or channel count could not be measured"
+            )
+        )
     if sample_rate <= 0 or channels <= 0:
-        return result(_not_measured("the audio stream's sample rate or channel count could not be measured"))
+        return result(
+            _not_measured(
+                "the audio stream's sample rate or channel count could not be measured"
+            )
+        )
     too_long = _not_measured(
         f"the audio is too long to hold for the seam analysis (over {MAX_DECODED_BYTES // (1024 * 1024)} MiB of samples)"
     )
-    if duration_sec is not None and duration_sec * sample_rate * channels * 4 > MAX_DECODED_BYTES:
+    if (
+        duration_sec is not None
+        and duration_sec * sample_rate * channels * 4 > MAX_DECODED_BYTES
+    ):
         return result(too_long)
 
     argv = ffmpeg_rawaudio_argv(
-        ffmpeg_path, input_path, stream_select=f"0:{audio_stream['index']}", max_bytes=MAX_DECODED_BYTES,
+        ffmpeg_path,
+        input_path,
+        stream_select=f"0:{audio_stream['index']}",
+        max_bytes=MAX_DECODED_BYTES,
     )
     try:
         res = run_argv(argv, timeout=timeout, binary_stdout=True)
     except FileNotFoundError:
-        raise error("DEPENDENCY_ERROR", "ffmpeg executable could not be run", executable=ffmpeg_path)
+        raise error(
+            "DEPENDENCY_ERROR",
+            "ffmpeg executable could not be run",
+            executable=ffmpeg_path,
+        )
     if res.timed_out:
-        raise error("TOOL_ERROR", "ffmpeg loop-seam decode timed out", argv=argv, timeout=timeout)
+        raise error(
+            "TOOL_ERROR",
+            "ffmpeg loop-seam decode timed out",
+            argv=argv,
+            timeout=timeout,
+        )
     raw = res.stdout_bytes
-    if len(raw) >= MAX_DECODED_BYTES:  # ffmpeg stopped at the cap (no duration, or a wrong one)
+    if (
+        len(raw) >= MAX_DECODED_BYTES
+    ):  # ffmpeg stopped at the cap (no duration, or a wrong one)
         return result(too_long)
     usable = len(raw) - len(raw) % (4 * channels)
     if res.returncode != 0 or usable == 0:
         detail = (res.stderr or "").strip().splitlines()[-1:] or ["no samples"]
         return result(_not_measured(f"the audio could not be decoded: {detail[0]}"))
-    if sys.byteorder == "little":  # the samples are f32le: read them in place, no second copy
+    if (
+        sys.byteorder == "little"
+    ):  # the samples are f32le: read them in place, no second copy
         data: Any = memoryview(raw)[:usable].cast("f")
     else:
         data = array("f")
@@ -381,15 +496,43 @@ def analyze_loop_seams(
         window = int(round(rule.window_sec * sample_rate))
     seams = []
     if rule.include_wrap:
-        seams.append(_measure_seam(data, channels, sample_rate, total, "wrap", None, window))
+        seams.append(
+            _measure_seam(data, channels, sample_rate, total, "wrap", None, window)
+        )
     for t in rule.seams or []:
-        seams.append(_measure_seam(data, channels, sample_rate, total, t, int(round(t * sample_rate)), window))
-    return result({
-        "measured": True, "sample_rate": sample_rate, "channels": channels, "samples": total,
-        "duration_sec": round(total / sample_rate, 6), "window_sec": rule.window_sec,
-        "window_samples": window, "seams": seams,
-    })
+        seams.append(
+            _measure_seam(
+                data,
+                channels,
+                sample_rate,
+                total,
+                t,
+                int(round(t * sample_rate)),
+                window,
+            )
+        )
+    return result(
+        {
+            "measured": True,
+            "sample_rate": sample_rate,
+            "channels": channels,
+            "samples": total,
+            "duration_sec": round(total / sample_rate, 6),
+            "window_sec": rule.window_sec,
+            "window_samples": window,
+            "seams": seams,
+        }
+    )
 
 
 def not_performed(reason: str) -> List[QCMeasurement]:
-    return [QCMeasurement("audio.loop_seams", "audio", "loop_seams", _not_measured(reason), source="ffmpeg:pcm_f32le", notes=LOOP_SEAM_NOTE)]
+    return [
+        QCMeasurement(
+            "audio.loop_seams",
+            "audio",
+            "loop_seams",
+            _not_measured(reason),
+            source="ffmpeg:pcm_f32le",
+            notes=LOOP_SEAM_NOTE,
+        )
+    ]

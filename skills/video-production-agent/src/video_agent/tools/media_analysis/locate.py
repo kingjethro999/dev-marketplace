@@ -1,6 +1,7 @@
 """Locate an installed media-analysis-skill (kajisho5/media-analysis-skill). Two shapes are accepted: a source checkout
 (<dir>/src/media_analysis/cli.py, run as `python -m media_analysis.cli` (without the current directory on sys.path, ADR-074) with PYTHONPATH=<dir>/src) or the installed
 console script `media-analysis` on PATH. The agent never imports the package."""
+
 from __future__ import annotations
 
 import os
@@ -16,9 +17,11 @@ ENV_DIR = "VIDEO_AGENT_MEDIA_ANALYSIS_DIR"
 
 @dataclass
 class MediaAnalysisSkill:
-    command: List[str]            # argv prefix, e.g. [python, "-m", "media_analysis.cli"] or ["media-analysis"]
-    root: Optional[Path]          # checkout root when run from source
-    env: Dict[str, str]           # extra environment for the child (PYTHONPATH for a checkout)
+    command: List[
+        str
+    ]  # argv prefix, e.g. [python, "-m", "media_analysis.cli"] or ["media-analysis"]
+    root: Optional[Path]  # checkout root when run from source
+    env: Dict[str, str]  # extra environment for the child (PYTHONPATH for a checkout)
 
     def describe(self) -> str:
         return str(self.root) if self.root else self.command[0]
@@ -27,11 +30,17 @@ class MediaAnalysisSkill:
 def _from_checkout(root: Path) -> Optional[MediaAnalysisSkill]:
     cli = root / "src" / "media_analysis" / "cli.py"
     if cli.is_file():
-        return MediaAnalysisSkill(python_module_command("media_analysis.cli"), root, {"PYTHONPATH": str(root / "src")})
+        return MediaAnalysisSkill(
+            python_module_command("media_analysis.cli"),
+            root,
+            {"PYTHONPATH": str(root / "src")},
+        )
     return None
 
 
-def locate_media_analysis(explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None) -> Optional[MediaAnalysisSkill]:
+def locate_media_analysis(
+    explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None
+) -> Optional[MediaAnalysisSkill]:
     env = os.environ if env is None else env
     authoritative: List[Path] = []
     if explicit:

@@ -5,6 +5,7 @@ neither, Argos is replaced by a fake `argostranslate` package in
 `sys.modules`, OPUS-MT by fake `ctranslate2`/`sentencepiece` modules over an
 empty model directory, and DeepL and Ollama by fake HTTP functions.
 """
+
 import json
 import subprocess
 import sys
@@ -55,7 +56,9 @@ def test_fixture_translation_keeps_timing_and_lays_out_for_the_target(tmp_path, 
     doc = resp["subtitle"]
     assert doc["language"] == fx["expected"]["language"]
     assert len(doc["cues"]) == len(fx["expected"]["cues"])
-    for got, want, src in zip(doc["cues"], fx["expected"]["cues"], fx["source"]["cues"]):
+    for got, want, src in zip(
+        doc["cues"], fx["expected"]["cues"], fx["source"]["cues"]
+    ):
         assert got["id"] == want["id"] == src["id"]
         assert got["start"] == want["start"] == src["start"]
         assert got["end"] == want["end"] == src["end"]
@@ -63,7 +66,9 @@ def test_fixture_translation_keeps_timing_and_lays_out_for_the_target(tmp_path, 
         assert got.get("speaker") == want.get("speaker")
         assert got["metadata"]["translation"]["source_text"] == src["text"]
     observed = [(o["code"], o.get("cue_id")) for o in resp["observation"]]
-    assert observed == [(o["code"], o["cue_id"]) for o in fx["expected"]["observations"]]
+    assert observed == [
+        (o["code"], o["cue_id"]) for o in fx["expected"]["observations"]
+    ]
 
 
 def test_ja_target_lines_respect_the_ja_profile(tmp_path):
@@ -96,7 +101,9 @@ def test_provenance_records_the_engine(tmp_path):
     assert meta["source_language"] == "ja" and meta["target_language"] == "en"
     assert meta["source_document_id"] == "ep01"
     assert len(meta["glossary_sha256"]) == 64
-    sidecar = json.loads(Path(resp["output"] + ".subtitle-skill.json").read_text(encoding="utf-8"))
+    sidecar = json.loads(
+        Path(resp["output"] + ".subtitle-skill.json").read_text(encoding="utf-8")
+    )
     assert sidecar["engine"] == "memory"
     assert sidecar["engine_version"] == resp["engine_version"]
     assert sidecar["document"] == resp["subtitle"]
@@ -109,15 +116,25 @@ def test_repeat_request_is_reused_and_returns_the_document(tmp_path):
     assert first["reused"] is False and second["reused"] is True
     assert second["subtitle"] == first["subtitle"]
     assert second["sha256"] == first["sha256"]
-    assert [o["code"] for o in second["observation"]] == [o["code"] for o in first["observation"]]
+    assert [o["code"] for o in second["observation"]] == [
+        o["code"] for o in first["observation"]
+    ]
     # a different glossary is a different request
-    third = execute(_request(tmp_path, fx, glossary=[{"source": "字幕", "target": "captions"}]))
+    third = execute(
+        _request(tmp_path, fx, glossary=[{"source": "字幕", "target": "captions"}])
+    )
     assert third["reused"] is False
 
 
 def test_target_constraints_override_profile_defaults(tmp_path):
     fx = _fixture("ja_en.json")
-    resp = execute(_request(tmp_path, fx, constraints={"max_chars_per_line": 20, "reading_speed_cps": 100}))
+    resp = execute(
+        _request(
+            tmp_path,
+            fx,
+            constraints={"max_chars_per_line": 20, "reading_speed_cps": 100},
+        )
+    )
     for cue in resp["subtitle"]["cues"]:
         assert all(len(line) <= 20 for line in cue["text"].split("\n"))
     assert "READING_SPEED_TOO_HIGH" not in [o["code"] for o in resp["observation"]]
@@ -152,7 +169,15 @@ def test_cli_translate_round_trip(tmp_path):
         ({"engine": "deepl"}, "INVALID_INPUT"),  # translation_memory only for memory
         ({"translation_memory": []}, "MISSING_INPUT"),
         ({"glossary": [{"source": "a"}]}, "INVALID_INPUT"),
-        ({"glossary": [{"source": "a", "target": "b"}, {"source": "a", "target": "c"}]}, "INVALID_INPUT"),
+        (
+            {
+                "glossary": [
+                    {"source": "a", "target": "b"},
+                    {"source": "a", "target": "c"},
+                ]
+            },
+            "INVALID_INPUT",
+        ),
         ({"format": "ass"}, "UNSUPPORTED_FORMAT"),
         ({"surprise": 1}, "INVALID_REQUEST"),
     ],
@@ -170,7 +195,15 @@ def test_invalid_translate_requests(tmp_path, over, code):
 def test_api_key_in_a_request_is_refused(tmp_path):
     fx = _fixture("ja_en.json")
     with pytest.raises(SubtitleSkillError) as exc:
-        execute(_request(tmp_path, fx, engine="deepl", translation_memory=None, deepl={"api_key": "x"}))
+        execute(
+            _request(
+                tmp_path,
+                fx,
+                engine="deepl",
+                translation_memory=None,
+                deepl={"api_key": "x"},
+            )
+        )
     assert exc.value.code == "INVALID_REQUEST"
     assert "api_key" in exc.value.message
 
@@ -201,22 +234,32 @@ def test_layout_wraps_past_two_lines_when_it_must():
 
 def test_layout_never_breaks_before_a_small_kana():
     ja = PROFILES["ja"]
-    out = translation.layout_text("ちょっとまってくださいねっていったでしょう", ja, 13, 2)
+    out = translation.layout_text(
+        "ちょっとまってくださいねっていったでしょう", ja, 13, 2
+    )
     for line in out.split("\n")[1:]:
         assert line[0] not in ja.no_line_start
 
 
 def test_glossary_substitution_longest_first():
     glossary = translation.parse_glossary(
-        [{"source": "字幕", "target": "subtitle"}, {"source": "字幕翻訳", "target": "subtitle translation"}]
+        [
+            {"source": "字幕", "target": "subtitle"},
+            {"source": "字幕翻訳", "target": "subtitle translation"},
+        ]
     )
-    assert translation.apply_glossary_to_source("字幕翻訳と字幕", glossary) == "subtitle translationとsubtitle"
+    assert (
+        translation.apply_glossary_to_source("字幕翻訳と字幕", glossary)
+        == "subtitle translationとsubtitle"
+    )
 
 
 def test_glossary_check_is_case_insensitive_on_the_output():
     glossary = translation.parse_glossary([{"source": "字幕", "target": "Subtitles"}])
     assert translation.glossary_misses("字幕です", "subtitles here", glossary) == []
-    assert translation.glossary_misses("字幕です", "captions here", glossary) == list(glossary)
+    assert translation.glossary_misses("字幕です", "captions here", glossary) == list(
+        glossary
+    )
 
 
 # --------------------------------------------------------------------------
@@ -249,17 +292,25 @@ class _FakeArgos:
             install_package_for_language_pair=_forbidden,
             get_available_packages=_forbidden,
         )
-        self.translate = types.SimpleNamespace(get_translation_from_codes=lambda s, t: Translation())
+        self.translate = types.SimpleNamespace(
+            get_translation_from_codes=lambda s, t: Translation()
+        )
 
         class ModelProvider:
             OPENNMT = "opennmt"
             LIBRETRANSLATE = "libretranslate"
 
-        self.settings = types.SimpleNamespace(ModelProvider=ModelProvider, model_provider=provider)
+        self.settings = types.SimpleNamespace(
+            ModelProvider=ModelProvider, model_provider=provider
+        )
 
     def install(self, monkeypatch):
         root = types.ModuleType("argostranslate")
-        root.package, root.translate, root.settings = self.package, self.translate, self.settings
+        root.package, root.translate, root.settings = (
+            self.package,
+            self.translate,
+            self.settings,
+        )
         monkeypatch.setitem(sys.modules, "argostranslate", root)
         monkeypatch.setitem(sys.modules, "argostranslate.package", self.package)
         monkeypatch.setitem(sys.modules, "argostranslate.translate", self.translate)
@@ -274,13 +325,19 @@ def _argos_request(tmp_path, **over):
         "output_path": "out.srt",
         "target_language": "en",
         "glossary": [{"source": "字幕", "target": "captions"}],
-        "subtitle": {"id": "d", "language": "ja", "cues": [{"id": "1", "start": 0, "end": 3, "text": "字幕を\n翻訳します。"}]},
+        "subtitle": {
+            "id": "d",
+            "language": "ja",
+            "cues": [{"id": "1", "start": 0, "end": 3, "text": "字幕を\n翻訳します。"}],
+        },
     }
     req.update(over)
     return req
 
 
-def test_argos_is_the_default_engine_and_gets_glossary_terms_substituted(tmp_path, monkeypatch):
+def test_argos_is_the_default_engine_and_gets_glossary_terms_substituted(
+    tmp_path, monkeypatch
+):
     fake = _FakeArgos()
     fake.install(monkeypatch)
     resp = execute(_argos_request(tmp_path))
@@ -295,7 +352,9 @@ def test_argos_is_the_default_engine_and_gets_glossary_terms_substituted(tmp_pat
 def test_argos_output_missing_a_glossary_term_is_reported(tmp_path, monkeypatch):
     fake = _FakeArgos()
     fake.install(monkeypatch)
-    fake.translate.get_translation_from_codes = lambda s, t: types.SimpleNamespace(translate=lambda text: "Translated.")
+    fake.translate.get_translation_from_codes = lambda s, t: types.SimpleNamespace(
+        translate=lambda text: "Translated."
+    )
     resp = execute(_argos_request(tmp_path))
     assert [o["code"] for o in resp["observation"]] == ["GLOSSARY_TERM_MISSING"]
 
@@ -350,7 +409,12 @@ class _FakeDeepL:
             if self.translate_status != 200:
                 return self.translate_status, b'{"message":"nope"}'
             texts = payload["text"]
-            return 200, json.dumps({"translations": [{"text": "captions: " + t} for t in texts]}).encode()
+            return (
+                200,
+                json.dumps(
+                    {"translations": [{"text": "captions: " + t} for t in texts]}
+                ).encode(),
+            )
         return 404, b""
 
 
@@ -365,7 +429,11 @@ def test_deepl_uses_a_native_glossary_and_cleans_it_up():
     out = engine.translate(["字幕です"], "ja", "en", glossary)
     assert out == ["captions: 字幕です"]  # the source is NOT pre-substituted for DeepL
     methods = [(m, u.rsplit("/v2", 1)[1]) for m, u, _h, _p in fake.requests]
-    assert methods == [("POST", "/glossaries"), ("POST", "/translate"), ("DELETE", "/glossaries/g-123")]
+    assert methods == [
+        ("POST", "/glossaries"),
+        ("POST", "/translate"),
+        ("DELETE", "/glossaries/g-123"),
+    ]
     created = fake.requests[0][3]
     assert created["entries"] == "字幕\tcaptions" and created["entries_format"] == "tsv"
     assert created["source_lang"] == "ja" and created["target_lang"] == "en"
@@ -410,7 +478,9 @@ def test_deepl_count_mismatch_is_a_tool_error():
     def http(method, url, headers, body):
         return 200, json.dumps({"translations": []}).encode()
 
-    engine = translation.DeepLEngine(http=http, environ={translation.DEEPL_KEY_ENV: "k"})
+    engine = translation.DeepLEngine(
+        http=http, environ={translation.DEEPL_KEY_ENV: "k"}
+    )
     with pytest.raises(SubtitleSkillError) as exc:
         engine.translate(["a", "b"], "en", "ja", ())
     assert exc.value.code == "TOOL_ERROR"
@@ -425,7 +495,10 @@ def test_deepl_through_execute_with_the_http_layer_replaced(tmp_path, monkeypatc
     assert resp["engine"] == "deepl"
     assert resp["engine_version"] == "deepl-api v2"
     assert resp["subtitle"]["cues"][0]["text"].startswith("captions:")
-    assert resp["subtitle"]["cues"][0]["start"] == 0 and resp["subtitle"]["cues"][0]["end"] == 3
+    assert (
+        resp["subtitle"]["cues"][0]["start"] == 0
+        and resp["subtitle"]["cues"][0]["end"] == 3
+    )
 
 
 def test_doctor_lists_translation_engines(monkeypatch):
@@ -437,10 +510,15 @@ def test_doctor_lists_translation_engines(monkeypatch):
     assert "translate" in report["supported_operations"]
     engines = report["translation_engines"]
     assert engines["memory"]["available"] is True
-    assert engines["deepl"]["available"] is False and engines["deepl"]["offline"] is False
+    assert (
+        engines["deepl"]["available"] is False and engines["deepl"]["offline"] is False
+    )
     assert engines["argos"]["offline"] is True
     assert engines["argos"]["weights_licence"].startswith("unverified")
-    assert engines["opus-mt"]["offline"] is True and "Apache-2.0" in engines["opus-mt"]["weights_licence"]
+    assert (
+        engines["opus-mt"]["offline"] is True
+        and "Apache-2.0" in engines["opus-mt"]["weights_licence"]
+    )
     assert engines["ollama"]["model"] == translation.OLLAMA_DEFAULT_MODEL
 
 
@@ -464,7 +542,9 @@ class _FakeCT2:
                 # "translate" by upper-casing the pieces; keep the eos token
                 # out of the output as CTranslate2 does
                 return [
-                    types.SimpleNamespace(hypotheses=[[t.upper() for t in tokens if t != "</s>"]])
+                    types.SimpleNamespace(
+                        hypotheses=[[t.upper() for t in tokens if t != "</s>"]]
+                    )
                     for tokens in batch
                 ]
 
@@ -498,7 +578,9 @@ def _opus_root(tmp_path, pair="ja-en"):
     return root
 
 
-def test_opus_mt_translates_with_ctranslate2_and_substitutes_the_glossary(tmp_path, monkeypatch):
+def test_opus_mt_translates_with_ctranslate2_and_substitutes_the_glossary(
+    tmp_path, monkeypatch
+):
     fake = _FakeCT2()
     fake.install(monkeypatch)
     root = _opus_root(tmp_path)
@@ -510,13 +592,16 @@ def test_opus_mt_translates_with_ctranslate2_and_substitutes_the_glossary(tmp_pa
     assert resp["engine_version"].startswith("ctranslate2 ")
     assert "model opus-mt-ja-en sha256:" in resp["engine_version"]
     assert fake.loaded == [(str(root / "opus-mt-ja-en"), "cpu")]
-    (batch, kwargs), = fake.batches
+    ((batch, kwargs),) = fake.batches
     # one segment per cue, glossary target substituted, eos appended
     # (a ja line break joins without a space, as for every engine)
     assert batch == [["\u2581captions", "\u2581を翻訳", "\u2581します", "</s>"]]
     assert kwargs["beam_size"] == 4
     assert resp["subtitle"]["cues"][0]["text"] == "CAPTIONS を翻訳 します"
-    assert resp["subtitle"]["cues"][0]["start"] == 0 and resp["subtitle"]["cues"][0]["end"] == 3
+    assert (
+        resp["subtitle"]["cues"][0]["start"] == 0
+        and resp["subtitle"]["cues"][0]["end"] == 3
+    )
 
 
 def test_opus_mt_model_change_changes_the_reuse_identity(tmp_path, monkeypatch):
@@ -536,14 +621,21 @@ def test_opus_mt_without_the_modules_is_a_dependency_error(tmp_path, monkeypatch
     assert exc.value.code == "DEPENDENCY_ERROR" and "ctranslate2" in exc.value.message
 
 
-def test_opus_mt_without_a_model_dir_or_pair_is_a_dependency_error(tmp_path, monkeypatch):
+def test_opus_mt_without_a_model_dir_or_pair_is_a_dependency_error(
+    tmp_path, monkeypatch
+):
     _FakeCT2().install(monkeypatch)
     monkeypatch.delenv(translation.OPUS_MT_DIR_ENV, raising=False)
     with pytest.raises(SubtitleSkillError) as exc:
         execute(_argos_request(tmp_path, engine="opus-mt"))
-    assert exc.value.code == "DEPENDENCY_ERROR" and translation.OPUS_MT_DIR_ENV in exc.value.message
+    assert (
+        exc.value.code == "DEPENDENCY_ERROR"
+        and translation.OPUS_MT_DIR_ENV in exc.value.message
+    )
 
-    monkeypatch.setenv(translation.OPUS_MT_DIR_ENV, str(_opus_root(tmp_path, pair="en-ja")))
+    monkeypatch.setenv(
+        translation.OPUS_MT_DIR_ENV, str(_opus_root(tmp_path, pair="en-ja"))
+    )
     with pytest.raises(SubtitleSkillError) as exc:
         execute(_argos_request(tmp_path, engine="opus-mt"))
     assert exc.value.code == "DEPENDENCY_ERROR" and "opus-mt-ja-en" in exc.value.message
@@ -556,7 +648,11 @@ def test_opus_mt_without_a_model_dir_or_pair_is_a_dependency_error(tmp_path, mon
 
 
 class _FakeOllama:
-    def __init__(self, models=("qwen3:8b",), reply="<think>\n</think>\n\nCaptions get translated."):
+    def __init__(
+        self,
+        models=("qwen3:8b",),
+        reply="<think>\n</think>\n\nCaptions get translated.",
+    ):
         self.requests = []
         self.models = models
         self.reply = reply
@@ -567,12 +663,23 @@ class _FakeOllama:
         if url.endswith("/api/version"):
             return 200, b'{"version": "0.12.0"}'
         if url.endswith("/api/tags"):
-            models = [{"name": m, "model": m, "digest": "abcdef0123456789" * 4} for m in self.models]
+            models = [
+                {"name": m, "model": m, "digest": "abcdef0123456789" * 4}
+                for m in self.models
+            ]
             return 200, json.dumps({"models": models}).encode()
         if url.endswith("/api/chat"):
             if payload["model"] not in self.models:
                 return 404, b'{"error": "model not found"}'
-            return 200, json.dumps({"message": {"role": "assistant", "content": self.reply}, "done": True}).encode()
+            return (
+                200,
+                json.dumps(
+                    {
+                        "message": {"role": "assistant", "content": self.reply},
+                        "done": True,
+                    }
+                ).encode(),
+            )
         if url.endswith("/api/pull"):
             raise AssertionError("subtitle-skill must never pull Ollama models")
         return 404, b""
@@ -584,15 +691,21 @@ def test_ollama_one_request_per_cue_through_execute(tmp_path, monkeypatch):
     monkeypatch.delenv(translation.OLLAMA_URL_ENV, raising=False)
     monkeypatch.delenv(translation.OLLAMA_MODEL_ENV, raising=False)
     req = _argos_request(tmp_path, engine="ollama")
-    req["subtitle"]["cues"].append({"id": "2", "start": 3, "end": 5, "text": "二つ目です。"})
+    req["subtitle"]["cues"].append(
+        {"id": "2", "start": 3, "end": 5, "text": "二つ目です。"}
+    )
     resp = execute(req)
     assert resp["engine"] == "ollama"
     assert resp["engine_version"] == "ollama 0.12.0; model qwen3:8b@abcdef012345"
     chats = [p for m, u, p in fake.requests if u.endswith("/api/chat")]
     assert len(chats) == 2
-    assert all(u.startswith(translation.OLLAMA_DEFAULT_URL) for _m, u, _p in fake.requests)
+    assert all(
+        u.startswith(translation.OLLAMA_DEFAULT_URL) for _m, u, _p in fake.requests
+    )
     first = chats[0]
-    assert first["messages"][1]["content"] == "captionsを翻訳します。"  # glossary substituted, lines joined
+    assert (
+        first["messages"][1]["content"] == "captionsを翻訳します。"
+    )  # glossary substituted, lines joined
     assert "Japanese to English" in first["messages"][0]["content"]
     assert first["stream"] is False and first["think"] is False
     assert first["options"] == {"temperature": 0, "seed": 0}
@@ -600,30 +713,43 @@ def test_ollama_one_request_per_cue_through_execute(tmp_path, monkeypatch):
     assert resp["subtitle"]["cues"][0]["text"] == "Captions get translated."
 
 
-def test_ollama_missing_model_is_a_dependency_error_and_never_pulls(tmp_path, monkeypatch):
+def test_ollama_missing_model_is_a_dependency_error_and_never_pulls(
+    tmp_path, monkeypatch
+):
     fake = _FakeOllama(models=("llama3:8b",))
     monkeypatch.setattr(translation, "_ollama_http", fake)
     monkeypatch.delenv(translation.OLLAMA_MODEL_ENV, raising=False)
     with pytest.raises(SubtitleSkillError) as exc:
         execute(_argos_request(tmp_path, engine="ollama"))
-    assert exc.value.code == "DEPENDENCY_ERROR" and "ollama pull qwen3:8b" in exc.value.message
+    assert (
+        exc.value.code == "DEPENDENCY_ERROR"
+        and "ollama pull qwen3:8b" in exc.value.message
+    )
     assert not any(u.endswith("/api/pull") for _m, u, _p in fake.requests)
 
 
 def test_ollama_refuses_plain_http_to_a_remote_host():
-    engine = translation.OllamaEngine(http=_FakeOllama(), environ={translation.OLLAMA_URL_ENV: "http://10.0.0.5:11434"})
+    engine = translation.OllamaEngine(
+        http=_FakeOllama(),
+        environ={translation.OLLAMA_URL_ENV: "http://10.0.0.5:11434"},
+    )
     with pytest.raises(SubtitleSkillError) as exc:
         engine.translate(["x"], "ja", "en", ())
     assert exc.value.code == "DEPENDENCY_ERROR"
     assert engine.available()[0] is False
-    remote = translation.OllamaEngine(http=_FakeOllama(), environ={translation.OLLAMA_URL_ENV: "https://gpu.example:443"})
+    remote = translation.OllamaEngine(
+        http=_FakeOllama(),
+        environ={translation.OLLAMA_URL_ENV: "https://gpu.example:443"},
+    )
     assert remote.available() == (True, None) and remote.is_local() is False
     assert translation.OllamaEngine(environ={}).is_local() is True
 
 
 def test_ollama_model_from_the_environment_and_reply_errors():
     fake = _FakeOllama(models=("qwen3:4b",), reply="Hello.")
-    engine = translation.OllamaEngine(http=fake, environ={translation.OLLAMA_MODEL_ENV: "qwen3:4b"})
+    engine = translation.OllamaEngine(
+        http=fake, environ={translation.OLLAMA_MODEL_ENV: "qwen3:4b"}
+    )
     assert engine.translate(["こんにちは。"], "ja", "en", ()) == ["Hello."]
     assert fake.requests[-1][2]["model"] == "qwen3:4b"
 
@@ -631,5 +757,7 @@ def test_ollama_model_from_the_environment_and_reply_errors():
         return 200, b'{"message": {}}'
 
     with pytest.raises(SubtitleSkillError) as exc:
-        translation.OllamaEngine(http=broken, environ={}).translate(["x"], "ja", "en", ())
+        translation.OllamaEngine(http=broken, environ={}).translate(
+            ["x"], "ja", "en", ()
+        )
     assert exc.value.code == "TOOL_ERROR"

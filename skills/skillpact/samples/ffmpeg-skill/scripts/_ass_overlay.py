@@ -20,8 +20,8 @@ a centred title needs no text-width measurement at all. `move` is (x1, y1, x2, y
 milliseconds relative to the line's own start; `fade` is (in_ms, out_ms); `scale_t` is
 (t1_ms, t2_ms, percent) for a pop.
 """
-from typing import Any, Dict, List, Optional, Sequence
 
+from typing import Any, Dict, List, Optional, Sequence
 
 # One sentinel character stands in drawn text where an emoji was, so the placeholder is inserted
 # AFTER the brace-stripping that keeps caller-supplied text from injecting override commands.
@@ -94,7 +94,11 @@ def ass_escape(text: str) -> str:
         elif ch == "\n":
             out.append("\\N")
         elif ch == "\\":
-            out.append("\\\u200b" if (i + 1 < len(s) and s[i + 1] in _ASS_AFTER_BACKSLASH) else "\\")
+            out.append(
+                "\\\u200b"
+                if (i + 1 < len(s) and s[i + 1] in _ASS_AFTER_BACKSLASH)
+                else "\\"
+            )
         else:
             out.append(ch)
     return "".join(out)
@@ -105,14 +109,26 @@ def ass_text(text: str) -> str:
     return ass_escape(text)
 
 
-def text_overlay_ass(elements: Sequence[Dict[str, Any]], *, play_w: int, play_h: int,
-                     path: str, fonts_dir: Optional[str] = None) -> str:
+def text_overlay_ass(
+    elements: Sequence[Dict[str, Any]],
+    *,
+    play_w: int,
+    play_h: int,
+    path: str,
+    fonts_dir: Optional[str] = None,
+) -> str:
     """Write `elements` as an ASS file at `path` and return the path."""
     header = [
-        "[Script Info]", "ScriptType: v4.00+", f"PlayResX: {play_w}", f"PlayResY: {play_h}",
+        "[Script Info]",
+        "ScriptType: v4.00+",
+        f"PlayResX: {play_w}",
+        f"PlayResY: {play_h}",
         # YCbCr Matrix: None -- the colours are RGB, to be put in the video's own matrix: FFmpeg 8.x's
         # ass filter reads an absent header as BT.601 whatever the picture is tagged (drawn_chain)
-        "WrapStyle: 2", "ScaledBorderAndShadow: yes", "YCbCr Matrix: None", "",
+        "WrapStyle: 2",
+        "ScaledBorderAndShadow: yes",
+        "YCbCr Matrix: None",
+        "",
         "[V4+ Styles]",
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "
         "BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, "
@@ -124,18 +140,23 @@ def text_overlay_ass(elements: Sequence[Dict[str, Any]], *, play_w: int, play_h:
         colour = ass_color(el.get("color", "FFFFFF"))
         outline_colour = ass_color(el.get("outline_color", "000000"))
         box = bool(el.get("box"))
-        back = ass_color(el.get("box_color", el.get("outline_color", "000000")),
-                         int(el.get("box_alpha", 0)))
+        back = ass_color(
+            el.get("box_color", el.get("outline_color", "000000")),
+            int(el.get("box_alpha", 0)),
+        )
         header.append(
             f"Style: {name},{ass_field(el.get('font') or 'Sans')},{int(round(el['size']))},"
             f"{colour},{colour},{outline_colour},{back},{-1 if el.get('bold') else 0},0,0,0,"
             f"100,100,0,0,{3 if box else 1},{float(el.get('outline', 0)):.1f},"
-            f"{float(el.get('shadow', 0)):.1f},{int(el.get('align', 7))},0,0,0,1")
+            f"{float(el.get('shadow', 0)):.1f},{int(el.get('align', 7))},0,0,0,1"
+        )
         tags = [f"\\an{int(el.get('align', 7))}"]
         move = el.get("move")
         if move:
             x1, y1, x2, y2, t1, t2 = move
-            tags.append(f"\\move({x1:.0f},{y1:.0f},{x2:.0f},{y2:.0f},{t1:.0f},{t2:.0f})")
+            tags.append(
+                f"\\move({x1:.0f},{y1:.0f},{x2:.0f},{y2:.0f},{t1:.0f},{t2:.0f})"
+            )
         else:
             tags.append(f"\\pos({el['x']:.0f},{el['y']:.0f})")
         fade = el.get("fade")
@@ -144,14 +165,31 @@ def text_overlay_ass(elements: Sequence[Dict[str, Any]], *, play_w: int, play_h:
         scale_t = el.get("scale_t")
         if scale_t:
             t1, t2, pct = scale_t
-            tags.append(f"\\fscx{pct:.0f}\\fscy{pct:.0f}\\t({t1:.0f},{t2:.0f},\\fscx100\\fscy100)")
+            tags.append(
+                f"\\fscx{pct:.0f}\\fscy{pct:.0f}\\t({t1:.0f},{t2:.0f},\\fscx100\\fscy100)"
+            )
         events.append(
             f"Dialogue: 0,{ass_time(el['start'])},{ass_time(el['end'])},{name},,0,0,0,,"
-            "{" + "".join(tags) + "}" + ass_text(el["text"]).replace(
-                EMOJI_SENTINEL, emoji_placeholder(el.get("box_px") or el["size"])))
-    body = "\n".join(header + ["", "[Events]",
-                               "Format: Layer, Start, End, Style, Name, MarginL, MarginR, "
-                               "MarginV, Effect, Text"] + events) + "\n"
+            "{"
+            + "".join(tags)
+            + "}"
+            + ass_text(el["text"]).replace(
+                EMOJI_SENTINEL, emoji_placeholder(el.get("box_px") or el["size"])
+            )
+        )
+    body = (
+        "\n".join(
+            header
+            + [
+                "",
+                "[Events]",
+                "Format: Layer, Start, End, Style, Name, MarginL, MarginR, "
+                "MarginV, Effect, Text",
+            ]
+            + events
+        )
+        + "\n"
+    )
     with open(path, "w", encoding="utf-8-sig") as fh:
         fh.write(body)
     return path

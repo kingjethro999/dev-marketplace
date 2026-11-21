@@ -44,20 +44,35 @@ class CompareTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.a = os.path.join(self.tmp.name, "a.png")
         self.b = os.path.join(self.tmp.name, "b.png")
-        base = lambda x, y: ((x * 7) % 256, (y * 5) % 256, ((x + y) * 3) % 256)  # noqa: E731
+        base = lambda x, y: (
+            (x * 7) % 256,
+            (y * 5) % 256,
+            ((x + y) * 3) % 256,
+        )  # noqa: E731
         write_png(self.a, 120, 90, base)
         # exactly 100 changed pixels: a 10x10 block
-        write_png(self.b, 120, 90, lambda x, y: (255, 255, 255) if 20 <= x < 30 and 40 <= y < 50 else base(x, y))
+        write_png(
+            self.b,
+            120,
+            90,
+            lambda x, y: (
+                (255, 255, 255) if 20 <= x < 30 and 40 <= y < 50 else base(x, y)
+            ),
+        )
 
     def run_cli(self, *args):
-        proc = subprocess.run([sys.executable, SCRIPT, *args, "--json"], capture_output=True, text=True)
+        proc = subprocess.run(
+            [sys.executable, SCRIPT, *args, "--json"], capture_output=True, text=True
+        )
         return proc.returncode, json.loads(proc.stdout)
 
     def test_identical_images(self):
         code, out = self.run_cli(self.a, self.a)
         self.assertEqual(code, 0)
         self.assertTrue(out["identical"])
-        self.assertEqual((out["ssim"], out["psnr_db"], out["diff_pixels"]), (1.0, None, 0))
+        self.assertEqual(
+            (out["ssim"], out["psnr_db"], out["diff_pixels"]), (1.0, None, 0)
+        )
 
     def test_counts_changed_pixels_exactly(self):
         code, out = self.run_cli(self.a, self.b)
@@ -80,6 +95,7 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(out["output"], heat)
         from _common import identify_dims
+
         self.assertEqual(identify_dims(heat), (120, 90))
 
     def test_size_mismatch_is_refused(self):

@@ -3,6 +3,7 @@
 lives in scripts/bpy/_compat.py (it varies by Blender version); this module only says which
 logical format a path is, so host scripts can validate before ever launching Blender.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,8 +24,8 @@ FORMATS = {
 
 EXT_TO_FORMAT = {ext: fmt for fmt, exts in FORMATS.items() for ext in exts}
 
-IMPORTABLE = set(FORMATS)          # every format above can be read
-EXPORTABLE = set(FORMATS)          # and written
+IMPORTABLE = set(FORMATS)  # every format above can be read
+EXPORTABLE = set(FORMATS)  # and written
 
 
 def detect_format(path: str) -> Optional[str]:

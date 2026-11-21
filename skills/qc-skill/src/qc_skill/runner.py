@@ -35,9 +35,18 @@ from typing import Iterator, List, Optional
 from .errors import error
 
 _PASSTHROUGH_ENV_VARS = (
-    "PATH", "HOME", "LANG", "LC_ALL", "TERM",
-    "TMPDIR", "TEMP", "TMP",
-    "SYSTEMROOT", "SYSTEMDRIVE", "WINDIR", "COMSPEC",
+    "PATH",
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "COMSPEC",
 )
 
 
@@ -104,7 +113,9 @@ def _kill_group(proc: subprocess.Popen) -> None:
 
 # (deadline on time.monotonic(), budget in seconds) for the request being
 # run in this context, or None when the request set no timeout.
-_DEADLINE: "contextvars.ContextVar[Optional[tuple]]" = contextvars.ContextVar("qc_request_deadline", default=None)
+_DEADLINE: "contextvars.ContextVar[Optional[tuple]]" = contextvars.ContextVar(
+    "qc_request_deadline", default=None
+)
 
 
 @contextlib.contextmanager
@@ -117,7 +128,9 @@ def request_deadline(seconds: Optional[float]) -> Iterator[None]:
     another with the same budget)."""
 
     outer = _DEADLINE.get()
-    inner = None if seconds is None else (time.monotonic() + float(seconds), float(seconds))
+    inner = (
+        None if seconds is None else (time.monotonic() + float(seconds), float(seconds))
+    )
     if outer is not None and (inner is None or outer[0] <= inner[0]):
         inner = outer
     token = _DEADLINE.set(inner)
@@ -131,7 +144,9 @@ def _timeout_error(budget: float, stage: str, **details):
     return error(
         "TIMEOUT",
         f"request.timeout of {budget:g}s elapsed during {stage}",
-        timeout=budget, stage=stage, **details,
+        timeout=budget,
+        stage=stage,
+        **details,
     )
 
 
@@ -143,7 +158,9 @@ def check_deadline(stage: str) -> None:
         raise _timeout_error(current[1], stage)
 
 
-def run_argv(argv: List[str], timeout: Optional[float] = None, *, binary_stdout: bool = False) -> ProcessResult:
+def run_argv(
+    argv: List[str], timeout: Optional[float] = None, *, binary_stdout: bool = False
+) -> ProcessResult:
     """``binary_stdout=True`` keeps stdout as raw bytes (``stdout_bytes``;
     ``stdout`` is then empty) - for the rawvideo frame readouts in
     measurements/temporal.py and measurements/text_legibility.py, which
@@ -189,13 +206,17 @@ def run_argv(argv: List[str], timeout: Optional[float] = None, *, binary_stdout:
         _kill_group(proc)
         try:
             stdout, stderr = proc.communicate(timeout=10)
-        except subprocess.TimeoutExpired:  # a pipe still held open by something the kill missed
+        except (
+            subprocess.TimeoutExpired
+        ):  # a pipe still held open by something the kill missed
             proc.kill()
             proc.wait()
             stdout, stderr = b"", b""
         timed_out = True
         if deadline_binds:
-            raise _timeout_error(current[1], stage, seconds=round(time.monotonic() - start, 3))
+            raise _timeout_error(
+                current[1], stage, seconds=round(time.monotonic() - start, 3)
+            )
 
     return ProcessResult(
         argv=argv,
@@ -208,13 +229,18 @@ def run_argv(argv: List[str], timeout: Optional[float] = None, *, binary_stdout:
     )
 
 
-def ffprobe_argv(executable: str, input_path: Path, extra: Optional[List[str]] = None) -> List[str]:
+def ffprobe_argv(
+    executable: str, input_path: Path, extra: Optional[List[str]] = None
+) -> List[str]:
     argv = [
         executable,
         "-hide_banner",
-        "-v", "error",
-        "-protocol_whitelist", "file",
-        "-print_format", "json",
+        "-v",
+        "error",
+        "-protocol_whitelist",
+        "file",
+        "-print_format",
+        "json",
     ]
     if extra:
         argv.extend(extra)
@@ -241,9 +267,12 @@ def ffmpeg_analysis_argv(
         executable,
         "-hide_banner",
         "-nostdin",
-        "-v", "info",
-        "-protocol_whitelist", "file",
-        "-i", str(input_path),
+        "-v",
+        "info",
+        "-protocol_whitelist",
+        "file",
+        "-i",
+        str(input_path),
     ]
     if stream_select:
         argv.extend(["-map", stream_select])
@@ -276,7 +305,15 @@ def ffmpeg_rawvideo_argv(
     schemas.py has already validated as numbers - never caller text.
     """
 
-    argv = [executable, "-hide_banner", "-nostdin", "-v", log_level, "-protocol_whitelist", "file"]
+    argv = [
+        executable,
+        "-hide_banner",
+        "-nostdin",
+        "-v",
+        log_level,
+        "-protocol_whitelist",
+        "file",
+    ]
     if seek_sec is not None:
         argv.extend(["-ss", f"{seek_sec:.6f}"])
     argv.extend(["-i", str(input_path), "-map", stream_select])
@@ -294,7 +331,11 @@ def ffmpeg_rawvideo_argv(
 
 
 def ffmpeg_rawaudio_argv(
-    executable: str, input_path: Path, *, stream_select: str, max_bytes: Optional[int] = None,
+    executable: str,
+    input_path: Path,
+    *,
+    stream_select: str,
+    max_bytes: Optional[int] = None,
 ) -> List[str]:
     """Build a fixed 'decode one audio stream to 32-bit float samples on
     stdout' ffmpeg invocation (the loop-seam measurement, ADR-025): the
@@ -302,8 +343,17 @@ def ffmpeg_rawaudio_argv(
     ``max_bytes`` makes ffmpeg stop writing once that much is out (``-fs``)."""
 
     argv = [
-        executable, "-hide_banner", "-nostdin", "-v", "error", "-protocol_whitelist", "file",
-        "-i", str(input_path), "-map", stream_select,
+        executable,
+        "-hide_banner",
+        "-nostdin",
+        "-v",
+        "error",
+        "-protocol_whitelist",
+        "file",
+        "-i",
+        str(input_path),
+        "-map",
+        stream_select,
     ]
     if max_bytes is not None:
         argv.extend(["-fs", str(int(max_bytes))])
@@ -329,10 +379,21 @@ def ffmpeg_two_input_argv(
     """
 
     argv = [
-        executable, "-hide_banner", "-nostdin", "-v", "info",
-        "-protocol_whitelist", "file", "-i", str(distorted_path),
-        "-protocol_whitelist", "file", "-i", str(reference_path),
-        "-filter_complex", filter_complex,
+        executable,
+        "-hide_banner",
+        "-nostdin",
+        "-v",
+        "info",
+        "-protocol_whitelist",
+        "file",
+        "-i",
+        str(distorted_path),
+        "-protocol_whitelist",
+        "file",
+        "-i",
+        str(reference_path),
+        "-filter_complex",
+        filter_complex,
     ]
     for label in outputs:
         argv.extend(["-map", label])

@@ -23,10 +23,25 @@ Examples:
   python3 proxy.py input.mov --width 480 --no-audio    # smaller, video-only
   python3 proxy.py input.mov --scale 0.25 --fps 10     # quarter-size, 10fps (e.g. for a vision model)
 """
+
 import argparse
 import sys
 
-from _common import add_common, apply_common, cfr_args, with_cfr, default_output, die, emit, ffmpeg_base, info, probe, run_keeping_subtitles, video_args, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    cfr_args,
+    with_cfr,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    video_args,
+    fmt_secs,
+)
 from _common.emit import note
 from _common.probe import display_size, square_pixels, square_pixels_note
 
@@ -37,14 +52,27 @@ def even(n: float) -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_proxy.<ext>)")
-    ap.add_argument("--width", type=int, default=640, help="output width in px, height follows the source aspect (default 640)")
-    ap.add_argument("--scale", type=float, help="scale factor applied to the source dimensions instead of --width (0 < scale <= 1)")
+    ap.add_argument(
+        "--width",
+        type=int,
+        default=640,
+        help="output width in px, height follows the source aspect (default 640)",
+    )
+    ap.add_argument(
+        "--scale",
+        type=float,
+        help="scale factor applied to the source dimensions instead of --width (0 < scale <= 1)",
+    )
     ap.set_defaults(crf=30)  # --quality's default (the --crf alias was removed in 2.0)
     ap.add_argument("--fps", type=float, help="force a constant output frame rate")
-    ap.add_argument("--no-audio", action="store_true", help="drop audio entirely (default: keep it)")
+    ap.add_argument(
+        "--no-audio", action="store_true", help="drop audio entirely (default: keep it)"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -73,19 +101,36 @@ def main() -> int:
     ceiling = max(2, sw - sw % 2) if sw else asked
     out_w = max(2, min(asked, ceiling))
     if out_w != asked:
-        note(f"proxy width {out_w}px, not {asked}px: "
-             + (f"the source is {sw}px wide and a proxy is not upscaled" if asked > ceiling else "2px is the smallest width"))
+        note(
+            f"proxy width {out_w}px, not {asked}px: "
+            + (
+                f"the source is {sw}px wide and a proxy is not upscaled"
+                if asked > ceiling
+                else "2px is the smallest width"
+            )
+        )
     output = args.output or default_output(args.input, "proxy")
 
-    cmd = ffmpeg_base() + ["-i", args.input, "-vf", with_cfr((square + "," if square else "") + f"scale={out_w}:-2", meta, args.fps)]
+    cmd = ffmpeg_base() + [
+        "-i",
+        args.input,
+        "-vf",
+        with_cfr(
+            (square + "," if square else "") + f"scale={out_w}:-2", meta, args.fps
+        ),
+    ]
     cmd += video_args(meta, args.crf, "veryfast")
     cmd += cfr_args(meta, args.fps)
-    cmd += ["-map", "0:v:0"] + (["-map", "0:a:0", "-c:a", "aac", "-b:a", "96k"] if has_audio else ["-an"])
+    cmd += ["-map", "0:v:0"] + (
+        ["-map", "0:a:0", "-c:a", "aac", "-b:a", "96k"] if has_audio else ["-an"]
+    )
     dropped_streams = run_keeping_subtitles(cmd, output)
 
     result = probe(output)
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {v['codec']}, crf {args.crf})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {v['codec']}, crf {args.crf})"
+    )
     emit(output, dropped_non_av_streams=dropped_streams)
     return 0
 

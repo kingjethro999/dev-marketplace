@@ -1,4 +1,5 @@
 """Shared cue text helpers for the generators."""
+
 from __future__ import annotations
 
 from ..models import SubtitleCue
@@ -24,5 +25,7 @@ def ruby_as_text(base: str, reading: str, language: str) -> str:
 
 
 def plain_text(cue: SubtitleCue, language: str) -> str:
-    return "".join(seg if reading is None else ruby_as_text(seg, reading, language)
-                   for seg, reading in display_segments(cue))
+    return "".join(
+        seg if reading is None else ruby_as_text(seg, reading, language)
+        for seg, reading in display_segments(cue)
+    )

@@ -13,13 +13,17 @@ CAPS = detect_capabilities()
 
 def make_ctx(workspace: Path, allowed_roots=None, cache=None) -> ExecutionContext:
     return ExecutionContext(
-        path_policy=PathPolicy(workspace=str(workspace), allowed_input_roots=allowed_roots),
+        path_policy=PathPolicy(
+            workspace=str(workspace), allowed_input_roots=allowed_roots
+        ),
         capabilities=CAPS,
         cache=cache,
     )
 
 
-def run(doc: Dict[str, Any], workspace: Path, allowed_roots=None, cache=None) -> Dict[str, Any]:
+def run(
+    doc: Dict[str, Any], workspace: Path, allowed_roots=None, cache=None
+) -> Dict[str, Any]:
     request = parse_request(doc)
     ctx = make_ctx(workspace, allowed_roots=allowed_roots, cache=cache)
     return run_report(request, ctx)

@@ -4,7 +4,12 @@ from tests.helpers import run
 
 
 def test_identity_is_stable_across_runs_with_different_clocks(media, workspace):
-    doc = {"operation": "check", "kind": "video", "input": str(media["clean"]), "rules": {"video": {"expected_width": 320}}}
+    doc = {
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["clean"]),
+        "rules": {"video": {"expected_width": 320}},
+    }
 
     workspace_a = workspace / "a"
     workspace_b = workspace / "b"
@@ -19,8 +24,18 @@ def test_identity_is_stable_across_runs_with_different_clocks(media, workspace):
 
 
 def test_identity_changes_when_rules_change(media, workspace):
-    doc1 = {"operation": "check", "kind": "video", "input": str(media["clean"]), "rules": {"video": {"expected_width": 320}}}
-    doc2 = {"operation": "check", "kind": "video", "input": str(media["clean"]), "rules": {"video": {"expected_width": 321}}}
+    doc1 = {
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["clean"]),
+        "rules": {"video": {"expected_width": 320}},
+    }
+    doc2 = {
+        "operation": "check",
+        "kind": "video",
+        "input": str(media["clean"]),
+        "rules": {"video": {"expected_width": 321}},
+    }
     r1 = run(doc1, workspace)
     r2 = run(doc2, workspace)
     assert r1["provenance"]["identity"] != r2["provenance"]["identity"]
@@ -38,7 +53,12 @@ def test_identity_excludes_asset_id_style_labels_by_construction(media, workspac
     # There is no request_id/asset_id field accepted into the identity hash
     # at all - passing one must not change the computed identity.
     doc1 = {"operation": "inspect", "kind": "video", "input": str(media["clean"])}
-    doc2 = {"operation": "inspect", "kind": "video", "input": str(media["clean"]), "request_id": "totally-different-label"}
+    doc2 = {
+        "operation": "inspect",
+        "kind": "video",
+        "input": str(media["clean"]),
+        "request_id": "totally-different-label",
+    }
     r1 = run(doc1, workspace)
     r2 = run(doc2, workspace)
     assert r1["provenance"]["identity"] == r2["provenance"]["identity"]

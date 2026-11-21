@@ -9,6 +9,7 @@ text contains Japanese, Chinese or Korean; with no suitable font the tool fails 
 of drawing empty boxes. Size and colour of text are required: how it should look is the
 caller's call. ImageMagick only.
 """
+
 import os
 import sys
 
@@ -38,19 +39,42 @@ from _common import (  # noqa: E402
 
 
 def build_parser():
-    parser = JSONArgumentParser(description="Overlay a logo image or a line of text onto an image")
+    parser = JSONArgumentParser(
+        description="Overlay a logo image or a line of text onto an image"
+    )
     parser.add_argument("input", help="base image to read (never modified)")
     add_output_args(parser)
     what = parser.add_mutually_exclusive_group(required=True)
-    what.add_argument("--image", help="overlay image, e.g. a logo PNG with transparency")
+    what.add_argument(
+        "--image", help="overlay image, e.g. a logo PNG with transparency"
+    )
     what.add_argument("--text", help="overlay text (rendered literally, one line)")
-    parser.add_argument("--position", choices=GRAVITIES, required=True, help="where the overlay sits")
-    parser.add_argument("--margin", type=non_negative_int, default=0, help="distance from the edge(s) in pixels (default 0)")
-    parser.add_argument("--opacity", type=float, default=1.0, help="0-1 (default 1 = opaque)")
-    parser.add_argument("--scale", type=float, help="--image only: overlay width as a fraction of the base width, e.g. 0.2")
-    parser.add_argument("--font-size", type=float, help="--text only (required): point size")
-    parser.add_argument("--color", type=color_arg, help="--text only (required): text colour")
-    parser.add_argument("--font", help="--text only: font file to use instead of the one doctor reports")
+    parser.add_argument(
+        "--position", choices=GRAVITIES, required=True, help="where the overlay sits"
+    )
+    parser.add_argument(
+        "--margin",
+        type=non_negative_int,
+        default=0,
+        help="distance from the edge(s) in pixels (default 0)",
+    )
+    parser.add_argument(
+        "--opacity", type=float, default=1.0, help="0-1 (default 1 = opaque)"
+    )
+    parser.add_argument(
+        "--scale",
+        type=float,
+        help="--image only: overlay width as a fraction of the base width, e.g. 0.2",
+    )
+    parser.add_argument(
+        "--font-size", type=float, help="--text only (required): point size"
+    )
+    parser.add_argument(
+        "--color", type=color_arg, help="--text only (required): text colour"
+    )
+    parser.add_argument(
+        "--font", help="--text only: font file to use instead of the one doctor reports"
+    )
     return parser
 
 
@@ -62,7 +86,20 @@ def _offset(position, margin):
 
 
 def _fade(opacity):
-    return [] if opacity >= 1 else ["-alpha", "set", "-channel", "A", "-evaluate", "multiply", f"{opacity:g}", "+channel"]
+    return (
+        []
+        if opacity >= 1
+        else [
+            "-alpha",
+            "set",
+            "-channel",
+            "A",
+            "-evaluate",
+            "multiply",
+            f"{opacity:g}",
+            "+channel",
+        ]
+    )
 
 
 def run_overlay(args):
@@ -75,7 +112,9 @@ def run_overlay(args):
         raise ImageSkillError("--opacity must be greater than 0 and at most 1")
     if args.text is not None:
         if args.scale is not None:
-            raise ImageSkillError("--scale applies to --image, not --text (use --font-size)")
+            raise ImageSkillError(
+                "--scale applies to --image, not --text (use --font-size)"
+            )
         if args.font_size is None or args.color is None:
             raise ImageSkillError("--text needs --font-size and --color")
         if args.font_size <= 0:
@@ -83,7 +122,11 @@ def run_overlay(args):
         if not args.text.strip():
             raise ImageSkillError("--text is empty")
     else:
-        if args.font_size is not None or args.color is not None or args.font is not None:
+        if (
+            args.font_size is not None
+            or args.color is not None
+            or args.font is not None
+        ):
             raise ImageSkillError("--font-size/--color/--font apply to --text only")
         if args.scale is not None and not 0 < args.scale <= 1:
             raise ImageSkillError("--scale must be greater than 0 and at most 1")
@@ -93,9 +136,23 @@ def run_overlay(args):
     font = None
     if args.text is not None:
         font = resolve_font(args.text, args.font)
-        layer = ["-background", "none", "-font", font, "-pointsize", f"{args.font_size:g}", "-fill", args.color,
-                 f"label:{escape_magick_text(args.text)}"]
-        ow, oh = (int(v) for v in run([magick] + layer + ["-format", "%w %h", "info:"])["stdout"].split())
+        layer = [
+            "-background",
+            "none",
+            "-font",
+            font,
+            "-pointsize",
+            f"{args.font_size:g}",
+            "-fill",
+            args.color,
+            f"label:{escape_magick_text(args.text)}",
+        ]
+        ow, oh = (
+            int(v)
+            for v in run([magick] + layer + ["-format", "%w %h", "info:"])[
+                "stdout"
+            ].split()
+        )
     else:
         ow, oh = (int(v) for v in magick_info(magick, args.image, "%w %h").split())
         layer = [f"{args.image}[0]", "-auto-orient"]
@@ -110,9 +167,22 @@ def run_overlay(args):
             + ("use --scale" if args.image else "use a smaller --font-size")
         )
 
-    cmd = [magick, args.input, "-auto-orient", "("] + layer + _fade(args.opacity) + [")",
-           "-gravity", args.position, "-geometry", _offset(args.position, args.margin),
-           "-compose", "over", "-composite", args.output]
+    cmd = (
+        [magick, args.input, "-auto-orient", "("]
+        + layer
+        + _fade(args.opacity)
+        + [
+            ")",
+            "-gravity",
+            args.position,
+            "-geometry",
+            _offset(args.position, args.margin),
+            "-compose",
+            "over",
+            "-composite",
+            args.output,
+        ]
+    )
     run(cmd, dry_run=args.dry_run)
     if args.dry_run:
         return {"dry_run": True, "would_run": cmd}
@@ -120,7 +190,9 @@ def run_overlay(args):
     finish_output(args.output, backend)
     out_w, out_h = identify_dims(args.output)
     if (out_w, out_h) != (base_w, base_h):
-        raise ImageSkillError(f"overlay changed the size from {base_w}x{base_h} to {out_w}x{out_h}")
+        raise ImageSkillError(
+            f"overlay changed the size from {base_w}x{base_h} to {out_w}x{out_h}"
+        )
     return {
         "input": args.input,
         "output": args.output,

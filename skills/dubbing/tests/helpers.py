@@ -1,6 +1,7 @@
 """Shared test helpers: paths, the CLI runner, environment patching, a fake loopback HTTP app (VOICEVOX /
 Style-Bert-VITS2 lookalike) and a fake Hugging Face cache. Nothing here is part of the package; no engine, no weights
 and no network are needed."""
+
 from __future__ import annotations
 
 import io
@@ -21,48 +22,96 @@ from dubbing_skill import cli  # noqa: E402
 
 
 def _dir_from_env(key: str, sibling: str, marker: str) -> Optional[Path]:
-    for c in ([Path(os.environ[key])] if os.environ.get(key) else []) + [ROOT.parent / sibling]:
+    for c in ([Path(os.environ[key])] if os.environ.get(key) else []) + [
+        ROOT.parent / sibling
+    ]:
         if (c / marker).is_file():
             return c
     return None
 
 
-OS_DIR = _dir_from_env("AI_VIDEO_PRODUCTION_OS_DIR", "AI-video-production-OS", "registry/conformance.py")
-FFMPEG_SKILL_DIR = _dir_from_env("DUBBING_FFMPEG_SKILL_DIR", "ffmpeg-skill", "scripts/_contract.py")
+OS_DIR = _dir_from_env(
+    "AI_VIDEO_PRODUCTION_OS_DIR", "AI-video-production-OS", "registry/conformance.py"
+)
+FFMPEG_SKILL_DIR = _dir_from_env(
+    "DUBBING_FFMPEG_SKILL_DIR", "ffmpeg-skill", "scripts/_contract.py"
+)
 # subtitle-skill with translate and mux (its steps 5-6): the localise chain's other half (roadmap step 11, ADR-014)
-SUBTITLE_SKILL_DIR = _dir_from_env("DUBBING_SUBTITLE_SKILL_DIR", "subtitle-skill", "src/subtitle_skill/translation.py")
+SUBTITLE_SKILL_DIR = _dir_from_env(
+    "DUBBING_SUBTITLE_SKILL_DIR", "subtitle-skill", "src/subtitle_skill/translation.py"
+)
 
 
 # publish-skill with `plan` (its step 2): where the AI voice disclosure is handed over (roadmap step 14, ADR-017)
-PUBLISH_SKILL_DIR = _dir_from_env("DUBBING_PUBLISH_SKILL_DIR", "publish-skill", "src/publish_skill/plan.py")
+PUBLISH_SKILL_DIR = _dir_from_env(
+    "DUBBING_PUBLISH_SKILL_DIR", "publish-skill", "src/publish_skill/plan.py"
+)
 
 
-def run_publish_plan(deliverable: str, platform: str, description: str, title: str = "Test video") -> Dict[str, Any]:
+def run_publish_plan(
+    deliverable: str, platform: str, description: str, title: str = "Test video"
+) -> Dict[str, Any]:
     """`publish plan --json` of the checkout at PUBLISH_SKILL_DIR on `deliverable`, as an agent calls it, with ffmpeg-skill
     at FFMPEG_SKILL_DIR. Offline; nothing is uploaded. Returns its JSON document (a FAIL verdict on the delivery spec is
     still a document)."""
     import subprocess
+
     assert PUBLISH_SKILL_DIR is not None and FFMPEG_SKILL_DIR is not None
-    run_env = dict(os.environ, PYTHONPATH=str(PUBLISH_SKILL_DIR / "src"), PYTHONIOENCODING="utf-8")
-    proc = subprocess.run([sys.executable, "-m", "publish_skill.cli", "plan", "--json", "--platform", platform, "--ffmpeg-skill",
-                           str(FFMPEG_SKILL_DIR), "--title", title, "--description", description, "--", deliverable],
-                          capture_output=True, env=run_env, timeout=300)
+    run_env = dict(
+        os.environ, PYTHONPATH=str(PUBLISH_SKILL_DIR / "src"), PYTHONIOENCODING="utf-8"
+    )
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "publish_skill.cli",
+            "plan",
+            "--json",
+            "--platform",
+            platform,
+            "--ffmpeg-skill",
+            str(FFMPEG_SKILL_DIR),
+            "--title",
+            title,
+            "--description",
+            description,
+            "--",
+            deliverable,
+        ],
+        capture_output=True,
+        env=run_env,
+        timeout=300,
+    )
     return json.loads(proc.stdout.decode("utf-8"))
 
 
 def run_subtitle_skill(request: Dict[str, Any], workdir: str) -> Dict[str, Any]:
     """One `subtitle-skill run <request.json>` of the checkout at SUBTITLE_SKILL_DIR, as an agent calls it, with
-    ffmpeg-skill at FFMPEG_SKILL_DIR. Returns its JSON response; a non-ok response fails the calling test."""
+    ffmpeg-skill at FFMPEG_SKILL_DIR. Returns its JSON response; a non-ok response fails the calling test.
+    """
     import subprocess
+
     assert SUBTITLE_SKILL_DIR is not None and FFMPEG_SKILL_DIR is not None
     path = os.path.join(workdir, f"subtitle-request-{request['operation']}.json")
     Path(path).write_text(json.dumps(request, ensure_ascii=False), encoding="utf-8")
-    run_env = dict(os.environ, PYTHONPATH=str(SUBTITLE_SKILL_DIR / "src"), SUBTITLE_SKILL_FFMPEG_SKILL_DIR=str(FFMPEG_SKILL_DIR),
-                   PYTHONIOENCODING="utf-8")
-    proc = subprocess.run([sys.executable, "-m", "subtitle_skill", "run", path], capture_output=True, env=run_env, timeout=300)
+    run_env = dict(
+        os.environ,
+        PYTHONPATH=str(SUBTITLE_SKILL_DIR / "src"),
+        SUBTITLE_SKILL_FFMPEG_SKILL_DIR=str(FFMPEG_SKILL_DIR),
+        PYTHONIOENCODING="utf-8",
+    )
+    proc = subprocess.run(
+        [sys.executable, "-m", "subtitle_skill", "run", path],
+        capture_output=True,
+        env=run_env,
+        timeout=300,
+    )
     os.remove(path)
     doc = json.loads(proc.stdout.decode("utf-8"))
-    assert doc.get("status") == "ok", (doc, proc.stderr.decode("utf-8", "replace")[-2000:])
+    assert doc.get("status") == "ok", (
+        doc,
+        proc.stderr.decode("utf-8", "replace")[-2000:],
+    )
     return doc
 
 
@@ -102,16 +151,27 @@ def closed_port_url() -> str:
 
 def no_engines_env(hf_cache: str) -> Dict[str, Optional[str]]:
     """Every engine unreachable, whatever this machine has installed or running."""
-    return {"DUBBING_VOICEVOX_URL": closed_port_url(), "DUBBING_SBV2_URL": closed_port_url(),
-            "DUBBING_CHATTERBOX_PYTHON": None, "DUBBING_KOKORO_PYTHON": None, "DUBBING_QWEN3_TTS_PYTHON": None,
-            "DUBBING_CHATTERBOX_MODEL_DIR": None, "DUBBING_KOKORO_MODEL_DIR": None, "DUBBING_QWEN3_TTS_MODEL_DIR": None,
-            "DUBBING_QWEN3_TTS_MODEL": None, "DUBBING_QWEN3_TTS_DEVICE": None,
-            "HF_HUB_CACHE": hf_cache, "HF_HOME": hf_cache, "XDG_CACHE_HOME": hf_cache}
+    return {
+        "DUBBING_VOICEVOX_URL": closed_port_url(),
+        "DUBBING_SBV2_URL": closed_port_url(),
+        "DUBBING_CHATTERBOX_PYTHON": None,
+        "DUBBING_KOKORO_PYTHON": None,
+        "DUBBING_QWEN3_TTS_PYTHON": None,
+        "DUBBING_CHATTERBOX_MODEL_DIR": None,
+        "DUBBING_KOKORO_MODEL_DIR": None,
+        "DUBBING_QWEN3_TTS_MODEL_DIR": None,
+        "DUBBING_QWEN3_TTS_MODEL": None,
+        "DUBBING_QWEN3_TTS_DEVICE": None,
+        "HF_HUB_CACHE": hf_cache,
+        "HF_HOME": hf_cache,
+        "XDG_CACHE_HOME": hf_cache,
+    }
 
 
 @contextmanager
 def fake_app(routes: Dict[str, Tuple[int, Any]]) -> Iterator[str]:
     """A loopback HTTP server answering GET <path> with (status, JSON body). Yields its base URL."""
+
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802 - http.server API
             status, body = routes.get(self.path, (404, {"detail": "Not Found"}))
@@ -137,23 +197,36 @@ def fake_app(routes: Dict[str, Tuple[int, Any]]) -> Iterator[str]:
 
 def fake_hf_file(cache: str, repo_id: str, filename: str) -> str:
     """Put an (empty) weights file where the Hugging Face cache keeps snapshots."""
-    d = Path(cache) / ("models--" + repo_id.replace("/", "--")) / "snapshots" / "0123abcd"
+    d = (
+        Path(cache)
+        / ("models--" + repo_id.replace("/", "--"))
+        / "snapshots"
+        / "0123abcd"
+    )
     d.mkdir(parents=True, exist_ok=True)
     p = d / filename
     p.write_bytes(b"")
     return str(p)
 
 
-def write_tone_wav(path: str, seconds: float = 1.0, rate: int = 48000, freq: float = 440.0) -> str:
+def write_tone_wav(
+    path: str, seconds: float = 1.0, rate: int = 48000, freq: float = 440.0
+) -> str:
     import math
     import struct
     import wave
+
     n = int(seconds * rate)
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(rate)
-        w.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(2 * math.pi * freq * i / rate))) for i in range(n)))
+        w.writeframes(
+            b"".join(
+                struct.pack("<h", int(8000 * math.sin(2 * math.pi * freq * i / rate)))
+                for i in range(n)
+            )
+        )
     return path
 
 
@@ -170,7 +243,7 @@ def write_tone_wav(path: str, seconds: float = 1.0, rate: int = 48000, freq: flo
 #   long         every line lasts 4 s
 #   hang         generate sleeps for a minute
 FAKE_BASE, FAKE_PER_CHAR, FAKE_RATE = 0.3, 0.06, 24000
-FAKE_CHATTERBOX = r'''
+FAKE_CHATTERBOX = r"""
 import json, math, os, time
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODE = os.environ.get("DUBBING_FAKE_CHATTERBOX_MODE", "tone")
@@ -229,8 +302,8 @@ class ChatterboxMultilingualTTS:
         if MODE == "silence":
             return _Wave([0.0] * n)
         return _Wave([0.25 * math.sin(2 * math.pi * 220.0 * i / self.sr) for i in range(n)])
-'''
-FAKE_TORCH = '''
+"""
+FAKE_TORCH = """
 SEED = None
 
 
@@ -243,28 +316,37 @@ class cuda:
 def manual_seed(seed):
     global SEED
     SEED = seed
-'''
+"""
 
 
 def fake_line_seconds(text: str) -> float:
     return FAKE_BASE + FAKE_PER_CHAR * len(text)
 
 
-def fake_chatterbox(directory: str, version: str = "0.1.7", pykakasi: bool = True) -> str:
+def fake_chatterbox(
+    directory: str, version: str = "0.1.7", pykakasi: bool = True
+) -> str:
     """A directory to put on sys.path / PYTHONPATH holding the fake chatterbox, torch and pykakasi; returns it."""
     root = os.path.join(directory, "fake_site")
     pkg = os.path.join(root, "chatterbox")
     os.makedirs(pkg, exist_ok=True)
     Path(pkg, "__init__.py").write_text("", encoding="utf-8")
-    Path(pkg, "mtl_tts.py").write_text(FAKE_CHATTERBOX.replace("__RATE__", str(FAKE_RATE)).replace("__BASE__", repr(FAKE_BASE))
-                                       .replace("__PER_CHAR__", repr(FAKE_PER_CHAR)), encoding="utf-8")
+    Path(pkg, "mtl_tts.py").write_text(
+        FAKE_CHATTERBOX.replace("__RATE__", str(FAKE_RATE))
+        .replace("__BASE__", repr(FAKE_BASE))
+        .replace("__PER_CHAR__", repr(FAKE_PER_CHAR)),
+        encoding="utf-8",
+    )
     Path(root, "torch.py").write_text(FAKE_TORCH, encoding="utf-8")
     Path(root, "perth.py").write_text(FAKE_PERTH, encoding="utf-8")
     if pykakasi:
         Path(root, "pykakasi.py").write_text("", encoding="utf-8")
     dist = os.path.join(root, f"chatterbox_tts-{version}.dist-info")
     os.makedirs(dist, exist_ok=True)
-    Path(dist, "METADATA").write_text(f"Metadata-Version: 2.1\nName: chatterbox-tts\nVersion: {version}\n", encoding="utf-8")
+    Path(dist, "METADATA").write_text(
+        f"Metadata-Version: 2.1\nName: chatterbox-tts\nVersion: {version}\n",
+        encoding="utf-8",
+    )
     return root
 
 
@@ -276,6 +358,7 @@ def fake_chatterbox_calls(site: str) -> List[Dict[str, Any]]:
 def fake_chatterbox_weights(cache: str) -> str:
     """Every checkpoint file chatterbox-tts 0.1.7 loads, empty, in one Hugging Face cache snapshot."""
     from dubbing_skill.engines.chatterbox import HF_REPO, MODEL_FILES
+
     for name in MODEL_FILES:
         path = fake_hf_file(cache, HF_REPO, name)
     return os.path.dirname(path)
@@ -284,7 +367,7 @@ def fake_chatterbox_weights(cache: str) -> str:
 FAKE_MODULES = ("chatterbox", "torch", "pykakasi", "perth", "qwen_tts")
 # The fake resemble-perth (ADR-017): PerthImplicitWatermarker.get_watermark is 1.0 on any audio that is not silent, 0.0
 # on silence or in mode nowatermark; it raises in mode nodetector. Each call goes to calls.json like the others.
-FAKE_PERTH = r'''
+FAKE_PERTH = r"""
 import json, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODE = os.environ.get("DUBBING_FAKE_CHATTERBOX_MODE", "tone")
@@ -301,23 +384,30 @@ class PerthImplicitWatermarker:
         if MODE == "nowatermark":
             return 0.0
         return 1.0 if any(abs(float(v)) > 1e-4 for v in audio) else 0.0
-'''
+"""
 
 
 @contextmanager
 def on_python_path(directory: str) -> Iterator[None]:
     """`directory` first on sys.path (this process) and on PYTHONPATH (the worker), with import caches reset on the
-    way in and out, so a fake package is found by the engine's checks and by the worker, and forgotten afterwards."""
+    way in and out, so a fake package is found by the engine's checks and by the worker, and forgotten afterwards.
+    """
     import importlib
 
     def forget() -> None:
         for name in [m for m in sys.modules if m.split(".")[0] in FAKE_MODULES]:
             del sys.modules[name]
         importlib.invalidate_caches()
+
     sys.path.insert(0, directory)
     forget()
     try:
-        with env(PYTHONPATH=os.pathsep.join([directory] + [p for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p])):
+        with env(
+            PYTHONPATH=os.pathsep.join(
+                [directory]
+                + [p for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p]
+            )
+        ):
             yield
     finally:
         sys.path.remove(directory)
@@ -331,46 +421,70 @@ def chatterbox_ready(tmp: str, mode: str = "tone", **fake: Any) -> Iterator[str]
     os.makedirs(cache, exist_ok=True)
     fake_chatterbox_weights(cache)
     site = fake_chatterbox(tmp, **fake)
-    with env(**no_engines_env(cache)), env(DUBBING_FAKE_CHATTERBOX_MODE=mode), on_python_path(site):
+    with env(**no_engines_env(cache)), env(
+        DUBBING_FAKE_CHATTERBOX_MODE=mode
+    ), on_python_path(site):
         yield site
 
 
 def wav_facts(path: str) -> Dict[str, Any]:
     """What ffmpeg-skill/probe reports, for a PCM WAV, read with the wave module (unit tests run without FFmpeg)."""
     import wave
+
     with wave.open(path, "rb") as w:
         rate, channels, frames = w.getframerate(), w.getnchannels(), w.getnframes()
-    return {"duration": frames / float(rate), "audio": {"codec": "pcm_s16le", "sample_rate": rate, "channels": channels},
-            "audio_streams": [{"index": 0, "sample_rate": rate, "channels": channels}]}
+    return {
+        "duration": frames / float(rate),
+        "audio": {"codec": "pcm_s16le", "sample_rate": rate, "channels": channels},
+        "audio_streams": [{"index": 0, "sample_rate": rate, "channels": channels}],
+    }
 
 
 def wav_samples(path: str) -> Tuple[int, List[int]]:
     import struct
     import wave
+
     with wave.open(path, "rb") as w:
         rate, n = w.getframerate(), w.getnframes()
         data = w.readframes(n)
     return rate, list(struct.unpack(f"<{n}h", data))
 
 
-def fake_contract(pad_audio: bool = True, drop: Optional[Tuple[str, str]] = None) -> Dict[str, Any]:
+def fake_contract(
+    pad_audio: bool = True, drop: Optional[Tuple[str, str]] = None
+) -> Dict[str, Any]:
     """An ffmpeg-skill contract document declaring every tool and flag the adapter uses; pad's audio_only is
     `pad_audio` (ffmpeg-skill 2.23.0 declares false)."""
     from dubbing_skill.ffmpeg_skill import FLAGS_USED, OPTIONAL_TOOLS
+
     tools = []
     for name, flags in list(FLAGS_USED.items()) + list(OPTIONAL_TOOLS.items()):
         props = {f: {"type": "string"} for f in flags if (name, f) != drop}
-        tools.append({"name": name, "audio_only": pad_audio if name == "pad" else True, "input_schema": {"properties": props}})
-    return {"skill": {"version": "9.9.9-test"}, "contract_version": "1.0", "tools": tools}
+        tools.append(
+            {
+                "name": name,
+                "audio_only": pad_audio if name == "pad" else True,
+                "input_schema": {"properties": props},
+            }
+        )
+    return {
+        "skill": {"version": "9.9.9-test"},
+        "contract_version": "1.0",
+        "tools": tools,
+    }
 
 
 class WaveSkill:
     """Stands in for ffmpeg-skill in unit tests (no FFmpeg): probe, pad, join, cut, audio extraction and the audio mix of
     a line over a piece of the programme (--music --music-volume --gain) on 16-bit PCM mono WAV with the wave module,
-    each call recorded. Test-only; the package itself only ever runs ffmpeg-skill's tools."""
+    each call recorded. Test-only; the package itself only ever runs ffmpeg-skill's tools.
+    """
 
-    def __init__(self, pad_audio: bool = True, drop: Optional[Tuple[str, str]] = None) -> None:
+    def __init__(
+        self, pad_audio: bool = True, drop: Optional[Tuple[str, str]] = None
+    ) -> None:
         from dubbing_skill.ffmpeg_skill import parse_contract
+
         self._info = parse_contract(fake_contract(pad_audio, drop), Path("wave-skill"))
         self.calls: List[Tuple[str, Any]] = []
 
@@ -379,21 +493,42 @@ class WaveSkill:
 
     def probe(self, path: str, timeout: Optional[float] = None) -> Dict[str, Any]:
         from dubbing_skill.errors import DubbingError
+
         self.calls.append(("probe", os.path.basename(path)))
         try:
             return wav_facts(path)
         except Exception as e:
-            raise DubbingError("UNSUPPORTED_MEDIA", f"cannot read {os.path.basename(path)}: {e}")
+            raise DubbingError(
+                "UNSUPPORTED_MEDIA", f"cannot read {os.path.basename(path)}: {e}"
+            )
 
-    def pad(self, input_path: str, output: str, start: float, end: float, timeout: Optional[float] = None) -> Dict[str, Any]:
-        self.calls.append(("pad", (os.path.basename(input_path), round(start, 3), round(end, 3))))
+    def pad(
+        self,
+        input_path: str,
+        output: str,
+        start: float,
+        end: float,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        self.calls.append(
+            ("pad", (os.path.basename(input_path), round(start, 3), round(end, 3)))
+        )
         rate, samples = wav_samples(input_path)
         lead, tail = [0] * int(round(start * rate)), [0] * int(round(end * rate))
         _write16(output, lead + samples + tail, rate)
         return {"status": "completed"}
 
-    def join(self, inputs: List[str], output: str, sample_rate: int, channels: int = 1, timeout: Optional[float] = None) -> Dict[str, Any]:
-        self.calls.append(("join", ([os.path.basename(p) for p in inputs], sample_rate, channels)))
+    def join(
+        self,
+        inputs: List[str],
+        output: str,
+        sample_rate: int,
+        channels: int = 1,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        self.calls.append(
+            ("join", ([os.path.basename(p) for p in inputs], sample_rate, channels))
+        )
         out: List[int] = []
         for p in inputs:
             rate, samples = wav_samples(p)
@@ -402,24 +537,57 @@ class WaveSkill:
         _write16(output, out, sample_rate)
         return {"status": "completed"}
 
-
-    def extract_audio(self, input_path: str, output: str, audio_stream: int = 0, timeout: Optional[float] = None) -> Dict[str, Any]:
+    def extract_audio(
+        self,
+        input_path: str,
+        output: str,
+        audio_stream: int = 0,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
         self.calls.append(("extract", (os.path.basename(input_path), audio_stream)))
         rate, samples = wav_samples(input_path)
         _write16(output, samples, rate)
         return {"status": "completed"}
 
-    def cut(self, input_path: str, output: str, start: float, end: float, timeout: Optional[float] = None) -> Dict[str, Any]:
-        self.calls.append(("cut", (os.path.basename(input_path), round(start, 3), round(end, 3))))
+    def cut(
+        self,
+        input_path: str,
+        output: str,
+        start: float,
+        end: float,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        self.calls.append(
+            ("cut", (os.path.basename(input_path), round(start, 3), round(end, 3)))
+        )
         rate, samples = wav_samples(input_path)
-        _write16(output, samples[int(round(start * rate)):int(round(end * rate))], rate)
+        _write16(
+            output, samples[int(round(start * rate)) : int(round(end * rate))], rate
+        )
         return {"status": "completed"}
 
-    def mix(self, main: str, music: str, output: str, music_volume: float = 0.0, gain: float = 0.0,
-            timeout: Optional[float] = None) -> Dict[str, Any]:
+    def mix(
+        self,
+        main: str,
+        music: str,
+        output: str,
+        music_volume: float = 0.0,
+        gain: float = 0.0,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """As ffmpeg-skill/audio --music --music-volume --gain: the main track's length and rate, music resampled
         (nearest sample), both scaled, summed and clipped."""
-        self.calls.append(("mix", (os.path.basename(main), os.path.basename(music), round(music_volume, 2), round(gain, 2))))
+        self.calls.append(
+            (
+                "mix",
+                (
+                    os.path.basename(main),
+                    os.path.basename(music),
+                    round(music_volume, 2),
+                    round(gain, 2),
+                ),
+            )
+        )
         rate, base = wav_samples(main)
         mrate, extra = wav_samples(music)
         g, mg = 10 ** (gain / 20.0), 10 ** (music_volume / 20.0)
@@ -431,11 +599,13 @@ class WaveSkill:
         _write16(output, out, rate)
         return {"status": "completed"}
 
-
-    def loudness(self, input_path: str, output: str, lufs: float, timeout: Optional[float] = None) -> Dict[str, Any]:
+    def loudness(
+        self, input_path: str, output: str, lufs: float, timeout: Optional[float] = None
+    ) -> Dict[str, Any]:
         """As ffmpeg-skill/loudness --lufs: one gain for the whole file, so its RMS level (dBFS, standing in for LUFS)
         is `lufs`; the rate and length kept."""
         import math
+
         self.calls.append(("loudness", (os.path.basename(input_path), round(lufs, 1))))
         rate, samples = wav_samples(input_path)
         rms = math.sqrt(sum(v * v for v in samples) / max(1, len(samples))) / 32768.0
@@ -443,14 +613,29 @@ class WaveSkill:
         out = [max(-32768, min(32767, int(round(v * gain)))) for v in samples]
         _write16(output, out, rate)
         peak = max(1, max(abs(v) for v in out)) / 32768.0
-        return {"status": "completed", "result": {"input_i": f"{lufs:.2f}", "input_tp": f"{20 * math.log10(peak):.2f}"}}
+        return {
+            "status": "completed",
+            "result": {
+                "input_i": f"{lufs:.2f}",
+                "input_tp": f"{20 * math.log10(peak):.2f}",
+            },
+        }
 
-    def silences(self, input_path: str, threshold_db: float, min_silence: float, timeout: Optional[float] = None) -> List[List[float]]:
+    def silences(
+        self,
+        input_path: str,
+        threshold_db: float,
+        min_silence: float,
+        timeout: Optional[float] = None,
+    ) -> List[List[float]]:
         """As ffmpeg-skill/silence --list: stretches at least `min_silence` long whose samples stay under the threshold."""
-        self.calls.append(("silences", (os.path.basename(input_path), threshold_db, min_silence)))
+        self.calls.append(
+            ("silences", (os.path.basename(input_path), threshold_db, min_silence))
+        )
         problem = self._info.optional_problem("silence")
         if problem:
             from dubbing_skill.errors import DubbingError
+
             raise DubbingError("FFMPEG_SKILL_UNAVAILABLE", problem)
         rate, samples = wav_samples(input_path)
         limit = 32768 * 10 ** (threshold_db / 20.0)
@@ -465,9 +650,12 @@ class WaveSkill:
         return spans
 
 
-def write_programme(path: str, pieces: List[Tuple[str, float]], rate: int = 24000, freq: float = 440.0) -> str:
+def write_programme(
+    path: str, pieces: List[Tuple[str, float]], rate: int = 24000, freq: float = 440.0
+) -> str:
     """A mono WAV made of ("tone" | "silence", seconds) pieces, for the AUDIO_DESCRIPTION gap tests."""
     import math
+
     samples: List[int] = []
     for kind, seconds in pieces:
         n = int(round(seconds * rate))
@@ -475,19 +663,36 @@ def write_programme(path: str, pieces: List[Tuple[str, float]], rate: int = 2400
             samples += [0] * n
         else:
             base = len(samples)
-            samples += [int(8000 * math.sin(2 * math.pi * freq * (base + i) / rate)) for i in range(n)]
+            samples += [
+                int(8000 * math.sin(2 * math.pi * freq * (base + i) / rate))
+                for i in range(n)
+            ]
     _write16(path, samples, rate)
     return path
 
 
-def mixed_sample(programme: int, voice: int, duck_db: float, voice_gain_db: float = 0.0) -> int:
+def mixed_sample(
+    programme: int, voice: int, duck_db: float, voice_gain_db: float = 0.0
+) -> int:
     """What WaveSkill.mix writes for one sample (for exact assertions in the DUB / AUDIO_DESCRIPTION tests)."""
-    return max(-32768, min(32767, int(round(programme * 10 ** (-duck_db / 20.0) + voice * 10 ** (voice_gain_db / 20.0)))))
+    return max(
+        -32768,
+        min(
+            32767,
+            int(
+                round(
+                    programme * 10 ** (-duck_db / 20.0)
+                    + voice * 10 ** (voice_gain_db / 20.0)
+                )
+            ),
+        ),
+    )
 
 
 def _write16(path: str, samples: List[int], rate: int) -> None:
     import struct
     import wave
+
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
@@ -520,18 +725,40 @@ def _write16(path: str, samples: List[int], rate: int) -> None:
 VV_VERSION = "0.26.0"
 VV_RATE = 24000
 VV_MORA = 0.06
-ZUNDAMON_UUID, METAN_UUID, TSUMUGI_UUID = "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9", "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff", \
-    "35b2c544-660e-401e-b503-0e14c635303a"
+ZUNDAMON_UUID, METAN_UUID, TSUMUGI_UUID = (
+    "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9",
+    "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff",
+    "35b2c544-660e-401e-b503-0e14c635303a",
+)
 VV_SPEAKERS: List[Dict[str, Any]] = [
-    {"name": "四国めたん", "speaker_uuid": METAN_UUID, "version": "0.15.1",
-     "styles": [{"name": "ノーマル", "id": 2, "type": "talk"}, {"name": "あまあま", "id": 0, "type": "talk"}],
-     "supported_features": {"permitted_synthesis_morphing": "SELF_ONLY"}},
-    {"name": "ずんだもん", "speaker_uuid": ZUNDAMON_UUID, "version": "0.15.1",
-     "styles": [{"name": "ノーマル", "id": 3, "type": "talk"}, {"name": "あまあま", "id": 1, "type": "streaming_talk"},
-                {"name": "ノーマル", "id": 3003, "type": "sing"}],
-     "supported_features": {"permitted_synthesis_morphing": "SELF_ONLY"}},
-    {"name": "春日部つむぎ", "speaker_uuid": TSUMUGI_UUID, "version": "0.15.1", "styles": [{"name": "ノーマル", "id": 8, "type": "talk"}],
-     "supported_features": {"permitted_synthesis_morphing": "ALL"}},
+    {
+        "name": "四国めたん",
+        "speaker_uuid": METAN_UUID,
+        "version": "0.15.1",
+        "styles": [
+            {"name": "ノーマル", "id": 2, "type": "talk"},
+            {"name": "あまあま", "id": 0, "type": "talk"},
+        ],
+        "supported_features": {"permitted_synthesis_morphing": "SELF_ONLY"},
+    },
+    {
+        "name": "ずんだもん",
+        "speaker_uuid": ZUNDAMON_UUID,
+        "version": "0.15.1",
+        "styles": [
+            {"name": "ノーマル", "id": 3, "type": "talk"},
+            {"name": "あまあま", "id": 1, "type": "streaming_talk"},
+            {"name": "ノーマル", "id": 3003, "type": "sing"},
+        ],
+        "supported_features": {"permitted_synthesis_morphing": "SELF_ONLY"},
+    },
+    {
+        "name": "春日部つむぎ",
+        "speaker_uuid": TSUMUGI_UUID,
+        "version": "0.15.1",
+        "styles": [{"name": "ノーマル", "id": 8, "type": "talk"}],
+        "supported_features": {"permitted_synthesis_morphing": "ALL"},
+    },
 ]
 
 
@@ -540,7 +767,12 @@ def fake_voicevox_seconds(text: str) -> float:
 
 
 class FakeVoicevox:
-    def __init__(self, speakers: Optional[List[Dict[str, Any]]] = None, version: str = VV_VERSION, mode: str = "ok") -> None:
+    def __init__(
+        self,
+        speakers: Optional[List[Dict[str, Any]]] = None,
+        version: str = VV_VERSION,
+        mode: str = "ok",
+    ) -> None:
         self.speakers = VV_SPEAKERS if speakers is None else speakers
         self.version, self.mode = version, mode
         self.calls: List[Dict[str, Any]] = []
@@ -548,7 +780,12 @@ class FakeVoicevox:
         self.user_dict: Dict[str, Dict[str, Any]] = {}
 
     def talk_ids(self) -> List[int]:
-        return [st["id"] for sp in self.speakers for st in sp["styles"] if st.get("type", "talk") in ("talk", "streaming_talk")]
+        return [
+            st["id"]
+            for sp in self.speakers
+            for st in sp["styles"]
+            if st.get("type", "talk") in ("talk", "streaming_talk")
+        ]
 
     def read(self, text: str) -> str:
         for w in sorted(self.user_dict.values(), key=lambda w: -len(w["surface"])):
@@ -557,12 +794,38 @@ class FakeVoicevox:
 
     def audio_query(self, text: str, style_id: int) -> Dict[str, Any]:
         text = self.read(text)
-        moras = [{"text": ch, "consonant": None, "consonant_length": None, "vowel": "a", "vowel_length": VV_MORA, "pitch": 5.5}
-                 for ch in text]
-        return {"accent_phrases": [{"moras": moras, "accent": 1, "pause_mora": None, "is_interrogative": False}],
-                "speedScale": 1.0, "pitchScale": 0.0, "intonationScale": 1.0, "volumeScale": 1.0, "prePhonemeLength": 0.1,
-                "postPhonemeLength": 0.1, "pauseLength": None, "pauseLengthScale": 1.0, "outputSamplingRate": VV_RATE,
-                "outputStereo": False, "kana": "'" + text}
+        moras = [
+            {
+                "text": ch,
+                "consonant": None,
+                "consonant_length": None,
+                "vowel": "a",
+                "vowel_length": VV_MORA,
+                "pitch": 5.5,
+            }
+            for ch in text
+        ]
+        return {
+            "accent_phrases": [
+                {
+                    "moras": moras,
+                    "accent": 1,
+                    "pause_mora": None,
+                    "is_interrogative": False,
+                }
+            ],
+            "speedScale": 1.0,
+            "pitchScale": 0.0,
+            "intonationScale": 1.0,
+            "volumeScale": 1.0,
+            "prePhonemeLength": 0.1,
+            "postPhonemeLength": 0.1,
+            "pauseLength": None,
+            "pauseLengthScale": 1.0,
+            "outputSamplingRate": VV_RATE,
+            "outputStereo": False,
+            "kana": "'" + text,
+        }
 
     @staticmethod
     def query_errors(q: Any) -> List[str]:
@@ -570,15 +833,25 @@ class FakeVoicevox:
         if not isinstance(q, dict):
             return ["body is not an object"]
         errs = []
-        numbers = {"speedScale": "gt0", "pitchScale": "", "intonationScale": "", "volumeScale": "ge0", "prePhonemeLength": "ge0",
-                   "postPhonemeLength": "ge0"}
+        numbers = {
+            "speedScale": "gt0",
+            "pitchScale": "",
+            "intonationScale": "",
+            "volumeScale": "ge0",
+            "prePhonemeLength": "ge0",
+            "postPhonemeLength": "ge0",
+        }
         for k, rule in numbers.items():
             v = q.get(k)
             if isinstance(v, bool) or not isinstance(v, (int, float)):
                 errs.append(f"{k}: missing or not a number")
             elif (rule == "gt0" and v <= 0) or (rule == "ge0" and v < 0):
                 errs.append(f"{k}: out of range")
-        if isinstance(q.get("outputSamplingRate"), bool) or not isinstance(q.get("outputSamplingRate"), int) or q["outputSamplingRate"] <= 0:
+        if (
+            isinstance(q.get("outputSamplingRate"), bool)
+            or not isinstance(q.get("outputSamplingRate"), int)
+            or q["outputSamplingRate"] <= 0
+        ):
             errs.append("outputSamplingRate: missing or not a positive integer")
         if not isinstance(q.get("outputStereo"), bool):
             errs.append("outputStereo: missing or not a boolean")
@@ -587,13 +860,23 @@ class FakeVoicevox:
             errs.append("accent_phrases: missing or not a list")
             return errs
         for ph in phrases:
-            if not isinstance(ph, dict) or not isinstance(ph.get("moras"), list) or not isinstance(ph.get("accent"), int) \
-                    or ph["accent"] < 1 or ph["accent"] > len(ph["moras"]):
+            if (
+                not isinstance(ph, dict)
+                or not isinstance(ph.get("moras"), list)
+                or not isinstance(ph.get("accent"), int)
+                or ph["accent"] < 1
+                or ph["accent"] > len(ph["moras"])
+            ):
                 errs.append("accent_phrases: bad AccentPhrase")
                 continue
             for m in ph["moras"]:
-                if not isinstance(m, dict) or not isinstance(m.get("text"), str) or not isinstance(m.get("vowel"), str) \
-                        or not isinstance(m.get("vowel_length"), (int, float)) or not isinstance(m.get("pitch"), (int, float)):
+                if (
+                    not isinstance(m, dict)
+                    or not isinstance(m.get("text"), str)
+                    or not isinstance(m.get("vowel"), str)
+                    or not isinstance(m.get("vowel_length"), (int, float))
+                    or not isinstance(m.get("pitch"), (int, float))
+                ):
                     errs.append("accent_phrases: bad Mora")
         return errs
 
@@ -601,12 +884,25 @@ class FakeVoicevox:
         import math
         import struct
         import wave
+
         rate = int(q["outputSamplingRate"])
-        spoken = sum(float(m["vowel_length"]) + float(m.get("consonant_length") or 0.0) for ph in q["accent_phrases"] for m in ph["moras"])
-        seconds = float(q["prePhonemeLength"]) + spoken / float(q["speedScale"]) + float(q["postPhonemeLength"])
+        spoken = sum(
+            float(m["vowel_length"]) + float(m.get("consonant_length") or 0.0)
+            for ph in q["accent_phrases"]
+            for m in ph["moras"]
+        )
+        seconds = (
+            float(q["prePhonemeLength"])
+            + spoken / float(q["speedScale"])
+            + float(q["postPhonemeLength"])
+        )
         n = int(round(seconds * rate))
         channels = 2 if self.mode == "stereo" or q["outputStereo"] else 1
-        frames = b"".join(struct.pack("<h", int(6000 * math.sin(2 * math.pi * 330.0 * i / rate))) * channels for i in range(n))
+        frames = b"".join(
+            struct.pack("<h", int(6000 * math.sin(2 * math.pi * 330.0 * i / rate)))
+            * channels
+            for i in range(n)
+        )
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:
             w.setnchannels(channels)
@@ -621,11 +917,18 @@ def fake_voicevox(**kw: Any) -> Iterator[FakeVoicevox]:
     """A FakeVoicevox on 127.0.0.1 (a free port), with DUBBING_VOICEVOX_URL pointing at it. Yields the fake."""
     from http.server import ThreadingHTTPServer
     from urllib.parse import parse_qs, urlsplit
+
     fake = FakeVoicevox(**kw)
 
     class Handler(BaseHTTPRequestHandler):
-        def reply(self, status: int, body: Any, ctype: str = "application/json") -> None:
-            data = body if isinstance(body, bytes) else json.dumps(body, ensure_ascii=False).encode("utf-8")
+        def reply(
+            self, status: int, body: Any, ctype: str = "application/json"
+        ) -> None:
+            data = (
+                body
+                if isinstance(body, bytes)
+                else json.dumps(body, ensure_ascii=False).encode("utf-8")
+            )
             self.send_response(status)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
@@ -634,13 +937,29 @@ def fake_voicevox(**kw: Any) -> Iterator[FakeVoicevox]:
 
         def handle_any(self, method: str) -> None:
             parts = urlsplit(self.path)
-            query = {k: v for k, v in parse_qs(parts.query, keep_blank_values=True).items()}
+            query = {
+                k: v for k, v in parse_qs(parts.query, keep_blank_values=True).items()
+            }
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length) if length else b""
-            fake.calls.append({"method": method, "path": parts.path, "query": {k: v[0] if len(v) == 1 else v for k, v in query.items()},
-                               "content_type": self.headers.get("Content-Type"), "body": body})
-            routes = {("GET", "/version"), ("GET", "/speakers"), ("POST", "/audio_query"), ("POST", "/synthesis"),
-                      ("POST", "/user_dict_word"), ("GET", "/user_dict"), ("POST", "/accent_phrases")}
+            fake.calls.append(
+                {
+                    "method": method,
+                    "path": parts.path,
+                    "query": {k: v[0] if len(v) == 1 else v for k, v in query.items()},
+                    "content_type": self.headers.get("Content-Type"),
+                    "body": body,
+                }
+            )
+            routes = {
+                ("GET", "/version"),
+                ("GET", "/speakers"),
+                ("POST", "/audio_query"),
+                ("POST", "/synthesis"),
+                ("POST", "/user_dict_word"),
+                ("GET", "/user_dict"),
+                ("POST", "/accent_phrases"),
+            }
             if method == "DELETE" and parts.path.startswith("/user_dict_word/"):
                 uuid = parts.path.rsplit("/", 1)[1]
                 if fake.mode == "fail_delete":
@@ -656,50 +975,130 @@ def fake_voicevox(**kw: Any) -> Iterator[FakeVoicevox]:
             if (method, parts.path) == ("POST", "/user_dict_word"):
                 q = {k: v[0] for k, v in query.items() if len(v) == 1}
                 need = {"surface", "pronunciation", "accent_type"}
-                if not need <= set(q) or set(q) - need - {"word_type", "priority"} or not q["accent_type"].isdigit() \
-                        or not all("\u30a1" <= c <= "\u30f4" or c == "\u30fc" for c in q["pronunciation"]) \
-                        or int(q["accent_type"]) > len(q["pronunciation"]) \
-                        or q.get("word_type", "PROPER_NOUN") not in ("PROPER_NOUN", "COMMON_NOUN", "VERB", "ADJECTIVE", "SUFFIX") \
-                        or not 0 <= int(q.get("priority", "5")) <= 10:
+                if (
+                    not need <= set(q)
+                    or set(q) - need - {"word_type", "priority"}
+                    or not q["accent_type"].isdigit()
+                    or not all(
+                        "\u30a1" <= c <= "\u30f4" or c == "\u30fc"
+                        for c in q["pronunciation"]
+                    )
+                    or int(q["accent_type"]) > len(q["pronunciation"])
+                    or q.get("word_type", "PROPER_NOUN")
+                    not in ("PROPER_NOUN", "COMMON_NOUN", "VERB", "ADJECTIVE", "SUFFIX")
+                    or not 0 <= int(q.get("priority", "5")) <= 10
+                ):
                     return self.reply(422, {"detail": "invalid user dictionary word"})
                 import uuid as _uuid
+
                 word_id = str(_uuid.uuid4())
                 fake.user_dict[word_id] = dict(q, accent_type=int(q["accent_type"]))
                 return self.reply(200, word_id)
             if (method, parts.path) not in routes:
                 known = {p for _, p in routes}
-                return self.reply(405 if parts.path in known else 404, {"detail": "Method Not Allowed" if parts.path in known else "Not Found"})
+                return self.reply(
+                    405 if parts.path in known else 404,
+                    {
+                        "detail": (
+                            "Method Not Allowed" if parts.path in known else "Not Found"
+                        )
+                    },
+                )
             if parts.path == "/version":
                 return self.reply(200, fake.version)
             if parts.path == "/speakers":
                 return self.reply(200, fake.speakers)
             speaker = query.get("speaker", [""])
             if len(speaker) != 1 or not speaker[0].isdigit():
-                return self.reply(422, {"detail": [{"loc": ["query", "speaker"], "msg": "field required (an integer)"}]})
+                return self.reply(
+                    422,
+                    {
+                        "detail": [
+                            {
+                                "loc": ["query", "speaker"],
+                                "msg": "field required (an integer)",
+                            }
+                        ]
+                    },
+                )
             style_id = int(speaker[0])
             if parts.path == "/accent_phrases":
                 text = query.get("text", [""])[0]
-                moras = [{"text": ch, "consonant": None, "consonant_length": None, "vowel": "a", "vowel_length": VV_MORA,
-                          "pitch": 5.5} for ch in text]
-                return self.reply(200, [{"moras": moras, "accent": 1, "pause_mora": None, "is_interrogative": False}])
+                moras = [
+                    {
+                        "text": ch,
+                        "consonant": None,
+                        "consonant_length": None,
+                        "vowel": "a",
+                        "vowel_length": VV_MORA,
+                        "pitch": 5.5,
+                    }
+                    for ch in text
+                ]
+                return self.reply(
+                    200,
+                    [
+                        {
+                            "moras": moras,
+                            "accent": 1,
+                            "pause_mora": None,
+                            "is_interrogative": False,
+                        }
+                    ],
+                )
             if parts.path == "/audio_query":
                 if fake.mode == "fail_query":
                     return self.reply(500, {"detail": "Internal Server Error"})
                 text = query.get("text", [])
-                extra = set(query) - {"text", "speaker", "enable_katakana_english", "core_version"}
+                extra = set(query) - {
+                    "text",
+                    "speaker",
+                    "enable_katakana_english",
+                    "core_version",
+                }
                 if len(text) != 1 or extra or body:
-                    return self.reply(422, {"detail": [{"loc": ["query", "text"], "msg": "text and speaker are query parameters; no body"}]})
+                    return self.reply(
+                        422,
+                        {
+                            "detail": [
+                                {
+                                    "loc": ["query", "text"],
+                                    "msg": "text and speaker are query parameters; no body",
+                                }
+                            ]
+                        },
+                    )
                 if style_id not in fake.talk_ids():
                     return self.reply(422, {"detail": f"style {style_id} not found"})
                 return self.reply(200, fake.audio_query(text[0], style_id))
             # /synthesis
-            extra = set(query) - {"speaker", "enable_interrogative_upspeak", "core_version"}
-            if extra or (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json":
-                return self.reply(422, {"detail": [{"loc": ["body"], "msg": "a JSON AudioQuery body and the speaker query parameter"}]})
+            extra = set(query) - {
+                "speaker",
+                "enable_interrogative_upspeak",
+                "core_version",
+            }
+            if (
+                extra
+                or (self.headers.get("Content-Type") or "").split(";")[0].strip()
+                != "application/json"
+            ):
+                return self.reply(
+                    422,
+                    {
+                        "detail": [
+                            {
+                                "loc": ["body"],
+                                "msg": "a JSON AudioQuery body and the speaker query parameter",
+                            }
+                        ]
+                    },
+                )
             try:
                 q = json.loads(body.decode("utf-8"))
             except (UnicodeDecodeError, ValueError):
-                return self.reply(422, {"detail": [{"loc": ["body"], "msg": "invalid JSON"}]})
+                return self.reply(
+                    422, {"detail": [{"loc": ["body"], "msg": "invalid JSON"}]}
+                )
             errs = fake.query_errors(q)
             if errs:
                 return self.reply(422, {"detail": errs})
@@ -734,12 +1133,19 @@ def fake_voicevox(**kw: Any) -> Iterator[FakeVoicevox]:
         server.server_close()
 
 
-def make_consent(directory: str, clip: str, name: str = "consent.json", **overrides: Any) -> str:
+def make_consent(
+    directory: str, clip: str, name: str = "consent.json", **overrides: Any
+) -> str:
     """A consent record (dubbing/consent@1, ADR-009) for the reference `clip`, with one evidence file next to it, that passes the
-    gate; `overrides` replace top-level fields (None removes one). Returns the record's path."""
+    gate; `overrides` replace top-level fields (None removes one). Returns the record's path.
+    """
     import hashlib
+
     evidence = os.path.join(directory, name + ".form.txt")
-    Path(evidence).write_text("I, Hanako Yamada, agree that my voice may be used for this dub.\n", encoding="utf-8")
+    Path(evidence).write_text(
+        "I, Hanako Yamada, agree that my voice may be used for this dub.\n",
+        encoding="utf-8",
+    )
     sha = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()  # noqa: E731
     doc: Dict[str, Any] = {
         "schema": "dubbing/consent@1",
@@ -748,7 +1154,10 @@ def make_consent(directory: str, clip: str, name: str = "consent.json", **overri
         "granted_at": "2026-01-15T10:00:00+09:00",
         "expires_at": None,
         "revoked": False,
-        "scope": {"ops": ["narrate", "dub", "audio_description"], "purpose": "conference video, test"},
+        "scope": {
+            "ops": ["narrate", "dub", "audio_description"],
+            "purpose": "conference video, test",
+        },
         "evidence": [{"path": os.path.basename(evidence), "sha256": sha(evidence)}],
         "reference": {"sha256": sha(clip)},
     }
@@ -767,7 +1176,7 @@ def make_consent(directory: str, clip: str, name: str = "consent.json", **overri
 # dist-info, so the engine's checks find it and the worker loads it as it would the real one. A line lasts
 # KOKORO_BASE + KOKORO_PER_CHAR * len(text) seconds at 24 kHz, yielded in two chunks. Calls go to calls.json.
 KOKORO_BASE, KOKORO_PER_CHAR, KOKORO_RATE = 0.25, 0.05, 24000
-FAKE_KOKORO = r'''
+FAKE_KOKORO = r"""
 import json, math, os
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -822,7 +1231,7 @@ class KPipeline:
         half = n // 2
         yield _Result(_Tensor(wave[:half]))
         yield _Result(_Tensor(wave[half:]))
-'''
+"""
 
 
 def kokoro_line_seconds(text: str) -> float:
@@ -833,20 +1242,29 @@ def fake_kokoro(directory: str, version: str = "0.9.4", ja: bool = True) -> str:
     root = os.path.join(directory, "fake_kokoro_site")
     pkg = os.path.join(root, "kokoro")
     os.makedirs(pkg, exist_ok=True)
-    Path(pkg, "__init__.py").write_text(FAKE_KOKORO.replace("__RATE__", str(KOKORO_RATE)).replace("__BASE__", repr(KOKORO_BASE))
-                                        .replace("__PER_CHAR__", repr(KOKORO_PER_CHAR)), encoding="utf-8")
+    Path(pkg, "__init__.py").write_text(
+        FAKE_KOKORO.replace("__RATE__", str(KOKORO_RATE))
+        .replace("__BASE__", repr(KOKORO_BASE))
+        .replace("__PER_CHAR__", repr(KOKORO_PER_CHAR)),
+        encoding="utf-8",
+    )
     Path(root, "torch.py").write_text(FAKE_TORCH, encoding="utf-8")
     Path(root, "perth.py").write_text(FAKE_PERTH, encoding="utf-8")
     for mod in (("misaki", "pyopenjtalk", "fugashi") if ja else ()):
         Path(root, f"{mod}.py").write_text("", encoding="utf-8")
     dist = os.path.join(root, f"kokoro-{version}.dist-info")
     os.makedirs(dist, exist_ok=True)
-    Path(dist, "METADATA").write_text(f"Metadata-Version: 2.1\nName: kokoro\nVersion: {version}\n", encoding="utf-8")
+    Path(dist, "METADATA").write_text(
+        f"Metadata-Version: 2.1\nName: kokoro\nVersion: {version}\n", encoding="utf-8"
+    )
     return root
 
 
-def fake_kokoro_weights(cache: str, voices: Tuple[str, ...] = ("jf_alpha", "jf_gongitsune", "af_heart")) -> str:
+def fake_kokoro_weights(
+    cache: str, voices: Tuple[str, ...] = ("jf_alpha", "jf_gongitsune", "af_heart")
+) -> str:
     from dubbing_skill.engines.kokoro import HF_REPO, MODEL_FILES
+
     for name in MODEL_FILES:
         path = fake_hf_file(cache, HF_REPO, name)
     snap = os.path.dirname(path)
@@ -864,11 +1282,16 @@ def kokoro_ready(tmp: str, **fake: Any) -> Iterator[str]:
     fake_kokoro_weights(cache)
     site = fake_kokoro(tmp, **fake)
     import importlib
+
     with env(**no_engines_env(cache)), on_python_path(site):
         try:
             yield site
         finally:
-            for name in [m for m in sys.modules if m.split(".")[0] in ("kokoro", "misaki", "pyopenjtalk", "fugashi")]:
+            for name in [
+                m
+                for m in sys.modules
+                if m.split(".")[0] in ("kokoro", "misaki", "pyopenjtalk", "fugashi")
+            ]:
                 del sys.modules[name]
             importlib.invalidate_caches()
 
@@ -951,7 +1374,9 @@ class Qwen3TTSModel:
         freq = 200.0 + (torch.SEED or 0) % 50
         return [_Array([0.2 * math.sin(2 * math.pi * freq * i / __RATE__) for i in range(n)])], __RATE__
 """
-FAKE_QWEN_TORCH = FAKE_TORCH + 'float32 = "torch.float32"\nbfloat16 = "torch.bfloat16"\n'
+FAKE_QWEN_TORCH = (
+    FAKE_TORCH + 'float32 = "torch.float32"\nbfloat16 = "torch.bfloat16"\n'
+)
 
 
 def qwen_line_seconds(text: str) -> float:
@@ -963,42 +1388,85 @@ def fake_qwen3_tts(directory: str, version: str = "0.1.1") -> str:
     root = os.path.join(directory, "fake_qwen_site")
     pkg = os.path.join(root, "qwen_tts")
     os.makedirs(pkg, exist_ok=True)
-    Path(pkg, "__init__.py").write_text(FAKE_QWEN_TTS.replace("__RATE__", str(QWEN_RATE)).replace("__BASE__", repr(QWEN_BASE))
-                                        .replace("__PER_CHAR__", repr(QWEN_PER_CHAR)), encoding="utf-8")
+    Path(pkg, "__init__.py").write_text(
+        FAKE_QWEN_TTS.replace("__RATE__", str(QWEN_RATE))
+        .replace("__BASE__", repr(QWEN_BASE))
+        .replace("__PER_CHAR__", repr(QWEN_PER_CHAR)),
+        encoding="utf-8",
+    )
     Path(root, "torch.py").write_text(FAKE_QWEN_TORCH, encoding="utf-8")
     dist = os.path.join(root, f"qwen_tts-{version}.dist-info")
     os.makedirs(dist, exist_ok=True)
-    Path(dist, "METADATA").write_text(f"Metadata-Version: 2.1\nName: qwen-tts\nVersion: {version}\n", encoding="utf-8")
+    Path(dist, "METADATA").write_text(
+        f"Metadata-Version: 2.1\nName: qwen-tts\nVersion: {version}\n", encoding="utf-8"
+    )
     return root
 
 
-def fake_qwen3_tts_weights(cache: str, model: str = "1.7B", revision: Optional[str] = None,
-                           config: Optional[Dict[str, Any]] = None) -> str:
+def fake_qwen3_tts_weights(
+    cache: str,
+    model: str = "1.7B",
+    revision: Optional[str] = None,
+    config: Optional[Dict[str, Any]] = None,
+) -> str:
     """Every file the engine needs, in the Hugging Face cache snapshot of the pinned revision (or `revision`), with a
-    config.json that says what the checkpoint is (`config` replaces it) and the checkpoint's generation defaults."""
+    config.json that says what the checkpoint is (`config` replaces it) and the checkpoint's generation defaults.
+    """
     from dubbing_skill.engines.qwen3_tts import MODEL_FILES, MODELS
+
     m = MODELS[model]
-    snap = Path(cache) / ("models--" + m["repo"].replace("/", "--")) / "snapshots" / (revision or m["revision"])
+    snap = (
+        Path(cache)
+        / ("models--" + m["repo"].replace("/", "--"))
+        / "snapshots"
+        / (revision or m["revision"])
+    )
     for name in MODEL_FILES:
         (snap / name).parent.mkdir(parents=True, exist_ok=True)
         (snap / name).write_bytes(b"")
-    doc = config if config is not None else {"model_type": "qwen3_tts", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
-                                             "tts_model_type": "base", "tts_model_size": m["size"]}
+    doc = (
+        config
+        if config is not None
+        else {
+            "model_type": "qwen3_tts",
+            "tokenizer_type": "qwen3_tts_tokenizer_12hz",
+            "tts_model_type": "base",
+            "tts_model_size": m["size"],
+        }
+    )
     (snap / "config.json").write_text(json.dumps(doc), encoding="utf-8")
-    (snap / "generation_config.json").write_text(json.dumps(
-        {"do_sample": True, "repetition_penalty": 1.05, "temperature": 0.9, "top_p": 1.0, "top_k": 50, "subtalker_dosample": True,
-         "subtalker_temperature": 0.9, "subtalker_top_p": 1.0, "subtalker_top_k": 50, "max_new_tokens": 8192}), encoding="utf-8")
+    (snap / "generation_config.json").write_text(
+        json.dumps(
+            {
+                "do_sample": True,
+                "repetition_penalty": 1.05,
+                "temperature": 0.9,
+                "top_p": 1.0,
+                "top_k": 50,
+                "subtalker_dosample": True,
+                "subtalker_temperature": 0.9,
+                "subtalker_top_p": 1.0,
+                "subtalker_top_k": 50,
+                "max_new_tokens": 8192,
+            }
+        ),
+        encoding="utf-8",
+    )
     return str(snap)
 
 
 @contextmanager
-def qwen3_tts_ready(tmp: str, mode: str = "tone", model: str = "1.7B", **fake: Any) -> Iterator[str]:
+def qwen3_tts_ready(
+    tmp: str, mode: str = "tone", model: str = "1.7B", **fake: Any
+) -> Iterator[str]:
     """The fake Qwen3-TTS installed and the `model` checkpoint cached, every other engine unreachable. Yields the fake site."""
     cache = os.path.join(tmp, "hf")
     os.makedirs(cache, exist_ok=True)
     fake_qwen3_tts_weights(cache, model)
     site = fake_qwen3_tts(tmp, **fake)
-    with env(**no_engines_env(cache)), env(DUBBING_FAKE_QWEN3_TTS_MODE=mode, DUBBING_QWEN3_TTS_MODEL=model), on_python_path(site):
+    with env(**no_engines_env(cache)), env(
+        DUBBING_FAKE_QWEN3_TTS_MODE=mode, DUBBING_QWEN3_TTS_MODEL=model
+    ), on_python_path(site):
         yield site
 
 
@@ -1008,11 +1476,22 @@ def qwen3_tts_ready(tmp: str, mode: str = "tone", model: str = "1.7B", **fake: A
 # with another shape is refused with 422, as FastAPI does. Calls are recorded in `.calls`. Modes: ok, notwav, stereo.
 SBV2_RATE, SBV2_BASE, SBV2_PER_CHAR = 44100, 0.2, 0.05
 SBV2_MODELS = {
-    "0": {"config_path": "model_assets/jvnv-F1-jp/config.json", "model_path": "model_assets/jvnv-F1-jp/jvnv-F1-jp_e160_s14000.safetensors",
-          "device": "cpu", "spk2id": {"jvnv-F1-jp": 0}, "id2spk": {"0": "jvnv-F1-jp"},
-          "style2id": {"Neutral": 0, "Happy": 1, "Sad": 2}},
-    "1": {"config_path": "model_assets\\hanako\\config.json", "model_path": "model_assets\\hanako\\hanako_e100_s5000.safetensors",
-          "device": "cpu", "spk2id": {"hanako": 0}, "id2spk": {"0": "hanako"}, "style2id": {"Neutral": 0}},
+    "0": {
+        "config_path": "model_assets/jvnv-F1-jp/config.json",
+        "model_path": "model_assets/jvnv-F1-jp/jvnv-F1-jp_e160_s14000.safetensors",
+        "device": "cpu",
+        "spk2id": {"jvnv-F1-jp": 0},
+        "id2spk": {"0": "jvnv-F1-jp"},
+        "style2id": {"Neutral": 0, "Happy": 1, "Sad": 2},
+    },
+    "1": {
+        "config_path": "model_assets\\hanako\\config.json",
+        "model_path": "model_assets\\hanako\\hanako_e100_s5000.safetensors",
+        "device": "cpu",
+        "spk2id": {"hanako": 0},
+        "id2spk": {"0": "hanako"},
+        "style2id": {"Neutral": 0},
+    },
 }
 
 
@@ -1021,7 +1500,9 @@ def sbv2_line_seconds(text: str) -> float:
 
 
 class FakeSbv2:
-    def __init__(self, models: Optional[Dict[str, Any]] = None, mode: str = "ok") -> None:
+    def __init__(
+        self, models: Optional[Dict[str, Any]] = None, mode: str = "ok"
+    ) -> None:
         self.models = SBV2_MODELS if models is None else models
         self.mode = mode
         self.calls: List[Dict[str, Any]] = []
@@ -1031,9 +1512,14 @@ class FakeSbv2:
         import math
         import struct
         import wave
+
         n = int(round(sbv2_line_seconds(text) * SBV2_RATE))
         channels = 2 if self.mode == "stereo" else 1
-        frames = b"".join(struct.pack("<h", int(5000 * math.sin(2 * math.pi * 260.0 * i / SBV2_RATE))) * channels for i in range(n))
+        frames = b"".join(
+            struct.pack("<h", int(5000 * math.sin(2 * math.pi * 260.0 * i / SBV2_RATE)))
+            * channels
+            for i in range(n)
+        )
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:
             w.setnchannels(channels)
@@ -1047,14 +1533,38 @@ class FakeSbv2:
 def fake_sbv2(**kw: Any) -> Iterator[FakeSbv2]:
     from http.server import ThreadingHTTPServer
     from urllib.parse import parse_qs, urlsplit
+
     fake = FakeSbv2(**kw)
-    allowed = {"text", "encoding", "model_name", "model_id", "speaker_name", "speaker_id", "sdp_ratio", "noise", "noisew",
-               "length", "language", "auto_split", "split_interval", "assist_text", "assist_text_weight", "style",
-               "style_weight", "reference_audio_path"}
+    allowed = {
+        "text",
+        "encoding",
+        "model_name",
+        "model_id",
+        "speaker_name",
+        "speaker_id",
+        "sdp_ratio",
+        "noise",
+        "noisew",
+        "length",
+        "language",
+        "auto_split",
+        "split_interval",
+        "assist_text",
+        "assist_text_weight",
+        "style",
+        "style_weight",
+        "reference_audio_path",
+    }
 
     class Handler(BaseHTTPRequestHandler):
-        def reply(self, status: int, body: Any, ctype: str = "application/json") -> None:
-            data = body if isinstance(body, bytes) else json.dumps(body, ensure_ascii=False).encode("utf-8")
+        def reply(
+            self, status: int, body: Any, ctype: str = "application/json"
+        ) -> None:
+            data = (
+                body
+                if isinstance(body, bytes)
+                else json.dumps(body, ensure_ascii=False).encode("utf-8")
+            )
             self.send_response(status)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
@@ -1063,26 +1573,57 @@ def fake_sbv2(**kw: Any) -> Iterator[FakeSbv2]:
 
         def handle_any(self, method: str) -> None:
             parts = urlsplit(self.path)
-            q = {k: v[0] if len(v) == 1 else v for k, v in parse_qs(parts.query, keep_blank_values=True).items()}
+            q = {
+                k: v[0] if len(v) == 1 else v
+                for k, v in parse_qs(parts.query, keep_blank_values=True).items()
+            }
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length) if length else b""
-            fake.calls.append({"method": method, "path": parts.path, "query": q, "body": body})
+            fake.calls.append(
+                {"method": method, "path": parts.path, "query": q, "body": body}
+            )
             if (method, parts.path) == ("GET", "/models/info"):
                 return self.reply(200, fake.models)
             if (method, parts.path) == ("GET", "/openapi.json"):
-                return self.reply(200, {"openapi": "3.1.0", "info": {"title": "FastAPI", "version": "0.1.0"}})
+                return self.reply(
+                    200,
+                    {
+                        "openapi": "3.1.0",
+                        "info": {"title": "FastAPI", "version": "0.1.0"},
+                    },
+                )
             if parts.path != "/voice" or method not in ("GET", "POST"):
                 return self.reply(404, {"detail": "Not Found"})
-            if set(q) - allowed or not isinstance(q.get("text"), str) or not q["text"] or body:
-                return self.reply(422, {"detail": "query parameters only, text required"})
-            names = {m["model_path"].replace("\\", "/").split("/")[-2]: m for m in fake.models.values()}
+            if (
+                set(q) - allowed
+                or not isinstance(q.get("text"), str)
+                or not q["text"]
+                or body
+            ):
+                return self.reply(
+                    422, {"detail": "query parameters only, text required"}
+                )
+            names = {
+                m["model_path"].replace("\\", "/").split("/")[-2]: m
+                for m in fake.models.values()
+            }
             model = names.get(q.get("model_name"))
             if model is None:
-                return self.reply(422, {"detail": [{"loc": ["query", "model_name"], "msg": "not found"}]})
-            if q.get("speaker_name") not in model["spk2id"] or q.get("style", "Neutral") not in model["style2id"]:
+                return self.reply(
+                    422,
+                    {"detail": [{"loc": ["query", "model_name"], "msg": "not found"}]},
+                )
+            if (
+                q.get("speaker_name") not in model["spk2id"]
+                or q.get("style", "Neutral") not in model["style2id"]
+            ):
                 return self.reply(422, {"detail": "speaker or style not found"})
-            if q.get("language") not in ("JP", "EN", "ZH") or q.get("auto_split") not in ("false", "False"):
-                return self.reply(422, {"detail": "language JP|EN|ZH and auto_split false expected"})
+            if q.get("language") not in ("JP", "EN", "ZH") or q.get(
+                "auto_split"
+            ) not in ("false", "False"):
+                return self.reply(
+                    422, {"detail": "language JP|EN|ZH and auto_split false expected"}
+                )
             if fake.mode == "notwav":
                 return self.reply(200, {"not": "a wav"})
             return self.reply(200, fake.wav(q["text"]), "audio/wav")

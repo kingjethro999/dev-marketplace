@@ -8,6 +8,7 @@ validation, and provenance recording. No step here makes an editorial
 decision about subtitle content -- everything it does is a mechanical
 consequence of the typed request.
 """
+
 from __future__ import annotations
 
 import json
@@ -40,16 +41,22 @@ def _parse_common(request: Mapping[str, Any]) -> tuple:
     operation = request.get("operation")
     if operation not in SUPPORTED_OPERATIONS:
         raise SubtitleSkillError(
-            "UNSUPPORTED_OPERATION", f"unsupported operation: {operation!r}; supported: {SUPPORTED_OPERATIONS}"
+            "UNSUPPORTED_OPERATION",
+            f"unsupported operation: {operation!r}; supported: {SUPPORTED_OPERATIONS}",
         )
 
     fmt = request.get("format")
     if fmt not in SUPPORTED_FORMATS:
-        raise SubtitleSkillError("UNSUPPORTED_FORMAT", f"unsupported format: {fmt!r}; supported: {SUPPORTED_FORMATS}")
+        raise SubtitleSkillError(
+            "UNSUPPORTED_FORMAT",
+            f"unsupported format: {fmt!r}; supported: {SUPPORTED_FORMATS}",
+        )
 
     workspace = request.get("workspace")
     if not isinstance(workspace, str) or not workspace:
-        raise SubtitleSkillError("INVALID_REQUEST", "request.workspace (absolute path) is required")
+        raise SubtitleSkillError(
+            "INVALID_REQUEST", "request.workspace (absolute path) is required"
+        )
 
     output_path = request.get("output_path")
     if not isinstance(output_path, str) or not output_path:
@@ -104,22 +111,36 @@ def _write_sidecar(output_path: Path, record: dict) -> None:
 
 def execute(request: Mapping[str, Any]) -> dict:
     started = time.monotonic()
-    operation, fmt, workspace, output_path_rel, document, constraints = _parse_common(request)
+    operation, fmt, workspace, output_path_rel, document, constraints = _parse_common(
+        request
+    )
     policy = PathPolicy(workspace)
 
     video_duration = request.get("video_duration")
-    if video_duration is not None and (not isinstance(video_duration, (int, float)) or video_duration <= 0):
-        raise SubtitleSkillError("INVALID_INPUT", "video_duration must be a positive number")
+    if video_duration is not None and (
+        not isinstance(video_duration, (int, float)) or video_duration <= 0
+    ):
+        raise SubtitleSkillError(
+            "INVALID_INPUT", "video_duration must be a positive number"
+        )
 
-    issues = validate_document(document, constraints=constraints, video_duration=video_duration)
+    issues = validate_document(
+        document, constraints=constraints, video_duration=video_duration
+    )
     document = document.sorted_by_start()
 
     if operation == "generate":
-        return _run_generate(policy, document, fmt, output_path_rel, constraints, issues, started)
-    return _run_render(policy, document, fmt, output_path_rel, constraints, issues, request, started)
+        return _run_generate(
+            policy, document, fmt, output_path_rel, constraints, issues, started
+        )
+    return _run_render(
+        policy, document, fmt, output_path_rel, constraints, issues, request, started
+    )
 
 
-def _identity_payload(document: SubtitleDocument, fmt: str, constraints: SubtitleConstraints, extra: dict) -> dict:
+def _identity_payload(
+    document: SubtitleDocument, fmt: str, constraints: SubtitleConstraints, extra: dict
+) -> dict:
     payload = {
         "document": document.to_dict(),
         "format": fmt,
@@ -129,7 +150,9 @@ def _identity_payload(document: SubtitleDocument, fmt: str, constraints: Subtitl
     return payload
 
 
-def _run_generate(policy, document, fmt, output_path_rel, constraints, issues, started) -> dict:
+def _run_generate(
+    policy, document, fmt, output_path_rel, constraints, issues, started
+) -> dict:
     output_path = policy.resolve_output(output_path_rel)
     identity = compute_identity(
         skill_version=SKILL_VERSION,
@@ -140,7 +163,9 @@ def _run_generate(policy, document, fmt, output_path_rel, constraints, issues, s
 
     reused = _try_reuse(output_path, identity)
     if reused is not None:
-        return _finish(reused, output_path, issues, "generate", reused=True, started=started)
+        return _finish(
+            reused, output_path, issues, "generate", reused=True, started=started
+        )
 
     content = GENERATORS[fmt](document)
     _write_text_exact(output_path, content)
@@ -157,7 +182,9 @@ def _run_generate(policy, document, fmt, output_path_rel, constraints, issues, s
         "cue_count": len(document.cues),
     }
     _write_sidecar(output_path, record)
-    return _finish(record, output_path, issues, "generate", reused=False, started=started)
+    return _finish(
+        record, output_path, issues, "generate", reused=False, started=started
+    )
 
 
 def _document_wide_style_value(document: SubtitleDocument, field: str):
@@ -183,7 +210,9 @@ def _document_wide_style_value(document: SubtitleDocument, field: str):
             continue
         seen.setdefault(value, []).append(cue.id)
     if len(seen) > 1:
-        detail = ", ".join(f"{value!r} (cue {', '.join(cue_ids)})" for value, cue_ids in seen.items())
+        detail = ", ".join(
+            f"{value!r} (cue {', '.join(cue_ids)})" for value, cue_ids in seen.items()
+        )
         raise SubtitleSkillError(
             "INVALID_INPUT",
             f"render burn cannot represent differing cue-level style.{field} values in a single "
@@ -193,7 +222,9 @@ def _document_wide_style_value(document: SubtitleDocument, field: str):
     return next(iter(seen), None)
 
 
-def _run_render(policy, document, fmt, output_path_rel, constraints, issues, request, started) -> dict:
+def _run_render(
+    policy, document, fmt, output_path_rel, constraints, issues, request, started
+) -> dict:
     if fmt != "srt":
         raise SubtitleSkillError(
             "UNSUPPORTED_FORMAT",
@@ -202,7 +233,9 @@ def _run_render(policy, document, fmt, output_path_rel, constraints, issues, req
 
     video_input_rel = request.get("video_input")
     if not isinstance(video_input_rel, str) or not video_input_rel:
-        raise SubtitleSkillError("MISSING_INPUT", "request.video_input is required for the render operation")
+        raise SubtitleSkillError(
+            "MISSING_INPUT", "request.video_input is required for the render operation"
+        )
 
     # request.mode selects ffmpeg-skill/caption's own --mode: "burn" (default,
     # renders pixels into the picture) or "mux" (copies video/audio untouched,
@@ -214,7 +247,8 @@ def _run_render(policy, document, fmt, output_path_rel, constraints, issues, req
     mode = request.get("mode", "burn")
     if mode not in engine_module.ALLOWED_RENDER_MODES:
         raise SubtitleSkillError(
-            "INVALID_INPUT", f"request.mode must be one of {sorted(engine_module.ALLOWED_RENDER_MODES)}, got {mode!r}"
+            "INVALID_INPUT",
+            f"request.mode must be one of {sorted(engine_module.ALLOWED_RENDER_MODES)}, got {mode!r}",
         )
 
     # request.audio_stream selects which 0-based audio track of a
@@ -225,10 +259,13 @@ def _run_render(policy, document, fmt, output_path_rel, constraints, issues, req
     # value as an INVALID_INPUT-mapped "kind": "input" failure).
     audio_stream = request.get("audio_stream")
     if audio_stream is not None and (
-        isinstance(audio_stream, bool) or not isinstance(audio_stream, int) or audio_stream < 0
+        isinstance(audio_stream, bool)
+        or not isinstance(audio_stream, int)
+        or audio_stream < 0
     ):
         raise SubtitleSkillError(
-            "INVALID_INPUT", f"request.audio_stream must be a non-negative integer, got {audio_stream!r}"
+            "INVALID_INPUT",
+            f"request.audio_stream must be a non-negative integer, got {audio_stream!r}",
         )
 
     # ffmpeg-skill/caption's --color/--bold/--size are a single, whole-burn
@@ -266,8 +303,12 @@ def _run_render(policy, document, fmt, output_path_rel, constraints, issues, req
             f"ffmpeg-skill install not found (checked {engine_module.FFMPEG_SKILL_DIR_ENV} and the standard "
             "~/.claude, ~/.cursor, ~/.codex and ./.claude skills directories)",
         )
-    real_video_duration = engine_module.probe(ffmpeg_skill_root, video_path).get("duration")
-    issues = validate_document(document, constraints=constraints, video_duration=real_video_duration)
+    real_video_duration = engine_module.probe(ffmpeg_skill_root, video_path).get(
+        "duration"
+    )
+    issues = validate_document(
+        document, constraints=constraints, video_duration=real_video_duration
+    )
 
     # The render identity is anchored on the *content* of the ffmpeg-skill
     # scripts that will actually execute (sha256 of caption.py + _common.py),
@@ -327,7 +368,9 @@ def _run_render(policy, document, fmt, output_path_rel, constraints, issues, req
     # formats.srt.generate_srt's docstring.
     allow_style_fields = frozenset({"color", "size"}) if mode == "burn" else frozenset()
     subtitle_content = generate_srt(document, allow_style_fields=allow_style_fields)
-    subtitle_tmp_path = output_path.with_name(output_path.stem + f".subtitle-skill-src.{fmt}")
+    subtitle_tmp_path = output_path.with_name(
+        output_path.stem + f".subtitle-skill-src.{fmt}"
+    )
     _write_text_exact(subtitle_tmp_path, subtitle_content)
 
     try:
@@ -399,7 +442,9 @@ def _finish(
     mode: Optional[str] = None,
 ) -> dict:
     if not output_path.exists() or output_path.stat().st_size == 0:
-        raise SubtitleSkillError("OUTPUT_ERROR", "output file is missing or empty after execution")
+        raise SubtitleSkillError(
+            "OUTPUT_ERROR", "output file is missing or empty after execution"
+        )
 
     response = {
         "status": "ok",

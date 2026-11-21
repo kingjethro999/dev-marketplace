@@ -109,7 +109,11 @@ def run(
     timeout: int | None = None,
     limits: Limits = DEFAULT_LIMITS,
 ) -> ExecResult:
-    if not argv or not isinstance(argv, list) or not all(isinstance(a, str) for a in argv):
+    if (
+        not argv
+        or not isinstance(argv, list)
+        or not all(isinstance(a, str) for a in argv)
+    ):
         raise ArtifactSecurityError(
             code="ARTIFACT_SUBPROCESS_INVALID_ARGV",
             message="argv must be a non-empty list of strings.",
@@ -132,7 +136,9 @@ def run(
             evidence={"executable": argv[0]},
         )
 
-    effective_timeout = timeout if timeout is not None else limits.subprocess_timeout_seconds
+    effective_timeout = (
+        timeout if timeout is not None else limits.subprocess_timeout_seconds
+    )
     argv = [resolved, *argv[1:]]
 
     with tempfile.TemporaryDirectory(prefix="artifacts-skill-exec-") as tmp:
@@ -151,14 +157,26 @@ def run(
                 check=False,
             )
             return ExecResult(
-                argv=argv, returncode=proc.returncode, stdout=proc.stdout, stderr=proc.stderr, timed_out=False
+                argv=argv,
+                returncode=proc.returncode,
+                stdout=proc.stdout,
+                stderr=proc.stderr,
+                timed_out=False,
             )
         except subprocess.TimeoutExpired as exc:
             return ExecResult(
                 argv=argv,
                 returncode=-1,
-                stdout=exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or ""),
-                stderr=exc.stderr.decode() if isinstance(exc.stderr, bytes) else (exc.stderr or ""),
+                stdout=(
+                    exc.stdout.decode()
+                    if isinstance(exc.stdout, bytes)
+                    else (exc.stdout or "")
+                ),
+                stderr=(
+                    exc.stderr.decode()
+                    if isinstance(exc.stderr, bytes)
+                    else (exc.stderr or "")
+                ),
                 timed_out=True,
             )
 

@@ -71,7 +71,8 @@ class CsvAdapter(ArtifactAdapter):
 
     def capabilities(self) -> list[Capability]:
         structural = Capability(
-            id="csv.structural", status=CapabilityStatus.AVAILABLE,
+            id="csv.structural",
+            status=CapabilityStatus.AVAILABLE,
             detail="Uses only the standard library (csv); always available.",
             detected_via="stdlib",
         )
@@ -83,15 +84,19 @@ class CsvAdapter(ArtifactAdapter):
             except im.PackageNotFoundError:
                 version = None
             render = Capability(
-                id="csv.render", status=CapabilityStatus.AVAILABLE,
+                id="csv.render",
+                status=CapabilityStatus.AVAILABLE,
                 detail="playwright importable. A matching Chromium build must also be installed "
                 "(`playwright install chromium`) — verified at render() time, not here.",
-                detected_via="import playwright", version=version,
+                detected_via="import playwright",
+                version=version,
             )
         else:
             render = Capability(
-                id="csv.render", status=CapabilityStatus.MISSING,
-                detail="playwright not importable.", detected_via="import playwright",
+                id="csv.render",
+                status=CapabilityStatus.MISSING,
+                detail="playwright not importable.",
+                detected_via="import playwright",
             )
         return [structural, render]
 
@@ -135,7 +140,9 @@ class CsvAdapter(ArtifactAdapter):
             "column_count": column_count,
             "header": header,
             "delimiter": dialect.delimiter,
-            "ragged_row_indices": ragged_rows[:20],  # capped — a signal, not a full dump
+            "ragged_row_indices": ragged_rows[
+                :20
+            ],  # capped — a signal, not a full dump
             "ragged_row_count": len(ragged_rows),
             "size_bytes": ref.size_bytes,
             "leftover_markers": find_leftover_markers(flat_text),
@@ -144,7 +151,9 @@ class CsvAdapter(ArtifactAdapter):
 
     # ---- plan / execute -----------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"CSV adapter has no mutating operations (requested '{operation}').",
@@ -152,7 +161,9 @@ class CsvAdapter(ArtifactAdapter):
             evidence={"operation": operation},
         )
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"CSV adapter has no mutating operations (requested '{operation}').",
@@ -162,13 +173,17 @@ class CsvAdapter(ArtifactAdapter):
 
     # ---- render ----------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         check_input_size(ref.path)
         rows, _dialect = _read_rows(ref.path)
         warnings: list[str] = []
         preview_rows = rows[:_MAX_RENDER_ROWS]
         if len(rows) > _MAX_RENDER_ROWS:
-            warnings.append(f"Rendered preview truncated to the first {_MAX_RENDER_ROWS} of {len(rows)} rows.")
+            warnings.append(
+                f"Rendered preview truncated to the first {_MAX_RENDER_ROWS} of {len(rows)} rows."
+            )
 
         row_html = []
         for i, row in enumerate(preview_rows):
@@ -179,38 +194,65 @@ class CsvAdapter(ArtifactAdapter):
             "<!doctype html><html><head><meta charset='utf-8'><style>"
             "table{border-collapse:collapse;font-family:sans-serif;font-size:13px}"
             "td,th{border:1px solid #ccc;padding:4px 8px;text-align:left}"
-            "th{background:#eee}</style></head><body><table>" + "".join(row_html) + "</table></body></html>"
+            "th{background:#eee}</style></head><body><table>"
+            + "".join(row_html)
+            + "</table></body></html>"
         )
         out_dir.mkdir(parents=True, exist_ok=True)
         render_html_path = out_dir / "_render.html"
         render_html_path.write_text(doc, encoding="utf-8")
 
         out_path = render_local_file(
-            render_html_path, out_dir / "page-001.png", capability_id="csv.render", limits=limits
+            render_html_path,
+            out_dir / "page-001.png",
+            capability_id="csv.render",
+            limits=limits,
         )
-        return RenderResult(kind="page_images", files=[out_path], backend="playwright+chromium(generated_html)", warnings=warnings)
+        return RenderResult(
+            kind="page_images",
+            files=[out_path],
+            backend="playwright+chromium(generated_html)",
+            warnings=warnings,
+        )
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="csv_validity", name="CSV is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="csv_validity",
+                    name="CSV is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="csv_validity", name="CSV is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(id="csv_validity", name="CSV is readable", status=CheckStatus.PASS)
+        )
 
         details = report.details
         checks.append(
             Check(
                 id="column_count_consistency",
                 name="Every row has the same number of columns",
-                status=CheckStatus.FAIL if details["ragged_row_count"] else CheckStatus.PASS,
-                message=f"{details['ragged_row_count']} row(s) have a different column count than the header."
-                if details["ragged_row_count"]
-                else f"All {details['row_count']} row(s) have {details['column_count']} column(s).",
+                status=(
+                    CheckStatus.FAIL
+                    if details["ragged_row_count"]
+                    else CheckStatus.PASS
+                ),
+                message=(
+                    f"{details['ragged_row_count']} row(s) have a different column count than the header."
+                    if details["ragged_row_count"]
+                    else f"All {details['row_count']} row(s) have {details['column_count']} column(s)."
+                ),
                 evidence={"ragged_row_indices": details["ragged_row_indices"]},
             )
         )
@@ -218,7 +260,11 @@ class CsvAdapter(ArtifactAdapter):
         if "require_row_count" in policy:
             required = policy["require_row_count"]
             actual = details["row_count"]
-            ok = (actual == required) if isinstance(required, int) else (required[0] <= actual <= required[1])
+            ok = (
+                (actual == required)
+                if isinstance(required, int)
+                else (required[0] <= actual <= required[1])
+            )
             checks.append(
                 Check(
                     id="row_count_requirement",
@@ -235,14 +281,22 @@ class CsvAdapter(ArtifactAdapter):
                 Check(
                     id="leftover_placeholder_text",
                     name="No leftover generation placeholder text",
-                    status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_placeholder_text")
+                        else CheckStatus.WARN
+                    ),
                     message=f"Found likely-unreviewed placeholder text: {leftover_markers}.",
                     evidence={"markers": leftover_markers},
                 )
             )
         else:
             checks.append(
-                Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                Check(
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=CheckStatus.PASS,
+                )
             )
 
         return VerificationResult(kind="structural", checks=checks)

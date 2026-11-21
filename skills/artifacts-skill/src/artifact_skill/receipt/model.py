@@ -99,7 +99,9 @@ ProductionReceipt = ArtifactVerificationReceipt
 class ReceiptBuilder:
     """Accumulates evidence across the lifecycle, then emits one receipt."""
 
-    def __init__(self, input_artifact: ArtifactRef, capabilities: CapabilityReport) -> None:
+    def __init__(
+        self, input_artifact: ArtifactRef, capabilities: CapabilityReport
+    ) -> None:
         self._input = input_artifact
         self._capabilities = capabilities
         self._operations: list[OperationRecord] = []
@@ -154,20 +156,28 @@ class ReceiptBuilder:
         return aggregate(statuses)
 
     def build(self) -> ArtifactVerificationReceipt:
-        structural_dict = self._structural.to_dict() if self._structural else {
-            "kind": "structural",
-            "status": CheckStatus.NOT_CHECKED.value,
-            "checks": [],
-            "evidence_files": [],
-            "inspected_by": None,
-        }
-        visual_dict = self._visual.to_dict() if self._visual else {
-            "kind": "visual",
-            "status": CheckStatus.NOT_CHECKED.value,
-            "checks": [],
-            "evidence_files": [],
-            "inspected_by": None,
-        }
+        structural_dict = (
+            self._structural.to_dict()
+            if self._structural
+            else {
+                "kind": "structural",
+                "status": CheckStatus.NOT_CHECKED.value,
+                "checks": [],
+                "evidence_files": [],
+                "inspected_by": None,
+            }
+        )
+        visual_dict = (
+            self._visual.to_dict()
+            if self._visual
+            else {
+                "kind": "visual",
+                "status": CheckStatus.NOT_CHECKED.value,
+                "checks": [],
+                "evidence_files": [],
+                "inspected_by": None,
+            }
+        )
         return ArtifactVerificationReceipt(
             schema=RECEIPT_SCHEMA,
             status=self._overall_status(),

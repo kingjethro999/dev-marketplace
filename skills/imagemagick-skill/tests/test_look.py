@@ -23,7 +23,9 @@ class LookTests(unittest.TestCase):
 
     def run_look(self, *extra):
         out = os.path.join(self.tmp.name, "sheet.png")
-        args = look.build_parser().parse_args(self.inputs[: extra[0]] + ["-o", out] + list(extra[1:]))
+        args = look.build_parser().parse_args(
+            self.inputs[: extra[0]] + ["-o", out] + list(extra[1:])
+        )
         return look.run_look(args), out
 
     def test_grid_has_the_promised_size_and_leaves_inputs_alone(self):
@@ -43,7 +45,9 @@ class LookTests(unittest.TestCase):
         self.assertEqual(payload["cols"], 2)
 
     def test_refuses_to_write_over_an_input(self):
-        args = look.build_parser().parse_args(self.inputs + ["-o", self.inputs[0], "--overwrite"])
+        args = look.build_parser().parse_args(
+            self.inputs + ["-o", self.inputs[0], "--overwrite"]
+        )
         with self.assertRaises(ImageSkillError):
             look.run_look(args)
 

@@ -65,7 +65,9 @@ def test_hash_is_stable_for_same_content(good_pdf):
 
 def test_html_with_a_leading_comment_before_doctype_is_still_detected(tmp_path):
     path = tmp_path / "licensed.html"
-    path.write_text("<!-- Copyright 2026 Example Corp. All rights reserved. -->\n<!doctype html>\n<html></html>")
+    path.write_text(
+        "<!-- Copyright 2026 Example Corp. All rights reserved. -->\n<!doctype html>\n<html></html>"
+    )
     assert ArtifactRef.from_path(path).type == ArtifactType.HTML
 
 
@@ -95,7 +97,9 @@ def test_svg_with_a_leading_comment_before_bare_svg_tag_is_still_detected(tmp_pa
     """No XML prolog at all - just <svg> after the comment, a common
     hand-authored/tool-exported shape."""
     path = tmp_path / "no_prolog.svg"
-    path.write_text('<!-- exported from Design Tool --><svg xmlns="http://www.w3.org/2000/svg"></svg>')
+    path.write_text(
+        '<!-- exported from Design Tool --><svg xmlns="http://www.w3.org/2000/svg"></svg>'
+    )
     assert ArtifactRef.from_path(path).type == ArtifactType.SVG
 
 
@@ -123,7 +127,9 @@ def test_xhtml_detection_does_not_steal_svg_documents(tmp_path):
     not HTML - the new XHTML check must not run before (or instead of) the
     existing SVG check."""
     path = tmp_path / "test.svg"
-    path.write_text('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>')
+    path.write_text(
+        '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>'
+    )
     assert ArtifactRef.from_path(path).type == ArtifactType.SVG
 
 
@@ -159,7 +165,9 @@ _CFB_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
 def test_cfb_ole2_container_is_detected_as_its_own_type_not_unknown(tmp_path):
     path = tmp_path / "password_protected.pptx"
-    path.write_bytes(_CFB_MAGIC + b"\x00" * 512)  # real CFB files carry more header after the signature
+    path.write_bytes(
+        _CFB_MAGIC + b"\x00" * 512
+    )  # real CFB files carry more header after the signature
     assert ArtifactRef.from_path(path).type == ArtifactType.OLE_COMPOUND_FILE
 
 
@@ -180,14 +188,19 @@ def _make_minimal_epub(path, mimetype_first_and_stored: bool = True) -> None:
 
     with zipfile.ZipFile(path, "w") as zf:
         if mimetype_first_and_stored:
-            zf.writestr(zipfile.ZipInfo("mimetype"), "application/epub+zip", zipfile.ZIP_STORED)
+            zf.writestr(
+                zipfile.ZipInfo("mimetype"), "application/epub+zip", zipfile.ZIP_STORED
+            )
         zf.writestr(
             "META-INF/container.xml",
             '<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" '
             'version="1.0"><rootfiles><rootfile full-path="OEBPS/content.opf" '
             'media-type="application/oebps-package+xml"/></rootfiles></container>',
         )
-        zf.writestr("OEBPS/content.opf", '<package xmlns="http://www.idpf.org/2007/opf"><manifest/><spine/></package>')
+        zf.writestr(
+            "OEBPS/content.opf",
+            '<package xmlns="http://www.idpf.org/2007/opf"><manifest/><spine/></package>',
+        )
         if not mimetype_first_and_stored:
             zf.writestr("mimetype", "application/epub+zip")
 
@@ -280,11 +293,15 @@ def test_markdown_with_a_leading_utf8_bom_is_still_detected_by_a_heading(tmp_pat
 
 def test_markdown_detected_by_two_weaker_signals_together(tmp_path):
     path = tmp_path / "doc.md"
-    path.write_text("Check [this link](http://example.com) out.\n\n- item one\n- item two\n")
+    path.write_text(
+        "Check [this link](http://example.com) out.\n\n- item one\n- item two\n"
+    )
     assert ArtifactRef.from_path(path).type == ArtifactType.MARKDOWN
 
 
-def test_a_single_atx_heading_shaped_line_alone_is_too_weak_a_signal_for_markdown(tmp_path):
+def test_a_single_atx_heading_shaped_line_alone_is_too_weak_a_signal_for_markdown(
+    tmp_path,
+):
     """A shell/Python/YAML '# comment' line is shaped exactly like an ATX
     heading - one match alone must not be enough, or every commented
     script would misdetect as Markdown."""

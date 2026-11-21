@@ -8,6 +8,7 @@ engine's borderline decision to keep or drop a second language (see STATE.md, kn
 stream 1, ...), so `audio_stream` selection (media.py `-map 0:a:N`) can be exercised against a real
 multi-audio-track input instead of only checked at the argv-building level.
 """
+
 from __future__ import annotations
 
 import os
@@ -17,7 +18,21 @@ from typing import List, Optional
 
 
 def media_duration(path: str) -> float:
-    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path], stdout=subprocess.PIPE, text=True, check=True).stdout
+    out = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            path,
+        ],
+        stdout=subprocess.PIPE,
+        text=True,
+        check=True,
+    ).stdout
     return float(out.strip())
 
 
@@ -25,10 +40,34 @@ def twice(src: str, gap: float = 1.5, out_dir: Optional[str] = None) -> str:
     """Return the path of a 16 kHz mono WAV holding `src` twice with `gap` s of silence between."""
     out_dir = out_dir or tempfile.mkdtemp(prefix="ts_derived_")
     os.makedirs(out_dir, exist_ok=True)
-    dst = os.path.join(out_dir, os.path.splitext(os.path.basename(src))[0] + "_twice.wav")
-    subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", src, "-i", src, "-filter_complex",
-                    f"[0:a]apad=pad_dur={gap}[a0];[a0][1:a]concat=n=2:v=0:a=1[a]", "-map", "[a]", "-ac", "1", "-ar", "16000",
-                    "-c:a", "pcm_s16le", dst], check=True)
+    dst = os.path.join(
+        out_dir, os.path.splitext(os.path.basename(src))[0] + "_twice.wav"
+    )
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            src,
+            "-i",
+            src,
+            "-filter_complex",
+            f"[0:a]apad=pad_dur={gap}[a0];[a0][1:a]concat=n=2:v=0:a=1[a]",
+            "-map",
+            "[a]",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-c:a",
+            "pcm_s16le",
+            dst,
+        ],
+        check=True,
+    )
     return dst
 
 
@@ -37,10 +76,13 @@ def second_onset(src: str, gap: float, speech_onset: float) -> float:
     return media_duration(src) + gap + speech_onset
 
 
-def multi_track(sources: List[str], out_dir: Optional[str] = None, name: str = "multi_track.mkv") -> str:
+def multi_track(
+    sources: List[str], out_dir: Optional[str] = None, name: str = "multi_track.mkv"
+) -> str:
     """Return the path of a Matroska file holding each of `sources` as its own audio stream, in order
     (`sources[0]` -> stream 0, `sources[1]` -> stream 1, ...). Real multi-audio-track fixture for
-    `audio_stream` selection tests: a container ffprobe reports with `len(sources)` audio streams."""
+    `audio_stream` selection tests: a container ffprobe reports with `len(sources)` audio streams.
+    """
     out_dir = out_dir or tempfile.mkdtemp(prefix="ts_derived_")
     os.makedirs(out_dir, exist_ok=True)
     dst = os.path.join(out_dir, name)
@@ -56,10 +98,32 @@ def multi_track(sources: List[str], out_dir: Optional[str] = None, name: str = "
 
 def repeated(src: str, times: int, out_dir: Optional[str] = None) -> str:
     """Return the path of a 16 kHz mono WAV holding `src` `times` times back to back (its own lead-in and tail silence
-    are the pause between two copies): a long same-language recording with known pauses, built from a short fixture."""
+    are the pause between two copies): a long same-language recording with known pauses, built from a short fixture.
+    """
     out_dir = out_dir or tempfile.mkdtemp(prefix="ts_derived_")
     os.makedirs(out_dir, exist_ok=True)
-    dst = os.path.join(out_dir, f"{os.path.splitext(os.path.basename(src))[0]}_x{times}.wav")
-    subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-stream_loop", str(times - 1), "-i", src, "-ac", "1", "-ar", "16000",
-                    "-c:a", "pcm_s16le", dst], check=True)
+    dst = os.path.join(
+        out_dir, f"{os.path.splitext(os.path.basename(src))[0]}_x{times}.wav"
+    )
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-stream_loop",
+            str(times - 1),
+            "-i",
+            src,
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-c:a",
+            "pcm_s16le",
+            dst,
+        ],
+        check=True,
+    )
     return dst

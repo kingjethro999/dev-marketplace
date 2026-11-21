@@ -38,7 +38,9 @@ def _gcd_ratio(width: int, height: int) -> str:
     return f"{width // g}:{height // g}"
 
 
-def measure_container(probe_data: Dict[str, Any], actual_size_bytes: Optional[int] = None) -> List[QCMeasurement]:
+def measure_container(
+    probe_data: Dict[str, Any], actual_size_bytes: Optional[int] = None
+) -> List[QCMeasurement]:
     """``actual_size_bytes``, when given, is the caller's own ``stat()`` of
     the resolved input file - authoritative, always available, and
     preferred over ffprobe's self-reported ``format.size`` (which some
@@ -71,8 +73,12 @@ def measure_container(probe_data: Dict[str, Any], actual_size_bytes: Optional[in
     if actual_size_bytes is not None:
         measurements.append(
             QCMeasurement(
-                id="container.size_bytes", category="container", name="size_bytes",
-                value=actual_size_bytes, unit="bytes", source="OBSERVED",
+                id="container.size_bytes",
+                category="container",
+                name="size_bytes",
+                value=actual_size_bytes,
+                unit="bytes",
+                source="OBSERVED",
                 notes="from the resolved input file's own stat(), not the container's self-reported size",
             )
         )
@@ -103,7 +109,9 @@ def measure_container(probe_data: Dict[str, Any], actual_size_bytes: Optional[in
 
 
 def measure_video_streams(probe_data: Dict[str, Any]) -> List[QCMeasurement]:
-    streams = [s for s in probe_data.get("streams", []) if s.get("codec_type") == "video"]
+    streams = [
+        s for s in probe_data.get("streams", []) if s.get("codec_type") == "video"
+    ]
     measurements: List[QCMeasurement] = [
         QCMeasurement(
             id="video.stream_present",
@@ -128,25 +136,76 @@ def measure_video_streams(probe_data: Dict[str, Any]) -> List[QCMeasurement]:
     width = stream.get("width")
     height = stream.get("height")
 
-    measurements.append(QCMeasurement("video.codec", "video", "codec", stream.get("codec_name"), stream=idx, source="ffprobe"))
-    measurements.append(QCMeasurement("video.width", "video", "width", width, unit="px", stream=idx, source="ffprobe"))
-    measurements.append(QCMeasurement("video.height", "video", "height", height, unit="px", stream=idx, source="ffprobe"))
+    measurements.append(
+        QCMeasurement(
+            "video.codec",
+            "video",
+            "codec",
+            stream.get("codec_name"),
+            stream=idx,
+            source="ffprobe",
+        )
+    )
+    measurements.append(
+        QCMeasurement(
+            "video.width",
+            "video",
+            "width",
+            width,
+            unit="px",
+            stream=idx,
+            source="ffprobe",
+        )
+    )
+    measurements.append(
+        QCMeasurement(
+            "video.height",
+            "video",
+            "height",
+            height,
+            unit="px",
+            stream=idx,
+            source="ffprobe",
+        )
+    )
 
     dar = stream.get("display_aspect_ratio")
     if dar and dar != "0:1":
         aspect_value, aspect_source, estimated = dar, "ffprobe", False
     elif width and height:
-        aspect_value, aspect_source, estimated = _gcd_ratio(int(width), int(height)), "ffprobe:derived", True
+        aspect_value, aspect_source, estimated = (
+            _gcd_ratio(int(width), int(height)),
+            "ffprobe:derived",
+            True,
+        )
     else:
         aspect_value, aspect_source, estimated = None, "ffprobe", False
     measurements.append(
-        QCMeasurement("video.aspect_ratio", "video", "aspect_ratio", aspect_value, stream=idx, source=aspect_source, estimated=estimated)
+        QCMeasurement(
+            "video.aspect_ratio",
+            "video",
+            "aspect_ratio",
+            aspect_value,
+            stream=idx,
+            source=aspect_source,
+            estimated=estimated,
+        )
     )
 
     avg_fps = parse_frame_rate(stream.get("avg_frame_rate"))
     r_fps = parse_frame_rate(stream.get("r_frame_rate"))
     fps = avg_fps or r_fps
-    measurements.append(QCMeasurement("video.frame_rate", "video", "frame_rate", fps, unit="fps", stream=idx, source="ffprobe"))
+    measurements.append(
+        QCMeasurement(
+            "video.frame_rate",
+            "video",
+            "frame_rate",
+            fps,
+            unit="fps",
+            stream=idx,
+            source="ffprobe",
+        )
+    )
 
     # Mirrors ffmpeg-skill's variable_frame_rate_suspected heuristic: a
     # container's declared r_frame_rate (the least-common-multiple rate the
@@ -159,8 +218,12 @@ def measure_video_streams(probe_data: Dict[str, Any]) -> List[QCMeasurement]:
         vfr_suspected = abs(r_fps - avg_fps) > 0.01
     measurements.append(
         QCMeasurement(
-            "video.variable_frame_rate_suspected", "video", "variable_frame_rate_suspected", vfr_suspected,
-            stream=idx, source="ffprobe:derived",
+            "video.variable_frame_rate_suspected",
+            "video",
+            "variable_frame_rate_suspected",
+            vfr_suspected,
+            stream=idx,
+            source="ffprobe:derived",
             notes="derived from |r_frame_rate - avg_frame_rate| > 0.01fps; null when either rate is unavailable",
         )
     )
@@ -168,42 +231,97 @@ def measure_video_streams(probe_data: Dict[str, Any]) -> List[QCMeasurement]:
     nb_frames = stream.get("nb_frames")
     if nb_frames is not None:
         measurements.append(
-            QCMeasurement("video.frame_count", "video", "frame_count", int(nb_frames), stream=idx, source="ffprobe")
+            QCMeasurement(
+                "video.frame_count",
+                "video",
+                "frame_count",
+                int(nb_frames),
+                stream=idx,
+                source="ffprobe",
+            )
         )
     else:
-        duration = stream.get("duration") or probe_data.get("format", {}).get("duration")
+        duration = stream.get("duration") or probe_data.get("format", {}).get(
+            "duration"
+        )
         if duration is not None and fps:
             estimate = round(float(duration) * fps)
             measurements.append(
                 QCMeasurement(
-                    "video.frame_count", "video", "frame_count", estimate,
-                    stream=idx, source="ffprobe:derived", estimated=True,
+                    "video.frame_count",
+                    "video",
+                    "frame_count",
+                    estimate,
+                    stream=idx,
+                    source="ffprobe:derived",
+                    estimated=True,
                     notes="derived from duration * frame_rate; nb_frames was not reported by the container",
                 )
             )
         else:
             measurements.append(
                 QCMeasurement(
-                    "video.frame_count", "video", "frame_count", None,
-                    stream=idx, source="ffprobe", notes="not available: no nb_frames and insufficient data to derive it",
+                    "video.frame_count",
+                    "video",
+                    "frame_count",
+                    None,
+                    stream=idx,
+                    source="ffprobe",
+                    notes="not available: no nb_frames and insufficient data to derive it",
                 )
             )
 
-    measurements.append(QCMeasurement("video.pixel_format", "video", "pixel_format", stream.get("pix_fmt"), stream=idx, source="ffprobe"))
+    measurements.append(
+        QCMeasurement(
+            "video.pixel_format",
+            "video",
+            "pixel_format",
+            stream.get("pix_fmt"),
+            stream=idx,
+            source="ffprobe",
+        )
+    )
 
-    for field_name in ("color_range", "color_space", "color_transfer", "color_primaries", "field_order"):
+    for field_name in (
+        "color_range",
+        "color_space",
+        "color_transfer",
+        "color_primaries",
+        "field_order",
+    ):
         measurements.append(
-            QCMeasurement(f"video.{field_name}", "video", field_name, stream.get(field_name), stream=idx, source="ffprobe")
+            QCMeasurement(
+                f"video.{field_name}",
+                "video",
+                field_name,
+                stream.get(field_name),
+                stream=idx,
+                source="ffprobe",
+            )
         )
 
     return measurements
 
 
 def measure_audio_stream_presence(probe_data: Dict[str, Any]) -> List[QCMeasurement]:
-    streams = [s for s in probe_data.get("streams", []) if s.get("codec_type") == "audio"]
+    streams = [
+        s for s in probe_data.get("streams", []) if s.get("codec_type") == "audio"
+    ]
     return [
-        QCMeasurement("audio.stream_present", "audio", "stream_present", bool(streams), source="ffprobe"),
-        QCMeasurement("audio.stream_count", "audio", "stream_count", len(streams), source="ffprobe"),
+        QCMeasurement(
+            "audio.stream_present",
+            "audio",
+            "stream_present",
+            bool(streams),
+            source="ffprobe",
+        ),
+        QCMeasurement(
+            "audio.stream_count",
+            "audio",
+            "stream_count",
+            len(streams),
+            source="ffprobe",
+        ),
     ]
 
 
@@ -248,7 +366,9 @@ def _parse_luminance_frames(stdout: str) -> List[Dict[str, Any]]:
     return frames
 
 
-def _build_luminance_excursions(frames: List[Dict[str, Any]], legal_min: int, legal_max: int) -> List[Dict[str, Any]]:
+def _build_luminance_excursions(
+    frames: List[Dict[str, Any]], legal_min: int, legal_max: int
+) -> List[Dict[str, Any]]:
     """Contiguous runs of frames whose Y value fell outside
     ``[legal_min, legal_max]``, merged into segments the same way
     ``black_segments``/``freeze_segments`` already are (ADR-013).
@@ -268,10 +388,26 @@ def _build_luminance_excursions(frames: List[Dict[str, Any]], legal_min: int, le
                 seg_min, seg_max = min(seg_min, f["ymin"]), max(seg_max, f["ymax"])
             last_time = f["pts_time"]
         elif seg_start is not None:
-            segments.append({"start": seg_start, "end": last_time, "duration": last_time - seg_start, "min_y": seg_min, "max_y": seg_max})
+            segments.append(
+                {
+                    "start": seg_start,
+                    "end": last_time,
+                    "duration": last_time - seg_start,
+                    "min_y": seg_min,
+                    "max_y": seg_max,
+                }
+            )
             seg_start = None
     if seg_start is not None:
-        segments.append({"start": seg_start, "end": last_time, "duration": last_time - seg_start, "min_y": seg_min, "max_y": seg_max})
+        segments.append(
+            {
+                "start": seg_start,
+                "end": last_time,
+                "duration": last_time - seg_start,
+                "min_y": seg_min,
+                "max_y": seg_max,
+            }
+        )
     return segments
 
 
@@ -319,10 +455,19 @@ def analyze_video_defects(
     try:
         result = run_argv(argv, timeout=timeout)
     except FileNotFoundError:
-        raise error("DEPENDENCY_ERROR", "ffmpeg executable could not be run", executable=ffmpeg_path)
+        raise error(
+            "DEPENDENCY_ERROR",
+            "ffmpeg executable could not be run",
+            executable=ffmpeg_path,
+        )
 
     if result.timed_out:
-        raise error("TOOL_ERROR", "ffmpeg video defect analysis timed out", argv=argv, timeout=timeout)
+        raise error(
+            "TOOL_ERROR",
+            "ffmpeg video defect analysis timed out",
+            argv=argv,
+            timeout=timeout,
+        )
 
     lines = result.stderr.splitlines()
 
@@ -341,13 +486,17 @@ def analyze_video_defects(
         m = _FREEZE_DURATION_RE.search(line)
         if m and pending_start is not None:
             dur = float(m.group(1))
-            freeze_segments.append({"start": pending_start, "end": pending_start + dur, "duration": dur})
+            freeze_segments.append(
+                {"start": pending_start, "end": pending_start + dur, "duration": dur}
+            )
             pending_start = None
             continue
         m = _FREEZE_END_RE.search(line)
         if m and pending_start is not None:
             end = float(m.group(1))
-            freeze_segments.append({"start": pending_start, "end": end, "duration": end - pending_start})
+            freeze_segments.append(
+                {"start": pending_start, "end": end, "duration": end - pending_start}
+            )
             pending_start = None
     if pending_start is not None:
         # Stream ended while still frozen: duration is unknown-but-ongoing;
@@ -357,31 +506,59 @@ def analyze_video_defects(
     decoded_frame_count = None
     for match in _FRAME_PROGRESS_RE.finditer(result.stderr):
         n = int(match.group(1))
-        decoded_frame_count = n if decoded_frame_count is None else max(decoded_frame_count, n)
+        decoded_frame_count = (
+            n if decoded_frame_count is None else max(decoded_frame_count, n)
+        )
 
     error_lines = extract_decode_errors(lines)
 
     luminance_frames = _parse_luminance_frames(result.stdout)
-    luminance_excursions = _build_luminance_excursions(luminance_frames, luminance_legal_min, luminance_legal_max)
+    luminance_excursions = _build_luminance_excursions(
+        luminance_frames, luminance_legal_min, luminance_legal_max
+    )
 
     measurements = [
-        QCMeasurement("video.black_segments", "video", "black_segments", black_segments, source="ffmpeg:blackdetect"),
-        QCMeasurement("video.freeze_segments", "video", "freeze_segments", freeze_segments, source="ffmpeg:freezedetect"),
         QCMeasurement(
-            "video.luminance_excursions", "video", "luminance_excursions", luminance_excursions,
+            "video.black_segments",
+            "video",
+            "black_segments",
+            black_segments,
+            source="ffmpeg:blackdetect",
+        ),
+        QCMeasurement(
+            "video.freeze_segments",
+            "video",
+            "freeze_segments",
+            freeze_segments,
+            source="ffmpeg:freezedetect",
+        ),
+        QCMeasurement(
+            "video.luminance_excursions",
+            "video",
+            "luminance_excursions",
+            luminance_excursions,
             source="ffmpeg:signalstats",
             notes=f"Y outside [{luminance_legal_min}, {luminance_legal_max}] (8-bit); a single-frame excursion reports duration 0.0, not its display duration",
         ),
         QCMeasurement(
-            "video.decoded_frame_count", "video", "decoded_frame_count", decoded_frame_count,
+            "video.decoded_frame_count",
+            "video",
+            "decoded_frame_count",
+            decoded_frame_count,
             source="ffmpeg:decode",
         ),
         QCMeasurement(
-            "video.decode_error_count", "video", "decode_error_count", len(error_lines),
+            "video.decode_error_count",
+            "video",
+            "decode_error_count",
+            len(error_lines),
             source="ffmpeg:decode",
         ),
         QCMeasurement(
-            "video.decode_errors", "video", "decode_errors", error_lines[:200],
+            "video.decode_errors",
+            "video",
+            "decode_errors",
+            error_lines[:200],
             source="ffmpeg:decode",
             notes="truncated to first 200 lines" if len(error_lines) > 200 else None,
         ),
@@ -389,7 +566,9 @@ def analyze_video_defects(
     if expected_frame_count is not None and decoded_frame_count is not None:
         measurements.append(
             QCMeasurement(
-                "video.frame_count_delta", "video", "frame_count_delta",
+                "video.frame_count_delta",
+                "video",
+                "frame_count_delta",
                 expected_frame_count - decoded_frame_count,
                 source="ffmpeg:decode",
                 notes="container-reported frame count minus frames actually decoded",

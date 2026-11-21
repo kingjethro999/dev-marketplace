@@ -6,7 +6,11 @@ import pytest
 
 from artifact_skill.adapters.xlsx.adapter import XlsxAdapter
 from artifact_skill.core.artifact import ArtifactRef, ArtifactType
-from artifact_skill.core.errors import ArtifactExecutionError, ArtifactInputError, ArtifactSecurityError
+from artifact_skill.core.errors import (
+    ArtifactExecutionError,
+    ArtifactInputError,
+    ArtifactSecurityError,
+)
 from artifact_skill.core.verification import CheckStatus
 
 
@@ -15,7 +19,9 @@ def adapter() -> XlsxAdapter:
     return XlsxAdapter()
 
 
-def _probe_xlsx_render_works(adapter: XlsxAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+def _probe_xlsx_render_works(
+    adapter: XlsxAdapter, ref: ArtifactRef, tmp_path: Path
+) -> bool:
     try:
         result = adapter.render(ref, tmp_path / "_probe")
         return len(result.files) > 0
@@ -56,7 +62,9 @@ def test_inspect_rejects_entity_declaration_before_opening(entity_bomb_xlsx, ada
     assert exc_info.value.code == "ARTIFACT_XML_ENTITY_DECLARATION_REJECTED"
 
 
-def test_execute_rejects_entity_declaration_before_opening(entity_bomb_xlsx, adapter, tmp_path):
+def test_execute_rejects_entity_declaration_before_opening(
+    entity_bomb_xlsx, adapter, tmp_path
+):
     ref = ArtifactRef.from_path(entity_bomb_xlsx)
     with pytest.raises(ArtifactSecurityError) as exc_info:
         adapter.execute(ref, "metadata_set", {"title": "x"}, tmp_path / "out.xlsx")
@@ -74,7 +82,9 @@ def test_verify_no_formula_workbook_skips_formula_checks(no_formula_xlsx, adapte
     assert result.status == CheckStatus.PASS
 
 
-def test_verify_good_workbook_formula_cached_errors_pass_but_recalculation_unknown(good_xlsx, adapter):
+def test_verify_good_workbook_formula_cached_errors_pass_but_recalculation_unknown(
+    good_xlsx, adapter
+):
     """The core design point of this adapter: a workbook with a real cached
     (non-error) result still can't claim the formula is *currently* correct
     — openpyxl never recalculates — so overall status is UNKNOWN even
@@ -110,7 +120,9 @@ def test_verify_external_link_workbook_warns_by_default(external_link_xlsx, adap
     assert check.status == CheckStatus.WARN
 
 
-def test_verify_external_link_workbook_fails_under_strict_policy(external_link_xlsx, adapter):
+def test_verify_external_link_workbook_fails_under_strict_policy(
+    external_link_xlsx, adapter
+):
     ref = ArtifactRef.from_path(external_link_xlsx)
     result = adapter.verify_structural(ref, {"forbid_external_links": True})
     check = next(c for c in result.checks if c.id == "external_links")
@@ -124,7 +136,9 @@ def test_verify_good_workbook_has_no_leftover_placeholder_text(good_xlsx, adapte
     assert check.status == CheckStatus.PASS
 
 
-def test_verify_leftover_placeholder_workbook_warns_by_default(leftover_placeholder_xlsx, adapter):
+def test_verify_leftover_placeholder_workbook_warns_by_default(
+    leftover_placeholder_xlsx, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_xlsx)
     result = adapter.verify_structural(ref, {})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -134,7 +148,9 @@ def test_verify_leftover_placeholder_workbook_warns_by_default(leftover_placehol
     assert "lorem ipsum" in check.evidence["markers"]
 
 
-def test_verify_leftover_placeholder_workbook_fails_under_strict_policy(leftover_placeholder_xlsx, adapter):
+def test_verify_leftover_placeholder_workbook_fails_under_strict_policy(
+    leftover_placeholder_xlsx, adapter
+):
     ref = ArtifactRef.from_path(leftover_placeholder_xlsx)
     result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
     check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
@@ -162,18 +178,28 @@ def test_leftover_text_scan_covers_sheet_names(adapter, tmp_path):
 def test_verify_good_workbook_sheet_count_requirement(good_xlsx, adapter):
     ref = ArtifactRef.from_path(good_xlsx)
     ok = adapter.verify_structural(ref, {"require_sheet_count": 2})
-    assert next(c for c in ok.checks if c.id == "sheet_count_requirement").status == CheckStatus.PASS
+    assert (
+        next(c for c in ok.checks if c.id == "sheet_count_requirement").status
+        == CheckStatus.PASS
+    )
 
     mismatch = adapter.verify_structural(ref, {"require_sheet_count": 5})
-    assert next(c for c in mismatch.checks if c.id == "sheet_count_requirement").status == CheckStatus.FAIL
+    assert (
+        next(c for c in mismatch.checks if c.id == "sheet_count_requirement").status
+        == CheckStatus.FAIL
+    )
 
 
-def test_execute_metadata_set_preserves_input_and_sheet_count(good_xlsx, adapter, tmp_path):
+def test_execute_metadata_set_preserves_input_and_sheet_count(
+    good_xlsx, adapter, tmp_path
+):
     ref = ArtifactRef.from_path(good_xlsx)
     before_hash = ref.sha256
     output_path = tmp_path / "out.xlsx"
 
-    result_ref = adapter.execute(ref, "metadata_set", {"title": "New Title", "author": "QA"}, output_path)
+    result_ref = adapter.execute(
+        ref, "metadata_set", {"title": "New Title", "author": "QA"}, output_path
+    )
 
     assert output_path.exists()
     assert result_ref.sha256 != before_hash
@@ -197,8 +223,14 @@ def test_capabilities_report_never_lies_about_probe_result(adapter):
     caps = {c.id: c for c in adapter.capabilities()}
     assert "xlsx.structural" in caps
     assert "xlsx.render" in caps
-    assert caps["xlsx.structural"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
-    assert caps["xlsx.render"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["xlsx.structural"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
+    assert caps["xlsx.render"].status in (
+        CapabilityStatus.AVAILABLE,
+        CapabilityStatus.MISSING,
+    )
 
 
 def test_render_propagates_backend_failure(good_xlsx, adapter, tmp_path, monkeypatch):
@@ -206,7 +238,8 @@ def test_render_propagates_backend_failure(good_xlsx, adapter, tmp_path, monkeyp
 
     def _fake_convert(input_path, pdf_out_dir, **kwargs):
         raise ArtifactExecutionError(
-            code="ARTIFACT_RENDER_BACKEND_FAILED", message="fake failure for testing",
+            code="ARTIFACT_RENDER_BACKEND_FAILED",
+            message="fake failure for testing",
             evidence={"stderr": "fake soffice failure for testing"},
         )
 
@@ -218,7 +251,9 @@ def test_render_propagates_backend_failure(good_xlsx, adapter, tmp_path, monkeyp
     assert exc_info.value.code == "ARTIFACT_RENDER_BACKEND_FAILED"
 
 
-def test_render_honors_a_custom_limits_max_pages(good_xlsx, adapter, tmp_path, monkeypatch):
+def test_render_honors_a_custom_limits_max_pages(
+    good_xlsx, adapter, tmp_path, monkeypatch
+):
     """Grok review P0-3: limits must reach render_pdf_pages() through the
     intermediate PDF conversion step. Fakes convert_to_pdf() with a real,
     pre-made multi-page PDF rather than requiring a working LibreOffice
@@ -250,7 +285,9 @@ def test_render_honors_a_custom_limits_max_pages(good_xlsx, adapter, tmp_path, m
 def test_render_happy_path_when_backend_actually_works(good_xlsx, adapter, tmp_path):
     ref = ArtifactRef.from_path(good_xlsx)
     if not _probe_xlsx_render_works(adapter, ref, tmp_path):
-        pytest.skip("LibreOffice in this environment cannot convert documents (soffice present but non-functional)")
+        pytest.skip(
+            "LibreOffice in this environment cannot convert documents (soffice present but non-functional)"
+        )
     result = adapter.render(ref, tmp_path / "rendered")
     assert len(result.files) >= 1
     assert all(f.exists() for f in result.files)

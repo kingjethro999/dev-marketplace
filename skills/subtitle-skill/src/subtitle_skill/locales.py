@@ -14,6 +14,7 @@ Nothing in this module changes subtitle text on its own. `break_lines` is a
 deterministic helper whose result `validation.py` only *reports* as a
 suggestion; it is never applied to a cue.
 """
+
 from __future__ import annotations
 
 import unicodedata
@@ -46,13 +47,49 @@ def _with_compat_forms(base: FrozenSet[str]) -> FrozenSet[str]:
 # 2020-08-11), Appendix A, character classes -- the public description of
 # JIS X 4051:2004's classes. Code points copied from the appendix tables.
 JLREQ_CL01_OPENING_BRACKETS = _chars(
-    [0x2018, 0x201C, 0x0028, 0x3014, 0x005B, 0x007B, 0x3008, 0x300A, 0x300C, 0x300E, 0x3010, 0x2985, 0x3018, 0x3016, 0x00AB, 0x301D]
+    [
+        0x2018,
+        0x201C,
+        0x0028,
+        0x3014,
+        0x005B,
+        0x007B,
+        0x3008,
+        0x300A,
+        0x300C,
+        0x300E,
+        0x3010,
+        0x2985,
+        0x3018,
+        0x3016,
+        0x00AB,
+        0x301D,
+    ]
 )
 JLREQ_CL02_CLOSING_BRACKETS = _chars(
-    [0x2019, 0x201D, 0x0029, 0x3015, 0x005D, 0x007D, 0x3009, 0x300B, 0x300D, 0x300F, 0x3011, 0x2986, 0x3019, 0x3017, 0x00BB, 0x301F]
+    [
+        0x2019,
+        0x201D,
+        0x0029,
+        0x3015,
+        0x005D,
+        0x007D,
+        0x3009,
+        0x300B,
+        0x300D,
+        0x300F,
+        0x3011,
+        0x2986,
+        0x3019,
+        0x3017,
+        0x00BB,
+        0x301F,
+    ]
 )
 JLREQ_CL03_HYPHENS = _chars([0x2010, 0x301C, 0x30A0, 0x2013])
-JLREQ_CL04_DIVIDING_PUNCTUATION = _chars([0x0021, 0x003F, 0x203C, 0x2047, 0x2048, 0x2049])
+JLREQ_CL04_DIVIDING_PUNCTUATION = _chars(
+    [0x0021, 0x003F, 0x203C, 0x2047, 0x2048, 0x2049]
+)
 JLREQ_CL05_MIDDLE_DOTS = _chars([0x30FB, 0x003A, 0x003B])
 JLREQ_CL06_FULL_STOPS = _chars([0x3002, 0x002E])
 JLREQ_CL07_COMMAS = _chars([0x3001, 0x002C])
@@ -60,8 +97,32 @@ JLREQ_CL09_ITERATION_MARKS = _chars([0x30FD, 0x30FE, 0x309D, 0x309E, 0x3005, 0x3
 JLREQ_CL10_PROLONGED_SOUND_MARK = _chars([0x30FC])
 # cl-11 also lists the sequence U+31F7 U+309A; U+31F7 alone is already a member.
 JLREQ_CL11_SMALL_KANA = _chars(
-    [0x3041, 0x3043, 0x3045, 0x3047, 0x3049, 0x30A1, 0x30A3, 0x30A5, 0x30A7, 0x30A9, 0x3063, 0x3083, 0x3085, 0x3087,
-     0x308E, 0x3095, 0x3096, 0x30C3, 0x30E3, 0x30E5, 0x30E7, 0x30EE, 0x30F5, 0x30F6]
+    [
+        0x3041,
+        0x3043,
+        0x3045,
+        0x3047,
+        0x3049,
+        0x30A1,
+        0x30A3,
+        0x30A5,
+        0x30A7,
+        0x30A9,
+        0x3063,
+        0x3083,
+        0x3085,
+        0x3087,
+        0x308E,
+        0x3095,
+        0x3096,
+        0x30C3,
+        0x30E3,
+        0x30E5,
+        0x30E7,
+        0x30EE,
+        0x30F5,
+        0x30F6,
+    ]
     + list(range(0x31F0, 0x3200))
 )
 
@@ -87,9 +148,13 @@ JA_NO_LINE_END = _with_compat_forms(JLREQ_CL01_OPENING_BRACKETS)
 # brackets and book-title marks do not end one. Connector marks (连接号) are
 # also named, but are not included here -- see the ADR.
 ZH_PAUSE_STOP_MARKS = frozenset("、，。：；！？")
-ZH_INTERPUNCTS = _chars([0x00B7, 0x30FB])  # CLREQ: U+00B7 MIDDLE DOT; U+30FB as used in JLREQ cl-05
+ZH_INTERPUNCTS = _chars(
+    [0x00B7, 0x30FB]
+)  # CLREQ: U+00B7 MIDDLE DOT; U+30FB as used in JLREQ cl-05
 ZH_SOLIDI = _chars([0x002F, 0xFF0F])  # CLREQ: U+002F SOLIDUS, U+FF0F FULLWIDTH SOLIDUS
-ZH_NO_LINE_START = _with_compat_forms(ZH_PAUSE_STOP_MARKS | JLREQ_CL02_CLOSING_BRACKETS | ZH_INTERPUNCTS | ZH_SOLIDI)
+ZH_NO_LINE_START = _with_compat_forms(
+    ZH_PAUSE_STOP_MARKS | JLREQ_CL02_CLOSING_BRACKETS | ZH_INTERPUNCTS | ZH_SOLIDI
+)
 ZH_NO_LINE_END = _with_compat_forms(JLREQ_CL01_OPENING_BRACKETS)
 
 # W3C "Requirements for Hangul Text Layout and Typography" (KLREQ) 7.1.2 /
@@ -210,7 +275,9 @@ _INSEPARABLE = frozenset("—‥…―⸺⸻")
 
 
 def _is_narrow_word_char(ch: str) -> bool:
-    return unicodedata.east_asian_width(ch) in ("Na", "H", "N") and (ch.isalnum() or ch in "'-_")
+    return unicodedata.east_asian_width(ch) in ("Na", "H", "N") and (
+        ch.isalnum() or ch in "'-_"
+    )
 
 
 def _tokenize(text: str, profile: LocaleProfile) -> List[str]:
@@ -290,7 +357,9 @@ def _legal_split(head: List[str], tail_first: str, profile: LocaleProfile) -> bo
     return True
 
 
-def _split_wide_units(units: List[str], max_width: float, profile: LocaleProfile) -> List[str]:
+def _split_wide_units(
+    units: List[str], max_width: float, profile: LocaleProfile
+) -> List[str]:
     """A single unit wider than the line can only be split inside itself."""
     out: List[str] = []
     for u in units:
@@ -315,7 +384,9 @@ def break_lines(text: str, profile: LocaleProfile, max_width: float) -> List[str
     """
     if max_width <= 0:
         raise ValueError("max_width must be positive")
-    units = _split_wide_units(_tokenize(_join_lines(text, profile), profile), max_width, profile)
+    units = _split_wide_units(
+        _tokenize(_join_lines(text, profile), profile), max_width, profile
+    )
     lines: List[str] = []
     cur: List[str] = []
     for unit in units:
@@ -350,7 +421,9 @@ def break_lines(text: str, profile: LocaleProfile, max_width: float) -> List[str
     return lines
 
 
-def kinsoku_violations(lines: List[str], profile: LocaleProfile) -> List[Tuple[int, str, str]]:
+def kinsoku_violations(
+    lines: List[str], profile: LocaleProfile
+) -> List[Tuple[int, str, str]]:
     """(line index, "start" | "end", offending character) for every line
     break in `lines` that breaks the profile's kinsoku rules. Only positions
     next to a line break are checked: the start of every line after the

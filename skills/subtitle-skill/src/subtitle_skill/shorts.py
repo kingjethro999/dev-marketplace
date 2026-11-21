@@ -16,6 +16,7 @@ docs/adr/ADR-009-shorts-captions.md).
 - **The speaker's face avoided** with step 8's rule (placement.py): while a face
   overlaps the caption box the chunk moves to the top of the safe zone.
 """
+
 from __future__ import annotations
 
 import unicodedata
@@ -32,7 +33,10 @@ PLATFORM_SAFE = {
     "shorts": {"top": 0.06, "bottom": 0.18, "left": 0.05, "right": 0.12},
     "reels": {"top": 0.08, "bottom": 0.20, "left": 0.05, "right": 0.12},
 }
-SAFE = {edge: max(zone[edge] for zone in PLATFORM_SAFE.values()) for edge in ("top", "bottom", "left", "right")}
+SAFE = {
+    edge: max(zone[edge] for zone in PLATFORM_SAFE.values())
+    for edge in ("top", "bottom", "left", "right")
+}
 
 FONT_HEIGHT = 0.055  # Fontsize as a fraction of the frame height
 CAPTION_BOTTOM = 0.70  # bottom edge of the caption box, fraction of the height
@@ -60,7 +64,12 @@ class ShortsLayout:
 
     @property
     def safe_box(self) -> Box:
-        return Box(SAFE["left"], SAFE["top"], 1.0 - SAFE["left"] - SAFE["right"], 1.0 - SAFE["top"] - SAFE["bottom"])
+        return Box(
+            SAFE["left"],
+            SAFE["top"],
+            1.0 - SAFE["left"] - SAFE["right"],
+            1.0 - SAFE["top"] - SAFE["bottom"],
+        )
 
     @property
     def font_size(self) -> int:
@@ -73,7 +82,9 @@ class ShortsLayout:
     def caption_boxes(self) -> dict:
         safe = self.safe_box
         return {
-            "bottom": Box(safe.x, CAPTION_BOTTOM - self.box_height, safe.w, self.box_height),
+            "bottom": Box(
+                safe.x, CAPTION_BOTTOM - self.box_height, safe.w, self.box_height
+            ),
             "top": Box(safe.x, safe.y, safe.w, self.box_height),
         }
 
@@ -92,7 +103,12 @@ class ShortsLayout:
 
 def estimate_width(text: str, font_size: float) -> float:
     return sum(
-        font_size * (CJK_ADVANCE if unicodedata.east_asian_width(ch) in ("W", "F") else LATIN_ADVANCE)
+        font_size
+        * (
+            CJK_ADVANCE
+            if unicodedata.east_asian_width(ch) in ("W", "F")
+            else LATIN_ADVANCE
+        )
         for ch in text
     )
 
@@ -142,8 +158,11 @@ def chunk_document(document: SubtitleDocument) -> SubtitleDocument:
                 words=tuple(words),
                 # a name prefix would be a third word: the speaker is kept in metadata
                 speaker=None,
-                metadata={**cue.metadata, "source_cue": cue.id,
-                          **({"speaker": cue.speaker} if cue.speaker else {})},
+                metadata={
+                    **cue.metadata,
+                    "source_cue": cue.id,
+                    **({"speaker": cue.speaker} if cue.speaker else {}),
+                },
             )
         )
     return replace(document, cues=tuple(cues))

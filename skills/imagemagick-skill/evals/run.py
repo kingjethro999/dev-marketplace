@@ -8,6 +8,7 @@ FIXTURES and OUTDIR in a prompt are replaced by the given directories (create th
 fixtures with evals/write_fixtures.py). Grading is done by reading the agent's run
 against the entry's `expect` - see evals/README.md.
 """
+
 import argparse
 import json
 import os
@@ -31,14 +32,22 @@ def main(argv=None):
     prompts = load()
     if args.list or not args.show:
         for p in prompts:
-            kind = "decline" if p.get("decline") else "ask" if p.get("ask") else " -> ".join(p["expect"])
+            kind = (
+                "decline"
+                if p.get("decline")
+                else "ask" if p.get("ask") else " -> ".join(p["expect"])
+            )
             print(f"{p['id']:28} {kind}")
         return 0
     match = [p for p in prompts if p["id"] == args.show]
     if not match:
         print(f"unknown id: {args.show}", file=sys.stderr)
         return 1
-    print(match[0]["prompt"].replace("FIXTURES", args.fixtures.rstrip("/")).replace("OUTDIR", args.out.rstrip("/")))
+    print(
+        match[0]["prompt"]
+        .replace("FIXTURES", args.fixtures.rstrip("/"))
+        .replace("OUTDIR", args.out.rstrip("/"))
+    )
     return 0
 
 

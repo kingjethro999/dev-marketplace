@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """check.py - verify a produced image actually opens, matches the promised dimensions/
 format, and did not silently overwrite the original input."""
+
 import os
 import sys
 
@@ -22,13 +23,32 @@ from _common import (  # noqa: E402
 def build_parser():
     parser = JSONArgumentParser(description="Verify an image output file")
     parser.add_argument("output", help="the file to check")
-    parser.add_argument("--input", help="original input path; fails if output resolves to this same path")
-    parser.add_argument("--expect-width", type=int, help="fail unless the width is exactly this")
-    parser.add_argument("--expect-height", type=int, help="fail unless the height is exactly this")
-    parser.add_argument("--expect-max-width", type=int, help="fail if width exceeds this (for fit-mode results)")
-    parser.add_argument("--expect-max-height", type=int, help="fail if height exceeds this (for fit-mode results)")
+    parser.add_argument(
+        "--input",
+        help="original input path; fails if output resolves to this same path",
+    )
+    parser.add_argument(
+        "--expect-width", type=int, help="fail unless the width is exactly this"
+    )
+    parser.add_argument(
+        "--expect-height", type=int, help="fail unless the height is exactly this"
+    )
+    parser.add_argument(
+        "--expect-max-width",
+        type=int,
+        help="fail if width exceeds this (for fit-mode results)",
+    )
+    parser.add_argument(
+        "--expect-max-height",
+        type=int,
+        help="fail if height exceeds this (for fit-mode results)",
+    )
     parser.add_argument("--expect-format", help="expected format, e.g. WEBP, JPEG, PNG")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
     add_timeout_arg(parser)
     return parser
 
@@ -38,7 +58,9 @@ def run_check(args):
         raise ImageSkillError(f"output not found: {args.output}")
 
     if args.input and os.path.realpath(args.input) == os.path.realpath(args.output):
-        raise ImageSkillError("output path is the same file as --input: the original was overwritten")
+        raise ImageSkillError(
+            "output path is the same file as --input: the original was overwritten"
+        )
 
     if os.path.getsize(args.output) == 0:
         raise ImageSkillError("output file is empty (0 bytes)")

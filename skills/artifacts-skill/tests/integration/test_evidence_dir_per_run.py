@@ -31,7 +31,9 @@ def _cmd(args: list[str]) -> list[str]:
 
 
 def run_cli(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(_cmd(args), cwd=cwd, capture_output=True, text=True, timeout=120)
+    return subprocess.run(
+        _cmd(args), cwd=cwd, capture_output=True, text=True, timeout=120
+    )
 
 
 def _sha256(path: Path) -> str:
@@ -55,19 +57,29 @@ def test_50_concurrent_receipt_processes_never_share_or_overwrite_evidence(tmp_p
     # What each input's evidence looks like when rendered alone.
     expected: dict[str, list[str]] = {}
     for name in inputs:
-        proc = run_cli(["receipt", name, "--json", "--evidence-dir", f"ref-{name}"], cwd=tmp_path)
+        proc = run_cli(
+            ["receipt", name, "--json", "--evidence-dir", f"ref-{name}"], cwd=tmp_path
+        )
         assert proc.returncode == 0, proc.stderr
         expected[name] = _evidence_hashes(json.loads(proc.stdout), tmp_path)
-        assert expected[name], "the reference run produced no visual evidence to compare"
+        assert expected[
+            name
+        ], "the reference run produced no visual evidence to compare"
     assert expected["a.pdf"] != expected["b.pdf"]
 
     # 50 real processes, all started before any is waited on.
     names = [name for name in inputs for _ in range(CONCURRENT_RUNS // 2)]
     procs = [
-        (name, subprocess.Popen(
-            _cmd(["receipt", name, "--json"]), cwd=tmp_path,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-        ))
+        (
+            name,
+            subprocess.Popen(
+                _cmd(["receipt", name, "--json"]),
+                cwd=tmp_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            ),
+        )
         for name in names
     ]
     receipts: list[tuple[str, dict]] = []
@@ -85,15 +97,21 @@ def test_50_concurrent_receipt_processes_never_share_or_overwrite_evidence(tmp_p
     all_paths: list[str] = []
     for name, receipt in receipts:
         paths = [a["path"] for a in receipt["artifacts"]]
-        run_dir = {Path(p).parents[1] for p in paths}  # reports/<run-id>/rendered/page-NNN.png
+        run_dir = {
+            Path(p).parents[1] for p in paths
+        }  # reports/<run-id>/rendered/page-NNN.png
         assert len(run_dir) == 1
         run_dirs |= run_dir
         all_paths.extend(paths)
         # The evidence each receipt points at is still that run's own render
         # of its own input - nothing another process wrote.
-        assert _evidence_hashes(receipt, tmp_path) == expected[name], f"evidence for {name} was overwritten"
+        assert (
+            _evidence_hashes(receipt, tmp_path) == expected[name]
+        ), f"evidence for {name} was overwritten"
         # And the receipt.json next to it is this run's receipt.
-        saved = json.loads((tmp_path / next(iter(run_dir)) / "receipt.json").read_text())
+        saved = json.loads(
+            (tmp_path / next(iter(run_dir)) / "receipt.json").read_text()
+        )
         assert saved == receipt
 
     assert len(run_dirs) == CONCURRENT_RUNS
@@ -114,7 +132,9 @@ def test_render_and_look_default_to_a_fresh_directory_per_run(tmp_path):
         assert d.parent.parent == Path("reports")
 
     sheets = {
-        json.loads(run_cli(["look", "a.pdf", "--json"], cwd=tmp_path).stdout)["contact_sheet"]
+        json.loads(run_cli(["look", "a.pdf", "--json"], cwd=tmp_path).stdout)[
+            "contact_sheet"
+        ]
         for _ in range(2)
     }
     assert len(sheets) == 2
@@ -125,7 +145,9 @@ def test_render_and_look_default_to_a_fresh_directory_per_run(tmp_path):
 
 def test_explicit_out_dir_is_still_used_exactly_as_given(tmp_path):
     shutil.copy(FIXTURES_DIR / "good_2page.pdf", tmp_path / "a.pdf")
-    data = json.loads(run_cli(["render", "a.pdf", "--out-dir", "mine", "--json"], cwd=tmp_path).stdout)
+    data = json.loads(
+        run_cli(["render", "a.pdf", "--out-dir", "mine", "--json"], cwd=tmp_path).stdout
+    )
     assert {Path(f).parent for f in data["files"]} == {Path("mine")}
     assert not (tmp_path / "reports").exists()
 

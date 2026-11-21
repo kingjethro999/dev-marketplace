@@ -18,7 +18,9 @@ Vocabulary and checks only, no execution:
   Without that switch the null-only speaker_id invariants stay: recognition alone never identifies anyone.
 - **Without diarization-skill** (or with DIARIZE not ready: pyannote.audio, torch or the pipeline directory missing, as its doctor
   says) the measurement is not run: the plan records the ask and BLOCKs with a handoff naming diarization-skill and its install
-  (agent/handoffs.py `decide_measurement_handoffs`). A measurement that ran and failed blocks with diarization-skill's own code."""
+  (agent/handoffs.py `decide_measurement_handoffs`). A measurement that ran and failed blocks with diarization-skill's own code.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Dict, Optional, Tuple
@@ -39,40 +41,68 @@ def _int(v: Any, key: str, lo: int) -> int:
     if isinstance(v, str) and v.strip().lstrip("-").isdigit():
         v = int(v.strip())
     if isinstance(v, bool) or not isinstance(v, int) or v < lo:
-        raise EditRequirementError(f"{key} must be an integer >= {lo} (diarization-skill's own rule), got {v!r}")
+        raise EditRequirementError(
+            f"{key} must be an integer >= {lo} (diarization-skill's own rule), got {v!r}"
+        )
     return v
 
 
-def parse_speaker_requirements(user_requirements: Dict[str, Any]) -> Tuple[bool, Dict[str, int]]:
+def parse_speaker_requirements(
+    user_requirements: Dict[str, Any],
+) -> Tuple[bool, Dict[str, int]]:
     """(requested, the diarize parameters) from explicit requirements; ValueError (EditRequirementError) on anything the Skill would refuse."""
     given = {k: v for k, v in (user_requirements or {}).items() if k.startswith(PREFIX)}
     unknown = sorted(k for k in given if k not in REQUIREMENT_KEYS)
     if unknown:
-        raise EditRequirementError(f"unknown requirement key(s): {', '.join(unknown)}; known: {', '.join(REQUIREMENT_KEYS)}")
+        raise EditRequirementError(
+            f"unknown requirement key(s): {', '.join(unknown)}; known: {', '.join(REQUIREMENT_KEYS)}"
+        )
     if not given:
         return False, {}
     sw = given.get(SWITCH)
     sw = sw.strip().lower() if isinstance(sw, str) else sw
     if SWITCH in given and sw not in _ON + _OFF:
-        raise EditRequirementError(f"{SWITCH} is a switch (true / false), got {given[SWITCH]!r}")
+        raise EditRequirementError(
+            f"{SWITCH} is a switch (true / false), got {given[SWITCH]!r}"
+        )
     on = SWITCH in given and sw in _ON
     params: Dict[str, int] = {}
     for p in PARAMETERS:
         key = PREFIX + p
         if key in given and given[key] is not None:
             if not on:
-                raise EditRequirementError(f"{key} refines {SWITCH}, which is not set to true")
+                raise EditRequirementError(
+                    f"{key} refines {SWITCH}, which is not set to true"
+                )
             params[p] = _int(given[key], key, 0 if p == "audio_stream" else 1)
-    if "num_speakers" in params and ("min_speakers" in params or "max_speakers" in params):
-        raise EditRequirementError("speakers.num_speakers excludes speakers.min_speakers / speakers.max_speakers (diarization-skill's rule)")
-    if "min_speakers" in params and "max_speakers" in params and params["min_speakers"] > params["max_speakers"]:
-        raise EditRequirementError("speakers.min_speakers must be <= speakers.max_speakers")
+    if "num_speakers" in params and (
+        "min_speakers" in params or "max_speakers" in params
+    ):
+        raise EditRequirementError(
+            "speakers.num_speakers excludes speakers.min_speakers / speakers.max_speakers (diarization-skill's rule)"
+        )
+    if (
+        "min_speakers" in params
+        and "max_speakers" in params
+        and params["min_speakers"] > params["max_speakers"]
+    ):
+        raise EditRequirementError(
+            "speakers.min_speakers must be <= speakers.max_speakers"
+        )
     if ASSIGN in given:
-        a = given[ASSIGN].strip().lower() if isinstance(given[ASSIGN], str) else given[ASSIGN]
+        a = (
+            given[ASSIGN].strip().lower()
+            if isinstance(given[ASSIGN], str)
+            else given[ASSIGN]
+        )
         if a not in _ON + _OFF:
-            raise EditRequirementError(f"{ASSIGN} is a switch (true / false), got {given[ASSIGN]!r}")
+            raise EditRequirementError(
+                f"{ASSIGN} is a switch (true / false), got {given[ASSIGN]!r}"
+            )
         if a in _ON and not on:
-            raise EditRequirementError(f"{ASSIGN} puts the measured speaker turns into the transcript; it needs {SWITCH}=true")
+            raise EditRequirementError(
+                f"{ASSIGN} puts the measured speaker turns into the transcript; it needs {SWITCH}=true"
+            )
     return on, params
 
 
@@ -88,7 +118,9 @@ def check_speaker_keys(user_requirements: Dict[str, Any]) -> None:
     parse_speaker_requirements(user_requirements)
 
 
-def speaker_kind(user_requirements: Dict[str, Any]) -> Optional[Tuple[str, Dict[str, int]]]:
+def speaker_kind(
+    user_requirements: Dict[str, Any],
+) -> Optional[Tuple[str, Dict[str, int]]]:
     """(analysis kind, its parameters) when the request asks for speaker turns, else None."""
     on, params = parse_speaker_requirements(user_requirements)
     return (KIND, params) if on else None

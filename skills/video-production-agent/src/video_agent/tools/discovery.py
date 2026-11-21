@@ -12,7 +12,9 @@ A Skill child process gets the agent's environment minus the AI provider credent
 A Skill checkout is run as a module without the current directory on its import path (ADR-074): `python -m` puts the
 current directory first on `sys.path`, so a `json.py`, `numpy/` or `<package>/` in the folder the agent was started in
 would be imported by the Skill instead of the real one. `python_module_command` keeps `PYTHONPATH` (the checkout's
-`src`) and the child's working directory (relative paths resolve as before), and drops only that entry."""
+`src`) and the child's working directory (relative paths resolve as before), and drops only that entry.
+"""
+
 from __future__ import annotations
 
 import os
@@ -30,7 +32,11 @@ def source_checkout_root() -> Optional[Path]:
     here = Path(__file__).resolve()
     pkg = here.parents[1]
     root = pkg.parent.parent
-    if pkg.name == "video_agent" and pkg.parent.name == "src" and ((root / "pyproject.toml").is_file() or (root / ".git").exists()):
+    if (
+        pkg.name == "video_agent"
+        and pkg.parent.name == "src"
+        and ((root / "pyproject.toml").is_file() or (root / ".git").exists())
+    ):
         return root
     return None
 
@@ -52,9 +58,15 @@ def is_secret_env(key: str) -> bool:
     return key.upper().startswith(SECRET_ENV_PREFIXES)
 
 
-def child_env(extra: Optional[Mapping[str, str]] = None, base: Optional[Mapping[str, str]] = None) -> Dict[str, str]:
+def child_env(
+    extra: Optional[Mapping[str, str]] = None, base: Optional[Mapping[str, str]] = None
+) -> Dict[str, str]:
     """The environment for a Skill (or engine) child process: `base` (default os.environ) without provider credentials, plus `extra`."""
-    env = {k: v for k, v in (os.environ if base is None else base).items() if not is_secret_env(k)}
+    env = {
+        k: v
+        for k, v in (os.environ if base is None else base).items()
+        if not is_secret_env(k)
+    }
     env.update(extra or {})
     return env
 
@@ -70,5 +82,6 @@ MODULE_BOOTSTRAP = "import sys; sys.path[:] = [p for p in sys.path if p]; import
 
 def python_module_command(module: str, python: Optional[str] = None) -> List[str]:
     """The argv prefix that runs a Skill checkout's `module` (with PYTHONPATH=<checkout>/src in the child's environment)
-    as `python -m` would, except that the current directory is never on its import path (ADR-074)."""
+    as `python -m` would, except that the current directory is never on its import path (ADR-074).
+    """
     return [python or sys.executable, "-c", MODULE_BOOTSTRAP, module]

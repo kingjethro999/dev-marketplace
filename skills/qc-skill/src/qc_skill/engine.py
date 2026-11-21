@@ -20,17 +20,39 @@ from .canonical import sha256_file, stable_hash
 from .capabilities import CapabilitySet
 from .errors import error
 from .measurements.audio import analyze_audio, measure_audio_streams
-from .measurements.loop_seam import analyze_loop_seams, not_performed as loop_seam_not_performed
-from .measurements.reference import analyze_reference_metrics, not_performed as reference_not_performed
-from .measurements.stinger import analyze_stinger, not_performed as stinger_not_performed
-from .measurements.alpha_edge import analyze_alpha_edge, not_performed as alpha_edge_not_performed
-from .measurements.key_fill import analyze_key_fill, not_performed as key_fill_not_performed
-from .measurements.video_loop_seam import analyze_video_loop_seam, not_performed as video_loop_seam_not_performed
+from .measurements.loop_seam import (
+    analyze_loop_seams,
+    not_performed as loop_seam_not_performed,
+)
+from .measurements.reference import (
+    analyze_reference_metrics,
+    not_performed as reference_not_performed,
+)
+from .measurements.stinger import (
+    analyze_stinger,
+    not_performed as stinger_not_performed,
+)
+from .measurements.alpha_edge import (
+    analyze_alpha_edge,
+    not_performed as alpha_edge_not_performed,
+)
+from .measurements.key_fill import (
+    analyze_key_fill,
+    not_performed as key_fill_not_performed,
+)
+from .measurements.video_loop_seam import (
+    analyze_video_loop_seam,
+    not_performed as video_loop_seam_not_performed,
+)
 from .measurements.subtitle import measure_subtitle
 from .measurements.temporal import analyze_temporal
 from .measurements.transcript import measure_transcript
 from .measurements.text_legibility import analyze_text_regions
-from .measurements.video import analyze_video_defects, measure_container, measure_video_streams
+from .measurements.video import (
+    analyze_video_defects,
+    measure_container,
+    measure_video_streams,
+)
 from .models import QCCheck, QCFinding, QCMeasurement, QCReport
 from .probe import audio_streams, probe_media, video_streams
 from .rules import (
@@ -113,9 +135,14 @@ def _dedupe_measurements(measurements: List[QCMeasurement]) -> List[QCMeasuremen
 
 
 def _gather_video_measurements(
-    ctx: ExecutionContext, input_path: Path, params: Dict[str, Any], size_bytes: int,
-    video_rule: Optional[VideoRule] = None, reference_path: Optional[Path] = None,
-    stinger_path: Optional[Path] = None, key_path: Optional[Path] = None,
+    ctx: ExecutionContext,
+    input_path: Path,
+    params: Dict[str, Any],
+    size_bytes: int,
+    video_rule: Optional[VideoRule] = None,
+    reference_path: Optional[Path] = None,
+    stinger_path: Optional[Path] = None,
+    key_path: Optional[Path] = None,
 ) -> List[QCMeasurement]:
     """``video_rule`` only decides which *opt-in* measurements are taken
     (flash analysis, scene cuts, text regions, reference metrics, stinger
@@ -134,7 +161,9 @@ def _gather_video_measurements(
     v_streams = video_streams(probe_data)
     if v_streams and ctx.capabilities.ffmpeg_available:
         expected_frame_count = None
-        fc_measurement = next((m for m in measurements if m.id == "video.frame_count"), None)
+        fc_measurement = next(
+            (m for m in measurements if m.id == "video.frame_count"), None
+        )
         if fc_measurement is not None and not fc_measurement.estimated:
             expected_frame_count = fc_measurement.value
         result = analyze_video_defects(
@@ -151,32 +180,57 @@ def _gather_video_measurements(
         )
         measurements += result.measurements
         measurements += _gather_opt_in_video_measurements(
-            ctx, input_path, params, v_streams[0]["index"], measurements, video_rule, reference_path,
+            ctx,
+            input_path,
+            params,
+            v_streams[0]["index"],
+            measurements,
+            video_rule,
+            reference_path,
         )
         if video_rule is not None and video_rule.stinger is not None:
             measurements += analyze_stinger(
-                ctx.capabilities.ffmpeg_path, ctx.capabilities.ffprobe_path, input_path, probe_data, v_streams[0],
-                video_rule.stinger, stinger_path,
+                ctx.capabilities.ffmpeg_path,
+                ctx.capabilities.ffprobe_path,
+                input_path,
+                probe_data,
+                v_streams[0],
+                video_rule.stinger,
+                stinger_path,
             )
-        measurements += _material_measurements(ctx, input_path, probe_data, v_streams[0], video_rule, key_path)
+        measurements += _material_measurements(
+            ctx, input_path, probe_data, v_streams[0], video_rule, key_path
+        )
     elif v_streams:
         measurements.append(
             QCMeasurement(
-                "video.decode_error_count", "video", "decode_error_count", None,
-                source="ffmpeg:decode", notes="not performed: ffmpeg is not available",
+                "video.decode_error_count",
+                "video",
+                "decode_error_count",
+                None,
+                source="ffmpeg:decode",
+                notes="not performed: ffmpeg is not available",
             )
         )
         if video_rule is not None and video_rule.reference_metrics:
-            measurements += reference_not_performed(video_rule.reference_metrics, "ffmpeg is not available")
+            measurements += reference_not_performed(
+                video_rule.reference_metrics, "ffmpeg is not available"
+            )
         if video_rule is not None and video_rule.stinger is not None:
-            measurements += stinger_not_performed(video_rule.stinger, "ffmpeg is not available")
+            measurements += stinger_not_performed(
+                video_rule.stinger, "ffmpeg is not available"
+            )
         measurements += _material_not_performed(video_rule, "ffmpeg is not available")
     return measurements
 
 
 def _material_measurements(
-    ctx: ExecutionContext, input_path: Path, probe_data: Dict[str, Any], stream: Dict[str, Any],
-    video_rule: Optional[VideoRule], key_path: Optional[Path],
+    ctx: ExecutionContext,
+    input_path: Path,
+    probe_data: Dict[str, Any],
+    stream: Dict[str, Any],
+    video_rule: Optional[VideoRule],
+    key_path: Optional[Path],
 ) -> List[QCMeasurement]:
     """The opt-in title, stinger and loop material measurements
     (ADR-026/027/028), each only when its rule asks."""
@@ -186,15 +240,29 @@ def _material_measurements(
     ffmpeg, ffprobe = ctx.capabilities.ffmpeg_path, ctx.capabilities.ffprobe_path
     out: List[QCMeasurement] = []
     if video_rule.loop_seam is not None:
-        out += analyze_video_loop_seam(ffmpeg, ffprobe, input_path, probe_data, stream, video_rule.loop_seam)
+        out += analyze_video_loop_seam(
+            ffmpeg, ffprobe, input_path, probe_data, stream, video_rule.loop_seam
+        )
     if video_rule.alpha_edge is not None:
-        out += analyze_alpha_edge(ffmpeg, ffprobe, input_path, probe_data, stream, video_rule.alpha_edge)
+        out += analyze_alpha_edge(
+            ffmpeg, ffprobe, input_path, probe_data, stream, video_rule.alpha_edge
+        )
     if video_rule.key_fill is not None and key_path is not None:
-        out += analyze_key_fill(ffmpeg, ffprobe, input_path, probe_data, stream, video_rule.key_fill, key_path)
+        out += analyze_key_fill(
+            ffmpeg,
+            ffprobe,
+            input_path,
+            probe_data,
+            stream,
+            video_rule.key_fill,
+            key_path,
+        )
     return out
 
 
-def _material_not_performed(video_rule: Optional[VideoRule], reason: str) -> List[QCMeasurement]:
+def _material_not_performed(
+    video_rule: Optional[VideoRule], reason: str
+) -> List[QCMeasurement]:
     if video_rule is None:
         return []
     out: List[QCMeasurement] = []
@@ -220,20 +288,28 @@ def _stream_facts(measurements: List[QCMeasurement]) -> Dict[str, Any]:
 
 
 def _gather_reference_metrics(
-    ctx: ExecutionContext, input_path: Path, stream_index: int, measurements: List[QCMeasurement],
-    metrics: List[str], reference_path: Optional[Path],
+    ctx: ExecutionContext,
+    input_path: Path,
+    stream_index: int,
+    measurements: List[QCMeasurement],
+    metrics: List[str],
+    reference_path: Optional[Path],
 ) -> List[QCMeasurement]:
     """ADR-021: compare the input against ``request.reference_video``."""
 
     if reference_path is None:
         return reference_not_performed(
-            metrics, "no request.reference_video was supplied (reference metrics need kind=video or kind=delivery with request.reference_video)",
+            metrics,
+            "no request.reference_video was supplied (reference metrics need kind=video or kind=delivery with request.reference_video)",
         )
     ref_probe = probe_media(ctx.capabilities.ffprobe_path, reference_path)
     ref_measurements = measure_container(ref_probe) + measure_video_streams(ref_probe)
     ref_streams = video_streams(ref_probe)
     return analyze_reference_metrics(
-        ctx.capabilities.ffmpeg_path, input_path, stream_index, reference_path,
+        ctx.capabilities.ffmpeg_path,
+        input_path,
+        stream_index,
+        reference_path,
         ref_streams[0]["index"] if ref_streams else 0,
         distorted=_stream_facts(measurements),
         reference=_stream_facts(ref_measurements),
@@ -259,25 +335,42 @@ def _gather_opt_in_video_measurements(
     want_cuts = video_rule.expected_cuts is not None
     if want_flashes or want_cuts:
         out += analyze_temporal(
-            ctx.capabilities.ffmpeg_path, input_path, stream_index,
+            ctx.capabilities.ffmpeg_path,
+            input_path,
+            stream_index,
             frame_rate=known.get("video.frame_rate"),
             color_transfer=known.get("video.color_transfer"),
-            want_flashes=want_flashes, want_cuts=want_cuts,
+            want_flashes=want_flashes,
+            want_cuts=want_cuts,
             flash_area_fraction=params["flash_area_fraction"],
             scene_cut_threshold=params["scene_cut_threshold"],
         ).measurements
     if video_rule.text_regions:
         out += analyze_text_regions(
-            ctx.capabilities.ffmpeg_path, input_path, stream_index, video_rule.text_regions,
-            frame_width=known.get("video.width"), frame_height=known.get("video.height"),
+            ctx.capabilities.ffmpeg_path,
+            input_path,
+            stream_index,
+            video_rule.text_regions,
+            frame_width=known.get("video.width"),
+            frame_height=known.get("video.height"),
         ).measurements
     if video_rule.reference_metrics:
-        out += _gather_reference_metrics(ctx, input_path, stream_index, measurements, video_rule.reference_metrics, reference_path)
+        out += _gather_reference_metrics(
+            ctx,
+            input_path,
+            stream_index,
+            measurements,
+            video_rule.reference_metrics,
+            reference_path,
+        )
     return out
 
 
 def _gather_audio_measurements(
-    ctx: ExecutionContext, input_path: Path, params: Dict[str, Any], size_bytes: int,
+    ctx: ExecutionContext,
+    input_path: Path,
+    params: Dict[str, Any],
+    size_bytes: int,
     audio_rule: Optional[AudioRule] = None,
 ) -> List[QCMeasurement]:
     """``audio_rule`` only decides whether the opt-in loop-seam decode
@@ -289,7 +382,9 @@ def _gather_audio_measurements(
 
     a_streams = audio_streams(probe_data)
     if a_streams and ctx.capabilities.ffmpeg_available:
-        duration_m = next((m for m in measurements if m.id == "audio.duration_sec"), None)
+        duration_m = next(
+            (m for m in measurements if m.id == "audio.duration_sec"), None
+        )
         result = analyze_audio(
             ctx.capabilities.ffmpeg_path,
             input_path,
@@ -302,14 +397,21 @@ def _gather_audio_measurements(
         measurements += result.measurements
         if audio_rule is not None and audio_rule.loop_seam is not None:
             measurements += analyze_loop_seams(
-                ctx.capabilities.ffmpeg_path, input_path, a_streams[0], audio_rule.loop_seam,
+                ctx.capabilities.ffmpeg_path,
+                input_path,
+                a_streams[0],
+                audio_rule.loop_seam,
                 duration_sec=duration_m.value if duration_m else None,
             )
     elif a_streams:
         measurements.append(
             QCMeasurement(
-                "audio.decode_error_count", "audio", "decode_error_count", None,
-                source="ffmpeg:decode", notes="not performed: ffmpeg is not available",
+                "audio.decode_error_count",
+                "audio",
+                "decode_error_count",
+                None,
+                source="ffmpeg:decode",
+                notes="not performed: ffmpeg is not available",
             )
         )
         if audio_rule is not None and audio_rule.loop_seam is not None:
@@ -318,13 +420,18 @@ def _gather_audio_measurements(
 
 
 def _gather_subtitle_measurements(
-    subtitle_path: Path, video_duration_sec: Optional[float], params: Dict[str, Any],
-    subtitle_rule: Optional[SubtitleRule] = None, transcript_path: Optional[Path] = None,
+    subtitle_path: Path,
+    video_duration_sec: Optional[float],
+    params: Dict[str, Any],
+    subtitle_rule: Optional[SubtitleRule] = None,
+    transcript_path: Optional[Path] = None,
 ) -> List[QCMeasurement]:
     # A limit the SubtitleRule states is the threshold its check uses; the
     # engine parameters are only the fallback when the rule leaves it unset.
     def _limit(name: str) -> Any:
-        value = getattr(subtitle_rule, name, None) if subtitle_rule is not None else None
+        value = (
+            getattr(subtitle_rule, name, None) if subtitle_rule is not None else None
+        )
         return params[name] if value is None else value
 
     measurements = measure_subtitle(
@@ -343,7 +450,11 @@ def _gather_subtitle_measurements(
 def _applicable_subtitle_rule(request: Request) -> Optional[SubtitleRule]:
     if request.kind == "subtitle":
         return request.subtitle_rule
-    if request.kind == "delivery" and request.subtitle and request.delivery_rule is not None:
+    if (
+        request.kind == "delivery"
+        and request.subtitle
+        and request.delivery_rule is not None
+    ):
         return request.delivery_rule.subtitle
     return None
 
@@ -353,7 +464,11 @@ def _resolve_stinger(ctx: "ExecutionContext", video_rule: Optional[VideoRule]):
     transcript - resolved through the path policy and fingerprinted by
     content, so the identity follows the stinger's bytes, not its path."""
 
-    if video_rule is None or video_rule.stinger is None or video_rule.stinger.file is None:
+    if (
+        video_rule is None
+        or video_rule.stinger is None
+        or video_rule.stinger.file is None
+    ):
         return None, None
     path = ctx.path_policy.resolve_input(video_rule.stinger.file)
     return path, sha256_file(path)
@@ -381,7 +496,9 @@ def _resolve_transcript(ctx: "ExecutionContext", subtitle_rule: Optional[Subtitl
 
 
 def _build_checks_and_findings(
-    request: Request, measurements: List[QCMeasurement], video_duration_sec: Optional[float]
+    request: Request,
+    measurements: List[QCMeasurement],
+    video_duration_sec: Optional[float],
 ):
     mmap = _measurement_map(measurements)
     checks: List[QCCheck] = []
@@ -406,24 +523,37 @@ def _build_checks_and_findings(
             checks += c
             findings += f
             if rule.require_video is not None or rule.video is not None:
-                require_stream = rule.require_video if rule.require_video is not None else True
-                c2, f2 = evaluate_video(mmap, rule.video, video_duration_sec, require_stream=require_stream)
+                require_stream = (
+                    rule.require_video if rule.require_video is not None else True
+                )
+                c2, f2 = evaluate_video(
+                    mmap, rule.video, video_duration_sec, require_stream=require_stream
+                )
                 checks += c2
                 findings += f2
             if rule.require_audio is not None or rule.audio is not None:
-                audio_rule = _with_requirement(rule.audio, AudioRule, "require_audio_stream", rule.require_audio)
+                audio_rule = _with_requirement(
+                    rule.audio, AudioRule, "require_audio_stream", rule.require_audio
+                )
                 c3, f3 = evaluate_audio(mmap, audio_rule)
                 checks += c3
                 findings += f3
             if rule.require_subtitle is not None or rule.subtitle is not None:
-                subtitle_rule = _with_requirement(rule.subtitle, SubtitleRule, "require_subtitle", rule.require_subtitle)
+                subtitle_rule = _with_requirement(
+                    rule.subtitle,
+                    SubtitleRule,
+                    "require_subtitle",
+                    rule.require_subtitle,
+                )
                 c4, f4 = evaluate_subtitle(mmap, subtitle_rule)
                 checks += c4
                 findings += f4
     return checks, findings
 
 
-def _with_requirement(sub_rule, cls, field_name: str, delivery_level_value: Optional[bool]):
+def _with_requirement(
+    sub_rule, cls, field_name: str, delivery_level_value: Optional[bool]
+):
     """Fold a delivery-level require_video/require_audio/require_subtitle
     flag into the corresponding sub-rule's own requirement field, unless
     the sub-rule already specifies one explicitly (the sub-rule wins).
@@ -432,7 +562,11 @@ def _with_requirement(sub_rule, cls, field_name: str, delivery_level_value: Opti
     if sub_rule is not None and getattr(sub_rule, field_name) is not None:
         return sub_rule
     if sub_rule is None:
-        return cls(**{field_name: delivery_level_value}) if delivery_level_value is not None else cls()
+        return (
+            cls(**{field_name: delivery_level_value})
+            if delivery_level_value is not None
+            else cls()
+        )
     return replace(sub_rule, **{field_name: delivery_level_value})
 
 
@@ -485,7 +619,11 @@ def _rules_payload(request: Request) -> Dict[str, Any]:
     def without_paths(value):
         if isinstance(value, dict):
             return {
-                k: ("<fingerprinted input>" if k in _PATH_RULE_FIELDS and v is not None else without_paths(v))
+                k: (
+                    "<fingerprinted input>"
+                    if k in _PATH_RULE_FIELDS and v is not None
+                    else without_paths(v)
+                )
                 for k, v in value.items()
             }
         if isinstance(value, list):
@@ -545,7 +683,8 @@ def _run_report(request: Request, ctx: ExecutionContext) -> Dict[str, Any]:
     reference_video_path = None
     reference_fingerprint = None
     if request.reference_video and (
-        request.kind == "subtitle" or _wants_reference_metrics(_applicable_video_rule(request))
+        request.kind == "subtitle"
+        or _wants_reference_metrics(_applicable_video_rule(request))
     ):
         # kind=video/delivery read the reference only when the VideoRule
         # opts into reference metrics (ADR-021): otherwise reference_video
@@ -555,16 +694,21 @@ def _run_report(request: Request, ctx: ExecutionContext) -> Dict[str, Any]:
 
     subtitle_rule = _applicable_subtitle_rule(request)
     transcript_path, transcript_fingerprint = _resolve_transcript(ctx, subtitle_rule)
-    stinger_path, stinger_fingerprint = _resolve_stinger(ctx, _applicable_video_rule(request))
+    stinger_path, stinger_fingerprint = _resolve_stinger(
+        ctx, _applicable_video_rule(request)
+    )
     key_path, key_fingerprint = _resolve_key(ctx, _applicable_video_rule(request))
 
     effective_parameters = _effective_parameters(request)
     rules_payload = _rules_payload(request)
-    asset_fingerprints = [fingerprint] + ([subtitle_fingerprint] if subtitle_fingerprint else []) + (
-        [reference_fingerprint] if reference_fingerprint else []
-    ) + ([f"transcript:{transcript_fingerprint}"] if transcript_fingerprint else []) + (
-        [f"stinger:{stinger_fingerprint}"] if stinger_fingerprint else []
-    ) + ([f"key:{key_fingerprint}"] if key_fingerprint else [])
+    asset_fingerprints = (
+        [fingerprint]
+        + ([subtitle_fingerprint] if subtitle_fingerprint else [])
+        + ([reference_fingerprint] if reference_fingerprint else [])
+        + ([f"transcript:{transcript_fingerprint}"] if transcript_fingerprint else [])
+        + ([f"stinger:{stinger_fingerprint}"] if stinger_fingerprint else [])
+        + ([f"key:{key_fingerprint}"] if key_fingerprint else [])
+    )
 
     identity = _identity(
         asset_fingerprints=asset_fingerprints,
@@ -600,61 +744,119 @@ def _run_report(request: Request, ctx: ExecutionContext) -> Dict[str, Any]:
                 "report": cached,
                 "provenance": cached.get("provenance", {}),
                 "reused": True,
-                "cache": {"status": cache_status, "policy": request.cache_policy, "key": cache_key},
+                "cache": {
+                    "status": cache_status,
+                    "policy": request.cache_policy,
+                    "key": cache_key,
+                },
             }
         cache_status = "miss"
 
     if request.cache_policy == "only":
-        raise error("VALIDATION_ERROR", "cache_policy is 'only' but no cached report was found", key=cache_key)
+        raise error(
+            "VALIDATION_ERROR",
+            "cache_policy is 'only' but no cached report was found",
+            key=cache_key,
+        )
 
     video_duration_sec = None
 
     if request.kind == "video":
         measurements = _gather_video_measurements(
-            ctx, input_path, effective_parameters, size_bytes, request.video_rule, reference_video_path, stinger_path,
+            ctx,
+            input_path,
+            effective_parameters,
+            size_bytes,
+            request.video_rule,
+            reference_video_path,
+            stinger_path,
             key_path,
         )
-        duration_m = next((m for m in measurements if m.id == "container.duration_sec"), None)
+        duration_m = next(
+            (m for m in measurements if m.id == "container.duration_sec"), None
+        )
         video_duration_sec = duration_m.value if duration_m else None
     elif request.kind == "audio":
-        measurements = _gather_audio_measurements(ctx, input_path, effective_parameters, size_bytes, request.audio_rule)
+        measurements = _gather_audio_measurements(
+            ctx, input_path, effective_parameters, size_bytes, request.audio_rule
+        )
     elif request.kind == "subtitle":
         ref_duration = None
         if reference_video_path is not None:
             ref_probe = probe_media(ctx.capabilities.ffprobe_path, reference_video_path)
             fmt_duration = ref_probe.get("format", {}).get("duration")
             ref_duration = float(fmt_duration) if fmt_duration is not None else None
-        measurements = _gather_subtitle_measurements(input_path, ref_duration, effective_parameters, subtitle_rule, transcript_path)
+        measurements = _gather_subtitle_measurements(
+            input_path,
+            ref_duration,
+            effective_parameters,
+            subtitle_rule,
+            transcript_path,
+        )
     elif request.kind == "delivery":
         measurements = []
         fmt_probe = probe_media(ctx.capabilities.ffprobe_path, input_path)
         measurements += measure_container(fmt_probe, actual_size_bytes=size_bytes)
-        measurements.append(QCMeasurement("delivery.extension", "delivery", "extension", input_path.suffix.lower().lstrip("."), source="OBSERVED"))
+        measurements.append(
+            QCMeasurement(
+                "delivery.extension",
+                "delivery",
+                "extension",
+                input_path.suffix.lower().lstrip("."),
+                source="OBSERVED",
+            )
+        )
         v = video_streams(fmt_probe)
         a = audio_streams(fmt_probe)
         if v:
-            delivery_video_rule = request.delivery_rule.video if request.delivery_rule is not None else None
+            delivery_video_rule = (
+                request.delivery_rule.video
+                if request.delivery_rule is not None
+                else None
+            )
             measurements += _gather_video_measurements(
-                ctx, input_path, effective_parameters, size_bytes, delivery_video_rule, reference_video_path, stinger_path,
+                ctx,
+                input_path,
+                effective_parameters,
+                size_bytes,
+                delivery_video_rule,
+                reference_video_path,
+                stinger_path,
                 key_path,
             )
         else:
             measurements += measure_video_streams(fmt_probe)
         if a:
-            delivery_audio_rule = request.delivery_rule.audio if request.delivery_rule is not None else None
-            measurements += _gather_audio_measurements(ctx, input_path, effective_parameters, size_bytes, delivery_audio_rule)
+            delivery_audio_rule = (
+                request.delivery_rule.audio
+                if request.delivery_rule is not None
+                else None
+            )
+            measurements += _gather_audio_measurements(
+                ctx, input_path, effective_parameters, size_bytes, delivery_audio_rule
+            )
         else:
             measurements += measure_audio_streams(fmt_probe)
         measurements = _dedupe_measurements(measurements)
-        duration_m = next((m for m in measurements if m.id == "container.duration_sec"), None)
+        duration_m = next(
+            (m for m in measurements if m.id == "container.duration_sec"), None
+        )
         video_duration_sec = duration_m.value if duration_m else None
         if subtitle_path is not None:
             sub_measurements = _gather_subtitle_measurements(
-                subtitle_path, video_duration_sec, effective_parameters, subtitle_rule, transcript_path,
+                subtitle_path,
+                video_duration_sec,
+                effective_parameters,
+                subtitle_rule,
+                transcript_path,
             )
             measurements += sub_measurements
         else:
-            measurements.append(QCMeasurement("subtitle.exists", "subtitle", "exists", False, source="OBSERVED"))
+            measurements.append(
+                QCMeasurement(
+                    "subtitle.exists", "subtitle", "exists", False, source="OBSERVED"
+                )
+            )
     else:
         raise error("INVALID_REQUEST", f"unsupported kind: {request.kind}")
 
@@ -663,7 +865,9 @@ def _run_report(request: Request, ctx: ExecutionContext) -> Dict[str, Any]:
     checks: List[QCCheck] = []
     findings: List[QCFinding] = []
     if request.operation in ("check", "validate"):
-        checks, findings = _build_checks_and_findings(request, measurements, video_duration_sec)
+        checks, findings = _build_checks_and_findings(
+            request, measurements, video_duration_sec
+        )
 
     observed_at = now_iso(ctx.clock)
     provenance = {
@@ -695,7 +899,11 @@ def _run_report(request: Request, ctx: ExecutionContext) -> Dict[str, Any]:
         version="1",
         operation=request.operation,
         kind=request.kind,
-        input={"kind": request.kind, "fingerprint": fingerprint, "size_bytes": size_bytes},
+        input={
+            "kind": request.kind,
+            "fingerprint": fingerprint,
+            "size_bytes": size_bytes,
+        },
         checks=checks,
         measurements=measurements,
         findings=findings,
@@ -713,7 +921,11 @@ def _run_report(request: Request, ctx: ExecutionContext) -> Dict[str, Any]:
         "report": report_dict,
         "provenance": provenance,
         "reused": reused,
-        "cache": {"status": cache_status, "policy": request.cache_policy, "key": cache_key},
+        "cache": {
+            "status": cache_status,
+            "policy": request.cache_policy,
+            "key": cache_key,
+        },
     }
 
 
@@ -732,7 +944,10 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
     for artifact_id, artifact_rule in rule_by_id.items():
         if artifact_rule.artifact_type is not None:
             declared = request_by_id.get(artifact_id)
-            if declared is not None and declared.artifact_type != artifact_rule.artifact_type:
+            if (
+                declared is not None
+                and declared.artifact_type != artifact_rule.artifact_type
+            ):
                 raise error(
                     "INVALID_REQUEST",
                     f"artifact {artifact_id!r} is declared as {declared.artifact_type!r} in "
@@ -747,7 +962,9 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
     for artifact in request.artifacts:
         path = ctx.path_policy.resolve_input(artifact.path, must_exist=False)
         resolved[artifact.artifact_id] = path
-        fingerprints[artifact.artifact_id] = sha256_file(path) if path is not None else None
+        fingerprints[artifact.artifact_id] = (
+            sha256_file(path) if path is not None else None
+        )
         sizes[artifact.artifact_id] = path.stat().st_size if path is not None else None
 
     # One string per declared artifact - id, type, and content-or-"MISSING"
@@ -755,19 +972,28 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
     # artifact changed or went missing, not just how many fingerprints
     # happen to remain (STEP: determinism must not rely on coincidence).
     asset_fingerprints = [
-        f"{a.artifact_id}:{a.artifact_type}:{fingerprints[a.artifact_id] or 'MISSING'}" for a in request.artifacts
+        f"{a.artifact_id}:{a.artifact_type}:{fingerprints[a.artifact_id] or 'MISSING'}"
+        for a in request.artifacts
     ]
     transcripts: Dict[str, Any] = {}
     stingers: Dict[str, Any] = {}
     keys: Dict[str, Any] = {}
     for a in request.artifacts:
         artifact_rule = rule_by_id.get(a.artifact_id)
-        if a.artifact_type == "subtitle" and resolved[a.artifact_id] is not None and artifact_rule is not None:
+        if (
+            a.artifact_type == "subtitle"
+            and resolved[a.artifact_id] is not None
+            and artifact_rule is not None
+        ):
             t_path, t_fingerprint = _resolve_transcript(ctx, artifact_rule.subtitle)
             if t_path is not None:
                 transcripts[a.artifact_id] = (t_path, t_fingerprint)
                 asset_fingerprints.append(f"{a.artifact_id}:transcript:{t_fingerprint}")
-        if a.artifact_type == "video" and resolved[a.artifact_id] is not None and artifact_rule is not None:
+        if (
+            a.artifact_type == "video"
+            and resolved[a.artifact_id] is not None
+            and artifact_rule is not None
+        ):
             s_path, s_fingerprint = _resolve_stinger(ctx, artifact_rule.video)
             if s_path is not None:
                 stingers[a.artifact_id] = (s_path, s_fingerprint)
@@ -810,12 +1036,20 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
                 "report": cached,
                 "provenance": cached.get("provenance", {}),
                 "reused": True,
-                "cache": {"status": "hit", "policy": request.cache_policy, "key": cache_key},
+                "cache": {
+                    "status": "hit",
+                    "policy": request.cache_policy,
+                    "key": cache_key,
+                },
             }
         cache_status = "miss"
 
     if request.cache_policy == "only":
-        raise error("VALIDATION_ERROR", "cache_policy is 'only' but no cached report was found", key=cache_key)
+        raise error(
+            "VALIDATION_ERROR",
+            "cache_policy is 'only' but no cached report was found",
+            key=cache_key,
+        )
 
     measurements: List[QCMeasurement] = []
     per_artifact_measurements: Dict[str, Dict[str, QCMeasurement]] = {}
@@ -825,36 +1059,61 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
         path = resolved[aid]
         present = path is not None
         own: List[QCMeasurement] = [
-            QCMeasurement("delivery_package.artifact_present", "delivery_package", "artifact_present", present, source="OBSERVED"),
+            QCMeasurement(
+                "delivery_package.artifact_present",
+                "delivery_package",
+                "artifact_present",
+                present,
+                source="OBSERVED",
+            ),
         ]
         if present:
             own.append(
                 QCMeasurement(
-                    "delivery_package.artifact_size_bytes", "delivery_package", "artifact_size_bytes", sizes[aid], source="OBSERVED",
+                    "delivery_package.artifact_size_bytes",
+                    "delivery_package",
+                    "artifact_size_bytes",
+                    sizes[aid],
+                    source="OBSERVED",
                 )
             )
             own.append(
                 QCMeasurement(
-                    "delivery_package.artifact_extension", "delivery_package", "artifact_extension",
-                    path.suffix.lower().lstrip("."), source="OBSERVED",
+                    "delivery_package.artifact_extension",
+                    "delivery_package",
+                    "artifact_extension",
+                    path.suffix.lower().lstrip("."),
+                    source="OBSERVED",
                 )
             )
             own.append(
                 QCMeasurement(
-                    "delivery_package.artifact_fingerprint", "delivery_package", "artifact_fingerprint", fingerprints[aid], source="OBSERVED",
+                    "delivery_package.artifact_fingerprint",
+                    "delivery_package",
+                    "artifact_fingerprint",
+                    fingerprints[aid],
+                    source="OBSERVED",
                 )
             )
             if artifact.artifact_type == "video":
                 artifact_rule = rule_by_id.get(aid)
                 own += _gather_video_measurements(
-                    ctx, path, effective_parameters, sizes[aid], artifact_rule.video if artifact_rule is not None else None,
+                    ctx,
+                    path,
+                    effective_parameters,
+                    sizes[aid],
+                    artifact_rule.video if artifact_rule is not None else None,
                     stinger_path=stingers[aid][0] if aid in stingers else None,
                     key_path=keys[aid][0] if aid in keys else None,
                 )
             elif artifact.artifact_type == "audio":
                 artifact_rule = rule_by_id.get(aid)
                 own += _gather_audio_measurements(
-                    ctx, path, effective_parameters, sizes[aid], artifact_rule.audio if artifact_rule is not None else None,
+                    ctx,
+                    path,
+                    effective_parameters,
+                    sizes[aid],
+                    artifact_rule.audio if artifact_rule is not None else None,
                 )
             elif artifact.artifact_type == "subtitle":
                 # No cross-artifact reference video here by design (Phase 1
@@ -863,7 +1122,9 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
                 # validation, Phase 2's job, not this one's.
                 artifact_rule = rule_by_id.get(aid)
                 own += _gather_subtitle_measurements(
-                    path, None, effective_parameters,
+                    path,
+                    None,
+                    effective_parameters,
                     artifact_rule.subtitle if artifact_rule is not None else None,
                     transcripts[aid][0] if aid in transcripts else None,
                 )
@@ -892,9 +1153,21 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
                 "present": resolved[a.artifact_id] is not None,
                 "fingerprint": fingerprints[a.artifact_id],
                 "size_bytes": sizes[a.artifact_id],
-                **({"transcript_fingerprint": transcripts[a.artifact_id][1]} if a.artifact_id in transcripts else {}),
-                **({"stinger_fingerprint": stingers[a.artifact_id][1]} if a.artifact_id in stingers else {}),
-                **({"key_fingerprint": keys[a.artifact_id][1]} if a.artifact_id in keys else {}),
+                **(
+                    {"transcript_fingerprint": transcripts[a.artifact_id][1]}
+                    if a.artifact_id in transcripts
+                    else {}
+                ),
+                **(
+                    {"stinger_fingerprint": stingers[a.artifact_id][1]}
+                    if a.artifact_id in stingers
+                    else {}
+                ),
+                **(
+                    {"key_fingerprint": keys[a.artifact_id][1]}
+                    if a.artifact_id in keys
+                    else {}
+                ),
             }
             for a in request.artifacts
         ],
@@ -908,7 +1181,10 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
         version="1",
         operation=request.operation,
         kind=request.kind,
-        input={"kind": request.kind, "artifacts": [a.artifact_id for a in request.artifacts]},
+        input={
+            "kind": request.kind,
+            "artifacts": [a.artifact_id for a in request.artifacts],
+        },
         checks=checks,
         measurements=measurements,
         findings=findings,
@@ -926,5 +1202,9 @@ def _run_delivery_package(request: Request, ctx: ExecutionContext) -> Dict[str, 
         "report": report_dict,
         "provenance": provenance,
         "reused": reused,
-        "cache": {"status": cache_status, "policy": request.cache_policy, "key": cache_key},
+        "cache": {
+            "status": cache_status,
+            "policy": request.cache_policy,
+            "key": cache_key,
+        },
     }

@@ -24,29 +24,88 @@ Examples:
   python3 redact.py dashcam.mp4 --x 0 --y 900 --width 400 --height 120 --mode pixelate --block-size 16
   python3 redact.py branded.mp4 --x 40 --y 20 --width 180 --height 60 --mode delogo
 """
+
 import argparse
 import sys
 
-from _common import add_common, apply_common, aac_args, cfr_args, default_output, die, emit, ffmpeg_base, info, probe, run_keeping_subtitles, video_args, X264_PRESETS, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    video_args,
+    X264_PRESETS,
+    fmt_secs,
+)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_redact.<ext>)")
-    ap.add_argument("--x", type=int, required=True, help="left edge of the rectangle, in source pixels")
-    ap.add_argument("--y", type=int, required=True, help="top edge of the rectangle, in source pixels")
-    ap.add_argument("--width", type=int, required=True, help="rectangle width in px (must be even)")
-    ap.add_argument("--height", type=int, required=True, help="rectangle height in px (must be even)")
-    ap.add_argument("--mode", choices=["blur", "pixelate", "delogo"], default="blur",
-                     help="blur (default), pixelate, or delogo (interpolate a fixed rectangle away; not inpainting, and not a moving region)")
-    ap.add_argument("--blur-strength", type=int, default=20, help="box-blur radius in px, --mode blur only (default 20)")
-    ap.add_argument("--block-size", type=int, default=12, help="mosaic block size in px, --mode pixelate only (default 12)")
-    ap.add_argument("--audio-stream", type=int, default=0,
-                     help="which audio stream of the input to keep, 0-based in file order (default 0)")
+    ap.add_argument(
+        "--x",
+        type=int,
+        required=True,
+        help="left edge of the rectangle, in source pixels",
+    )
+    ap.add_argument(
+        "--y",
+        type=int,
+        required=True,
+        help="top edge of the rectangle, in source pixels",
+    )
+    ap.add_argument(
+        "--width", type=int, required=True, help="rectangle width in px (must be even)"
+    )
+    ap.add_argument(
+        "--height",
+        type=int,
+        required=True,
+        help="rectangle height in px (must be even)",
+    )
+    ap.add_argument(
+        "--mode",
+        choices=["blur", "pixelate", "delogo"],
+        default="blur",
+        help="blur (default), pixelate, or delogo (interpolate a fixed rectangle away; not inpainting, and not a moving region)",
+    )
+    ap.add_argument(
+        "--blur-strength",
+        type=int,
+        default=20,
+        help="box-blur radius in px, --mode blur only (default 20)",
+    )
+    ap.add_argument(
+        "--block-size",
+        type=int,
+        default=12,
+        help="mosaic block size in px, --mode pixelate only (default 12)",
+    )
+    ap.add_argument(
+        "--audio-stream",
+        type=int,
+        default=0,
+        help="which audio stream of the input to keep, 0-based in file order (default 0)",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
-    ap.add_argument("--fps", type=float, help="force a constant output frame rate (recommended for VFR sources)")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
+    ap.add_argument(
+        "--fps",
+        type=float,
+        help="force a constant output frame rate (recommended for VFR sources)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -56,9 +115,13 @@ def main() -> int:
     if args.x < 0 or args.y < 0:
         die(f"--x/--y must be >= 0, got x={args.x} y={args.y}")
     if args.width <= 0 or args.height <= 0:
-        die(f"--width/--height must be > 0, got width={args.width} height={args.height}")
+        die(
+            f"--width/--height must be > 0, got width={args.width} height={args.height}"
+        )
     if args.width % 2 or args.height % 2:
-        die(f"--width/--height must be even (4:2:0 chroma), got width={args.width} height={args.height}")
+        die(
+            f"--width/--height must be even (4:2:0 chroma), got width={args.width} height={args.height}"
+        )
     if args.blur_strength <= 0:
         die(f"--blur-strength must be > 0, got {args.blur_strength}")
     if args.block_size <= 1:
@@ -71,36 +134,56 @@ def main() -> int:
     if meta["video"].get("rotation") in (90, -90, 270, -270):
         sw, sh = sh, sw
     if args.x + args.width > sw or args.y + args.height > sh:
-        die(f"redaction rectangle ({args.x},{args.y},{args.width}x{args.height}) exceeds the source frame ({sw}x{sh})")
+        die(
+            f"redaction rectangle ({args.x},{args.y},{args.width}x{args.height}) exceeds the source frame ({sw}x{sh})"
+        )
     if args.mode == "delogo":
         # delogo's band is fixed at 1 px (the option was removed; 5.1 through current all
         # expand the box by that ring and refuse it when the ring leaves the frame).
         vinfo = meta["video"]
         if vinfo.get("bt2020_or_hdr") or (vinfo.get("bit_depth") or 8) > 8:
-            die(f"--mode delogo interpolates 8-bit YUV only (this source is {vinfo.get('pix_fmt') or 'not 8-bit'}); "
-                "color.py --to-sdr first")
-        if args.x < 1 or args.y < 1 or args.x + args.width >= sw or args.y + args.height >= sh:
-            die(f"--mode delogo needs a 1 px ring of picture around the rectangle "
+            die(
+                f"--mode delogo interpolates 8-bit YUV only (this source is {vinfo.get('pix_fmt') or 'not 8-bit'}); "
+                "color.py --to-sdr first"
+            )
+        if (
+            args.x < 1
+            or args.y < 1
+            or args.x + args.width >= sw
+            or args.y + args.height >= sh
+        ):
+            die(
+                f"--mode delogo needs a 1 px ring of picture around the rectangle "
                 f"({args.x},{args.y},{args.width}x{args.height} in {sw}x{sh}); "
-                "a logo on the frame edge is out of range")
+                "a logo on the frame edge is out of range"
+            )
     has_audio = bool(meta.get("audio"))
     audio_streams = meta.get("audio_streams") or []
     if audio_streams and not (0 <= args.audio_stream < len(audio_streams)):
-        die(f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}")
+        die(
+            f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}"
+        )
     if args.audio_stream and not audio_streams:
         die("--audio-stream needs an input with audio streams")
 
     output = args.output or default_output(args.input, "redact")
     if args.mode == "delogo":
-        cmd = ffmpeg_base() + ["-i", args.input, "-vf",
-                               f"delogo=x={args.x}:y={args.y}:w={args.width}:h={args.height}",
-                               "-map", "0:v:0"]
+        cmd = ffmpeg_base() + [
+            "-i",
+            args.input,
+            "-vf",
+            f"delogo=x={args.x}:y={args.y}:w={args.width}:h={args.height}",
+            "-map",
+            "0:v:0",
+        ]
     else:
         crop = f"crop={args.width}:{args.height}:{args.x}:{args.y}"
         if args.mode == "blur":
             # boxblur refuses a radius above half the plane: the chroma planes of 4:2:0 are half-size,
             # so they get their own (halved) radius; a 30 px region with the default 20 used to fail
-            radius = max(1, min(args.blur_strength, min(args.width, args.height) // 2 - 1))
+            radius = max(
+                1, min(args.blur_strength, min(args.width, args.height) // 2 - 1)
+            )
             chroma = max(1, min(radius // 2, min(args.width, args.height) // 4 - 1))
             region = f"{crop},boxblur={radius}:{radius}:{chroma}:{radius}"
         else:
@@ -119,7 +202,9 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {args.mode} at x={args.x} y={args.y} {args.width}x{args.height})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {args.mode} at x={args.x} y={args.y} {args.width}x{args.height})"
+    )
     emit(output, dropped_non_av_streams=dropped_streams)
     return 0
 

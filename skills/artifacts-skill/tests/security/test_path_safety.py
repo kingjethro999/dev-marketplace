@@ -107,7 +107,9 @@ def test_artifact_ref_from_path_checks_size_before_hashing(tmp_path, monkeypatch
 
     def _reject(path, limits=None):
         raise ArtifactSecurityError(
-            code="ARTIFACT_INPUT_TOO_LARGE", message="rejected for this test", evidence={"path": str(path)}
+            code="ARTIFACT_INPUT_TOO_LARGE",
+            message="rejected for this test",
+            evidence={"path": str(path)},
         )
 
     monkeypatch.setattr("artifact_skill.security.paths.check_input_size", _reject)
@@ -115,7 +117,9 @@ def test_artifact_ref_from_path_checks_size_before_hashing(tmp_path, monkeypatch
     hash_calls: list[Path] = []
     real_sha256_of = artifact_module.sha256_of
     monkeypatch.setattr(
-        artifact_module, "sha256_of", lambda p: hash_calls.append(p) or real_sha256_of(p)
+        artifact_module,
+        "sha256_of",
+        lambda p: hash_calls.append(p) or real_sha256_of(p),
     )
 
     with pytest.raises(ArtifactSecurityError) as exc_info:

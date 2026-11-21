@@ -16,7 +16,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from artifact_skill.core.errors import ArtifactCapabilityError, ArtifactExecutionError, ArtifactInputError
+from artifact_skill.core.errors import (
+    ArtifactCapabilityError,
+    ArtifactExecutionError,
+    ArtifactInputError,
+)
 from artifact_skill.security.limits import DEFAULT_LIMITS, Limits
 from artifact_skill.security.subprocess_exec import run as run_subprocess
 from artifact_skill.security.subprocess_exec import which_allowed
@@ -80,7 +84,15 @@ def probe_media(path: Path, *, limits: Limits = DEFAULT_LIMITS) -> dict[str, Any
             # removes the dependency on that ordering ever holding — a bare
             # positional path argument is otherwise always at risk of being
             # misread as an option by ffprobe's own arg parser.
-            ffprobe, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", "--", str(path),
+            ffprobe,
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            "--",
+            str(path),
         ],
         allowlist=FFMPEG_ALLOWLIST,
         limits=limits,
@@ -90,7 +102,11 @@ def probe_media(path: Path, *, limits: Limits = DEFAULT_LIMITS) -> dict[str, Any
             code="ARTIFACT_MEDIA_UNREADABLE",
             message=f"ffprobe could not read '{path}' (exited {result.returncode}).",
             remediation="The file may be corrupt or truncated despite matching a media container's magic bytes.",
-            evidence={"path": str(path), "returncode": result.returncode, "stderr": result.stderr},
+            evidence={
+                "path": str(path),
+                "returncode": result.returncode,
+                "stderr": result.stderr,
+            },
         )
     try:
         return json.loads(result.stdout)
@@ -102,7 +118,9 @@ def probe_media(path: Path, *, limits: Limits = DEFAULT_LIMITS) -> dict[str, Any
         ) from exc
 
 
-def extract_frame(path: Path, out_path: Path, *, at_seconds: float, limits: Limits = DEFAULT_LIMITS) -> None:
+def extract_frame(
+    path: Path, out_path: Path, *, at_seconds: float, limits: Limits = DEFAULT_LIMITS
+) -> None:
     """Extracts one frame at `at_seconds` into `out_path` (PNG) via
     `ffmpeg -ss <t> -i <path> -frames:v 1`. Raises `ArtifactExecutionError`
     (code `ARTIFACT_RENDER_BACKEND_FAILED`, carrying ffmpeg's own stdout/
@@ -127,8 +145,18 @@ def extract_frame(path: Path, out_path: Path, *, at_seconds: float, limits: Limi
             # "frame-001.png" basename resolved to absolute — neither can
             # currently start with "-", but the "--" removes the dependency
             # on that ordering ever holding for the output path.
-            ffmpeg, "-y", "-ss", f"{max(at_seconds, 0.0):.3f}", "-i", str(path),
-            "-frames:v", "1", "-f", "image2", "--", str(out_path),
+            ffmpeg,
+            "-y",
+            "-ss",
+            f"{max(at_seconds, 0.0):.3f}",
+            "-i",
+            str(path),
+            "-frames:v",
+            "1",
+            "-f",
+            "image2",
+            "--",
+            str(out_path),
         ],
         allowlist=FFMPEG_ALLOWLIST,
         limits=limits,
@@ -139,5 +167,9 @@ def extract_frame(path: Path, out_path: Path, *, at_seconds: float, limits: Limi
             message=f"ffmpeg failed to extract a frame from '{path}' at {at_seconds:.2f}s "
             f"(exited {result.returncode}).",
             remediation="See evidence.stdout/stderr for ffmpeg's own diagnostic.",
-            evidence={"returncode": result.returncode, "stdout": result.stdout, "stderr": result.stderr},
+            evidence={
+                "returncode": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+            },
         )

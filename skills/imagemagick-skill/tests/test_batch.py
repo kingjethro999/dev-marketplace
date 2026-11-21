@@ -22,13 +22,25 @@ class TestBatch(unittest.TestCase):
 
     def test_rejects_same_input_and_output_dir(self):
         args = batch.parse_args(
-            ["thumb", "-i", self.in_dir, "-o", self.in_dir, "--json", "--", "--long-edge", "10"]
+            [
+                "thumb",
+                "-i",
+                self.in_dir,
+                "-o",
+                self.in_dir,
+                "--json",
+                "--",
+                "--long-edge",
+                "10",
+            ]
         )
         with self.assertRaises(ImageSkillError):
             batch.run_batch(args)
 
     def test_convert_requires_ext(self):
-        args = batch.parse_args(["convert", "-i", self.in_dir, "-o", self.out_dir, "--json"])
+        args = batch.parse_args(
+            ["convert", "-i", self.in_dir, "-o", self.out_dir, "--json"]
+        )
         with self.assertRaises(ImageSkillError) as ctx:
             batch.run_batch(args)
         self.assertIn("--ext", str(ctx.exception))
@@ -40,7 +52,9 @@ class TestBatch(unittest.TestCase):
         sys.exit(), so run_batch's existing per-file try/except catches it."""
         write_solid_png(os.path.join(self.in_dir, "a.png"), 10, 10)
 
-        args = batch.parse_args(["resize", "-i", self.in_dir, "-o", self.out_dir, "--json"])
+        args = batch.parse_args(
+            ["resize", "-i", self.in_dir, "-o", self.out_dir, "--json"]
+        )
         payload = batch.run_batch(args)
 
         self.assertEqual(payload["count"], 1)
@@ -54,7 +68,17 @@ class TestBatch(unittest.TestCase):
         write_solid_png(os.path.join(self.in_dir, "b.png"), 40, 40)
 
         args = batch.parse_args(
-            ["thumb", "-i", self.in_dir, "-o", self.out_dir, "--json", "--", "--long-edge", "20"]
+            [
+                "thumb",
+                "-i",
+                self.in_dir,
+                "-o",
+                self.out_dir,
+                "--json",
+                "--",
+                "--long-edge",
+                "20",
+            ]
         )
         payload = batch.run_batch(args)
 

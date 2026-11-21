@@ -7,6 +7,7 @@ no speaker attribution, no edit decisions.
 speaker_id: always present on a Segment and ``null`` from recognition. Only a speaker merge with
 diarization-skill turns (speakers.py, ADR-037) fills it; this skill never infers a speaker itself.
 """
+
 from __future__ import annotations
 
 import dataclasses
@@ -43,11 +44,15 @@ class Model:
 class Word(Model):
     """One engine word. In a Transcript every word dict also carries ``index`` (0-based over the whole document) and,
     for dictionary words (word_segmentation "dictionary"), ``timing`` and ``pos``; words.py adds them (ADR-039).
-    An engine word whose time is partly the engine's own estimate also carries ``timing: "interpolated"`` (ADR-041)."""
+    An engine word whose time is partly the engine's own estimate also carries ``timing: "interpolated"`` (ADR-041).
+    """
+
     start: float
     end: float
     text: str
-    confidence: Optional[float] = None   # engine-reported, 0..1, None when the engine gives none
+    confidence: Optional[float] = (
+        None  # engine-reported, 0..1, None when the engine gives none
+    )
 
 
 @dataclass
@@ -55,20 +60,25 @@ class Segment(Model):
     id: str
     start: float
     end: float
-    text: str                            # normalized_text (whitespace / control characters only)
-    raw_text: str                        # exactly what the engine returned
-    confidence: Optional[float] = None   # 0..1 or None
-    words: Optional[List[Dict[str, Any]]] = None   # Word.to_dict() list, None when unavailable
-    speaker_id: Optional[str] = None     # None from recognition; speakers.py fills it from diarization turns (ADR-037)
+    text: str  # normalized_text (whitespace / control characters only)
+    raw_text: str  # exactly what the engine returned
+    confidence: Optional[float] = None  # 0..1 or None
+    words: Optional[List[Dict[str, Any]]] = (
+        None  # Word.to_dict() list, None when unavailable
+    )
+    speaker_id: Optional[str] = (
+        None  # None from recognition; speakers.py fills it from diarization turns (ADR-037)
+    )
 
 
 @dataclass
 class Source(Model):
     """What was transcribed. No absolute path: a fingerprint and a display name only."""
-    filename: str                        # basename of the input (display only)
-    fingerprint: str                     # "sha256:<hex>" of the input file bytes
+
+    filename: str  # basename of the input (display only)
+    fingerprint: str  # "sha256:<hex>" of the input file bytes
     size_bytes: int
-    media_duration: float                # seconds, from ffprobe
+    media_duration: float  # seconds, from ffprobe
     audio_channels: Optional[int] = None
     sample_rate: Optional[int] = None
     container: Optional[str] = None
@@ -79,35 +89,39 @@ class Source(Model):
 class Provenance(Model):
     engine: str
     engine_version: str
-    execution_mode: str                  # local | remote: where recognition ran
+    execution_mode: str  # local | remote: where recognition ran
     model: str
     model_version: Optional[str]
-    parameters: Dict[str, Any]           # the transcription parameters that shaped the result
-    parameters_hash: str                 # sha256 of canonical parameters JSON
-    cache_key: str                       # identity of (input, engine, model, language, parameters)
+    parameters: Dict[str, Any]  # the transcription parameters that shaped the result
+    parameters_hash: str  # sha256 of canonical parameters JSON
+    cache_key: str  # identity of (input, engine, model, language, parameters)
     created_at: str
     processing_seconds: float
     skill_version: str
-    skill: str = "transcription-skill"   # which skill produced the document
+    skill: str = "transcription-skill"  # which skill produced the document
     tool: str = "transcription/transcribe"  # which tool of that skill
-    language_detection: Optional[Dict[str, Any]] = None   # {"candidate": "ja", "probability": 0.99} when auto
-    audio_extraction: Optional[Dict[str, Any]] = None      # how audio was prepared (fixed ffmpeg recipe)
+    language_detection: Optional[Dict[str, Any]] = (
+        None  # {"candidate": "ja", "probability": 0.99} when auto
+    )
+    audio_extraction: Optional[Dict[str, Any]] = (
+        None  # how audio was prepared (fixed ffmpeg recipe)
+    )
 
 
 @dataclass
 class Transcript(Model):
     id: str
     asset_id: str
-    language: str                        # ISO 639-1 code, or "unknown"
-    language_source: str                 # requested | detected | unknown
+    language: str  # ISO 639-1 code, or "unknown"
+    language_source: str  # requested | detected | unknown
     language_confidence: Optional[float]
-    duration: float                      # media duration in seconds
-    segments: List[Dict[str, Any]]       # Segment.to_dict() list, ordered by start
-    source: Dict[str, Any]               # Source.to_dict()
+    duration: float  # media duration in seconds
+    segments: List[Dict[str, Any]]  # Segment.to_dict() list, ordered by start
+    source: Dict[str, Any]  # Source.to_dict()
     engine: str
     engine_version: str
     created_at: str
-    provenance: Dict[str, Any]           # Provenance.to_dict()
+    provenance: Dict[str, Any]  # Provenance.to_dict()
     schema: str = TRANSCRIPT_SCHEMA
     warnings: List[str] = field(default_factory=list)
 
@@ -117,6 +131,7 @@ class SpeechEvent(Model):
     """Event-compatible record: what an adapter in video-production-agent can lift into its own
     Event model. Deliberately mirrors the shape (type/start/end/source/confidence/evidence/metadata)
     without importing it."""
+
     type: str
     start: float
     end: float

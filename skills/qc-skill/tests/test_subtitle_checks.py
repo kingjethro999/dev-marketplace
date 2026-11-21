@@ -2,7 +2,12 @@ from tests.helpers import checks_by_id, measurements_by_id, run
 
 
 def test_inspect_valid_subtitle(media, workspace):
-    doc = {"operation": "inspect", "kind": "subtitle", "input": str(media["subtitle_valid"]), "reference_video": str(media["clean"])}
+    doc = {
+        "operation": "inspect",
+        "kind": "subtitle",
+        "input": str(media["subtitle_valid"]),
+        "reference_video": str(media["clean"]),
+    }
     resp = run(doc, workspace)
     m = measurements_by_id(resp)
     assert m["subtitle.exists"]["value"] is True
@@ -17,7 +22,12 @@ def test_inspect_valid_subtitle(media, workspace):
 
 
 def test_valid_subtitle_baseline_checks_pass(media, workspace):
-    doc = {"operation": "check", "kind": "subtitle", "input": str(media["subtitle_valid"]), "reference_video": str(media["clean"])}
+    doc = {
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(media["subtitle_valid"]),
+        "reference_video": str(media["clean"]),
+    }
     resp = run(doc, workspace)
     checks = checks_by_id(resp)
     assert checks["subtitle.timestamps_valid"]["status"] == "PASS"
@@ -29,20 +39,30 @@ def test_valid_subtitle_baseline_checks_pass(media, workspace):
 
 
 def test_malformed_subtitle_fails_baseline_checks(media, workspace):
-    doc = {"operation": "check", "kind": "subtitle", "input": str(media["subtitle_malformed"])}
+    doc = {
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(media["subtitle_malformed"]),
+    }
     resp = run(doc, workspace)
     checks = checks_by_id(resp)
     assert checks["subtitle.timestamps_valid"]["status"] == "FAIL"
     assert checks["subtitle.no_duplicate_ids"]["status"] == "FAIL"
     assert checks["subtitle.no_empty_cues"]["status"] == "WARN"
     codes = {f["code"] for f in resp["report"]["findings"]}
-    assert {"SUBTITLE_INVALID_TIMESTAMP", "SUBTITLE_DUPLICATE_ID", "SUBTITLE_EMPTY_CUE"} <= codes
+    assert {
+        "SUBTITLE_INVALID_TIMESTAMP",
+        "SUBTITLE_DUPLICATE_ID",
+        "SUBTITLE_EMPTY_CUE",
+    } <= codes
     assert resp["report"]["overall_status"] == "FAIL"
 
 
 def test_subtitle_duration_mismatch_detected(media, workspace):
     doc = {
-        "operation": "check", "kind": "subtitle", "input": str(media["subtitle_mismatch"]),
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(media["subtitle_mismatch"]),
         "reference_video": str(media["clean"]),
         "rules": {"subtitle": {"max_duration_delta_sec": 0.5}},
     }
@@ -55,7 +75,9 @@ def test_subtitle_duration_mismatch_detected(media, workspace):
 
 def test_subtitle_duration_match_within_tolerance_passes(media, workspace):
     doc = {
-        "operation": "check", "kind": "subtitle", "input": str(media["subtitle_valid"]),
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(media["subtitle_valid"]),
         "reference_video": str(media["clean"]),
         "rules": {"subtitle": {"max_duration_delta_sec": 1.0}},
     }
@@ -66,7 +88,9 @@ def test_subtitle_duration_match_within_tolerance_passes(media, workspace):
 
 def test_duration_check_is_unknown_without_reference_video(media, workspace):
     doc = {
-        "operation": "check", "kind": "subtitle", "input": str(media["subtitle_valid"]),
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(media["subtitle_valid"]),
         "rules": {"subtitle": {"max_duration_delta_sec": 1.0}},
     }
     resp = run(doc, workspace)
@@ -75,8 +99,15 @@ def test_duration_check_is_unknown_without_reference_video(media, workspace):
     assert checks["subtitle.duration_matches_video"]["reason"]
 
 
-def test_require_subtitle_false_passes_when_input_would_be_absent(media, workspace, tmp_path):
-    doc = {"operation": "check", "kind": "subtitle", "input": str(media["subtitle_valid"]), "rules": {"subtitle": {"require_subtitle": True}}}
+def test_require_subtitle_false_passes_when_input_would_be_absent(
+    media, workspace, tmp_path
+):
+    doc = {
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(media["subtitle_valid"]),
+        "rules": {"subtitle": {"require_subtitle": True}},
+    }
     resp = run(doc, workspace)
     assert checks_by_id(resp)["subtitle.presence_matches_expected"]["status"] == "PASS"
 
@@ -90,7 +121,9 @@ def test_line_length_and_gap_rules(media, workspace):
         encoding="utf-8",
     )
     doc = {
-        "operation": "check", "kind": "subtitle", "input": str(long_line_srt),
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(long_line_srt),
         "rules": {"subtitle": {"max_line_length": 42, "max_gap_sec": 2.0}},
     }
     resp = run(doc, workspace)
@@ -110,8 +143,16 @@ def test_rule_limits_are_the_thresholds_not_the_defaults(media, workspace):
         encoding="utf-8",
     )
     tight = {
-        "operation": "check", "kind": "subtitle", "input": str(srt),
-        "rules": {"subtitle": {"max_line_length": 10, "max_cue_duration_sec": 2.0, "max_gap_sec": 2.0}},
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(srt),
+        "rules": {
+            "subtitle": {
+                "max_line_length": 10,
+                "max_cue_duration_sec": 2.0,
+                "max_gap_sec": 2.0,
+            }
+        },
     }
     checks = checks_by_id(run(tight, workspace))
     assert checks["subtitle.line_length_within_limit"]["status"] == "WARN"
@@ -128,8 +169,16 @@ def test_rule_limits_are_the_thresholds_not_the_defaults(media, workspace):
         encoding="utf-8",
     )
     loose = {
-        "operation": "check", "kind": "subtitle", "input": str(above_defaults),
-        "rules": {"subtitle": {"max_line_length": 60, "max_cue_duration_sec": 9.0, "max_gap_sec": 7.0}},
+        "operation": "check",
+        "kind": "subtitle",
+        "input": str(above_defaults),
+        "rules": {
+            "subtitle": {
+                "max_line_length": 60,
+                "max_cue_duration_sec": 9.0,
+                "max_gap_sec": 7.0,
+            }
+        },
     }
     checks = checks_by_id(run(loose, workspace))
     assert checks["subtitle.line_length_within_limit"]["status"] == "PASS"

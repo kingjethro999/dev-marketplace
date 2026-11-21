@@ -15,7 +15,11 @@ def test_case_insensitive():
 def test_finds_multiple_markers_in_order():
     text = "TODO: replace this. Lorem ipsum filler content. FIXME later."
     found = find_leftover_markers(text)
-    assert found == ["lorem ipsum", "todo", "fixme"]  # MARKERS' own order, not text order
+    assert found == [
+        "lorem ipsum",
+        "todo",
+        "fixme",
+    ]  # MARKERS' own order, not text order
 
 
 def test_clean_text_finds_nothing():
@@ -67,7 +71,9 @@ def test_finds_bracketed_placeholder():
 
 def test_finds_japanese_placeholder_phrases():
     assert find_leftover_markers("ここに入力してください") == ["ここに入力"]
-    assert find_leftover_markers("タイトルを入力してください。") == ["タイトルを入力してください"]
+    assert find_leftover_markers("タイトルを入力してください。") == [
+        "タイトルを入力してください"
+    ]
     assert find_leftover_markers("これはダミーテキストです。") == ["ダミーテキスト"]
     assert find_leftover_markers("サンプルテキストを挿入") == ["サンプルテキスト"]
     assert find_leftover_markers("仮のテキストです") == ["仮のテキスト"]
@@ -80,9 +86,13 @@ def test_clean_japanese_text_finds_nothing():
 def test_finds_p3_1_additional_markers():
     """FIX_PROMPT P3-1: real-world variants the original short list missed."""
     assert find_leftover_markers("This is dummy text for now.") == ["dummy text"]
-    assert find_leftover_markers("Replace this sample text before publishing.") == ["sample text"]
+    assert find_leftover_markers("Replace this sample text before publishing.") == [
+        "sample text"
+    ]
     assert find_leftover_markers("lorem.ipsum dolor sit amet") == ["lorem.ipsum"]
-    assert find_leftover_markers("ここに商品名のプレースホルダーがあります") == ["プレースホルダー"]
+    assert find_leftover_markers("ここに商品名のプレースホルダーがあります") == [
+        "プレースホルダー"
+    ]
     assert find_leftover_markers("これはダミーデータです") == ["ダミーデータ"]
     assert find_leftover_markers("以下はサンプル文章です") == ["サンプル文章"]
 
@@ -91,4 +101,7 @@ def test_bare_placeholder_is_deliberately_not_a_marker():
     """FIX_PROMPT P3-1 also suggested a bare "placeholder" - deliberately
     not added (see leftover_text.py's comment): unlike todo/fixme, it's
     an ordinary word with legitimate everyday technical-writing uses."""
-    assert find_leftover_markers("This field is a placeholder for the real config value.") == []
+    assert (
+        find_leftover_markers("This field is a placeholder for the real config value.")
+        == []
+    )

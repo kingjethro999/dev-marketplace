@@ -20,6 +20,7 @@ Which ffmpeg-skill tools are used, and for what (ADR-003):
 `join` is not used: it refuses a single clip, so it cannot convert one file (ADR-003). `--overwrite` is never passed:
 every ffmpeg-skill output is a fresh file in a private run directory, renamed into place by this skill (ADR-006).
 """
+
 from __future__ import annotations
 
 import json
@@ -63,36 +64,63 @@ class SkillInfo:
         return not self.problems
 
     def takes_flag(self, tool: str, flag: str) -> bool:
-        props = ((self.tools.get(tool) or {}).get("input_schema") or {}).get("properties") or {}
+        props = ((self.tools.get(tool) or {}).get("input_schema") or {}).get(
+            "properties"
+        ) or {}
         return isinstance(props, dict) and flag in props
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"directory": str(self.directory), "version": self.version, "contract_version": self.contract_version,
-                "tools_used": [t for t in TOOLS_USED if t in self.tools], "problems": list(self.problems),
-                "warnings": list(self.warnings),
-                "optional_flags": {t: {f: self.takes_flag(t, f) for f in fl} for t, fl in OPTIONAL_FLAGS.items()},
-                "compatibility": "capability detection: tools and flags read from this checkout's contract; no version window"}
+        return {
+            "directory": str(self.directory),
+            "version": self.version,
+            "contract_version": self.contract_version,
+            "tools_used": [t for t in TOOLS_USED if t in self.tools],
+            "problems": list(self.problems),
+            "warnings": list(self.warnings),
+            "optional_flags": {
+                t: {f: self.takes_flag(t, f) for f in fl}
+                for t, fl in OPTIONAL_FLAGS.items()
+            },
+            "compatibility": "capability detection: tools and flags read from this checkout's contract; no version window",
+        }
 
 
 def candidates(explicit: Optional[str] = None) -> List[Path]:
     if explicit:
-        return [Path(explicit)]          # an explicit directory is never silently replaced by a fallback
+        return [
+            Path(explicit)
+        ]  # an explicit directory is never silently replaced by a fallback
     out = [Path(os.environ[k]) for k in ENV_DIR_KEYS if os.environ.get(k)]
-    out += [Path.home() / ".claude" / "skills" / "ffmpeg-skill", Path.cwd() / "vendor" / "ffmpeg-skill",
-            Path.cwd().parent / "ffmpeg-skill"]
+    out += [
+        Path.home() / ".claude" / "skills" / "ffmpeg-skill",
+        Path.cwd() / "vendor" / "ffmpeg-skill",
+        Path.cwd().parent / "ffmpeg-skill",
+    ]
     return out
 
 
 def parse_contract(doc: Dict[str, Any], directory: Path) -> SkillInfo:
     """What this skill needs from an ffmpeg-skill contract document. Pure: no process, so it is unit-testable."""
-    version = str((doc.get("skill") or {}).get("version", "unknown")) if isinstance(doc.get("skill"), dict) else "unknown"
+    version = (
+        str((doc.get("skill") or {}).get("version", "unknown"))
+        if isinstance(doc.get("skill"), dict)
+        else "unknown"
+    )
     contract_version = str(doc.get("contract_version", "unknown"))
-    tools = {t["name"]: t for t in doc.get("tools", []) if isinstance(t, dict) and "name" in t}
+    tools = {
+        t["name"]: t
+        for t in doc.get("tools", [])
+        if isinstance(t, dict) and "name" in t
+    }
     problems: List[str] = []
     warnings: List[str] = []
-    if contract_version != "unknown" and contract_version.split(".")[0] not in {v.split(".")[0] for v in KNOWN_CONTRACT_VERSIONS}:
-        warnings.append(f"ffmpeg-skill contract_version {contract_version} is not one of {', '.join(KNOWN_CONTRACT_VERSIONS)}; "
-                        "compatibility was decided by the tool / flag check, not by this number")
+    if contract_version != "unknown" and contract_version.split(".")[0] not in {
+        v.split(".")[0] for v in KNOWN_CONTRACT_VERSIONS
+    }:
+        warnings.append(
+            f"ffmpeg-skill contract_version {contract_version} is not one of {', '.join(KNOWN_CONTRACT_VERSIONS)}; "
+            "compatibility was decided by the tool / flag check, not by this number"
+        )
     for tool, flags in FLAGS_USED.items():
         spec = tools.get(tool)
         if spec is None:
@@ -116,43 +144,69 @@ class FfmpegSkill:
         self._info: Optional[SkillInfo] = None
 
     @classmethod
-    def locate(cls, explicit: Optional[str] = None, timeout: float = 600.0) -> "FfmpegSkill":
+    def locate(
+        cls, explicit: Optional[str] = None, timeout: float = 600.0
+    ) -> "FfmpegSkill":
         tried = []
         for c in candidates(explicit):
             tried.append(str(c))
-            if (c / "scripts" / "_contract.py").is_file() and all((c / "scripts" / f"{t}.py").is_file() for t in TOOLS_USED):
+            if (c / "scripts" / "_contract.py").is_file() and all(
+                (c / "scripts" / f"{t}.py").is_file() for t in TOOLS_USED
+            ):
                 return cls(c.resolve(), timeout)
-        raise VoiceEnhanceError("FFMPEG_SKILL_UNAVAILABLE", "ffmpeg-skill not found (need scripts/_contract.py and "
-                                f"scripts/{{{','.join(TOOLS_USED)}}}.py)", {"tried": tried})
+        raise VoiceEnhanceError(
+            "FFMPEG_SKILL_UNAVAILABLE",
+            "ffmpeg-skill not found (need scripts/_contract.py and "
+            f"scripts/{{{','.join(TOOLS_USED)}}}.py)",
+            {"tried": tried},
+        )
 
     def script(self, name: str) -> str:
         if name not in TOOLS_USED + ("_contract",):
-            raise VoiceEnhanceError("INTERNAL_ERROR", f"{name!r} is not on the adapter allowlist")
+            raise VoiceEnhanceError(
+                "INTERNAL_ERROR", f"{name!r} is not on the adapter allowlist"
+            )
         return str(self.directory / "scripts" / f"{name}.py")
 
     def _run(self, args: List[str], timeout: float) -> Tuple[int, str, str]:
-        code, out, err = run_process_group([sys.executable, *args], timeout, cwd=str(self.directory))
+        code, out, err = run_process_group(
+            [sys.executable, *args], timeout, cwd=str(self.directory)
+        )
         if code == TIMEOUT_EXIT:
-            raise VoiceEnhanceError("TOOL_ERROR", f"ffmpeg-skill/{Path(args[0]).stem} exceeded {timeout}s", {"reason": "timeout"})
+            raise VoiceEnhanceError(
+                "TOOL_ERROR",
+                f"ffmpeg-skill/{Path(args[0]).stem} exceeded {timeout}s",
+                {"reason": "timeout"},
+            )
         return code, out, err
 
     def info(self, timeout: float = 60.0) -> SkillInfo:
         if self._info is None:
-            code, out, err = self._run([self.script("_contract"), "--json", "--static"], timeout)
+            code, out, err = self._run(
+                [self.script("_contract"), "--json", "--static"], timeout
+            )
             try:
                 doc = json.loads(out or "{}")
             except ValueError:
                 doc = {}
             if not isinstance(doc, dict) or not doc.get("tools"):
                 tail = err.strip().splitlines()[-1] if err.strip() else "no output"
-                self._info = SkillInfo(self.directory, "unknown", "unknown", {}, [f"cannot read ffmpeg-skill contract (exit {code}): {tail}"])
+                self._info = SkillInfo(
+                    self.directory,
+                    "unknown",
+                    "unknown",
+                    {},
+                    [f"cannot read ffmpeg-skill contract (exit {code}): {tail}"],
+                )
             else:
                 self._info = parse_contract(doc, self.directory)
         return self._info
 
     def doctor(self, timeout: float = 120.0) -> Dict[str, Any]:
         """ffmpeg-skill's own doctor (`_contract.py doctor --json`): ffmpeg / ffprobe versions and filters."""
-        code, out, _ = self._run([self.script("_contract"), "doctor", "--json"], timeout)
+        code, out, _ = self._run(
+            [self.script("_contract"), "doctor", "--json"], timeout
+        )
         try:
             doc = json.loads(out or "{}")
         except ValueError:
@@ -164,42 +218,82 @@ class FfmpegSkill:
     def probe(self, path: str, timeout: Optional[float] = None) -> Dict[str, Any]:
         """ffmpeg-skill/probe prints its document directly (no status envelope). Paths are passed absolute, so they can
         never be read as an option."""
-        code, out, err = self._run([self.script("probe"), os.path.abspath(path)], timeout or min(self.timeout, 120.0))
+        code, out, err = self._run(
+            [self.script("probe"), os.path.abspath(path)],
+            timeout or min(self.timeout, 120.0),
+        )
         data = _parse_json(out)
         if code != 0 or "duration" not in data:
             tail = err.strip().splitlines()[-1] if err.strip() else "no output"
-            raise VoiceEnhanceError("UNSUPPORTED_MEDIA", f"ffmpeg-skill/probe could not read {os.path.basename(path)}: {tail}",
-                                    {"tool": "ffmpeg-skill/probe", "exit_code": code})
+            raise VoiceEnhanceError(
+                "UNSUPPORTED_MEDIA",
+                f"ffmpeg-skill/probe could not read {os.path.basename(path)}: {tail}",
+                {"tool": "ffmpeg-skill/probe", "exit_code": code},
+            )
         return data
 
-    def audio_to_wav(self, src: str, dst: str, *, audio_stream: Optional[int] = None, mono: bool = False,
-                     sample_rate: Optional[int] = None, timeout: Optional[float] = None) -> Dict[str, Any]:
+    def audio_to_wav(
+        self,
+        src: str,
+        dst: str,
+        *,
+        audio_stream: Optional[int] = None,
+        mono: bool = False,
+        sample_rate: Optional[int] = None,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """ffmpeg-skill/audio with a .wav output: one audio stream of `src` as PCM WAV, the picture dropped. `dst` must
         not exist (it is always a fresh file in a private run directory, so --overwrite is never passed here).
         Returns ffmpeg-skill's result document (its `probe` describes `dst`)."""
-        args = [self.script("audio"), os.path.abspath(src), "-o", os.path.abspath(dst), "--json"]
+        args = [
+            self.script("audio"),
+            os.path.abspath(src),
+            "-o",
+            os.path.abspath(dst),
+            "--json",
+        ]
         if audio_stream is not None:
             args += ["--audio-stream", str(int(audio_stream))]
         if mono:
             args.append("--mono")
         if sample_rate is not None:
             if not self.info().takes_flag("audio", "sample_rate"):
-                raise VoiceEnhanceError("FFMPEG_SKILL_UNAVAILABLE", f"resampling to {int(sample_rate)} Hz needs ffmpeg-skill/audio "
-                                        "--sample-rate, which this ffmpeg-skill checkout does not declare",
-                                        {"tool": "ffmpeg-skill/audio", "needs_flag": "sample_rate", "directory": str(self.directory)})
+                raise VoiceEnhanceError(
+                    "FFMPEG_SKILL_UNAVAILABLE",
+                    f"resampling to {int(sample_rate)} Hz needs ffmpeg-skill/audio "
+                    "--sample-rate, which this ffmpeg-skill checkout does not declare",
+                    {
+                        "tool": "ffmpeg-skill/audio",
+                        "needs_flag": "sample_rate",
+                        "directory": str(self.directory),
+                    },
+                )
             args += ["--sample-rate", str(int(sample_rate))]
         return self._audio(args, src, dst, timeout)
 
-    def replace_audio(self, video: str, stem: str, dst: str, *, timeout: Optional[float] = None) -> Dict[str, Any]:
+    def replace_audio(
+        self, video: str, stem: str, dst: str, *, timeout: Optional[float] = None
+    ) -> Dict[str, Any]:
         """ffmpeg-skill/audio <video> --replace <stem> -o <dst>: `dst` holds the first video stream of `video` copied
         packet for packet (-c:v copy) and the stem's first audio stream as its only audio stream, encoded by `dst`'s
         extension and padded or trimmed to `video`'s duration; subtitle and data streams are copied when the
         container takes them. `dst` must not exist (a fresh file in a private run directory; --overwrite is never
-        passed). Returns ffmpeg-skill's result document (its `probe` describes `dst`)."""
-        args = [self.script("audio"), os.path.abspath(video), "--replace", os.path.abspath(stem), "-o", os.path.abspath(dst), "--json"]
+        passed). Returns ffmpeg-skill's result document (its `probe` describes `dst`).
+        """
+        args = [
+            self.script("audio"),
+            os.path.abspath(video),
+            "--replace",
+            os.path.abspath(stem),
+            "-o",
+            os.path.abspath(dst),
+            "--json",
+        ]
         return self._audio(args, video, dst, timeout)
 
-    def _audio(self, args: List[str], src: str, dst: str, timeout: Optional[float]) -> Dict[str, Any]:
+    def _audio(
+        self, args: List[str], src: str, dst: str, timeout: Optional[float]
+    ) -> Dict[str, Any]:
         code, out, err = self._run(args, timeout or self.timeout)
         doc = _parse_json(out)
         if code != 0 or doc.get("status") == "failed" or not os.path.isfile(dst):
@@ -207,10 +301,24 @@ class FfmpegSkill:
             tail = err.strip().splitlines()[-1] if err.strip() else "no output"
             message = str(error.get("message") or tail)
             if error.get("kind") == "input":
-                raise VoiceEnhanceError("UNSUPPORTED_MEDIA", f"ffmpeg-skill/audio refused {os.path.basename(src)}: {message}",
-                                        {"tool": "ffmpeg-skill/audio", "exit_code": code, "ffmpeg_skill_error": error})
-            raise VoiceEnhanceError("TOOL_ERROR", f"ffmpeg-skill/audio failed on {os.path.basename(src)}: {message}",
-                                    {"tool": "ffmpeg-skill/audio", "exit_code": code, "ffmpeg_skill_error": error})
+                raise VoiceEnhanceError(
+                    "UNSUPPORTED_MEDIA",
+                    f"ffmpeg-skill/audio refused {os.path.basename(src)}: {message}",
+                    {
+                        "tool": "ffmpeg-skill/audio",
+                        "exit_code": code,
+                        "ffmpeg_skill_error": error,
+                    },
+                )
+            raise VoiceEnhanceError(
+                "TOOL_ERROR",
+                f"ffmpeg-skill/audio failed on {os.path.basename(src)}: {message}",
+                {
+                    "tool": "ffmpeg-skill/audio",
+                    "exit_code": code,
+                    "ffmpeg_skill_error": error,
+                },
+            )
         return doc
 
 

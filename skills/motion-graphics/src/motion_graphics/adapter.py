@@ -27,6 +27,7 @@ Which ffmpeg-skill tools are used, and for what (docs/ffmpeg-skill.md):
 Every graphics/overlay invocation may also carry --audio-stream (document.options.audio_stream, ffmpeg-skill
 0.12.0) to select which audio track of the source survives, and --platform (document.options.platform) to put each element's
 margin in a destination's safe zone, when the checkout has that flag."""
+
 from __future__ import annotations
 
 import json
@@ -47,7 +48,9 @@ from .layerexport import LAYER_EXPORT_FLAGS
 # cut.py's `precision` / `keyframe_snapped` meaning -- a tool this adapter never calls; ADR-23). Reported, not gated on --
 # a different value only matters if the flags below can no longer be read from it, and that is detected directly
 KNOWN_CONTRACT_VERSIONS = ("1.0", "2.0")
-KNOWN_CONTRACT_VERSION = KNOWN_CONTRACT_VERSIONS[0]   # the oldest; the registry range starts here
+KNOWN_CONTRACT_VERSION = KNOWN_CONTRACT_VERSIONS[
+    0
+]  # the oldest; the registry range starts here
 ENV_DIR_KEYS = ("MOTION_GRAPHICS_FFMPEG_SKILL_DIR", "VIDEO_AGENT_FFMPEG_SKILL_DIR")
 TOOLS_USED = ("probe", "graphics", "overlay")
 # argparse dests of the ffmpeg-skill tools this adapter emits; every one must be present in the located checkout
@@ -57,12 +60,52 @@ TOOLS_USED = ("probe", "graphics", "overlay")
 # when absent (adapter.ToolRun, never guessed as false), so it needs no gate of its own.
 REQUIRED_FLAGS: Dict[str, Tuple[str, ...]] = {
     "probe": ("inputs",),
-    "graphics": ("input", "output", "template", "start", "end", "preset", "audio_stream", "title", "subtitle",
-                 "name", "position", "count_from", "text_color", "primary", "json"),
-    "overlay": ("input", "output", "position", "margin", "start", "end", "opacity", "preset", "audio_stream",
-                "fade", "text", "font_size", "font_color", "border", "border_color", "box", "box_color", "font",
-                "font_file", "image", "scale", "scale_percent", "video", "chromakey", "chromakey_similarity",
-                "chromakey_blend", "json"),
+    "graphics": (
+        "input",
+        "output",
+        "template",
+        "start",
+        "end",
+        "preset",
+        "audio_stream",
+        "title",
+        "subtitle",
+        "name",
+        "position",
+        "count_from",
+        "text_color",
+        "primary",
+        "json",
+    ),
+    "overlay": (
+        "input",
+        "output",
+        "position",
+        "margin",
+        "start",
+        "end",
+        "opacity",
+        "preset",
+        "audio_stream",
+        "fade",
+        "text",
+        "font_size",
+        "font_color",
+        "border",
+        "border_color",
+        "box",
+        "box_color",
+        "font",
+        "font_file",
+        "image",
+        "scale",
+        "scale_percent",
+        "video",
+        "chromakey",
+        "chromakey_similarity",
+        "chromakey_blend",
+        "json",
+    ),
 }
 # one of each group must be present; the first the checkout offers is used. ffmpeg-skill 1.10 added --quality (the
 # same CRF scale and default) and 2.0 removed --crf from graphics/overlay, so a 0.x checkout has only --crf and a 2.x
@@ -81,31 +124,66 @@ FLAG_ALTERNATIVES: Dict[str, Dict[str, Tuple[str, ...]]] = {
 # front when the checkout lacks it.
 # `scale`, `lang` and `wrap` on graphics carry a lower_third / title text fit (ADR-27): the size multiplier the fit chose, the text's
 # language, and -- `wrap` being 1.16's multi-line label layout -- the sign that a label with line breaks is laid out line by line.
-OPTIONAL_FLAGS: Dict[str, Tuple[str, ...]] = {"graphics": ("overwrite", "platform", "scale", "lang", "wrap"), "overlay": ("overwrite", "platform", "place")}
+OPTIONAL_FLAGS: Dict[str, Tuple[str, ...]] = {
+    "graphics": ("overwrite", "platform", "scale", "lang", "wrap"),
+    "overlay": ("overwrite", "platform", "place"),
+}
 # graphics templates the oldest verified ffmpeg-skill (0.12.5) does not have. An element type built on one needs the
 # name in the checkout's `--template` choices AND the flags listed here; the element type is refused up front when the
 # checkout lacks either (never attempted and left to fail inside the tool), and doctor reports it unsupported.
-TEMPLATE_FLAGS: Dict[str, Tuple[str, ...]] = {"sticker": ("text",), "hook": ("duration",), "meme": ("top", "bottom")}
+TEMPLATE_FLAGS: Dict[str, Tuple[str, ...]] = {
+    "sticker": ("text",),
+    "hook": ("duration",),
+    "meme": ("top", "bottom"),
+}
 # ffmpeg-skill tools this adapter calls only for one element type, detected like a template (ADR-22): `background` makes the
 # solid-colour clip of a `shape` element (ffmpeg-skill 0.11.0+). Not needed to locate a checkout or to render any other
 # type; a checkout without it, or without these flags, reports `shape` unsupported and refuses it before rendering.
 # Its encoder flags (--quality/--crf, --overwrite, --preset) are passed when the checkout has them.
-GENERATOR_TOOLS: Dict[str, Tuple[str, ...]] = {"background": ("output", "duration", "width", "height", "color", "json")}
+GENERATOR_TOOLS: Dict[str, Tuple[str, ...]] = {
+    "background": ("output", "duration", "width", "height", "color", "json")
+}
 # ffmpeg-skill tools called only for a layer export (ADR-30): `color --retag` gives the transparent canvas the programme's colour tags.
 # Detected with LAYER_EXPORT_FLAGS; never needed to locate a checkout.
 LAYER_TOOLS: Tuple[str, ...] = ("color",)
-GENERATOR_OPTIONAL_FLAGS: Dict[str, Tuple[str, ...]] = {"background": ("quality", "crf", "preset", "overwrite")}
+GENERATOR_OPTIONAL_FLAGS: Dict[str, Tuple[str, ...]] = {
+    "background": ("quality", "crf", "preset", "overwrite")
+}
 # every flag this adapter may emit, for the contract document (`ffmpeg_skill.flags_used`)
 FLAGS_USED: Dict[str, Tuple[str, ...]] = {
-    tool: flags + tuple(f for alts in FLAG_ALTERNATIVES.get(tool, {}).values() for f in alts) + OPTIONAL_FLAGS.get(tool, ())
-    + (tuple(sorted({f for fl in TEMPLATE_FLAGS.values() for f in fl})) if tool == "graphics" else ())
+    tool: flags
+    + tuple(f for alts in FLAG_ALTERNATIVES.get(tool, {}).values() for f in alts)
+    + OPTIONAL_FLAGS.get(tool, ())
+    + (
+        tuple(sorted({f for fl in TEMPLATE_FLAGS.values() for f in fl}))
+        if tool == "graphics"
+        else ()
+    )
     for tool, flags in REQUIRED_FLAGS.items()
 }
 # ADR-30: the alpha flags a layer export adds to the graphics / overlay calls (background's are in LAYER_EXPORT_FLAGS)
 for _tool in ("graphics", "overlay"):
-    FLAGS_USED[_tool] += tuple(f for f in LAYER_EXPORT_FLAGS[_tool] if f not in FLAGS_USED[_tool])
-_ENV_KEEP = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "TERM",
-             "SYSTEMROOT", "SYSTEMDRIVE", "PATHEXT", "COMSPEC", "USERPROFILE", "LOCALAPPDATA", "APPDATA", "PROGRAMDATA")
+    FLAGS_USED[_tool] += tuple(
+        f for f in LAYER_EXPORT_FLAGS[_tool] if f not in FLAGS_USED[_tool]
+    )
+_ENV_KEEP = (
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "PATHEXT",
+    "COMSPEC",
+    "USERPROFILE",
+    "LOCALAPPDATA",
+    "APPDATA",
+    "PROGRAMDATA",
+)
 _HELP_FLAG_RE = re.compile(r"(?<![\w-])--([a-z][a-z0-9-]*)")
 
 
@@ -124,7 +202,11 @@ def _group_kwargs() -> Dict[str, Any]:
 
 def kill_tree(proc: "subprocess.Popen[str]") -> None:
     if os.name == "nt":
-        subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         proc.kill()
     else:
         try:
@@ -139,13 +221,24 @@ def kill_tree(proc: "subprocess.Popen[str]") -> None:
 
 def fmt_seconds(value: float) -> str:
     """Seconds as a plain decimal string with millisecond precision (ffmpeg-skill parse_time accepts it)."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value or value in (float("inf"), float("-inf")) or value < 0:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or value != value
+        or value in (float("inf"), float("-inf"))
+        or value < 0
+    ):
         raise MotionGraphicsError("INTERNAL_ERROR", f"bad time value {value!r}")
     return f"{float(value):.3f}"
 
 
 def fmt_number(value: float) -> str:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value or value in (float("inf"), float("-inf")):
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or value != value
+        or value in (float("inf"), float("-inf"))
+    ):
         raise MotionGraphicsError("INTERNAL_ERROR", f"bad numeric value {value!r}")
     return f"{float(value):g}"
 
@@ -206,8 +299,12 @@ class SkillInfo:
 
     def layer_export(self) -> Dict[str, Any]:
         """Whether this checkout can draw an element alone on a transparent canvas (ADR-30): {supported, missing ["tool.flag"],
-        alpha_codecs (the --alpha-codec choices every tool offers, or None when they could not be read)}."""
-        return dict(self.features.get("layer_export") or {"supported": False, "missing": ["not detected"], "alpha_codecs": None})
+        alpha_codecs (the --alpha-codec choices every tool offers, or None when they could not be read)}.
+        """
+        return dict(
+            self.features.get("layer_export")
+            or {"supported": False, "missing": ["not detected"], "alpha_codecs": None}
+        )
 
     def tool_support(self, tool: str) -> Optional[bool]:
         """Whether this checkout has the optional generator `tool` (GENERATOR_TOOLS) with every flag this skill sends it."""
@@ -233,8 +330,15 @@ def flags_from_help(text: str) -> Dict[str, Any]:
     """argparse dests readable from a tool's `--help`, for a checkout whose contract cannot be read: every `--long-flag`
     (dashes -> underscores) and every name listed under "positional arguments". The same keys a contract's
     input_schema.properties carries, so check_tools() works on either."""
-    props: Dict[str, Any] = {m.group(1).replace("-", "_"): {} for m in _HELP_FLAG_RE.finditer(text)}
-    for flag in ("template", "platform", "alpha_codec", "retag"):  # argparse prints the choices as `--flag {a,b,c}`; a contract carries them as `enum`
+    props: Dict[str, Any] = {
+        m.group(1).replace("-", "_"): {} for m in _HELP_FLAG_RE.finditer(text)
+    }
+    for flag in (
+        "template",
+        "platform",
+        "alpha_codec",
+        "retag",
+    ):  # argparse prints the choices as `--flag {a,b,c}`; a contract carries them as `enum`
         m = re.search(rf"--{flag.replace('_', '-')}\s+\{{([^}}\s]+)\}}", text)
         if m and flag in props:
             props[flag] = {"enum": m.group(1).split(",")}
@@ -248,14 +352,20 @@ def flags_from_help(text: str) -> Dict[str, Any]:
                 in_positional = False
                 continue
             words = line.split()
-            if words and line.startswith("  ") and not line.startswith("        ") and re.match(r"^[a-z_][a-z0-9_]*$", words[0]):
+            if (
+                words
+                and line.startswith("  ")
+                and not line.startswith("        ")
+                and re.match(r"^[a-z_][a-z0-9_]*$", words[0])
+            ):
                 props[words[0]] = {}
     return props
 
 
 def check_tools(tools: Dict[str, Dict[str, Any]]) -> Tuple[List[str], Dict[str, Any]]:
     """Compare the flags this skill emits with what the located checkout declares. Returns (problems, features); an
-    empty problem list means every element type can be rendered. Pure: unit-testable against any contract document."""
+    empty problem list means every element type can be rendered. Pure: unit-testable against any contract document.
+    """
     problems: List[str] = []
     quality: Dict[str, Optional[str]] = {}
     overwrite: Dict[str, bool] = {}
@@ -301,25 +411,50 @@ def check_tools(tools: Dict[str, Dict[str, Any]]) -> Tuple[List[str], Dict[str, 
     generator_support: Dict[str, bool] = {}
     generator_flags: Dict[str, Dict[str, Any]] = {}
     for tool, flags in GENERATOR_TOOLS.items():
-        props = ((tools.get(tool) or {}).get("input_schema") or {}).get("properties") or {}
+        props = ((tools.get(tool) or {}).get("input_schema") or {}).get(
+            "properties"
+        ) or {}
         generator_support[tool] = bool(props) and all(f in props for f in flags)
-        generator_flags[tool] = {"encoder_quality": next(("--" + f for f in ("quality", "crf") if f in props), None),
-                                 "overwrite": "overwrite" in props, "preset": "preset" in props}
+        generator_flags[tool] = {
+            "encoder_quality": next(
+                ("--" + f for f in ("quality", "crf") if f in props), None
+            ),
+            "overwrite": "overwrite" in props,
+            "preset": "preset" in props,
+        }
     # ADR-30: a layer export needs a transparent canvas (background --transparent) and graphics / overlay keeping its alpha; never a
     # problem (nothing else needs them), a feature the request option is refused without
     layer_missing: List[str] = []
     alpha_codecs: Optional[List[str]] = None
     for tool, flags in LAYER_EXPORT_FLAGS.items():
-        props = ((tools.get(tool) or {}).get("input_schema") or {}).get("properties") or {}
+        props = ((tools.get(tool) or {}).get("input_schema") or {}).get(
+            "properties"
+        ) or {}
         layer_missing += [f"{tool}.{f}" for f in flags if f not in props]
         choices = (props.get("alpha_codec") or {}).get("enum")
         if isinstance(choices, list):
-            alpha_codecs = sorted(set(choices) if alpha_codecs is None else set(alpha_codecs) & set(choices))
-    layer_export = {"supported": not layer_missing, "missing": layer_missing, "alpha_codecs": alpha_codecs if not layer_missing else None}
-    return problems, {"encoder_quality_flag": quality, "overwrite_flag": overwrite, "platform_flag": platform_flag, "platforms": platforms, "place_flag": place_flag,
-                      "optional_flags": optional_present,
-                      "template_support": template_support, "generator_support": generator_support, "generator_flags": generator_flags,
-                      "layer_export": layer_export}
+            alpha_codecs = sorted(
+                set(choices)
+                if alpha_codecs is None
+                else set(alpha_codecs) & set(choices)
+            )
+    layer_export = {
+        "supported": not layer_missing,
+        "missing": layer_missing,
+        "alpha_codecs": alpha_codecs if not layer_missing else None,
+    }
+    return problems, {
+        "encoder_quality_flag": quality,
+        "overwrite_flag": overwrite,
+        "platform_flag": platform_flag,
+        "platforms": platforms,
+        "place_flag": place_flag,
+        "optional_flags": optional_present,
+        "template_support": template_support,
+        "generator_support": generator_support,
+        "generator_flags": generator_flags,
+        "layer_export": layer_export,
+    }
 
 
 class FfmpegSkill:
@@ -337,7 +472,9 @@ class FfmpegSkill:
     def candidates(explicit: Optional[str] = None) -> List[Path]:
         out: List[Path] = []
         if explicit:
-            return [Path(explicit)]  # an explicit directory is never silently replaced by a fallback
+            return [
+                Path(explicit)
+            ]  # an explicit directory is never silently replaced by a fallback
         for key in ENV_DIR_KEYS:
             v = os.environ.get(key)
             if v:
@@ -348,38 +485,62 @@ class FfmpegSkill:
         return out
 
     @classmethod
-    def locate(cls, explicit: Optional[str] = None, timeout: float = 600.0) -> "FfmpegSkill":
+    def locate(
+        cls, explicit: Optional[str] = None, timeout: float = 600.0
+    ) -> "FfmpegSkill":
         tried = []
         for c in cls.candidates(explicit):
             tried.append(str(c))
             if all((c / "scripts" / f"{t}.py").is_file() for t in TOOLS_USED):
                 return cls(c.resolve(), timeout)
-        raise MotionGraphicsError("TOOL_ERROR", "ffmpeg-skill not found (need scripts/{probe,graphics,overlay}.py)",
-                                   {"reason": "ffmpeg_skill_missing", "tried": tried}, retryable=False)
+        raise MotionGraphicsError(
+            "TOOL_ERROR",
+            "ffmpeg-skill not found (need scripts/{probe,graphics,overlay}.py)",
+            {"reason": "ffmpeg_skill_missing", "tried": tried},
+            retryable=False,
+        )
 
     def script(self, tool: str) -> str:
-        if tool not in TOOLS_USED and tool not in GENERATOR_TOOLS and tool not in LAYER_TOOLS:
-            raise MotionGraphicsError("INTERNAL_ERROR", f"tool {tool!r} is not on the adapter allowlist")
+        if (
+            tool not in TOOLS_USED
+            and tool not in GENERATOR_TOOLS
+            and tool not in LAYER_TOOLS
+        ):
+            raise MotionGraphicsError(
+                "INTERNAL_ERROR", f"tool {tool!r} is not on the adapter allowlist"
+            )
         return str(self.directory / "scripts" / f"{tool}.py")
 
     # ---- what the located skill can do
-    def _read_contract(self, timeout: float) -> Tuple[Optional[Dict[str, Any]], str, List[str]]:
+    def _read_contract(
+        self, timeout: float
+    ) -> Tuple[Optional[Dict[str, Any]], str, List[str]]:
         """The first contract document one of ffmpeg-skill's contract entry points prints, newest first."""
         errors: List[str] = []
         scripts = self.directory / "scripts"
-        attempts = [("contract", scripts / "_contract.py", ["--json", "--static"]),
-                    ("contract (with detection)", scripts / "_contract.py", ["--json"]),
-                    ("contract.py", scripts / "contract.py", ["--json"])]
+        attempts = [
+            ("contract", scripts / "_contract.py", ["--json", "--static"]),
+            ("contract (with detection)", scripts / "_contract.py", ["--json"]),
+            ("contract.py", scripts / "contract.py", ["--json"]),
+        ]
         for label, path, extra in attempts:
             if not path.is_file():
                 continue
             try:
-                code, out, _, _ = self._popen([sys.executable, str(path), *extra], timeout)
+                code, out, _, _ = self._popen(
+                    [sys.executable, str(path), *extra], timeout
+                )
                 doc = json.loads(out or "{}")
             except (MotionGraphicsError, ValueError, OSError) as e:
-                errors.append(f"{path.name} {' '.join(extra)}: {getattr(e, 'message', str(e))}")
+                errors.append(
+                    f"{path.name} {' '.join(extra)}: {getattr(e, 'message', str(e))}"
+                )
                 continue
-            if code == 0 and isinstance(doc, dict) and isinstance(doc.get("tools"), list):
+            if (
+                code == 0
+                and isinstance(doc, dict)
+                and isinstance(doc.get("tools"), list)
+            ):
                 return doc, label, errors
             errors.append(f"{path.name} {' '.join(extra)}: exit {code}, no tools list")
         return None, "", errors
@@ -390,11 +551,16 @@ class FfmpegSkill:
             if tool not in TOOLS_USED and not Path(self.script(tool)).is_file():
                 continue
             try:
-                code, out, _, _ = self._popen([sys.executable, self.script(tool), "--help"], timeout)
+                code, out, _, _ = self._popen(
+                    [sys.executable, self.script(tool), "--help"], timeout
+                )
             except (MotionGraphicsError, OSError):
                 continue
             if code == 0 and out.strip():
-                tools[tool] = {"name": tool, "input_schema": {"properties": flags_from_help(out)}}
+                tools[tool] = {
+                    "name": tool,
+                    "input_schema": {"properties": flags_from_help(out)},
+                }
         return tools
 
     def info(self, timeout: float = 60.0) -> SkillInfo:
@@ -408,63 +574,141 @@ class FfmpegSkill:
         if doc is not None:
             version = str((doc.get("skill") or {}).get("version", "unknown"))
             contract_version = str(doc.get("contract_version", "unknown"))
-            tools = {t["name"]: t for t in doc.get("tools", []) if isinstance(t, dict) and "name" in t}
+            tools = {
+                t["name"]: t
+                for t in doc.get("tools", [])
+                if isinstance(t, dict) and "name" in t
+            }
         if not tools:
             tools = self._tools_from_help(timeout)
             source = "--help" if tools else "none"
             if version == "unknown":
                 version = _package_version(self.directory)
         if not tools:
-            problems.append("cannot read ffmpeg-skill's tool flags (no contract, no --help): " + ("; ".join(errors) or "nothing to run"))
+            problems.append(
+                "cannot read ffmpeg-skill's tool flags (no contract, no --help): "
+                + ("; ".join(errors) or "nothing to run")
+            )
         else:
             tool_problems, features = check_tools(tools)
             problems += tool_problems
-        features.update({"source": source, "common_layout": _common_layout(self.directory),
-                         "removed": [r.get("what") for r in (doc or {}).get("removed") or [] if isinstance(r, dict)]})
-        self._info = SkillInfo(self.directory, version, contract_version, tools, problems, features)
+        features.update(
+            {
+                "source": source,
+                "common_layout": _common_layout(self.directory),
+                "removed": [
+                    r.get("what")
+                    for r in (doc or {}).get("removed") or []
+                    if isinstance(r, dict)
+                ],
+            }
+        )
+        self._info = SkillInfo(
+            self.directory, version, contract_version, tools, problems, features
+        )
         return self._info
 
     # ---- execution
     def cancel(self) -> None:
         self._cancelled = True
 
-    def _popen(self, argv: Sequence[str], timeout: Optional[float], cwd: Optional[str] = None) -> Tuple[int, str, str, float]:
+    def _popen(
+        self, argv: Sequence[str], timeout: Optional[float], cwd: Optional[str] = None
+    ) -> Tuple[int, str, str, float]:
         for a in argv:
             if not isinstance(a, str) or "\x00" in a:
-                raise MotionGraphicsError("INTERNAL_ERROR", "argv element is not a clean string")
+                raise MotionGraphicsError(
+                    "INTERNAL_ERROR", "argv element is not a clean string"
+                )
         if self._cancelled:
             raise MotionGraphicsError("CANCELLED", "cancelled before the tool started")
         t0 = time.monotonic()
         try:
-            proc = subprocess.Popen(list(argv), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                     text=True, errors="replace", env=_clean_env(), cwd=cwd or str(self.directory), **_group_kwargs())
+            proc = subprocess.Popen(
+                list(argv),
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                errors="replace",
+                env=_clean_env(),
+                cwd=cwd or str(self.directory),
+                **_group_kwargs(),
+            )
         except FileNotFoundError as e:
-            raise MotionGraphicsError("TOOL_ERROR", f"cannot start {os.path.basename(argv[0])}: {e}", {"reason": "executable_missing"}, retryable=False)
+            raise MotionGraphicsError(
+                "TOOL_ERROR",
+                f"cannot start {os.path.basename(argv[0])}: {e}",
+                {"reason": "executable_missing"},
+                retryable=False,
+            )
         try:
             out, err = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             kill_tree(proc)
-            raise MotionGraphicsError("TOOL_ERROR", f"{os.path.basename(argv[1]) if len(argv) > 1 else argv[0]} exceeded {timeout}s", {"reason": "timeout", "timeout": timeout})
+            raise MotionGraphicsError(
+                "TOOL_ERROR",
+                f"{os.path.basename(argv[1]) if len(argv) > 1 else argv[0]} exceeded {timeout}s",
+                {"reason": "timeout", "timeout": timeout},
+            )
         except KeyboardInterrupt:
             kill_tree(proc)
             self._cancelled = True
-            raise MotionGraphicsError("CANCELLED", "interrupted while a tool was running", {"reason": "signal"})
+            raise MotionGraphicsError(
+                "CANCELLED",
+                "interrupted while a tool was running",
+                {"reason": "signal"},
+            )
         return proc.returncode, out or "", err or "", round(time.monotonic() - t0, 3)
 
-    def run_tool(self, tool: str, args: Sequence[str], timeout: Optional[float] = None, cwd: Optional[str] = None) -> ToolRun:
+    def run_tool(
+        self,
+        tool: str,
+        args: Sequence[str],
+        timeout: Optional[float] = None,
+        cwd: Optional[str] = None,
+    ) -> ToolRun:
         argv = [sys.executable, self.script(tool), *args, "--json"]
         code, out, err, seconds = self._popen(argv, timeout or self.timeout, cwd)
         data = _parse_json(out)
         tail = "\n".join(err.strip().splitlines()[-12:])
         dropped = data.get("dropped_non_av_streams") if isinstance(data, dict) else None
-        run = ToolRun(tool, argv, code, data, tail, seconds, list(data.get("commands", [])) if isinstance(data.get("commands"), list) else [],
-                      dropped if isinstance(dropped, bool) else None)
+        run = ToolRun(
+            tool,
+            argv,
+            code,
+            data,
+            tail,
+            seconds,
+            (
+                list(data.get("commands", []))
+                if isinstance(data.get("commands"), list)
+                else []
+            ),
+            dropped if isinstance(dropped, bool) else None,
+        )
         self.runs.append(run)
         if code != 0 or (isinstance(data, dict) and data.get("status") == "failed"):
-            msg = (data.get("error") or {}).get("message") if isinstance(data.get("error"), dict) else None
-            raise MotionGraphicsError("TOOL_ERROR", f"ffmpeg-skill/{tool} failed (exit {code}): {msg or tail or 'no message'}",
-                                       {"reason": "tool_failed", "tool": f"ffmpeg-skill/{tool}", "exit_code": code, "stderr_tail": tail,
-                                        "error_kind": (data.get("error") or {}).get("kind") if isinstance(data.get("error"), dict) else None})
+            msg = (
+                (data.get("error") or {}).get("message")
+                if isinstance(data.get("error"), dict)
+                else None
+            )
+            raise MotionGraphicsError(
+                "TOOL_ERROR",
+                f"ffmpeg-skill/{tool} failed (exit {code}): {msg or tail or 'no message'}",
+                {
+                    "reason": "tool_failed",
+                    "tool": f"ffmpeg-skill/{tool}",
+                    "exit_code": code,
+                    "stderr_tail": tail,
+                    "error_kind": (
+                        (data.get("error") or {}).get("kind")
+                        if isinstance(data.get("error"), dict)
+                        else None
+                    ),
+                },
+            )
         return run
 
     def probe(self, path: str, timeout: Optional[float] = None) -> Dict[str, Any]:
@@ -472,17 +716,33 @@ class FfmpegSkill:
         argv = [sys.executable, self.script("probe"), path]
         code, out, err, seconds = self._popen(argv, timeout or min(self.timeout, 120.0))
         data = _parse_json(out)
-        self.runs.append(ToolRun("probe", argv, code, data, "\n".join(err.strip().splitlines()[-12:]), seconds))
+        self.runs.append(
+            ToolRun(
+                "probe",
+                argv,
+                code,
+                data,
+                "\n".join(err.strip().splitlines()[-12:]),
+                seconds,
+            )
+        )
         if code != 0 or not isinstance(data, dict) or "duration" not in data:
-            raise MotionGraphicsError("INVALID_INPUT", f"ffmpeg-skill/probe could not read {os.path.basename(path)}: {err.strip().splitlines()[-1] if err.strip() else 'no output'}",
-                                       {"reason": "unreadable_media", "path": path, "exit_code": code})
+            raise MotionGraphicsError(
+                "INVALID_INPUT",
+                f"ffmpeg-skill/probe could not read {os.path.basename(path)}: {err.strip().splitlines()[-1] if err.strip() else 'no output'}",
+                {"reason": "unreadable_media", "path": path, "exit_code": code},
+            )
         return data
 
 
 def _package_version(directory: Path) -> str:
     """ffmpeg-skill's version from package.json, for a checkout whose contract cannot be read; informational only."""
     try:
-        return str(json.loads((directory / "package.json").read_text(encoding="utf-8")).get("version", "unknown"))
+        return str(
+            json.loads((directory / "package.json").read_text(encoding="utf-8")).get(
+                "version", "unknown"
+            )
+        )
     except (OSError, ValueError, AttributeError):
         return "unknown"
 

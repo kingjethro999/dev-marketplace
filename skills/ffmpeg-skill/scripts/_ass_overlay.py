@@ -20,9 +20,9 @@ a centred title needs no text-width measurement at all. `move` is (x1, y1, x2, y
 milliseconds relative to the line's own start; `fade` is (in_ms, out_ms); `scale_t` is
 (t1_ms, t2_ms, percent) for a pop.
 """
+
 import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-
 
 # One sentinel character stands in drawn text where an emoji was, so the placeholder is inserted
 # AFTER the brace-stripping that keeps caller-supplied text from injecting override commands.
@@ -45,7 +45,10 @@ def emoji_placeholder(box_px: float, back_alpha: int = 0) -> str:
     has. A `\r` did the same and also reset everything before it on the line: the pop's
     \fscx/\t, a per-cue \fs, a cue's <i>/<b> and colour (A69, #457).
     """
-    return "{\\alpha&HFF&\\fsp%.1f}\u200b{\\alpha&H00&\\4a&H%02X&\\fsp0}" % (box_px, int(back_alpha) & 0xFF)
+    return "{\\alpha&HFF&\\fsp%.1f}\u200b{\\alpha&H00&\\4a&H%02X&\\fsp0}" % (
+        box_px,
+        int(back_alpha) & 0xFF,
+    )
 
 
 def ass_time(sec: float) -> str:
@@ -98,7 +101,11 @@ def ass_escape(text: str) -> str:
         elif ch == "\n":
             out.append("\\N")
         elif ch == "\\":
-            out.append("\\\u200b" if (i + 1 < len(s) and s[i + 1] in _ASS_AFTER_BACKSLASH) else "\\")
+            out.append(
+                "\\\u200b"
+                if (i + 1 < len(s) and s[i + 1] in _ASS_AFTER_BACKSLASH)
+                else "\\"
+            )
         else:
             out.append(ch)
     return "".join(out)
@@ -118,18 +125,35 @@ def ass_text(text: str) -> str:
 # markup here: an unknown `<tag>` and every other `{\...}` block stay text, escaped as before
 # (a caption still cannot open \pos or \t from its cue text).
 _SRT_TAG_RE = re.compile(
-    r"<\s*(/?)\s*(i|b|u|s)\s*>"                       # 1, 2: simple style tags
-    r"|<\s*font\b([^<>]*)>"                           # 3: <font ...attributes>
-    r"|<\s*/\s*font\s*>"                              # closing font
-    r"|\{\\an([1-9])\}",                              # 4: position block
-    re.IGNORECASE)
+    r"<\s*(/?)\s*(i|b|u|s)\s*>"  # 1, 2: simple style tags
+    r"|<\s*font\b([^<>]*)>"  # 3: <font ...attributes>
+    r"|<\s*/\s*font\s*>"  # closing font
+    r"|\{\\an([1-9])\}",  # 4: position block
+    re.IGNORECASE,
+)
 _FONT_COLOR_RE = re.compile(r"""\bcolor\s*=\s*["']?\s*([#\w]+)""", re.IGNORECASE)
 _NAMED_COLORS = {
-    "white": "ffffff", "black": "000000", "red": "ff0000", "lime": "00ff00", "green": "008000",
-    "blue": "0000ff", "yellow": "ffff00", "cyan": "00ffff", "aqua": "00ffff",
-    "magenta": "ff00ff", "fuchsia": "ff00ff", "silver": "c0c0c0", "gray": "808080",
-    "grey": "808080", "maroon": "800000", "olive": "808000", "navy": "000080",
-    "purple": "800080", "teal": "008080", "orange": "ffa500"}
+    "white": "ffffff",
+    "black": "000000",
+    "red": "ff0000",
+    "lime": "00ff00",
+    "green": "008000",
+    "blue": "0000ff",
+    "yellow": "ffff00",
+    "cyan": "00ffff",
+    "aqua": "00ffff",
+    "magenta": "ff00ff",
+    "fuchsia": "ff00ff",
+    "silver": "c0c0c0",
+    "gray": "808080",
+    "grey": "808080",
+    "maroon": "800000",
+    "olive": "808000",
+    "navy": "000080",
+    "purple": "800080",
+    "teal": "008080",
+    "orange": "ffa500",
+}
 
 
 def srt_markup_tokens(text: str) -> "List[Tuple[bool, str]]":
@@ -138,7 +162,7 @@ def srt_markup_tokens(text: str) -> "List[Tuple[bool, str]]":
     pos = 0
     for m in _SRT_TAG_RE.finditer(text or ""):
         if m.start() > pos:
-            out.append((False, text[pos:m.start()]))
+            out.append((False, text[pos : m.start()]))
         out.append((True, m.group(0)))
         pos = m.end()
     if pos < len(text or ""):
@@ -170,8 +194,12 @@ def _font_colour(attrs: str) -> "Optional[str]":
         value = value[2:]
     value = value.lstrip("#")
     if re.fullmatch(r"[0-9a-f]{6}", value):
-        return "&H%s%s%s&" % (value[4:6].upper(), value[2:4].upper(), value[0:2].upper())
-    return None   # ffmpeg ignores a colour it cannot read (#f00 included); so does this
+        return "&H%s%s%s&" % (
+            value[4:6].upper(),
+            value[2:4].upper(),
+            value[0:2].upper(),
+        )
+    return None  # ffmpeg ignores a colour it cannot read (#f00 included); so does this
 
 
 def _markup_to_ass(tag: str, colours: "List[str]", colour: bool = True) -> str:
@@ -179,7 +207,7 @@ def _markup_to_ass(tag: str, colours: "List[str]", colour: bool = True) -> str:
     if not m:
         return ""
     if not colour and not m.group(2) and not m.group(4):
-        return ""   # a <font> tag where the caller owns the colours (karaoke): dropped
+        return ""  # a <font> tag where the caller owns the colours (karaoke): dropped
     if m.group(2):
         return "{\\%s%d}" % (m.group(2).lower(), 0 if m.group(1) else 1)
     if m.group(4):
@@ -207,7 +235,9 @@ def ass_escape_markup(text: str, colour: bool = True) -> str:
             continue
         escaped = ass_escape(piece)
         if escaped.endswith("\\") and not escaped.endswith("\\​"):
-            escaped += "​"   # a trailing backslash must not run into the override after it
+            escaped += (
+                "​"  # a trailing backslash must not run into the override after it
+            )
         out.append(escaped)
     return "".join(out)
 
@@ -231,12 +261,17 @@ def reinsert_srt_markup(marked: str, lines: "Sequence[str]") -> "List[str]":
     if not any(markup for markup, _p in tokens):
         return list(lines)
     # (line, column) of every non-space character of the wrapped lines, in reading order
-    slots = [(li, ci) for li, line in enumerate(lines) for ci, ch in enumerate(line) if not ch.isspace()]
+    slots = [
+        (li, ci)
+        for li, line in enumerate(lines)
+        for ci, ch in enumerate(line)
+        if not ch.isspace()
+    ]
     if not slots:
         return list(lines)
     split_at = _empty_pair_splits(tokens)
     inserts: "Dict[Tuple[int, int], List[str]]" = {}
-    seen = 0   # non-space visible characters passed so far
+    seen = 0  # non-space visible characters passed so far
     for index, (markup, piece) in enumerate(tokens):
         if not markup:
             for ch in piece:
@@ -281,7 +316,7 @@ def _empty_pair_splits(tokens: "Sequence[Tuple[bool, str]]") -> "Dict[int, int]"
     closing tag."""
     splits: "Dict[int, int]" = {}
     seen = 0
-    open_here: "List[str]" = []   # names of the tags opened in the current gap
+    open_here: "List[str]" = []  # names of the tags opened in the current gap
     for index, (markup, piece) in enumerate(tokens):
         if not markup:
             if piece.strip():
@@ -341,14 +376,26 @@ def _tag_name(tag: str) -> str:
     return ((m.group(2) if m else None) or "font").lower()
 
 
-def text_overlay_ass(elements: Sequence[Dict[str, Any]], *, play_w: int, play_h: int,
-                     path: str, fonts_dir: Optional[str] = None) -> str:
+def text_overlay_ass(
+    elements: Sequence[Dict[str, Any]],
+    *,
+    play_w: int,
+    play_h: int,
+    path: str,
+    fonts_dir: Optional[str] = None,
+) -> str:
     """Write `elements` as an ASS file at `path` and return the path."""
     header = [
-        "[Script Info]", "ScriptType: v4.00+", f"PlayResX: {play_w}", f"PlayResY: {play_h}",
+        "[Script Info]",
+        "ScriptType: v4.00+",
+        f"PlayResX: {play_w}",
+        f"PlayResY: {play_h}",
         # YCbCr Matrix: None -- the colours are RGB, to be put in the video's own matrix: FFmpeg 8.x's
         # ass filter reads an absent header as BT.601 whatever the picture is tagged (drawn_chain)
-        "WrapStyle: 2", "ScaledBorderAndShadow: yes", "YCbCr Matrix: None", "",
+        "WrapStyle: 2",
+        "ScaledBorderAndShadow: yes",
+        "YCbCr Matrix: None",
+        "",
         "[V4+ Styles]",
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "
         "BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, "
@@ -360,18 +407,23 @@ def text_overlay_ass(elements: Sequence[Dict[str, Any]], *, play_w: int, play_h:
         colour = ass_color(el.get("color", "FFFFFF"))
         outline_colour = ass_color(el.get("outline_color", "000000"))
         box = bool(el.get("box"))
-        back = ass_color(el.get("box_color", el.get("outline_color", "000000")),
-                         int(el.get("box_alpha", 0)))
+        back = ass_color(
+            el.get("box_color", el.get("outline_color", "000000")),
+            int(el.get("box_alpha", 0)),
+        )
         header.append(
             f"Style: {name},{ass_field(el.get('font') or 'Sans')},{int(round(el['size']))},"
             f"{colour},{colour},{outline_colour},{back},{-1 if el.get('bold') else 0},0,0,0,"
             f"100,100,0,0,{3 if box else 1},{float(el.get('outline', 0)):.1f},"
-            f"{float(el.get('shadow', 0)):.1f},{int(el.get('align', 7))},0,0,0,1")
+            f"{float(el.get('shadow', 0)):.1f},{int(el.get('align', 7))},0,0,0,1"
+        )
         tags = [f"\\an{int(el.get('align', 7))}"]
         move = el.get("move")
         if move:
             x1, y1, x2, y2, t1, t2 = move
-            tags.append(f"\\move({x1:.0f},{y1:.0f},{x2:.0f},{y2:.0f},{t1:.0f},{t2:.0f})")
+            tags.append(
+                f"\\move({x1:.0f},{y1:.0f},{x2:.0f},{y2:.0f},{t1:.0f},{t2:.0f})"
+            )
         else:
             tags.append(f"\\pos({el['x']:.0f},{el['y']:.0f})")
         fade = el.get("fade")
@@ -380,14 +432,34 @@ def text_overlay_ass(elements: Sequence[Dict[str, Any]], *, play_w: int, play_h:
         scale_t = el.get("scale_t")
         if scale_t:
             t1, t2, pct = scale_t
-            tags.append(f"\\fscx{pct:.0f}\\fscy{pct:.0f}\\t({t1:.0f},{t2:.0f},\\fscx100\\fscy100)")
+            tags.append(
+                f"\\fscx{pct:.0f}\\fscy{pct:.0f}\\t({t1:.0f},{t2:.0f},\\fscx100\\fscy100)"
+            )
         events.append(
             f"Dialogue: 0,{ass_time(el['start'])},{ass_time(el['end'])},{name},,0,0,0,,"
-            "{" + "".join(tags) + "}" + ass_text(el["text"]).replace(
-                EMOJI_SENTINEL, emoji_placeholder(el.get("box_px") or el["size"], int(el.get("box_alpha", 0)))))
-    body = "\n".join(header + ["", "[Events]",
-                               "Format: Layer, Start, End, Style, Name, MarginL, MarginR, "
-                               "MarginV, Effect, Text"] + events) + "\n"
+            "{"
+            + "".join(tags)
+            + "}"
+            + ass_text(el["text"]).replace(
+                EMOJI_SENTINEL,
+                emoji_placeholder(
+                    el.get("box_px") or el["size"], int(el.get("box_alpha", 0))
+                ),
+            )
+        )
+    body = (
+        "\n".join(
+            header
+            + [
+                "",
+                "[Events]",
+                "Format: Layer, Start, End, Style, Name, MarginL, MarginR, "
+                "MarginV, Effect, Text",
+            ]
+            + events
+        )
+        + "\n"
+    )
     with open(path, "w", encoding="utf-8-sig") as fh:
         fh.write(body)
     return path

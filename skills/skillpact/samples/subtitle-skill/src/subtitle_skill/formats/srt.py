@@ -7,6 +7,7 @@ must either omit it or choose a format that supports it (WebVTT).
 Cue-level `metadata` is provenance/auxiliary data, not renderable text; it
 is intentionally never written into the subtitle body of any format.
 """
+
 from __future__ import annotations
 
 from typing import FrozenSet
@@ -25,7 +26,9 @@ def _format_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{ms:03d}"
 
 
-def _escape_text(cue: SubtitleCue, *, allow_style_fields: FrozenSet[str] = frozenset()) -> str:
+def _escape_text(
+    cue: SubtitleCue, *, allow_style_fields: FrozenSet[str] = frozenset()
+) -> str:
     lines = cue.text.split("\n")
     if cue.speaker:
         lines[0] = f"{cue.speaker}: {lines[0]}"
@@ -49,7 +52,9 @@ def _escape_text(cue: SubtitleCue, *, allow_style_fields: FrozenSet[str] = froze
     return text
 
 
-def generate_srt(document: SubtitleDocument, *, allow_style_fields: FrozenSet[str] = frozenset()) -> str:
+def generate_srt(
+    document: SubtitleDocument, *, allow_style_fields: FrozenSet[str] = frozenset()
+) -> str:
     """Render `document` as a plain .srt file.
 
     `allow_style_fields` is an internal escape hatch, used only by

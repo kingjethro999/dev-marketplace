@@ -15,6 +15,7 @@ Each real-media class wrote its source clips, intermediates and deliverables (hu
 removed it; 22 of them filled a shared disk. tests/test_tmp_dirs.py checks each of the ways above, and that tests/test_integration.py
 makes no temporary directory any other way.
 """
+
 from __future__ import annotations
 
 import atexit
@@ -31,7 +32,9 @@ _SIGTERM_SET = False
 
 def _remove(path: str) -> None:
     shutil.rmtree(path, ignore_errors=True)
-    if not os.path.exists(path):   # still tracked (for the exit handler) when a running child kept it from going
+    if not os.path.exists(
+        path
+    ):  # still tracked (for the exit handler) when a running child kept it from going
         _LIVE.discard(path)
 
 
@@ -58,7 +61,11 @@ def _catch_sigterm() -> None:
     try:
         if signal.getsignal(signal.SIGTERM) in (signal.SIG_DFL, None):
             signal.signal(signal.SIGTERM, _on_sigterm)
-    except (ValueError, OSError, AttributeError):   # no SIGTERM handler possible on this platform / thread
+    except (
+        ValueError,
+        OSError,
+        AttributeError,
+    ):  # no SIGTERM handler possible on this platform / thread
         pass
 
 

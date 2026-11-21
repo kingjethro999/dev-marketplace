@@ -16,25 +16,71 @@ Examples:
   python3 freeze.py sketch.mp4 --at 12.5 --hold 1.5                # 1.5s freeze inserted at 12.5s
   python3 freeze.py outro.mp4 --hold 3 --mode extend                # extend only the very end by 3s
 """
+
 import argparse
 import sys
 from fractions import Fraction
 
-from _common.decision import av_trim, cfr_at_input, cfr_filter, delivered_rate, frame_durations, frame_rate, grid_at_or_after, silence_filter, stream_starts, tpad_length
-from _common import add_common, apply_common, aac_args, cfr_args, with_cfr, default_output, die, emit, ffmpeg_base, info, probe, run_keeping_subtitles, video_args, X264_PRESETS, time_arg, fmt_secs, run
+from _common.decision import (
+    av_trim,
+    cfr_at_input,
+    cfr_filter,
+    delivered_rate,
+    frame_durations,
+    frame_rate,
+    grid_at_or_after,
+    silence_filter,
+    stream_starts,
+    tpad_length,
+)
+from _common import (
+    add_common,
+    apply_common,
+    aac_args,
+    cfr_args,
+    with_cfr,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    video_args,
+    X264_PRESETS,
+    time_arg,
+    fmt_secs,
+    run,
+)
 from _common.emit import input_length, refuse_still
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", help="output file (default: <name>_freeze.<ext>)")
-    ap.add_argument("--at", help="timestamp to freeze: seconds, mm:ss, hh:mm:ss.ms or SMPTE hh:mm:ss:ff (default: the last frame)")
-    ap.add_argument("--hold", type=float, required=True, help="how long the freeze lasts, in seconds")
-    ap.add_argument("--mode", choices=["insert", "extend"], default="insert",
-                     help="insert (default): hold pushes the rest of the clip later; extend: only valid at/after the clip's end, makes the last frame last longer with nothing pushed")
+    ap.add_argument(
+        "--at",
+        help="timestamp to freeze: seconds, mm:ss, hh:mm:ss.ms or SMPTE hh:mm:ss:ff (default: the last frame)",
+    )
+    ap.add_argument(
+        "--hold",
+        type=float,
+        required=True,
+        help="how long the freeze lasts, in seconds",
+    )
+    ap.add_argument(
+        "--mode",
+        choices=["insert", "extend"],
+        default="insert",
+        help="insert (default): hold pushes the rest of the clip later; extend: only valid at/after the clip's end, makes the last frame last longer with nothing pushed",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -52,10 +98,14 @@ def main() -> int:
     else:
         at = dur
     if at < 0 or at > dur:
-        refuse_still(meta, args.input, f"--at {at:g} is past its one frame, which --at 0 holds")  # not "0..0.000" (#531)
+        refuse_still(
+            meta, args.input, f"--at {at:g} is past its one frame, which --at 0 holds"
+        )  # not "0..0.000" (#531)
         die(f"--at {at:g} is outside the clip (0..{dur:.3f})")
     if args.mode == "extend" and at < dur - 0.01:
-        die(f"--mode extend needs --at at or after the clip's end ({dur:.3f}), got {at:g}")
+        die(
+            f"--mode extend needs --at at or after the clip's end ({dur:.3f}), got {at:g}"
+        )
     has_audio = bool(meta.get("audio"))
     output = args.output or default_output(args.input, "freeze")
 
@@ -85,7 +135,12 @@ def main() -> int:
         vf = with_cfr(f"tpad=stop_mode=clone:stop_duration={args.hold:.3f}", meta)
         cmd = ffmpeg_base() + ["-i", args.input, "-vf", vf, "-map", "0:v:0"]
         if has_audio:
-            cmd += ["-map", "0:a:0?", "-af", silence_filter(meta["audio"].get("sample_rate"), tail=args.hold)]
+            cmd += [
+                "-map",
+                "0:a:0?",
+                "-af",
+                silence_filter(meta["audio"].get("sample_rate"), tail=args.hold),
+            ]
     elif at == 0 or cut_at <= v0 + 1e-6:
         # A freeze at the very start has no preceding "head" segment to hold on to (the
         # split/trim/concat approach below needs a non-empty head, which trim=end=0 can't give
@@ -106,7 +161,12 @@ def main() -> int:
         if has_audio:
             # the sound waits as long as the picture is held: whole frames (tpad_length), as the
             # hold in the middle of a clip pads by the held frames' length
-            cmd += ["-map", "0:a:0?", "-af", silence_filter(meta["audio"].get("sample_rate"), lead=lead)]
+            cmd += [
+                "-map",
+                "0:a:0?",
+                "-af",
+                silence_filter(meta["audio"].get("sample_rate"), lead=lead),
+            ]
     else:
         # freeze N frames at `at` by holding on that one source frame for --hold seconds, then
         # resuming the rest of the clip: split the timeline at `at` and hold the remainder's
@@ -122,8 +182,14 @@ def main() -> int:
         # a conformed VFR picture starts at 0 on the graph's clock (cfr_at_input's origin), so its
         # trims are counted from its own start; the sound's stay on the input's clock
         vo = v0 if cfr_filter(meta) else 0.0
-        head_v, head_a = av_trim(v0 - vo, cut_at - vo, rate)[0], av_trim(v0, cut_at, rate)[1]
-        tail_v, tail_a = av_trim(cut_at - vo, None, rate)[0], av_trim(cut_at, None, rate)[1]
+        head_v, head_a = (
+            av_trim(v0 - vo, cut_at - vo, rate)[0],
+            av_trim(v0, cut_at, rate)[1],
+        )
+        tail_v, tail_a = (
+            av_trim(cut_at - vo, None, rate)[0],
+            av_trim(cut_at, None, rate)[1],
+        )
         # The hold is its own segment: the frame at cut_at, cut on the input's clock and cloned to
         # n frames there (tpad's stop clone), then shifted like the tail. From FFmpeg 7.0 setpts
         # leaves its output's frame rate unknown and its frames' durations 0, so the earlier tpad
@@ -138,18 +204,26 @@ def main() -> int:
         half = 0.5 / rate
         # the graph closes on the rate the encoder line delivers (a VFR source is conformed to its
         # average): closed on r_frame_rate, -r then resampled it and the picture ran late (#512)
-        hold_v = (f"trim=start={cut_at - vo - half:.6f},trim=end_frame=1,"
-                  f"tpad=stop_mode=clone:stop={n - 1},setpts=PTS-STARTPTS")
+        hold_v = (
+            f"trim=start={cut_at - vo - half:.6f},trim=end_frame=1,"
+            f"tpad=stop_mode=clone:stop={n - 1},setpts=PTS-STARTPTS"
+        )
         # Every segment is a whole count of frames on one grid, so the joined picture's timestamps
         # are rebuilt from its running frame count before the closing fps: FFmpeg 6.1.1's video
         # concat gives a one-frame segment no length (it ends a segment at its last frame's
         # timestamp), so a hold of one frame (--hold 0.04 at 30 fps) was dropped and the rest of
         # the picture ran a frame before its sound, as speedramp.py's one-frame segments did
         grid = frame_durations(meta, delivered_rate(meta) or rate)
-        q = Fraction(grid[len("fps="):]) if "/" in grid else Fraction(delivered_rate(meta) or rate).limit_denominator(1001)
-        vf = (f"[0:v]split=3[a][b][c];[a]{head_v}[head];"
-              f"[b]{hold_v}[hold];[c]{tail_v}[tail];"
-              f"[head][hold][tail]concat=n=3:v=1:a=0,setpts=N*{q.denominator}/({q.numerator}*TB),{grid}[outv]")
+        q = (
+            Fraction(grid[len("fps=") :])
+            if "/" in grid
+            else Fraction(delivered_rate(meta) or rate).limit_denominator(1001)
+        )
+        vf = (
+            f"[0:v]split=3[a][b][c];[a]{head_v}[head];"
+            f"[b]{hold_v}[hold];[c]{tail_v}[tail];"
+            f"[head][hold][tail]concat=n=3:v=1:a=0,setpts=N*{q.denominator}/({q.numerator}*TB),{grid}[outv]"
+        )
         # the grid is laid from the picture's start (the picture moved to 0 ahead of the fps
         # filter, and the trims above counted from there), on a microsecond time base: laid from
         # the clock's 0, a picture that starts 50 ms in came out a frame early after the hold, and
@@ -159,13 +233,31 @@ def main() -> int:
         # duration and no rate, and the hold's tpad after it cloned nothing (109 frames for 135
         # on 7.1)
         vf = cfr_at_input(vf, meta, origin=v0)
-        cmd = ffmpeg_base() + ["-i", args.input, "-filter_complex", vf, "-map", "[outv]"]
+        cmd = ffmpeg_base() + [
+            "-i",
+            args.input,
+            "-filter_complex",
+            vf,
+            "-map",
+            "[outv]",
+        ]
         if has_audio:
-            af = (f"[0:a]asplit[aa][ab];[aa]{head_a}[ahead];"
-                  f"[ab]{tail_a}[atail];"
-                  f"[ahead]apad=pad_dur={actual_hold:.6f}[afrozen];"
-                  f"[afrozen][atail]concat=n=2:v=0:a=1[outa]")
-            cmd = ffmpeg_base() + ["-i", args.input, "-filter_complex", f"{vf};{af}", "-map", "[outv]", "-map", "[outa]"]
+            af = (
+                f"[0:a]asplit[aa][ab];[aa]{head_a}[ahead];"
+                f"[ab]{tail_a}[atail];"
+                f"[ahead]apad=pad_dur={actual_hold:.6f}[afrozen];"
+                f"[afrozen][atail]concat=n=2:v=0:a=1[outa]"
+            )
+            cmd = ffmpeg_base() + [
+                "-i",
+                args.input,
+                "-filter_complex",
+                f"{vf};{af}",
+                "-map",
+                "[outv]",
+                "-map",
+                "[outa]",
+            ]
     cmd += video_args(meta, args.crf, args.preset)
     cmd += cfr_args(meta)
     if has_audio:
@@ -185,7 +277,9 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, froze {args.hold:g}s at {at:g}s, mode={args.mode})")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, froze {args.hold:g}s at {at:g}s, mode={args.mode})"
+    )
     emit(output, dropped_non_av_streams=dropped_streams)
     return 0
 

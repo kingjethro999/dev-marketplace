@@ -8,6 +8,7 @@ them transparent (refused for JPEG). ImageMagick only.
 Unlike look.py (a preview for the agent), this writes a deliverable - e.g. a README
 comparison strip - so nothing about its look is defaulted except the layout.
 """
+
 import os
 import sys
 
@@ -41,17 +42,48 @@ LABEL_HEIGHT = 28
 
 
 def build_parser():
-    parser = JSONArgumentParser(description="Compose several images into a row or a grid")
-    parser.add_argument("inputs", nargs="+", help="images in reading order (only read; first frame of multi-frame files)")
-    add_output_args(parser, output_help="composite to write; must not be one of the inputs")
-    parser.add_argument("--cols", type=positive_int, help="images per row (default: all in one row)")
-    parser.add_argument("--cell-width", type=positive_int, help="cell width in pixels (with --cell-height; default: widest input)")
-    parser.add_argument("--cell-height", type=positive_int, help="cell height in pixels (with --cell-width; default: tallest input)")
-    parser.add_argument("--gap", type=non_negative_int, default=0, help="space between cells in pixels (default 0)")
-    parser.add_argument("--background", type=color_arg, required=True,
-                        help="colour for gaps and letterboxing, or none for transparent")
-    parser.add_argument("--labels", action="store_true", help="caption each cell with its file name")
-    parser.add_argument("--font", help="--labels only: font file instead of the one doctor reports")
+    parser = JSONArgumentParser(
+        description="Compose several images into a row or a grid"
+    )
+    parser.add_argument(
+        "inputs",
+        nargs="+",
+        help="images in reading order (only read; first frame of multi-frame files)",
+    )
+    add_output_args(
+        parser, output_help="composite to write; must not be one of the inputs"
+    )
+    parser.add_argument(
+        "--cols", type=positive_int, help="images per row (default: all in one row)"
+    )
+    parser.add_argument(
+        "--cell-width",
+        type=positive_int,
+        help="cell width in pixels (with --cell-height; default: widest input)",
+    )
+    parser.add_argument(
+        "--cell-height",
+        type=positive_int,
+        help="cell height in pixels (with --cell-width; default: tallest input)",
+    )
+    parser.add_argument(
+        "--gap",
+        type=non_negative_int,
+        default=0,
+        help="space between cells in pixels (default 0)",
+    )
+    parser.add_argument(
+        "--background",
+        type=color_arg,
+        required=True,
+        help="colour for gaps and letterboxing, or none for transparent",
+    )
+    parser.add_argument(
+        "--labels", action="store_true", help="caption each cell with its file name"
+    )
+    parser.add_argument(
+        "--font", help="--labels only: font file instead of the one doctor reports"
+    )
     return parser
 
 
@@ -61,8 +93,13 @@ def run_montage(args):
     prepare_output(args.inputs, args.output, args.overwrite)
     if (args.cell_width is None) != (args.cell_height is None):
         raise ImageSkillError("give both --cell-width and --cell-height, or neither")
-    if color_is_transparent(args.background) and ext_of(args.output) not in ALPHA_CAPABLE_EXTS:
-        raise ImageSkillError(f".{ext_of(args.output)} has no alpha channel for a transparent --background")
+    if (
+        color_is_transparent(args.background)
+        and ext_of(args.output) not in ALPHA_CAPABLE_EXTS
+    ):
+        raise ImageSkillError(
+            f".{ext_of(args.output)} has no alpha channel for a transparent --background"
+        )
     if args.font and not args.labels:
         raise ImageSkillError("--font applies to --labels only")
     backend, magick = select_backend("sips cannot compose images")
@@ -75,8 +112,21 @@ def run_montage(args):
     font = resolve_font(" ".join(labels), args.font) if labels else None
     label_h = LABEL_HEIGHT if labels else 0
 
-    cmd = grid_command(magick, args.inputs, args.output, cols, cell_w, cell_h, args.background, gap=args.gap,
-                       checker=False, shrink_only=True, labels=labels, font=font, label_h=label_h)
+    cmd = grid_command(
+        magick,
+        args.inputs,
+        args.output,
+        cols,
+        cell_w,
+        cell_h,
+        args.background,
+        gap=args.gap,
+        checker=False,
+        shrink_only=True,
+        labels=labels,
+        font=font,
+        label_h=label_h,
+    )
     run(cmd, dry_run=args.dry_run)
     if args.dry_run:
         return {"dry_run": True, "would_run": cmd}
@@ -85,9 +135,13 @@ def run_montage(args):
     expected = sheet_size(len(args.inputs), cols, cell_w, cell_h, args.gap, label_h)
     actual = identify_dims(args.output)
     if tuple(actual) != expected:
-        raise ImageSkillError(f"composite came out {actual[0]}x{actual[1]}, expected {expected[0]}x{expected[1]}")
+        raise ImageSkillError(
+            f"composite came out {actual[0]}x{actual[1]}, expected {expected[0]}x{expected[1]}"
+        )
     return {
-        "inputs": [{"path": p, "width": w, "height": h} for p, (w, h) in zip(args.inputs, dims)],
+        "inputs": [
+            {"path": p, "width": w, "height": h} for p, (w, h) in zip(args.inputs, dims)
+        ],
         "output": args.output,
         "cols": cols,
         "rows": rows,

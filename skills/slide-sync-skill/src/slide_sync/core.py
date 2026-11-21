@@ -5,6 +5,7 @@ than --min-dwell seconds are ignored (its --min-scene), so a slide must stay up 
 Animated builds, video clips inside a slide and a camera cutting away still produce cuts; the timeline says
 what was measured and the contact sheet (--sheet) is the way to check it.
 """
+
 from __future__ import annotations
 
 import os
@@ -31,8 +32,16 @@ def _round(t: float) -> float:
     return round(float(t), 3)
 
 
-def detect(skill: FfmpegSkill, video: str, *, threshold: float = DEFAULT_THRESHOLD, min_dwell: float = DEFAULT_MIN_DWELL,
-           sheet: Optional[str] = None, timeout: float = 3600.0, runner: Runner = subprocess_runner) -> Dict[str, Any]:
+def detect(
+    skill: FfmpegSkill,
+    video: str,
+    *,
+    threshold: float = DEFAULT_THRESHOLD,
+    min_dwell: float = DEFAULT_MIN_DWELL,
+    sheet: Optional[str] = None,
+    timeout: float = 3600.0,
+    runner: Runner = subprocess_runner,
+) -> Dict[str, Any]:
     """Slide timeline of a recording: one entry per slide (start, end, duration) and the change times."""
     if not os.path.isfile(video):
         raise SlideSyncError("INPUT_NOT_FOUND", f"no such file: {video}")
@@ -46,18 +55,37 @@ def detect(skill: FfmpegSkill, video: str, *, threshold: float = DEFAULT_THRESHO
     doc = run_tool(skill, "scenes", args, timeout=timeout, runner=runner)
     duration = doc.get("duration")
     scenes = doc.get("scenes")
-    if not isinstance(duration, (int, float)) or not isinstance(scenes, list) or not scenes:
-        raise SlideSyncError("ENGINE_FAILED", "ffmpeg-skill scenes returned no duration or no scenes")
+    if (
+        not isinstance(duration, (int, float))
+        or not isinstance(scenes, list)
+        or not scenes
+    ):
+        raise SlideSyncError(
+            "ENGINE_FAILED", "ffmpeg-skill scenes returned no duration or no scenes"
+        )
     slides = []
     for i, s in enumerate(sorted(scenes, key=lambda s: float(s["start"]))):
         start, end = _round(s["start"]), _round(s["end"])
-        slides.append({"index": i + 1, "start": start, "end": end, "duration": _round(end - start)})
+        slides.append(
+            {
+                "index": i + 1,
+                "start": start,
+                "end": end,
+                "duration": _round(end - start),
+            }
+        )
     return {
         "schema": TIMELINE_SCHEMA,
         "source": {"path": os.path.abspath(video), "duration": _round(duration)},
-        "detector": {"skill": "slide-sync", "skill_version": __version__, "engine": "ffmpeg-skill/scenes",
-                     "engine_version": skill.version, "method": "scdet cuts held at least min_dwell seconds",
-                     "threshold": threshold, "min_dwell": min_dwell},
+        "detector": {
+            "skill": "slide-sync",
+            "skill_version": __version__,
+            "engine": "ffmpeg-skill/scenes",
+            "engine_version": skill.version,
+            "method": "scdet cuts held at least min_dwell seconds",
+            "threshold": threshold,
+            "min_dwell": min_dwell,
+        },
         "slide_count": len(slides),
         "changes": [s["start"] for s in slides[1:]],
         "slides": slides,
@@ -80,8 +108,13 @@ def timecode(t: float) -> str:
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
 
-def chapters(timeline: Dict[str, Any], *, titles: Optional[List[str]] = None, prefix: str = "Slide",
-             min_chapter: float = 0.0) -> Dict[str, Any]:
+def chapters(
+    timeline: Dict[str, Any],
+    *,
+    titles: Optional[List[str]] = None,
+    prefix: str = "Slide",
+    min_chapter: float = 0.0,
+) -> Dict[str, Any]:
     """Chapters from a slide timeline: one per slide, titled from `titles` in order (then `prefix N`). Slides
     shorter than `min_chapter` seconds are merged into the chapter before them."""
     if timeline.get("schema") != TIMELINE_SCHEMA:
@@ -92,27 +125,58 @@ def chapters(timeline: Dict[str, Any], *, titles: Optional[List[str]] = None, pr
     titles = titles or []
     out: List[Dict[str, Any]] = []
     for s in slides:
-        title = titles[s["index"] - 1] if s["index"] - 1 < len(titles) else f"{prefix} {s['index']}"
+        title = (
+            titles[s["index"] - 1]
+            if s["index"] - 1 < len(titles)
+            else f"{prefix} {s['index']}"
+        )
         if out and s["duration"] < min_chapter:
             out[-1]["end"] = s["end"]
             out[-1]["slides"].append(s["index"])
             continue
-        out.append({"start": s["start"], "end": s["end"], "title": title, "slides": [s["index"]]})
+        out.append(
+            {
+                "start": s["start"],
+                "end": s["end"],
+                "title": title,
+                "slides": [s["index"]],
+            }
+        )
     out[0]["start"] = 0.0
     warnings = []
     if len(out) < YOUTUBE_MIN_CHAPTERS:
-        warnings.append(f"YouTube shows chapters only with at least {YOUTUBE_MIN_CHAPTERS}; this has {len(out)}")
+        warnings.append(
+            f"YouTube shows chapters only with at least {YOUTUBE_MIN_CHAPTERS}; this has {len(out)}"
+        )
     short = [c["title"] for c in out if c["end"] - c["start"] < YOUTUBE_MIN_CHAPTER_S]
     if short:
-        warnings.append(f"YouTube needs every chapter to be at least {YOUTUBE_MIN_CHAPTER_S:.0f}s; shorter: "
-                        + ", ".join(short[:5]) + (" ..." if len(short) > 5 else "") + " (use --min-chapter 10)")
+        warnings.append(
+            f"YouTube needs every chapter to be at least {YOUTUBE_MIN_CHAPTER_S:.0f}s; shorter: "
+            + ", ".join(short[:5])
+            + (" ..." if len(short) > 5 else "")
+            + " (use --min-chapter 10)"
+        )
     if len(titles) and len(titles) != len(slides):
-        warnings.append(f"{len(titles)} title(s) for {len(slides)} slide(s): titles are used in order")
-    return {"chapters": out, "text": "".join(f"{timecode(c['start'])} {c['title']}\n" for c in out), "warnings": warnings}
+        warnings.append(
+            f"{len(titles)} title(s) for {len(slides)} slide(s): titles are used in order"
+        )
+    return {
+        "chapters": out,
+        "text": "".join(f"{timecode(c['start'])} {c['title']}\n" for c in out),
+        "warnings": warnings,
+    }
 
 
-def write_chapters(skill: FfmpegSkill, video: str, chapter_doc: Dict[str, Any], output: str, *, overwrite: bool = False,
-                   timeout: float = 3600.0, runner: Runner = subprocess_runner) -> Dict[str, Any]:
+def write_chapters(
+    skill: FfmpegSkill,
+    video: str,
+    chapter_doc: Dict[str, Any],
+    output: str,
+    *,
+    overwrite: bool = False,
+    timeout: float = 3600.0,
+    runner: Runner = subprocess_runner,
+) -> Dict[str, Any]:
     """A copy of `video` with the chapters as container metadata, through ffmpeg-skill `metadata` (streams are copied
     bit for bit). The input is never written."""
     if os.path.abspath(output) == os.path.abspath(video):
@@ -122,6 +186,12 @@ def write_chapters(skill: FfmpegSkill, video: str, chapter_doc: Dict[str, Any], 
         with open(chapters_file, "w", encoding="utf-8") as fh:
             for c in chapter_doc["chapters"]:
                 fh.write(f"{c['start']:.3f} {c['title']}\n")
-        args = [video, "--chapters", chapters_file, "-o", output] + (["--overwrite"] if overwrite else [])
+        args = [video, "--chapters", chapters_file, "-o", output] + (
+            ["--overwrite"] if overwrite else []
+        )
         doc = run_tool(skill, "metadata", args, timeout=timeout, runner=runner)
-    return {"output": doc.get("output") or output, "engine_status": doc.get("status"), "commands": doc.get("commands", [])}
+    return {
+        "output": doc.get("output") or output,
+        "engine_status": doc.get("status"),
+        "commands": doc.get("commands", []),
+    }

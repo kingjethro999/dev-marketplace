@@ -2,6 +2,7 @@
 the per-machine support probe and the overlay filter chain that composites the assets.
 Split out of _common.text in the refactor after 1.17.3; every body is byte-identical.
 """
+
 from __future__ import annotations
 
 import os
@@ -12,19 +13,21 @@ from _common.emit import die
 from _common.runner import ffmpeg_exe
 from _common.runner import safe_which as _safe_which
 
-
 # --------------------------------------------------------------------------- emoji (1.15)
 # Emoji are orthogonal to the writing system: "やった 🎉" is Japanese AND emoji. They are detected
 # separately from detect_script() so a cue's font resolution is still decided by its letters.
 EMOJI_RANGES = (
-    (0x1F300, 0x1FAFF),   # symbols & pictographs, supplemental, extended-A
-    (0x1F000, 0x1F0FF),   # mahjong/domino/playing cards (only 🀄 and 🃏 are emoji)
-    (0x2600, 0x27BF),     # misc symbols + dingbats (Emoji_Presentation only: _is_emoji_char)
-    (0x2B00, 0x2BFF),     # misc symbols and arrows (likewise)
-    (0xFE0F, 0xFE0F),     # VS16 (emoji presentation selector)
-    (0x1F1E6, 0x1F1FF),   # regional indicators (flags)
-    (0x20E3, 0x20E3),     # combining enclosing keycap
-    (0x1F3FB, 0x1F3FF),   # skin-tone modifiers
+    (0x1F300, 0x1FAFF),  # symbols & pictographs, supplemental, extended-A
+    (0x1F000, 0x1F0FF),  # mahjong/domino/playing cards (only 🀄 and 🃏 are emoji)
+    (
+        0x2600,
+        0x27BF,
+    ),  # misc symbols + dingbats (Emoji_Presentation only: _is_emoji_char)
+    (0x2B00, 0x2BFF),  # misc symbols and arrows (likewise)
+    (0xFE0F, 0xFE0F),  # VS16 (emoji presentation selector)
+    (0x1F1E6, 0x1F1FF),  # regional indicators (flags)
+    (0x20E3, 0x20E3),  # combining enclosing keycap
+    (0x1F3FB, 0x1F3FF),  # skin-tone modifiers
 )
 
 
@@ -40,7 +43,9 @@ _EMOJI_REGIONAL = range(0x1F1E6, 0x1F200)
 _ZWJ = 0x200D
 
 
-_VS15 = 0xFE0E   # text-presentation selector: "draw this as a character, not as an emoji"
+_VS15 = (
+    0xFE0E  # text-presentation selector: "draw this as a character, not as an emoji"
+)
 
 
 _VS16 = 0xFE0F
@@ -70,18 +75,87 @@ def _cps(*spans) -> "frozenset":
 # VS16 or a skin-tone modifier follows it. Pinned from emoji-data.txt (Unicode 15.1); the
 # pictograph planes keep their block rule.
 _EMOJI_PRESENTATION_SYMBOLS = _cps(
-    (0x2614, 0x2615), (0x2648, 0x2653), 0x267F, 0x2693, 0x26A1, (0x26AA, 0x26AB),
-    (0x26BD, 0x26BE), (0x26C4, 0x26C5), 0x26CE, 0x26D4, 0x26EA, (0x26F2, 0x26F3), 0x26F5,
-    0x26FA, 0x26FD, 0x2705, (0x270A, 0x270B), 0x2728, 0x274C, 0x274E, (0x2753, 0x2755), 0x2757,
-    (0x2795, 0x2797), 0x27B0, 0x27BF, (0x2B1B, 0x2B1C), 0x2B50, 0x2B55, 0x1F004, 0x1F0CF)
+    (0x2614, 0x2615),
+    (0x2648, 0x2653),
+    0x267F,
+    0x2693,
+    0x26A1,
+    (0x26AA, 0x26AB),
+    (0x26BD, 0x26BE),
+    (0x26C4, 0x26C5),
+    0x26CE,
+    0x26D4,
+    0x26EA,
+    (0x26F2, 0x26F3),
+    0x26F5,
+    0x26FA,
+    0x26FD,
+    0x2705,
+    (0x270A, 0x270B),
+    0x2728,
+    0x274C,
+    0x274E,
+    (0x2753, 0x2755),
+    0x2757,
+    (0x2795, 0x2797),
+    0x27B0,
+    0x27BF,
+    (0x2B1B, 0x2B1C),
+    0x2B50,
+    0x2B55,
+    0x1F004,
+    0x1F0CF,
+)
 _EMOJI_TEXT_DEFAULT_SYMBOLS = _cps(
-    (0x2600, 0x2604), 0x260E, 0x2611, 0x2618, 0x261D, 0x2620, (0x2622, 0x2623), 0x2626, 0x262A,
-    (0x262E, 0x262F), (0x2638, 0x263A), 0x2640, 0x2642, (0x265F, 0x2660), 0x2663,
-    (0x2665, 0x2666), 0x2668, 0x267B, 0x267E, (0x2692, 0x2697), 0x2699, (0x269B, 0x269C),
-    0x26A0, 0x26A7, (0x26B0, 0x26B1), 0x26C8, 0x26CF, 0x26D1, 0x26D3, 0x26E9, (0x26F0, 0x26F1),
-    0x26F4, (0x26F7, 0x26F9), 0x2702, (0x2708, 0x2709), (0x270C, 0x270D), 0x270F, 0x2712, 0x2714,
-    0x2716, 0x271D, 0x2721, (0x2733, 0x2734), 0x2744, 0x2747, (0x2763, 0x2764), 0x27A1,
-    (0x2B05, 0x2B07))
+    (0x2600, 0x2604),
+    0x260E,
+    0x2611,
+    0x2618,
+    0x261D,
+    0x2620,
+    (0x2622, 0x2623),
+    0x2626,
+    0x262A,
+    (0x262E, 0x262F),
+    (0x2638, 0x263A),
+    0x2640,
+    0x2642,
+    (0x265F, 0x2660),
+    0x2663,
+    (0x2665, 0x2666),
+    0x2668,
+    0x267B,
+    0x267E,
+    (0x2692, 0x2697),
+    0x2699,
+    (0x269B, 0x269C),
+    0x26A0,
+    0x26A7,
+    (0x26B0, 0x26B1),
+    0x26C8,
+    0x26CF,
+    0x26D1,
+    0x26D3,
+    0x26E9,
+    (0x26F0, 0x26F1),
+    0x26F4,
+    (0x26F7, 0x26F9),
+    0x2702,
+    (0x2708, 0x2709),
+    (0x270C, 0x270D),
+    0x270F,
+    0x2712,
+    0x2714,
+    0x2716,
+    0x271D,
+    0x2721,
+    (0x2733, 0x2734),
+    0x2744,
+    0x2747,
+    (0x2763, 0x2764),
+    0x27A1,
+    (0x2B05, 0x2B07),
+)
 _SYMBOL_BLOCKS = ((0x2600, 0x27BF), (0x2B00, 0x2BFF), (0x1F000, 0x1F0FF))
 
 
@@ -91,7 +165,8 @@ def _in_symbol_block(cp: int) -> bool:
 
 def _is_emoji_char(ch: str) -> bool:
     """Is this character drawn as an emoji with nothing after it? In the text-symbol blocks only
-    the Emoji_Presentation characters are; ♪ ✓ ★ ♥ are text (see _EMOJI_PRESENTATION_SYMBOLS)."""
+    the Emoji_Presentation characters are; ♪ ✓ ★ ♥ are text (see _EMOJI_PRESENTATION_SYMBOLS).
+    """
     cp = ord(ch)
     if _in_symbol_block(cp):
         return cp in _EMOJI_PRESENTATION_SYMBOLS
@@ -147,7 +222,9 @@ def emoji_clusters(text: str) -> "List[Tuple[int, str]]":
         start = i
         if _starts_emoji(text, i):
             j = i + 1
-            if j < n and ord(text[j]) == _VS15:      # text presentation requested: not an emoji
+            if (
+                j < n and ord(text[j]) == _VS15
+            ):  # text presentation requested: not an emoji
                 i = j + 1
                 continue
         elif ch in _KEYCAP_BASES:
@@ -167,12 +244,16 @@ def emoji_clusters(text: str) -> "List[Tuple[int, str]]":
             if cp in (_VS16, _KEYCAP) or 0x1F3FB <= cp <= 0x1F3FF:
                 j += 1
                 continue
-            if cp == _ZWJ and j + 1 < n and ord(text[j + 1]) not in _EMOJI_TAIL \
-                    and _can_be_emoji(text[j + 1]):
+            if (
+                cp == _ZWJ
+                and j + 1 < n
+                and ord(text[j + 1]) not in _EMOJI_TAIL
+                and _can_be_emoji(text[j + 1])
+            ):
                 # inside a ZWJ sequence a text-default symbol is emoji glue too: 🏃‍♀ ends in ♀
                 j += 2
                 continue
-            if (j == start + 1 and ord(ch) in _EMOJI_REGIONAL and cp in _EMOJI_REGIONAL):
+            if j == start + 1 and ord(ch) in _EMOJI_REGIONAL and cp in _EMOJI_REGIONAL:
                 j += 1
                 continue
             break
@@ -187,7 +268,8 @@ def has_emoji(text: str) -> bool:
 
 def emoji_codepoint_name(cluster: str) -> str:
     """The asset filename stem for a cluster: lowercase hex code points joined by '-', the
-    Twemoji convention (1f389, 1f469-200d-1f4bb, 1f1ef-1f1f5); emoji_asset_for() also tries Noto's."""
+    Twemoji convention (1f389, 1f469-200d-1f4bb, 1f1ef-1f1f5); emoji_asset_for() also tries Noto's.
+    """
     return "-".join(f"{ord(c):x}" for c in cluster)
 
 
@@ -201,6 +283,7 @@ def _emoji_name_candidates(cluster: str) -> "List[str]":
         name = "-".join(f"{c:x}" for c in seq)
         if name and name not in names:
             names.append(name)
+
     add([c for c in cps if c != 0xFE0F])
     add([c for c in cps if c != 0xFE0F and not (0x1F3FB <= c <= 0x1F3FF)])
     if 0x200D in cps:
@@ -229,8 +312,11 @@ def emoji_mono_on_colour_note(support: "Dict[str, Any]") -> str:
     """--emoji mono on a build whose libass draws the emoji face in colour: nothing here makes that
     glyph monochrome (mono and color build the same text), so the result says color (#403: the
     warning said "no colour path" beside a detail saying it renders in colour)."""
-    return ("--emoji mono: libass draws the emoji face in colour on this build and nothing here makes it "
-            "monochrome, so the emoji are drawn in colour (mode: color). " + str(support.get("detail") or ""))
+    return (
+        "--emoji mono: libass draws the emoji face in colour on this build and nothing here makes it "
+        "monochrome, so the emoji are drawn in colour (mode: color). "
+        + str(support.get("detail") or "")
+    )
 
 
 def emoji_missing_asset_note(missing: "List[str]", support: "Dict[str, Any]") -> str:
@@ -238,17 +324,27 @@ def emoji_missing_asset_note(missing: "List[str]", support: "Dict[str, Any]") ->
     which is said as measured (libass_glyph), not as "drawn by the text font" (#403)."""
     names = ", ".join(missing)
     if support.get("libass_glyph") is False:
-        return (f"no PNG in the assets directory for {names} -- those clusters stay in the text, and libass draws no "
-                "emoji glyph on this build: an empty box at best")
-    return (f"no PNG in the assets directory for {names} -- those clusters stay in the text for libass to draw "
-            "with an installed face" + ("" if support.get("libass_glyph") else " (whether one has the glyph was not measured)"))
+        return (
+            f"no PNG in the assets directory for {names} -- those clusters stay in the text, and libass draws no "
+            "emoji glyph on this build: an empty box at best"
+        )
+    return (
+        f"no PNG in the assets directory for {names} -- those clusters stay in the text for libass to draw "
+        "with an installed face"
+        + (
+            ""
+            if support.get("libass_glyph")
+            else " (whether one has the glyph was not measured)"
+        )
+    )
 
 
 EMOJI_ASSET_HINT = (
     "point --emoji-assets at a directory of PNGs named by code point (1f389.png): "
     "twemoji/assets/72x72 (Twemoji, CC-BY 4.0) or noto-emoji/png/128 (Noto Emoji, OFL/Apache-2.0) "
     "are the two people already have. The skill has no network at runtime, so the assets must "
-    "already exist on this machine -- nothing is ever downloaded")
+    "already exist on this machine -- nothing is ever downloaded"
+)
 
 
 _EMOJI_COLOR_FAMILIES = ("Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji")
@@ -276,8 +372,15 @@ def _emoji_color_font() -> "Tuple[Optional[str], Optional[str], bool]":
         return None, None, False
     for family in _EMOJI_COLOR_FAMILIES:
         try:
-            proc = subprocess.run([exe, f":family={family}", "file"], stdout=subprocess.PIPE,
-                                  stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace", timeout=10)
+            proc = subprocess.run(
+                [exe, f":family={family}", "file"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=10,
+            )
         except (subprocess.TimeoutExpired, OSError):
             return None, None, False
         if proc.returncode != 0:
@@ -293,22 +396,42 @@ def _libass_color_probe() -> "Optional[bool]":
     """Does THIS ffmpeg render an emoji in colour through libass? Answered by a render, never by
     the font listing: Noto Color Emoji installs happily on builds whose freetype/libass has no
     colour-bitmap path at all, and those render a monochrome outline instead (measured). ~80 ms.
-    None means the probe could not be run (no ffmpeg, a failure) -- unknown, not false."""
+    None means the probe could not be run (no ffmpeg, a failure) -- unknown, not false.
+    """
     exe = ffmpeg_exe("ffmpeg")[0]
     if not exe:
         return None
     import tempfile
+
     with tempfile.TemporaryDirectory() as td:
         srt = os.path.join(td, "e.srt")
         with open(srt, "w", encoding="utf-8") as fh:
-            fh.write("1\n00:00:00,000 --> 00:00:01,000\n\U0001F389\n")
+            fh.write("1\n00:00:00,000 --> 00:00:01,000\n\U0001f389\n")
         try:
             proc = subprocess.run(
-                [exe, "-hide_banner", "-loglevel", "error", "-f", "lavfi",
-                 "-i", "color=c=black:s=64x64:d=0.04",
-                 "-vf", "subtitles=" + escape_filter_path(srt, bind=False), "-frames:v", "1",
-                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=20)
+                [
+                    exe,
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "color=c=black:s=64x64:d=0.04",
+                    "-vf",
+                    "subtitles=" + escape_filter_path(srt, bind=False),
+                    "-frames:v",
+                    "1",
+                    "-f",
+                    "rawvideo",
+                    "-pix_fmt",
+                    "rgb24",
+                    "-",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=20,
+            )
         except (subprocess.TimeoutExpired, OSError):
             return None
     if proc.returncode != 0 or len(proc.stdout) < 64 * 64 * 3:
@@ -321,21 +444,48 @@ def _libass_color_probe() -> "Optional[bool]":
     return False
 
 
-def _libass_render(exe: str, char: str, fonts_dir: "Optional[str]" = None) -> "Optional[bytes]":
+def _libass_render(
+    exe: str, char: str, fonts_dir: "Optional[str]" = None
+) -> "Optional[bytes]":
     """One 96x96 rgb24 frame of `char` drawn through libass (subtitles=), or None when it failed."""
     import tempfile
+
     with tempfile.TemporaryDirectory() as td:
         srt = os.path.join(td, "g.srt")
         with open(srt, "w", encoding="utf-8") as fh:
             fh.write(f"1\n00:00:00,000 --> 00:00:01,000\n{char}\n")
         try:
             proc = subprocess.run(
-                [exe, "-hide_banner", "-loglevel", "error", "-f", "lavfi",
-                 "-i", "color=c=black:s=96x96:d=0.04",
-                 "-vf", "subtitles=" + escape_filter_path(srt, bind=False) + ":force_style='FontSize=64,Alignment=5'"
-                 + (":fontsdir=" + escape_filter_path(fonts_dir, bind=False) if fonts_dir else ""),
-                 "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=20)
+                [
+                    exe,
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "color=c=black:s=96x96:d=0.04",
+                    "-vf",
+                    "subtitles="
+                    + escape_filter_path(srt, bind=False)
+                    + ":force_style='FontSize=64,Alignment=5'"
+                    + (
+                        ":fontsdir=" + escape_filter_path(fonts_dir, bind=False)
+                        if fonts_dir
+                        else ""
+                    ),
+                    "-frames:v",
+                    "1",
+                    "-f",
+                    "rawvideo",
+                    "-pix_fmt",
+                    "rgb24",
+                    "-",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=20,
+            )
         except (subprocess.TimeoutExpired, OSError):
             return None
     if proc.returncode != 0 or len(proc.stdout) < 96 * 96 * 3:
@@ -353,14 +503,20 @@ def _libass_glyph_probe(fonts_dir: "Optional[str]" = None) -> "Optional[bool]":
     exe = ffmpeg_exe("ffmpeg")[0]
     if not exe:
         return None
-    emoji, nothing = _libass_render(exe, "\U0001F389", fonts_dir), _libass_render(exe, "\U0010FFFD", fonts_dir)
+    emoji, nothing = _libass_render(exe, "\U0001f389", fonts_dir), _libass_render(
+        exe, "\U0010fffd", fonts_dir
+    )
     if emoji is None or nothing is None:
         return None
     lit = any(emoji[i] > 60 for i in range(0, len(emoji)))
     return bool(lit and emoji != nothing)
 
 
-def emoji_support(assets: "Optional[str]" = None, probe: bool = True, fonts_dir: "Optional[str]" = None) -> "Dict[str, Any]":
+def emoji_support(
+    assets: "Optional[str]" = None,
+    probe: bool = True,
+    fonts_dir: "Optional[str]" = None,
+) -> "Dict[str, Any]":
     """What this machine can actually do with emoji, cached per process.
 
     `mode` is `color` when a render probe proves libass draws colour, else `png` when an assets
@@ -375,7 +531,13 @@ def emoji_support(assets: "Optional[str]" = None, probe: bool = True, fonts_dir:
     family, file, fc_answered = _emoji_color_font()
     libass_color = _libass_color_probe() if probe else None
     # a colour render is a glyph; without one, ask whether libass draws one at all (#395)
-    libass_glyph = True if libass_color else (_libass_glyph_probe(fonts_dir) if probe and libass_color is False else None)
+    libass_glyph = (
+        True
+        if libass_color
+        else (
+            _libass_glyph_probe(fonts_dir) if probe and libass_color is False else None
+        )
+    )
     assets_dir = assets if (assets and os.path.isdir(assets)) else None
     if libass_color:
         mode = "color"
@@ -398,8 +560,10 @@ def emoji_support(assets: "Optional[str]" = None, probe: bool = True, fonts_dir:
     elif libass_color:
         detail = f"{family or 'an installed face'} renders in colour through libass on this ffmpeg"
     elif family and libass_glyph is False:
-        detail = (f"{family} installed but libass draws no emoji glyph from it on this build (the render "
-                  "matches a code point no font has: an empty box or nothing)")
+        detail = (
+            f"{family} installed but libass draws no emoji glyph from it on this build (the render "
+            "matches a code point no font has: an empty box or nothing)"
+        )
     elif family and libass_color is False:
         detail = f"{family} installed but libass renders it monochrome on this build"
     elif family and libass_color is None:
@@ -410,34 +574,57 @@ def emoji_support(assets: "Optional[str]" = None, probe: bool = True, fonts_dir:
         detail = "no colour emoji family installed; libass draws the emoji monochrome from an installed face"
     else:
         detail = "no colour emoji family installed and no --emoji-assets directory"
-    result = {"mode": mode, "color_font": family, "color_font_file": file,
-              "libass_color": libass_color, "libass_glyph": libass_glyph, "assets": assets_dir,
-              "detail": detail, "fix": EMOJI_ASSET_HINT}
+    result = {
+        "mode": mode,
+        "color_font": family,
+        "color_font_file": file,
+        "libass_color": libass_color,
+        "libass_glyph": libass_glyph,
+        "assets": assets_dir,
+        "detail": detail,
+        "fix": EMOJI_ASSET_HINT,
+    }
     _EMOJI_SUPPORT_CACHE[key] = result
     return dict(result)
 
 
-def resolve_emoji_assets(flag: "Optional[str]" = None, project: "Optional[str]" = None,
-                         brand: "Optional[dict]" = None) -> "Optional[str]":
+def resolve_emoji_assets(
+    flag: "Optional[str]" = None,
+    project: "Optional[str]" = None,
+    brand: "Optional[dict]" = None,
+) -> "Optional[str]":
     """--emoji-assets DIR, else the project key, else brand.json, else FFMPEG_SKILL_EMOJI_ASSETS.
-    A directory that was named but does not exist is a failed job, never a silent downgrade."""
+    A directory that was named but does not exist is a failed job, never a silent downgrade.
+    """
     brand = brand or {}
     styles = (brand.get("styles") or {}).get("caption") or {}
-    for value, where in ((flag, "--emoji-assets"), (project, "the project's text.emoji_assets"),
-                         (styles.get("emoji_assets"), "brand.json styles.caption.emoji_assets"),
-                         (brand.get("emoji_assets"), "brand.json emoji_assets"),
-                         (os.environ.get("FFMPEG_SKILL_EMOJI_ASSETS"), "FFMPEG_SKILL_EMOJI_ASSETS")):
+    for value, where in (
+        (flag, "--emoji-assets"),
+        (project, "the project's text.emoji_assets"),
+        (styles.get("emoji_assets"), "brand.json styles.caption.emoji_assets"),
+        (brand.get("emoji_assets"), "brand.json emoji_assets"),
+        (os.environ.get("FFMPEG_SKILL_EMOJI_ASSETS"), "FFMPEG_SKILL_EMOJI_ASSETS"),
+    ):
         if not value:
             continue
         if not os.path.isdir(str(value)):
-            die(f"{where}: {value} is not a readable directory -- {EMOJI_ASSET_HINT}", kind="input")
+            die(
+                f"{where}: {value} is not a readable directory -- {EMOJI_ASSET_HINT}",
+                kind="input",
+            )
         return str(value)
     return None
 
 
-
-
-def emoji_filter_chain(plan, base_label, out_label, first_input=1, to_yuv="", base_chain="", overlay_opts=""):
+def emoji_filter_chain(
+    plan,
+    base_label,
+    out_label,
+    first_input=1,
+    to_yuv="",
+    base_chain="",
+    overlay_opts="",
+):
     """(chains, inputs) that composite the planned PNGs on top of `base_label`.
 
     `inputs` is a list of argv fragments, each ending in the asset path, to be appended to the
@@ -453,11 +640,19 @@ def emoji_filter_chain(plan, base_label, out_label, first_input=1, to_yuv="", ba
     overlays = plan.get("overlays") or []
     if not overlays:
         return [], []
+
     # Group by everything that makes two uses of the same PNG a different STREAM: the fade is
     # expressed in the cue's own timeline, so two cues cannot share one faded input.
     def _key(o):
-        fades = (round(float(o.get("fade_in") or 0.0), 3), round(float(o.get("fade_out") or 0.0), 3))
-        window = (round(float(o["start"]), 3), round(float(o["end"]), 3)) if any(fades) else (None, None)
+        fades = (
+            round(float(o.get("fade_in") or 0.0), 3),
+            round(float(o.get("fade_out") or 0.0), 3),
+        )
+        window = (
+            (round(float(o["start"]), 3), round(float(o["end"]), 3))
+            if any(fades)
+            else (None, None)
+        )
         return (o["asset"], o["box"]) + fades + window
 
     groups: "List[Tuple]" = []
@@ -506,7 +701,9 @@ def emoji_filter_chain(plan, base_label, out_label, first_input=1, to_yuv="", ba
         # asset would be composited on frame 0 only and vanish for the rest of the cue (that is
         # exactly what shipped first). eof_action=repeat (the default) holds the still for the
         # whole timeline; enable= is what confines it to the cue's window.
-        chains.append(f"[{cur}][{label}]overlay=x={x}:y={o['y']}:"
-                      f"enable='between(t,{o['start']:.3f},{o['end']:.3f})'{overlay_opts}[{nxt}]")
+        chains.append(
+            f"[{cur}][{label}]overlay=x={x}:y={o['y']}:"
+            f"enable='between(t,{o['start']:.3f},{o['end']:.3f})'{overlay_opts}[{nxt}]"
+        )
         cur = nxt
     return chains, inputs

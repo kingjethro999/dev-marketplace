@@ -53,7 +53,17 @@ from artifact_skill.security.limits import DEFAULT_LIMITS, Limits
 from artifact_skill.security.paths import atomic_copy, check_input_size
 from artifact_skill.security.xml_safety import reject_xml_entities_in_zip
 
-_ERROR_TOKENS = {"#REF!", "#VALUE!", "#DIV/0!", "#N/A", "#NAME?", "#NULL!", "#NUM!", "#SPILL!", "#CALC!"}
+_ERROR_TOKENS = {
+    "#REF!",
+    "#VALUE!",
+    "#DIV/0!",
+    "#N/A",
+    "#NAME?",
+    "#NULL!",
+    "#NUM!",
+    "#SPILL!",
+    "#CALC!",
+}
 
 
 def _has(module: str) -> bool:
@@ -90,7 +100,6 @@ def _reject_entities_before_opening(path: Path) -> None:
         pass
 
 
-
 def _grounding_text(wb: Any, wb_cached: Any) -> str | None:
     """Every cell's value, numbers included, one line per row, each sheet
     headed by its name - the text InspectionReport.text carries. A formula
@@ -107,7 +116,11 @@ def _grounding_text(wb: Any, wb_cached: Any) -> str | None:
             for cell in row:
                 value = cell.value
                 if cell.data_type == "f":
-                    value = ws_cached[cell.coordinate].value if ws_cached is not None else None
+                    value = (
+                        ws_cached[cell.coordinate].value
+                        if ws_cached is not None
+                        else None
+                    )
                     if value is None:
                         return None
                 if value is not None:
@@ -115,6 +128,7 @@ def _grounding_text(wb: Any, wb_cached: Any) -> str | None:
             if values:
                 lines.append(" ".join(values))
     return "\n".join(lines)
+
 
 class XlsxAdapter(ArtifactAdapter):
     id = "xlsx"
@@ -142,7 +156,10 @@ class XlsxAdapter(ArtifactAdapter):
                 structural_verification_required=True,
                 visual_verification_required=False,
                 render_required=False,
-                postconditions=["output sheet count == input sheet count", "requested metadata fields match"],
+                postconditions=[
+                    "output sheet count == input sheet count",
+                    "requested metadata fields match",
+                ],
             ),
         }
 
@@ -167,7 +184,11 @@ class XlsxAdapter(ArtifactAdapter):
             )
         else:
             caps.append(
-                Capability(id="xlsx.structural", status=CapabilityStatus.MISSING, detail="openpyxl not importable.")
+                Capability(
+                    id="xlsx.structural",
+                    status=CapabilityStatus.MISSING,
+                    detail="openpyxl not importable.",
+                )
             )
 
         soffice = soffice_binary()
@@ -205,10 +226,17 @@ class XlsxAdapter(ArtifactAdapter):
         ]
 
     def recognized_policy_keys(self) -> frozenset[str]:
-        return frozenset({
-            "require_sheet_count", "min_sheets", "max_sheets", "require_sheet_names", "forbid_placeholder_text",
-            "forbid_external_links", "require_metadata",
-        })
+        return frozenset(
+            {
+                "require_sheet_count",
+                "min_sheets",
+                "max_sheets",
+                "require_sheet_names",
+                "forbid_placeholder_text",
+                "forbid_external_links",
+                "require_metadata",
+            }
+        )
 
     # ---- inspect ---------------------------------------------------
 
@@ -229,7 +257,9 @@ class XlsxAdapter(ArtifactAdapter):
 
         try:
             wb_cached = openpyxl.load_workbook(str(ref.path), data_only=True)
-        except Exception:  # noqa: BLE001 - the formula-mode load above already succeeded; treat as no cache
+        except (
+            Exception
+        ):  # noqa: BLE001 - the formula-mode load above already succeeded; treat as no cache
             wb_cached = None
 
         sheet_names = wb.sheetnames
@@ -249,13 +279,22 @@ class XlsxAdapter(ArtifactAdapter):
                             cached_value = ws_cached[cell.coordinate].value
                             if cached_value is not None:
                                 cached_values_seen = True
-                                if isinstance(cached_value, str) and cached_value.strip() in _ERROR_TOKENS:
-                                    cached_errors.append(f"{sheet_name}!{cell.coordinate}: {cached_value}")
+                                if (
+                                    isinstance(cached_value, str)
+                                    and cached_value.strip() in _ERROR_TOKENS
+                                ):
+                                    cached_errors.append(
+                                        f"{sheet_name}!{cell.coordinate}: {cached_value}"
+                                    )
                     elif isinstance(cell.value, str):
                         all_text_parts.append(cell.value)
 
         external_links = list(getattr(wb, "_external_links", []) or [])
-        defined_names = list(wb.defined_names.keys()) if hasattr(wb.defined_names, "keys") else list(wb.defined_names)
+        defined_names = (
+            list(wb.defined_names.keys())
+            if hasattr(wb.defined_names, "keys")
+            else list(wb.defined_names)
+        )
 
         props = wb.properties
         metadata = {
@@ -281,13 +320,22 @@ class XlsxAdapter(ArtifactAdapter):
             # "Sheet1 - dummy data") is exactly the kind of unreviewed
             # generation artifact this check exists to catch, and it was
             # previously invisible since only cell values were scanned.
-            "leftover_markers": find_leftover_markers("\n".join(all_text_parts + sheet_names)),
+            "leftover_markers": find_leftover_markers(
+                "\n".join(all_text_parts + sheet_names)
+            ),
         }
-        return InspectionReport(artifact=ref, details=details, warnings=warnings, text=_grounding_text(wb, wb_cached))
+        return InspectionReport(
+            artifact=ref,
+            details=details,
+            warnings=warnings,
+            text=_grounding_text(wb, wb_cached),
+        )
 
     # ---- plan --------------------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         specs = self.operations()
         if operation not in specs:
             raise ArtifactInputError(
@@ -300,19 +348,28 @@ class XlsxAdapter(ArtifactAdapter):
         report = self.inspect(ref)
         risks: list[str] = []
         if report.details["external_links"]:
-            risks.append(f"{len(report.details['external_links'])} external workbook link(s) present.")
+            risks.append(
+                f"{len(report.details['external_links'])} external workbook link(s) present."
+            )
         if report.details["cached_errors"]:
-            risks.append(f"{len(report.details['cached_errors'])} cell(s) have a cached formula error.")
+            risks.append(
+                f"{len(report.details['cached_errors'])} cell(s) have a cached formula error."
+            )
 
         return OperationPlan(
             operation=f"xlsx.{operation}",
             adapter=self.id,
             input=ref.to_dict(),
             output_path=str(output_path),
-            required_capabilities=["xlsx.structural"] + (["xlsx.render"] if spec.render_required else []),
+            required_capabilities=["xlsx.structural"]
+            + (["xlsx.render"] if spec.render_required else []),
             files_touched=[],
             files_created=[str(output_path)],
-            rendering_strategy="soffice -> PDF -> pypdfium2 page images" if spec.render_required else None,
+            rendering_strategy=(
+                "soffice -> PDF -> pypdfium2 page images"
+                if spec.render_required
+                else None
+            ),
             verification_strategy={
                 "structural_required": spec.structural_verification_required,
                 "visual_required": spec.visual_verification_required,
@@ -323,7 +380,9 @@ class XlsxAdapter(ArtifactAdapter):
 
     # ---- execute -------------------------------------------------------
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         openpyxl = _require_openpyxl()
         if operation != "metadata_set":
             raise ArtifactInputError(
@@ -344,7 +403,9 @@ class XlsxAdapter(ArtifactAdapter):
             props.keywords = args["keywords"]
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(dir=str(output_path.parent), suffix=".xlsx.tmp", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(
+            dir=str(output_path.parent), suffix=".xlsx.tmp", delete=False
+        ) as tmp:
             tmp_path = Path(tmp.name)
         try:
             wb.save(str(tmp_path))
@@ -355,22 +416,35 @@ class XlsxAdapter(ArtifactAdapter):
 
     # ---- render ----------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         with tempfile.TemporaryDirectory(prefix="artifacts-skill-xlsx-render-") as tmp:
             pdf_path = convert_to_pdf(ref.path, Path(tmp) / "pdf", limits=limits)
             return render_pdf_pages(pdf_path, out_dir, limits=limits)
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="xlsx_validity", name="XLSX is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="xlsx_validity",
+                    name="XLSX is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="xlsx_validity", name="XLSX is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(id="xlsx_validity", name="XLSX is readable", status=CheckStatus.PASS)
+        )
 
         details = report.details
         sheet_count = details["sheet_count"]
@@ -419,7 +493,11 @@ class XlsxAdapter(ArtifactAdapter):
                     id="required_sheet_names",
                     name="Required sheet names present",
                     status=CheckStatus.PASS if ok else CheckStatus.FAIL,
-                    message=f"missing: {sorted(expected_names - actual_names)}" if not ok else "all present.",
+                    message=(
+                        f"missing: {sorted(expected_names - actual_names)}"
+                        if not ok
+                        else "all present."
+                    ),
                 )
             )
 
@@ -429,14 +507,22 @@ class XlsxAdapter(ArtifactAdapter):
                 Check(
                     id="leftover_placeholder_text",
                     name="No leftover generation placeholder text",
-                    status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_placeholder_text")
+                        else CheckStatus.WARN
+                    ),
                     message=f"Found likely-unreviewed placeholder text: {leftover_markers}.",
                     evidence={"markers": leftover_markers},
                 )
             )
         else:
             checks.append(
-                Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                Check(
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=CheckStatus.PASS,
+                )
             )
 
         if details["external_links"]:
@@ -444,14 +530,24 @@ class XlsxAdapter(ArtifactAdapter):
                 Check(
                     id="external_links",
                     name="No external workbook links",
-                    status=CheckStatus.FAIL if policy.get("forbid_external_links") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_external_links")
+                        else CheckStatus.WARN
+                    ),
                     message=f"{len(details['external_links'])} external link(s) present; not fetched (network "
                     "access is off by default — see docs/security.md).",
                     evidence={"links": details["external_links"]},
                 )
             )
         else:
-            checks.append(Check(id="external_links", name="No external workbook links", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="external_links",
+                    name="No external workbook links",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         if details["formula_cells"] == 0:
             checks.append(

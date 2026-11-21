@@ -24,6 +24,7 @@ A consent record is a JSON file (schema `dubbing/consent@1`):
 The gate runs in the op, before any engine work (the record first, then the reference clip's hash), and again in the
 worker (Engine.check_request), so an engine never receives a reference voice whose consent was not verified in its own
 process. Every refusal is CONSENT_REQUIRED, with the reason and every problem found."""
+
 from __future__ import annotations
 
 import json
@@ -39,13 +40,22 @@ CONSENT_SCHEMA = "dubbing/consent@1"
 RELATIONS = ("self", "legal_guardian", "authorised_representative")
 CONSENT_OPS = ("narrate", "dub", "audio_description")
 MAX_RECORD_BYTES = 1 << 20
-FUTURE_SLACK = 300.0                  # seconds: a clock a little ahead does not make a fresh record "from the future"
+FUTURE_SLACK = 300.0  # seconds: a clock a little ahead does not make a fresh record "from the future"
 ADR = "docs/decisions.md ADR-009"
 
 
 def _refuse(reason: str, message: str, **details: Any) -> DubbingError:
-    return DubbingError("CONSENT_REQUIRED", message, dict(details, reason=reason, policy="voice_cloning", adr=ADR,
-                                                          bypass="none: the gate cannot be switched off"))
+    return DubbingError(
+        "CONSENT_REQUIRED",
+        message,
+        dict(
+            details,
+            reason=reason,
+            policy="voice_cloning",
+            adr=ADR,
+            bypass="none: the gate cannot be switched off",
+        ),
+    )
 
 
 def parse_time(value: Any) -> Optional[datetime]:
@@ -77,26 +87,53 @@ def _str_list(value: Any) -> Optional[List[str]]:
 
 def read_record(record_path: str) -> Dict[str, Any]:
     if not isinstance(record_path, str) or not record_path:
-        raise _refuse("no_record", "a reference voice needs the consent record of the person whose voice it is (--consent)")
+        raise _refuse(
+            "no_record",
+            "a reference voice needs the consent record of the person whose voice it is (--consent)",
+        )
     if not os.path.isfile(record_path):
-        raise _refuse("record_not_found", f"the consent record {record_path} is not a file", record=record_path)
+        raise _refuse(
+            "record_not_found",
+            f"the consent record {record_path} is not a file",
+            record=record_path,
+        )
     if os.path.getsize(record_path) > MAX_RECORD_BYTES:
-        raise _refuse("record_invalid", f"the consent record is larger than {MAX_RECORD_BYTES} bytes", record=record_path)
+        raise _refuse(
+            "record_invalid",
+            f"the consent record is larger than {MAX_RECORD_BYTES} bytes",
+            record=record_path,
+        )
     try:
         with open(record_path, encoding="utf-8-sig") as fh:
             doc = json.load(fh)
     except (OSError, UnicodeDecodeError, ValueError) as e:
-        raise _refuse("record_invalid", f"the consent record is not UTF-8 JSON: {e}", record=record_path)
+        raise _refuse(
+            "record_invalid",
+            f"the consent record is not UTF-8 JSON: {e}",
+            record=record_path,
+        )
     if not isinstance(doc, dict):
-        raise _refuse("record_invalid", "the consent record is not a JSON object", record=record_path)
+        raise _refuse(
+            "record_invalid",
+            "the consent record is not a JSON object",
+            record=record_path,
+        )
     return doc
 
 
-def check_record(doc: Dict[str, Any], record_path: str, op: str, engine_id: str, lang: str,
-                 now: Optional[float] = None) -> Tuple[List[str], List[Dict[str, Any]]]:
+def check_record(
+    doc: Dict[str, Any],
+    record_path: str,
+    op: str,
+    engine_id: str,
+    lang: str,
+    now: Optional[float] = None,
+) -> Tuple[List[str], List[Dict[str, Any]]]:
     """Every problem with the record itself (not the reference clip), and its evidence files with their hashes."""
     problems: List[str] = []
-    now_dt = datetime.fromtimestamp(time.time() if now is None else now, tz=timezone.utc)
+    now_dt = datetime.fromtimestamp(
+        time.time() if now is None else now, tz=timezone.utc
+    )
     if doc.get("schema") != CONSENT_SCHEMA:
         problems.append(f"schema must be {CONSENT_SCHEMA!r}")
     if _name(doc.get("voice_owner")) is None:
@@ -107,8 +144,15 @@ def check_record(doc: Dict[str, Any], record_path: str, op: str, engine_id: str,
     relation = consenter.get("relation") if isinstance(consenter, dict) else None
     if relation not in RELATIONS:
         problems.append(f"consenter.relation must be one of {list(RELATIONS)}")
-    elif relation == "self" and _name(consenter) and _name(doc.get("voice_owner")) and _name(consenter) != _name(doc.get("voice_owner")):
-        problems.append("consenter.relation is 'self' but the consenter is not the voice owner")
+    elif (
+        relation == "self"
+        and _name(consenter)
+        and _name(doc.get("voice_owner"))
+        and _name(consenter) != _name(doc.get("voice_owner"))
+    ):
+        problems.append(
+            "consenter.relation is 'self' but the consenter is not the voice owner"
+        )
     granted = parse_time(doc.get("granted_at"))
     if granted is None:
         problems.append("granted_at must be an ISO 8601 date-time with a UTC offset")
@@ -117,7 +161,9 @@ def check_record(doc: Dict[str, Any], record_path: str, op: str, engine_id: str,
     if doc.get("expires_at") is not None:
         expires = parse_time(doc.get("expires_at"))
         if expires is None:
-            problems.append("expires_at must be null or an ISO 8601 date-time with a UTC offset")
+            problems.append(
+                "expires_at must be null or an ISO 8601 date-time with a UTC offset"
+            )
         elif expires <= now_dt:
             problems.append(f"the consent expired at {doc.get('expires_at')}")
         elif granted is not None and expires <= granted:
@@ -130,7 +176,9 @@ def check_record(doc: Dict[str, Any], record_path: str, op: str, engine_id: str,
         scope = {}
     ops = _str_list(scope.get("ops"))
     if not ops:
-        problems.append(f"scope.ops must list the ops the consent covers ({', '.join(CONSENT_OPS)})")
+        problems.append(
+            f"scope.ops must list the ops the consent covers ({', '.join(CONSENT_OPS)})"
+        )
     elif op not in ops:
         problems.append(f"scope.ops {ops} does not cover {op!r}")
     for key, value in (("engines", engine_id), ("languages", lang)):
@@ -142,13 +190,20 @@ def check_record(doc: Dict[str, Any], record_path: str, op: str, engine_id: str,
     evidence: List[Dict[str, Any]] = []
     items = doc.get("evidence")
     if not isinstance(items, list) or not items:
-        problems.append("evidence must list at least one file (the signed form, a recording of the consent, ...)")
+        problems.append(
+            "evidence must list at least one file (the signed form, a recording of the consent, ...)"
+        )
         items = []
     base = os.path.dirname(os.path.abspath(record_path))
     for k, item in enumerate(items):
         path = item.get("path") if isinstance(item, dict) else None
         want = item.get("sha256") if isinstance(item, dict) else None
-        if not isinstance(path, str) or not path or not isinstance(want, str) or len(want) != 64:
+        if (
+            not isinstance(path, str)
+            or not path
+            or not isinstance(want, str)
+            or len(want) != 64
+        ):
             problems.append(f"evidence[{k}] needs a path and its sha256")
             continue
         full = path if os.path.isabs(path) else os.path.join(base, path)
@@ -160,35 +215,74 @@ def check_record(doc: Dict[str, Any], record_path: str, op: str, engine_id: str,
             continue
         got = sha256_file(full)
         if got != want.lower():
-            problems.append(f"evidence[{k}] {path} does not match its sha256 (changed since the consent was recorded)")
+            problems.append(
+                f"evidence[{k}] {path} does not match its sha256 (changed since the consent was recorded)"
+            )
             continue
         evidence.append({"path": os.path.basename(path), "sha256": got})
     ref = doc.get("reference")
     want_ref = ref.get("sha256") if isinstance(ref, dict) else None
     if not isinstance(want_ref, str) or len(want_ref) != 64:
-        problems.append("reference.sha256 (the reference clip the consent covers) is missing")
+        problems.append(
+            "reference.sha256 (the reference clip the consent covers) is missing"
+        )
     return problems, evidence
 
 
-def verify_consent(record_path: Optional[str], reference_path: Optional[str], op: str, engine_id: str, lang: str,
-                   now: Optional[float] = None) -> Dict[str, Any]:
+def verify_consent(
+    record_path: Optional[str],
+    reference_path: Optional[str],
+    op: str,
+    engine_id: str,
+    lang: str,
+    now: Optional[float] = None,
+) -> Dict[str, Any]:
     """The consent summary for the provenance, or CONSENT_REQUIRED. The record is checked before the reference clip is
     read (hashed); a clip whose hash differs from the record's is refused."""
     if not reference_path:
-        raise DubbingError("INVALID_ARGUMENT", "a consent record was given without a reference voice (--reference)", {"op": op})
+        raise DubbingError(
+            "INVALID_ARGUMENT",
+            "a consent record was given without a reference voice (--reference)",
+            {"op": op},
+        )
     doc = read_record(record_path or "")
     problems, evidence = check_record(doc, record_path or "", op, engine_id, lang, now)
     if problems:
-        raise _refuse("record_invalid", "the consent record does not cover this use: " + "; ".join(problems),
-                      record=record_path, problems=problems, reference_read=False)
+        raise _refuse(
+            "record_invalid",
+            "the consent record does not cover this use: " + "; ".join(problems),
+            record=record_path,
+            problems=problems,
+            reference_read=False,
+        )
     if not os.path.isfile(reference_path):
-        raise DubbingError("INPUT_NOT_FOUND", f"the reference voice {reference_path} is not a file", {"input": reference_path})
+        raise DubbingError(
+            "INPUT_NOT_FOUND",
+            f"the reference voice {reference_path} is not a file",
+            {"input": reference_path},
+        )
     got = sha256_file(reference_path)
     if got != doc["reference"]["sha256"].lower():
-        raise _refuse("reference_mismatch", "the reference voice is not the clip the consent record covers (its SHA-256 differs)",
-                      record=record_path, reference_sha256=got, reference_read=True)
-    summary = {"schema": CONSENT_SCHEMA, "record_sha256": sha256_file(record_path or ""), "voice_owner": _name(doc["voice_owner"]),
-               "consenter": _name(doc["consenter"]), "relation": doc["consenter"]["relation"], "granted_at": doc["granted_at"],
-               "expires_at": doc.get("expires_at"), "scope": {k: doc["scope"].get(k) for k in ("ops", "engines", "languages", "purpose")},
-               "evidence": evidence, "reference_sha256": got, "verified_for": {"op": op, "engine": engine_id, "lang": lang}}
+        raise _refuse(
+            "reference_mismatch",
+            "the reference voice is not the clip the consent record covers (its SHA-256 differs)",
+            record=record_path,
+            reference_sha256=got,
+            reference_read=True,
+        )
+    summary = {
+        "schema": CONSENT_SCHEMA,
+        "record_sha256": sha256_file(record_path or ""),
+        "voice_owner": _name(doc["voice_owner"]),
+        "consenter": _name(doc["consenter"]),
+        "relation": doc["consenter"]["relation"],
+        "granted_at": doc["granted_at"],
+        "expires_at": doc.get("expires_at"),
+        "scope": {
+            k: doc["scope"].get(k) for k in ("ops", "engines", "languages", "purpose")
+        },
+        "evidence": evidence,
+        "reference_sha256": got,
+        "verified_for": {"op": op, "engine": engine_id, "lang": lang},
+    }
     return summary

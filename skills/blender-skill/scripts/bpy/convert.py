@@ -4,6 +4,7 @@ and diff it against the source (--verify) so a conversion is checked, not assume
 Reuses info.py's run() for both halves of the diff -- info.py already does
 reset scene -> import -> measure, which is exactly "load the file and tell me what's in it".
 """
+
 import sys
 from pathlib import Path
 
@@ -23,9 +24,13 @@ def _compare(before: dict, after: dict) -> dict:
     if bm["vertices"] != am["vertices"]:
         diffs.append(f"vertices: {bm['vertices']} -> {am['vertices']}")
     if before["materials"]["count"] != after["materials"]["count"]:
-        diffs.append(f"materials: {before['materials']['count']} -> {after['materials']['count']}")
+        diffs.append(
+            f"materials: {before['materials']['count']} -> {after['materials']['count']}"
+        )
     if len(before["animations"]) != len(after["animations"]):
-        diffs.append(f"animation clips: {len(before['animations'])} -> {len(after['animations'])}")
+        diffs.append(
+            f"animation clips: {len(before['animations'])} -> {len(after['animations'])}"
+        )
     return {"matches": not diffs, "diffs": diffs}
 
 
@@ -33,7 +38,9 @@ def run(args):
     before = info_mod.run({"path": args["input"], "format": args["input_format"]})
     # The scene from info_mod.run()'s import is still loaded -- export it directly rather than
     # reloading, so the exported file is exactly what was just measured.
-    axis_kwargs = _compat.axis_export_kwargs(args["output_format"], args.get("forward_axis"), args.get("up_axis"))
+    axis_kwargs = _compat.axis_export_kwargs(
+        args["output_format"], args.get("forward_axis"), args.get("up_axis")
+    )
     _compat.export_file(args["output"], args["output_format"], **axis_kwargs)
     result = {"input": before, "output_path": args["output"]}
     if args.get("verify"):

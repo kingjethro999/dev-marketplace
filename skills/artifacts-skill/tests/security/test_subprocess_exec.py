@@ -10,7 +10,11 @@ import time
 import pytest
 
 from artifact_skill.core.errors import ArtifactExecutionError, ArtifactSecurityError
-from artifact_skill.security.subprocess_exec import _executable_basename, run, treat_sigterm_as_interrupt
+from artifact_skill.security.subprocess_exec import (
+    _executable_basename,
+    run,
+    treat_sigterm_as_interrupt,
+)
 
 
 def test_rejects_non_allowlisted_executable():
@@ -31,7 +35,10 @@ def test_rejects_non_string_argv_entries():
 
 def test_missing_executable_raises_execution_error():
     with pytest.raises(ArtifactExecutionError) as exc_info:
-        run(["definitely-not-a-real-binary-xyz"], allowlist={"definitely-not-a-real-binary-xyz"})
+        run(
+            ["definitely-not-a-real-binary-xyz"],
+            allowlist={"definitely-not-a-real-binary-xyz"},
+        )
     assert exc_info.value.code == "ARTIFACT_EXECUTABLE_NOT_FOUND"
 
 
@@ -136,16 +143,26 @@ def _pid_alive(pid: int) -> bool:
 def _run_child_and_sigterm_it(install_handler: bool, tmp_path) -> bool:
     """Returns True iff the grandchild `sleep` process is still alive a
     moment after the direct child received SIGTERM."""
-    src_path = str((__import__("artifact_skill").__file__).rsplit("/artifact_skill/", 1)[0])
+    src_path = str(
+        (__import__("artifact_skill").__file__).rsplit("/artifact_skill/", 1)[0]
+    )
     script = tmp_path / "child.py"
-    script.write_text(_CHILD_SCRIPT.format(src_path=src_path, install_handler=install_handler))
+    script.write_text(
+        _CHILD_SCRIPT.format(src_path=src_path, install_handler=install_handler)
+    )
 
-    proc = subprocess.Popen([sys.executable, str(script)], stdout=subprocess.PIPE, text=True)
+    proc = subprocess.Popen(
+        [sys.executable, str(script)], stdout=subprocess.PIPE, text=True
+    )
     try:
         ready_line = proc.stdout.readline()
-        assert ready_line.strip() == "READY", f"child didn't start cleanly: {ready_line!r}"
+        assert (
+            ready_line.strip() == "READY"
+        ), f"child didn't start cleanly: {ready_line!r}"
         time.sleep(0.3)  # let the grandchild `sleep` actually spawn
-        before = subprocess.run(["pgrep", "-P", str(proc.pid)], capture_output=True, text=True).stdout.split()
+        before = subprocess.run(
+            ["pgrep", "-P", str(proc.pid)], capture_output=True, text=True
+        ).stdout.split()
         assert before, "grandchild `sleep` process never started"
         grandchild_pid = int(before[0])
 
@@ -161,13 +178,19 @@ def _run_child_and_sigterm_it(install_handler: bool, tmp_path) -> bool:
         subprocess.run(["pkill", "-9", "-f", "sleep 30"], capture_output=True)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="signal.SIGTERM semantics tested here are POSIX-specific")
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="signal.SIGTERM semantics tested here are POSIX-specific",
+)
 def test_sigterm_without_the_handler_orphans_the_child(tmp_path):
     """Establishes the bug is real before asserting the fix works below."""
     assert _run_child_and_sigterm_it(install_handler=False, tmp_path=tmp_path) is True
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="signal.SIGTERM semantics tested here are POSIX-specific")
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="signal.SIGTERM semantics tested here are POSIX-specific",
+)
 def test_treat_sigterm_as_interrupt_prevents_the_orphan(tmp_path):
     assert _run_child_and_sigterm_it(install_handler=True, tmp_path=tmp_path) is False
 

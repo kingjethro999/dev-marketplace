@@ -2,7 +2,8 @@
 
 It executes typed, validated audio operations (gain, trim, cut, fades, loudness normalisation, mix, ...)
 through ffmpeg-skill and reports provenance. It does not measure media for decisions (media-analysis-skill),
-does not decide what to do (video-production-agent) and never runs a shell or an arbitrary command."""
+does not decide what to do (video-production-agent) and never runs a shell or an arbitrary command.
+"""
 
 SKILL_ID = "audio-production"
 PACKAGE_NAME = "audio-production-skill"

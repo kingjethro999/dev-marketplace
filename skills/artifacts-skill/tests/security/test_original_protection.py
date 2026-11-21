@@ -20,7 +20,10 @@ def test_input_hash_unchanged_after_execute(good_pdf, tmp_path):
     before = sha256_of(good_pdf)
     output_path = tmp_path / "out.pdf"
     run_lifecycle(
-        good_pdf, "metadata_set", {"title": "changed"}, output_path,
+        good_pdf,
+        "metadata_set",
+        {"title": "changed"},
+        output_path,
         evidence_dir=tmp_path / "reports",
     )
     after = sha256_of(good_pdf)
@@ -31,7 +34,10 @@ def test_input_hash_unchanged_across_multiple_operations(good_pdf, tmp_path):
     before = sha256_of(good_pdf)
     for i, args in enumerate([{"title": "a"}, {"author": "b"}, {"subject": "c"}]):
         run_lifecycle(
-            good_pdf, "metadata_set", args, tmp_path / f"out{i}.pdf",
+            good_pdf,
+            "metadata_set",
+            args,
+            tmp_path / f"out{i}.pdf",
             evidence_dir=tmp_path / f"reports{i}",
         )
     assert sha256_of(good_pdf) == before
@@ -53,7 +59,10 @@ def test_execute_rejects_output_path_identical_to_input(good_pdf, tmp_path):
     before = sha256_of(good_pdf)
     with pytest.raises(ArtifactSecurityError) as exc_info:
         run_lifecycle(
-            good_pdf, "metadata_set", {"title": "x"}, good_pdf,
+            good_pdf,
+            "metadata_set",
+            {"title": "x"},
+            good_pdf,
             evidence_dir=tmp_path / "reports",
         )
     assert exc_info.value.code == "ARTIFACT_OUTPUT_OVERWRITES_INPUT"
@@ -61,7 +70,9 @@ def test_execute_rejects_output_path_identical_to_input(good_pdf, tmp_path):
     assert not (tmp_path / "reports").exists()
 
 
-def test_execute_rejects_output_path_that_resolves_to_the_same_input(good_pdf, tmp_path):
+def test_execute_rejects_output_path_that_resolves_to_the_same_input(
+    good_pdf, tmp_path
+):
     """A relative path and an absolute path can name the same file
     without being string-equal - the guard must resolve() both sides,
     not just compare the literal path objects."""
@@ -69,7 +80,10 @@ def test_execute_rejects_output_path_that_resolves_to_the_same_input(good_pdf, t
     relative_equivalent = good_pdf.parent / ".." / good_pdf.parent.name / good_pdf.name
     with pytest.raises(ArtifactSecurityError) as exc_info:
         run_lifecycle(
-            good_pdf, "metadata_set", {"title": "x"}, relative_equivalent,
+            good_pdf,
+            "metadata_set",
+            {"title": "x"},
+            relative_equivalent,
             evidence_dir=tmp_path / "reports",
         )
     assert exc_info.value.code == "ARTIFACT_OUTPUT_OVERWRITES_INPUT"
@@ -82,7 +96,10 @@ def test_execute_rejects_a_symlink_output_pointing_at_the_input(good_pdf, tmp_pa
     symlink_path.symlink_to(good_pdf)
     with pytest.raises(ArtifactSecurityError) as exc_info:
         run_lifecycle(
-            good_pdf, "metadata_set", {"title": "x"}, symlink_path,
+            good_pdf,
+            "metadata_set",
+            {"title": "x"},
+            symlink_path,
             evidence_dir=tmp_path / "reports",
         )
     assert exc_info.value.code == "ARTIFACT_OUTPUT_OVERWRITES_INPUT"
@@ -100,7 +117,10 @@ def test_execute_rejects_a_hard_link_output_pointing_at_the_input(good_pdf, tmp_
     os.link(good_pdf, hardlink_path)
     with pytest.raises(ArtifactSecurityError) as exc_info:
         run_lifecycle(
-            good_pdf, "metadata_set", {"title": "x"}, hardlink_path,
+            good_pdf,
+            "metadata_set",
+            {"title": "x"},
+            hardlink_path,
             evidence_dir=tmp_path / "reports",
         )
     assert exc_info.value.code == "ARTIFACT_OUTPUT_OVERWRITES_INPUT"
@@ -120,7 +140,13 @@ def test_execute_rejects_output_equal_to_input_for_every_format(
     for input_path, operation, args in cases:
         before = sha256_of(input_path)
         with pytest.raises(ArtifactSecurityError) as exc_info:
-            run_lifecycle(input_path, operation, args, input_path, evidence_dir=tmp_path / "reports")
+            run_lifecycle(
+                input_path,
+                operation,
+                args,
+                input_path,
+                evidence_dir=tmp_path / "reports",
+            )
         assert exc_info.value.code == "ARTIFACT_OUTPUT_OVERWRITES_INPUT", input_path
         assert sha256_of(input_path) == before, input_path
 

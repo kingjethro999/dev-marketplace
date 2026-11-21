@@ -4,6 +4,7 @@ ceiling, signal handling, output locking and staging, and the drawtext text-file
 Nothing here decides *what* to encode -- that is decision.py -- and nothing here formats a result
 document -- that is emit.py. Imported through the `_common` facade by every script.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,11 +17,12 @@ import subprocess
 import sys
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-
 INSTALL_HINTS = {
-    "Darwin": ("  brew install ffmpeg-full; export PATH=\"$(brew --prefix ffmpeg-full)/bin:$PATH\""
-               "   # keg-only, so installing it does not put it on PATH: keep the export in your shell profile;"
-               " the plain ffmpeg formula lacks subtitles/drawtext/zscale"),
+    "Darwin": (
+        '  brew install ffmpeg-full; export PATH="$(brew --prefix ffmpeg-full)/bin:$PATH"'
+        "   # keg-only, so installing it does not put it on PATH: keep the export in your shell profile;"
+        " the plain ffmpeg formula lacks subtitles/drawtext/zscale"
+    ),
     "Linux": (
         "  Debian/Ubuntu: sudo apt install ffmpeg\n"
         "  Fedora:        sudo dnf install ffmpeg\n"
@@ -102,8 +104,15 @@ def ffmpeg_version() -> "Tuple[int, int]":
     if _FFMPEG_VERSION is None:
         _FFMPEG_VERSION = (0, 0)
         try:
-            out = subprocess.run([ffmpeg_exe("ffprobe")[0] or "ffprobe", "-version"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
-                                 timeout=PROBE_TIMEOUT).stdout
+            out = subprocess.run(
+                [ffmpeg_exe("ffprobe")[0] or "ffprobe", "-version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=PROBE_TIMEOUT,
+            ).stdout
             m = re.search(r"ffprobe version\s+n?(\d+)\.(\d+)", out)
             if m:
                 _FFMPEG_VERSION = (int(m.group(1)), int(m.group(2)))
@@ -133,7 +142,8 @@ def _homebrew_full_build(path: str, name: str) -> str:
     PATH. `brew install ffmpeg-full` therefore changes nothing for a user whose PATH still reaches
     the lean one (#317). The swap happens only when `path` resolves into THIS Homebrew prefix's
     Cellar as `ffmpeg` / `ffmpeg@N` and the same prefix has `opt/ffmpeg-full/bin/<name>`; a tap
-    build, MacPorts, a static download or a custom prefix is left exactly as the user put it."""
+    build, MacPorts, a static download or a custom prefix is left exactly as the user put it.
+    """
     if platform.system() != "Darwin":
         return ""
     real = os.path.realpath(path)
@@ -169,12 +179,24 @@ def require_tool(name: str) -> str:
     die(
         f"'{name}' was not found on PATH.\n"
         f"Install FFmpeg (which includes ffprobe) for {system}:\n{hint}",
-        code=127, kind="missing_tool",
+        code=127,
+        kind="missing_tool",
     )
     return ""  # unreachable
 
 
-X264_PRESETS = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo")
+X264_PRESETS = (
+    "ultrafast",
+    "superfast",
+    "veryfast",
+    "faster",
+    "fast",
+    "medium",
+    "slow",
+    "slower",
+    "veryslow",
+    "placebo",
+)
 
 
 CODECS = ("h264", "hevc", "av1", "prores")
@@ -191,36 +213,83 @@ class Context:
     makes it obvious what run()/emit() depend on and lets tests reset it with ``STATE.reset()``.
     """
 
-    __slots__ = ("dry_run", "json", "json_brief", "progress", "fast", "duration_hint", "commands", "timeout", "overwrite", "written", "preexisting", "plan", "plan_written", "plan_inputs", "codec",
-                 "hw", "hw_source", "hw_notes", "hw_swaps", "hw_fallback", "hw_env_ignored", "hw_stages", "hw_auto")
+    __slots__ = (
+        "dry_run",
+        "json",
+        "json_brief",
+        "progress",
+        "fast",
+        "duration_hint",
+        "commands",
+        "timeout",
+        "overwrite",
+        "written",
+        "preexisting",
+        "plan",
+        "plan_written",
+        "plan_inputs",
+        "codec",
+        "hw",
+        "hw_source",
+        "hw_notes",
+        "hw_swaps",
+        "hw_fallback",
+        "hw_env_ignored",
+        "hw_stages",
+        "hw_auto",
+    )
 
     def __init__(self) -> None:
         self.reset()
 
     def reset(self) -> None:
-        self.dry_run = False      # print ffmpeg commands, run nothing (ffprobe still runs)
-        self.json = False         # emit() prints a JSON document instead of the output path
-        self.json_brief = False   # --json-brief: the same document trimmed to the fields a caller acts on
-        self.progress = False     # run() streams percent / ETA to stderr for ffmpeg
-        self.fast = False         # x264 preset forced to veryfast
-        self.duration_hint: Optional[float] = None  # expected output length, for the progress percent
-        self.commands: List[str] = []               # every ffmpeg command line, for --json and --dry-run
-        self.timeout: float = _env_timeout()         # seconds per ffmpeg invocation, 0 = none
-        self.overwrite = False                       # --overwrite: an existing output may be replaced
-        self.written: set = set()                    # output paths this process has written itself
-        self.preexisting: dict = {}                  # output path -> (size, mtime_ns) of a file that was there before we ran
-        self.plan: Optional[str] = None              # --plan FILE: write the dry-run as a plan document (implies --dry-run)
-        self.plan_written = False                    # write_plan() ran (emit or the exit hook), so the hook does not write twice
-        self.plan_inputs: List[str] = []             # side inputs (srt/ass/lut/font files) a tool named through escape_filter_path
-        self.codec: Optional[str] = None             # --codec: encoder for the re-encode (None = x264 for SDR, x265 for HDR)
-        self.hw = False                              # --hw / $FFMPEG_SKILL_HW: VideoToolbox encoders where they apply
-        self.hw_source: Optional[str] = None         # "flag" (--hw/--no-hw given) or "env" (FFMPEG_SKILL_HW), None = off by default
-        self.hw_notes: List[str] = []                # why an encode stayed on (or fell back to) the CPU, for the result document
-        self.hw_swaps: List[Tuple[List[str], List[str]]] = []  # (VideoToolbox args, the CPU args they replaced) for run()'s fallback
-        self.hw_fallback = False                     # run() re-encoded a job VideoToolbox refused on the CPU (or a stage reported one)
-        self.hw_env_ignored = False                  # $FFMPEG_SKILL_HW=1 was set but this tool's delivery preset does not take it (export.py)
-        self.hw_stages: List[Dict[str, Any]] = []    # render.py: the `hw` facts each stage (a child process) reported
-        self.hw_auto: List[str] = []                 # CPU encoders (libx264/libx265) this ffmpeg build lacks, whose encodes ran on VideoToolbox without --hw
+        self.dry_run = False  # print ffmpeg commands, run nothing (ffprobe still runs)
+        self.json = False  # emit() prints a JSON document instead of the output path
+        self.json_brief = False  # --json-brief: the same document trimmed to the fields a caller acts on
+        self.progress = False  # run() streams percent / ETA to stderr for ffmpeg
+        self.fast = False  # x264 preset forced to veryfast
+        self.duration_hint: Optional[float] = (
+            None  # expected output length, for the progress percent
+        )
+        self.commands: List[str] = (
+            []
+        )  # every ffmpeg command line, for --json and --dry-run
+        self.timeout: float = _env_timeout()  # seconds per ffmpeg invocation, 0 = none
+        self.overwrite = False  # --overwrite: an existing output may be replaced
+        self.written: set = set()  # output paths this process has written itself
+        self.preexisting: dict = (
+            {}
+        )  # output path -> (size, mtime_ns) of a file that was there before we ran
+        self.plan: Optional[str] = (
+            None  # --plan FILE: write the dry-run as a plan document (implies --dry-run)
+        )
+        self.plan_written = False  # write_plan() ran (emit or the exit hook), so the hook does not write twice
+        self.plan_inputs: List[str] = (
+            []
+        )  # side inputs (srt/ass/lut/font files) a tool named through escape_filter_path
+        self.codec: Optional[str] = (
+            None  # --codec: encoder for the re-encode (None = x264 for SDR, x265 for HDR)
+        )
+        self.hw = (
+            False  # --hw / $FFMPEG_SKILL_HW: VideoToolbox encoders where they apply
+        )
+        self.hw_source: Optional[str] = (
+            None  # "flag" (--hw/--no-hw given) or "env" (FFMPEG_SKILL_HW), None = off by default
+        )
+        self.hw_notes: List[str] = (
+            []
+        )  # why an encode stayed on (or fell back to) the CPU, for the result document
+        self.hw_swaps: List[Tuple[List[str], List[str]]] = (
+            []
+        )  # (VideoToolbox args, the CPU args they replaced) for run()'s fallback
+        self.hw_fallback = False  # run() re-encoded a job VideoToolbox refused on the CPU (or a stage reported one)
+        self.hw_env_ignored = False  # $FFMPEG_SKILL_HW=1 was set but this tool's delivery preset does not take it (export.py)
+        self.hw_stages: List[Dict[str, Any]] = (
+            []
+        )  # render.py: the `hw` facts each stage (a child process) reported
+        self.hw_auto: List[str] = (
+            []
+        )  # CPU encoders (libx264/libx265) this ffmpeg build lacks, whose encodes ran on VideoToolbox without --hw
 
 
 STATE = Context()
@@ -228,34 +297,83 @@ STATE = Context()
 
 def add_common(ap: "argparse.ArgumentParser", codec: bool = True) -> None:
     """Add the flags every script shares. `codec=False` is for a tool that re-encodes but whose
-    preset decides the encoder (export.py): it must not advertise --codec/--quality in its schema."""
+    preset decides the encoder (export.py): it must not advertise --codec/--quality in its schema.
+    """
     g = ap.add_argument_group("agent options")
-    g.add_argument("--dry-run", action="store_true", help="print the ffmpeg commands that would run, run nothing")
-    g.add_argument("--json", action="store_true", help="print a JSON result (output, probe, commands) on stdout instead of the path")
-    g.add_argument("--json-brief", action="store_true",
-                   help="like --json but trimmed: status, output, dry_run, verified, a compact summary of the output probe, this tool's own keys, and the command count instead of the command lines (failures print the full failure document, unchanged)")
-    g.add_argument("--progress", action="store_true", help="show percent / ETA on stderr while ffmpeg encodes")
-    g.add_argument("--fast", action="store_true", help="preview quality: x264 preset veryfast (overrides --preset) for quick iterations")
-    if "--timeout" not in ap._option_string_actions:  # verify.py defines its own per-step --timeout; apply_common reads either
-        g.add_argument("--timeout", type=float, default=None, metavar="SECONDS",
-                       help=f"kill an ffmpeg run past this many seconds, kind=timeout (default {DEFAULT_TIMEOUT:.0f}; 0 = no limit)")
-    g.add_argument("--overwrite", action="store_true",
-                   help="allow replacing an existing output (refused without it)")
-    g.add_argument("--plan", metavar="FILE",
-                   help="write the dry run as a plan (inputs fingerprinted, commands, expected output, verify steps) that render.py FILE executes later; implies --dry-run")
+    g.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the ffmpeg commands that would run, run nothing",
+    )
+    g.add_argument(
+        "--json",
+        action="store_true",
+        help="print a JSON result (output, probe, commands) on stdout instead of the path",
+    )
+    g.add_argument(
+        "--json-brief",
+        action="store_true",
+        help="like --json but trimmed: status, output, dry_run, verified, a compact summary of the output probe, this tool's own keys, and the command count instead of the command lines (failures print the full failure document, unchanged)",
+    )
+    g.add_argument(
+        "--progress",
+        action="store_true",
+        help="show percent / ETA on stderr while ffmpeg encodes",
+    )
+    g.add_argument(
+        "--fast",
+        action="store_true",
+        help="preview quality: x264 preset veryfast (overrides --preset) for quick iterations",
+    )
+    if (
+        "--timeout" not in ap._option_string_actions
+    ):  # verify.py defines its own per-step --timeout; apply_common reads either
+        g.add_argument(
+            "--timeout",
+            type=float,
+            default=None,
+            metavar="SECONDS",
+            help=f"kill an ffmpeg run past this many seconds, kind=timeout (default {DEFAULT_TIMEOUT:.0f}; 0 = no limit)",
+        )
+    g.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow replacing an existing output (refused without it)",
+    )
+    g.add_argument(
+        "--plan",
+        metavar="FILE",
+        help="write the dry run as a plan (inputs fingerprinted, commands, expected output, verify steps) that render.py FILE executes later; implies --dry-run",
+    )
     if codec and "crf" in ap._defaults:
         # A tool that re-encodes declares its CRF default with set_defaults(crf=N) before calling
         # this; --codec/--quality are its only encoder flags, resolved in video_args(). --crf was
         # the 1.x spelling of --quality (an alias from 1.8, deprecated in 1.10, removed in 2.0).
-        g.add_argument("--codec", choices=CODECS, default=None,
-                       help="video encoder for the re-encode: h264 (x264, the default for SDR), hevc (x265, the default for HDR), av1 (SVT-AV1 or libaom), prores (422 HQ, needs a .mov/.mkv output); HDR sources keep their colour on hevc/av1/prores")
-        g.add_argument("--quality", type=int, default=ap._defaults["crf"], metavar="N",
-                       help="encoder quality on the CRF scale (default %(default)s; lower = better; 18 visually lossless for x264/x265, up to 63 for av1); ignored by prores")
+        g.add_argument(
+            "--codec",
+            choices=CODECS,
+            default=None,
+            help="video encoder for the re-encode: h264 (x264, the default for SDR), hevc (x265, the default for HDR), av1 (SVT-AV1 or libaom), prores (422 HQ, needs a .mov/.mkv output); HDR sources keep their colour on hevc/av1/prores",
+        )
+        g.add_argument(
+            "--quality",
+            type=int,
+            default=ap._defaults["crf"],
+            metavar="N",
+            help="encoder quality on the CRF scale (default %(default)s; lower = better; 18 visually lossless for x264/x265, up to 63 for av1); ignored by prores",
+        )
     if (codec and "crf" in ap._defaults) or not codec:
-        _add_hw_flags(g, "encode on the GPU with Apple VideoToolbox (h264/hevc/prores; Apple Silicon only): several times faster, "
-                         "larger files at the same quality; falls back to the CPU encoder, reported, where it cannot apply"
-                         + ("" if codec else ". The only way to put a delivery preset on the GPU: $FFMPEG_SKILL_HW does not apply here"),
-                      "encode on the CPU (x264/x265/SVT-AV1/prores_ks) even when $FFMPEG_SKILL_HW=1")
+        _add_hw_flags(
+            g,
+            "encode on the GPU with Apple VideoToolbox (h264/hevc/prores; Apple Silicon only): several times faster, "
+            "larger files at the same quality; falls back to the CPU encoder, reported, where it cannot apply"
+            + (
+                ""
+                if codec
+                else ". The only way to put a delivery preset on the GPU: $FFMPEG_SKILL_HW does not apply here"
+            ),
+            "encode on the CPU (x264/x265/SVT-AV1/prores_ks) even when $FFMPEG_SKILL_HW=1",
+        )
         ap.set_defaults(_hw_env=bool(codec))
 
 
@@ -263,7 +381,8 @@ def _add_hw_flags(g: Any, hw_help: str, no_hw_help: str) -> None:
     """--hw and --no-hw, each its own boolean (dests `hw` and `no_hw`). They are not one dest
     with store_true/store_false: the contract's input_schema keeps one property per dest and the
     MCP transport turns `true` into the flag, so a shared dest published --no-hw under the name
-    `hw` and an MCP `hw: true` ran on the CPU. hw_flag() reads the pair back as True/False/None."""
+    `hw` and an MCP `hw: true` ran on the CPU. hw_flag() reads the pair back as True/False/None.
+    """
     hw = g.add_mutually_exclusive_group()
     hw.add_argument("--hw", action="store_true", help=hw_help)
     hw.add_argument("--no-hw", action="store_true", help=no_hw_help)
@@ -285,6 +404,7 @@ def apply_common(args: "argparse.Namespace") -> None:
         # tools that print their document instead of calling emit() (probe, and the analysis
         # tools without --json) still get their plan written, at exit, unless die() ran (review 6)
         import atexit
+
         atexit.register(_plan_at_exit)
     STATE.json_brief = bool(getattr(args, "json_brief", False))
     # --json-brief is a shorter --json, not a second output mode: it implies it, so a caller that
@@ -298,7 +418,14 @@ def apply_common(args: "argparse.Namespace") -> None:
     if STATE.fast and getattr(args, "preset", None) in X264_PRESETS:
         args.preset = "veryfast"
     STATE.codec = getattr(args, "codec", None) or None
-    STATE.hw_notes, STATE.hw_swaps, STATE.hw_fallback, STATE.hw_env_ignored, STATE.hw_stages, STATE.hw_auto = [], [], False, False, [], []
+    (
+        STATE.hw_notes,
+        STATE.hw_swaps,
+        STATE.hw_fallback,
+        STATE.hw_env_ignored,
+        STATE.hw_stages,
+        STATE.hw_auto,
+    ) = ([], [], False, False, [], [])
     flag = hw_flag(args)
     if flag is not None:
         STATE.hw, STATE.hw_source = bool(flag), "flag"
@@ -315,28 +442,44 @@ def apply_common(args: "argparse.Namespace") -> None:
         STATE.hw, STATE.hw_source = False, None
         # export.py (a delivery preset decides the encoder): the machine default is not applied,
         # and the result says so rather than leaving a caller to wonder why the GPU was not used
-        STATE.hw_env_ignored = (hasattr(args, "hw") and env_hw() and not getattr(args, "_hw_env", False)
-                                and not getattr(args, "_hw_orchestrator", False))
+        STATE.hw_env_ignored = (
+            hasattr(args, "hw")
+            and env_hw()
+            and not getattr(args, "_hw_env", False)
+            and not getattr(args, "_hw_orchestrator", False)
+        )
     quality = getattr(args, "quality", None)
     if quality is not None:
         top = 63 if STATE.codec == "av1" else 51
         if not 0 <= int(quality) <= top:
-            die(f"--quality must be between 0 and {top} for {STATE.codec or 'h264'} (CRF scale; 18 is visually lossless), got {quality}")
-        args.crf = int(quality)  # every tool reads args.crf; --quality is the codec-neutral spelling of it
+            die(
+                f"--quality must be between 0 and {top} for {STATE.codec or 'h264'} (CRF scale; 18 is visually lossless), got {quality}"
+            )
+        args.crf = int(
+            quality
+        )  # every tool reads args.crf; --quality is the codec-neutral spelling of it
     if STATE.codec == "prores" and hasattr(args, "output"):
         out = getattr(args, "output", None)
         if not out:
             # every tool defaults its output to the source's extension (or .mp4): ProRes in an .mp4
             # fails inside ffmpeg with "codec not currently supported in container" (review 7)
-            die("--codec prores needs an explicit -o NAME.mov (or .mkv): the default output name keeps the source's container, which cannot hold ProRes",
-                hint="give -o NAME.mov")
+            die(
+                "--codec prores needs an explicit -o NAME.mov (or .mkv): the default output name keeps the source's container, which cannot hold ProRes",
+                hint="give -o NAME.mov",
+            )
         if os.path.splitext(str(out))[1].lower() not in (".mov", ".mkv"):
-            die(f"--codec prores needs a .mov (or .mkv) output; {os.path.basename(str(out))} cannot hold ProRes",
-                hint="give -o NAME.mov")
-    crf = getattr(args, "crf", None)  # export.py's own --crf (its preset chooses the encoder)
+            die(
+                f"--codec prores needs a .mov (or .mkv) output; {os.path.basename(str(out))} cannot hold ProRes",
+                hint="give -o NAME.mov",
+            )
+    crf = getattr(
+        args, "crf", None
+    )  # export.py's own --crf (its preset chooses the encoder)
     top = 63 if STATE.codec == "av1" else 51
     if crf is not None and not 0 <= int(crf) <= top:
-        die(f"--crf must be between 0 and {top} ({'SVT-AV1' if STATE.codec == 'av1' else 'x264/x265'} scale; 18 is visually lossless), got {crf}")
+        die(
+            f"--crf must be between 0 and {top} ({'SVT-AV1' if STATE.codec == 'av1' else 'x264/x265'} scale; 18 is visually lossless), got {crf}"
+        )
     install_signal_handlers()
 
 
@@ -354,7 +497,11 @@ _SIGNALS_INSTALLED = False
 
 def _on_signal(signum: int, frame: Any) -> None:
     import signal as _signal
-    name = {getattr(_signal, "SIGINT", None): "SIGINT", getattr(_signal, "SIGTERM", None): "SIGTERM"}.get(signum, str(signum))
+
+    name = {
+        getattr(_signal, "SIGINT", None): "SIGINT",
+        getattr(_signal, "SIGTERM", None): "SIGTERM",
+    }.get(signum, str(signum))
     for proc, cmd in list(_CHILDREN):
         try:
             proc.terminate()  # ffmpeg exits promptly on SIGTERM; a sibling script runs this same handler
@@ -368,8 +515,11 @@ def _on_signal(signum: int, frame: Any) -> None:
         if cmd:
             _cleanup_partial_output(cmd)
     _CHILDREN.clear()
-    die(f"interrupted by {name}: the running command was stopped and its partial output removed; nothing was written",
-        code=128 + signum, kind="interrupted")
+    die(
+        f"interrupted by {name}: the running command was stopped and its partial output removed; nothing was written",
+        code=128 + signum,
+        kind="interrupted",
+    )
 
 
 def install_signal_handlers() -> None:
@@ -381,6 +531,7 @@ def install_signal_handlers() -> None:
         return
     import signal as _signal
     import threading
+
     if threading.current_thread() is not threading.main_thread():
         return
     for sig in (getattr(_signal, "SIGINT", None), getattr(_signal, "SIGTERM", None)):
@@ -423,7 +574,11 @@ def _cleanup_partial_output(cmd: Sequence[str]) -> None:
     if not _is_ffmpeg(cmd):
         return
     output = cmd[-1]
-    if output in ("-", "pipe:0", "pipe:1") or output.startswith("pipe:") or output.startswith("-"):
+    if (
+        output in ("-", "pipe:0", "pipe:1")
+        or output.startswith("pipe:")
+        or output.startswith("-")
+    ):
         return
     try:
         if not os.path.exists(output):
@@ -443,7 +598,13 @@ def _cleanup_partial_output(cmd: Sequence[str]) -> None:
         pass
 
 
-def _fail(cmd: Sequence[str], returncode: int, stderr: str, ctx: "Optional[Context]" = None, retried: bool = False) -> None:
+def _fail(
+    cmd: Sequence[str],
+    returncode: int,
+    stderr: str,
+    ctx: "Optional[Context]" = None,
+    retried: bool = False,
+) -> None:
     # Partial-output cleanup already ran in the caller (_run_captured/_run_with_progress) for
     # every failed ffmpeg invocation, not just this check=True path -- see _cleanup_partial_output.
     # The process exit code is always 1 for an ffmpeg failure: ffmpeg's own code (1, 69, 218, 234,
@@ -471,11 +632,21 @@ def _fail(cmd: Sequence[str], returncode: int, stderr: str, ctx: "Optional[Conte
         report = hw_report(ctx, enc)
         if on_gpu:
             report["notes"].append(
-                "the VideoToolbox encode failed and was not retried on the CPU: " +
-                ("ffmpeg reported no encoder-open or compression-session error, so the cause is not the GPU (see the message)"
-                 if why is None else f"VideoToolbox refused it ({why}) and no CPU encoder line was recorded to retry with"))
+                "the VideoToolbox encode failed and was not retried on the CPU: "
+                + (
+                    "ffmpeg reported no encoder-open or compression-session error, so the cause is not the GPU (see the message)"
+                    if why is None
+                    else f"VideoToolbox refused it ({why}) and no CPU encoder line was recorded to retry with"
+                )
+            )
         extra = {"encoder": enc, "hw": report}
-    die(f"command failed ({returncode}): {what}\n{tail}", code=1, kind="ffmpeg", ffmpeg_returncode=returncode, **extra)
+    die(
+        f"command failed ({returncode}): {what}\n{tail}",
+        code=1,
+        kind="ffmpeg",
+        ffmpeg_returncode=returncode,
+        **extra,
+    )
 
 
 def video_encoder_of(cmd: Sequence[str]) -> Optional[str]:
@@ -494,9 +665,14 @@ def _check_no_overwrite_input(cmd: Sequence[str]) -> None:
     all resolve to the same file but pass that check, so "-o ./same.mp4" on an input opened as
     "same.mp4" would otherwise silently let ffmpeg's -y clobber the source mid-encode. Every
     write-side script routes through this one run() choke point rather than each computing its
-    own output path defensively, so the guard lives here once instead of at 25+ call sites."""
+    own output path defensively, so the guard lives here once instead of at 25+ call sites.
+    """
     output = cmd[-1]
-    if output in ("-", "pipe:0", "pipe:1") or output.startswith("pipe:") or output.startswith("-"):
+    if (
+        output in ("-", "pipe:0", "pipe:1")
+        or output.startswith("pipe:")
+        or output.startswith("-")
+    ):
         return
     try:
         out_real = os.path.realpath(output)
@@ -507,9 +683,11 @@ def _check_no_overwrite_input(cmd: Sequence[str]) -> None:
             inp = cmd[i + 1]
             try:
                 if os.path.realpath(inp) == out_real:
-                    die(f"refusing to run: output {output!r} is the same file as input {inp!r} "
+                    die(
+                        f"refusing to run: output {output!r} is the same file as input {inp!r} "
                         f"(would overwrite it while ffmpeg is still reading it) -- choose a different --output/-o path",
-                        kind="input")
+                        kind="input",
+                    )
             except OSError:
                 continue
 
@@ -519,7 +697,8 @@ def refuse_output_is_input(output: str, *inputs: str) -> None:
     the user's input at all. `cut.py --segments` cuts each part into a temp dir and then concats
     a list file: the last command's only `-i` is that list, so `-o` equal to the input sailed
     through _check_no_overwrite_input() and replaced the source with the join (fourth audit,
-    P0). Call it once the output path is known, before any part of the input is consumed."""
+    P0). Call it once the output path is known, before any part of the input is consumed.
+    """
     try:
         out_real = os.path.realpath(output)
     except OSError:
@@ -530,22 +709,30 @@ def refuse_output_is_input(output: str, *inputs: str) -> None:
         except OSError:
             continue
         if same:
-            die(f"refusing to run: output {output!r} is the same file as input {inp!r} "
-                f"(the result would replace the source) -- choose a different --output/-o path", kind="input")
+            die(
+                f"refusing to run: output {output!r} is the same file as input {inp!r} "
+                f"(the result would replace the source) -- choose a different --output/-o path",
+                kind="input",
+            )
 
 
 def _check_output_path(cmd: Sequence[str]) -> None:
     """An output whose directory does not exist, or that names a directory, is a caller mistake:
     say so as `kind: input` before ffmpeg runs, instead of the muxer's "No such file or directory"
-    as `kind: ffmpeg` (which reads as an encoder failure) or an `OUTPUT_INVALID` after the fact."""
+    as `kind: ffmpeg` (which reads as an encoder failure) or an `OUTPUT_INVALID` after the fact.
+    """
     output = cmd[-1]
     if output == "-" or output.startswith("pipe:") or output.startswith("-"):
         return
     if os.path.isdir(output):
-        die(f"output {output!r} is a directory; pass a file path (e.g. {os.path.join(output, 'result.mp4')!r})")
+        die(
+            f"output {output!r} is a directory; pass a file path (e.g. {os.path.join(output, 'result.mp4')!r})"
+        )
     parent = os.path.dirname(os.path.abspath(output))
     if not os.path.isdir(parent):
-        die(f"output directory {parent!r} does not exist; create it first (this tool never creates directories)")
+        die(
+            f"output directory {parent!r} does not exist; create it first (this tool never creates directories)"
+        )
     if not os.access(parent, os.W_OK):
         die(f"output directory {parent!r} is not writable")
 
@@ -567,8 +754,11 @@ def _pid_dead(pid: int) -> bool:
         return False
     try:
         import ctypes
+
         k32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
-        handle = k32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        handle = k32.OpenProcess(
+            0x1000, False, pid
+        )  # PROCESS_QUERY_LIMITED_INFORMATION
         if handle:
             k32.CloseHandle(handle)
             return False
@@ -582,6 +772,7 @@ class _OutputLock:
     them described the other's file (sweep F1). A lock file next to the output, created with
     O_EXCL and holding the writer's pid, makes the second run refuse as `kind: input`. A lock
     whose pid is dead (POSIX) or older than an hour is stale and taken over."""
+
     def __init__(self, output: str) -> None:
         self.path: Optional[str] = None
         self.fd: Optional[int] = None
@@ -595,7 +786,9 @@ class _OutputLock:
             return self
         for attempt in (0, 1):
             try:
-                self.fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+                self.fd = os.open(
+                    self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644
+                )
                 os.write(self.fd, str(os.getpid()).encode())
                 return self
             except FileExistsError:
@@ -605,8 +798,10 @@ class _OutputLock:
                     except OSError:
                         pass
                     continue
-                die(f"another run is writing {os.path.basename(self.path)[1:-len('.ffskill-lock')]!r} right now "
-                    f"(lock {self.path}); wait for it or choose a different --output/-o path")
+                die(
+                    f"another run is writing {os.path.basename(self.path)[1:-len('.ffskill-lock')]!r} right now "
+                    f"(lock {self.path}); wait for it or choose a different --output/-o path"
+                )
             except OSError:
                 return self  # unlockable location (read-only dir surfaces elsewhere): proceed without a lock
         return self
@@ -617,6 +812,7 @@ class _OutputLock:
             if pid > 0 and _pid_dead(pid):
                 return True
             import time
+
             return time.time() - os.path.getmtime(self.path) > 3600
         except (OSError, ValueError):
             return True
@@ -640,7 +836,11 @@ def _odd_dimension_retry(cmd: List[str], stderr: str) -> Optional[List[str]]:
     with an even-dimension scale prepended to its -vf chain (or a new -vf when the command had
     none); None when the failure is something else or the graph is a -filter_complex the
     caller has to fix itself."""
-    if "not divisible by 2" not in stderr or EVEN_SCALE in cmd or any(EVEN_SCALE in a for a in cmd):
+    if (
+        "not divisible by 2" not in stderr
+        or EVEN_SCALE in cmd
+        or any(EVEN_SCALE in a for a in cmd)
+    ):
         return None
     if "-filter_complex" in cmd:
         return None
@@ -660,7 +860,8 @@ def _check_existing_output(cmd: Sequence[str]) -> None:
     a run never blocks on a y/N prompt) would replace it without a word. Since 2.0 it is refused
     (kind: input, before anything runs, dry runs included) unless --overwrite gives explicit
     consent; 1.x only warned, and FFMPEG_SKILL_NO_OVERWRITE=1 was the opt-in to this. Paths this
-    process wrote itself (a two-pass tool, a copy-then-re-encode fallback) are never in question."""
+    process wrote itself (a two-pass tool, a copy-then-re-encode fallback) are never in question.
+    """
     output = cmd[-1]
     if output in ("-",) or output.startswith("pipe:") or output.startswith("-"):
         return
@@ -693,11 +894,18 @@ def refuse_existing_outputs(paths: Sequence[str]) -> None:
     if not existing or STATE.overwrite:
         return
     if len(existing) == 1:
-        die(f"refusing to overwrite existing output {existing[0]!r}: pass --overwrite to replace it, or choose another -o path",
-            kind="input", hint="pass --overwrite, or choose another -o path")
-    die("refusing to overwrite existing outputs " + ", ".join(repr(p) for p in existing)
+        die(
+            f"refusing to overwrite existing output {existing[0]!r}: pass --overwrite to replace it, or choose another -o path",
+            kind="input",
+            hint="pass --overwrite, or choose another -o path",
+        )
+    die(
+        "refusing to overwrite existing outputs "
+        + ", ".join(repr(p) for p in existing)
         + ": pass --overwrite to replace them, or choose another -o path",
-        kind="input", hint="pass --overwrite, or choose another -o path")
+        kind="input",
+        hint="pass --overwrite, or choose another -o path",
+    )
 
 
 def _remember_output(cmd: Sequence[str]) -> None:
@@ -712,12 +920,17 @@ def _remember_output(cmd: Sequence[str]) -> None:
 
 def _timed_out(cmd: Sequence[str], seconds: float) -> "None":
     _cleanup_partial_output(cmd)
-    die(f"{os.path.basename(cmd[0])} exceeded the {seconds:.0f} s time limit and was killed; nothing was written. "
+    die(
+        f"{os.path.basename(cmd[0])} exceeded the {seconds:.0f} s time limit and was killed; nothing was written. "
         f"Raise --timeout (or FFMPEG_SKILL_TIMEOUT) if the job is genuinely that long, or check the input for a stall",
-        code=124, kind="timeout")
+        code=124,
+        kind="timeout",
+    )
 
 
-def _stage_existing_output(cmd: Sequence[str]) -> Tuple[List[str], Optional[str], Optional[str]]:
+def _stage_existing_output(
+    cmd: Sequence[str],
+) -> Tuple[List[str], Optional[str], Optional[str]]:
     """When the output path already holds someone's file, run ffmpeg against a hidden sibling
     temp path and move it over the original only on success.
 
@@ -751,10 +964,13 @@ HW_FORCED_ENV = "_FFMPEG_SKILL_HW_EXPLICIT"
 
 def add_hw_orchestrator_args(ap: "argparse.ArgumentParser") -> None:
     """--hw / --no-hw on a tool that runs other tools (render.py, batch.py) and encodes nothing itself."""
-    _add_hw_flags(ap, "run every stage's encode on Apple VideoToolbox, the final delivery export included (Apple Silicon; "
-                      "falls back to the CPU, reported, where it cannot apply). Without it, $FFMPEG_SKILL_HW=1 still "
-                      "puts the intermediate stages on the GPU and leaves the delivery export on the CPU",
-                  "every stage on the CPU encoders, whatever $FFMPEG_SKILL_HW says")
+    _add_hw_flags(
+        ap,
+        "run every stage's encode on Apple VideoToolbox, the final delivery export included (Apple Silicon; "
+        "falls back to the CPU, reported, where it cannot apply). Without it, $FFMPEG_SKILL_HW=1 still "
+        "puts the intermediate stages on the GPU and leaves the delivery export on the CPU",
+        "every stage on the CPU encoders, whatever $FFMPEG_SKILL_HW says",
+    )
     ap.set_defaults(_hw_orchestrator=True)
 
 
@@ -766,7 +982,8 @@ def env_hw() -> bool:
 def hw_platform_reason() -> Optional[str]:
     """None when this machine can take a VideoToolbox constant-quality encode, else why not.
     `-q:v` on VideoToolbox is Apple-Silicon-only in FFmpeg: an Intel Mac lists the encoders but
-    rejects the quality setting, so the machine check is macOS AND Apple Silicon hardware."""
+    rejects the quality setting, so the machine check is macOS AND Apple Silicon hardware.
+    """
     if platform.system() != "Darwin":
         return "VideoToolbox is macOS-only"
     if not apple_silicon():
@@ -788,9 +1005,19 @@ def apple_silicon() -> bool:
         _APPLE_SILICON = platform.machine() == "arm64"
         if not _APPLE_SILICON and platform.system() == "Darwin":
             try:
-                out = subprocess.run([shutil.which("sysctl") or "/usr/sbin/sysctl", "-n", "hw.optional.arm64"],
-                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8",
-                                     errors="replace", timeout=10).stdout
+                out = subprocess.run(
+                    [
+                        shutil.which("sysctl") or "/usr/sbin/sysctl",
+                        "-n",
+                        "hw.optional.arm64",
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=10,
+                ).stdout
                 _APPLE_SILICON = out.strip() == "1"
             except (OSError, subprocess.SubprocessError):
                 _APPLE_SILICON = False
@@ -819,9 +1046,14 @@ def apple_silicon() -> bool:
 #    for another reason (a full disk: "Error submitting a packet to the muxer") can still carry.
 _VT_ENCODER_RE = re.compile(r"(?:h264|hevc|prores)_videotoolbox")
 _VT_OWN_CONTEXT_RE = re.compile(r"\[(?:h264|hevc|prores)_videotoolbox @ [^\]]*\]")
-_VT_SESSION_RE = re.compile(r"create compression session|prepare encoder|encode frame|encoding frame", re.I)
+_VT_SESSION_RE = re.compile(
+    r"create compression session|prepare encoder|encode frame|encoding frame", re.I
+)
 # the encoder's own ERROR-level lines that do not fail the encode (listed above)
-_VT_NONFATAL_RE = re.compile(r"profile/level|entropy|frames_before|frames_after|realtime|pixel aspect|aspect ratio", re.I)
+_VT_NONFATAL_RE = re.compile(
+    r"profile/level|entropy|frames_before|frames_after|realtime|pixel aspect|aspect ratio",
+    re.I,
+)
 _STREAM_CONTEXT_RE = re.compile(r"\[[a-z]ost#\d+:\d+")
 _ENCODER_OPEN_FAILED = "Error while opening encoder"
 
@@ -829,7 +1061,8 @@ _ENCODER_OPEN_FAILED = "Error while opening encoder"
 def videotoolbox_failure(stderr: str) -> Optional[str]:
     """The stderr line that shows a VideoToolbox encoder refused the job (could not open, or its
     compression session failed), with the log contexts' pointers dropped; None when the failure
-    is something else. Only such a failure is retried on the CPU (see the notes above)."""
+    is something else. Only such a failure is retried on the CPU (see the notes above).
+    """
     lines = [ln.strip() for ln in (stderr or "").splitlines() if ln.strip()]
     own = [ln for ln in lines if _VT_OWN_CONTEXT_RE.search(ln)]
     # the lines that can explain a refusal: not the non-fatal property errors, which a job that
@@ -840,10 +1073,14 @@ def videotoolbox_failure(stderr: str) -> Optional[str]:
         for ln in lines:
             if _ENCODER_OPEN_FAILED not in ln:
                 continue
-            if _VT_ENCODER_RE.search(ln):            # 6.0+: the line names the encoder that failed to open
+            if _VT_ENCODER_RE.search(
+                ln
+            ):  # 6.0+: the line names the encoder that failed to open
                 found = fatal[-1] if fatal else ln
                 break
-            if fatal and not _STREAM_CONTEXT_RE.search(ln):  # 5.1: no encoder named; the encoder's own error line is
+            if fatal and not _STREAM_CONTEXT_RE.search(
+                ln
+            ):  # 5.1: no encoder named; the encoder's own error line is
                 found = fatal[-1]
                 break
     return re.sub(r" @ 0x[0-9a-fA-F]+", "", found)[:200] if found else None
@@ -851,19 +1088,26 @@ def videotoolbox_failure(stderr: str) -> Optional[str]:
 
 def _hw_fallback(cmd: List[str], ctx: "Context") -> Optional[List[str]]:
     """`cmd` with every VideoToolbox encoder line this process built swapped back to the CPU line
-    it replaced, or None when it has none -- for run() when the GPU refused an encode."""
+    it replaced, or None when it has none -- for run() when the GPU refused an encode.
+    """
     out, changed = list(cmd), False
     for vt, cpu in ctx.hw_swaps:
         n = len(vt)
         for i in range(len(out) - n + 1):
-            if out[i:i + n] == vt:
-                out[i:i + n] = cpu
+            if out[i : i + n] == vt:
+                out[i : i + n] = cpu
                 changed = True
                 break
     return out if changed else None
 
 
-def run(cmd: Sequence[str], *, quiet: bool = False, check: bool = True, ctx: "Optional[Context]" = None) -> subprocess.CompletedProcess:
+def run(
+    cmd: Sequence[str],
+    *,
+    quiet: bool = False,
+    check: bool = True,
+    ctx: "Optional[Context]" = None,
+) -> subprocess.CompletedProcess:
     """Run a command, echoing it to stderr unless quiet. Exits on failure when check=True.
 
     ffmpeg invocations are recorded in STATE.commands (for --json), skipped under --dry-run
@@ -882,20 +1126,29 @@ def run(cmd: Sequence[str], *, quiet: bool = False, check: bool = True, ctx: "Op
         # that conversion as a -vf; it joins the tool's own graph here, before anything records
         # or runs the command (color.py imports this module, hence the late import)
         from _common.color import fold_bt709_matrix
+
         cmd = fold_bt709_matrix(cmd)
         _check_no_overwrite_input(cmd)
         _check_output_path(cmd)
         _check_existing_output(cmd)
         ctx.commands.append(_cmdline(cmd))
     if not quiet:
-        info(("[dry-run] $ " if ctx.dry_run and is_ffmpeg else "$ ") + _cmdline(cmd), ctx=ctx)
+        info(
+            ("[dry-run] $ " if ctx.dry_run and is_ffmpeg else "$ ") + _cmdline(cmd),
+            ctx=ctx,
+        )
     if ctx.dry_run and is_ffmpeg:
         return subprocess.CompletedProcess(list(cmd), 0, "", "")
     if is_ffmpeg:
         flush_drawtext_textfiles(cmd)
     with _OutputLock(cmd[-1] if is_ffmpeg else "-"):
-        exec_cmd, final, tmp = _stage_existing_output(cmd) if is_ffmpeg else (list(cmd), None, None)
-        def even_retry(proc: subprocess.CompletedProcess, ran: List[str]) -> "Tuple[subprocess.CompletedProcess, List[str]]":
+        exec_cmd, final, tmp = (
+            _stage_existing_output(cmd) if is_ffmpeg else (list(cmd), None, None)
+        )
+
+        def even_retry(
+            proc: subprocess.CompletedProcess, ran: List[str]
+        ) -> "Tuple[subprocess.CompletedProcess, List[str]]":
             """An attempt that failed on odd dimensions, run again with an even scale: after the
             first attempt, and after a GPU->CPU retry (VideoToolbox may refuse an odd-sized job
             for another reason before x264 ever reports the size)."""
@@ -903,13 +1156,17 @@ def run(cmd: Sequence[str], *, quiet: bool = False, check: bool = True, ctx: "Op
                 return proc, ran
             retry = _odd_dimension_retry(ran, proc.stderr or "")
             if retry is not None:
-                info("source has odd dimensions; scaling to even before encoding (yuv420p needs it)")
+                info(
+                    "source has odd dimensions; scaling to even before encoding (yuv420p needs it)"
+                )
                 ctx.commands[-1] = _cmdline(retry[:-1] + [cmd[-1]])
                 return _execute(retry), retry
             if "not divisible by 2" in (proc.stderr or ""):
-                die("the source has odd dimensions (width or height not divisible by 2) and this tool's filter graph "
+                die(
+                    "the source has odd dimensions (width or height not divisible by 2) and this tool's filter graph "
                     "cannot pad them itself; make them even first, e.g. fit.py --width/--height, then retry",
-                    kind="input")
+                    kind="input",
+                )
             return proc, ran
 
         # `tried` is the last command run: the CPU fallback swaps its encoder line in
@@ -941,7 +1198,15 @@ def run(cmd: Sequence[str], *, quiet: bool = False, check: bool = True, ctx: "Op
                     # the outcome replaces the line above: a failure document must not claim a
                     # re-encode that did not happen, and hw.fallback is the same claim as a flag
                     ok = proc.returncode == 0
-                    _set_refusal_note(ctx, reason, "; re-encoded on the CPU" if ok else "; the CPU retry failed too")
+                    _set_refusal_note(
+                        ctx,
+                        reason,
+                        (
+                            "; re-encoded on the CPU"
+                            if ok
+                            else "; the CPU retry failed too"
+                        ),
+                    )
                     ctx.hw_fallback = ctx.hw_fallback or ok
         if proc.returncode != 0 and check:
             _fail(tried, proc.returncode, proc.stderr or "", ctx=ctx, retried=retried)
@@ -951,7 +1216,10 @@ def run(cmd: Sequence[str], *, quiet: bool = False, check: bool = True, ctx: "Op
                     os.replace(tmp, final)
                 except OSError as e:
                     _cleanup_partial_output(exec_cmd)
-                    die(f"could not replace {final} with the new output: {e}", kind="output")
+                    die(
+                        f"could not replace {final} with the new output: {e}",
+                        kind="output",
+                    )
                 _remember_output(cmd)
             else:
                 _cleanup_partial_output(exec_cmd)
@@ -973,7 +1241,9 @@ def _execute(exec_cmd: List[str]) -> subprocess.CompletedProcess:
     return _run_captured(exec_cmd, False)
 
 
-def run_analysis(cmd: Sequence[str], *, check: bool = True, text: bool = True, record: bool = False) -> subprocess.CompletedProcess:
+def run_analysis(
+    cmd: Sequence[str], *, check: bool = True, text: bool = True, record: bool = False
+) -> subprocess.CompletedProcess:
     """Run an ffmpeg *measurement* (scene scores, crop rectangles, decoded PCM, signal stats,
     silence detection, loudness, stabilisation pass 1): output to `-f null`, a pipe or a temp
     file, no deliverable written. These are not run() calls -- they run under --dry-run too,
@@ -990,7 +1260,14 @@ def run_analysis(cmd: Sequence[str], *, check: bool = True, text: bool = True, r
         # input filename on stderr, and loudness/check parse the loudnorm JSON out of it. The
         # encoding kwargs are rejected with text=False, so they are only passed for text mode.
         text_kw = {"encoding": "utf-8", "errors": "replace"} if text else {}
-        proc = subprocess.run(list(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=text, **text_kw, timeout=limit)
+        proc = subprocess.run(
+            list(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=text,
+            **text_kw,
+            timeout=limit,
+        )
     except subprocess.TimeoutExpired:
         _timed_out(cmd, limit or 0)
     if check and proc.returncode != 0:
@@ -1005,7 +1282,9 @@ def dry_run_input_pending(path: str) -> bool:
     run never wrote. The measurement is then skipped (with a note) rather than failing the plan;
     on a real file the measurement runs even under --dry-run."""
     if STATE.dry_run and not os.path.exists(path):
-        info(f"[dry-run] {path} does not exist yet (an earlier dry-run stage would write it); measurement skipped")
+        info(
+            f"[dry-run] {path} does not exist yet (an earlier dry-run stage would write it); measurement skipped"
+        )
         return True
     return False
 
@@ -1015,19 +1294,31 @@ def child_limit(per_call: Optional[float] = None) -> Optional[float]:
     stages, the MCP server's dispatch). A tool runs a handful of ffmpeg/ffprobe calls, each
     under its own --timeout, so the outer ceiling is a multiple of that plus a margin: it never
     fires first on a healthy run, and it is the only thing that ends a child hung for a reason
-    that is not ffmpeg (a stuck import, a wedged pipe). None when the per-call limit is 0."""
+    that is not ffmpeg (a stuck import, a wedged pipe). None when the per-call limit is 0.
+    """
     limit = STATE.timeout if per_call is None else per_call
     return (limit * 4 + 60) if limit else None
 
 
-def run_tool(argv: Sequence[str], *, per_call: Optional[float] = None) -> subprocess.CompletedProcess:
+def run_tool(
+    argv: Sequence[str], *, per_call: Optional[float] = None
+) -> subprocess.CompletedProcess:
     """Run a sibling script (`argv[0]` is the script path) under child_limit(). On overrun the
     child is killed and a CompletedProcess is returned whose stdout is this skill's own failure
     document (kind timeout, exit 124), so callers that parse the child's --json see a timeout
     exactly as they would from the child itself."""
     limit = child_limit(per_call)
-    child = subprocess.Popen([sys.executable] + list(argv), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
-    _watch(child, [])  # a sibling script removes its own partial output; there is none of ours to clean
+    child = subprocess.Popen(
+        [sys.executable] + list(argv),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    _watch(
+        child, []
+    )  # a sibling script removes its own partial output; there is none of ours to clean
     try:
         out, err = child.communicate(timeout=limit)
         _unwatch(child)
@@ -1038,11 +1329,25 @@ def run_tool(argv: Sequence[str], *, per_call: Optional[float] = None) -> subpro
         _unwatch(child)
         name = os.path.basename(str(argv[0]))
         msg = f"{name} did not finish within {limit:.0f} s (4x the per-ffmpeg --timeout plus 60 s) and was killed"
-        doc = {"status": "failed", "exit_code": 124,
-               "error": {"kind": "timeout", "message": msg, "code": ERROR_CODE["timeout"], "retryable": ERROR_RETRYABLE},
-               "commands": []}
-        partial = e.stderr.decode(errors="replace") if isinstance(e.stderr, bytes) else (e.stderr or "")
-        return subprocess.CompletedProcess(list(argv), 124, json.dumps(doc), partial + f"\nerror: {msg}\n")
+        doc = {
+            "status": "failed",
+            "exit_code": 124,
+            "error": {
+                "kind": "timeout",
+                "message": msg,
+                "code": ERROR_CODE["timeout"],
+                "retryable": ERROR_RETRYABLE,
+            },
+            "commands": [],
+        }
+        partial = (
+            e.stderr.decode(errors="replace")
+            if isinstance(e.stderr, bytes)
+            else (e.stderr or "")
+        )
+        return subprocess.CompletedProcess(
+            list(argv), 124, json.dumps(doc), partial + f"\nerror: {msg}\n"
+        )
 
 
 def child_args() -> List[str]:
@@ -1068,8 +1373,16 @@ def run_keeping_subtitles(cmd: List[str], output: str) -> bool:
     (e.g. a container change) makes that first attempt fail; retry the same command without the
     extra maps rather than let a tool that never touched subtitles start hard-failing because of
     them. `cmd` is the full argv *without* the output path. Returns True only when the
-    retry-without-subtitles path was actually needed (i.e. subtitle/data streams were dropped)."""
-    if run(cmd + ["-map", "0:s?", "-map", "0:d?", "-c:s", "copy", "-c:d", "copy", output], check=False).returncode == 0:
+    retry-without-subtitles path was actually needed (i.e. subtitle/data streams were dropped).
+    """
+    if (
+        run(
+            cmd
+            + ["-map", "0:s?", "-map", "0:d?", "-c:s", "copy", "-c:d", "copy", output],
+            check=False,
+        ).returncode
+        == 0
+    ):
         return False
     run(cmd + [output])
     return True
@@ -1086,7 +1399,14 @@ def _limit_for(cmd: Sequence[str]) -> Optional[float]:
 def _run_captured(cmd: List[str], check: bool) -> subprocess.CompletedProcess:
     """Plain run with stdout/stderr captured."""
     limit = _limit_for(cmd)
-    child = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+    child = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     _watch(child, cmd)
     try:
         out, err = child.communicate(timeout=limit)
@@ -1132,11 +1452,19 @@ def _run_with_progress(cmd: List[str], check: bool) -> subprocess.CompletedProce
     import queue
     import threading
     import time
+
     total = STATE.duration_hint or 0.0
     full = cmd[:1] + ["-progress", "pipe:1", "-nostats"] + cmd[1:]
     t0 = time.time()
     limit = _limit_for(cmd)
-    proc = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+    proc = subprocess.Popen(
+        full,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     _watch(proc, cmd)
     assert proc.stdout is not None and proc.stderr is not None
     lines: "queue.Queue[Optional[str]]" = queue.Queue()
@@ -1170,7 +1498,9 @@ def _run_with_progress(cmd: List[str], check: bool) -> subprocess.CompletedProce
         if remaining is not None and remaining <= 0:
             timed_out()
         try:
-            line = lines.get(timeout=min(0.5, remaining) if remaining is not None else 0.5)
+            line = lines.get(
+                timeout=min(0.5, remaining) if remaining is not None else 0.5
+            )
         except queue.Empty:
             continue
         if line is None:
@@ -1226,6 +1556,7 @@ def place_output(src: str, dst: str, move: bool = False) -> None:
     copied whole, about 2 s for 240 MB. A rename that fails (another filesystem) falls back to
     the copy."""
     import shutil
+
     cmd = ["ffmpeg", dst]
     _check_output_path(cmd)
     _check_existing_output(cmd)
@@ -1279,12 +1610,14 @@ def _drawtext_tmpdir(create: bool = True) -> str:
     """
     global _DRAWTEXT_TMPDIR
     import tempfile
+
     if _DRAWTEXT_TMPDIR and os.path.isdir(_DRAWTEXT_TMPDIR):
         return _DRAWTEXT_TMPDIR
     if not create:
         # --dry-run names the path it WOULD use and creates nothing (a dry run writes nothing).
         return os.path.join(tempfile.gettempdir(), "ffmpeg-skill-text-%d" % os.getpid())
     import atexit
+
     _DRAWTEXT_TMPDIR = tempfile.mkdtemp(prefix="ffmpeg-skill-text-")
     atexit.register(shutil.rmtree, _DRAWTEXT_TMPDIR, True)
     return _DRAWTEXT_TMPDIR
@@ -1340,8 +1673,15 @@ def ffmpeg_encoders() -> set:
         # (#314), so a deadlocked ffmpeg must not outlive the limit the caller set before the encode
         limit = min(PROBE_TIMEOUT, STATE.timeout) if STATE.timeout else PROBE_TIMEOUT
         try:
-            out = subprocess.run([ffmpeg_exe(tool)[0] or tool, "-hide_banner", "-encoders"], stdout=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace", timeout=limit).stdout
+            out = subprocess.run(
+                [ffmpeg_exe(tool)[0] or tool, "-hide_banner", "-encoders"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=limit,
+            ).stdout
             _ENCODERS = set(re.findall(r"^\s*[VAS][.\w]{5}\s+(\S+)", out, re.M))
         except (OSError, subprocess.SubprocessError):
             pass
@@ -1350,7 +1690,8 @@ def ffmpeg_encoders() -> set:
 
 def read_text_or_die(path: str, flag: str) -> str:
     """Read a caller-supplied UTF-8 text file (a cue list, chapters, notes) or fail as kind input
-    with the flag named, instead of a FileNotFoundError / UnicodeDecodeError traceback."""
+    with the flag named, instead of a FileNotFoundError / UnicodeDecodeError traceback.
+    """
     if os.path.isdir(path):
         # checked first: Windows raises PermissionError, not IsADirectoryError, for a directory
         die(f"{flag}: {path} is a directory, not a text file")
@@ -1362,7 +1703,9 @@ def read_text_or_die(path: str, flag: str) -> str:
     except IsADirectoryError:
         die(f"{flag}: {path} is a directory, not a text file")
     except UnicodeDecodeError as e:
-        die(f"{flag}: {path} is not UTF-8 text ({e.reason} at byte {e.start}); save it as UTF-8")
+        die(
+            f"{flag}: {path} is not UTF-8 text ({e.reason} at byte {e.start}); save it as UTF-8"
+        )
     except OSError as e:
         die(f"{flag}: cannot read {path}: {e.strerror}")
     return ""  # unreachable

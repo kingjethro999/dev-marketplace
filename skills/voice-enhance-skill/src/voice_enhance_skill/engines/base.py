@@ -2,7 +2,9 @@
 and provenance are the service's job (through ffmpeg-skill), so every engine yields the same kind of result.
 
 Statuses (doctor vocabulary): OK (installed and usable), MISSING (not installed, or its model file is absent),
-INCOMPATIBLE (installed, but a version outside the supported range). An engine never downloads anything."""
+INCOMPATIBLE (installed, but a version outside the supported range). An engine never downloads anything.
+"""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -18,7 +20,9 @@ OPS = ("isolate", "dereverb", "bleed_reduce")
 @dataclass
 class EngineRequest:
     """One prepared WAV in, one cleaned WAV out. BLEED_REDUCE works on several tracks at once: it also fills
-    input_paths / output_paths (one output per track), and input_path / output_path name the first pair (ADR-005)."""
+    input_paths / output_paths (one output per track), and input_path / output_path name the first pair (ADR-005).
+    """
+
     op: str
     input_path: str
     output_path: str
@@ -48,15 +52,20 @@ class EngineResult:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "EngineResult":
-        return cls(output_path=str(d["output_path"]), engine_version=str(d["engine_version"]),
-                   model=None if d.get("model") is None else str(d["model"]), extra=dict(d.get("extra") or {}),
-                   output_paths=[str(p) for p in d.get("output_paths") or []])
+        return cls(
+            output_path=str(d["output_path"]),
+            engine_version=str(d["engine_version"]),
+            model=None if d.get("model") is None else str(d["model"]),
+            extra=dict(d.get("extra") or {}),
+            output_paths=[str(p) for p in d.get("output_paths") or []],
+        )
 
 
 def parse_version(text: Optional[str]) -> Optional[Tuple[int, ...]]:
     if not text:
         return None
     import re
+
     m = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", text)
     if not m:
         return None
@@ -65,37 +74,51 @@ def parse_version(text: Optional[str]) -> Optional[Tuple[int, ...]]:
 
 class Engine:
     """Subclass and register in `engines/__init__.py`. `process` may be slow and runs in the worker process."""
+
     id = "base"
     ops: Tuple[str, ...] = ()
     description = ""
-    kind = ""                       # "binary" (external executable) | "python" (optional package)
+    kind = ""  # "binary" (external executable) | "python" (optional package)
     code_license = ""
     weights_license = ""
     attribution = ""
     execution_mode = "local"
-    network_required = False        # at run time; no engine registered here needs it
+    network_required = False  # at run time; no engine registered here needs it
     deterministic = True
     version_range = ""
     install = ""
     located_by: List[str] = []
-    roadmap_step: Optional[int] = None   # the step that implements process()
+    roadmap_step: Optional[int] = None  # the step that implements process()
 
     def inspect(self) -> Dict[str, Any]:  # pragma: no cover - interface
         raise NotImplementedError
 
     def spec(self) -> Dict[str, Any]:
         """Static facts, safe to publish (no paths): what the contract lists."""
-        return {"id": self.id, "ops": list(self.ops), "description": self.description, "kind": self.kind,
-                "code_license": self.code_license, "weights_license": self.weights_license, "attribution": self.attribution,
-                "execution_mode": self.execution_mode, "network_required": self.network_required,
-                "deterministic": self.deterministic, "version_range": self.version_range, "install": self.install,
-                "located_by": list(self.located_by)}
+        return {
+            "id": self.id,
+            "ops": list(self.ops),
+            "description": self.description,
+            "kind": self.kind,
+            "code_license": self.code_license,
+            "weights_license": self.weights_license,
+            "attribution": self.attribution,
+            "execution_mode": self.execution_mode,
+            "network_required": self.network_required,
+            "deterministic": self.deterministic,
+            "version_range": self.version_range,
+            "install": self.install,
+            "located_by": list(self.located_by),
+        }
 
     def report(self, offline: bool = False) -> Dict[str, Any]:
         """inspect() plus the static facts; with offline=True an engine that needs the network is MISSING."""
         info = dict(self.spec(), **self.inspect())
         if offline and self.network_required and info["status"] == OK:
-            info.update(status=MISSING, detail="needs the network at run time; --offline was given")
+            info.update(
+                status=MISSING,
+                detail="needs the network at run time; --offline was given",
+            )
         info["usable_offline"] = not self.network_required
         if info["status"] == OK:
             info["install"] = None
@@ -104,12 +127,23 @@ class Engine:
     def require(self) -> Dict[str, Any]:
         info = self.inspect()
         if info["status"] != OK:
-            code = "MODEL_NOT_FOUND" if info.get("missing") == "model" else "ENGINE_UNAVAILABLE"
-            raise VoiceEnhanceError(code, f"engine {self.id!r} is {info['status']}: {info.get('detail')}",
-                                    {"engine": self.id, "install": self.install})
+            code = (
+                "MODEL_NOT_FOUND"
+                if info.get("missing") == "model"
+                else "ENGINE_UNAVAILABLE"
+            )
+            raise VoiceEnhanceError(
+                code,
+                f"engine {self.id!r} is {info['status']}: {info.get('detail')}",
+                {"engine": self.id, "install": self.install},
+            )
         return info
 
     def process(self, req: EngineRequest) -> EngineResult:
         self.require()
-        raise VoiceEnhanceError("NOT_IMPLEMENTED", f"engine {self.id!r} is installed, but {req.op} is not implemented yet "
-                                f"(roadmap step {self.roadmap_step})", {"engine": self.id, "op": req.op})
+        raise VoiceEnhanceError(
+            "NOT_IMPLEMENTED",
+            f"engine {self.id!r} is installed, but {req.op} is not implemented yet "
+            f"(roadmap step {self.roadmap_step})",
+            {"engine": self.id, "op": req.op},
+        )

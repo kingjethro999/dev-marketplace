@@ -18,6 +18,7 @@ proposes `video.crop` with the measured rectangle. Never applied without the use
 - **Not proposed at all**: an explicit `edit.crop` (the user's rectangle wins), a programme built from several inputs
   (concat / switch / grid / takes: one input's bars do not describe the programme), the audio production path (no
   picture is delivered)."""
+
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -25,10 +26,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 CROP_KIND = "crop_rectangle"
 CROP_SUBJECT = "video.crop"
 CROP_SKILL = "video_crop"
-MIN_CONFIDENCE = 0.9      # share of per-frame readings across every sampled window that agree with the reported rectangle
-MIN_WINDOWS = 3           # decoded windows the rectangle must rest on
-MIN_BAR_FRACTION = 0.01   # the bars must remove at least this share of the width or of the height
-MIN_SIDE = 16             # the validator: width and height at least 16 px
+MIN_CONFIDENCE = 0.9  # share of per-frame readings across every sampled window that agree with the reported rectangle
+MIN_WINDOWS = 3  # decoded windows the rectangle must rest on
+MIN_BAR_FRACTION = (
+    0.01  # the bars must remove at least this share of the width or of the height
+)
+MIN_SIDE = 16  # the validator: width and height at least 16 px
 
 
 def crop_facts(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -36,12 +39,21 @@ def crop_facts(data: Dict[str, Any]) -> Dict[str, Any]:
     d = data or {}
     c = d.get("crop") if isinstance(d.get("crop"), dict) else None
     rect = None
-    if c is not None and all(isinstance(c.get(k), (int, float)) and not isinstance(c.get(k), bool) for k in ("x", "y", "width", "height")):
+    if c is not None and all(
+        isinstance(c.get(k), (int, float)) and not isinstance(c.get(k), bool)
+        for k in ("x", "y", "width", "height")
+    ):
         rect = {k: int(c[k]) for k in ("x", "y", "width", "height")}
     windows = d.get("windows")
     failed = d.get("windows_failed")
-    return {"rect": rect, "source_width": _int(d.get("source_width")), "source_height": _int(d.get("source_height")),
-            "confidence": _num(d.get("confidence")), "windows": _int(windows), "windows_failed": _int(failed) or 0}
+    return {
+        "rect": rect,
+        "source_width": _int(d.get("source_width")),
+        "source_height": _int(d.get("source_height")),
+        "confidence": _num(d.get("confidence")),
+        "windows": _int(windows),
+        "windows_failed": _int(failed) or 0,
+    }
 
 
 def even_inward(rect: Dict[str, int]) -> Dict[str, int]:
@@ -60,26 +72,68 @@ def stable_rectangle(facts: Dict[str, Any]) -> Tuple[Optional[Dict[str, int]], s
     if not sw or not sh:
         return None, "the measurement does not report the frame size"
     if facts.get("rect") is None:
-        return None, "cropdetect reported no rectangle (no readings: an all-black or undecodable sample)"
+        return (
+            None,
+            "cropdetect reported no rectangle (no readings: an all-black or undecodable sample)",
+        )
     windows = facts.get("windows")
-    decoded = (windows - facts.get("windows_failed", 0)) if windows is not None else None
+    decoded = (
+        (windows - facts.get("windows_failed", 0)) if windows is not None else None
+    )
     if decoded is not None and decoded < MIN_WINDOWS:
-        return None, f"only {decoded} of {windows} sampled windows decoded (needs {MIN_WINDOWS})"
+        return (
+            None,
+            f"only {decoded} of {windows} sampled windows decoded (needs {MIN_WINDOWS})",
+        )
     conf = facts.get("confidence")
     if conf is None or conf < MIN_CONFIDENCE:
-        return None, f"the rectangle is not stable across the sampled windows (confidence {conf if conf is not None else 'missing'} < {MIN_CONFIDENCE:g})"
+        return (
+            None,
+            f"the rectangle is not stable across the sampled windows (confidence {conf if conf is not None else 'missing'} < {MIN_CONFIDENCE:g})",
+        )
     r = even_inward(facts["rect"])
-    if r["x"] < 0 or r["y"] < 0 or r["x"] + r["width"] > sw or r["y"] + r["height"] > sh:
-        return None, f"the rectangle {_words(r)} does not lie inside the {sw}x{sh} frame"
+    if (
+        r["x"] < 0
+        or r["y"] < 0
+        or r["x"] + r["width"] > sw
+        or r["y"] + r["height"] > sh
+    ):
+        return (
+            None,
+            f"the rectangle {_words(r)} does not lie inside the {sw}x{sh} frame",
+        )
     if r["width"] < MIN_SIDE or r["height"] < MIN_SIDE:
         return None, f"the rectangle {_words(r)} is smaller than {MIN_SIDE} px"
-    if (sw - r["width"]) < MIN_BAR_FRACTION * sw and (sh - r["height"]) < MIN_BAR_FRACTION * sh:
-        return None, f"no black bars: the active picture {_words(r)} is the {sw}x{sh} frame" + ("" if (r["width"], r["height"]) == (sw, sh) else f" within {MIN_BAR_FRACTION:.0%}")
-    return r, f"stable across the sampled windows (confidence {conf:g}" + (f", {decoded} of {windows} windows decoded" if decoded is not None else "") + ")"
+    if (sw - r["width"]) < MIN_BAR_FRACTION * sw and (
+        sh - r["height"]
+    ) < MIN_BAR_FRACTION * sh:
+        return (
+            None,
+            f"no black bars: the active picture {_words(r)} is the {sw}x{sh} frame"
+            + (
+                ""
+                if (r["width"], r["height"]) == (sw, sh)
+                else f" within {MIN_BAR_FRACTION:.0%}"
+            ),
+        )
+    return (
+        r,
+        f"stable across the sampled windows (confidence {conf:g}"
+        + (f", {decoded} of {windows} windows decoded" if decoded is not None else "")
+        + ")",
+    )
 
 
-def decide_crop(eng, analysis, subjects: List[Tuple[str, List[str]]], edits: Dict[str, Any], skip: Optional[str], approval_for: Callable,
-                probe_ids_of: Callable[[List[str]], List[str]], cap_block: Callable) -> None:
+def decide_crop(
+    eng,
+    analysis,
+    subjects: List[Tuple[str, List[str]]],
+    edits: Dict[str, Any],
+    skip: Optional[str],
+    approval_for: Callable,
+    probe_ids_of: Callable[[List[str]], List[str]],
+    cap_block: Callable,
+) -> None:
     """One decision per measured asset that is its own subject: a CONFIRM proposal of `video.crop` with the stable rectangle,
     or KEEP with the reason it is not proposed. `skip`: why no single input is a subject of its own (a programme / the audio
     path); then nothing is decided, the measurement stays an observation."""
@@ -99,14 +153,33 @@ def decide_crop(eng, analysis, subjects: List[Tuple[str, List[str]]], edits: Dic
         ev = [o.id] + probe_ids_of([o.asset_id])
         frame = f"{facts['source_width']}x{facts['source_height']}"
         if rect is None:
-            eng.decide(subject=CROP_SUBJECT, type="KEEP", decision=f"keep the full {frame} frame of {o.asset_id}", reason=f"crop not proposed: {why}",
-                       confidence=1.0, evidence=ev, risk="LOW", approval="AUTO", provenance="OBSERVED", params={"asset_id": o.asset_id, "measured": facts["rect"]})
+            eng.decide(
+                subject=CROP_SUBJECT,
+                type="KEEP",
+                decision=f"keep the full {frame} frame of {o.asset_id}",
+                reason=f"crop not proposed: {why}",
+                confidence=1.0,
+                evidence=ev,
+                risk="LOW",
+                approval="AUTO",
+                provenance="OBSERVED",
+                params={"asset_id": o.asset_id, "measured": facts["rect"]},
+            )
             continue
-        eng.decide(subject=CROP_SUBJECT, type="TRANSFORM", decision=f"video.crop on {o.asset_id}: crop the black bars to {_words(rect)} (from {frame})",
-                   reason=f"measured black bars ({o.source}): the active picture is {_words(rect)} of the {frame} frame, {why}; "
-                          "proposed, not applied: look at the frame first (letterboxing can be the intended presentation)",
-                   confidence=float(facts["confidence"] or 0.0), evidence=ev, risk="MEDIUM", approval=approval_for(CROP_SUBJECT, floor="CONFIRM"), provenance="OBSERVED",
-                   params={"asset_id": o.asset_id, **rect}, serves_intent=None)
+        eng.decide(
+            subject=CROP_SUBJECT,
+            type="TRANSFORM",
+            decision=f"video.crop on {o.asset_id}: crop the black bars to {_words(rect)} (from {frame})",
+            reason=f"measured black bars ({o.source}): the active picture is {_words(rect)} of the {frame} frame, {why}; "
+            "proposed, not applied: look at the frame first (letterboxing can be the intended presentation)",
+            confidence=float(facts["confidence"] or 0.0),
+            evidence=ev,
+            risk="MEDIUM",
+            approval=approval_for(CROP_SUBJECT, floor="CONFIRM"),
+            provenance="OBSERVED",
+            params={"asset_id": o.asset_id, **rect},
+            serves_intent=None,
+        )
         proposed = True
     if proposed:
         cap_block(CROP_SKILL, f"capability.{CROP_SKILL}")

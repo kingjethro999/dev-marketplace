@@ -20,7 +20,11 @@ from qc_skill.capabilities import listed_filter_names
 from qc_skill.contract import doctor_report, skill_contract
 from qc_skill.engine import run_report
 from qc_skill.errors import QCError
-from qc_skill.measurements.reference import build_filter_complex, parse_metric_output, plan_alignment
+from qc_skill.measurements.reference import (
+    build_filter_complex,
+    parse_metric_output,
+    plan_alignment,
+)
 from qc_skill.schemas import parse_request
 from tests.helpers import CAPS, checks_by_id, make_ctx, measurements_by_id, run
 
@@ -32,13 +36,24 @@ def _needs_libvmaf():
     if not HAS_LIBVMAF:
         if REQUIRE_LIBVMAF:
             pytest.fail("QC_REQUIRE_LIBVMAF=1 but this ffmpeg has no libvmaf filter")
-        pytest.skip("this ffmpeg has no libvmaf filter (the UNKNOWN path is tested instead)")
+        pytest.skip(
+            "this ffmpeg has no libvmaf filter (the UNKNOWN path is tested instead)"
+        )
 
 
 def _doc(media, distorted, reference, metrics, kind="video", **rule):
     video_rule = {"reference_metrics": metrics, **rule}
-    rules = {"video": video_rule} if kind == "video" else {"delivery": {"video": video_rule}}
-    doc = {"operation": "check", "kind": kind, "input": str(media[distorted]), "rules": rules}
+    rules = (
+        {"video": video_rule}
+        if kind == "video"
+        else {"delivery": {"video": video_rule}}
+    )
+    doc = {
+        "operation": "check",
+        "kind": kind,
+        "input": str(media[distorted]),
+        "rules": rules,
+    }
     if reference is not None:
         doc["reference_video"] = str(media[reference])
     return doc
@@ -80,7 +95,17 @@ def test_degraded_input_fails_ssim_and_psnr_at_the_default_thresholds(media, wor
 
 
 def test_thresholds_are_configurable(media, workspace):
-    resp = run(_doc(media, "ref_degraded", "ref_master", ["ssim", "psnr"], min_ssim=0.3, min_psnr_db=10.0), workspace)
+    resp = run(
+        _doc(
+            media,
+            "ref_degraded",
+            "ref_master",
+            ["ssim", "psnr"],
+            min_ssim=0.3,
+            min_psnr_db=10.0,
+        ),
+        workspace,
+    )
     checks = checks_by_id(resp)
     assert checks["video.ssim_meets_minimum"]["status"] == "PASS"
     assert checks["video.psnr_meets_minimum"]["status"] == "PASS"
@@ -88,7 +113,9 @@ def test_thresholds_are_configurable(media, workspace):
 
 
 def test_delivery_kind_takes_reference_metrics_from_its_video_rule(media, workspace):
-    resp = run(_doc(media, "ref_degraded", "ref_master", ["ssim"], kind="delivery"), workspace)
+    resp = run(
+        _doc(media, "ref_degraded", "ref_master", ["ssim"], kind="delivery"), workspace
+    )
     assert checks_by_id(resp)["video.ssim_meets_minimum"]["status"] == "FAIL"
 
 
@@ -106,7 +133,9 @@ def test_identical_input_passes_vmaf(media, workspace):
 
 def test_degraded_input_fails_vmaf(media, workspace):
     _needs_libvmaf()
-    resp = run(_doc(media, "ref_degraded", "ref_master", ["vmaf", "ssim", "psnr"]), workspace)
+    resp = run(
+        _doc(media, "ref_degraded", "ref_master", ["vmaf", "ssim", "psnr"]), workspace
+    )
     checks = checks_by_id(resp)
     assert checks["video.vmaf_meets_minimum"]["status"] == "FAIL"
     assert measurements_by_id(resp)["video.vmaf"]["value"] < 93.0
@@ -115,23 +144,43 @@ def test_degraded_input_fails_vmaf(media, workspace):
 
 def test_vmaf_is_unknown_on_an_ffmpeg_without_libvmaf(media, workspace):
     if HAS_LIBVMAF:
-        pytest.skip("this ffmpeg has libvmaf (the simulated-missing test covers this path)")
-    _assert_vmaf_unknown_ssim_psnr_pass(run(_doc(media, "ref_master", "ref_master", ["vmaf", "ssim", "psnr"]), workspace))
+        pytest.skip(
+            "this ffmpeg has libvmaf (the simulated-missing test covers this path)"
+        )
+    _assert_vmaf_unknown_ssim_psnr_pass(
+        run(
+            _doc(media, "ref_master", "ref_master", ["vmaf", "ssim", "psnr"]), workspace
+        )
+    )
 
 
 def test_vmaf_is_unknown_when_libvmaf_is_missing_simulated(media, workspace):
     caps = replace(CAPS, filters={**CAPS.filters, "libvmaf": "missing"})
     ctx = replace(make_ctx(workspace), capabilities=caps)
-    resp = run_report(parse_request(_doc(media, "ref_master", "ref_master", ["vmaf", "ssim", "psnr"])), ctx)
+    resp = run_report(
+        parse_request(
+            _doc(media, "ref_master", "ref_master", ["vmaf", "ssim", "psnr"])
+        ),
+        ctx,
+    )
     _assert_vmaf_unknown_ssim_psnr_pass(resp)
 
 
 def test_libvmaf_failing_at_run_time_does_not_take_ssim_psnr_down(media, workspace):
     if HAS_LIBVMAF:
-        pytest.skip("needs an ffmpeg without libvmaf to make the libvmaf filter fail for real")
-    caps = replace(CAPS, filters={**CAPS.filters, "libvmaf": "available"})  # claims libvmaf, ffmpeg refuses it
+        pytest.skip(
+            "needs an ffmpeg without libvmaf to make the libvmaf filter fail for real"
+        )
+    caps = replace(
+        CAPS, filters={**CAPS.filters, "libvmaf": "available"}
+    )  # claims libvmaf, ffmpeg refuses it
     ctx = replace(make_ctx(workspace), capabilities=caps)
-    resp = run_report(parse_request(_doc(media, "ref_master", "ref_master", ["vmaf", "ssim", "psnr"])), ctx)
+    resp = run_report(
+        parse_request(
+            _doc(media, "ref_master", "ref_master", ["vmaf", "ssim", "psnr"])
+        ),
+        ctx,
+    )
     checks = checks_by_id(resp)
     assert checks["video.vmaf_meets_minimum"]["status"] == "UNKNOWN"
     assert "failed at run time" in checks["video.vmaf_meets_minimum"]["reason"]
@@ -148,7 +197,9 @@ def _assert_vmaf_unknown_ssim_psnr_pass(resp):
     assert checks["video.ssim_meets_minimum"]["status"] == "PASS"
     assert checks["video.psnr_meets_minimum"]["status"] == "PASS"
     assert not resp["report"]["findings"]
-    assert resp["report"]["overall_status"] == "UNKNOWN"  # never collapsed into PASS or FAIL
+    assert (
+        resp["report"]["overall_status"] == "UNKNOWN"
+    )  # never collapsed into PASS or FAIL
 
 
 # --- alignment / mismatch -----------------------------------------------------
@@ -177,7 +228,9 @@ def test_frame_rate_mismatch_is_refused_not_scored(media, workspace):
     for check_id in ("video.ssim_meets_minimum", "video.psnr_meets_minimum"):
         assert checks[check_id]["status"] == "UNKNOWN"
         assert "FRAME_RATE_MISMATCH" in checks[check_id]["reason"]
-        assert checks[check_id]["evidence"]["alignment"]["code"] == "FRAME_RATE_MISMATCH"
+        assert (
+            checks[check_id]["evidence"]["alignment"]["code"] == "FRAME_RATE_MISMATCH"
+        )
     assert not resp["report"]["findings"]
     assert resp["report"]["overall_status"] == "UNKNOWN"
 
@@ -197,26 +250,62 @@ def test_missing_reference_video_is_unknown(media, workspace):
 
 
 def test_plan_alignment_rules():
-    base = {"width": 320, "height": 240, "frame_rate": 25.0, "frame_count": 50, "duration_sec": 2.0, "pix_fmt": "yuv420p"}
+    base = {
+        "width": 320,
+        "height": 240,
+        "frame_rate": 25.0,
+        "frame_count": 50,
+        "duration_sec": 2.0,
+        "pix_fmt": "yuv420p",
+    }
     assert plan_alignment(base, base)["status"] == "aligned"
-    assert plan_alignment({**base, "frame_count": 51}, base)["status"] == "aligned"  # one frame of slack
-    assert plan_alignment({**base, "frame_count": 52}, base)["code"] == "FRAME_COUNT_MISMATCH"
-    assert plan_alignment({**base, "frame_rate": 25.02}, base)["code"] == "FRAME_RATE_MISMATCH"
-    assert plan_alignment({**base, "frame_rate": None}, base)["code"] == "FRAME_RATE_UNKNOWN"
+    assert (
+        plan_alignment({**base, "frame_count": 51}, base)["status"] == "aligned"
+    )  # one frame of slack
+    assert (
+        plan_alignment({**base, "frame_count": 52}, base)["code"]
+        == "FRAME_COUNT_MISMATCH"
+    )
+    assert (
+        plan_alignment({**base, "frame_rate": 25.02}, base)["code"]
+        == "FRAME_RATE_MISMATCH"
+    )
+    assert (
+        plan_alignment({**base, "frame_rate": None}, base)["code"]
+        == "FRAME_RATE_UNKNOWN"
+    )
     assert plan_alignment(base, {**base, "width": None})["code"] == "REFERENCE_NO_VIDEO"
     no_counts = {**base, "frame_count": None}
-    assert plan_alignment(no_counts, {**no_counts, "duration_sec": 2.03})["status"] == "aligned"
-    assert plan_alignment(no_counts, {**no_counts, "duration_sec": 3.0})["code"] == "DURATION_MISMATCH"
+    assert (
+        plan_alignment(no_counts, {**no_counts, "duration_sec": 2.03})["status"]
+        == "aligned"
+    )
+    assert (
+        plan_alignment(no_counts, {**no_counts, "duration_sec": 3.0})["code"]
+        == "DURATION_MISMATCH"
+    )
     rgb_ref = plan_alignment(base, {**base, "pix_fmt": "rgb24"})
     assert rgb_ref["pix_fmt"] == "yuv420p"
-    assert plan_alignment(base, {**base, "pix_fmt": "yuv420p10le"})["pix_fmt"] == "yuv420p10le"
+    assert (
+        plan_alignment(base, {**base, "pix_fmt": "yuv420p10le"})["pix_fmt"]
+        == "yuv420p10le"
+    )
 
 
 def test_filter_graph_is_built_from_fixed_parts_only():
-    base = {"width": 160, "height": 120, "frame_rate": 25.0, "frame_count": 50, "duration_sec": 2.0, "pix_fmt": "yuv420p"}
+    base = {
+        "width": 160,
+        "height": 120,
+        "frame_rate": 25.0,
+        "frame_count": 50,
+        "duration_sec": 2.0,
+        "pix_fmt": "yuv420p",
+    }
     alignment = plan_alignment(base, {**base, "width": 320, "height": 240})
     graph, outputs = build_filter_complex(alignment, ["vmaf", "ssim", "psnr"], 0, 0)
-    assert graph.startswith("[0:0]setpts=PTS-STARTPTS,scale=320:240:flags=bicubic,format=yuv420p,split=3[d0][d1][d2]")
+    assert graph.startswith(
+        "[0:0]setpts=PTS-STARTPTS,scale=320:240:flags=bicubic,format=yuv420p,split=3[d0][d1][d2]"
+    )
     assert "[d0][r0]libvmaf=shortest=1[o0]" in graph
     assert outputs == ["[o0]", "[o1]", "[o2]"]
 
@@ -227,48 +316,88 @@ def test_parse_metric_output():
         "[Parsed_psnr_8 @ 0x2] PSNR y:25.809084 u:26.785756 v:23.852630 average:25.550779 min:25.148419 max:26.115907\n"
         "[Parsed_libvmaf_9 @ 0x3] VMAF score: 41.123456\n"
     )
-    assert parse_metric_output(stderr) == {"ssim": 0.836148, "psnr": "25.550779", "vmaf": 41.123456}
-    assert parse_metric_output("[Parsed_psnr_0 @ 0x2] PSNR y:inf u:inf v:inf average:inf min:inf max:inf")["psnr"] == "inf"
+    assert parse_metric_output(stderr) == {
+        "ssim": 0.836148,
+        "psnr": "25.550779",
+        "vmaf": 41.123456,
+    }
+    assert (
+        parse_metric_output(
+            "[Parsed_psnr_0 @ 0x2] PSNR y:inf u:inf v:inf average:inf min:inf max:inf"
+        )["psnr"]
+        == "inf"
+    )
 
 
 # --- opt-in only: defaults unchanged --------------------------------------------
 
 
-def test_reference_video_is_ignored_for_kind_video_without_reference_metrics(media, workspace):
+def test_reference_video_is_ignored_for_kind_video_without_reference_metrics(
+    media, workspace
+):
     base = {"operation": "check", "kind": "video", "input": str(media["ref_master"])}
     plain = run(base, workspace)
     with_ref = run({**base, "reference_video": str(media["ref_degraded"])}, workspace)
     assert plain["provenance"]["identity"] == with_ref["provenance"]["identity"]
     assert "reference_video_input" not in with_ref["provenance"]
     ids = set(measurements_by_id(with_ref))
-    assert not ids & {"video.reference_alignment", "video.vmaf", "video.ssim", "video.psnr_db"}
-    assert not set(checks_by_id(with_ref)) & {"video.vmaf_meets_minimum", "video.ssim_meets_minimum", "video.psnr_meets_minimum"}
+    assert not ids & {
+        "video.reference_alignment",
+        "video.vmaf",
+        "video.ssim",
+        "video.psnr_db",
+    }
+    assert not set(checks_by_id(with_ref)) & {
+        "video.vmaf_meets_minimum",
+        "video.ssim_meets_minimum",
+        "video.psnr_meets_minimum",
+    }
 
 
-@pytest.mark.parametrize("rule", [
-    {"reference_metrics": []},
-    {"reference_metrics": ["vmaf", "ms_ssim"]},
-    {"reference_metrics": ["ssim", "ssim"]},
-    {"reference_metrics": "vmaf"},
-    {"reference_metrics": ["ssim"], "min_ssim": 1.5},
-    {"reference_metrics": ["vmaf"], "min_vmaf": 101},
-    {"reference_metrics": ["psnr"], "min_psnr_db": -1},
-    {"reference_metrics": ["psnr"], "min_psnr_db": True},
-])
+@pytest.mark.parametrize(
+    "rule",
+    [
+        {"reference_metrics": []},
+        {"reference_metrics": ["vmaf", "ms_ssim"]},
+        {"reference_metrics": ["ssim", "ssim"]},
+        {"reference_metrics": "vmaf"},
+        {"reference_metrics": ["ssim"], "min_ssim": 1.5},
+        {"reference_metrics": ["vmaf"], "min_vmaf": 101},
+        {"reference_metrics": ["psnr"], "min_psnr_db": -1},
+        {"reference_metrics": ["psnr"], "min_psnr_db": True},
+    ],
+)
 def test_invalid_reference_metric_rules_are_rejected(rule):
     with pytest.raises(QCError) as exc:
-        parse_request({"operation": "check", "kind": "video", "input": "x.mp4", "rules": {"video": rule}})
+        parse_request(
+            {
+                "operation": "check",
+                "kind": "video",
+                "input": "x.mp4",
+                "rules": {"video": rule},
+            }
+        )
     assert exc.value.code == "INVALID_REQUEST"
 
 
 def test_reference_metrics_are_stored_in_canonical_order():
-    req = parse_request({"operation": "check", "kind": "video", "input": "x.mp4", "rules": {"video": {"reference_metrics": ["psnr", "vmaf"]}}})
+    req = parse_request(
+        {
+            "operation": "check",
+            "kind": "video",
+            "input": "x.mp4",
+            "rules": {"video": {"reference_metrics": ["psnr", "vmaf"]}},
+        }
+    )
     assert req.video_rule.reference_metrics == ["vmaf", "psnr"]
 
 
 def test_rule_types_stay_within_the_typed_rule_grammar():
     video = skill_contract()["rules"]["video"]
-    assert video["reference_metrics"] == {"type": "Optional[List[str]]", "default": None}
+    assert video["reference_metrics"] == {
+        "type": "Optional[List[str]]",
+        "default": None,
+    }
     assert video["min_vmaf"] == {"type": "float", "default": 93.0}
     assert video["min_ssim"] == {"type": "float", "default": 0.95}
     assert video["min_psnr_db"] == {"type": "float", "default": 31.0}
@@ -298,7 +427,9 @@ def test_doctor_reports_vmaf_availability(tmp_path):
     assert entry["buildconf_enable_libvmaf"] in (True, False, None)
     assert report["checks"]["filter:ssim"]["status"] == "AVAILABLE"
     assert report["checks"]["filter:psnr"]["status"] == "AVAILABLE"
-    assert ("video.vmaf_meets_minimum" in report["unavailable_tools"]) is (not HAS_LIBVMAF)
+    assert ("video.vmaf_meets_minimum" in report["unavailable_tools"]) is (
+        not HAS_LIBVMAF
+    )
     if not HAS_LIBVMAF:
         assert "detail" in entry
         assert report["status"] == "ok"  # an optional filter never degrades doctor

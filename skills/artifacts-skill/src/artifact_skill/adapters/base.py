@@ -100,7 +100,9 @@ class ArtifactAdapter(ABC):
         """Read-only. Must never write to disk or spawn a mutating process."""
 
     @abstractmethod
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         """Pure/read-only. Describes what execute() *would* do."""
 
     @abstractmethod
@@ -109,7 +111,9 @@ class ArtifactAdapter(ABC):
     ) -> ArtifactRef:
         """Perform `operation`, writing only to `output_path` (never to `ref.path`)."""
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         """Produce a visual representation for Agent/human inspection.
 
         `limits` governs whatever this adapter's render backend needs a
@@ -131,12 +135,18 @@ class ArtifactAdapter(ABC):
         )
 
     @abstractmethod
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         """Structural checks only. Visual checks are handled by the engine
         from render() output plus (optionally) an Agent's judgment."""
 
     def fix(
-        self, ref: ArtifactRef, operation: str, args: dict[str, Any], failed_result: VerificationResult
+        self,
+        ref: ArtifactRef,
+        operation: str,
+        args: dict[str, Any],
+        failed_result: VerificationResult,
     ) -> dict[str, Any] | None:
         """Given a failed structural verification, return revised `args` to
         retry `execute()` with, or None if this adapter has no automatic fix

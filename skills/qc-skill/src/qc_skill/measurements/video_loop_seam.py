@@ -48,17 +48,33 @@ def _median(values: List[float]) -> float:
 
 
 def _measure(
-    ffmpeg_path: str, ffprobe_path: str, path: Path, probe_data: Dict[str, Any], stream: Dict[str, Any], rule: Any,
+    ffmpeg_path: str,
+    ffprobe_path: str,
+    path: Path,
+    probe_data: Dict[str, Any],
+    stream: Dict[str, Any],
+    rule: Any,
 ) -> Dict[str, Any]:
-    window = rule.window_frames if rule.window_frames is not None else DEFAULT_WINDOW_FRAMES
-    entry: Dict[str, Any] = {"measured": False, "window_frames": window, "source": "segments" if rule.segments else "file"}
+    window = (
+        rule.window_frames if rule.window_frames is not None else DEFAULT_WINDOW_FRAMES
+    )
+    entry: Dict[str, Any] = {
+        "measured": False,
+        "window_frames": window,
+        "source": "segments" if rule.segments else "file",
+    }
     rate = stream_frame_rate(stream)
     if rate is None:
         entry["reason"] = "the stream's frame rate could not be measured"
         return entry
     entry["frame_rate"] = f"{rate.numerator}/{rate.denominator}"
     width, height = stream.get("width"), stream.get("height")
-    if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
+    if (
+        not isinstance(width, int)
+        or not isinstance(height, int)
+        or width <= 0
+        or height <= 0
+    ):
         entry["reason"] = "the stream's frame size could not be measured"
         return entry
     stream_index = int(stream["index"])
@@ -66,7 +82,10 @@ def _measure(
         start, end = rule.segments["in"], rule.segments["in"] + rule.segments["loop"]
         first, off_first = frame_at(start, rate)
         end_frame, off_end = frame_at(end, rate)
-        for name, t, n, off in (("in", start, first, off_first), ("in + loop", end, end_frame, off_end)):
+        for name, t, n, off in (
+            ("in", start, first, off_first),
+            ("in + loop", end, end_frame, off_end),
+        ):
             if off > ON_FRAME_TOLERANCE:
                 entry["reason"] = (
                     f"segments {name} = {t}s is not on a frame: the nearest is frame {n} ({float(n / rate):.6f}s), "
@@ -84,7 +103,9 @@ def _measure(
     frames = last - first + 1
     entry["loop"] = {"first_frame": first, "last_frame": last, "frames": frames}
     if frames < MIN_LOOP_FRAMES:
-        entry["reason"] = f"the loop has {max(frames, 0)} frame(s); its seam is compared with the motion inside, which needs at least {MIN_LOOP_FRAMES}"
+        entry["reason"] = (
+            f"the loop has {max(frames, 0)} frame(s); its seam is compared with the motion inside, which needs at least {MIN_LOOP_FRAMES}"
+        )
         return entry
     k = min(window, frames - 1)
     frame_bytes = width * height * 3
@@ -92,8 +113,16 @@ def _measure(
 
     def read(start_frame: int, n: int) -> Dict[str, Any]:
         return grab_frames(
-            ffmpeg_path, path, stream_index, start_frame, n, rate, ["format=rgb24"],
-            pix_fmt="rgb24", frame_bytes=frame_bytes, origin=origin,
+            ffmpeg_path,
+            path,
+            stream_index,
+            start_frame,
+            n,
+            rate,
+            ["format=rgb24"],
+            pix_fmt="rgb24",
+            frame_bytes=frame_bytes,
+            origin=origin,
         )
 
     head = read(first, k + 1)
@@ -108,7 +137,9 @@ def _measure(
         return entry
     head_f, tail_f = head["frames"], tail["frames"]
     if len(head_f) < k + 1:
-        entry["reason"] = f"the stream ended at frame {head_f[-1]['index']}, inside the loop"
+        entry["reason"] = (
+            f"the stream ended at frame {head_f[-1]['index']}, inside the loop"
+        )
         return entry
     if len(tail_f) < k + 1:
         entry["reason"] = (
@@ -116,14 +147,21 @@ def _measure(
         )
         return entry
     if len(tail_f) > k + 1:
-        entry["reason"] = f"the file has frames after frame {last}, the last one ffprobe counted"
+        entry["reason"] = (
+            f"the file has frames after frame {last}, the last one ffprobe counted"
+        )
         return entry
 
     pairs: Dict[tuple, float] = {}
     for run in (head_f, tail_f):
         for a, b in zip(run, run[1:]):
-            pairs[(a["index"], b["index"])] = round(mean_abs_difference(a["raw"], b["raw"]), 3)
-    inside = [{"from_frame": a, "to_frame": b, "difference": d} for (a, b), d in sorted(pairs.items())]
+            pairs[(a["index"], b["index"])] = round(
+                mean_abs_difference(a["raw"], b["raw"]), 3
+            )
+    inside = [
+        {"from_frame": a, "to_frame": b, "difference": d}
+        for (a, b), d in sorted(pairs.items())
+    ]
     seam_diff = round(mean_abs_difference(tail_f[-1]["raw"], head_f[0]["raw"]), 3)
     reference = round(_median([p["difference"] for p in inside]), 3)
     if reference > 0:
@@ -134,22 +172,60 @@ def _measure(
     entry.update(
         measured=True,
         seam={
-            "from_frame": last, "to_frame": first, "from_time": tail_f[-1]["time"], "to_time": head_f[0]["time"],
+            "from_frame": last,
+            "to_frame": first,
+            "from_time": tail_f[-1]["time"],
+            "to_time": head_f[0]["time"],
             "difference": seam_diff,
         },
-        inside=inside, reference=reference, ratio=ratio, still=still, width=width, height=height,
+        inside=inside,
+        reference=reference,
+        ratio=ratio,
+        still=still,
+        width=width,
+        height=height,
     )
     return entry
 
 
 def analyze_video_loop_seam(
-    ffmpeg_path: str, ffprobe_path: str, input_path: Path, probe_data: Dict[str, Any], stream: Dict[str, Any], rule: Any,
+    ffmpeg_path: str,
+    ffprobe_path: str,
+    input_path: Path,
+    probe_data: Dict[str, Any],
+    stream: Dict[str, Any],
+    rule: Any,
 ) -> List[QCMeasurement]:
     value = _measure(ffmpeg_path, ffprobe_path, input_path, probe_data, stream, rule)
-    return [QCMeasurement("video.loop_seam", "video", "loop_seam", value, source="ffmpeg:rawvideo", notes=NOTE)]
+    return [
+        QCMeasurement(
+            "video.loop_seam",
+            "video",
+            "loop_seam",
+            value,
+            source="ffmpeg:rawvideo",
+            notes=NOTE,
+        )
+    ]
 
 
 def not_performed(rule: Any, reason: str) -> List[QCMeasurement]:
-    window = rule.window_frames if rule.window_frames is not None else DEFAULT_WINDOW_FRAMES
-    value = {"measured": False, "window_frames": window, "source": "segments" if rule.segments else "file", "reason": reason}
-    return [QCMeasurement("video.loop_seam", "video", "loop_seam", value, source="ffmpeg:rawvideo", notes=NOTE)]
+    window = (
+        rule.window_frames if rule.window_frames is not None else DEFAULT_WINDOW_FRAMES
+    )
+    value = {
+        "measured": False,
+        "window_frames": window,
+        "source": "segments" if rule.segments else "file",
+        "reason": reason,
+    }
+    return [
+        QCMeasurement(
+            "video.loop_seam",
+            "video",
+            "loop_seam",
+            value,
+            source="ffmpeg:rawvideo",
+            notes=NOTE,
+        )
+    ]

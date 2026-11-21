@@ -28,7 +28,11 @@ def test_perf_benchmark_inspect_and_verify_always_succeed_on_known_good_fixtures
     project's own known-good fixtures."""
     rows = run()
     for row in rows:
-        assert row["inspect_error"] is None, f"{row['format']}: inspect failed: {row['inspect_error']}"
-        assert row["verify_error"] is None, f"{row['format']}: verify failed: {row['verify_error']}"
+        assert (
+            row["inspect_error"] is None
+        ), f"{row['format']}: inspect failed: {row['inspect_error']}"
+        assert (
+            row["verify_error"] is None
+        ), f"{row['format']}: verify failed: {row['verify_error']}"
         assert row["inspect_ms"] is not None and row["inspect_ms"] >= 0
         assert row["verify_ms"] is not None and row["verify_ms"] >= 0

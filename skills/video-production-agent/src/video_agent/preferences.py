@@ -25,6 +25,7 @@
   durations). Reported per version with the change from the previous version and the channel's recent average (the latest version
   of up to 10 other projects of the channel, from `<channel>.corrections.json`). A report only: nothing acts on it.
 """
+
 from __future__ import annotations
 
 import json
@@ -52,30 +53,49 @@ class PreferenceError(ValueError):
 def check_channel(channel: Any) -> str:
     c = str(channel or "").strip()
     if not CHANNEL_RE.match(c):
-        raise PreferenceError(f"channel must be 1..64 letters, digits, '.', '_' or '-' (a name, never a path), got {channel!r}")
+        raise PreferenceError(
+            f"channel must be 1..64 letters, digits, '.', '_' or '-' (a name, never a path), got {channel!r}"
+        )
     return c
 
 
 def check_scope(scope: Any) -> str:
     s = str(scope or DEFAULT_SCOPE).strip().lower()
     if s not in SCOPES:
-        raise PreferenceError(f"scope must be one of {' | '.join(SCOPES)}, got {scope!r}")
+        raise PreferenceError(
+            f"scope must be one of {' | '.join(SCOPES)}, got {scope!r}"
+        )
     return s
 
 
-def feedback_scope(scope: Optional[str], scope_by: Optional[str], channel_id: Optional[str]) -> Dict[str, Any]:
+def feedback_scope(
+    scope: Optional[str], scope_by: Optional[str], channel_id: Optional[str]
+) -> Dict[str, Any]:
     """The scope fields of one feedback item. A wider scope from the user is confirmed; from an AI it is a candidate (the item stays
     this_video until a person confirms it). `channel` needs the project's channel."""
     s = check_scope(scope)
     by = str(scope_by or "user").strip().lower()
     if by not in SCOPE_BY:
-        raise PreferenceError(f"scope_by must be one of {' | '.join(SCOPE_BY)}, got {scope_by!r}")
+        raise PreferenceError(
+            f"scope_by must be one of {' | '.join(SCOPE_BY)}, got {scope_by!r}"
+        )
     if s == "channel" and not channel_id:
-        raise PreferenceError("scope channel needs the project's channel (plan or revise with --channel <name>)")
+        raise PreferenceError(
+            "scope channel needs the project's channel (plan or revise with --channel <name>)"
+        )
     if scope is None:
-        return {"scope": DEFAULT_SCOPE, "scope_source": "default", "scope_status": "confirmed"}
+        return {
+            "scope": DEFAULT_SCOPE,
+            "scope_source": "default",
+            "scope_status": "confirmed",
+        }
     if by == "ai" and s != DEFAULT_SCOPE:
-        return {"scope": DEFAULT_SCOPE, "proposed_scope": s, "scope_source": "ai", "scope_status": "candidate"}
+        return {
+            "scope": DEFAULT_SCOPE,
+            "proposed_scope": s,
+            "scope_source": "ai",
+            "scope_status": "candidate",
+        }
     return {"scope": s, "scope_source": by, "scope_status": "confirmed"}
 
 
@@ -90,19 +110,43 @@ class PreferenceStore:
     def __init__(self, workspace: str, channel: Optional[str] = None):
         self.channel = check_channel(channel) if channel is not None else None
         root = store_root(workspace)
-        self.path = root / "global.json" if self.channel is None else root / "channels" / f"{self.channel}.json"
+        self.path = (
+            root / "global.json"
+            if self.channel is None
+            else root / "channels" / f"{self.channel}.json"
+        )
         self.name = "global" if self.channel is None else f"channel:{self.channel}"
 
     def doc(self) -> Dict[str, Any]:
         if not self.path.is_file():
-            return {"schema": SCHEMA, "store": self.name, "channel_id": self.channel, "current": 0,
-                    "versions": [{"version": 0, "action": "init", "at": None, "by": None, "reason": "empty store", "rules": {}}]}
+            return {
+                "schema": SCHEMA,
+                "store": self.name,
+                "channel_id": self.channel,
+                "current": 0,
+                "versions": [
+                    {
+                        "version": 0,
+                        "action": "init",
+                        "at": None,
+                        "by": None,
+                        "reason": "empty store",
+                        "rules": {},
+                    }
+                ],
+            }
         try:
             d = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as e:
             raise PreferenceError(f"preference store {self.path} cannot be read: {e}")
-        if d.get("schema") != SCHEMA or d.get("store") != self.name or not isinstance(d.get("versions"), list):
-            raise PreferenceError(f"{self.path} is not a {SCHEMA} document for {self.name}")
+        if (
+            d.get("schema") != SCHEMA
+            or d.get("store") != self.name
+            or not isinstance(d.get("versions"), list)
+        ):
+            raise PreferenceError(
+                f"{self.path} is not a {SCHEMA} document for {self.name}"
+            )
         return d
 
     def version(self, n: Optional[int] = None) -> Dict[str, Any]:
@@ -110,7 +154,9 @@ class PreferenceStore:
         n = d["current"] if n is None else int(n)
         v = next((x for x in d["versions"] if x["version"] == n), None)
         if v is None:
-            raise PreferenceError(f"{self.name} has no version {n} (versions 0..{d['versions'][-1]['version']})")
+            raise PreferenceError(
+                f"{self.name} has no version {n} (versions 0..{d['versions'][-1]['version']})"
+            )
         return v
 
     def current(self) -> Tuple[int, Dict[str, Any]]:
@@ -119,10 +165,14 @@ class PreferenceStore:
 
     def _write(self, d: Dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(prefix=self.path.name + ".", suffix=".tmp", dir=str(self.path.parent))
+        fd, tmp = tempfile.mkstemp(
+            prefix=self.path.name + ".", suffix=".tmp", dir=str(self.path.parent)
+        )
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(json.dumps(d, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
+                f.write(
+                    json.dumps(d, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+                )
             os.replace(tmp, self.path)
         except BaseException:
             try:
@@ -131,43 +181,96 @@ class PreferenceStore:
                 pass
             raise
 
-    def _append(self, rules: Dict[str, Any], action: str, by: str, reason: str, source: Dict[str, Any]) -> Dict[str, Any]:
+    def _append(
+        self,
+        rules: Dict[str, Any],
+        action: str,
+        by: str,
+        reason: str,
+        source: Dict[str, Any],
+    ) -> Dict[str, Any]:
         d = self.doc()
         n = d["versions"][-1]["version"] + 1
-        v = {"version": n, "action": action, "at": now_iso(), "by": by, "reason": reason, "source": source, "rules": rules, "previous": d["current"]}
+        v = {
+            "version": n,
+            "action": action,
+            "at": now_iso(),
+            "by": by,
+            "reason": reason,
+            "source": source,
+            "rules": rules,
+            "previous": d["current"],
+        }
         d["versions"].append(v)
         d["current"] = n
         self._write(d)
         return v
 
-    def promote(self, values: Dict[str, Any], by: str, reason: str, source: Dict[str, Any]) -> Dict[str, Any]:
+    def promote(
+        self, values: Dict[str, Any], by: str, reason: str, source: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """A new version: the current rules plus these keys (a key already there takes the new value)."""
         cur = dict(self.version()["rules"])
         at = now_iso()
         for k, v in values.items():
-            cur[k] = {"value": v, "by": by, "at": at, **{x: source.get(x) for x in ("project_id", "feedback_id", "plan_version")}}
+            cur[k] = {
+                "value": v,
+                "by": by,
+                "at": at,
+                **{
+                    x: source.get(x)
+                    for x in ("project_id", "feedback_id", "plan_version")
+                },
+            }
         return self._append(cur, "promote", by, reason, source)
 
     def rollback(self, to: int, by: str, reason: str) -> Dict[str, Any]:
         """A new version whose rules are those of version `to` (nothing is deleted)."""
         target = self.version(to)
-        return self._append(json.loads(json.dumps(target["rules"])), "rollback", by, reason or f"roll back to version {to}", {"rollback_to": int(to)})
+        return self._append(
+            json.loads(json.dumps(target["rules"])),
+            "rollback",
+            by,
+            reason or f"roll back to version {to}",
+            {"rollback_to": int(to)},
+        )
 
     def history(self) -> List[Dict[str, Any]]:
         d = self.doc()
-        return [{"version": v["version"], "action": v["action"], "at": v["at"], "by": v["by"], "reason": v.get("reason"), "keys": sorted(v["rules"]),
-                 "current": v["version"] == d["current"], **({"source": v["source"]} if v.get("source") else {})} for v in d["versions"]]
+        return [
+            {
+                "version": v["version"],
+                "action": v["action"],
+                "at": v["at"],
+                "by": v["by"],
+                "reason": v.get("reason"),
+                "keys": sorted(v["rules"]),
+                "current": v["version"] == d["current"],
+                **({"source": v["source"]} if v.get("source") else {}),
+            }
+            for v in d["versions"]
+        ]
 
     def diff(self, a: int, b: int) -> Dict[str, Any]:
         ra, rb = self.version(a)["rules"], self.version(b)["rules"]
-        return {"store": self.name, "from": int(a), "to": int(b),
-                "added": {k: rb[k]["value"] for k in sorted(set(rb) - set(ra))},
-                "removed": {k: ra[k]["value"] for k in sorted(set(ra) - set(rb))},
-                "changed": {k: {"before": ra[k]["value"], "after": rb[k]["value"]} for k in sorted(set(ra) & set(rb)) if ra[k]["value"] != rb[k]["value"]}}
+        return {
+            "store": self.name,
+            "from": int(a),
+            "to": int(b),
+            "added": {k: rb[k]["value"] for k in sorted(set(rb) - set(ra))},
+            "removed": {k: ra[k]["value"] for k in sorted(set(ra) - set(rb))},
+            "changed": {
+                k: {"before": ra[k]["value"], "after": rb[k]["value"]}
+                for k in sorted(set(ra) & set(rb))
+                if ra[k]["value"] != rb[k]["value"]
+            },
+        }
 
 
 def stores_for(workspace: str, channel: Optional[str]) -> List[PreferenceStore]:
-    return [PreferenceStore(workspace)] + ([PreferenceStore(workspace, channel)] if channel else [])
+    return [PreferenceStore(workspace)] + (
+        [PreferenceStore(workspace, channel)] if channel else []
+    )
 
 
 def snapshot(workspace: str, channel: Optional[str]) -> Dict[str, Any]:
@@ -191,10 +294,20 @@ def source_of(prefs: Dict[str, Any], key: str) -> str:
 
 # ---- corrections per minute ----------------------------------------------------------------------------------------------------
 def corrections_log(workspace: str, channel: str) -> Path:
-    return store_root(workspace) / "channels" / f"{check_channel(channel)}.corrections.json"
+    return (
+        store_root(workspace)
+        / "channels"
+        / f"{check_channel(channel)}.corrections.json"
+    )
 
 
-def record_corrections(workspace: str, channel: str, project_id: str, project_name: str, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def record_corrections(
+    workspace: str,
+    channel: str,
+    project_id: str,
+    project_name: str,
+    rows: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     """Upsert this project's per-version rows into the channel's log; returns the log's rows."""
     p = corrections_log(workspace, channel)
     try:
@@ -202,7 +315,10 @@ def record_corrections(workspace: str, channel: str, project_id: str, project_na
     except (OSError, ValueError):
         log = []
     log = [r for r in log if isinstance(r, dict) and r.get("project_id") != project_id]
-    log += [dict(r, project_id=project_id, project_name=project_name, at=now_iso()) for r in rows]
+    log += [
+        dict(r, project_id=project_id, project_name=project_name, at=now_iso())
+        for r in rows
+    ]
     p.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=p.name + ".", suffix=".tmp", dir=str(p.parent))
     with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -211,15 +327,25 @@ def record_corrections(workspace: str, channel: str, project_id: str, project_na
     return log
 
 
-def recent_average(log: List[Dict[str, Any]], project_id: str) -> Optional[Dict[str, Any]]:
+def recent_average(
+    log: List[Dict[str, Any]], project_id: str
+) -> Optional[Dict[str, Any]]:
     """Mean corrections per minute of the latest version of up to RECENT_PROJECTS other projects (log order = most recent last)."""
     latest: Dict[str, Dict[str, Any]] = {}
     for r in log:
         if r.get("project_id") == project_id or r.get("cpm") is None:
             continue
-        if r["project_id"] not in latest or r["plan_version"] >= latest[r["project_id"]]["plan_version"]:
+        if (
+            r["project_id"] not in latest
+            or r["plan_version"] >= latest[r["project_id"]]["plan_version"]
+        ):
             latest[r["project_id"]] = r
-    rows = sorted(latest.values(), key=lambda r: str(r.get("at") or ""))[-RECENT_PROJECTS:]
+    rows = sorted(latest.values(), key=lambda r: str(r.get("at") or ""))[
+        -RECENT_PROJECTS:
+    ]
     if not rows:
         return None
-    return {"projects": len(rows), "cpm": round(sum(r["cpm"] for r in rows) / len(rows), 3)}
+    return {
+        "projects": len(rows),
+        "cpm": round(sum(r["cpm"] for r in rows) / len(rows), 3),
+    }

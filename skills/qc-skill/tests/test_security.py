@@ -41,7 +41,9 @@ def test_resolve_input_must_exist_false_still_rejects_traversal(tmp_path):
     assert exc.value.code == "PATH_NOT_ALLOWED"
 
 
-def test_resolve_input_must_exist_false_still_enforces_allowed_roots_when_file_exists(tmp_path):
+def test_resolve_input_must_exist_false_still_enforces_allowed_roots_when_file_exists(
+    tmp_path,
+):
     allowed = tmp_path / "allowed"
     allowed.mkdir()
     outside = tmp_path / "outside"
@@ -180,7 +182,9 @@ def test_check_filename_rejects_windows_reserved_names(name):
     assert exc.value.code == "OUTPUT_ERROR"
 
 
-@pytest.mark.parametrize("name", ["-rf", "trailing.", "trailing ", "bad<name>.json", "a\x01b"])
+@pytest.mark.parametrize(
+    "name", ["-rf", "trailing.", "trailing ", "bad<name>.json", "a\x01b"]
+)
 def test_check_filename_rejects_unsafe_names(name):
     with pytest.raises(QCError):
         check_filename(name)

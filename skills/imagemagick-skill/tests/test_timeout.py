@@ -6,6 +6,7 @@ two background processes (standing in for delegates such as gs or ffmpeg, one of
 a grandchild), records every pid, begins writing the output file, then waits forever.
 POSIX only - the Windows path (CREATE_NEW_PROCESS_GROUP + taskkill /T) is exercised by
 the same code with a different kill call."""
+
 import json
 import os
 import stat
@@ -50,7 +51,9 @@ def alive(pid):
             return f.read().rsplit(")", 1)[1].split()[0] != "Z"
     except OSError:
         pass
-    state = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True).stdout.strip()
+    state = subprocess.run(
+        ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True
+    ).stdout.strip()
     return bool(state) and not state.startswith("Z")
 
 
@@ -64,11 +67,16 @@ class HungBackendTests(unittest.TestCase):
         fake = os.path.join(bindir, "magick")
         with open(fake, "w") as f:
             f.write(FAKE_MAGICK)
-        os.chmod(fake, os.stat(fake).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        os.chmod(
+            fake, os.stat(fake).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        )
         self.pidfile = os.path.join(self.tmp.name, "pids")
         open(self.pidfile, "w").close()
-        self.env = dict(os.environ, PATH=bindir + os.pathsep + os.environ.get("PATH", ""),
-                        IMSKILL_TEST_PIDS=self.pidfile)
+        self.env = dict(
+            os.environ,
+            PATH=bindir + os.pathsep + os.environ.get("PATH", ""),
+            IMSKILL_TEST_PIDS=self.pidfile,
+        )
         self.src = os.path.join(self.tmp.name, "in.png")
         write_solid_png(self.src, 8, 8)
         self.addCleanup(self.kill_leftovers)
@@ -86,22 +94,35 @@ class HungBackendTests(unittest.TestCase):
 
     def assert_nothing_left(self):
         pids = self.pids()
-        self.assertGreaterEqual(len(pids), 4, "the fake magick did not start its children")
+        self.assertGreaterEqual(
+            len(pids), 4, "the fake magick did not start its children"
+        )
         end = time.monotonic() + 5
         while time.monotonic() < end and any(alive(p) for p in pids):
             time.sleep(0.05)
-        self.assertEqual([p for p in pids if alive(p)], [], "processes outlived the timeout")
+        self.assertEqual(
+            [p for p in pids if alive(p)], [], "processes outlived the timeout"
+        )
 
     def tool(self, script, *argv):
         start = time.monotonic()
-        proc = subprocess.run([sys.executable, os.path.join(SCRIPTS, script)] + list(argv),
-                              capture_output=True, text=True, env=self.env, timeout=60)
+        proc = subprocess.run(
+            [sys.executable, os.path.join(SCRIPTS, script)] + list(argv),
+            capture_output=True,
+            text=True,
+            env=self.env,
+            timeout=60,
+        )
         return proc, time.monotonic() - start
 
     def test_timed_out_run_fails_with_the_timeout_code_and_leaves_no_child(self):
         out = os.path.join(self.tmp.name, "out.png")
-        proc, took = self.tool("convert.py", self.src, "-o", out, "--timeout", "1", "--json")
-        self.assertEqual(proc.returncode, _common.TIMEOUT_EXIT_CODE, proc.stdout + proc.stderr)
+        proc, took = self.tool(
+            "convert.py", self.src, "-o", out, "--timeout", "1", "--json"
+        )
+        self.assertEqual(
+            proc.returncode, _common.TIMEOUT_EXIT_CODE, proc.stdout + proc.stderr
+        )
         self.assertEqual(proc.returncode, 124)
         payload = json.loads(proc.stdout)
         shape = _contract.build_contract_payload()["result_shapes"]["timeout"]
@@ -125,20 +146,41 @@ class HungBackendTests(unittest.TestCase):
         os.makedirs(in_dir)
         for name in ("a.png", "b.png"):
             write_solid_png(os.path.join(in_dir, name), 8, 8)
-        proc, _ = self.tool("batch.py", "convert", "-i", in_dir, "-o", os.path.join(self.tmp.name, "out"),
-                            "--ext", "jpg", "--timeout", "0.5", "--json")
+        proc, _ = self.tool(
+            "batch.py",
+            "convert",
+            "-i",
+            in_dir,
+            "-o",
+            os.path.join(self.tmp.name, "out"),
+            "--ext",
+            "jpg",
+            "--timeout",
+            "0.5",
+            "--json",
+        )
         payload = json.loads(proc.stdout)
         self.assertFalse(payload["all_ok"])
-        self.assertEqual([r["code"] for r in payload["results"]], ["timeout", "timeout"])
+        self.assertEqual(
+            [r["code"] for r in payload["results"]], ["timeout", "timeout"]
+        )
         self.assertEqual([r["timeout"] for r in payload["results"]], [0.5, 0.5])
         self.assert_nothing_left()
 
     def test_mcp_call_reports_the_timeout(self):
         out = os.path.join(self.tmp.name, "mcp.png")
         proc = subprocess.run(
-            [sys.executable, os.path.join(ROOT, "mcp", "server.py"), "--call", "convert",
-             json.dumps({"input": self.src, "output": out, "timeout": 1})],
-            capture_output=True, text=True, env=self.env, timeout=60,
+            [
+                sys.executable,
+                os.path.join(ROOT, "mcp", "server.py"),
+                "--call",
+                "convert",
+                json.dumps({"input": self.src, "output": out, "timeout": 1}),
+            ],
+            capture_output=True,
+            text=True,
+            env=self.env,
+            timeout=60,
         )
         self.assertIn('"code": "timeout"', proc.stdout)
         self.assert_nothing_left()
@@ -154,14 +196,28 @@ class TimeoutContractTests(unittest.TestCase):
                 self.assertEqual(prop["default"], _common.DEFAULT_TIMEOUT)
                 self.assertEqual(prop["cli"], ["--timeout"])
                 self.assertNotIn("timeout", tool["input_schema"]["required"])
-                self.assertIn("timeout", _contract.mcp_tool(tool)["inputSchema"]["properties"])
-        self.assertEqual(payload["result_shapes"]["timeout"]["code"]["enum"], ["timeout"])
+                self.assertIn(
+                    "timeout", _contract.mcp_tool(tool)["inputSchema"]["properties"]
+                )
+        self.assertEqual(
+            payload["result_shapes"]["timeout"]["code"]["enum"], ["timeout"]
+        )
 
     def test_timeout_must_be_a_positive_number(self):
         for bad in ("0", "-1", "abc", "nan", "inf"):
             with self.subTest(value=bad):
-                proc = subprocess.run([sys.executable, os.path.join(SCRIPTS, "probe.py"), "x.png",
-                                       "--timeout", bad, "--json"], capture_output=True, text=True)
+                proc = subprocess.run(
+                    [
+                        sys.executable,
+                        os.path.join(SCRIPTS, "probe.py"),
+                        "x.png",
+                        "--timeout",
+                        bad,
+                        "--json",
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
                 self.assertEqual(proc.returncode, 1)
                 self.assertNotIn("code", json.loads(proc.stdout))
 

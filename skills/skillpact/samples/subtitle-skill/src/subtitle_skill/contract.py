@@ -1,4 +1,5 @@
 """Machine-readable capability contract (`contract --json`)."""
+
 from __future__ import annotations
 
 from . import CONTRACT_VERSION, SKILL_ID, SKILL_VERSION
@@ -40,10 +41,10 @@ def build_contract() -> dict:
                     "Burn a subtitle document into a video, or mux it in as a soft "
                     "(player-toggleable) subtitle stream, by delegating to ffmpeg-skill's "
                     "`caption` tool (scripts/caption.py). format must be 'srt': ffmpeg-skill's "
-                    "caption tool burns SRT or ASS, never WebVTT. `mode: \"mux\"` copies the "
+                    'caption tool burns SRT or ASS, never WebVTT. `mode: "mux"` copies the '
                     "video/audio streams untouched and forwards `subtitle.language` as the new "
                     "subtitle stream's language tag; `audio_stream` selects which 0-based audio "
-                    "track of a multi-track input is kept, for either mode. For `mode: \"burn\"` "
+                    'track of a multi-track input is kept, for either mode. For `mode: "burn"` '
                     "only, cue `style.color`/`style.bold`/`style.size` are forwarded to "
                     "caption.py's own `--color`/`--bold`/`--size` (a single, whole-burn setting, "
                     "so every cue that sets one of these fields must agree on its value); "
@@ -59,13 +60,25 @@ def build_contract() -> dict:
                     "mode?",
                     "audio_stream?",
                 ],
-                "outputs": ["output", "sha256", "size", "timeline", "observation", "engine", "mode"],
+                "outputs": [
+                    "output",
+                    "sha256",
+                    "size",
+                    "timeline",
+                    "observation",
+                    "engine",
+                    "mode",
+                ],
                 "formats": list(RENDER_SUPPORTED_FORMATS),
                 "delegates_to": {"skill_id": "ffmpeg-skill", "tool": "caption"},
             },
         },
         "provides": [
-            {"id": PROVIDES[op], "lifecycle": "EXPERIMENTAL", "tool_id": f"{SKILL_ID}/{op}"}
+            {
+                "id": PROVIDES[op],
+                "lifecycle": "EXPERIMENTAL",
+                "tool_id": f"{SKILL_ID}/{op}",
+            }
             for op in OPERATIONS
         ],
         "capabilities": {

@@ -16,6 +16,7 @@ Claude Desktop / Claude Code config example:
   On Windows, use "python" instead of "python3" unless Python was installed from the Microsoft
   Store (a python.org install exposes python/py, not python3) -- see README.md's MCP section.
 """
+
 import json
 import os
 import sys
@@ -47,7 +48,10 @@ def specs() -> Dict[str, Dict[str, Any]]:
     if not _SPECS:
         with _SPECS_LOCK:
             if not _SPECS:
-                built = {spec["name"]: spec for spec in _contract.build(detect=False)["tools"]}
+                built = {
+                    spec["name"]: spec
+                    for spec in _contract.build(detect=False)["tools"]
+                }
                 _SPECS.update(built)
     return _SPECS
 
@@ -56,7 +60,9 @@ class _Positional(dict):
     """Positional argument names per tool, read from the contract (kept as a mapping for compatibility)."""
 
     def __missing__(self, name: str) -> List[str]:
-        return list(specs()[name]["mcp"]["positional"]) if name in specs() else ["input"]
+        return (
+            list(specs()[name]["mcp"]["positional"]) if name in specs() else ["input"]
+        )
 
     def get(self, name: str, default: Any = None) -> Any:  # type: ignore[override]
         return self[name] if name in specs() else default
@@ -69,8 +75,14 @@ def build_argv(name: str, args: Dict[str, Any]) -> List[str]:
     """Structured arguments -> argv, using the mapping the contract states (invocation.structured)."""
     if isinstance(args.get("argv"), list):
         argv = [str(a) for a in args["argv"]]
-        if name not in _contract.MCP_JSON_EXEMPT and "--json" not in argv and "--help" not in argv:
-            argv = _common.runner.with_flags(argv, ["--json"])  # before a `--`, where it is still an option
+        if (
+            name not in _contract.MCP_JSON_EXEMPT
+            and "--json" not in argv
+            and "--help" not in argv
+        ):
+            argv = _common.runner.with_flags(
+                argv, ["--json"]
+            )  # before a `--`, where it is still an option
         return argv
     spec = specs().get(name)
     exceptions = spec["mcp"]["argument_exceptions"] if spec else {}
@@ -99,8 +111,16 @@ def build_argv(name: str, args: Dict[str, Any]) -> List[str]:
         longs = [f for f in cli if f.startswith("--")] if isinstance(cli, list) else []
         long_flag = flag if flag.startswith("--") or not longs else longs[0]
         for v in (val if isinstance(val, list) else [val]):
-            options += _common.option_args(long_flag, v) if str(v).startswith("-") else [flag, str(v)]
-    if name not in _contract.MCP_JSON_EXEMPT and "--json" not in options and "--help" not in options:
+            options += (
+                _common.option_args(long_flag, v)
+                if str(v).startswith("-")
+                else [flag, str(v)]
+            )
+    if (
+        name not in _contract.MCP_JSON_EXEMPT
+        and "--json" not in options
+        and "--help" not in options
+    ):
         options.append("--json")
     # A positional starting with '-' would be read as an option (`--plan=x` given as an input path
     # wrote a plan through a read-only tool): such positionals go after `--`, after every option.
@@ -165,7 +185,10 @@ def call_tool(name: str, args: Dict[str, Any], on_start: Any = None) -> Dict[str
     keeps it, to stop the call if the client cancels it)."""
     script = SCRIPTS / f"{name}.py"
     if name not in specs() or not script.exists():
-        return {"isError": True, "content": [{"type": "text", "text": f"unknown tool {name}"}]}
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"unknown tool {name}"}],
+        }
     argv = build_argv(name, args or {})
     # The child enforces --timeout on each ffmpeg call; this outer ceiling (4x that plus 60 s)
     # is the only thing that ends a child hung for any other reason. Structured `timeout` or
@@ -184,13 +207,25 @@ def call_tool(name: str, args: Dict[str, Any], on_start: Any = None) -> Dict[str
     text = stdout
     structured = None
     try:
-        structured = json.loads(stdout) if stdout.startswith("{") or stdout.startswith("[") else None
+        structured = (
+            json.loads(stdout)
+            if stdout.startswith("{") or stdout.startswith("[")
+            else None
+        )
     except ValueError:
         structured = None
     if proc.returncode != 0:
         err = proc.stderr.strip().splitlines()
         tail = "\n".join(err[-12:])
-        failed: Dict[str, Any] = {"isError": True, "content": [{"type": "text", "text": f"{name} failed (exit {proc.returncode})\n{tail}"}]}
+        failed: Dict[str, Any] = {
+            "isError": True,
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"{name} failed (exit {proc.returncode})\n{tail}",
+                }
+            ],
+        }
         # The child's own failure document (status, error.kind/code/hint, commands) is the
         # machine-readable half of the contract; dropping it here left an MCP caller regex-
         # parsing prose to tell a timeout from a missing binary. structuredContent is a field of
@@ -205,7 +240,9 @@ def call_tool(name: str, args: Dict[str, Any], on_start: Any = None) -> Dict[str
         text = stdout or "\n".join(proc.stderr.strip().splitlines()[-5:])
     result: Dict[str, Any] = {"content": [{"type": "text", "text": text}]}
     if structured is not None:
-        result["structuredContent"] = structured if isinstance(structured, dict) else {"result": structured}
+        result["structuredContent"] = (
+            structured if isinstance(structured, dict) else {"result": structured}
+        )
     return result
 
 
@@ -231,19 +268,26 @@ def handle(req: Dict[str, Any], on_start: Any = None) -> Dict[str, Any]:
         # 1.20.0: the structured-arguments note used to be appended to every one of the 42 tool
         # descriptions verbatim; it's server-wide, not per-tool, so it now lives here once instead
         # -- `tools/list` descriptions stay each tool's own one-line sentence.
-        return {"protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {}, "prompts": {}},
-                "serverInfo": {"name": "ffmpeg-skill", "version": version()},
-                "instructions": _contract.MCP_STRUCTURED_NOTE}
+        return {
+            "protocolVersion": PROTOCOL_VERSION,
+            "capabilities": {"tools": {}, "prompts": {}},
+            "serverInfo": {"name": "ffmpeg-skill", "version": version()},
+            "instructions": _contract.MCP_STRUCTURED_NOTE,
+        }
     if method == "tools/list":
         return {"tools": tool_list()}
     if method == "tools/call":
-        return call_tool(params.get("name", ""), params.get("arguments") or {}, on_start=on_start)
+        return call_tool(
+            params.get("name", ""), params.get("arguments") or {}, on_start=on_start
+        )
     if method == "prompts/list":
         # roadmap 1.20.0: the five workflow recipes (reel, podcast, multicam, delivery_check, hdr)
         return {"prompts": _contract.mcp_prompt_list()}
     if method == "prompts/get":
         try:
-            return _contract.mcp_prompt_get(params.get("name", ""), params.get("arguments") or {})
+            return _contract.mcp_prompt_get(
+                params.get("name", ""), params.get("arguments") or {}
+            )
         except KeyError as exc:
             # not "method not found" (-32601, handle()'s own KeyError below): the *method*
             # prompts/get exists, only this prompt *name* doesn't -- a caller mistake, same as
@@ -261,7 +305,9 @@ def handle(req: Dict[str, Any], on_start: Any = None) -> Dict[str, Any]:
 # order they were called, and answer in that order (one encode at a time, as before); a call
 # cancelled while it waits for its turn never starts.
 _QUEUE: "queue.Queue[Optional[Dict[str, Any]]]" = queue.Queue()
-_CALLS: Dict[str, Dict[str, Any]] = {}  # request id (as JSON) -> {"proc": Popen or None, "cancelled": bool}
+_CALLS: Dict[str, Dict[str, Any]] = (
+    {}
+)  # request id (as JSON) -> {"proc": Popen or None, "cancelled": bool}
 _CALLS_LOCK = threading.Lock()
 _WRITE_LOCK = threading.Lock()
 
@@ -308,11 +354,23 @@ def cancel(params: Any) -> None:
 
 def _respond(req: Dict[str, Any], on_start: Any = None) -> Dict[str, Any]:
     try:
-        return {"jsonrpc": "2.0", "id": req["id"], "result": handle(req, on_start=on_start)}
+        return {
+            "jsonrpc": "2.0",
+            "id": req["id"],
+            "result": handle(req, on_start=on_start),
+        }
     except KeyError as exc:
-        return {"jsonrpc": "2.0", "id": req["id"], "error": {"code": -32601, "message": f"method not found: {exc}"}}
+        return {
+            "jsonrpc": "2.0",
+            "id": req["id"],
+            "error": {"code": -32601, "message": f"method not found: {exc}"},
+        }
     except Exception as exc:  # noqa: BLE001
-        return {"jsonrpc": "2.0", "id": req["id"], "error": {"code": -32000, "message": str(exc)}}
+        return {
+            "jsonrpc": "2.0",
+            "id": req["id"],
+            "error": {"code": -32000, "message": str(exc)},
+        }
 
 
 def _call_worker(out: Any) -> None:
@@ -386,7 +444,14 @@ def main() -> int:
             # dropped -- a client whose request was mangled in transit otherwise waits for an
             # answer that never comes, with nothing to say why. Through _write(), as every
             # response: the worker writes too, and a line written beside its own would split it
-            _write(stdout, {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": f"parse error: {exc}"}})
+            _write(
+                stdout,
+                {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {"code": -32700, "message": f"parse error: {exc}"},
+                },
+            )
             continue
         # json.loads accepts any valid JSON value, not just an object -- a bare `42`, `null`,
         # `true` or `[1,2]` line parses fine but isn't a JSON-RPC request. Without this guard,
@@ -399,7 +464,10 @@ def main() -> int:
         if "id" not in req:  # notification
             # only a JSON-RPC 2.0 notification cancels a call (review of #530: a "jsonrpc": "1.0"
             # line stopped the running tool); anything else is ignored, as before
-            if req.get("jsonrpc") == "2.0" and req.get("method") == "notifications/cancelled":
+            if (
+                req.get("jsonrpc") == "2.0"
+                and req.get("method") == "notifications/cancelled"
+            ):
                 cancel(req.get("params"))
             continue
         if req.get("method") == "tools/call":
@@ -409,7 +477,9 @@ def main() -> int:
             _QUEUE.put({"req": req, "entry": entry})
             continue
         _write(stdout, _respond(req))
-    _QUEUE.put(None)  # end of input: the calls already queued run and answer before the server exits
+    _QUEUE.put(
+        None
+    )  # end of input: the calls already queued run and answer before the server exits
     worker.join()
     return 0
 

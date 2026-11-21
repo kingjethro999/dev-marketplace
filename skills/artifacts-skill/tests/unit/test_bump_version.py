@@ -45,7 +45,9 @@ def test_classify_bang_suffix_is_breaking():
 
 
 def test_classify_breaking_change_footer_is_breaking():
-    level, _ = bump_version.classify([("fix: patch something", "BREAKING CHANGE: it moves a flag")])
+    level, _ = bump_version.classify(
+        [("fix: patch something", "BREAKING CHANGE: it moves a flag")]
+    )
     assert level == "major"
 
 
@@ -61,20 +63,28 @@ def test_classify_breaking_change_mentioned_in_prose_is_not_breaking():
         "major bump, and chore:/docs:/untyped commits alone produce no bump at\n"
         "all."
     )
-    level, _ = bump_version.classify([("feat: automate version bumps from Conventional Commits PR titles", body)])
+    level, _ = bump_version.classify(
+        [("feat: automate version bumps from Conventional Commits PR titles", body)]
+    )
     assert level == "minor"
 
 
 def test_classify_chore_and_untyped_commits_never_bump():
     level, sections = bump_version.classify(
-        [("chore: tidy up", ""), ("Merge pull request #1 from x/y", ""), ("random commit message", "")]
+        [
+            ("chore: tidy up", ""),
+            ("Merge pull request #1 from x/y", ""),
+            ("random commit message", ""),
+        ]
     )
     assert level is None
     assert sections == {}
 
 
 def test_classify_highest_bump_wins_regardless_of_order():
-    level, _ = bump_version.classify([("fix: a", ""), ("feat: b", ""), ("chore: c", "")])
+    level, _ = bump_version.classify(
+        [("fix: a", ""), ("feat: b", ""), ("chore: c", "")]
+    )
     assert level == "minor"
 
     level, _ = bump_version.classify([("feat: a", ""), ("fix!: b", "")])
@@ -89,34 +99,75 @@ def _git(*args: str, cwd: Path) -> str:
 
 def _init_fake_repo(root: Path) -> None:
     _git("init", "-q", cwd=root)
-    _git("-c", "user.email=t@t.com", "-c", "user.name=t", "config", "commit.gpgsign", "false", cwd=root)
+    _git(
+        "-c",
+        "user.email=t@t.com",
+        "-c",
+        "user.name=t",
+        "config",
+        "commit.gpgsign",
+        "false",
+        cwd=root,
+    )
     (root / "pyproject.toml").write_text('[project]\nname = "x"\nversion = "0.2.0"\n')
     (root / "package.json").write_text('{\n  "name": "x",\n  "version": "0.2.0"\n}\n')
     (root / "src" / "artifact_skill").mkdir(parents=True)
-    (root / "src" / "artifact_skill" / "__init__.py").write_text('__version__ = "0.2.0"\n')
-    (root / "CHANGELOG.md").write_text("# Changelog\n\nIntro text.\n\n## v0.2.0\n\n- initial\n")
+    (root / "src" / "artifact_skill" / "__init__.py").write_text(
+        '__version__ = "0.2.0"\n'
+    )
+    (root / "CHANGELOG.md").write_text(
+        "# Changelog\n\nIntro text.\n\n## v0.2.0\n\n- initial\n"
+    )
     _git("add", "-A", cwd=root)
-    _git("-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "-q", "-m", "chore: initial", cwd=root)
+    _git(
+        "-c",
+        "user.email=t@t.com",
+        "-c",
+        "user.name=t",
+        "commit",
+        "-q",
+        "-m",
+        "chore: initial",
+        cwd=root,
+    )
     _git("tag", "v0.2.0", cwd=root)
 
 
-def test_end_to_end_bump_writes_all_three_version_files_and_changelog(tmp_path, monkeypatch):
+def test_end_to_end_bump_writes_all_three_version_files_and_changelog(
+    tmp_path, monkeypatch
+):
     _init_fake_repo(tmp_path)
     _git(
-        "-c", "user.email=t@t.com", "-c", "user.name=t",
-        "commit", "--allow-empty", "-q", "-m", "feat: add a widget",
+        "-c",
+        "user.email=t@t.com",
+        "-c",
+        "user.name=t",
+        "commit",
+        "--allow-empty",
+        "-q",
+        "-m",
+        "feat: add a widget",
         cwd=tmp_path,
     )
     _git(
-        "-c", "user.email=t@t.com", "-c", "user.name=t",
-        "commit", "--allow-empty", "-q", "-m", "fix: correct the widget\n\nno body needed",
+        "-c",
+        "user.email=t@t.com",
+        "-c",
+        "user.name=t",
+        "commit",
+        "--allow-empty",
+        "-q",
+        "-m",
+        "fix: correct the widget\n\nno body needed",
         cwd=tmp_path,
     )
 
     monkeypatch.setattr(bump_version, "ROOT", tmp_path)
     monkeypatch.setattr(bump_version, "PYPROJECT", tmp_path / "pyproject.toml")
     monkeypatch.setattr(bump_version, "PACKAGE_JSON", tmp_path / "package.json")
-    monkeypatch.setattr(bump_version, "INIT_PY", tmp_path / "src" / "artifact_skill" / "__init__.py")
+    monkeypatch.setattr(
+        bump_version, "INIT_PY", tmp_path / "src" / "artifact_skill" / "__init__.py"
+    )
     monkeypatch.setattr(bump_version, "CHANGELOG", tmp_path / "CHANGELOG.md")
 
     exit_code = bump_version.main()
@@ -124,7 +175,10 @@ def test_end_to_end_bump_writes_all_three_version_files_and_changelog(tmp_path, 
     assert exit_code == 0
     assert 'version = "0.3.0"' in (tmp_path / "pyproject.toml").read_text()
     assert '"version": "0.3.0"' in (tmp_path / "package.json").read_text()
-    assert '__version__ = "0.3.0"' in (tmp_path / "src" / "artifact_skill" / "__init__.py").read_text()
+    assert (
+        '__version__ = "0.3.0"'
+        in (tmp_path / "src" / "artifact_skill" / "__init__.py").read_text()
+    )
     changelog = (tmp_path / "CHANGELOG.md").read_text()
     assert changelog.index("## v0.3.0") < changelog.index("## v0.2.0")
     assert "add a widget" in changelog
@@ -134,15 +188,24 @@ def test_end_to_end_bump_writes_all_three_version_files_and_changelog(tmp_path, 
 def test_end_to_end_no_bump_when_no_conventional_commit_landed(tmp_path, monkeypatch):
     _init_fake_repo(tmp_path)
     _git(
-        "-c", "user.email=t@t.com", "-c", "user.name=t",
-        "commit", "--allow-empty", "-q", "-m", "just a plain commit message",
+        "-c",
+        "user.email=t@t.com",
+        "-c",
+        "user.name=t",
+        "commit",
+        "--allow-empty",
+        "-q",
+        "-m",
+        "just a plain commit message",
         cwd=tmp_path,
     )
 
     monkeypatch.setattr(bump_version, "ROOT", tmp_path)
     monkeypatch.setattr(bump_version, "PYPROJECT", tmp_path / "pyproject.toml")
     monkeypatch.setattr(bump_version, "PACKAGE_JSON", tmp_path / "package.json")
-    monkeypatch.setattr(bump_version, "INIT_PY", tmp_path / "src" / "artifact_skill" / "__init__.py")
+    monkeypatch.setattr(
+        bump_version, "INIT_PY", tmp_path / "src" / "artifact_skill" / "__init__.py"
+    )
     monkeypatch.setattr(bump_version, "CHANGELOG", tmp_path / "CHANGELOG.md")
 
     bump_version.main()

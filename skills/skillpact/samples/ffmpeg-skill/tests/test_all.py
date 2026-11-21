@@ -8,6 +8,7 @@ test_picture, test_delivery, test_orchestration, test_accel, test_asr, test_cut_
 This file imports all nine so that the entry point every CI job, npm test and release_check.sh already runs
 keeps running exactly the same set; each group module is also runnable on its own.
 """
+
 import sys
 import unittest
 from pathlib import Path
@@ -24,13 +25,23 @@ import test_editing  # noqa: E402
 import test_orchestration  # noqa: E402
 import test_picture  # noqa: E402
 
-MODULES = (test_analysis, test_editing, test_cut_copy, test_audio, test_picture, test_delivery, test_orchestration, test_accel,
-           test_asr)
+MODULES = (
+    test_analysis,
+    test_editing,
+    test_cut_copy,
+    test_audio,
+    test_picture,
+    test_delivery,
+    test_orchestration,
+    test_accel,
+    test_asr,
+)
 
 
 def load_tests(loader, tests, pattern):
     """unittest calls this instead of scanning this module: the cases are in the nine group
-    modules, and naming them here keeps the set (and the order groups run in) explicit."""
+    modules, and naming them here keeps the set (and the order groups run in) explicit.
+    """
     suite = unittest.TestSuite()
     for module in MODULES:
         suite.addTests(loader.loadTestsFromModule(module))

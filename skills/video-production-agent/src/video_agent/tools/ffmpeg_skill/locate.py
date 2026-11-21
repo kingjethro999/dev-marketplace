@@ -1,6 +1,7 @@
 """Find an ffmpeg-skill checkout/installation. Search order: explicit dir, VIDEO_AGENT_FFMPEG_SKILL_DIR,
 ~/.claude/skills/ffmpeg-skill, the sibling of this source checkout
 (never the current directory: ADR-069)."""
+
 from __future__ import annotations
 
 import json
@@ -56,11 +57,18 @@ class FfmpegSkill:
     def offers_flag(self, name: str, flag: str) -> bool:
         """Whether `<name>.py --help` lists `flag` (capability detection, ADR-048): flags renamed across ffmpeg-skill
         releases are chosen by what the installed checkout actually takes, never by its version number. Read once
-        per (checkout, script); an unreadable --help answers False, so callers keep the older spelling."""
+        per (checkout, script); an unreadable --help answers False, so callers keep the older spelling.
+        """
         key = (str(self.root), name)
         if key not in _HELP_CACHE:
             try:
-                out = subprocess.run([sys.executable, str(self.script(name)), "--help"], capture_output=True, text=True, timeout=60, env=child_env()).stdout
+                out = subprocess.run(
+                    [sys.executable, str(self.script(name)), "--help"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                    env=child_env(),
+                ).stdout
             except (OSError, subprocess.SubprocessError):
                 out = ""
             _HELP_CACHE[key] = out
@@ -68,7 +76,8 @@ class FfmpegSkill:
 
     def catalog_check(self) -> CatalogCheck:
         """ADR-056: the catalog checked against this checkout's `_contract.py --json --static` and `doctor --json` (read once per
-        checkout and version). `catalog_check().tool_reason(name)` is why a catalogued tool cannot be used here, or None."""
+        checkout and version). `catalog_check().tool_reason(name)` is why a catalogued tool cannot be used here, or None.
+        """
         return catalog_check(self.root, self.version, self.scripts)
 
 
@@ -82,14 +91,20 @@ def _candidate(p: Path) -> Optional[FfmpegSkill]:
     pj = p / "package.json"
     if pj.exists():
         try:
-            version = json.loads(pj.read_text(encoding="utf-8")).get("version", "unknown")
+            version = json.loads(pj.read_text(encoding="utf-8")).get(
+                "version", "unknown"
+            )
         except ValueError:
             pass
-    scripts = sorted(x.stem for x in (p / "scripts").glob("*.py") if not x.name.startswith("_"))
+    scripts = sorted(
+        x.stem for x in (p / "scripts").glob("*.py") if not x.name.startswith("_")
+    )
     return FfmpegSkill(p.resolve(), version, scripts)
 
 
-def locate_ffmpeg_skill(explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None) -> Optional[FfmpegSkill]:
+def locate_ffmpeg_skill(
+    explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None
+) -> Optional[FfmpegSkill]:
     env = os.environ if env is None else env
     authoritative: List[Path] = []
     if explicit:
@@ -103,6 +118,6 @@ def locate_ffmpeg_skill(explicit: Optional[str] = None, env: Optional[Dict[str, 
     for c in cands:
         found = _candidate(c)
         if found:
-            found.catalog_check()   # ADR-056: read the contract at locate time (cached), so every caller sees the same verdict
+            found.catalog_check()  # ADR-056: read the contract at locate time (cached), so every caller sees the same verdict
             return found
     return None

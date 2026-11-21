@@ -18,6 +18,7 @@ repo-root path, which would not exist after a real `pip install`) --
 repo-root `SKILL.md` that GitHub and humans read, so the two can never
 silently drift apart.
 """
+
 from __future__ import annotations
 
 import importlib.resources
@@ -27,6 +28,7 @@ from pathlib import Path
 from typing import List, Optional
 
 SKILL_NAME = "subtitle-skill"
+
 
 def _agent_targets() -> dict:
     """Directories the skill can be installed into, keyed by CLI flag name.
@@ -64,7 +66,15 @@ def _skill_md_bytes() -> bytes:
     return importlib.resources.files("subtitle_skill").joinpath("SKILL.md").read_bytes()
 
 
-def _targets(*, claude: bool, cursor: bool, codex: bool, project: bool, custom_dir: Optional[str], all_: bool) -> List[tuple]:
+def _targets(
+    *,
+    claude: bool,
+    cursor: bool,
+    codex: bool,
+    project: bool,
+    custom_dir: Optional[str],
+    all_: bool,
+) -> List[tuple]:
     if all_:
         claude = cursor = codex = True
     targets = _agent_targets()
@@ -73,7 +83,9 @@ def _targets(*, claude: bool, cursor: bool, codex: bool, project: bool, custom_d
         if want:
             selected.append(targets[flag])
     if project:
-        selected.append(("project (.claude/skills)", Path.cwd() / ".claude" / "skills" / SKILL_NAME))
+        selected.append(
+            ("project (.claude/skills)", Path.cwd() / ".claude" / "skills" / SKILL_NAME)
+        )
     if custom_dir:
         selected.append(("custom", Path(custom_dir).resolve() / SKILL_NAME))
     if not selected:
@@ -101,17 +113,35 @@ def install(
     payload = None if uninstall else _skill_md_bytes()
 
     for label, directory in _targets(
-        claude=claude, cursor=cursor, codex=codex, project=project, custom_dir=custom_dir, all_=all_
+        claude=claude,
+        cursor=cursor,
+        codex=codex,
+        project=project,
+        custom_dir=custom_dir,
+        all_=all_,
     ):
         try:
             if uninstall:
                 shutil.rmtree(directory, ignore_errors=True)
-                results.append(InstallResult(label=label, directory=str(directory), action="removed"))
+                results.append(
+                    InstallResult(
+                        label=label, directory=str(directory), action="removed"
+                    )
+                )
                 continue
             directory.mkdir(parents=True, exist_ok=True)
             (directory / "SKILL.md").write_bytes(payload)
-            results.append(InstallResult(label=label, directory=str(directory), action="installed"))
+            results.append(
+                InstallResult(label=label, directory=str(directory), action="installed")
+            )
         except OSError as exc:
-            results.append(InstallResult(label=label, directory=str(directory), action="failed", error=str(exc)))
+            results.append(
+                InstallResult(
+                    label=label,
+                    directory=str(directory),
+                    action="failed",
+                    error=str(exc),
+                )
+            )
 
     return results

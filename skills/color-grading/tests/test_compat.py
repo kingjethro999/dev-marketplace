@@ -4,6 +4,7 @@ Fake checkouts stand in for the layouts and contract shapes real releases have h
 `_common.py`, probe `hdr` meaning BT.2020-or-PQ/HLG), 2.x (`--quality` only, a `_common/` package, `--overwrite`,
 `bt2020_or_hdr`), a contract-less checkout read through `--help`, and a far-future version number. The real checkout
 the suite runs against (any version) is checked too."""
+
 import json
 import sys
 import textwrap
@@ -11,8 +12,16 @@ from pathlib import Path
 
 import pytest
 
-from color_grading.adapter import (FLAG_ALTERNATIVES, REQUIRED_FLAGS, FfmpegSkill, SkillInfo, _common_layout, check_tools, flags_from_help,
-                                   probe_hdr)
+from color_grading.adapter import (
+    FLAG_ALTERNATIVES,
+    REQUIRED_FLAGS,
+    FfmpegSkill,
+    SkillInfo,
+    _common_layout,
+    check_tools,
+    flags_from_help,
+    probe_hdr,
+)
 from color_grading.contract import skill_contract
 from color_grading.doctor import capability_status, doctor_report
 
@@ -34,16 +43,23 @@ def _tools(color_extra=(), drop=(), video_required=True):
 
 # ---- pure detection
 
+
 def test_old_release_with_crf_only_is_usable_and_gets_crf():
     problems, features = check_tools(_tools(color_extra=["crf"]))
     assert problems == []
-    assert features["encoder_quality_flag"] == "--crf" and features["overwrite_flag"] is False
+    assert (
+        features["encoder_quality_flag"] == "--crf"
+        and features["overwrite_flag"] is False
+    )
 
 
 def test_new_release_with_quality_only_is_usable_and_gets_quality():
     problems, features = check_tools(_tools(color_extra=["quality", "overwrite"]))
     assert problems == []
-    assert features["encoder_quality_flag"] == "--quality" and features["overwrite_flag"] is True
+    assert (
+        features["encoder_quality_flag"] == "--quality"
+        and features["overwrite_flag"] is True
+    )
 
 
 def test_quality_is_preferred_when_both_exist():
@@ -59,7 +75,9 @@ def test_neither_quality_nor_crf_is_a_named_problem():
     assert len(problems) == 1 and "quality|crf" in problems[0]
 
 
-@pytest.mark.parametrize("flag", ["gamma", "audio_stream", "correct", "levels_out_white"])
+@pytest.mark.parametrize(
+    "flag", ["gamma", "audio_stream", "correct", "levels_out_white"]
+)
 def test_a_missing_required_flag_is_reported_by_name(flag):
     problems, _ = check_tools(_tools(color_extra=["quality"], drop=[flag]))
     assert len(problems) == 1 and repr(flag) in problems[0]
@@ -74,7 +92,9 @@ def test_missing_tool_is_reported():
 
 def test_video_required_is_checked_only_when_declared():
     assert check_tools(_tools(color_extra=["crf"], video_required=None))[0] == []
-    assert check_tools(_tools(color_extra=["crf"], video_required=False))[0] == ["ffmpeg-skill/color does not declare video_required"]
+    assert check_tools(_tools(color_extra=["crf"], video_required=False))[0] == [
+        "ffmpeg-skill/color does not declare video_required"
+    ]
 
 
 def test_flags_from_help_reads_long_flags_and_positionals():
@@ -97,14 +117,20 @@ def test_flags_from_help_reads_long_flags_and_positionals():
     assert "usage" not in props and "source" not in props
 
 
-@pytest.mark.parametrize("video,expected", [
-    ({"hdr": True}, True),                                   # 0.x / 1.x: hdr already means BT.2020-or-PQ/HLG
-    ({"hdr": False}, False),
-    ({"hdr": False, "bt2020_or_hdr": True}, True),           # 2.x: BT.2020 SDR -- hdr narrowed, the old meaning kept
-    ({"hdr": True, "hdr_signal": True, "bt2020_or_hdr": True}, True),
-    ({"hdr": False, "bt2020_or_hdr": False}, False),
-    ({}, False),
-])
+@pytest.mark.parametrize(
+    "video,expected",
+    [
+        ({"hdr": True}, True),  # 0.x / 1.x: hdr already means BT.2020-or-PQ/HLG
+        ({"hdr": False}, False),
+        (
+            {"hdr": False, "bt2020_or_hdr": True},
+            True,
+        ),  # 2.x: BT.2020 SDR -- hdr narrowed, the old meaning kept
+        ({"hdr": True, "hdr_signal": True, "bt2020_or_hdr": True}, True),
+        ({"hdr": False, "bt2020_or_hdr": False}, False),
+        ({}, False),
+    ],
+)
 def test_probe_hdr_keeps_the_pre_2_0_meaning(video, expected):
     assert probe_hdr(video) is expected
 
@@ -142,55 +168,105 @@ ap.parse_args()
 """
 
 
-def _fake_checkout(root: Path, version: str, quality: str, layout: str, with_contract: bool = True, overwrite: bool = False,
-                   drop=()) -> Path:
+def _fake_checkout(
+    root: Path,
+    version: str,
+    quality: str,
+    layout: str,
+    with_contract: bool = True,
+    overwrite: bool = False,
+    drop=(),
+) -> Path:
     scripts = root / "scripts"
     scripts.mkdir(parents=True)
-    (scripts / "probe.py").write_text("import sys\nprint('usage: probe.py [-h] inputs [inputs ...]')\n")
+    (scripts / "probe.py").write_text(
+        "import sys\nprint('usage: probe.py [-h] inputs [inputs ...]')\n"
+    )
     if layout == "module":
         (scripts / "_common.py").write_text("")
     else:
         (scripts / "_common").mkdir()
         (scripts / "_common" / "__init__.py").write_text("")
-    (root / "package.json").write_text(json.dumps({"name": "ffmpeg-skill", "version": version}))
-    color_flags = [f for f in REQUIRED_FLAGS["color"] if f not in ("input", "output")] + [quality] + (["overwrite"] if overwrite else [])
+    (root / "package.json").write_text(
+        json.dumps({"name": "ffmpeg-skill", "version": version})
+    )
+    color_flags = (
+        [f for f in REQUIRED_FLAGS["color"] if f not in ("input", "output")]
+        + [quality]
+        + (["overwrite"] if overwrite else [])
+    )
     if with_contract:
-        tools = _tools(color_extra=[quality] + (["overwrite"] if overwrite else []), drop=drop)
-        doc = {"contract_version": "1.0", "skill": {"id": "ffmpeg-skill", "version": version}, "tools": list(tools.values())}
+        tools = _tools(
+            color_extra=[quality] + (["overwrite"] if overwrite else []), drop=drop
+        )
+        doc = {
+            "contract_version": "1.0",
+            "skill": {"id": "ffmpeg-skill", "version": version},
+            "tools": list(tools.values()),
+        }
         (scripts / "_contract.py").write_text(_CONTRACT_SCRIPT.format(doc=repr(doc)))
         (scripts / "color.py").write_text("print('{}')\n")
     else:
-        (scripts / "color.py").write_text(_ARGPARSE_COLOR.format(flags=repr([f for f in color_flags if f != "json"] + ["json"])))
-        (scripts / "probe.py").write_text("import argparse\nap = argparse.ArgumentParser()\nap.add_argument('inputs', nargs='+')\nap.parse_args()\n")
+        (scripts / "color.py").write_text(
+            _ARGPARSE_COLOR.format(
+                flags=repr([f for f in color_flags if f != "json"] + ["json"])
+            )
+        )
+        (scripts / "probe.py").write_text(
+            "import argparse\nap = argparse.ArgumentParser()\nap.add_argument('inputs', nargs='+')\nap.parse_args()\n"
+        )
     return root
 
 
-@pytest.mark.parametrize("version,quality,layout,overwrite", [
-    ("0.12.3", "crf", "module", False),     # the oldest release that has every flag (the former window's floor)
-    ("1.0.0", "crf", "module", False),      # the former window's exclusive upper bound
-    ("2.10.3", "quality", "package", True),
-    ("17.4.0", "quality", "package", True),  # a release that does not exist yet: no upper bound
-])
-def test_any_version_with_the_flags_is_usable(tmp_path, version, quality, layout, overwrite):
-    root = _fake_checkout(tmp_path / "ffs", version, quality, layout, overwrite=overwrite)
+@pytest.mark.parametrize(
+    "version,quality,layout,overwrite",
+    [
+        (
+            "0.12.3",
+            "crf",
+            "module",
+            False,
+        ),  # the oldest release that has every flag (the former window's floor)
+        ("1.0.0", "crf", "module", False),  # the former window's exclusive upper bound
+        ("2.10.3", "quality", "package", True),
+        (
+            "17.4.0",
+            "quality",
+            "package",
+            True,
+        ),  # a release that does not exist yet: no upper bound
+    ],
+)
+def test_any_version_with_the_flags_is_usable(
+    tmp_path, version, quality, layout, overwrite
+):
+    root = _fake_checkout(
+        tmp_path / "ffs", version, quality, layout, overwrite=overwrite
+    )
     info = FfmpegSkill.locate(str(root)).info()
     assert info.problems == [] and info.supported
     assert info.version == version
     assert info.quality_flag == "--" + quality
     assert info.features["overwrite_flag"] is overwrite
-    assert info.features["common_layout"] == ("_common.py" if layout == "module" else "_common/")
+    assert info.features["common_layout"] == (
+        "_common.py" if layout == "module" else "_common/"
+    )
     assert info.features["source"] == "contract"
 
 
 def test_new_version_without_a_required_flag_is_refused_with_the_flag_named(tmp_path):
-    root = _fake_checkout(tmp_path / "ffs", "3.0.0", "quality", "package", drop=["gamma"])
+    root = _fake_checkout(
+        tmp_path / "ffs", "3.0.0", "quality", "package", drop=["gamma"]
+    )
     info = FfmpegSkill.locate(str(root)).info()
     assert not info.supported and any("'gamma'" in p for p in info.problems)
     assert not any("window" in p or "version" in p for p in info.problems)
 
 
 def test_checkout_without_a_contract_is_read_through_help(tmp_path):
-    root = _fake_checkout(tmp_path / "ffs", "0.13.0", "crf", "module", with_contract=False)
+    root = _fake_checkout(
+        tmp_path / "ffs", "0.13.0", "crf", "module", with_contract=False
+    )
     info = FfmpegSkill.locate(str(root)).info()
     assert info.features["source"] == "--help"
     assert info.problems == [], info.problems
@@ -200,21 +276,38 @@ def test_checkout_without_a_contract_is_read_through_help(tmp_path):
     assert d["checks"]["ffmpeg_skill"]["status"] == "ok"
     assert d["checks"]["capabilities"]["ffmpeg"] == "unknown"
     ops = d["checks"]["operations"]
-    assert all(o["status"] == "unknown" for t, o in ops.items() if t not in ("MATCH_CAMERA", "LEGALIZE"))
+    assert all(
+        o["status"] == "unknown"
+        for t, o in ops.items()
+        if t not in ("MATCH_CAMERA", "LEGALIZE")
+    )
     # the operations this fake checkout really cannot serve: it has no look.py, and 0.13.0 predates the --lut fix
     # MATCH_CAMERA and LEGALIZE need (ADR-23, ADR-24); doctor says so (degraded, not fail) instead of reporting unknown
     assert ops["MATCH_CAMERA"]["status"] == "unsupported"
-    assert ops["MATCH_CAMERA"]["missing"] == ["ffmpeg-skill/look", "ffmpeg-skill/color:lut-bt709-legs"]
-    assert ops["LEGALIZE"]["status"] == "unsupported" and ops["LEGALIZE"]["missing"] == ["ffmpeg-skill/color:lut-bt709-legs"]
-    assert d["status"] == "degraded" and d["unavailable_operations"] == ["LEGALIZE", "MATCH_CAMERA"]
+    assert ops["MATCH_CAMERA"]["missing"] == [
+        "ffmpeg-skill/look",
+        "ffmpeg-skill/color:lut-bt709-legs",
+    ]
+    assert ops["LEGALIZE"]["status"] == "unsupported" and ops["LEGALIZE"][
+        "missing"
+    ] == ["ffmpeg-skill/color:lut-bt709-legs"]
+    assert d["status"] == "degraded" and d["unavailable_operations"] == [
+        "LEGALIZE",
+        "MATCH_CAMERA",
+    ]
 
 
 def test_doctor_reports_what_was_detected(tmp_path):
-    root = _fake_checkout(tmp_path / "ffs", "2.10.3", "quality", "package", overwrite=True)
+    root = _fake_checkout(
+        tmp_path / "ffs", "2.10.3", "quality", "package", overwrite=True
+    )
     d = doctor_report(str(root))
     fs = d["checks"]["ffmpeg_skill"]
     assert fs["status"] == "ok" and fs["version"] == "2.10.3"
-    assert fs["detected"]["encoder_quality_flag"] == "--quality" and fs["detected"]["common_layout"] == "_common/"
+    assert (
+        fs["detected"]["encoder_quality_flag"] == "--quality"
+        and fs["detected"]["common_layout"] == "_common/"
+    )
     assert "window" not in json.dumps(d["problems"])
 
 
@@ -222,12 +315,27 @@ def test_executor_emits_the_detected_quality_flag(tmp_path):
     from color_grading.executor import Executor, NodeState
     from color_grading.graph import Node
     from color_grading.security import PathPolicy
-    params = {"tonemap": "hable", "peak_nits": 1000.0, "desat": 0.0, "force": False, "crf": 21, "preset": "medium", "audio_stream": 0}
+
+    params = {
+        "tonemap": "hable",
+        "peak_nits": 1000.0,
+        "desat": 0.0,
+        "force": False,
+        "crf": 21,
+        "preset": "medium",
+        "audio_stream": 0,
+    }
     for flag in ("--quality", "--crf"):
         skill = FfmpegSkill(tmp_path)
-        skill._info = SkillInfo(tmp_path, "x", "1.0", {}, [], {"encoder_quality_flag": flag})
+        skill._info = SkillInfo(
+            tmp_path, "x", "1.0", {}, [], {"encoder_quality_flag": flag}
+        )
         ex = Executor(PathPolicy(str(tmp_path)), skill)
-        argv = ex._argv(NodeState(Node("op:h", "HDR_TO_SDR", ["source"], params), "id"), "/in.mp4", tmp_path / "o.mp4")
+        argv = ex._argv(
+            NodeState(Node("op:h", "HDR_TO_SDR", ["source"], params), "id"),
+            "/in.mp4",
+            tmp_path / "o.mp4",
+        )
         assert argv[argv.index(flag) + 1] == "21"
         assert ({"--quality", "--crf"} - {flag}).isdisjoint(argv)
 
@@ -240,11 +348,18 @@ def test_contract_declares_no_version_window():
 
 
 def test_capability_status_with_no_doctor_is_unknown():
-    s = capability_status(SkillInfo(Path("."), "x", "1.0", {}, []), {"_unavailable": True})
-    assert s["ffmpeg-skill"] == "supported" and s["ffmpeg"] == "unknown" and s["filter:zscale"] == "unknown"
+    s = capability_status(
+        SkillInfo(Path("."), "x", "1.0", {}, []), {"_unavailable": True}
+    )
+    assert (
+        s["ffmpeg-skill"] == "supported"
+        and s["ffmpeg"] == "unknown"
+        and s["filter:zscale"] == "unknown"
+    )
 
 
 # ---- the real checkout the suite runs against, whatever its version
+
 
 def test_real_checkout_is_usable_and_detection_matches_its_contract(skill_dir):
     info = FfmpegSkill.locate(str(skill_dir)).info()

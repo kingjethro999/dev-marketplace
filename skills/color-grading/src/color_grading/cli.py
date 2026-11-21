@@ -8,6 +8,7 @@ stderr: diagnostics only. Exit code: 0 on success, otherwise errors.EXIT_CODES[e
   color-grading validate - --json          validate a request document, run nothing
   color-grading plan - --json              dry run: plan, graph, tool selection, expected geometry; writes no media
   color-grading run - --json [--dry-run]"""
+
 from __future__ import annotations
 
 import argparse
@@ -25,21 +26,51 @@ from .security import PathPolicy
 
 
 def _add_common(ap: argparse.ArgumentParser) -> None:
-    ap.add_argument("--json", action="store_true", help="machine-readable JSON on stdout (exactly one document)")
+    ap.add_argument(
+        "--json",
+        action="store_true",
+        help="machine-readable JSON on stdout (exactly one document)",
+    )
 
 
 def _add_run_opts(ap: argparse.ArgumentParser) -> None:
     ap.add_argument("request", help="path to a request document, or - for stdin")
-    ap.add_argument("--workspace", help="directory writes are confined to (default: current directory)")
-    ap.add_argument("--allowed-input", action="append", help="restrict the source to this root (repeatable)")
-    ap.add_argument("--allowed-lut", action="append", help="restrict LUT files to this root (repeatable; default: same as --allowed-input)")
-    ap.add_argument("--ffmpeg-skill", help="ffmpeg-skill checkout directory (default: env / ~/.claude/skills/ffmpeg-skill / ./vendor / ..)")
-    ap.add_argument("--timeout", type=float, default=900.0, help="seconds per tool invocation (default 900)")
-    ap.add_argument("--no-reuse", action="store_true", help="do not reuse intermediates with a matching operation id")
+    ap.add_argument(
+        "--workspace",
+        help="directory writes are confined to (default: current directory)",
+    )
+    ap.add_argument(
+        "--allowed-input",
+        action="append",
+        help="restrict the source to this root (repeatable)",
+    )
+    ap.add_argument(
+        "--allowed-lut",
+        action="append",
+        help="restrict LUT files to this root (repeatable; default: same as --allowed-input)",
+    )
+    ap.add_argument(
+        "--ffmpeg-skill",
+        help="ffmpeg-skill checkout directory (default: env / ~/.claude/skills/ffmpeg-skill / ./vendor / ..)",
+    )
+    ap.add_argument(
+        "--timeout",
+        type=float,
+        default=900.0,
+        help="seconds per tool invocation (default 900)",
+    )
+    ap.add_argument(
+        "--no-reuse",
+        action="store_true",
+        help="do not reuse intermediates with a matching operation id",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="color-grading", description=f"{PACKAGE_NAME} {VERSION}: deterministic colour grading execution (not an AI agent)")
+    ap = argparse.ArgumentParser(
+        prog="color-grading",
+        description=f"{PACKAGE_NAME} {VERSION}: deterministic colour grading execution (not an AI agent)",
+    )
     ap.add_argument("--version", action="version", version=f"{PACKAGE_NAME} {VERSION}")
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("skill", "contract"):
@@ -51,10 +82,15 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--allowed-lut", action="append")
     d.add_argument("--ffmpeg-skill")
     _add_common(d)
-    v = sub.add_parser("validate", help="validate a request document; runs nothing, reads no media")
+    v = sub.add_parser(
+        "validate", help="validate a request document; runs nothing, reads no media"
+    )
     v.add_argument("request")
     _add_common(v)
-    p = sub.add_parser("plan", help="dry run: plan without writing media (the source and any LUTs are read read-only)")
+    p = sub.add_parser(
+        "plan",
+        help="dry run: plan without writing media (the source and any LUTs are read read-only)",
+    )
     _add_run_opts(p)
     _add_common(p)
     r = sub.add_parser("run", help="execute a request document")
@@ -66,7 +102,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _read_document(spec: str) -> Any:
     try:
-        text = sys.stdin.read() if spec == "-" else open(spec, "r", encoding="utf-8").read()
+        text = (
+            sys.stdin.read()
+            if spec == "-"
+            else open(spec, "r", encoding="utf-8").read()
+        )
     except OSError as e:
         raise ColorError("INVALID_REQUEST", f"cannot read request document: {e}")
     if len(text) > 16 * 1024 * 1024:
@@ -78,13 +118,22 @@ def _read_document(spec: str) -> Any:
 
 
 def _error_document(e: ColorError, dry_run: bool) -> dict:
-    return {"schema": RESPONSE_SCHEMA_ID, "skill": {"id": SKILL_ID, "version": VERSION}, "ok": False,
-            "status": "cancelled" if e.code == "CANCELLED" else "error", "dry_run": dry_run, "error": e.to_dict(), "warnings": []}
+    return {
+        "schema": RESPONSE_SCHEMA_ID,
+        "skill": {"id": SKILL_ID, "version": VERSION},
+        "ok": False,
+        "status": "cancelled" if e.code == "CANCELLED" else "error",
+        "dry_run": dry_run,
+        "error": e.to_dict(),
+        "warnings": [],
+    }
 
 
 def _emit(doc: dict, as_json: bool) -> None:
     if as_json:
-        sys.stdout.write(json.dumps(doc, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+        sys.stdout.write(
+            json.dumps(doc, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+        )
     else:
         _human(doc)
     sys.stdout.flush()
@@ -93,15 +142,23 @@ def _emit(doc: dict, as_json: bool) -> None:
 def _human(doc: dict) -> None:
     if not doc.get("ok", True) and doc.get("error"):
         e = doc["error"]
-        sys.stderr.write(f"error [{e['code']}]: {e['message']}" + (f" {json.dumps(e.get('details'))}" if e.get("details") else "") + "\n")
+        sys.stderr.write(
+            f"error [{e['code']}]: {e['message']}"
+            + (f" {json.dumps(e.get('details'))}" if e.get("details") else "")
+            + "\n"
+        )
     if "results" in doc:
         for r in doc["results"]:
             if r["type"] == "SOURCE":
                 continue
             art = r.get("artifact") or {}
-            print(f"{r['node_id']:20} {r['type']:12} {r['status']:10} {r.get('tool') or '':20} dur={art.get('duration')} sha={str(art.get('sha256'))[:12]}")
+            print(
+                f"{r['node_id']:20} {r['type']:12} {r['status']:10} {r.get('tool') or '':20} dur={art.get('duration')} sha={str(art.get('sha256'))[:12]}"
+            )
         for o in doc.get("outputs", []):
-            print(f"output {o['output_id']}: {o.get('status', 'planned')} {o.get('path')}")
+            print(
+                f"output {o['output_id']}: {o.get('status', 'planned')} {o.get('path')}"
+            )
     elif "validation" in doc:
         print("validation: ok")
     elif "checks" in doc:
@@ -109,11 +166,17 @@ def _human(doc: dict) -> None:
         for k in ("ffmpeg_skill", "ffmpeg", "ffprobe"):
             print(f"{k}: {json.dumps(doc['checks'].get(k))}")
         for t, o in doc["checks"]["operations"].items():
-            print(f"  {t:12} {o['status']:12} {o['tool']}" + (f"  missing: {o['missing']}" if o["missing"] else ""))
+            print(
+                f"  {t:12} {o['status']:12} {o['tool']}"
+                + (f"  missing: {o['missing']}" if o["missing"] else "")
+            )
         for p in doc["problems"]:
             print(f"problem: {p}")
     elif "operations" in doc:
-        print(f"{doc['skill_id']} {doc['version']}: " + ", ".join(o["type"] for o in doc["operations"]))
+        print(
+            f"{doc['skill_id']} {doc['version']}: "
+            + ", ".join(o["type"] for o in doc["operations"])
+        )
 
 
 def install_cancel_handlers(skill: Any) -> None:
@@ -121,6 +184,7 @@ def install_cancel_handlers(skill: Any) -> None:
     the running tool and the executor stops with CANCELLED at its next checkpoint, removing that step's partial
     output. It does not raise, so it cannot interrupt the executor between writing an intermediate and its
     manifest."""
+
     def _cancel(signum: int, frame: Any) -> None:
         skill.cancel()
 
@@ -138,7 +202,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         _emit(skill_contract(), as_json)
         return 0
     if args.cmd == "doctor":
-        doc = doctor_report(args.ffmpeg_skill, args.workspace, args.allowed_input, args.allowed_lut)
+        doc = doctor_report(
+            args.ffmpeg_skill, args.workspace, args.allowed_input, args.allowed_lut
+        )
         _emit(doc, as_json)
         return 0 if doc["status"] != "fail" else 1
     dry_run = args.cmd == "plan" or bool(getattr(args, "dry_run", False))
@@ -147,20 +213,39 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.cmd == "validate":
             from .graph import OperationGraph
             from .model import parse_request
+
             req = parse_request(document)
             graph = OperationGraph(req.project)
-            doc = {"schema": RESPONSE_SCHEMA_ID, "skill": {"id": SKILL_ID, "version": VERSION}, "ok": True, "status": "ok", "dry_run": True,
-                   "validation": {"ok": True, "graph": graph.to_dict()}, "warnings": []}
+            doc = {
+                "schema": RESPONSE_SCHEMA_ID,
+                "skill": {"id": SKILL_ID, "version": VERSION},
+                "ok": True,
+                "status": "ok",
+                "dry_run": True,
+                "validation": {"ok": True, "graph": graph.to_dict()},
+                "warnings": [],
+            }
         else:
             policy = PathPolicy(args.workspace, args.allowed_input, args.allowed_lut)
             skill, versions, caps = runtime_context(args.ffmpeg_skill, args.timeout)
-            executor = Executor(policy, skill, dry_run=dry_run, reuse=not args.no_reuse, timeout=args.timeout, tool_versions=versions, capabilities=caps)
+            executor = Executor(
+                policy,
+                skill,
+                dry_run=dry_run,
+                reuse=not args.no_reuse,
+                timeout=args.timeout,
+                tool_versions=versions,
+                capabilities=caps,
+            )
 
             install_cancel_handlers(skill)
             try:
                 doc = executor.response(document)
             except KeyboardInterrupt:
-                doc = _error_document(ColorError("CANCELLED", "interrupted", {"reason": "signal"}), dry_run)
+                doc = _error_document(
+                    ColorError("CANCELLED", "interrupted", {"reason": "signal"}),
+                    dry_run,
+                )
     except ColorError as e:
         doc = _error_document(e, dry_run)
     except Exception as e:
@@ -168,11 +253,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         # document overflowing json.loads' recursion limit) must still not break the one-JSON-document-on-stdout
         # contract every caller relies on; report it as an internal bug rather than letting main() propagate a
         # bare Python traceback that the caller cannot parse.
-        doc = _error_document(ColorError("INTERNAL_ERROR", f"unexpected error ({type(e).__name__}): {e}"), dry_run)
+        doc = _error_document(
+            ColorError("INTERNAL_ERROR", f"unexpected error ({type(e).__name__}): {e}"),
+            dry_run,
+        )
     _emit(doc, as_json)
     if doc.get("ok"):
         return 0
-    return EXIT_CODES.get((doc.get("error") or {}).get("code", "INTERNAL_ERROR"), EXIT_CODES["INTERNAL_ERROR"])
+    return EXIT_CODES.get(
+        (doc.get("error") or {}).get("code", "INTERNAL_ERROR"),
+        EXIT_CODES["INTERNAL_ERROR"],
+    )
 
 
 if __name__ == "__main__":

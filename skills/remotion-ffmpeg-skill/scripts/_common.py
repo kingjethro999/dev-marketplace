@@ -13,6 +13,7 @@ Three jobs live here so every public script behaves the same way:
 
 Python 3.10+ standard library only.
 """
+
 import argparse
 import hashlib
 import json
@@ -47,20 +48,38 @@ STATE = State()
 
 def version() -> str:
     try:
-        return json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
+        return json.loads((ROOT / "package.json").read_text(encoding="utf-8"))[
+            "version"
+        ]
     except (OSError, ValueError, KeyError):
         return "0.0.0"
 
 
 # ---------------------------------------------------------------- CLI conventions
 
+
 def add_common(parser: argparse.ArgumentParser) -> None:
     g = parser.add_argument_group("shared flags")
-    g.add_argument("--json", action="store_true", help="print one JSON object on stdout")
-    g.add_argument("--dry-run", action="store_true", help="plan only: print the commands, write nothing")
-    g.add_argument("--overwrite", action="store_true", help="allow replacing an existing output file")
-    g.add_argument("--timeout", type=float, default=1800.0, metavar="SECONDS",
-                   help="wall-clock limit for each external step (default 1800)")
+    g.add_argument(
+        "--json", action="store_true", help="print one JSON object on stdout"
+    )
+    g.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="plan only: print the commands, write nothing",
+    )
+    g.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow replacing an existing output file",
+    )
+    g.add_argument(
+        "--timeout",
+        type=float,
+        default=1800.0,
+        metavar="SECONDS",
+        help="wall-clock limit for each external step (default 1800)",
+    )
 
 
 def apply_common(args: argparse.Namespace) -> None:
@@ -103,15 +122,25 @@ def default_output(src: Path, suffix: str, ext: Optional[str] = None) -> Path:
     return src.with_name(f"{src.stem}{suffix}{ext if ext is not None else src.suffix}")
 
 
-def run(cmd: Sequence[str], cwd: Optional[Path] = None, capture: bool = True,
-        env: Optional[Dict[str, str]] = None) -> subprocess.CompletedProcess:
+def run(
+    cmd: Sequence[str],
+    cwd: Optional[Path] = None,
+    capture: bool = True,
+    env: Optional[Dict[str, str]] = None,
+) -> subprocess.CompletedProcess:
     """Run one external step with the shared timeout. Never called under --dry-run by writers."""
     try:
-        return subprocess.run(list(cmd), cwd=str(cwd) if cwd else None, env=env,
-                              stdout=subprocess.PIPE if capture else None,
-                              stderr=subprocess.PIPE if capture else None,
-                              text=True, encoding="utf-8", errors="replace",
-                              timeout=STATE.timeout)
+        return subprocess.run(
+            list(cmd),
+            cwd=str(cwd) if cwd else None,
+            env=env,
+            stdout=subprocess.PIPE if capture else None,
+            stderr=subprocess.PIPE if capture else None,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=STATE.timeout,
+        )
     except subprocess.TimeoutExpired:
         die(f"timed out after {STATE.timeout:.0f}s: {' '.join(cmd[:3])} ...", "timeout")
     except FileNotFoundError:
@@ -120,10 +149,12 @@ def run(cmd: Sequence[str], cwd: Optional[Path] = None, capture: bool = True,
 
 def shell_join(cmd: Sequence[str]) -> str:
     import shlex
+
     return " ".join(shlex.quote(str(c)) for c in cmd)
 
 
 # ---------------------------------------------------------------- ffmpeg-skill
+
 
 def _skill_candidates() -> List[Path]:
     home = Path.home()
@@ -132,7 +163,7 @@ def _skill_candidates() -> List[Path]:
     if env:
         out.append(Path(env).expanduser())
     out += [
-        ROOT.parent / "ffmpeg-skill",                       # installed side by side (~/.claude/skills/*)
+        ROOT.parent / "ffmpeg-skill",  # installed side by side (~/.claude/skills/*)
         Path.cwd() / ".claude" / "skills" / "ffmpeg-skill",  # project install
         home / ".claude" / "skills" / "ffmpeg-skill",
         home / ".agents" / "skills" / "ffmpeg-skill",
@@ -143,7 +174,9 @@ def _skill_candidates() -> List[Path]:
 
 def find_ffmpeg_skill() -> Optional[Path]:
     for c in _skill_candidates():
-        if (c / "scripts" / "probe.py").is_file() and (c / "scripts" / "check.py").is_file():
+        if (c / "scripts" / "probe.py").is_file() and (
+            c / "scripts" / "check.py"
+        ).is_file():
             return c.resolve()
     return None
 
@@ -151,25 +184,37 @@ def find_ffmpeg_skill() -> Optional[Path]:
 def require_ffmpeg_skill() -> Path:
     found = find_ffmpeg_skill()
     if found is None:
-        die("ffmpeg-skill not found. Install it with `npx ffmpeg-skill` (it lands next to this skill), "
+        die(
+            "ffmpeg-skill not found. Install it with `npx ffmpeg-skill` (it lands next to this skill), "
             "or set FFMPEG_SKILL_DIR to its folder. Looked in: "
-            + ", ".join(str(c) for c in _skill_candidates()), "missing_tool")
+            + ", ".join(str(c) for c in _skill_candidates()),
+            "missing_tool",
+        )
     return found
 
 
 def ffmpeg_skill_version(skill_dir: Path) -> Optional[str]:
     try:
-        return json.loads((skill_dir / "package.json").read_text(encoding="utf-8")).get("version")
+        return json.loads((skill_dir / "package.json").read_text(encoding="utf-8")).get(
+            "version"
+        )
     except (OSError, ValueError):
         return None
 
 
 def ffskill_cmd(script: str, args: Sequence[str]) -> List[str]:
     skill = require_ffmpeg_skill()
-    return [sys.executable, str(skill / "scripts" / f"{script}.py"), *[str(a) for a in args], "--json"]
+    return [
+        sys.executable,
+        str(skill / "scripts" / f"{script}.py"),
+        *[str(a) for a in args],
+        "--json",
+    ]
 
 
-def ffskill(script: str, args: Sequence[str], allow_fail: bool = False) -> Dict[str, Any]:
+def ffskill(
+    script: str, args: Sequence[str], allow_fail: bool = False
+) -> Dict[str, Any]:
     """Run one ffmpeg-skill script with --json and return its parsed result.
 
     ffmpeg-skill prints its JSON object on stdout and human progress on stderr; a non-zero exit
@@ -186,14 +231,22 @@ def ffskill(script: str, args: Sequence[str], allow_fail: bool = False) -> Dict[
             data.setdefault("status", "failed")
             data.setdefault("error", (proc.stderr or "").strip()[-600:])
             return data
-        err = data.get("error") or (proc.stderr or "").strip()[-600:] or f"exit {proc.returncode}"
-        die(f"ffmpeg-skill {script}.py failed: {err}", data.get("kind") or "failed",
-            command=shell_join(cmd))
+        err = (
+            data.get("error")
+            or (proc.stderr or "").strip()[-600:]
+            or f"exit {proc.returncode}"
+        )
+        die(
+            f"ffmpeg-skill {script}.py failed: {err}",
+            data.get("kind") or "failed",
+            command=shell_join(cmd),
+        )
     data["_command"] = shell_join(cmd)
     return data
 
 
 # ---------------------------------------------------------------- timeline
+
 
 def load_timeline(path: Path) -> Dict[str, Any]:
     if not path.is_file():
@@ -222,39 +275,75 @@ def validate_timeline(t: Any) -> List[str]:
             v = src.get(k)
             if not isinstance(v, (int, float)) or v <= 0:
                 p.append(f"source.{k} must be a positive number")
-    if t.get("pip") is not None and not (isinstance(t["pip"], dict) and isinstance(t["pip"].get("offset"), (int, float))
-                                         and t["pip"].get("path")):
+    if t.get("pip") is not None and not (
+        isinstance(t["pip"], dict)
+        and isinstance(t["pip"].get("offset"), (int, float))
+        and t["pip"].get("path")
+    ):
         p.append("pip must be {path, offset, duration, ...} (analyze.py --pip)")
-    for k in ("scenes", "silences", "speech", "peaks", "captions", "highlights", "words", "chapters", "emphasis"):
+    for k in (
+        "scenes",
+        "silences",
+        "speech",
+        "peaks",
+        "captions",
+        "highlights",
+        "words",
+        "chapters",
+        "emphasis",
+    ):
         if not isinstance(t.get(k, []), list):
             p.append(f"{k} must be a list")
     for i, c in enumerate(t.get("captions", []) or []):
-        if not (isinstance(c, dict) and isinstance(c.get("start"), (int, float))
-                and isinstance(c.get("end"), (int, float)) and isinstance(c.get("text"), str)
-                and c["end"] > c["start"]):
+        if not (
+            isinstance(c, dict)
+            and isinstance(c.get("start"), (int, float))
+            and isinstance(c.get("end"), (int, float))
+            and isinstance(c.get("text"), str)
+            and c["end"] > c["start"]
+        ):
             p.append(f"captions[{i}] needs start < end and text")
             break
     emph = t.get("emphasis") or []
     caps = t.get("captions") if isinstance(t.get("captions"), list) else []
     nwords = len(t["words"]) if isinstance(t.get("words"), list) else 0
     for i, e in enumerate(emph if isinstance(emph, list) else []):
-        ok = (isinstance(e, dict) and _finite(e.get("start")) and _finite(e.get("end")) and e["end"] > e["start"]
-              and isinstance(e.get("text"), str) and e["text"] and isinstance(e.get("cue"), int)
-              and not isinstance(e["cue"], bool) and 0 <= e["cue"] < len(caps)
-              and e.get("style") in (None, "pop", "color", "box"))
+        ok = (
+            isinstance(e, dict)
+            and _finite(e.get("start"))
+            and _finite(e.get("end"))
+            and e["end"] > e["start"]
+            and isinstance(e.get("text"), str)
+            and e["text"]
+            and isinstance(e.get("cue"), int)
+            and not isinstance(e["cue"], bool)
+            and 0 <= e["cue"] < len(caps)
+            and e.get("style") in (None, "pop", "color", "box")
+        )
         for key, limit in (("span", None), ("words", nwords)):
             r = e.get(key) if ok else None
-            ok = ok and (isinstance(r, list) and len(r) == 2 and all(isinstance(x, int) and not isinstance(x, bool)
-                                                                       for x in r) and 0 <= r[0] <= r[1])
+            ok = ok and (
+                isinstance(r, list)
+                and len(r) == 2
+                and all(isinstance(x, int) and not isinstance(x, bool) for x in r)
+                and 0 <= r[0] <= r[1]
+            )
             if ok and limit is not None:
                 ok = r[1] < limit
         if ok:
-            cue_text = caps[e["cue"]].get("text") if isinstance(caps[e["cue"]], dict) else None
-            ok = isinstance(cue_text, str) and e["span"][1] <= len(cue_text) and \
-                cue_text[e["span"][0]:e["span"][1]] == e["text"]
+            cue_text = (
+                caps[e["cue"]].get("text") if isinstance(caps[e["cue"]], dict) else None
+            )
+            ok = (
+                isinstance(cue_text, str)
+                and e["span"][1] <= len(cue_text)
+                and cue_text[e["span"][0] : e["span"][1]] == e["text"]
+            )
         if not ok:
-            p.append(f"emphasis[{i}] needs start < end, text, its caption cue, the span of the text in that cue, "
-                     "its word range and a style (pop, color, box or null) -- analyze.py --emphasis writes it")
+            p.append(
+                f"emphasis[{i}] needs start < end, text, its caption cue, the span of the text in that cue, "
+                "its word range and a style (pop, color, box or null) -- analyze.py --emphasis writes it"
+            )
             break
     for i, r in enumerate(t.get("speech", []) or []):
         if not (isinstance(r, list) and len(r) == 2 and r[1] > r[0]):
@@ -280,22 +369,43 @@ def expected_frames(comp: str, t: Dict[str, Any]) -> Optional[int]:
     and render.py then only reports the measured numbers.
     """
     fps = float(t["source"]["fps"])
-    if comp in ("Captioned", "PeakPulse", "Titled", "BeatMontage", "Karaoke", "Pip", "Emphasis"):
+    if comp in (
+        "Captioned",
+        "PeakPulse",
+        "Titled",
+        "BeatMontage",
+        "Karaoke",
+        "Pip",
+        "Emphasis",
+    ):
         return max(1, sec_to_frames(float(t["source"]["duration"]), fps))
     if comp in ("Jumpcut", "Highlights"):
         if comp == "Jumpcut":
             ranges = t.get("speech") or [[0.0, float(t["source"]["duration"])]]
         else:
-            ranges = [[h["start"], h["end"]] for h in (t.get("highlights") or [])] or [[0.0, float(t["source"]["duration"])]]
-        total = sum(max(1, sec_to_frames(e, fps) - sec_to_frames(s, fps)) for s, e in ranges)
+            ranges = [[h["start"], h["end"]] for h in (t.get("highlights") or [])] or [
+                [0.0, float(t["source"]["duration"])]
+            ]
+        total = sum(
+            max(1, sec_to_frames(e, fps) - sec_to_frames(s, fps)) for s, e in ranges
+        )
         return max(1, total)
     return None
 
 
 # ---------------------------------------------------------------- Remotion project
 
-BUILTIN_COMPOSITIONS = ("Captioned", "Jumpcut", "PeakPulse", "Titled", "Highlights", "BeatMontage", "Karaoke", "Pip",
-                        "Emphasis")
+BUILTIN_COMPOSITIONS = (
+    "Captioned",
+    "Jumpcut",
+    "PeakPulse",
+    "Titled",
+    "Highlights",
+    "BeatMontage",
+    "Karaoke",
+    "Pip",
+    "Emphasis",
+)
 
 
 def remotion_bin(project: Path) -> Path:
@@ -305,30 +415,52 @@ def remotion_bin(project: Path) -> Path:
 
 def require_project(project: Path, need_install: bool = True) -> Path:
     project = project.resolve()
-    if not (project / "package.json").is_file() or not (project / "src" / "index.ts").is_file():
-        die(f"{project} is not a Remotion project made by init.py (needs package.json and src/index.ts)", "input")
+    if (
+        not (project / "package.json").is_file()
+        or not (project / "src" / "index.ts").is_file()
+    ):
+        die(
+            f"{project} is not a Remotion project made by init.py (needs package.json and src/index.ts)",
+            "input",
+        )
     if need_install and not remotion_bin(project).exists():
-        die(f"Remotion is not installed in {project}: run `npm install` there (or init.py --install)",
-            "missing_tool")
+        die(
+            f"Remotion is not installed in {project}: run `npm install` there (or init.py --install)",
+            "missing_tool",
+        )
     return project
 
 
-_NOISE = ("Detected differing memory amounts", "Memory reported by", "inadvertently set the --memory",
-          "Using the lower amount of memory")
+_NOISE = (
+    "Detected differing memory amounts",
+    "Memory reported by",
+    "inadvertently set the --memory",
+    "Using the lower amount of memory",
+)
 
 
 def remotion_error(text: str, limit: int = 15) -> str:
     """The useful part of a failed Remotion CLI run: what follows 'An error occurred:', else the tail
     without container-memory chatter."""
-    lines = [ln for ln in (text or "").splitlines() if ln.strip() and not any(n in ln for n in _NOISE)]
+    lines = [
+        ln
+        for ln in (text or "").splitlines()
+        if ln.strip() and not any(n in ln for n in _NOISE)
+    ]
     for i, ln in enumerate(lines):
         if "An error occurred" in ln:
-            return "\n".join(ln2.strip() for ln2 in lines[i + 1:i + 1 + limit])
+            return "\n".join(ln2.strip() for ln2 in lines[i + 1 : i + 1 + limit])
     # No marker: the Error lines themselves, without the JavaScript stack frames under them.
-    errors = [ln.strip() for ln in lines if "Error" in ln and not ln.lstrip().startswith("at ")]
+    errors = [
+        ln.strip()
+        for ln in lines
+        if "Error" in ln and not ln.lstrip().startswith("at ")
+    ]
     if errors:
         return "\n".join(errors[-limit:])
-    return "\n".join(ln for ln in lines if not ln.lstrip().startswith("at "))[-4000:] or "\n".join(lines[-limit:])
+    return "\n".join(ln for ln in lines if not ln.lstrip().startswith("at "))[
+        -4000:
+    ] or "\n".join(lines[-limit:])
 
 
 def stage_source(project: Path, source_path: str) -> str:
@@ -341,12 +473,16 @@ def stage_source(project: Path, source_path: str) -> str:
 
 def _stage(project: Path, src: Path, folder: str) -> str:
     st = src.stat()
-    tag = hashlib.sha1(f"{src}|{st.st_size}|{int(st.st_mtime)}".encode()).hexdigest()[:8]
+    tag = hashlib.sha1(f"{src}|{st.st_size}|{int(st.st_mtime)}".encode()).hexdigest()[
+        :8
+    ]
     rel = f"{folder}/{tag}_{src.name}"
     dst = project / "public" / rel
     if STATE.dry_run:
         return rel
-    if dst.is_symlink():          # left by an older version or by hand: Remotion cannot serve it
+    if (
+        dst.is_symlink()
+    ):  # left by an older version or by hand: Remotion cannot serve it
         dst.unlink()
     elif dst.exists():
         return rel
@@ -358,7 +494,9 @@ def _stage(project: Path, src: Path, folder: str) -> str:
     try:
         os.link(src, dst)
     except OSError:
-        info(f"copying {src.name} into the project (hard link not possible across drives) ...")
+        info(
+            f"copying {src.name} into the project (hard link not possible across drives) ..."
+        )
         # Bytes only: copying a macOS system font's file flags (copy2 -> chflags) is not permitted.
         shutil.copyfile(src, dst)
     return rel
@@ -366,7 +504,13 @@ def _stage(project: Path, src: Path, folder: str) -> str:
 
 # ---------------------------------------------------------------- output frame
 
-ASPECTS = {"16:9": (16, 9), "9:16": (9, 16), "1:1": (1, 1), "4:5": (4, 5), "4:3": (4, 3)}
+ASPECTS = {
+    "16:9": (16, 9),
+    "9:16": (9, 16),
+    "1:1": (1, 1),
+    "4:5": (4, 5),
+    "4:3": (4, 3),
+}
 FITS = ("blur", "contain", "cover")
 
 
@@ -374,8 +518,12 @@ def even(n: float) -> int:
     return max(2, int(round(n / 2.0)) * 2)
 
 
-def output_frame(timeline: Dict[str, Any], aspect: Optional[str], width: Optional[int],
-                 fit: Optional[str]) -> Optional[Dict[str, Any]]:
+def output_frame(
+    timeline: Dict[str, Any],
+    aspect: Optional[str],
+    width: Optional[int],
+    fit: Optional[str],
+) -> Optional[Dict[str, Any]]:
     """The output frame for --aspect/--width/--fit, or None for the source's own size.
 
     Without --width the output keeps the source's short side (720p stays 720 wide when turned
@@ -384,7 +532,11 @@ def output_frame(timeline: Dict[str, Any], aspect: Optional[str], width: Optiona
     src = timeline["source"]
     sw, sh = int(src["width"]), int(src["height"])
     if (aspect in (None, "source")) and width is None:
-        return None if fit in (None, "contain") else {"width": sw, "height": sh, "fit": fit}
+        return (
+            None
+            if fit in (None, "contain")
+            else {"width": sw, "height": sh, "fit": fit}
+        )
     if aspect in (None, "source"):
         aw, ah = sw, sh
     else:
@@ -400,10 +552,16 @@ def output_frame(timeline: Dict[str, Any], aspect: Optional[str], width: Optiona
         else:
             h = even(short)
             w = even(h * aw / ah)
-    return {"width": w, "height": h, "fit": fit or ("blur" if aspect not in (None, "source") else "contain")}
+    return {
+        "width": w,
+        "height": h,
+        "fit": fit or ("blur" if aspect not in (None, "source") else "contain"),
+    }
 
 
-def frame_size(timeline: Dict[str, Any], frame: Optional[Dict[str, Any]]) -> Tuple[int, int]:
+def frame_size(
+    timeline: Dict[str, Any], frame: Optional[Dict[str, Any]]
+) -> Tuple[int, int]:
     if frame:
         return int(frame["width"]), int(frame["height"])
     return int(timeline["source"]["width"]), int(timeline["source"]["height"])
@@ -417,7 +575,9 @@ def platform_aspect(platform: Optional[str]) -> Optional[str]:
     if skill is None:
         return None
     try:
-        tpl = json.loads((skill / "templates" / f"{platform}.json").read_text(encoding="utf-8"))
+        tpl = json.loads(
+            (skill / "templates" / f"{platform}.json").read_text(encoding="utf-8")
+        )
     except (OSError, ValueError):
         return None
     aspect = (tpl.get("frame") or {}).get("aspect")
@@ -425,6 +585,7 @@ def platform_aspect(platform: Optional[str]) -> Optional[str]:
 
 
 # ---------------------------------------------------------------- fonts
+
 
 def caption_script(captions: List[Dict[str, Any]]) -> Optional[str]:
     """ja / ko / zh when the caption text needs a CJK font, else None (Latin etc. render with system fonts)."""
@@ -434,7 +595,9 @@ def caption_script(captions: List[Dict[str, Any]]) -> Optional[str]:
     if any("가" <= ch <= "힯" or "ᄀ" <= ch <= "ᇿ" for ch in text):
         return "ko"
     if any("一" <= ch <= "鿿" or "㐀" <= ch <= "䶿" for ch in text):
-        return "ja"  # Han only: Japanese glyph forms by default; --font-file picks another
+        return (
+            "ja"  # Han only: Japanese glyph forms by default; --font-file picks another
+        )
     return None
 
 
@@ -443,29 +606,46 @@ def cjk_font_file(script: str) -> Optional[Path]:
     skill = find_ffmpeg_skill()
     if skill is None:
         return None
-    proc = subprocess.run([sys.executable, str(skill / "scripts" / "_contract.py"), "doctor", "--json"],
-                          capture_output=True, text=True, timeout=120)
+    proc = subprocess.run(
+        [sys.executable, str(skill / "scripts" / "_contract.py"), "doctor", "--json"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
     try:
         entry = json.loads(proc.stdout)["fonts"]["scripts"].get(script) or {}
     except (ValueError, KeyError, TypeError):
         return None
     f = entry.get("file")
-    return Path(f) if entry.get("status") == "available" and f and Path(f).is_file() else None
+    return (
+        Path(f)
+        if entry.get("status") == "available" and f and Path(f).is_file()
+        else None
+    )
 
 
 def stage_font(project: Path, font_file: Path) -> Dict[str, str]:
     if not font_file.is_file():
         die(f"font file not found: {font_file}", "input")
-    if font_file.suffix.lower() not in (".ttf", ".otf", ".ttc", ".otc", ".woff", ".woff2"):
+    if font_file.suffix.lower() not in (
+        ".ttf",
+        ".otf",
+        ".ttc",
+        ".otc",
+        ".woff",
+        ".woff2",
+    ):
         die(f"{font_file.name}: use a .ttf, .otf, .ttc, .woff or .woff2 font", "input")
     rel = _stage(project, font_file.resolve(), "fonts")
     return {"src": rel, "family": "RFS " + Path(rel).name.split("_", 1)[0]}
 
 
-def resolve_font(project: Path, timeline: Dict[str, Any], font_file: Optional[str],
-                 auto: bool) -> Tuple[Optional[Dict[str, str]], Optional[str]]:
+def resolve_font(
+    project: Path, timeline: Dict[str, Any], font_file: Optional[str], auto: bool
+) -> Tuple[Optional[Dict[str, str]], Optional[str]]:
     """(font asset for the props, a note for the report). A given --font-file always wins; otherwise
-    CJK captions get the CJK font ffmpeg-skill finds on this machine, so they never render as tofu."""
+    CJK captions get the CJK font ffmpeg-skill finds on this machine, so they never render as tofu.
+    """
     if font_file:
         return stage_font(project, Path(font_file).expanduser()), f"font: {font_file}"
     script = caption_script(timeline.get("captions") or [])
@@ -473,75 +653,140 @@ def resolve_font(project: Path, timeline: Dict[str, Any], font_file: Optional[st
         return None, None
     found = cjk_font_file(script)
     if found is None:
-        return None, (f"captions need a {script} font and none was found on this machine: install one "
-                      f"(e.g. Noto Sans CJK) or pass --font-file; the contact sheet will show tofu otherwise")
-    return stage_font(project, found), f"font: {found} (found by ffmpeg-skill for {script} captions)"
+        return None, (
+            f"captions need a {script} font and none was found on this machine: install one "
+            f"(e.g. Noto Sans CJK) or pass --font-file; the contact sheet will show tofu otherwise"
+        )
+    return (
+        stage_font(project, found),
+        f"font: {found} (found by ffmpeg-skill for {script} captions)",
+    )
 
 
-def write_props(project: Path, comp: str, timeline: Dict[str, Any], options: Dict[str, Any],
-                frame: Optional[Dict[str, Any]] = None, font: Optional[Dict[str, str]] = None,
-                overlay: bool = False) -> Tuple[Path, Dict[str, Any]]:
+def write_props(
+    project: Path,
+    comp: str,
+    timeline: Dict[str, Any],
+    options: Dict[str, Any],
+    frame: Optional[Dict[str, Any]] = None,
+    font: Optional[Dict[str, str]] = None,
+    overlay: bool = False,
+) -> Tuple[Path, Dict[str, Any]]:
     t = json.loads(json.dumps(timeline))
     src = t["source"].get("path")
-    has_media = t["source"].get("has_video", True) or t["source"].get("has_audio", False)
-    t["source"]["src"] = stage_source(project, src) if src and has_media and not overlay else None
+    has_media = t["source"].get("has_video", True) or t["source"].get(
+        "has_audio", False
+    )
+    t["source"]["src"] = (
+        stage_source(project, src) if src and has_media and not overlay else None
+    )
     if t.get("pip") and comp == "Pip":
         t["pip"]["src"] = stage_source(project, t["pip"]["path"])
-    props = {"timeline": t, "options": options, "frame": frame, "font": font, "overlay": overlay}
+    props = {
+        "timeline": t,
+        "options": options,
+        "frame": frame,
+        "font": font,
+        "overlay": overlay,
+    }
     # Named by content: two renders running at once (different sources, shapes or options) never
     # overwrite each other's props, and identical props share one file harmlessly.
-    digest = hashlib.sha1(json.dumps(props, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:10]
+    digest = hashlib.sha1(
+        json.dumps(props, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()[:10]
     path = project / ".rfs" / f"props-{comp}-{digest}.json"
     if not STATE.dry_run:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(props, ensure_ascii=False, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(props, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
     return path, props
 
 
 def add_frame_args(p: argparse.ArgumentParser) -> None:
     g = p.add_argument_group("output frame and font")
-    g.add_argument("--aspect", choices=["source", *ASPECTS], default=None,
-                   help="output shape (default: the source's own). 9:16 for Reels/TikTok/Shorts, 1:1, 4:5, 16:9")
-    g.add_argument("--width", type=int, help="output width in px (default: keep the source's short side)")
-    g.add_argument("--fit", choices=FITS, help="how the source fills another shape: blur (default when the shape "
-                                                "changes), contain (bars) or cover (crop)")
-    g.add_argument("--font-file", help="caption font file (.ttf/.otf/.ttc/.woff2), staged into the project")
-    g.add_argument("--brand", help="ffmpeg-skill brand.json: its colours, caption colour, font and font file set "
-                                   "the look (an --options file still wins key by key)")
-    g.add_argument("--no-auto-font", action="store_true",
-                   help="don't stage the CJK font ffmpeg-skill finds for Japanese/Chinese/Korean captions")
+    g.add_argument(
+        "--aspect",
+        choices=["source", *ASPECTS],
+        default=None,
+        help="output shape (default: the source's own). 9:16 for Reels/TikTok/Shorts, 1:1, 4:5, 16:9",
+    )
+    g.add_argument(
+        "--width",
+        type=int,
+        help="output width in px (default: keep the source's short side)",
+    )
+    g.add_argument(
+        "--fit",
+        choices=FITS,
+        help="how the source fills another shape: blur (default when the shape "
+        "changes), contain (bars) or cover (crop)",
+    )
+    g.add_argument(
+        "--font-file",
+        help="caption font file (.ttf/.otf/.ttc/.woff2), staged into the project",
+    )
+    g.add_argument(
+        "--brand",
+        help="ffmpeg-skill brand.json: its colours, caption colour, font and font file set "
+        "the look (an --options file still wins key by key)",
+    )
+    g.add_argument(
+        "--no-auto-font",
+        action="store_true",
+        help="don't stage the CJK font ffmpeg-skill finds for Japanese/Chinese/Korean captions",
+    )
 
 
-def prepare_props(project: Path, comp: str, timeline: Dict[str, Any], options: Dict[str, Any],
-                  a: argparse.Namespace) -> Tuple[Path, Optional[Dict[str, Any]], Optional[str]]:
+def prepare_props(
+    project: Path,
+    comp: str,
+    timeline: Dict[str, Any],
+    options: Dict[str, Any],
+    a: argparse.Namespace,
+) -> Tuple[Path, Optional[Dict[str, Any]], Optional[str]]:
     """Frame + font + props file for render.py / still.py. Returns (props path, frame, font note)."""
     if a.width is not None and a.width < 16:
         die("--width must be at least 16 px", "input")
     frame = output_frame(timeline, a.aspect, a.width, a.fit)
     font, note = resolve_font(project, timeline, a.font_file, not a.no_auto_font)
-    props_path, _ = write_props(project, comp, timeline, options, frame, font, bool(getattr(a, "overlay", False)))
+    props_path, _ = write_props(
+        project,
+        comp,
+        timeline,
+        options,
+        frame,
+        font,
+        bool(getattr(a, "overlay", False)),
+    )
     return props_path, frame, note
 
 
 # Mirrors DEFAULT_OPTIONS.fontFamily in src/timeline.ts: a brand font goes in front of it, so CJK
 # and other scripts still fall back to a font that has them.
-DEFAULT_FONT_STACK = ("'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans', 'Helvetica Neue', Arial, "
-                      "sans-serif")
+DEFAULT_FONT_STACK = (
+    "'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans', 'Helvetica Neue', Arial, "
+    "sans-serif"
+)
 
 
 def _hex_colour(v: Any, where: str) -> str:
     s = str(v).strip()
     for prefix in ("#", "0x", "0X", "&H"):
         if s.startswith(prefix):
-            s = s[len(prefix):]
+            s = s[len(prefix) :]
     if not re.fullmatch(r"[0-9a-fA-F]{6}", s):
-        die(f"{where}: {v!r} is not a colour (use RRGGBB, as ffmpeg-skill's brand.json does)", "input")
+        die(
+            f"{where}: {v!r} is not a colour (use RRGGBB, as ffmpeg-skill's brand.json does)",
+            "input",
+        )
     return "#" + s.upper()
 
 
 def brand_look(path: str) -> Tuple[Dict[str, Any], Optional[str], List[str]]:
     """ffmpeg-skill brand.json -> (options, font file, notes). Only what the file itself states is
-    used: ffmpeg-skill fills in defaults for the rest, and those are not the user's choice."""
+    used: ffmpeg-skill fills in defaults for the rest, and those are not the user's choice.
+    """
     bp = Path(path).expanduser()
     if not bp.is_file():
         die(f"brand file not found: {bp}", "input")
@@ -574,11 +819,19 @@ def brand_look(path: str) -> Tuple[Dict[str, Any], Optional[str], List[str]]:
             die(f"{bp.name} font_file not found: {font_file}", "input")
     notes = []
     if data.get("logo"):
-        notes.append("brand logo: placed on delivery (deliver.py / pipeline.py --brand), not in the composition")
-    unused = [k for k in ("size", "position", "animate", "box", "outline") if k in style]
+        notes.append(
+            "brand logo: placed on delivery (deliver.py / pipeline.py --brand), not in the composition"
+        )
+    unused = [
+        k for k in ("size", "position", "animate", "box", "outline") if k in style
+    ]
     if unused:
-        notes.append("brand caption " + ", ".join(unused) + ": ffmpeg-skill caption settings, not used by the "
-                     "compositions (captionSize / captionMargin in --options set those)")
+        notes.append(
+            "brand caption "
+            + ", ".join(unused)
+            + ": ffmpeg-skill caption settings, not used by the "
+            "compositions (captionSize / captionMargin in --options set those)"
+        )
     return opts, font_file, notes
 
 
@@ -609,18 +862,36 @@ def load_options(path: Optional[str]) -> Dict[str, Any]:
         die(f"{p} must hold a JSON object", "input")
     problems = validate_options(data)
     if problems:
-        die(f"{p}: " + "; ".join(problems) + " (see references/timeline.md, Options)", "input")
+        die(
+            f"{p}: " + "; ".join(problems) + " (see references/timeline.md, Options)",
+            "input",
+        )
     return data
 
 
 # Mirrors Options in src/timeline.ts. A typo'd key would silently do nothing in the browser, so it is refused here.
 _OPTION_TYPES: Dict[str, Any] = {
-    "accent": str, "textColor": str, "fontFamily": str, "captionSize": (int, float),
-    "captionMargin": (int, float, type(None)), "punchIn": (int, float), "pulse": (int, float),
-    "progressBar": bool, "driver": str, "lowerThirds": list, "sceneTitles": list,
-    "title": (str, type(None)), "beatsPerCut": int, "chapterSeconds": (int, float),
-    "pipCorner": str, "pipSize": (int, float), "pipShape": str, "pipAudio": bool,
-    "emphasisStyle": str, "bubbles": list, "comments": list,
+    "accent": str,
+    "textColor": str,
+    "fontFamily": str,
+    "captionSize": (int, float),
+    "captionMargin": (int, float, type(None)),
+    "punchIn": (int, float),
+    "pulse": (int, float),
+    "progressBar": bool,
+    "driver": str,
+    "lowerThirds": list,
+    "sceneTitles": list,
+    "title": (str, type(None)),
+    "beatsPerCut": int,
+    "chapterSeconds": (int, float),
+    "pipCorner": str,
+    "pipSize": (int, float),
+    "pipShape": str,
+    "pipAudio": bool,
+    "emphasisStyle": str,
+    "bubbles": list,
+    "comments": list,
 }
 
 
@@ -628,9 +899,19 @@ def validate_options(o: Dict[str, Any]) -> List[str]:
     p: List[str] = []
     for k, v in o.items():
         if k not in _OPTION_TYPES:
-            p.append(f"unknown option {k!r} (known: {', '.join(sorted(_OPTION_TYPES))})")
-        elif isinstance(v, bool) and _OPTION_TYPES[k] is not bool and bool not in (
-                _OPTION_TYPES[k] if isinstance(_OPTION_TYPES[k], tuple) else (_OPTION_TYPES[k],)):
+            p.append(
+                f"unknown option {k!r} (known: {', '.join(sorted(_OPTION_TYPES))})"
+            )
+        elif (
+            isinstance(v, bool)
+            and _OPTION_TYPES[k] is not bool
+            and bool
+            not in (
+                _OPTION_TYPES[k]
+                if isinstance(_OPTION_TYPES[k], tuple)
+                else (_OPTION_TYPES[k],)
+            )
+        ):
             p.append(f"{k} must be {_OPTION_TYPES[k]}, got a boolean")
         elif not isinstance(v, _OPTION_TYPES[k]):
             p.append(f"{k} has the wrong type ({type(v).__name__})")
@@ -639,35 +920,62 @@ def validate_options(o: Dict[str, Any]) -> List[str]:
     if isinstance(o.get("beatsPerCut"), int) and o["beatsPerCut"] < 1:
         p.append("beatsPerCut must be at least 1")
     for i, lt in enumerate(o.get("lowerThirds") or []):
-        if not (isinstance(lt, dict) and isinstance(lt.get("text"), str) and lt.get("text")
-                and isinstance(lt.get("start"), (int, float)) and isinstance(lt.get("end"), (int, float))
-                and lt["end"] > lt["start"] and isinstance(lt.get("sub", ""), str)):
-            p.append(f"lowerThirds[{i}] needs text, start < end (seconds) and an optional sub")
-    if isinstance(o.get("chapterSeconds"), (int, float)) and not isinstance(o["chapterSeconds"], bool) \
-            and o["chapterSeconds"] < 0:
+        if not (
+            isinstance(lt, dict)
+            and isinstance(lt.get("text"), str)
+            and lt.get("text")
+            and isinstance(lt.get("start"), (int, float))
+            and isinstance(lt.get("end"), (int, float))
+            and lt["end"] > lt["start"]
+            and isinstance(lt.get("sub", ""), str)
+        ):
+            p.append(
+                f"lowerThirds[{i}] needs text, start < end (seconds) and an optional sub"
+            )
+    if (
+        isinstance(o.get("chapterSeconds"), (int, float))
+        and not isinstance(o["chapterSeconds"], bool)
+        and o["chapterSeconds"] < 0
+    ):
         p.append("chapterSeconds cannot be negative")
-    if "pipCorner" in o and o["pipCorner"] not in ("top-left", "top-right", "bottom-left", "bottom-right"):
+    if "pipCorner" in o and o["pipCorner"] not in (
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
+    ):
         p.append("pipCorner must be top-left, top-right, bottom-left or bottom-right")
     if "pipShape" in o and o["pipShape"] not in ("rounded", "circle"):
         p.append("pipShape must be rounded or circle")
-    if isinstance(o.get("pipSize"), (int, float)) and not isinstance(o["pipSize"], bool) \
-            and not 0.05 <= o["pipSize"] <= 0.6:
+    if (
+        isinstance(o.get("pipSize"), (int, float))
+        and not isinstance(o["pipSize"], bool)
+        and not 0.05 <= o["pipSize"] <= 0.6
+    ):
         p.append("pipSize must be between 0.05 and 0.6 (a fraction of the frame width)")
     if "emphasisStyle" in o and o["emphasisStyle"] not in ("pop", "color", "box"):
         p.append("emphasisStyle must be pop, color or box")
     for key, extra in (("bubbles", "side"), ("comments", "author")):
         items = o.get(key)
         for i, c in enumerate(items if isinstance(items, list) else []):
-            ok = (isinstance(c, dict) and isinstance(c.get("text"), str) and c["text"].strip()
-                  and _finite(c.get("start")) and _finite(c.get("end")) and c["end"] > c["start"]
-                  and set(c) <= {"text", "start", "end", extra})
+            ok = (
+                isinstance(c, dict)
+                and isinstance(c.get("text"), str)
+                and c["text"].strip()
+                and _finite(c.get("start"))
+                and _finite(c.get("end"))
+                and c["end"] > c["start"]
+                and set(c) <= {"text", "start", "end", extra}
+            )
             if ok and key == "bubbles":
                 ok = c.get("side", "left") in ("left", "right")
             if ok and key == "comments":
                 ok = isinstance(c.get("author", ""), str)
             if not ok:
-                p.append(f"{key}[{i}] needs text, start < end (seconds) and an optional {extra}"
-                         + (" (left or right)" if key == "bubbles" else ""))
+                p.append(
+                    f"{key}[{i}] needs text, start < end (seconds) and an optional {extra}"
+                    + (" (left or right)" if key == "bubbles" else "")
+                )
     if any(not isinstance(s, str) for s in (o.get("sceneTitles") or [])):
         p.append("sceneTitles must be a list of strings")
     return p

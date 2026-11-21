@@ -6,6 +6,7 @@ instead of guessing flags, and run `doctor` before assuming a format/tool works.
 Each tool's input_schema (and the legacy required_args/optional_args lists) is
 derived from that script's own build_parser(); only facts a parser cannot state
 (role, backends, output shape) are written by hand in TOOL_META."""
+
 import argparse
 import importlib.util
 import json
@@ -35,7 +36,9 @@ def _read_version():
     """Single source of truth is package.json (copied alongside scripts/ by the
     installer into every target) - avoids a hardcoded version string here drifting
     out of sync with it."""
-    pkg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "package.json")
+    pkg_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "package.json"
+    )
     try:
         with open(pkg_path, "r", encoding="utf-8") as f:
             return json.load(f).get("version", "0.0.0")
@@ -53,18 +56,31 @@ SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 # an ok:true, non-dry-run --json result carries.
 FAILURE_SCHEMA = {
     "ok": {"type": "boolean", "description": "always false"},
-    "reason": {"type": "string", "description": "human-readable cause, including argument errors; a tool may add context keys (compare --fail-below: its metrics; optimize: smallest_bytes, attempts)"},
+    "reason": {
+        "type": "string",
+        "description": "human-readable cause, including argument errors; a tool may add context keys (compare --fail-below: its metrics; optimize: smallest_bytes, attempts)",
+    },
 }
 # A failure because --timeout ran out: the failure shape plus code and timeout, exit 124.
 TIMEOUT_SCHEMA = {
     **FAILURE_SCHEMA,
-    "code": {"type": "string", "enum": ["timeout"], "description": "always \"timeout\"; exit status 124 (every other failure has no code and exits 1). ImageMagick and every process it started have been killed, and an output file the run had begun is removed"},
-    "timeout": {"type": "number", "description": "the --timeout budget, in seconds, that ran out"},
+    "code": {
+        "type": "string",
+        "enum": ["timeout"],
+        "description": 'always "timeout"; exit status 124 (every other failure has no code and exits 1). ImageMagick and every process it started have been killed, and an output file the run had begun is removed',
+    },
+    "timeout": {
+        "type": "number",
+        "description": "the --timeout budget, in seconds, that ran out",
+    },
 }
 DRY_RUN_SCHEMA = {
     "ok": {"type": "boolean", "description": "always true"},
     "dry_run": {"type": "boolean", "description": "always true"},
-    "would_run": {"type": "array", "description": "argv of the backend command that would run (never a shell string); a tool that runs several commands lists one argv per command"},
+    "would_run": {
+        "type": "array",
+        "description": "argv of the backend command that would run (never a shell string); a tool that runs several commands lists one argv per command",
+    },
 }
 
 _WH = {"type": "object", "description": "{width, height} in pixels"}
@@ -82,12 +98,27 @@ TOOL_META = {
             "input": {"type": "string"},
             "width": {"type": "integer"},
             "height": {"type": "integer"},
-            "format": {"type": "string", "description": "backend format name, e.g. JPEG, PNG, HEIC (sips reports lowercase)"},
-            "colorspace": {"type": ["string", "null"], "description": "null on the sips backend"},
-            "has_alpha": {"type": ["boolean", "null"], "description": "null on the sips backend"},
-            "has_gps": {"type": ["boolean", "null"], "description": "GPS coordinates in the EXIF block (parsed by the tool for every format, HEIC included); null when an EXIF block can't be parsed, and on the sips backend"},
+            "format": {
+                "type": "string",
+                "description": "backend format name, e.g. JPEG, PNG, HEIC (sips reports lowercase)",
+            },
+            "colorspace": {
+                "type": ["string", "null"],
+                "description": "null on the sips backend",
+            },
+            "has_alpha": {
+                "type": ["boolean", "null"],
+                "description": "null on the sips backend",
+            },
+            "has_gps": {
+                "type": ["boolean", "null"],
+                "description": "GPS coordinates in the EXIF block (parsed by the tool for every format, HEIC included); null when an EXIF block can't be parsed, and on the sips backend",
+            },
             "backend": {"type": "string", "enum": ["magick", "sips"]},
-            "note": {"type": "string", "description": "present when a field could not be measured"},
+            "note": {
+                "type": "string",
+                "description": "present when a field could not be measured",
+            },
         },
         output_required=["input", "width", "height", "format", "backend"],
     ),
@@ -140,7 +171,10 @@ TOOL_META = {
         output_schema={
             "input": {"type": "string"},
             "output": {"type": "string"},
-            "has_gps": {"type": "boolean", "description": "always false: a result that still has GPS is a failure"},
+            "has_gps": {
+                "type": "boolean",
+                "description": "always false: a result that still has GPS is a failure",
+            },
             "backend": {"type": "string", "enum": ["magick"]},
         },
         output_required=["input", "output", "has_gps", "backend"],
@@ -158,7 +192,14 @@ TOOL_META = {
             "removed_percent": {"type": "number"},
             "backend": {"type": "string", "enum": ["magick"]},
         },
-        output_required=["input", "output", "original", "trimmed", "removed_percent", "backend"],
+        output_required=[
+            "input",
+            "output",
+            "original",
+            "trimmed",
+            "removed_percent",
+            "backend",
+        ],
     ),
     "check": dict(
         description="Verify an output file opens, matches promised dimensions/format, and didn't overwrite the input.",
@@ -169,7 +210,10 @@ TOOL_META = {
             "output": {"type": "string"},
             "width": {"type": "integer"},
             "height": {"type": "integer"},
-            "format": {"type": ["string", "null"], "description": "read only when --expect-format is given"},
+            "format": {
+                "type": ["string", "null"],
+                "description": "read only when --expect-format is given",
+            },
         },
         output_required=["output", "width", "height", "format"],
     ),
@@ -181,16 +225,32 @@ TOOL_META = {
         output_schema={
             "output": {"type": "string"},
             "mode": {"type": "string", "enum": ["grid", "pair"]},
-            "inputs": {"type": "array", "description": "per input: {path, width, height, format, has_alpha}"},
+            "inputs": {
+                "type": "array",
+                "description": "per input: {path, width, height, format, has_alpha}",
+            },
             "tile": {"type": "integer"},
             "cols": {"type": "integer"},
             "rows": {"type": "integer"},
             "labels": {"type": "boolean"},
             "actual": _WH,
             "backend": {"type": "string", "enum": ["magick"]},
-            "note": {"type": "string", "description": "present when labels were dropped (no font)"},
+            "note": {
+                "type": "string",
+                "description": "present when labels were dropped (no font)",
+            },
         },
-        output_required=["output", "mode", "inputs", "tile", "cols", "rows", "labels", "actual", "backend"],
+        output_required=[
+            "output",
+            "mode",
+            "inputs",
+            "tile",
+            "cols",
+            "rows",
+            "labels",
+            "actual",
+            "backend",
+        ],
     ),
     "compare": dict(
         description="Measure the difference between two same-size images (SSIM, PSNR, changed pixels), optionally write a heatmap, optionally fail below an SSIM threshold.",
@@ -204,19 +264,46 @@ TOOL_META = {
             "width": {"type": "integer"},
             "height": {"type": "integer"},
             "identical": {"type": "boolean"},
-            "ssim": {"type": "number", "description": "0-1, 1 = identical; luma, 7x7 window, after downsampling by ssim_scale"},
-            "ssim_scale": {"type": "integer", "description": "downsampling factor applied before SSIM (shorter side ~256)"},
-            "psnr_db": {"type": ["number", "null"], "description": "null when the images are identical"},
-            "diff_ratio": {"type": "number", "description": "share of pixels whose largest channel difference exceeds --fuzz"},
+            "ssim": {
+                "type": "number",
+                "description": "0-1, 1 = identical; luma, 7x7 window, after downsampling by ssim_scale",
+            },
+            "ssim_scale": {
+                "type": "integer",
+                "description": "downsampling factor applied before SSIM (shorter side ~256)",
+            },
+            "psnr_db": {
+                "type": ["number", "null"],
+                "description": "null when the images are identical",
+            },
+            "diff_ratio": {
+                "type": "number",
+                "description": "share of pixels whose largest channel difference exceeds --fuzz",
+            },
             "diff_pixels": {"type": "integer"},
             "fuzz": {"type": "number"},
-            "output": {"type": "string", "description": "the heatmap, when -o was given"},
+            "output": {
+                "type": "string",
+                "description": "the heatmap, when -o was given",
+            },
             "fail_below": {"type": "number"},
             "passed": {"type": "boolean"},
             "backend": {"type": "string", "enum": ["magick"]},
         },
-        output_required=["a", "b", "width", "height", "identical", "ssim", "ssim_scale", "psnr_db",
-                         "diff_ratio", "diff_pixels", "fuzz", "backend"],
+        output_required=[
+            "a",
+            "b",
+            "width",
+            "height",
+            "identical",
+            "ssim",
+            "ssim_scale",
+            "psnr_db",
+            "diff_ratio",
+            "diff_pixels",
+            "fuzz",
+            "backend",
+        ],
     ),
     "optimize": dict(
         description="Re-encode an image to fit a file-size budget (--max-kb) without changing its dimensions; fails with the smallest size reached when it cannot.",
@@ -231,15 +318,37 @@ TOOL_META = {
             "bytes": {"type": "integer"},
             "kb": {"type": "number"},
             "original_bytes": {"type": "integer"},
-            "quality": {"type": ["integer", "null"], "description": "null for PNG and for webp:target-size"},
-            "method": {"type": "string", "enum": ["quality-search", "webp:target-size", "lossless"]},
-            "attempts": {"type": "array", "description": "every encode tried: {quality|target_bytes, bytes}"},
+            "quality": {
+                "type": ["integer", "null"],
+                "description": "null for PNG and for webp:target-size",
+            },
+            "method": {
+                "type": "string",
+                "enum": ["quality-search", "webp:target-size", "lossless"],
+            },
+            "attempts": {
+                "type": "array",
+                "description": "every encode tried: {quality|target_bytes, bytes}",
+            },
             "stripped": {"type": "boolean"},
             "actual": _WH,
             "backend": {"type": "string", "enum": ["magick", "sips"]},
         },
-        output_required=["input", "output", "format", "max_kb", "bytes", "kb", "original_bytes", "quality",
-                         "method", "attempts", "stripped", "actual", "backend"],
+        output_required=[
+            "input",
+            "output",
+            "format",
+            "max_kb",
+            "bytes",
+            "kb",
+            "original_bytes",
+            "quality",
+            "method",
+            "attempts",
+            "stripped",
+            "actual",
+            "backend",
+        ],
     ),
     "crop": dict(
         description="Crop to an exact pixel rectangle, or to the largest region of an aspect ratio placed by gravity. Never clips a rectangle silently.",
@@ -250,12 +359,23 @@ TOOL_META = {
             "input": {"type": "string"},
             "output": {"type": "string"},
             "mode": {"type": "string", "enum": ["rect", "aspect"]},
-            "box": {"type": "object", "description": "{x, y, width, height} cut from the image as displayed"},
+            "box": {
+                "type": "object",
+                "description": "{x, y, width, height} cut from the image as displayed",
+            },
             "original": _WH,
             "actual": _WH,
             "backend": {"type": "string", "enum": ["magick", "sips"]},
         },
-        output_required=["input", "output", "mode", "box", "original", "actual", "backend"],
+        output_required=[
+            "input",
+            "output",
+            "mode",
+            "box",
+            "original",
+            "actual",
+            "backend",
+        ],
     ),
     "pad": dict(
         description="Pad to an aspect ratio or exact canvas with a given colour (or transparency), never scaling or cropping the image.",
@@ -268,11 +388,23 @@ TOOL_META = {
             "mode": {"type": "string", "enum": ["aspect", "canvas"]},
             "color": {"type": "string"},
             "original": _WH,
-            "offset": {"type": ["object", "null"], "description": "{x, y} of the image on the canvas; null on sips"},
+            "offset": {
+                "type": ["object", "null"],
+                "description": "{x, y} of the image on the canvas; null on sips",
+            },
             "actual": _WH,
             "backend": {"type": "string", "enum": ["magick", "sips"]},
         },
-        output_required=["input", "output", "mode", "color", "original", "offset", "actual", "backend"],
+        output_required=[
+            "input",
+            "output",
+            "mode",
+            "color",
+            "original",
+            "offset",
+            "actual",
+            "backend",
+        ],
     ),
     "rotate": dict(
         description="Rotate clockwise, mirror, or just bake EXIF orientation into the pixels.",
@@ -285,13 +417,25 @@ TOOL_META = {
             "degrees": {"type": "number"},
             "flip_horizontal": {"type": "boolean"},
             "flip_vertical": {"type": "boolean"},
-            "orientation_before": {"type": ["string", "null"], "description": "EXIF orientation of the input (magick), e.g. RightTop"},
+            "orientation_before": {
+                "type": ["string", "null"],
+                "description": "EXIF orientation of the input (magick), e.g. RightTop",
+            },
             "original": _WH,
             "actual": _WH,
             "backend": {"type": "string", "enum": ["magick", "sips"]},
         },
-        output_required=["input", "output", "degrees", "flip_horizontal", "flip_vertical", "orientation_before",
-                         "original", "actual", "backend"],
+        output_required=[
+            "input",
+            "output",
+            "degrees",
+            "flip_horizontal",
+            "flip_vertical",
+            "orientation_before",
+            "original",
+            "actual",
+            "backend",
+        ],
     ),
     "adjust": dict(
         description="Levels, brightness, contrast, saturation, blur and sharpen with explicit values; never 'auto'.",
@@ -301,7 +445,10 @@ TOOL_META = {
         output_schema={
             "input": {"type": "string"},
             "output": {"type": "string"},
-            "operations": {"type": "array", "description": "applied in order: levels, brightness-contrast, saturation, blur, sharpen"},
+            "operations": {
+                "type": "array",
+                "description": "applied in order: levels, brightness-contrast, saturation, blur, sharpen",
+            },
             "actual": _WH,
             "backend": {"type": "string", "enum": ["magick"]},
         },
@@ -320,11 +467,25 @@ TOOL_META = {
             "margin": {"type": "integer"},
             "opacity": {"type": "number"},
             "overlay": _WH,
-            "font": {"type": ["string", "null"], "description": "font file used for text; null for an image overlay"},
+            "font": {
+                "type": ["string", "null"],
+                "description": "font file used for text; null for an image overlay",
+            },
             "actual": _WH,
             "backend": {"type": "string", "enum": ["magick"]},
         },
-        output_required=["input", "output", "kind", "position", "margin", "opacity", "overlay", "font", "actual", "backend"],
+        output_required=[
+            "input",
+            "output",
+            "kind",
+            "position",
+            "margin",
+            "opacity",
+            "overlay",
+            "font",
+            "actual",
+            "backend",
+        ],
     ),
     "montage": dict(
         description="Compose several images into a row or grid with an explicit background, optional gap and captions.",
@@ -332,7 +493,10 @@ TOOL_META = {
         backends=["magick"],
         verify=["check", "look"],
         output_schema={
-            "inputs": {"type": "array", "description": "per input: {path, width, height}"},
+            "inputs": {
+                "type": "array",
+                "description": "per input: {path, width, height}",
+            },
             "output": {"type": "string"},
             "cols": {"type": "integer"},
             "rows": {"type": "integer"},
@@ -344,7 +508,19 @@ TOOL_META = {
             "actual": _WH,
             "backend": {"type": "string", "enum": ["magick"]},
         },
-        output_required=["inputs", "output", "cols", "rows", "cell", "gap", "background", "labels", "font", "actual", "backend"],
+        output_required=[
+            "inputs",
+            "output",
+            "cols",
+            "rows",
+            "cell",
+            "gap",
+            "background",
+            "labels",
+            "font",
+            "actual",
+            "backend",
+        ],
     ),
     "icons": dict(
         description="Make favicon.ico (several sizes), PNG icons and apple-touch-icon.png from one square image, plus the HTML and manifest entries.",
@@ -354,13 +530,32 @@ TOOL_META = {
         output_schema={
             "input": {"type": "string"},
             "output_dir": {"type": "string"},
-            "files": {"type": "array", "description": "per file: {path, purpose, sizes, format}"},
-            "html": {"type": "array", "description": "<link> tags for the written icons"},
-            "manifest_icons": {"type": "array", "description": "web app manifest `icons` entries (192 and up)"},
-            "notes": {"type": "array", "description": "present when something needs the caller's attention"},
+            "files": {
+                "type": "array",
+                "description": "per file: {path, purpose, sizes, format}",
+            },
+            "html": {
+                "type": "array",
+                "description": "<link> tags for the written icons",
+            },
+            "manifest_icons": {
+                "type": "array",
+                "description": "web app manifest `icons` entries (192 and up)",
+            },
+            "notes": {
+                "type": "array",
+                "description": "present when something needs the caller's attention",
+            },
             "backend": {"type": "string", "enum": ["magick"]},
         },
-        output_required=["input", "output_dir", "files", "html", "manifest_icons", "backend"],
+        output_required=[
+            "input",
+            "output_dir",
+            "files",
+            "html",
+            "manifest_icons",
+            "backend",
+        ],
     ),
     "alpha": dict(
         description="Alpha hygiene for stills: report alpha present/used, straight <-> premultiplied, defringe edges blended with a --matte colour, or write the key (matte) or fill of a key-and-fill pair.",
@@ -371,18 +566,45 @@ TOOL_META = {
         output_schema={
             "input": {"type": "string"},
             "output": {"type": "string"},
-            "mode": {"type": "string", "enum": ["premultiply", "unpremultiply", "defringe", "key", "fill"]},
-            "matte": {"type": "string", "description": "defringe only: the colour taken back out of the edges"},
+            "mode": {
+                "type": "string",
+                "enum": ["premultiply", "unpremultiply", "defringe", "key", "fill"],
+            },
+            "matte": {
+                "type": "string",
+                "description": "defringe only: the colour taken back out of the edges",
+            },
             "actual": _WH,
-            "has_alpha": {"type": "boolean", "description": "report: the input has an alpha channel; a write: the output has one (key and fill never do)"},
-            "alpha_max_difference": {"type": "number", "description": "premultiply/unpremultiply/defringe: largest change of the alpha (0..1, at most one 8-bit step); key: largest difference between the key and the input's alpha"},
+            "has_alpha": {
+                "type": "boolean",
+                "description": "report: the input has an alpha channel; a write: the output has one (key and fill never do)",
+            },
+            "alpha_max_difference": {
+                "type": "number",
+                "description": "premultiply/unpremultiply/defringe: largest change of the alpha (0..1, at most one 8-bit step); key: largest difference between the key and the input's alpha",
+            },
             "width": {"type": "integer", "description": "report only"},
             "height": {"type": "integer", "description": "report only"},
-            "alpha_used": {"type": "boolean", "description": "report only: at least one pixel is not fully opaque"},
-            "pixels": {"type": "object", "description": "report only: {opaque, transparent, partial} pixel counts (8-bit alpha levels 255, 0, and between)"},
-            "alpha_min": {"type": "number", "description": "report only: lowest alpha, 0..1"},
-            "alpha_max": {"type": "number", "description": "report only: highest alpha, 0..1"},
-            "color_within_alpha": {"type": ["boolean", "null"], "description": "report only: every colour channel is at most its alpha (+1/255). false means the colour is straight; true is what a premultiplied image must show (an image that is mostly dark or opaque shows it too); null without alpha"},
+            "alpha_used": {
+                "type": "boolean",
+                "description": "report only: at least one pixel is not fully opaque",
+            },
+            "pixels": {
+                "type": "object",
+                "description": "report only: {opaque, transparent, partial} pixel counts (8-bit alpha levels 255, 0, and between)",
+            },
+            "alpha_min": {
+                "type": "number",
+                "description": "report only: lowest alpha, 0..1",
+            },
+            "alpha_max": {
+                "type": "number",
+                "description": "report only: highest alpha, 0..1",
+            },
+            "color_within_alpha": {
+                "type": ["boolean", "null"],
+                "description": "report only: every colour channel is at most its alpha (+1/255). false means the colour is straight; true is what a premultiplied image must show (an image that is mostly dark or opaque shows it too); null without alpha",
+            },
             "backend": {"type": "string", "enum": ["magick"]},
         },
         output_required=["input", "has_alpha", "backend"],
@@ -396,13 +618,34 @@ TOOL_META = {
             "input": {"type": "string"},
             "output_dir": {"type": "string"},
             "original": _WH,
-            "clear_space": {"type": "integer", "description": "transparent margin in pixels of the full-size logo"},
-            "files": {"type": "array", "description": "per file: {path, variant (color|mono|white|black|clearspace), long_edge, width, height}"},
-            "palette": {"type": "array", "description": "at most --palette {hex, share} entries, largest share first; share is the fraction of the logo's pixels with alpha >= 50%"},
-            "palette_pixels": {"type": "integer", "description": "pixels the palette shares are counted over"},
+            "clear_space": {
+                "type": "integer",
+                "description": "transparent margin in pixels of the full-size logo",
+            },
+            "files": {
+                "type": "array",
+                "description": "per file: {path, variant (color|mono|white|black|clearspace), long_edge, width, height}",
+            },
+            "palette": {
+                "type": "array",
+                "description": "at most --palette {hex, share} entries, largest share first; share is the fraction of the logo's pixels with alpha >= 50%",
+            },
+            "palette_pixels": {
+                "type": "integer",
+                "description": "pixels the palette shares are counted over",
+            },
             "backend": {"type": "string", "enum": ["magick"]},
         },
-        output_required=["input", "output_dir", "original", "clear_space", "files", "palette", "palette_pixels", "backend"],
+        output_required=[
+            "input",
+            "output_dir",
+            "original",
+            "clear_space",
+            "files",
+            "palette",
+            "palette_pixels",
+            "backend",
+        ],
     ),
     "preset": dict(
         description="Resize to a named published size (og, instagram-*, youtube-thumbnail, ...) with fill, fit or pad; --list shows sizes and their sources.",
@@ -415,13 +658,22 @@ TOOL_META = {
             "output": {"type": "string"},
             "preset": {"type": "string"},
             "description": {"type": "string"},
-            "source": {"type": "string", "description": "documentation URL the size comes from"},
+            "source": {
+                "type": "string",
+                "description": "documentation URL the size comes from",
+            },
             "mode": {"type": "string", "enum": ["fill", "fit", "pad"]},
             "requested": _WH,
             "actual": _WH,
-            "via": {"type": "array", "description": "tools run: [resize] or [resize, pad]"},
+            "via": {
+                "type": "array",
+                "description": "tools run: [resize] or [resize, pad]",
+            },
             "backend": {"type": "string", "enum": ["magick", "sips"]},
-            "presets": {"type": "object", "description": "--list only: every preset with size, description, source, quote"},
+            "presets": {
+                "type": "object",
+                "description": "--list only: every preset with size, description, source, quote",
+            },
         },
         output_required=[],
     ),
@@ -435,14 +687,17 @@ TOOL_META = {
                 "type": "array",
                 "items": {"type": "string"},
                 "cli": "after --",
-                "description": "arguments forwarded to the per-file tool, e.g. [\"--width\", \"1200\", \"--height\", \"1200\"]",
+                "description": 'arguments forwarded to the per-file tool, e.g. ["--width", "1200", "--height", "1200"]',
             },
         },
         output_schema={
             "tool": {"type": "string"},
             "count": {"type": "integer"},
             "all_ok": {"type": "boolean"},
-            "results": {"type": "array", "description": "one {file, output, ok, result|reason} per input file; a file whose --timeout ran out also has code \"timeout\" and timeout"},
+            "results": {
+                "type": "array",
+                "description": 'one {file, output, ok, result|reason} per input file; a file whose --timeout ran out also has code "timeout" and timeout',
+            },
         },
         output_required=["tool", "count", "all_ok", "results"],
     ),
@@ -454,10 +709,15 @@ RULES = [
     "Failures - including a malformed invocation with missing or invalid flags - return ok:false with a human-readable 'reason'; a broken or empty output is never reported as success.",
     "Call probe.py before editing and check.py after, to confirm the result matches what was promised.",
     "Tools never invoke mogrify (which overwrites in place) and never build a magick command from caller-supplied strings.",
-    f"Every tool takes --timeout SECONDS (default {DEFAULT_TIMEOUT}; batch: per file): when it runs out, ImageMagick's whole process group (delegates such as gs or ffmpeg included) is killed and the tool fails with ok:false, code \"timeout\", exit status {TIMEOUT_EXIT_CODE}.",
+    f'Every tool takes --timeout SECONDS (default {DEFAULT_TIMEOUT}; batch: per file): when it runs out, ImageMagick\'s whole process group (delegates such as gs or ffmpeg included) is killed and the tool fails with ok:false, code "timeout", exit status {TIMEOUT_EXIT_CODE}.',
 ]
 
-EXECUTION = {"shell": False, "network": False, "input_mutation": False, "arbitrary_executables": False}
+EXECUTION = {
+    "shell": False,
+    "network": False,
+    "input_mutation": False,
+    "arbitrary_executables": False,
+}
 
 
 def public_tools():
@@ -467,7 +727,9 @@ def public_tools():
 
 
 def _load_tool_module(name):
-    spec = importlib.util.spec_from_file_location(f"imagemagick_skill_tool_{name}", os.path.join(SCRIPTS_DIR, f"{name}.py"))
+    spec = importlib.util.spec_from_file_location(
+        f"imagemagick_skill_tool_{name}", os.path.join(SCRIPTS_DIR, f"{name}.py")
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -517,9 +779,13 @@ def input_schema(parser):
         "positional": positional,
         "additionalProperties": False,
     }
-    groups = [g for g in getattr(parser, "_mutually_exclusive_groups", []) if g._group_actions]
+    groups = [
+        g for g in getattr(parser, "_mutually_exclusive_groups", []) if g._group_actions
+    ]
     if groups:
-        schema["mutually_exclusive"] = [[a.dest for a in g._group_actions] for g in groups]
+        schema["mutually_exclusive"] = [
+            [a.dest for a in g._group_actions] for g in groups
+        ]
     return schema
 
 
@@ -539,7 +805,9 @@ def tool_spec(name):
     props = schema["properties"]
     real = [d for d in props if props[d]["cli"] != "after --"]
     required_args = [_flag_label(props[d], d) for d in real if d in schema["required"]]
-    optional_args = [_flag_label(props[d], d) for d in real if d not in schema["required"]]
+    optional_args = [
+        _flag_label(props[d], d) for d in real if d not in schema["required"]
+    ]
     writes_output = "output" in props or "output_dir" in props
     if name == "check":
         writes_output = False  # its positional is named "output" but it only reads it
@@ -619,7 +887,9 @@ def mcp_argv(spec, arguments):
     props = spec["input_schema"]["properties"]
     unknown = sorted(k for k in arguments if k not in props or k in MCP_TRANSPORT_FLAGS)
     if unknown:
-        raise ValueError(f"unknown argument(s) for {spec['name']}: {', '.join(unknown)}")
+        raise ValueError(
+            f"unknown argument(s) for {spec['name']}: {', '.join(unknown)}"
+        )
     argv, after = [], []
     for dest in spec["input_schema"]["positional"]:
         value = arguments.get(dest)
@@ -628,7 +898,11 @@ def mcp_argv(spec, arguments):
         argv += [str(v) for v in value] if isinstance(value, list) else [str(value)]
     for dest, value in arguments.items():
         prop = props[dest]
-        if dest in spec["input_schema"]["positional"] or value is None or value is False:
+        if (
+            dest in spec["input_schema"]["positional"]
+            or value is None
+            or value is False
+        ):
             continue
         if prop["cli"] == "after --":
             after += [str(v) for v in (value if isinstance(value, list) else [value])]
@@ -647,7 +921,10 @@ def mcp_argv(spec, arguments):
 
 def provides(names):
     """The AI Video Production OS registry's capability ids: image.<tool> -> imagemagick-skill/<tool>."""
-    return [{"id": f"image.{n}", "lifecycle": "EXPERIMENTAL", "tool_id": f"{SKILL_ID}/{n}"} for n in names]
+    return [
+        {"id": f"image.{n}", "lifecycle": "EXPERIMENTAL", "tool_id": f"{SKILL_ID}/{n}"}
+        for n in names
+    ]
 
 
 def build_contract_payload():
@@ -673,14 +950,20 @@ def build_contract_payload():
             "backends": "ImageMagick `magick` (every tool) or macOS `sips` (subset; see each tool's backends)",
         },
         "execution": dict(EXECUTION),
-        "result_shapes": {"failure": FAILURE_SCHEMA, "timeout": TIMEOUT_SCHEMA, "dry_run": DRY_RUN_SCHEMA},
+        "result_shapes": {
+            "failure": FAILURE_SCHEMA,
+            "timeout": TIMEOUT_SCHEMA,
+            "dry_run": DRY_RUN_SCHEMA,
+        },
         "provides": provides(public_tools()),
         "tools": tools,
         "rules": RULES,
     }
 
 
-_FORMAT_MODE_RE = re.compile(r"^\s*([A-Za-z0-9_]+)\*?(?:\s+\S+)?\s+([r-][w-][+-])\s", re.MULTILINE)
+_FORMAT_MODE_RE = re.compile(
+    r"^\s*([A-Za-z0-9_]+)\*?(?:\s+\S+)?\s+([r-][w-][+-])\s", re.MULTILINE
+)
 
 
 def _format_capabilities(formats_out):
@@ -700,9 +983,15 @@ def _format_capabilities(formats_out):
 
 
 def _magick_lists(magick):
-    formats = subprocess.run([magick, "-list", "format"], capture_output=True, text=True, timeout=30)
-    policy = subprocess.run([magick, "-list", "policy"], capture_output=True, text=True, timeout=30)
-    version = subprocess.run([magick, "-version"], capture_output=True, text=True, timeout=30)
+    formats = subprocess.run(
+        [magick, "-list", "format"], capture_output=True, text=True, timeout=30
+    )
+    policy = subprocess.run(
+        [magick, "-list", "policy"], capture_output=True, text=True, timeout=30
+    )
+    version = subprocess.run(
+        [magick, "-version"], capture_output=True, text=True, timeout=30
+    )
     return formats.stdout, policy.stdout, version.stdout
 
 
@@ -716,8 +1005,11 @@ def _heic_roundtrip(magick):
     with tempfile.TemporaryDirectory(prefix="imagemagick-skill-doctor-") as tmp:
         path = os.path.join(tmp, "probe.heic")
         try:
-            subprocess.run(magick_argv([magick, "-size", "16x16", "xc:#808080", path]),
-                           capture_output=True, timeout=30)
+            subprocess.run(
+                magick_argv([magick, "-size", "16x16", "xc:#808080", path]),
+                capture_output=True,
+                timeout=30,
+            )
             with open(path, "rb") as f:
                 written = f.read(12)[4:8] == b"ftyp"
         except (OSError, subprocess.TimeoutExpired):
@@ -725,9 +1017,15 @@ def _heic_roundtrip(magick):
         if not written:
             return {"write": False, "read": None}
         try:
-            proc = subprocess.run(magick_argv([magick, "identify", "-format", "%m", path]),
-                                  capture_output=True, text=True, timeout=30)
-            read = proc.returncode == 0 and proc.stdout.strip().upper().startswith("HEIC")
+            proc = subprocess.run(
+                magick_argv([magick, "identify", "-format", "%m", path]),
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            read = proc.returncode == 0 and proc.stdout.strip().upper().startswith(
+                "HEIC"
+            )
         except (OSError, subprocess.TimeoutExpired):
             read = False
         return {"write": True, "read": read}
@@ -743,9 +1041,17 @@ def _tool_status(magick, sips, needs_magick_only=False):
     if magick:
         return {"usable": True, "backend": "magick"}
     if sips and not needs_magick_only:
-        return {"usable": True, "backend": "sips", "note": "reduced feature set via sips"}
+        return {
+            "usable": True,
+            "backend": "sips",
+            "note": "reduced feature set via sips",
+        }
     if needs_magick_only:
-        return {"usable": False, "backend": None, "fix": "install ImageMagick: `brew install imagemagick`"}
+        return {
+            "usable": False,
+            "backend": None,
+            "fix": "install ImageMagick: `brew install imagemagick`",
+        }
     return {
         "usable": False,
         "backend": None,
@@ -759,22 +1065,44 @@ def build_doctor_payload():
     is_mac = sys.platform == "darwin"
 
     backends = {
-        "magick": {"found": bool(magick), "path": magick, "kind": magick_kind() if magick else None},
+        "magick": {
+            "found": bool(magick),
+            "path": magick,
+            "kind": magick_kind() if magick else None,
+        },
         "sips": {"found": bool(sips), "path": sips},
     }
 
-    heic = {"usable": False, "read": False, "write": False, "backend": None, "fix": None}
-    webp = {"usable": False, "read": False, "write": False, "backend": None, "fix": None}
+    heic = {
+        "usable": False,
+        "read": False,
+        "write": False,
+        "backend": None,
+        "fix": None,
+    }
+    webp = {
+        "usable": False,
+        "read": False,
+        "write": False,
+        "backend": None,
+        "fix": None,
+    }
     pdf_policy = None
     magick_version = None
 
     if magick:
         try:
             formats_out, policy_out, version_out = _magick_lists(magick)
-            magick_version = version_out.strip().splitlines()[0] if version_out.strip() else None
+            magick_version = (
+                version_out.strip().splitlines()[0] if version_out.strip() else None
+            )
             caps = _format_capabilities(formats_out)
             heic_read, heic_write = caps.get("HEIC", (False, False))
-            heic_verified = _heic_roundtrip(magick) if heic_write else {"write": False, "read": None}
+            heic_verified = (
+                _heic_roundtrip(magick)
+                if heic_write
+                else {"write": False, "read": None}
+            )
             heic_write = heic_write and heic_verified["write"]
             heic_no_decoder = heic_read and heic_verified["read"] is False
             heic_read = heic_read and not heic_no_decoder
@@ -790,11 +1118,13 @@ def build_doctor_payload():
                     "read": True,
                     "write": heic_write,
                     "backend": "magick",
-                    "fix": None
-                    if heic_write
-                    else "read-only HEIC on this build (no encode delegate) - can convert FROM HEIC but not "
-                    "create it; reinstall ImageMagick with libheif's encoder for write support, e.g. "
-                    "`brew reinstall imagemagick`, or use sips on macOS to write HEIC",
+                    "fix": (
+                        None
+                        if heic_write
+                        else "read-only HEIC on this build (no encode delegate) - can convert FROM HEIC but not "
+                        "create it; reinstall ImageMagick with libheif's encoder for write support, e.g. "
+                        "`brew reinstall imagemagick`, or use sips on macOS to write HEIC"
+                    ),
                 }
             elif is_mac and sips:
                 heic = {
@@ -803,8 +1133,11 @@ def build_doctor_payload():
                     "write": True,
                     "backend": "sips",
                     "fix": None,
-                    "note": HEIC_NO_DECODER + "; falling back to sips for HEIC" if heic_no_decoder
-                    else "magick has no HEIC read delegate here; falling back to sips for HEIC",
+                    "note": (
+                        HEIC_NO_DECODER + "; falling back to sips for HEIC"
+                        if heic_no_decoder
+                        else "magick has no HEIC read delegate here; falling back to sips for HEIC"
+                    ),
                 }
             else:
                 heic = {
@@ -812,14 +1145,23 @@ def build_doctor_payload():
                     "read": False,
                     "write": heic_write,
                     "backend": None,
-                    "fix": HEIC_NO_DECODER if heic_no_decoder
-                    else "reinstall ImageMagick with HEIC support, e.g. `brew reinstall imagemagick` "
-                    "(needs libheif), or run on macOS to use sips instead",
+                    "fix": (
+                        HEIC_NO_DECODER
+                        if heic_no_decoder
+                        else "reinstall ImageMagick with HEIC support, e.g. `brew reinstall imagemagick` "
+                        "(needs libheif), or run on macOS to use sips instead"
+                    ),
                 }
             heic["verified"] = heic_verified
 
             if webp_write:
-                webp = {"usable": True, "read": webp_read, "write": True, "backend": "magick", "fix": None}
+                webp = {
+                    "usable": True,
+                    "read": webp_read,
+                    "write": True,
+                    "backend": "magick",
+                    "fix": None,
+                }
             else:
                 webp = {
                     "usable": False,
@@ -830,7 +1172,9 @@ def build_doctor_payload():
                     "(needs libwebp)",
                 }
 
-            pdf_disabled = "PDF" in policy_out.upper() and 'rights="none"' in policy_out.lower()
+            pdf_disabled = (
+                "PDF" in policy_out.upper() and 'rights="none"' in policy_out.lower()
+            )
             pdf_policy = {
                 "enabled": not pdf_disabled,
                 "note": (
@@ -840,9 +1184,21 @@ def build_doctor_payload():
                 ),
             }
         except (subprocess.TimeoutExpired, OSError) as e:
-            heic = {"usable": False, "read": False, "write": False, "backend": None, "fix": f"could not query magick: {e}"}
+            heic = {
+                "usable": False,
+                "read": False,
+                "write": False,
+                "backend": None,
+                "fix": f"could not query magick: {e}",
+            }
     elif is_mac and sips:
-        heic = {"usable": True, "read": True, "write": True, "backend": "sips", "fix": None}
+        heic = {
+            "usable": True,
+            "read": True,
+            "write": True,
+            "backend": "sips",
+            "fix": None,
+        }
         webp = {
             "usable": False,
             "read": False,
@@ -867,7 +1223,9 @@ def build_doctor_payload():
         }
 
     tools = {
-        name: _tool_status(magick, sips, needs_magick_only=meta["backends"] == ["magick"])
+        name: _tool_status(
+            magick, sips, needs_magick_only=meta["backends"] == ["magick"]
+        )
         for name, meta in TOOL_META.items()
     }
 
@@ -910,7 +1268,9 @@ def build_parser():
     contract_p.add_argument("--json", action="store_true")
     contract_p.set_defaults(func=cmd_contract)
 
-    doctor_p = sub.add_parser("doctor", help="check the local environment for usable backends")
+    doctor_p = sub.add_parser(
+        "doctor", help="check the local environment for usable backends"
+    )
     doctor_p.add_argument("--json", action="store_true")
     doctor_p.set_defaults(func=cmd_doctor)
 

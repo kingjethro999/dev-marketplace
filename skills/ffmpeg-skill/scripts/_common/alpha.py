@@ -17,6 +17,7 @@ background.py's transparent canvas can do the same:
   fails (the output reported `verified: true` with the alpha gone before this module existed);
   `--drop-alpha` says the flattening is wanted, and a note records it instead.
 """
+
 from __future__ import annotations
 
 import json
@@ -33,25 +34,73 @@ from _common.runner import STATE, ffmpeg_encoders, require_tool, run
 # A pixel format that carries an alpha plane (yuva*, rgba, argb, gbrap, ya8/ya16, ...).
 ALPHA_PIX = re.compile(r"^(yuva|gbrap|ya\d|rgba|bgra|argb|abgr|rgba64|bgra64)")
 
-ALPHA_TOLERANCE = 2.0  # of 255, per frame (or on the mean and the most transparent frame, below)
-OPAQUE = 254.5         # a frame whose mean alpha is at least this is fully opaque
+ALPHA_TOLERANCE = (
+    2.0  # of 255, per frame (or on the mean and the most transparent frame, below)
+)
+OPAQUE = 254.5  # a frame whose mean alpha is at least this is fully opaque
 
-_MEASURE_W, _MEASURE_H = 64, 36  # the measuring copy: small enough to read every frame, large enough for exact edges
+_MEASURE_W, _MEASURE_H = (
+    64,
+    36,
+)  # the measuring copy: small enough to read every frame, large enough for exact edges
 
 # The lines --keep-alpha / --transparent write. `pix_fmt` is what the encoder is asked for and is
 # read back (the `alpha` step's `codec` field); `ext` are the containers that hold it.
 ALPHA_CODECS: Dict[str, Dict[str, Any]] = {
-    "prores4444": {"video": ["-c:v", "prores_ks", "-profile:v", "4", "-vendor", "apl0", "-pix_fmt", "yuva444p10le",
-                             "-alpha_bits", "16"],
-                   "encoder": "prores_ks", "pix_fmt": "yuva444p10le", "ext": (".mov", ".mkv"),
-                   "audio": ["-c:a", "pcm_s16le"], "desc": "ProRes 4444 with 16-bit alpha"},
-    "qtrle": {"video": ["-c:v", "qtrle", "-pix_fmt", "argb"], "encoder": "qtrle", "pix_fmt": "argb", "ext": (".mov",),
-              "audio": ["-c:a", "pcm_s16le"], "desc": "QuickTime Animation, lossless RGB + alpha"},
-    "png": {"video": ["-c:v", "png", "-pix_fmt", "rgba"], "encoder": "png", "pix_fmt": "rgba", "ext": (".mov", ".mkv"),
-            "audio": ["-c:a", "pcm_s16le"], "desc": "PNG frames in a .mov/.mkv, lossless RGB + alpha"},
-    "vp9": {"video": ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-crf", "20", "-b:v", "0", "-row-mt", "1"],
-            "encoder": "libvpx-vp9", "pix_fmt": "yuva420p", "ext": (".webm", ".mkv"),
-            "audio": ["-c:a", "libopus", "-b:a", "128k"], "desc": "VP9 with an alpha layer (CRF 20)"},
+    "prores4444": {
+        "video": [
+            "-c:v",
+            "prores_ks",
+            "-profile:v",
+            "4",
+            "-vendor",
+            "apl0",
+            "-pix_fmt",
+            "yuva444p10le",
+            "-alpha_bits",
+            "16",
+        ],
+        "encoder": "prores_ks",
+        "pix_fmt": "yuva444p10le",
+        "ext": (".mov", ".mkv"),
+        "audio": ["-c:a", "pcm_s16le"],
+        "desc": "ProRes 4444 with 16-bit alpha",
+    },
+    "qtrle": {
+        "video": ["-c:v", "qtrle", "-pix_fmt", "argb"],
+        "encoder": "qtrle",
+        "pix_fmt": "argb",
+        "ext": (".mov",),
+        "audio": ["-c:a", "pcm_s16le"],
+        "desc": "QuickTime Animation, lossless RGB + alpha",
+    },
+    "png": {
+        "video": ["-c:v", "png", "-pix_fmt", "rgba"],
+        "encoder": "png",
+        "pix_fmt": "rgba",
+        "ext": (".mov", ".mkv"),
+        "audio": ["-c:a", "pcm_s16le"],
+        "desc": "PNG frames in a .mov/.mkv, lossless RGB + alpha",
+    },
+    "vp9": {
+        "video": [
+            "-c:v",
+            "libvpx-vp9",
+            "-pix_fmt",
+            "yuva420p",
+            "-crf",
+            "20",
+            "-b:v",
+            "0",
+            "-row-mt",
+            "1",
+        ],
+        "encoder": "libvpx-vp9",
+        "pix_fmt": "yuva420p",
+        "ext": (".webm", ".mkv"),
+        "audio": ["-c:a", "libopus", "-b:a", "128k"],
+        "desc": "VP9 with an alpha layer (CRF 20)",
+    },
 }
 ALPHA_CODEC_DEFAULT = "prores4444"
 ALPHA_MODES = ("straight", "premultiplied")
@@ -89,16 +138,32 @@ def vp9_decoder_args(codec: Optional[str]) -> List[str]:
 def vp9_alpha_tagged(path: str) -> bool:
     """True when the first video stream is VP9 stored with an alpha layer (Matroska/WebM's
     ALPHA_MODE=1 stream tag): ffprobe reports such a stream as yuv420p, so the pixel format alone
-    does not show the alpha. A metadata read, so a dry run can decide without decoding."""
-    proc = run([require_tool("ffprobe"), "-v", "error", "-select_streams", "v:0", "-show_entries",
-                "stream=codec_name:stream_tags", "-of", "json", path], quiet=True)
+    does not show the alpha. A metadata read, so a dry run can decide without decoding.
+    """
+    proc = run(
+        [
+            require_tool("ffprobe"),
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=codec_name:stream_tags",
+            "-of",
+            "json",
+            path,
+        ],
+        quiet=True,
+    )
     try:
         streams = json.loads(proc.stdout or "{}").get("streams") or []
     except ValueError:
         return False
     s = streams[0] if streams else {}
-    return s.get("codec_name") == "vp9" and any(k.lower() == "alpha_mode" and str(v).strip() == "1"
-                                                for k, v in (s.get("tags") or {}).items())
+    return s.get("codec_name") == "vp9" and any(
+        k.lower() == "alpha_mode" and str(v).strip() == "1"
+        for k, v in (s.get("tags") or {}).items()
+    )
 
 
 def has_alpha_plane(meta: Dict[str, Any], path: str) -> bool:
@@ -108,26 +173,44 @@ def has_alpha_plane(meta: Dict[str, Any], path: str) -> bool:
     v = (meta or {}).get("video") or {}
     # a palette (pal8: an indexed PNG/GIF) can carry transparency in the palette itself (tRNS),
     # which the pixel format does not show; it is measured like an alpha plane
-    return (bool(ALPHA_PIX.match(v.get("pix_fmt") or "")) or v.get("pix_fmt") == "pal8"
-            or (v.get("codec") == "vp9" and vp9_alpha_tagged(path)))
+    return (
+        bool(ALPHA_PIX.match(v.get("pix_fmt") or ""))
+        or v.get("pix_fmt") == "pal8"
+        or (v.get("codec") == "vp9" and vp9_alpha_tagged(path))
+    )
 
 
-def frame_means(cmd_head: List[str], path: str, chain: str) -> "Dict[str, object] | None":
+def frame_means(
+    cmd_head: List[str], path: str, chain: str
+) -> "Dict[str, object] | None":
     """Every decoded frame of `path` through `chain` to a 64x36 grey copy: {mean (over every frame),
     min (the lowest frame's mean), frames, per_frame (each frame's mean, in decode order)}. None
     when no frame decodes."""
     w, h = _MEASURE_W, _MEASURE_H
-    cmd = cmd_head + ["-i", path, "-map", "0:v:0", "-vf", f"{chain},scale={w}:{h}:flags=area,format=gray",
-                      "-f", "rawvideo", "-"]
+    cmd = cmd_head + [
+        "-i",
+        path,
+        "-map",
+        "0:v:0",
+        "-vf",
+        f"{chain},scale={w}:{h}:flags=area,format=gray",
+        "-f",
+        "rawvideo",
+        "-",
+    ]
     # Read frame by frame as ffmpeg writes them, not the whole pipe at once: the raw copy is 2304
     # bytes a frame (~250 MB for an hour at 30 fps), the per-frame means a float each. The same
     # wall-clock limit as run_analysis(), which this replaces here.
-    cmd = _runner.guard_still_patterns(cmd)  # a still named with a % is that one file (#465 A7)
+    cmd = _runner.guard_still_patterns(
+        cmd
+    )  # a still named with a % is that one file (#465 A7)
     _runner._refuse_url_media(cmd)
     limit = _runner._limit_for(cmd)
     size = w * h
     frames: List[float] = []
-    child = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, **_runner.child_kwargs())
+    child = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, **_runner.child_kwargs()
+    )
     _runner._watch(child, cmd)
     expired = threading.Event()
 
@@ -148,7 +231,7 @@ def frame_means(cmd_head: List[str], path: str, chain: str) -> "Dict[str, object
             pending += chunk
             whole = len(pending) - len(pending) % size
             for i in range(0, whole, size):
-                frames.append(sum(pending[i:i + size]) / size)
+                frames.append(sum(pending[i : i + size]) / size)
             pending = pending[whole:]
         child.wait()
     finally:
@@ -160,7 +243,12 @@ def frame_means(cmd_head: List[str], path: str, chain: str) -> "Dict[str, object
         _runner._timed_out(cmd, limit or 0)
     if child.returncode != 0 or not frames:
         return None
-    return {"mean": sum(frames) / len(frames), "min": min(frames), "frames": len(frames), "per_frame": frames}
+    return {
+        "mean": sum(frames) / len(frames),
+        "min": min(frames),
+        "frames": len(frames),
+        "per_frame": frames,
+    }
 
 
 def alpha_stats(path: str, codec: Optional[str] = None) -> "Dict[str, object] | None":
@@ -168,8 +256,15 @@ def alpha_stats(path: str, codec: Optional[str] = None) -> "Dict[str, object] | 
     255.0 is fully opaque, and a picture with no alpha plane reads 255 too (format=rgba fills it).
     Every frame, not the first: a clip that opens fully opaque and turns transparent later would
     read as opaque from its first frame, in the source and in a written file that lost its alpha.
-    A VP9 file is decoded with libvpx-vp9 (vp9_decoder_args). None when no frame decodes."""
-    head = [require_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin"] + vp9_decoder_args(codec)
+    A VP9 file is decoded with libvpx-vp9 (vp9_decoder_args). None when no frame decodes.
+    """
+    head = [
+        require_tool("ffmpeg"),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-nostdin",
+    ] + vp9_decoder_args(codec)
     return frame_means(head, path, "format=rgba,alphaextract")
 
 
@@ -186,14 +281,33 @@ def alpha_compare(written, source) -> Dict[str, object]:
     if w and len(w) == len(s):
         deltas = [abs(a - b) for a, b in zip(w, s)]
         worst = max(range(len(deltas)), key=deltas.__getitem__)
-        return {"ok": deltas[worst] <= ALPHA_TOLERANCE, "paired": True, "worst_delta": round(deltas[worst], 2),
-                "worst_frame": worst}
-    delta = max(abs(written["mean"] - source["mean"]), abs(written["min"] - source["min"]))
-    return {"ok": delta <= ALPHA_TOLERANCE, "paired": False, "worst_delta": round(delta, 2), "worst_frame": None}
+        return {
+            "ok": deltas[worst] <= ALPHA_TOLERANCE,
+            "paired": True,
+            "worst_delta": round(deltas[worst], 2),
+            "worst_frame": worst,
+        }
+    delta = max(
+        abs(written["mean"] - source["mean"]), abs(written["min"] - source["min"])
+    )
+    return {
+        "ok": delta <= ALPHA_TOLERANCE,
+        "paired": False,
+        "worst_delta": round(delta, 2),
+        "worst_frame": None,
+    }
 
 
 def rounded(st) -> "Dict[str, float] | None":
-    return None if st is None else {"mean": round(st["mean"], 2), "min": round(st["min"], 2), "frames": st["frames"]}
+    return (
+        None
+        if st is None
+        else {
+            "mean": round(st["mean"], 2),
+            "min": round(st["min"], 2),
+            "frames": st["frames"],
+        }
+    )
 
 
 # source_alpha()'s answer for a source that stores an alpha plane whose alpha could not be read:
@@ -213,61 +327,99 @@ def uses_alpha(st) -> bool:
 
 # --- the flags -----------------------------------------------------------------------------------
 
+
 def add_alpha_args(ap, transparent: bool = False) -> None:
     """--keep-alpha / --drop-alpha (or background.py's --transparent), --alpha-codec, --alpha-mode."""
     g = ap.add_argument_group("alpha")
     if transparent:
-        g.add_argument("--transparent", action="store_true",
-                       help="write a fully transparent canvas (alpha 0 in every pixel) in an alpha line (--alpha-codec), "
-                            "a base layer for graphics.py / overlay.py --keep-alpha; --color/--gradient do not apply")
+        g.add_argument(
+            "--transparent",
+            action="store_true",
+            help="write a fully transparent canvas (alpha 0 in every pixel) in an alpha line (--alpha-codec), "
+            "a base layer for graphics.py / overlay.py --keep-alpha; --color/--gradient do not apply",
+        )
     else:
-        g.add_argument("--keep-alpha", action="store_true",
-                       help="keep the source's alpha: write the output in an alpha line (--alpha-codec, default "
-                            "prores4444; needs a .mov/.mkv, or .webm for vp9) with the source's colour tags kept, and "
-                            "check the alpha after (the `alpha` verification step). Refused on a source without an alpha plane")
-        g.add_argument("--drop-alpha", action="store_true",
-                       help="the source has alpha and an opaque output is wanted: the alpha is dropped on purpose and a note "
-                            "says so. Without it (or --keep-alpha) an output that loses a used alpha fails the `alpha` step")
-    g.add_argument("--alpha-codec", choices=sorted(ALPHA_CODECS), default=None,
-                   help="the alpha line: prores4444 (default; ProRes 4444, 16-bit alpha), qtrle (QuickTime Animation, "
-                        ".mov), png (PNG frames, .mov/.mkv), vp9 (VP9 with alpha, .webm/.mkv)")
-    g.add_argument("--alpha-mode", choices=list(ALPHA_MODES), default=None,
-                   help="how the colour is written beside the alpha: straight (default, as composited) or premultiplied "
-                        "by the alpha; reported as alpha_mode")
+        g.add_argument(
+            "--keep-alpha",
+            action="store_true",
+            help="keep the source's alpha: write the output in an alpha line (--alpha-codec, default "
+            "prores4444; needs a .mov/.mkv, or .webm for vp9) with the source's colour tags kept, and "
+            "check the alpha after (the `alpha` verification step). Refused on a source without an alpha plane",
+        )
+        g.add_argument(
+            "--drop-alpha",
+            action="store_true",
+            help="the source has alpha and an opaque output is wanted: the alpha is dropped on purpose and a note "
+            "says so. Without it (or --keep-alpha) an output that loses a used alpha fails the `alpha` step",
+        )
+    g.add_argument(
+        "--alpha-codec",
+        choices=sorted(ALPHA_CODECS),
+        default=None,
+        help="the alpha line: prores4444 (default; ProRes 4444, 16-bit alpha), qtrle (QuickTime Animation, "
+        ".mov), png (PNG frames, .mov/.mkv), vp9 (VP9 with alpha, .webm/.mkv)",
+    )
+    g.add_argument(
+        "--alpha-mode",
+        choices=list(ALPHA_MODES),
+        default=None,
+        help="how the colour is written beside the alpha: straight (default, as composited) or premultiplied "
+        "by the alpha; reported as alpha_mode",
+    )
 
 
 def alpha_requested(args) -> bool:
-    return bool(getattr(args, "keep_alpha", False) or getattr(args, "transparent", False))
+    return bool(
+        getattr(args, "keep_alpha", False) or getattr(args, "transparent", False)
+    )
 
 
 def check_alpha_args(args, output: Optional[str]) -> Optional[str]:
     """Validates the alpha flags against each other and the output name; returns the alpha codec
     (None when no alpha line was asked for). Sets STATE.alpha_line so the colour helpers keep the
     source's tags (decision.keeps_source_tags)."""
-    from _common.emit import die  # emit imports runner; imported here to keep this module light
+    from _common.emit import (
+        die,
+    )  # emit imports runner; imported here to keep this module light
+
     flag = "--transparent" if hasattr(args, "transparent") else "--keep-alpha"
     if not alpha_requested(args):
         if args.alpha_codec or args.alpha_mode:
             die(f"--alpha-codec and --alpha-mode apply with {flag}", kind="input")
         return None
     if getattr(args, "drop_alpha", False):
-        die("--keep-alpha and --drop-alpha ask for opposite things: give one", kind="input")
+        die(
+            "--keep-alpha and --drop-alpha ask for opposite things: give one",
+            kind="input",
+        )
     if STATE.codec:
-        die(f"{flag} writes its own alpha line (--alpha-codec); --codec {STATE.codec} cannot carry an alpha channel",
-            kind="input", hint=f"drop --codec, or drop {flag}")
+        die(
+            f"{flag} writes its own alpha line (--alpha-codec); --codec {STATE.codec} cannot carry an alpha channel",
+            kind="input",
+            hint=f"drop --codec, or drop {flag}",
+        )
     codec = args.alpha_codec or ALPHA_CODEC_DEFAULT
     line = ALPHA_CODECS[codec]
     if output is not None:
         ext = os.path.splitext(output)[1].lower()
         if ext not in line["ext"]:
-            die(f"{flag} --alpha-codec {codec} needs a {' or '.join(line['ext'])} output; {output} cannot hold it",
-                kind="input", hint=f"pass -o NAME{line['ext'][0]}")
+            die(
+                f"{flag} --alpha-codec {codec} needs a {' or '.join(line['ext'])} output; {output} cannot hold it",
+                kind="input",
+                hint=f"pass -o NAME{line['ext'][0]}",
+            )
     encoders = ffmpeg_encoders()
     if encoders and line["encoder"] not in encoders:
-        die(f"--alpha-codec {codec} needs the {line['encoder']} encoder and this ffmpeg build has none",
-            kind="missing_tool", error_extra={"reason": "encoder_missing", "details": {"name": line["encoder"]}},
+        die(
+            f"--alpha-codec {codec} needs the {line['encoder']} encoder and this ffmpeg build has none",
+            kind="missing_tool",
+            error_extra={
+                "reason": "encoder_missing",
+                "details": {"name": line["encoder"]},
+            },
             hint="python3 scripts/_contract.py doctor lists the encoders this build has; --alpha-codec prores4444 or png "
-                 "need only FFmpeg's own encoders")
+            "need only FFmpeg's own encoders",
+        )
     STATE.alpha_line = codec
     return codec
 
@@ -284,13 +436,24 @@ def audio_line(codec: str) -> List[str]:
     return list(ALPHA_CODECS[codec]["audio"])
 
 
-_TAG_KEYS = (("colorspace", "color_space", "-colorspace"), ("color_primaries", "color_primaries", "-color_primaries"),
-             ("color_trc", "color_transfer", "-color_trc"))
+_TAG_KEYS = (
+    ("colorspace", "color_space", "-colorspace"),
+    ("color_primaries", "color_primaries", "-color_primaries"),
+    ("color_trc", "color_transfer", "-color_trc"),
+)
 # swscale's name for a tagged SDR matrix (scale=in_color_matrix / out_color_matrix)
-_SWS_MATRIX = {"bt709": "bt709", "smpte170m": "bt601", "bt470bg": "bt601", "smpte240m": "smpte240m", "fcc": "fcc"}
+_SWS_MATRIX = {
+    "bt709": "bt709",
+    "smpte170m": "bt601",
+    "bt470bg": "bt601",
+    "smpte240m": "smpte240m",
+    "fcc": "fcc",
+}
 
 
-def rgb_to_bt709_line(meta: Optional[Dict[str, Any]], codec: Optional[str] = None) -> bool:
+def rgb_to_bt709_line(
+    meta: Optional[Dict[str, Any]], codec: Optional[str] = None
+) -> bool:
     """True when the alpha line being written (`codec`, default STATE.alpha_line) stores YUV
     (ProRes 4444, VP9) and the source `meta` probes is RGB (qtrle, PNG in .mov/.mkv, an image).
 
@@ -304,14 +467,20 @@ def rgb_to_bt709_line(meta: Optional[Dict[str, Any]], codec: Optional[str] = Non
     before)."""
     codec = codec or STATE.alpha_line
     v = (meta or {}).get("video") or {}
-    return bool(codec) and ALPHA_CODECS[codec]["pix_fmt"].startswith("yuv") and is_rgb(meta) and not v.get("bt2020_or_hdr")
+    return (
+        bool(codec)
+        and ALPHA_CODECS[codec]["pix_fmt"].startswith("yuv")
+        and is_rgb(meta)
+        and not v.get("bt2020_or_hdr")
+    )
 
 
 def source_format(meta: Optional[Dict[str, Any]]) -> str:
     """The filter that starts a compositing graph on an alpha line: the source at 4:4:4 with its
     alpha plane. An RGB source on a YUV line gets there by an explicit BT.709 conversion
     (rgb_to_bt709_line); a palette is expanded first, because swscale turns one into YUV with
-    BT.601 whatever matrix is asked for. Every other source: `format=yuva444p`, as before."""
+    BT.601 whatever matrix is asked for. Every other source: `format=yuva444p`, as before.
+    """
     if rgb_to_bt709_line(meta):
         pal = ((meta or {}).get("video") or {}).get("pix_fmt") == "pal8"
         return ("format=rgba," if pal else "") + rgb_to_bt709_filter("yuva444p")
@@ -325,14 +494,15 @@ def rgb_line(codec: Optional[str] = None) -> bool:
 
 
 def matrix_label(meta: Optional[Dict[str, Any]]) -> str:
-    """",setparams=colorspace=<the source's matrix>" to end a YUV chain with that an RGB line
+    """ ",setparams=colorspace=<the source's matrix>" to end a YUV chain with that an RGB line
     (qtrle, PNG) converts, or "" (a YUV line, an untagged or RGB source).
 
     finish_chain() labels the frames after the last filter of the graph, but FFmpeg places the
     conversion to an RGB line where the formats first differ, which in color.py is in front of
     `alphamerge` and so in front of that label: the graded YUV of a BT.709-tagged source reached
     it untagged (6.1) or carrying the grade legs' working matrix (7.1+) and was read as BT.601
-    (30C050 written as 3CD753). Labelled here, the conversion reads the matrix the samples are in."""
+    (30C050 written as 3CD753). Labelled here, the conversion reads the matrix the samples are in.
+    """
     if not rgb_line() or is_rgb(meta):
         return ""
     space = [val for p, val, _ in _source_tags(meta, "setparams") if p == "colorspace"]
@@ -343,30 +513,49 @@ def _source_tags(meta: Optional[Dict[str, Any]], dest: str = "option") -> List[t
     """(setparams name, value, output option) per source tag that is passed on, the value spelled
     for `dest` (carried_tag: an RGB source's `gbr` is left out, #454). An RGB source on a YUV line
     (rgb_to_bt709_line) is BT.709 YUV by then and says so: matrix bt709, and bt709 for a primaries
-    or transfer tag the source does not carry (the H.264 line's reading of an untagged picture)."""
+    or transfer tag the source does not carry (the H.264 line's reading of an untagged picture).
+    """
     v = (meta or {}).get("video") or {}
     to_709 = rgb_to_bt709_line(meta)
     # the matrix is the one the conversion used, whatever the RGB source's own tag says (a qtrle
     # clip retagged smpte170m would label its BT.709 samples BT.601); primaries and transfer are
     # not converted, so the source's own are kept when it has them
-    tags = [(param, "bt709" if to_709 and param == "colorspace"
-             else carried_tag(param, v.get(key), dest) or ("bt709" if to_709 else None), flag)
-            for param, key, flag in _TAG_KEYS]
+    tags = [
+        (
+            param,
+            (
+                "bt709"
+                if to_709 and param == "colorspace"
+                else carried_tag(param, v.get(key), dest)
+                or ("bt709" if to_709 else None)
+            ),
+            flag,
+        )
+        for param, key, flag in _TAG_KEYS
+    ]
     return [t for t in tags if t[1]]
 
 
-def finish_chain(codec: str, mode: Optional[str], meta: Optional[Dict[str, Any]] = None) -> str:
+def finish_chain(
+    codec: str, mode: Optional[str], meta: Optional[Dict[str, Any]] = None
+) -> str:
     """The end of a filter chain that hands an alpha picture to the line: premultiplied colour
     when asked, the source's colour tags put back on the frames (`setparams`: a grade's RGB legs
     and an RGB layer's conversion relabel them, BT.601 or unknown), then the line's own pixel
     format (so no later conversion can drop the plane)."""
     tags = _source_tags(meta, "setparams")
-    label = ("setparams=" + ":".join(f"{p}={val}" for p, val, _ in tags) + ",") if tags else ""
+    label = (
+        ("setparams=" + ":".join(f"{p}={val}" for p, val, _ in tags) + ",")
+        if tags
+        else ""
+    )
     pix = ALPHA_CODECS[codec]["pix_fmt"]
     # premultiplied colour is colour x alpha in RGB: multiplied there (a YUV premultiply scales the
     # limited-range offsets too), after the tags are back so both conversions use the same matrix
     pre = "format=gbrap,premultiply=inplace=1," if mode == "premultiplied" else ""
-    matrix = _SWS_MATRIX.get(next((val for p, val, _ in tags if p == "colorspace"), None))
+    matrix = _SWS_MATRIX.get(
+        next((val for p, val, _ in tags if p == "colorspace"), None)
+    )
     if pre and matrix and pix.startswith("yuv"):
         # ... which 6.1 does not do by itself on a tagged YUV line: the way to RGB is placed in
         # front of color.py's alphamerge (so in front of the label, and reads BT.601) and the way
@@ -389,11 +578,21 @@ def tag_args(meta: Optional[Dict[str, Any]]) -> List[str]:
 def written_line(output_meta: Dict[str, Any], output: str) -> Dict[str, Any]:
     """What the written stream is: {codec, pix_fmt, alpha_plane} (alpha_plane: the stream stores one)."""
     v = (output_meta or {}).get("video") or {}
-    return {"codec": v.get("codec"), "pix_fmt": v.get("pix_fmt"), "alpha_plane": has_alpha_plane(output_meta, output)}
+    return {
+        "codec": v.get("codec"),
+        "pix_fmt": v.get("pix_fmt"),
+        "alpha_plane": has_alpha_plane(output_meta, output),
+    }
 
 
-def kept_step(output: str, output_meta: Dict[str, Any], source: "Dict[str, object] | None", *,
-              composite: bool, provenance: str = "input_premeasurement") -> Dict[str, Any]:
+def kept_step(
+    output: str,
+    output_meta: Dict[str, Any],
+    source: "Dict[str, object] | None",
+    *,
+    composite: bool,
+    provenance: str = "input_premeasurement",
+) -> Dict[str, Any]:
     """The `alpha` verification step of a --keep-alpha / --transparent run.
 
     `composite` False (color.py, background.py --transparent against an all-zero source): the
@@ -401,16 +600,22 @@ def kept_step(output: str, output_meta: Dict[str, Any], source: "Dict[str, objec
     frame (alpha_compare). `composite` True (graphics.py, overlay.py): layers drawn over the
     picture add coverage, so the written alpha may only be at or above the source's in every
     frame, and must not have gone opaque in every frame the source was transparent in (what an
-    alpha dropped on the way reads as). In both, the written stream must store an alpha plane."""
+    alpha dropped on the way reads as). In both, the written stream must store an alpha plane.
+    """
     unmeasured = bool(source and source.get("unmeasured"))
     source = _measured(source)
     line = written_line(output_meta, output)
     written = alpha_stats(output, line["codec"])
-    step: Dict[str, Any] = {"step": "alpha", "property": "alpha_mean", "tolerance": ALPHA_TOLERANCE,
-                            "expected": None if source is None else round(source["mean"], 2),
-                            "measured": None if written is None else round(written["mean"], 2),
-                            "frames": {"expected": rounded(source), "measured": rounded(written)},
-                            "written": line, "provenance": provenance}
+    step: Dict[str, Any] = {
+        "step": "alpha",
+        "property": "alpha_mean",
+        "tolerance": ALPHA_TOLERANCE,
+        "expected": None if source is None else round(source["mean"], 2),
+        "measured": None if written is None else round(written["mean"], 2),
+        "frames": {"expected": rounded(source), "measured": rounded(written)},
+        "written": line,
+        "provenance": provenance,
+    }
     if unmeasured:
         step["reason"] = "source_alpha_unmeasured"
     if not composite:
@@ -419,7 +624,15 @@ def kept_step(output: str, output_meta: Dict[str, Any], source: "Dict[str, objec
         return step
     step["property"] = "alpha_at_least_source"
     if written is None or source is None:
-        step.update(ok=False, comparison={"ok": False, "paired": None, "worst_delta": None, "worst_frame": None})
+        step.update(
+            ok=False,
+            comparison={
+                "ok": False,
+                "paired": None,
+                "worst_delta": None,
+                "worst_frame": None,
+            },
+        )
         return step
     w, s = written["per_frame"], source["per_frame"]
     paired = len(w) == len(s)
@@ -427,12 +640,22 @@ def kept_step(output: str, output_meta: Dict[str, Any], source: "Dict[str, objec
         deficits = [b - a for a, b in zip(w, s)]
         worst = max(range(len(deficits)), key=deficits.__getitem__)
         below = deficits[worst] > ALPHA_TOLERANCE
-        opaque_where_transparent = all(a >= OPAQUE for a, b in zip(w, s) if b < OPAQUE) and any(b < OPAQUE for b in s)
-        cmp = {"paired": True, "worst_delta": round(max(deficits[worst], 0.0), 2), "worst_frame": worst}
+        opaque_where_transparent = all(
+            a >= OPAQUE for a, b in zip(w, s) if b < OPAQUE
+        ) and any(b < OPAQUE for b in s)
+        cmp = {
+            "paired": True,
+            "worst_delta": round(max(deficits[worst], 0.0), 2),
+            "worst_frame": worst,
+        }
     else:
         below = written["min"] < source["min"] - ALPHA_TOLERANCE
         opaque_where_transparent = written["min"] >= OPAQUE and source["min"] < OPAQUE
-        cmp = {"paired": False, "worst_delta": round(max(source["min"] - written["min"], 0.0), 2), "worst_frame": None}
+        cmp = {
+            "paired": False,
+            "worst_delta": round(max(source["min"] - written["min"], 0.0), 2),
+            "worst_frame": None,
+        }
     ok = line["alpha_plane"] and not below and not opaque_where_transparent
     cmp["ok"] = ok
     if opaque_where_transparent:
@@ -445,7 +668,9 @@ def kept_step(output: str, output_meta: Dict[str, Any], source: "Dict[str, objec
     return step
 
 
-def lost_step(output: str, output_meta: Dict[str, Any], source: "Dict[str, object] | None") -> Dict[str, Any]:
+def lost_step(
+    output: str, output_meta: Dict[str, Any], source: "Dict[str, object] | None"
+) -> Dict[str, Any]:
     """The `alpha` step of a run without --keep-alpha on a source whose alpha is used: the output
     stores no alpha plane (every re-encoding line but the alpha ones is opaque), so it fails, with
     the reason and the flag that keeps it. Measured, not assumed: a written file that does carry
@@ -455,18 +680,33 @@ def lost_step(output: str, output_meta: Dict[str, Any], source: "Dict[str, objec
     source = _measured(source)
     line = written_line(output_meta, output)
     written = alpha_stats(output, line["codec"]) if line["alpha_plane"] else None
-    cmp = alpha_compare(written, source) if written is not None else {"ok": False, "paired": None,
-                                                                         "worst_delta": None, "worst_frame": None}
-    step: Dict[str, Any] = {"step": "alpha", "property": "alpha_mean", "ok": bool(cmp["ok"]), "comparison": cmp,
-                            "tolerance": ALPHA_TOLERANCE,
-                            "expected": None if source is None else round(source["mean"], 2),
-                            "measured": round(written["mean"], 2) if written is not None else 255.0,
-                            "frames": {"expected": rounded(source), "measured": rounded(written)},
-                            "written": line, "provenance": "input_premeasurement"}
+    cmp = (
+        alpha_compare(written, source)
+        if written is not None
+        else {"ok": False, "paired": None, "worst_delta": None, "worst_frame": None}
+    )
+    step: Dict[str, Any] = {
+        "step": "alpha",
+        "property": "alpha_mean",
+        "ok": bool(cmp["ok"]),
+        "comparison": cmp,
+        "tolerance": ALPHA_TOLERANCE,
+        "expected": None if source is None else round(source["mean"], 2),
+        "measured": round(written["mean"], 2) if written is not None else 255.0,
+        "frames": {"expected": rounded(source), "measured": rounded(written)},
+        "written": line,
+        "provenance": "input_premeasurement",
+    }
     if not step["ok"]:
-        step.update(reason="source_alpha_unmeasured" if unmeasured and line["alpha_plane"] else "alpha_dropped",
-                    attribution="artifact",
-                    hint="pass --keep-alpha to write an alpha line, or --drop-alpha when an opaque output is wanted")
+        step.update(
+            reason=(
+                "source_alpha_unmeasured"
+                if unmeasured and line["alpha_plane"]
+                else "alpha_dropped"
+            ),
+            attribution="artifact",
+            hint="pass --keep-alpha to write an alpha line, or --drop-alpha when an opaque output is wanted",
+        )
     return step
 
 
@@ -475,6 +715,7 @@ def source_alpha(args, meta: Dict[str, Any], path: str) -> "Dict[str, object] | 
     alpha plane and this is not a dry run. Refuses --keep-alpha on a source without one (nothing to
     keep). Returns None when there is nothing to measure."""
     from _common.emit import die
+
     if STATE.dry_run and _runner.dry_run_input_pending(path):
         # a planned input an earlier step will write (a --transparent canvas in a recipe): there is
         # nothing to probe yet, so the alpha checks wait for the real run
@@ -484,9 +725,12 @@ def source_alpha(args, meta: Dict[str, Any], path: str) -> "Dict[str, object] | 
     if plane and codec == "vp9" and not libvpx_vp9_decoder():
         _no_vp9_decoder(path)
     if getattr(args, "keep_alpha", False) and not plane:
-        die(f"--keep-alpha keeps the source's alpha channel and {path} has none "
-            f"({((meta or {}).get('video') or {}).get('pix_fmt')}, fully opaque)", kind="input",
-            hint="background.py --transparent makes a transparent canvas to draw on; drop --keep-alpha for an opaque output")
+        die(
+            f"--keep-alpha keeps the source's alpha channel and {path} has none "
+            f"({((meta or {}).get('video') or {}).get('pix_fmt')}, fully opaque)",
+            kind="input",
+            hint="background.py --transparent makes a transparent canvas to draw on; drop --keep-alpha for an opaque output",
+        )
     if not plane or STATE.dry_run:
         return None
     return alpha_stats(path, codec) or UNMEASURED
@@ -507,33 +751,57 @@ def decoder_args_for(meta: Dict[str, Any], path: str) -> List[str]:
 
 def _no_vp9_decoder(path: str) -> None:
     from _common.emit import die
-    die(f"{path} is VP9 with an alpha layer, and this ffmpeg build has no libvpx-vp9 decoder to read it "
-        "(FFmpeg's own VP9 decoder drops the alpha)", kind="missing_tool",
+
+    die(
+        f"{path} is VP9 with an alpha layer, and this ffmpeg build has no libvpx-vp9 decoder to read it "
+        "(FFmpeg's own VP9 decoder drops the alpha)",
+        kind="missing_tool",
         error_extra={"reason": "decoder_missing", "details": {"name": "libvpx-vp9"}},
-        hint="use an ffmpeg built with libvpx, or a ProRes 4444 / qtrle / PNG source")
+        hint="use an ffmpeg built with libvpx, or a ProRes 4444 / qtrle / PNG source",
+    )
 
 
-def report(args, codec: Optional[str], src: "Dict[str, object] | None", output: Optional[str],
-           extra: Dict[str, Any], composite: bool, provenance: str = "input_premeasurement") -> None:
+def report(
+    args,
+    codec: Optional[str],
+    src: "Dict[str, object] | None",
+    output: Optional[str],
+    extra: Dict[str, Any],
+    composite: bool,
+    provenance: str = "input_premeasurement",
+) -> None:
     """Adds the alpha fields and the `alpha` step to a result's `extra` (after the write)."""
     from _common.emit import note, warn
     from _common.probe import probe
+
     if codec:
         extra["alpha_mode"] = args.alpha_mode or "straight"
         extra["alpha_codec"] = codec
         if output and not STATE.dry_run:
-            extra.setdefault("verification", []).append(kept_step(output, probe(output, role="output"), src,
-                                                                  composite=composite, provenance=provenance))
+            extra.setdefault("verification", []).append(
+                kept_step(
+                    output,
+                    probe(output, role="output"),
+                    src,
+                    composite=composite,
+                    provenance=provenance,
+                )
+            )
         return
     if not uses_alpha(src) or not output or STATE.dry_run:
         return
     if getattr(args, "drop_alpha", False):
-        note("the source's alpha channel was dropped (--drop-alpha): the output is opaque")
+        note(
+            "the source's alpha channel was dropped (--drop-alpha): the output is opaque"
+        )
         extra["alpha_dropped"] = True
         return
     step = lost_step(output, probe(output, role="output"), src)
     extra.setdefault("verification", []).append(step)
     if not step["ok"]:
         extra["alpha_dropped"] = True
-        warn("the source has an alpha channel and this output does not keep it: pass --keep-alpha to keep it, "
-             "or --drop-alpha when an opaque output is wanted", "alpha_dropped")
+        warn(
+            "the source has an alpha channel and this output does not keep it: pass --keep-alpha to keep it, "
+            "or --drop-alpha when an opaque output is wanted",
+            "alpha_dropped",
+        )

@@ -18,6 +18,7 @@ offline in the worker anyway), the reference turned into a speaker-embedding pro
 one `generate_voice_clone(text, language=<name>, voice_clone_prompt=..., max_new_tokens=2048)` per line after
 `torch.manual_seed(seed)`. The sampling settings are the checkpoint's own generation_config.json, recorded per clip.
 Clips are written as 16-bit PCM mono at the rate the runtime returns (24 kHz)."""
+
 from __future__ import annotations
 
 import importlib
@@ -28,7 +29,18 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..errors import DubbingError
-from .base import INCOMPATIBLE, OK, Engine, EngineRequest, EngineResult, EngineSpec, in_range, in_worker, missing, parse_version
+from .base import (
+    INCOMPATIBLE,
+    OK,
+    Engine,
+    EngineRequest,
+    EngineResult,
+    EngineSpec,
+    in_range,
+    in_worker,
+    missing,
+    parse_version,
+)
 from .lookup import hf_cache_dirs, hf_cached_snapshot, python_packages
 
 ENV_PYTHON = "DUBBING_QWEN3_TTS_PYTHON"
@@ -38,36 +50,80 @@ ENV_DEVICE = "DUBBING_QWEN3_TTS_DEVICE"
 DIST = "qwen-tts"
 MODULE = "qwen_tts"
 ENGINE_CLASS = "Qwen3TTSModel"
-SUPPORTED = ((0, 1, 1), (0, 2, 0))             # >=0.1.1 <0.2.0: the API below was read from 0.1.1
-MIN_PYTHON = (3, 10)                           # qwen-tts 0.1.1 evaluates `str | None` annotations at import time
-SAMPLE_RATE = 24000                            # speech_tokenizer/config.json output_sample_rate
-FRAME_SECONDS = 1920 / 24000                   # one codec frame (12.5 Hz): decode_upsample_rate / output_sample_rate
-MAX_NEW_TOKENS = 2048                          # codec frames at 12.5 Hz (about 164 s): the vendor's own evaluation setting;
-                                               # the checkpoint's generation_config.json allows 8192 (about 655 s)
-CLONE_MODE = "x_vector_only"                   # the speaker embedding of the reference; no transcript of it is needed
+SUPPORTED = ((0, 1, 1), (0, 2, 0))  # >=0.1.1 <0.2.0: the API below was read from 0.1.1
+MIN_PYTHON = (3, 10)  # qwen-tts 0.1.1 evaluates `str | None` annotations at import time
+SAMPLE_RATE = 24000  # speech_tokenizer/config.json output_sample_rate
+FRAME_SECONDS = (
+    1920 / 24000
+)  # one codec frame (12.5 Hz): decode_upsample_rate / output_sample_rate
+MAX_NEW_TOKENS = (
+    2048  # codec frames at 12.5 Hz (about 164 s): the vendor's own evaluation setting;
+)
+# the checkpoint's generation_config.json allows 8192 (about 655 s)
+CLONE_MODE = "x_vector_only"  # the speaker embedding of the reference; no transcript of it is needed
 HF_REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 # The two Base checkpoints, pinned to the revisions ADR-018 read (Hugging Face model API, 2026-11-12). Same runtime,
 # same API, same 12 Hz speech tokenizer; the 1.7B is the default.
 MODELS: Dict[str, Dict[str, str]] = {
-    "1.7B": {"repo": "Qwen/Qwen3-TTS-12Hz-1.7B-Base", "revision": "fd4b254389122332181a7c3db7f27e918eec64e3", "size": "1b7"},
-    "0.6B": {"repo": "Qwen/Qwen3-TTS-12Hz-0.6B-Base", "revision": "5d83992436eae1d760afd27aff78a71d676296fc", "size": "0b6"},
+    "1.7B": {
+        "repo": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "revision": "fd4b254389122332181a7c3db7f27e918eec64e3",
+        "size": "1b7",
+    },
+    "0.6B": {
+        "repo": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        "revision": "5d83992436eae1d760afd27aff78a71d676296fc",
+        "size": "0b6",
+    },
 }
 DEFAULT_MODEL = "1.7B"
 # What from_pretrained reads from the checkpoint directory (the model, its text tokenizer and processor, the
 # generation defaults and the 12 Hz speech tokenizer it loads from the speech_tokenizer/ subdirectory)
-MODEL_FILES = ("config.json", "generation_config.json", "model.safetensors", "preprocessor_config.json", "tokenizer_config.json",
-               "vocab.json", "merges.txt", "speech_tokenizer/config.json", "speech_tokenizer/model.safetensors",
-               "speech_tokenizer/preprocessor_config.json")
+MODEL_FILES = (
+    "config.json",
+    "generation_config.json",
+    "model.safetensors",
+    "preprocessor_config.json",
+    "tokenizer_config.json",
+    "vocab.json",
+    "merges.txt",
+    "speech_tokenizer/config.json",
+    "speech_tokenizer/model.safetensors",
+    "speech_tokenizer/preprocessor_config.json",
+)
 # Our language tags -> the runtime's language names (config.json talker_config.codec_language_id)
-LANGUAGES = {"de": "german", "en": "english", "es": "spanish", "fr": "french", "it": "italian", "ja": "japanese",
-             "ko": "korean", "pt": "portuguese", "ru": "russian", "zh": "chinese"}
-GENERATION_KEYS = ("do_sample", "temperature", "top_k", "top_p", "repetition_penalty", "subtalker_dosample",
-                   "subtalker_temperature", "subtalker_top_k", "subtalker_top_p")
-EXPERIMENTAL_REASON = ("a published human-preference ranking placed this model low, while the vendor's own metrics are "
-                       "strong; judge its quality by listening before making it a default (ADR-018)")
+LANGUAGES = {
+    "de": "german",
+    "en": "english",
+    "es": "spanish",
+    "fr": "french",
+    "it": "italian",
+    "ja": "japanese",
+    "ko": "korean",
+    "pt": "portuguese",
+    "ru": "russian",
+    "zh": "chinese",
+}
+GENERATION_KEYS = (
+    "do_sample",
+    "temperature",
+    "top_k",
+    "top_p",
+    "repetition_penalty",
+    "subtalker_dosample",
+    "subtalker_temperature",
+    "subtalker_top_k",
+    "subtalker_top_p",
+)
+EXPERIMENTAL_REASON = (
+    "a published human-preference ranking placed this model low, while the vendor's own metrics are "
+    "strong; judge its quality by listening before making it a default (ADR-018)"
+)
 
 
-def download_command(model: Dict[str, str], hf: str = "~/.venvs/qwen3-tts/bin/hf") -> str:
+def download_command(
+    model: Dict[str, str], hf: str = "~/.venvs/qwen3-tts/bin/hf"
+) -> str:
     """The one-time fetch of a checkpoint at its pinned revision, with the `hf` CLI qwen-tts installs (huggingface_hub)."""
     return f"{hf} download {model['repo']} --revision {model['revision']}"
 
@@ -75,14 +131,18 @@ def download_command(model: Dict[str, str], hf: str = "~/.venvs/qwen3-tts/bin/hf
 def hf_cli() -> str:
     """The `hf` CLI next to the engine's own interpreter when one is configured, else the install line's venv."""
     python = os.environ.get(ENV_PYTHON)
-    return os.path.join(os.path.dirname(python), "hf") if python else "~/.venvs/qwen3-tts/bin/hf"
+    return (
+        os.path.join(os.path.dirname(python), "hf")
+        if python
+        else "~/.venvs/qwen3-tts/bin/hf"
+    )
 
 
 SPEC = EngineSpec(
     id="qwen3_tts",
     ops=("narrate", "dub", "audio_description"),
     description="Qwen3-TTS-12Hz Base (1.7B by default, or 0.6B): multilingual TTS that speaks only in a reference voice "
-                "(voice cloning from a short clip, with its owner's consent record); experimental",
+    "(voice cloning from a short clip, with its owner's consent record); experimental",
     kind="python",
     code_license="Apache-2.0",
     weights_license="Apache-2.0 (Hugging Face model cards of Qwen/Qwen3-TTS-12Hz-1.7B-Base and Qwen/Qwen3-TTS-12Hz-0.6B-Base)",
@@ -93,13 +153,18 @@ SPEC = EngineSpec(
     japanese="native",
     voice_cloning=True,
     isolation="worker subprocess; recommended in its own virtual environment (DUBBING_QWEN3_TTS_PYTHON, Python >= 3.10): "
-              "qwen-tts pins transformers 4.57.3 and accelerate 1.12.0 and pulls in PyTorch",
+    "qwen-tts pins transformers 4.57.3 and accelerate 1.12.0 and pulls in PyTorch",
     version_range=">=0.1.1 <0.2.0",
-    install=(f"python3.12 -m venv ~/.venvs/qwen3-tts && ~/.venvs/qwen3-tts/bin/pip install 'qwen-tts==0.1.1' (Python >= 3.10), "
-             f"then fetch the weights once: {download_command(MODELS[DEFAULT_MODEL])} (or the 0.6B: "
-             f"{download_command(MODELS['0.6B'])}, and set {ENV_MODEL}=0.6B); set {ENV_PYTHON}=~/.venvs/qwen3-tts/bin/python"),
-    located_by=(f"${ENV_PYTHON} (else this Python)", f"${ENV_MODEL} (1.7B, the default, or 0.6B)",
-                f"${ENV_MODEL_DIR} (else the Hugging Face cache, the pinned revision first)"),
+    install=(
+        f"python3.12 -m venv ~/.venvs/qwen3-tts && ~/.venvs/qwen3-tts/bin/pip install 'qwen-tts==0.1.1' (Python >= 3.10), "
+        f"then fetch the weights once: {download_command(MODELS[DEFAULT_MODEL])} (or the 0.6B: "
+        f"{download_command(MODELS['0.6B'])}, and set {ENV_MODEL}=0.6B); set {ENV_PYTHON}=~/.venvs/qwen3-tts/bin/python"
+    ),
+    located_by=(
+        f"${ENV_PYTHON} (else this Python)",
+        f"${ENV_MODEL} (1.7B, the default, or 0.6B)",
+        f"${ENV_MODEL_DIR} (else the Hugging Face cache, the pinned revision first)",
+    ),
     roadmap_step=15,
     licence_checked="2026-11-12 (docs/decisions.md ADR-018, against the ADR-001 requirements)",
     licence_notes=(
@@ -113,9 +178,13 @@ SPEC = EngineSpec(
         "onnxruntime MIT, einops MIT",
         "experimental: " + EXPERIMENTAL_REASON,
     ),
-    sources=("https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base", "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
-             "https://github.com/QwenLM/Qwen3-TTS", "https://github.com/QwenLM/Qwen3-TTS/blob/main/LICENSE",
-             "https://pypi.org/project/qwen-tts/"),
+    sources=(
+        "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        "https://github.com/QwenLM/Qwen3-TTS",
+        "https://github.com/QwenLM/Qwen3-TTS/blob/main/LICENSE",
+        "https://pypi.org/project/qwen-tts/",
+    ),
     experimental=True,
     experimental_reason=EXPERIMENTAL_REASON,
 )
@@ -127,13 +196,16 @@ def selected_model() -> Tuple[Optional[Dict[str, str]], Optional[str]]:
     for key, model in MODELS.items():
         if value.lower() in (key.lower(), model["repo"].lower()):
             return dict(model, key=key), None
-    return None, (f"{ENV_MODEL}={value!r} is not a checkpoint this engine runs; use one of "
-                  f"{', '.join(list(MODELS) + [m['repo'] for m in MODELS.values()])}")
+    return None, (
+        f"{ENV_MODEL}={value!r} is not a checkpoint this engine runs; use one of "
+        f"{', '.join(list(MODELS) + [m['repo'] for m in MODELS.values()])}"
+    )
 
 
 def find_snapshot(model: Dict[str, str]) -> Tuple[Optional[Path], List[str]]:
     """The directory holding every file in MODEL_FILES: DUBBING_QWEN3_TTS_MODEL_DIR when set (never replaced by the cache),
-    else the pinned revision's Hugging Face cache snapshot, else any complete snapshot of the repository."""
+    else the pinned revision's Hugging Face cache snapshot, else any complete snapshot of the repository.
+    """
     if not os.environ.get(ENV_MODEL_DIR):
         folder = "models--" + model["repo"].replace("/", "--")
         for cache in hf_cache_dirs():
@@ -158,20 +230,33 @@ def config_problem(snapshot: Path, model: Dict[str, str]) -> Optional[str]:
         return f"its config.json cannot be read: {e}"
     if not isinstance(doc, dict):
         return "its config.json is not a JSON object"
-    found = {k: doc.get(k) for k in ("model_type", "tokenizer_type", "tts_model_type", "tts_model_size")}
-    want = {"model_type": "qwen3_tts", "tokenizer_type": "qwen3_tts_tokenizer_12hz", "tts_model_type": "base",
-            "tts_model_size": model["size"]}
+    found = {
+        k: doc.get(k)
+        for k in ("model_type", "tokenizer_type", "tts_model_type", "tts_model_size")
+    }
+    want = {
+        "model_type": "qwen3_tts",
+        "tokenizer_type": "qwen3_tts_tokenizer_12hz",
+        "tts_model_type": "base",
+        "tts_model_size": model["size"],
+    }
     if found == want:
         return None
     other = [k for k, m in MODELS.items() if m["size"] == found.get("tts_model_size")]
-    hint = f"; set {ENV_MODEL}={other[0]}" if other and found.get("tts_model_type") == "base" else ""
+    hint = (
+        f"; set {ENV_MODEL}={other[0]}"
+        if other and found.get("tts_model_type") == "base"
+        else ""
+    )
     return f"it is {found}, not the 12 Hz Base {model['key']} checkpoint ({want}){hint}"
 
 
 def generation_config(snapshot: Path) -> Dict[str, Any]:
     """The sampling settings generate_voice_clone takes from the checkpoint (generation_config.json), for the receipt."""
     try:
-        doc = json.loads((snapshot / "generation_config.json").read_text(encoding="utf-8"))
+        doc = json.loads(
+            (snapshot / "generation_config.json").read_text(encoding="utf-8")
+        )
     except (OSError, UnicodeDecodeError, ValueError):
         return {}
     return {k: doc[k] for k in GENERATION_KEYS if isinstance(doc, dict) and k in doc}
@@ -194,46 +279,100 @@ class Qwen3TtsEngine(Engine):
             return missing(found["error"], "package", interpreter=where)
         vstr = found["dists"].get(DIST)
         if not vstr or not found["modules"].get(MODULE):
-            return missing(f"{DIST} is not installed in {where}", "package", interpreter=where)
+            return missing(
+                f"{DIST} is not installed in {where}", "package", interpreter=where
+            )
         version = parse_version(vstr)
         if version is None or not in_range(version, *SUPPORTED):
-            return {"status": INCOMPATIBLE, "version": vstr, "detail": f"{DIST} {vstr} is outside {SPEC.version_range}",
-                    "model": None, "interpreter": where}
+            return {
+                "status": INCOMPATIBLE,
+                "version": vstr,
+                "detail": f"{DIST} {vstr} is outside {SPEC.version_range}",
+                "model": None,
+                "interpreter": where,
+            }
         python = parse_version(found.get("python"))
         if python is not None and python[:2] < MIN_PYTHON:
-            return {"status": INCOMPATIBLE, "version": vstr, "model": None, "interpreter": where,
-                    "detail": f"{DIST} {vstr} needs Python >= {'.'.join(map(str, MIN_PYTHON))}; {where} is Python "
-                              f"{found.get('python')} (make the engine's venv with Python 3.10 or later)"}
+            return {
+                "status": INCOMPATIBLE,
+                "version": vstr,
+                "model": None,
+                "interpreter": where,
+                "detail": f"{DIST} {vstr} needs Python >= {'.'.join(map(str, MIN_PYTHON))}; {where} is Python "
+                f"{found.get('python')} (make the engine's venv with Python 3.10 or later)",
+            }
         model, problem = selected_model()
         if model is None:
-            return {"status": INCOMPATIBLE, "version": vstr, "detail": problem, "model": None, "interpreter": where}
+            return {
+                "status": INCOMPATIBLE,
+                "version": vstr,
+                "detail": problem,
+                "model": None,
+                "interpreter": where,
+            }
         snapshot, absent = find_snapshot(model)
         if snapshot is None:
-            where_weights = (f"{ENV_MODEL_DIR}={os.environ[ENV_MODEL_DIR]}" if os.environ.get(ENV_MODEL_DIR)
-                             else f"the Hugging Face cache ({model['repo']})")
+            where_weights = (
+                f"{ENV_MODEL_DIR}={os.environ[ENV_MODEL_DIR]}"
+                if os.environ.get(ENV_MODEL_DIR)
+                else f"the Hugging Face cache ({model['repo']})"
+            )
             fetch = download_command(model, hf_cli())
-            return dict(missing(f"the {model['key']} weights were not found in {where_weights}; missing: {', '.join(absent)}; "
-                                f"fetch them once: {fetch}", "model", interpreter=where),
-                        version=vstr, model_id=model["repo"], download=fetch)
+            return dict(
+                missing(
+                    f"the {model['key']} weights were not found in {where_weights}; missing: {', '.join(absent)}; "
+                    f"fetch them once: {fetch}",
+                    "model",
+                    interpreter=where,
+                ),
+                version=vstr,
+                model_id=model["repo"],
+                download=fetch,
+            )
         bad = config_problem(snapshot, model)
         if bad:
-            return {"status": INCOMPATIBLE, "version": vstr, "model": None, "interpreter": where,
-                    "detail": f"the checkpoint in {snapshot} is not usable: {bad}"}
+            return {
+                "status": INCOMPATIBLE,
+                "version": vstr,
+                "model": None,
+                "interpreter": where,
+                "detail": f"the checkpoint in {snapshot} is not usable: {bad}",
+            }
         revision = snapshot_revision(snapshot)
-        return {"status": OK, "version": vstr, "model": model["repo"], "model_id": model["repo"], "revision": revision,
-                "revision_pinned": revision == model["revision"], "interpreter": where,
-                "detail": f"{DIST} {vstr}, {model['repo']} at {revision or 'a local directory'}"}
+        return {
+            "status": OK,
+            "version": vstr,
+            "model": model["repo"],
+            "model_id": model["repo"],
+            "revision": revision,
+            "revision_pinned": revision == model["revision"],
+            "interpreter": where,
+            "detail": f"{DIST} {vstr}, {model['repo']} at {revision or 'a local directory'}",
+        }
 
     def check_request(self, req: EngineRequest) -> None:
-        super().check_request(req)               # op, language, controls, and the consent record of the reference (ADR-009)
+        super().check_request(
+            req
+        )  # op, language, controls, and the consent record of the reference (ADR-009)
         if req.voice is not None:
-            raise DubbingError("INVALID_ARGUMENT", "the Qwen3-TTS Base models have no built-in voice; the voice is a reference "
-                               "clip (--reference) with its owner's consent record (--consent, ADR-009)",
-                               {"engine": self.id, "voice": req.voice, "voices": []})
+            raise DubbingError(
+                "INVALID_ARGUMENT",
+                "the Qwen3-TTS Base models have no built-in voice; the voice is a reference "
+                "clip (--reference) with its owner's consent record (--consent, ADR-009)",
+                {"engine": self.id, "voice": req.voice, "voices": []},
+            )
         if req.reference_audio is None:
-            raise DubbingError("INVALID_ARGUMENT", "the Qwen3-TTS Base models speak only in a reference voice: pass --reference "
-                               "<clip> with its owner's consent record --consent <record> (ADR-009, ADR-018), or use another "
-                               "engine", {"engine": self.id, "needs": "reference_audio", "policy": "voice_cloning"})
+            raise DubbingError(
+                "INVALID_ARGUMENT",
+                "the Qwen3-TTS Base models speak only in a reference voice: pass --reference "
+                "<clip> with its owner's consent record --consent <record> (ADR-009, ADR-018), or use another "
+                "engine",
+                {
+                    "engine": self.id,
+                    "needs": "reference_audio",
+                    "policy": "voice_cloning",
+                },
+            )
         if not req.text.strip():
             raise DubbingError("INVALID_ARGUMENT", "empty text", {"engine": self.id})
 
@@ -245,52 +384,114 @@ class Qwen3TtsEngine(Engine):
             self.check_request(req)
         info = self.require()
         if not in_worker():
-            raise DubbingError("INTERNAL_ERROR", "Qwen3-TTS runs in the worker process only (ADR-001)", {"engine": self.id})
+            raise DubbingError(
+                "INTERNAL_ERROR",
+                "Qwen3-TTS runs in the worker process only (ADR-001)",
+                {"engine": self.id},
+            )
         model_info, problem = selected_model()
         snapshot = find_snapshot(model_info)[0] if model_info is not None else None
-        if model_info is None or snapshot is None:             # require() has just seen both; they changed under us
-            raise DubbingError("MODEL_NOT_FOUND", f"the Qwen3-TTS checkpoint is gone: {problem or 'its files were removed'}",
-                               {"engine": self.id, "install": self.spec.install})
+        if (
+            model_info is None or snapshot is None
+        ):  # require() has just seen both; they changed under us
+            raise DubbingError(
+                "MODEL_NOT_FOUND",
+                f"the Qwen3-TTS checkpoint is gone: {problem or 'its files were removed'}",
+                {"engine": self.id, "install": self.spec.install},
+            )
         torch = importlib.import_module("torch")
         runtime = getattr(importlib.import_module(MODULE), ENGINE_CLASS)
-        device = os.environ.get(ENV_DEVICE) or ("cuda:0" if torch.cuda.is_available() else "cpu")
+        device = os.environ.get(ENV_DEVICE) or (
+            "cuda:0" if torch.cuda.is_available() else "cpu"
+        )
         dtype = "bfloat16" if str(device).startswith("cuda") else "float32"
-        model = runtime.from_pretrained(str(snapshot), device_map=device, dtype=getattr(torch, dtype))
+        model = runtime.from_pretrained(
+            str(snapshot), device_map=device, dtype=getattr(torch, dtype)
+        )
         sampling = generation_config(snapshot)
         revision = snapshot_revision(snapshot)
         prompts: Dict[str, Any] = {}
         results = []
         for req in reqs:
-            consent = self.check_consent(req)             # verified again here, in the worker, before the clip is read
-            reference = str(req.reference_audio)          # check_request refused a line without one
-            if reference not in prompts:                  # one speaker-embedding prompt per reference clip
-                prompts[reference] = model.create_voice_clone_prompt(ref_audio=reference, x_vector_only_mode=True)
+            consent = self.check_consent(
+                req
+            )  # verified again here, in the worker, before the clip is read
+            reference = str(
+                req.reference_audio
+            )  # check_request refused a line without one
+            if (
+                reference not in prompts
+            ):  # one speaker-embedding prompt per reference clip
+                prompts[reference] = model.create_voice_clone_prompt(
+                    ref_audio=reference, x_vector_only_mode=True
+                )
             seed = int(req.params.get("seed") or 0)
             torch.manual_seed(seed)
-            wavs, rate = model.generate_voice_clone(text=req.text, language=LANGUAGES[req.lang],
-                                                    voice_clone_prompt=prompts[reference],
-                                                    max_new_tokens=MAX_NEW_TOKENS)
+            wavs, rate = model.generate_voice_clone(
+                text=req.text,
+                language=LANGUAGES[req.lang],
+                voice_clone_prompt=prompts[reference],
+                max_new_tokens=MAX_NEW_TOKENS,
+            )
             if not wavs:
-                raise DubbingError("INVALID_RESULT", "qwen3-tts returned no clip for a line", {"engine": self.id})
+                raise DubbingError(
+                    "INVALID_RESULT",
+                    "qwen3-tts returned no clip for a line",
+                    {"engine": self.id},
+                )
             samples = as_samples(wavs[0])
-            if not samples or isinstance(rate, bool) or not isinstance(rate, int) or rate <= 0:
-                raise DubbingError("INVALID_RESULT", "qwen3-tts returned an empty clip or no sample rate",
-                                   {"engine": self.id, "sample_rate": rate})
+            if (
+                not samples
+                or isinstance(rate, bool)
+                or not isinstance(rate, int)
+                or rate <= 0
+            ):
+                raise DubbingError(
+                    "INVALID_RESULT",
+                    "qwen3-tts returned an empty clip or no sample rate",
+                    {"engine": self.id, "sample_rate": rate},
+                )
             # The runtime reports no stop reason: a clip of max_new_tokens frames is a line that ran out of frames, so its
             # end may be missing. A 500-character line (cues.MAX_LINE_CHARS) is far shorter than that at any speaking rate,
             # so this is a runaway generation; it is refused, never returned cut (x-vector clips have no reference prefix).
             if len(samples) >= (MAX_NEW_TOKENS - 1) * FRAME_SECONDS * rate:
-                raise DubbingError("INVALID_RESULT", f"qwen3-tts reached its limit of {MAX_NEW_TOKENS} codec frames "
-                                   f"({MAX_NEW_TOKENS * FRAME_SECONDS:.0f} s) on one line, so the clip may be cut short; it is "
-                                   "refused. Split the line, or try another --seed", {"engine": self.id, "text_chars": len(req.text),
-                                                                                      "max_new_tokens": MAX_NEW_TOKENS})
+                raise DubbingError(
+                    "INVALID_RESULT",
+                    f"qwen3-tts reached its limit of {MAX_NEW_TOKENS} codec frames "
+                    f"({MAX_NEW_TOKENS * FRAME_SECONDS:.0f} s) on one line, so the clip may be cut short; it is "
+                    "refused. Split the line, or try another --seed",
+                    {
+                        "engine": self.id,
+                        "text_chars": len(req.text),
+                        "max_new_tokens": MAX_NEW_TOKENS,
+                    },
+                )
             from .chatterbox import write_wav16
+
             write_wav16(req.output_path, samples, rate)
-            params = {"clone_mode": CLONE_MODE, "language": LANGUAGES[req.lang], "max_new_tokens": MAX_NEW_TOKENS,
-                      "dtype": dtype, "generation_config": sampling}
-            results.append(EngineResult(output_path=req.output_path, engine_version=str(info.get("version")), model=model_info["repo"],
-                                        sample_rate=rate, extra={"seed": seed, "device": str(device), "parameters": params,
-                                                                 "voice": "reference", "consent": consent,
-                                                                 "model_id": model_info["repo"], "revision": revision,
-                                                                 "model_snapshot": snapshot.name}))
+            params = {
+                "clone_mode": CLONE_MODE,
+                "language": LANGUAGES[req.lang],
+                "max_new_tokens": MAX_NEW_TOKENS,
+                "dtype": dtype,
+                "generation_config": sampling,
+            }
+            results.append(
+                EngineResult(
+                    output_path=req.output_path,
+                    engine_version=str(info.get("version")),
+                    model=model_info["repo"],
+                    sample_rate=rate,
+                    extra={
+                        "seed": seed,
+                        "device": str(device),
+                        "parameters": params,
+                        "voice": "reference",
+                        "consent": consent,
+                        "model_id": model_info["repo"],
+                        "revision": revision,
+                        "model_snapshot": snapshot.name,
+                    },
+                )
+            )
         return results

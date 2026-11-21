@@ -32,7 +32,9 @@ _CAPTION_FILES = {
 
 
 def _mentions_captions(value: str) -> bool:
-    tokens = value.lower().replace("-", ".").replace("_", ".").replace("/", ".").split(".")
+    tokens = (
+        value.lower().replace("-", ".").replace("_", ".").replace("/", ".").split(".")
+    )
     return any(word in tokens for word in _CAPTION_WORDS)
 
 
@@ -64,7 +66,11 @@ def test_caption_files_are_rejected_not_silently_checked(name, tmp_path):
     cli = shutil.which("artifacts-skill")
     cmd = [cli] if cli else [sys.executable, "-m", "artifact_skill.cli.main"]
     proc = subprocess.run(
-        [*cmd, "inspect", str(path), "--json"], cwd=tmp_path, capture_output=True, text=True, timeout=60
+        [*cmd, "inspect", str(path), "--json"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
     assert proc.returncode != 0
     assert json.loads(proc.stdout)["error"]["code"] == "ARTIFACT_TYPE_UNSUPPORTED"

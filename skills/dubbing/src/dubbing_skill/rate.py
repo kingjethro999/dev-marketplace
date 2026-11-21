@@ -17,7 +17,9 @@ module adds what a caller needs to ask the translator for a shorter line instead
            `max_tempo`, and also at tempo 1.0 (the only tempo DUB renders until ffmpeg-skill changes tempo on audio
            alone, ADR-007), so a line that fits only when sped up still gets the budget it needs today
 
-Pure: no I/O, no media, no engine. The text is never shortened here: the budget is for the caller (ADR-003)."""
+Pure: no I/O, no media, no engine. The text is never shortened here: the budget is for the caller (ADR-003).
+"""
+
 from __future__ import annotations
 
 import math
@@ -27,16 +29,24 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from .cues import Line
 
 RATE_SCHEMA_VERSION = 1
-RENDER_TEMPO = 1.0                # what DUB renders today (no audio-only tempo in ffmpeg-skill, ADR-007)
-MIN_CLIP_SECONDS = 0.05           # as timing.MIN_CLIP_SECONDS: a shorter clip is not a measurement of speech
-KANJI_MORAE = 2                   # estimates for characters whose reading is not known here
+RENDER_TEMPO = (
+    1.0  # what DUB renders today (no audio-only tempo in ffmpeg-skill, ADR-007)
+)
+MIN_CLIP_SECONDS = (
+    0.05  # as timing.MIN_CLIP_SECONDS: a shorter clip is not a measurement of speech
+)
+KANJI_MORAE = 2  # estimates for characters whose reading is not known here
 DIGIT_MORAE = 2
 LATIN_MORAE = 1
 MORA_LANGS = ("ja",)
-SMALL_KANA = set("ぁぃぅぇぉゃゅょゎァィゥェォャュョヮｧｨｩｪｫｬｭｮ")   # join the mora before them
-VOICED_MARKS = set("ﾞﾟ゙゚゛゜")           # half-width / combining dakuten: no mora of their own
-ESTIMATE_NOTE = (f"morae: kana counted exactly; kanji {KANJI_MORAE}, digits {DIGIT_MORAE} and Latin letters {LATIN_MORAE} "
-                 "each, estimated (no reading is looked up)")
+SMALL_KANA = set(
+    "ぁぃぅぇぉゃゅょゎァィゥェォャュョヮｧｨｩｪｫｬｭｮ"
+)  # join the mora before them
+VOICED_MARKS = set("ﾞﾟ゙゚゛゜")  # half-width / combining dakuten: no mora of their own
+ESTIMATE_NOTE = (
+    f"morae: kana counted exactly; kanji {KANJI_MORAE}, digits {DIGIT_MORAE} and Latin letters {LATIN_MORAE} "
+    "each, estimated (no reading is looked up)"
+)
 
 
 def _r(x: float) -> float:
@@ -49,12 +59,23 @@ def _spoken(ch: str) -> bool:
 
 def _is_kana(ch: str) -> bool:
     o = ord(ch)
-    return 0x3041 <= o <= 0x3096 or 0x30A1 <= o <= 0x30FA or o == 0x30FC or 0xFF66 <= o <= 0xFF9D
+    return (
+        0x3041 <= o <= 0x3096
+        or 0x30A1 <= o <= 0x30FA
+        or o == 0x30FC
+        or 0xFF66 <= o <= 0xFF9D
+    )
 
 
 def _is_kanji(ch: str) -> bool:
     o = ord(ch)
-    return 0x4E00 <= o <= 0x9FFF or 0x3400 <= o <= 0x4DBF or 0xF900 <= o <= 0xFAFF or 0x20000 <= o <= 0x2FA1F or ch in "々〆"
+    return (
+        0x4E00 <= o <= 0x9FFF
+        or 0x3400 <= o <= 0x4DBF
+        or 0xF900 <= o <= 0xFAFF
+        or 0x20000 <= o <= 0x2FA1F
+        or ch in "々〆"
+    )
 
 
 def count_morae(text: str) -> Tuple[int, bool]:
@@ -71,14 +92,18 @@ def count_morae(text: str) -> Tuple[int, bool]:
             morae, exact = morae + KANJI_MORAE, False
         elif unicodedata.category(ch) == "Nd":
             morae, exact = morae + DIGIT_MORAE, False
-        else:                          # Latin and any other letter or symbol: an estimate
+        else:  # Latin and any other letter or symbol: an estimate
             morae, exact = morae + LATIN_MORAE, False
     return morae, exact
 
 
 def units(text: str, lang: str) -> Dict[str, Any]:
     """The length of one line in the target language: spoken characters, and morae for Japanese."""
-    chars = sum(1 for ch in unicodedata.normalize("NFC", text) if _spoken(ch) and ch not in VOICED_MARKS)
+    chars = sum(
+        1
+        for ch in unicodedata.normalize("NFC", text)
+        if _spoken(ch) and ch not in VOICED_MARKS
+    )
     doc: Dict[str, Any] = {"chars": chars}
     if _primary(lang) in MORA_LANGS:
         doc["morae"], doc["morae_exact"] = count_morae(text)
@@ -108,11 +133,20 @@ def voice_model(points: Sequence[Tuple[int, float]]) -> Optional[Dict[str, Any]]
         icept = ms - slope * mu
         if slope > 0 and icept >= 0:
             model, overhead, spu = "linear", icept, slope
-    return {"model": model, "overhead": _r(overhead), "seconds_per_unit": round(spu, 6), "per_second": _r(1.0 / spu),
-            "lines": len(pts), "_overhead": overhead, "_spu": spu}
+    return {
+        "model": model,
+        "overhead": _r(overhead),
+        "seconds_per_unit": round(spu, 6),
+        "per_second": _r(1.0 / spu),
+        "lines": len(pts),
+        "_overhead": overhead,
+        "_spu": spu,
+    }
 
 
-def budget_units(length: int, measured: float, room: float, tempo: float, model: Dict[str, Any]) -> int:
+def budget_units(
+    length: int, measured: float, room: float, tempo: float, model: Dict[str, Any]
+) -> int:
     """The most units a line may have to end inside `room` seconds at `tempo`, by the voice model; always < length."""
     overhead, spu = model["_overhead"], model["_spu"]
     own = (measured - overhead) / length if length > 0 and measured > overhead else spu
@@ -122,26 +156,50 @@ def budget_units(length: int, measured: float, room: float, tempo: float, model:
     return max(0, min(n, length - 1))
 
 
-def _budget(line_units: Dict[str, Any], kinds: List[str], measured: float, room: float, tempo: float,
-            models: Dict[str, Optional[Dict[str, Any]]]) -> Dict[str, Any]:
+def _budget(
+    line_units: Dict[str, Any],
+    kinds: List[str],
+    measured: float,
+    room: float,
+    tempo: float,
+    models: Dict[str, Optional[Dict[str, Any]]],
+) -> Dict[str, Any]:
     doc: Dict[str, Any] = {"tempo": float(tempo), "seconds": _r(max(0.0, room) * tempo)}
     shorten: Dict[str, Any] = {}
     for kind in kinds:
         model = models.get(kind)
-        n = budget_units(line_units[kind], measured, max(0.0, room), tempo, model) if model else None
+        n = (
+            budget_units(line_units[kind], measured, max(0.0, room), tempo, model)
+            if model
+            else None
+        )
         doc[kind] = n
         shorten[kind] = None if n is None else line_units[kind] - n
     doc["shorten_by"] = shorten
     return doc
 
 
-def rate_report(lines: Sequence[Line], plan_lines: Sequence[Dict[str, Any]], lang: str, max_tempo: float) -> Dict[str, Any]:
+def rate_report(
+    lines: Sequence[Line],
+    plan_lines: Sequence[Dict[str, Any]],
+    lang: str,
+    max_tempo: float,
+) -> Dict[str, Any]:
     """Per cue: its length, whether it fits at a tempo up to `max_tempo` and at tempo 1.0, and for each line that does
-    not, its length budget; plus the voice's rate. `plan_lines` are timing.fit_lines' decisions for these lines."""
+    not, its length budget; plus the voice's rate. `plan_lines` are timing.fit_lines' decisions for these lines.
+    """
     kinds = unit_kinds(lang)
     line_units = [units(line.text, lang) for line in lines]
-    models = {kind: voice_model([(u[kind], d["measured"]) for u, d in zip(line_units, plan_lines) if d["measured"] is not None])
-              for kind in kinds}
+    models = {
+        kind: voice_model(
+            [
+                (u[kind], d["measured"])
+                for u, d in zip(line_units, plan_lines)
+                if d["measured"] is not None
+            ]
+        )
+        for kind in kinds
+    }
     out_lines = []
     over: List[int] = []
     sped: List[int] = []
@@ -149,31 +207,67 @@ def rate_report(lines: Sequence[Line], plan_lines: Sequence[Dict[str, Any]], lan
         fits = d["status"] != "unfit"
         renders = fits and (d["tempo"] or 0.0) <= RENDER_TEMPO + 1e-9
         measured = d["measured"]
-        doc: Dict[str, Any] = {"index": line.index, "status": d["status"], **u, "measured": measured, "room": d["room"],
-                               "fits": fits, "fits_at_tempo_1": renders, "budget": None, "budget_at_tempo_1": None,
-                               "reason": None}
+        doc: Dict[str, Any] = {
+            "index": line.index,
+            "status": d["status"],
+            **u,
+            "measured": measured,
+            "room": d["room"],
+            "fits": fits,
+            "fits_at_tempo_1": renders,
+            "budget": None,
+            "budget_at_tempo_1": None,
+            "reason": None,
+        }
         if measured is not None and measured >= MIN_CLIP_SECONDS:
             for kind in kinds:
                 if u[kind]:
                     doc[f"{kind}_per_second"] = _r(u[kind] / measured)
-        measurable = measured is not None and measured >= MIN_CLIP_SECONDS and any(models.values())
+        measurable = (
+            measured is not None
+            and measured >= MIN_CLIP_SECONDS
+            and any(models.values())
+        )
         if not fits:
             if measurable:
-                doc["budget"] = _budget(u, kinds, measured, d["room"], float(max_tempo), models)
+                doc["budget"] = _budget(
+                    u, kinds, measured, d["room"], float(max_tempo), models
+                )
                 over.append(line.index)
             else:
-                doc["reason"] = d["reason"]        # empty_clip / not_measured: nothing to measure a budget from
+                doc["reason"] = d[
+                    "reason"
+                ]  # empty_clip / not_measured: nothing to measure a budget from
         if not renders and measurable and max_tempo > RENDER_TEMPO + 1e-9:
-            doc["budget_at_tempo_1"] = _budget(u, kinds, measured, d["room"], RENDER_TEMPO, models)
+            doc["budget_at_tempo_1"] = _budget(
+                u, kinds, measured, d["room"], RENDER_TEMPO, models
+            )
             if fits:
                 sped.append(line.index)
         out_lines.append(doc)
-    voice = {kind: ({k: v for k, v in m.items() if not k.startswith("_")} if m else None) for kind, m in models.items()}
-    return {"version": RATE_SCHEMA_VERSION, "lang": lang, "units": kinds, "max_tempo": float(max_tempo),
-            "render_tempo": RENDER_TEMPO, "voice": voice, "lines": out_lines,
-            "over_budget": over, "needs_tempo": sped,
-            "summary": {"lines": len(out_lines), "fit": sum(1 for d in out_lines if d["fits"]),
-                        "fit_at_tempo_1": sum(1 for d in out_lines if d["fits_at_tempo_1"]),
-                        "with_budget": len(over), "unmeasured": [d["index"] for d in out_lines if d["reason"]],
-                        "every_line_fits_or_has_a_budget": all(d["fits"] or d["budget"] is not None for d in out_lines)},
-            "estimate": ESTIMATE_NOTE if "morae" in kinds else None}
+    voice = {
+        kind: ({k: v for k, v in m.items() if not k.startswith("_")} if m else None)
+        for kind, m in models.items()
+    }
+    return {
+        "version": RATE_SCHEMA_VERSION,
+        "lang": lang,
+        "units": kinds,
+        "max_tempo": float(max_tempo),
+        "render_tempo": RENDER_TEMPO,
+        "voice": voice,
+        "lines": out_lines,
+        "over_budget": over,
+        "needs_tempo": sped,
+        "summary": {
+            "lines": len(out_lines),
+            "fit": sum(1 for d in out_lines if d["fits"]),
+            "fit_at_tempo_1": sum(1 for d in out_lines if d["fits_at_tempo_1"]),
+            "with_budget": len(over),
+            "unmeasured": [d["index"] for d in out_lines if d["reason"]],
+            "every_line_fits_or_has_a_budget": all(
+                d["fits"] or d["budget"] is not None for d in out_lines
+            ),
+        },
+        "estimate": ESTIMATE_NOTE if "morae" in kinds else None,
+    }

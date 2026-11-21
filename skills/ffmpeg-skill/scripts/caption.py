@@ -32,6 +32,7 @@ Examples:
   python3 caption.py input.mp4 --text cues_ko.txt --lang ko        # a font that covers the script is picked automatically
   python3 caption.py input.mp4 --srt subs.srt --offset -0.4 --max-lines 2 --min-duration 1.2
 """
+
 import argparse
 import json
 import os
@@ -40,13 +41,75 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from _platforms import (PLATFORMS, PLATFORM_CHOICES, ASS_SCRIPT_HEIGHT, ass_units,
-                        resolve as resolve_platform)
-from _ass_overlay import (EMOJI_SENTINEL, emoji_placeholder, ass_escape_markup,
-                          strip_srt_markup, reinsert_srt_markup, carry_srt_markup, srt_alignment)
+from _platforms import (
+    PLATFORMS,
+    PLATFORM_CHOICES,
+    ASS_SCRIPT_HEIGHT,
+    ass_units,
+    resolve as resolve_platform,
+)
+from _ass_overlay import (
+    EMOJI_SENTINEL,
+    emoji_placeholder,
+    ass_escape_markup,
+    strip_srt_markup,
+    reinsert_srt_markup,
+    carry_srt_markup,
+    srt_alignment,
+)
 from _common.emit import refuse  # noqa: E402
 from _common.emoji import emoji_missing_asset_note, emoji_mono_on_colour_note
-from _common import require_filter, emoji_filter_chain, EMOJI_ASSET_HINT, emoji_asset_for, emoji_codepoint_name, emoji_support, resolve_emoji_assets, NO_SPACE_SCRIPTS, char_script, text_width_em, emoji_clusters, has_emoji, detect_script, BIDI_SCRIPTS, STATE, brand_states_font, script_font_for_text, signed_time_arg, brand_caption_style, color_hex, drawn_chain, layer_base_chain, load_brand, overlay_format, rgb_chain_to_bt709, video_args, add_common, apply_common, emit, aac_args, cfr_args, cfr_at_input, with_cfr, default_output, die, escape_filter_path, ffmpeg_base, fmt_smpte_time, info, MissingFpsError, parse_time, probe, run, X264_PRESETS, read_text_or_die, fmt_secs, refuse_existing_outputs, guard_sidecar
+from _common import (
+    require_filter,
+    emoji_filter_chain,
+    EMOJI_ASSET_HINT,
+    emoji_asset_for,
+    emoji_codepoint_name,
+    emoji_support,
+    resolve_emoji_assets,
+    NO_SPACE_SCRIPTS,
+    char_script,
+    text_width_em,
+    emoji_clusters,
+    has_emoji,
+    detect_script,
+    BIDI_SCRIPTS,
+    STATE,
+    brand_states_font,
+    script_font_for_text,
+    signed_time_arg,
+    brand_caption_style,
+    color_hex,
+    drawn_chain,
+    layer_base_chain,
+    load_brand,
+    overlay_format,
+    rgb_chain_to_bt709,
+    video_args,
+    add_common,
+    apply_common,
+    emit,
+    aac_args,
+    cfr_args,
+    cfr_at_input,
+    with_cfr,
+    default_output,
+    die,
+    escape_filter_path,
+    ffmpeg_base,
+    fmt_smpte_time,
+    info,
+    MissingFpsError,
+    parse_time,
+    probe,
+    run,
+    X264_PRESETS,
+    read_text_or_die,
+    fmt_secs,
+    refuse_existing_outputs,
+    guard_sidecar,
+)
+
 # The line breaker, lifted into _common/text.py in 1.16.0 so graphics.py can use the same rules.
 # The ASR bridge and the SRT reader/writer live in _common.asr since 1.17 (silence.py --filler
 # shares them). They stay caption.py's public names -- every caller and test that reached for
@@ -55,34 +118,114 @@ from _common import asr as _asr
 from _common.asr import ENGINE_CHOICES
 from _common.emit import note, warn
 from _common.probe import display_size, square_pixels, square_pixels_note
-from _common.runner import carried_stream_maps, refuse_output_is_input, same_file, subtitle_codec_for, subtitle_container_holds
-from _common.fonts import font_choice, fonts_dir_face, record_font_choice, require_font_file
-from _common import (ASR_INSTALL_HINT, die_no_engine, parse_srt, transcribe, whisper_word_timings,
-                     write_srt)
+from _common.runner import (
+    carried_stream_maps,
+    refuse_output_is_input,
+    same_file,
+    subtitle_codec_for,
+    subtitle_container_holds,
+)
+from _common.fonts import (
+    font_choice,
+    fonts_dir_face,
+    record_font_choice,
+    require_font_file,
+)
+from _common import (
+    ASR_INSTALL_HINT,
+    die_no_engine,
+    parse_srt,
+    transcribe,
+    whisper_word_timings,
+    write_srt,
+)
 from _common.asr import srt_blocks
 from _common.runner import normalize_text
-from _common import (SAFE_WIDTH_FRACTION, ORPHAN_MIN_EM, WRAP_MODES, wrap_text, wrap_variants, best_break,
-                     fit_size, line_em_for_size, MIN_CAPTION_FRACTION,
-                     break_penalty, _is_weak_line, _atoms, _join, _break_spaced, _bare_word, _function_words,
-                     _split_hyphens, _slice_atom, FUNCTION_WORDS, JA_PARTICLES, JA_SENTENCE_END, _fix_orphans, _rebalance)
+from _common import (
+    SAFE_WIDTH_FRACTION,
+    ORPHAN_MIN_EM,
+    WRAP_MODES,
+    wrap_text,
+    wrap_variants,
+    best_break,
+    fit_size,
+    line_em_for_size,
+    MIN_CAPTION_FRACTION,
+    break_penalty,
+    _is_weak_line,
+    _atoms,
+    _join,
+    _break_spaced,
+    _bare_word,
+    _function_words,
+    _split_hyphens,
+    _slice_atom,
+    FUNCTION_WORDS,
+    JA_PARTICLES,
+    JA_SENTENCE_END,
+    _fix_orphans,
+    _rebalance,
+)
 
 # The breaker's names are caption.py's public surface as much as _common's: every caller and test
 # that reached for `caption.wrap_text` before 1.16 still does.
-__all__ = ["parse_srt", "write_srt", "transcribe", "whisper_word_timings", "die_no_engine",
-           "ASR_INSTALL_HINT",
-           "SAFE_WIDTH_FRACTION", "ORPHAN_MIN_EM", "WRAP_MODES", "wrap_text", "wrap_variants",
-           "fit_size", "line_em_for_size", "MIN_CAPTION_FRACTION",
-           "best_break", "break_penalty", "_is_weak_line", "_atoms", "_join", "_break_spaced",
-           "_bare_word", "_function_words", "_split_hyphens", "_slice_atom", "FUNCTION_WORDS", "JA_PARTICLES",
-           "JA_SENTENCE_END", "_fix_orphans", "_rebalance", "char_script", "NO_SPACE_SCRIPTS",
-           "text_width_em"]
+__all__ = [
+    "parse_srt",
+    "write_srt",
+    "transcribe",
+    "whisper_word_timings",
+    "die_no_engine",
+    "ASR_INSTALL_HINT",
+    "SAFE_WIDTH_FRACTION",
+    "ORPHAN_MIN_EM",
+    "WRAP_MODES",
+    "wrap_text",
+    "wrap_variants",
+    "fit_size",
+    "line_em_for_size",
+    "MIN_CAPTION_FRACTION",
+    "best_break",
+    "break_penalty",
+    "_is_weak_line",
+    "_atoms",
+    "_join",
+    "_break_spaced",
+    "_bare_word",
+    "_function_words",
+    "_split_hyphens",
+    "_slice_atom",
+    "FUNCTION_WORDS",
+    "JA_PARTICLES",
+    "JA_SENTENCE_END",
+    "_fix_orphans",
+    "_rebalance",
+    "char_script",
+    "NO_SPACE_SCRIPTS",
+    "text_width_em",
+]
 
-ALIGN = {"bottom": 2, "top": 8, "center": 5, "bottom-left": 1, "bottom-right": 3, "top-left": 7, "top-right": 9}
+ALIGN = {
+    "bottom": 2,
+    "top": 8,
+    "center": 5,
+    "bottom-left": 1,
+    "bottom-right": 3,
+    "top-left": 7,
+    "top-right": 9,
+}
 # libass reads a force_style Alignment in the legacy SSA numbering (1-3 bottom, 5-7 top, 9-11
 # middle), not the v4+ numpad one a Style line uses: only the bottom row is the same number in
 # both. Through 3.2.3 the SRT burn passed the numpad value, so --position top landed mid-left,
 # center top-left, top-left top-right (#436, measured on libass 0.17.1 and FFmpeg 9.0.2).
-FORCE_STYLE_ALIGN = {"bottom": 2, "top": 6, "center": 10, "bottom-left": 1, "bottom-right": 3, "top-left": 5, "top-right": 7}
+FORCE_STYLE_ALIGN = {
+    "bottom": 2,
+    "top": 6,
+    "center": 10,
+    "bottom-left": 1,
+    "bottom-right": 3,
+    "top-left": 5,
+    "top-right": 7,
+}
 
 TIME_RE = re.compile(
     r"^\s*(?P<a>[\d:.,@]+)\s*(?P<sep>-->|-|–|to)\s*(?P<b>[\d:.,@]+)\s+(?P<text>.+)$"  # @ = the 1.9 @fps suffix
@@ -95,43 +238,64 @@ def cue_times_match(line: str) -> "Optional[re.Match[str]]":
     also an English word: "3 to 5 apples" is text, so with "to" both sides must be clock times
     (a ':' in each, "0:03 to 0:05 Hello")."""
     m = TIME_RE.match(line)
-    if m and m.group("sep") == "to" and not (":" in m.group("a") and ":" in m.group("b")):
+    if (
+        m
+        and m.group("sep") == "to"
+        and not (":" in m.group("a") and ":" in m.group("b"))
+    ):
         return None
     return m
 
 
 # an SRT timing line: the times alone, the cue text on the lines after it
 DROP_FRAME_RE = re.compile(r"^\s*\d+:\d{2}:\d{2};\d+")
-SRT_TIMING_RE = re.compile(r"^\s*\d+:\d{2}:\d{2}[,.]\d+\s*-->\s*\d+:\d{2}:\d{2}[,.]\d+\s*$")
+SRT_TIMING_RE = re.compile(
+    r"^\s*\d+:\d{2}:\d{2}[,.]\d+\s*-->\s*\d+:\d{2}:\d{2}[,.]\d+\s*$"
+)
 # the same line as WebVTT may write it, without the hours: `00:01.000 --> 00:02.000`
-TIMING_ONLY_RE = re.compile(r"^\s*(?:\d+:)?\d{1,2}:\d{2}[,.]\d+\s*-->\s*(?:\d+:)?\d{1,2}:\d{2}[,.]\d+\s*$")
+TIMING_ONLY_RE = re.compile(
+    r"^\s*(?:\d+:)?\d{1,2}:\d{2}[,.]\d+\s*-->\s*(?:\d+:)?\d{1,2}:\d{2}[,.]\d+\s*$"
+)
 ASS_SECTIONS = ("[script info]", "[v4+ styles]", "[v4 styles]", "[events]")
 
 
 def refuse_not_a_cue_file(path: str, lines: List[str]) -> None:
     """--text given a file in another format (#404): read as a cue file, a WebVTT header, an ASS
     section or a JSON document was burned in line by line, auto-timed 3 s apart. Named by what the
-    file starts with; the SRT timing-line check below catches a file with no such header."""
+    file starts with; the SRT timing-line check below catches a file with no such header.
+    """
     head = next((ln.strip() for ln in lines if ln.strip()), "")
     cue_shape = "A cue file has one cue per line: `START-END text` (or text alone, timed --auto-seconds apart)"
     if head.upper().startswith("WEBVTT"):
-        die(f"--text: {path} is a WebVTT subtitle file (it starts with {head[:20]!r}); pass it as --srt, which reads "
-            f"WebVTT (render.py: --srt, not --cues). {cue_shape}", kind="input")
+        die(
+            f"--text: {path} is a WebVTT subtitle file (it starts with {head[:20]!r}); pass it as --srt, which reads "
+            f"WebVTT (render.py: --srt, not --cues). {cue_shape}",
+            kind="input",
+        )
     if head.lower() in ASS_SECTIONS or head.startswith("Dialogue:"):
-        die(f"--text: {path} is an ASS/SSA subtitle file (it starts with {head[:20]!r}); pass it as --ass, which burns "
-            f"it with the styles inside it (in a render.py project, the captions stage's \"ass\" key). {cue_shape}",
-            kind="input")
+        die(
+            f"--text: {path} is an ASS/SSA subtitle file (it starts with {head[:20]!r}); pass it as --ass, which burns "
+            f'it with the styles inside it (in a render.py project, the captions stage\'s "ass" key). {cue_shape}',
+            kind="input",
+        )
     if head[:1] in "{[":
         try:
             doc = json.loads("\n".join(lines))
         except ValueError:
             doc = None
-        if isinstance(doc, dict) or (isinstance(doc, list) and doc and isinstance(doc[0], (dict, list))):
-            die(f"--text: {path} is a JSON document, not a cue file. {cue_shape}. A whisper JSON is a transcript: "
-                "caption.py --transcribe writes the cues from the audio", kind="input")
+        if isinstance(doc, dict) or (
+            isinstance(doc, list) and doc and isinstance(doc[0], (dict, list))
+        ):
+            die(
+                f"--text: {path} is a JSON document, not a cue file. {cue_shape}. A whisper JSON is a transcript: "
+                "caption.py --transcribe writes the cues from the audio",
+                kind="input",
+            )
 
 
-def parse_text_cues(path: str, auto_seconds: float, gap: float, fps: Optional[float] = None) -> List[Tuple[float, float, str]]:
+def parse_text_cues(
+    path: str, auto_seconds: float, gap: float, fps: Optional[float] = None
+) -> List[Tuple[float, float, str]]:
     cues: List[Tuple[float, float, str]] = []
     cursor = 0.0
     # split at "\n" only: splitlines() also breaks a cue at U+2028, U+0085, \v and \f, which
@@ -141,34 +305,51 @@ def parse_text_cues(path: str, auto_seconds: float, gap: float, fps: Optional[fl
     for n, raw in enumerate(lines, 1):
         if TIMING_ONLY_RE.match(raw) and not SRT_TIMING_RE.match(raw):
             # WebVTT's short form (no hours), in a file without the WEBVTT header
-            die(f"--text: {path} is a subtitle file, not a cue file (line {n} is a timing line with no text: "
-                f"'{raw.strip()}'); pass it as --srt (render.py: --srt, not --cues)", kind="input")
+            die(
+                f"--text: {path} is a subtitle file, not a cue file (line {n} is a timing line with no text: "
+                f"'{raw.strip()}'); pass it as --srt (render.py: --srt, not --cues)",
+                kind="input",
+            )
         if SRT_TIMING_RE.match(raw):
             # a cue file puts the text on the line with its times; this line has the times alone, so
             # the file is an SRT. Read as a cue file, its numbers and timing lines would be burned in
             # as captions, auto-timed 3 s apart (#396)
-            die(f"--text: {path} is an SRT file (line {n} is a timing line with no text: "
-                f"'{raw.strip()}'); pass it as --srt (render.py: --srt, not --cues)", kind="input")
+            die(
+                f"--text: {path} is an SRT file (line {n} is a timing line with no text: "
+                f"'{raw.strip()}'); pass it as --srt (render.py: --srt, not --cues)",
+                kind="input",
+            )
         if DROP_FRAME_RE.match(raw):
             # TIME_RE has no ';', so the line would be burned as caption text, auto-timed
-            die(f"--text: line {n} has a drop-frame timecode (';'), which is not read: write it as "
-                "hh:mm:ss:ff@29.97 or in seconds", kind="input")
+            die(
+                f"--text: line {n} has a drop-frame timecode (';'), which is not read: write it as "
+                "hh:mm:ss:ff@29.97 or in seconds",
+                kind="input",
+            )
     for line in lines:
         if not line.strip():
             continue
         m = cue_times_match(line)
         if m:
             try:
-                start, end = parse_time(m.group("a"), fps), parse_time(m.group("b"), fps)
+                start, end = parse_time(m.group("a"), fps), parse_time(
+                    m.group("b"), fps
+                )
             except MissingFpsError as e:
-                die(f"cue '{line}': {e} -- pass --fps, or --input's own fps is used automatically when given")
+                die(
+                    f"cue '{line}': {e} -- pass --fps, or --input's own fps is used automatically when given"
+                )
             except ValueError:
                 # TIME_RE matched (so m.group("text") is the real cue text, not the broken
                 # timestamp), but one of the two timestamps itself failed to parse (e.g. a
                 # malformed "00:00:03.15.999") -- falling back to `line.strip()` here used to
                 # burn the whole raw line, broken timestamp included, into the caption instead
                 # of just the text after it.
-                start, end, text = cursor, cursor + auto_seconds, m.group("text").strip()
+                start, end, text = (
+                    cursor,
+                    cursor + auto_seconds,
+                    m.group("text").strip(),
+                )
             else:
                 text = m.group("text").strip()
         else:
@@ -183,7 +364,9 @@ def parse_text_cues(path: str, auto_seconds: float, gap: float, fps: Optional[fl
     return cues
 
 
-def word_durations_from_audio(video: str, start: float, end: float, n_words: int, audio_stream: int = 0) -> List[int]:
+def word_durations_from_audio(
+    video: str, start: float, end: float, n_words: int, audio_stream: int = 0
+) -> List[int]:
     """Split a cue's time across n_words in proportion to speech energy (centiseconds each).
 
     Decodes the cue window to 8 kHz mono, builds a 10 ms RMS envelope, removes the noise floor,
@@ -192,15 +375,40 @@ def word_durations_from_audio(video: str, start: float, end: float, n_words: int
     """
     import struct
     from _common import require_tool, run_analysis
+
     total_cs = max(1, int(round((end - start) * 100)))
     if n_words <= 1:
         return [total_cs]
     ffmpeg = require_tool("ffmpeg")
-    cmd = [ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-ss", f"{start:.3f}", "-i", video,
-           "-map", f"0:a:{audio_stream}", "-t", f"{end - start:.3f}", "-vn",
-           # a sound that starts late is padded to its place on the file's clock (#414)
-           "-af", "aresample=async=1:first_pts=0", "-ac", "1", "-ar", "8000", "-f", "s16le", "-"]
-    proc = run_analysis(cmd, check=False, text=False)  # under --timeout like every other measurement
+    cmd = [
+        ffmpeg,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-nostdin",
+        "-ss",
+        f"{start:.3f}",
+        "-i",
+        video,
+        "-map",
+        f"0:a:{audio_stream}",
+        "-t",
+        f"{end - start:.3f}",
+        "-vn",
+        # a sound that starts late is padded to its place on the file's clock (#414)
+        "-af",
+        "aresample=async=1:first_pts=0",
+        "-ac",
+        "1",
+        "-ar",
+        "8000",
+        "-f",
+        "s16le",
+        "-",
+    ]
+    proc = run_analysis(
+        cmd, check=False, text=False
+    )  # under --timeout like every other measurement
     n = len(proc.stdout) // 2
     if proc.returncode != 0 or n < 800:
         per = total_cs // n_words
@@ -209,7 +417,7 @@ def word_durations_from_audio(video: str, start: float, end: float, n_words: int
     step = 80  # 10 ms
     env = []
     for i in range(0, n - step + 1, step):
-        block = samples[i:i + step]
+        block = samples[i : i + step]
         env.append((sum(x * x for x in block) / step) ** 0.5)
     floor = sorted(env)[len(env) // 5]  # 20th percentile ~ noise floor
     energy = [max(0.0, e - floor) for e in env]
@@ -255,7 +463,6 @@ def word_durations_from_audio(video: str, start: float, end: float, n_words: int
     return out
 
 
-
 # --------------------------------------------------------------------------- emoji (1.15)
 def _cue_lines(text: str) -> List[str]:
     return [l for l in text.split("\n")]
@@ -273,27 +480,42 @@ def plan_emoji(cues, args, play_w, play_h, brand=None):
         return cues, None
     assets = resolve_emoji_assets(getattr(args, "emoji_assets", None), None, brand)
     want = getattr(args, "emoji", "auto")
-    support = emoji_support(assets, probe=True, fonts_dir=getattr(args, "fonts_dir", None))
+    support = emoji_support(
+        assets, probe=True, fonts_dir=getattr(args, "fonts_dir", None)
+    )
     mode = support["mode"] if want == "auto" else want
     if want == "color" and not support["libass_color"]:
-        die("--emoji color: this ffmpeg renders emoji monochrome through libass "
+        die(
+            "--emoji color: this ffmpeg renders emoji monochrome through libass "
             f"({support['detail']}) -- pass --emoji-assets DIR for colour, or --emoji mono",
-            kind="input")
+            kind="input",
+        )
     if want == "png" and not assets:
-        die("--emoji png: no emoji assets directory resolved -- " + EMOJI_ASSET_HINT, kind="input")
+        die(
+            "--emoji png: no emoji assets directory resolved -- " + EMOJI_ASSET_HINT,
+            kind="input",
+        )
     # --emoji mono asks for the font's glyph, and there is none: empty boxes (tofu) are a failed job
     # (#395). An auto run takes mode "none" instead, as on a machine with no emoji face at all,
     # and says why below; --emoji mono never uses assets, so they do not save it
     if want == "mono" and support.get("libass_glyph") is False:
-        die(f"--emoji mono: this ffmpeg draws no emoji glyph through libass ({support['detail']}), so "
+        die(
+            f"--emoji mono: this ffmpeg draws no emoji glyph through libass ({support['detail']}), so "
             f"{len(clusters_all)} emoji would come out as empty boxes -- pass --emoji-assets DIR for colour, "
-            "or --emoji none to leave them out of the drawn text", kind="input")
+            "or --emoji none to leave them out of the drawn text",
+            kind="input",
+        )
     if want == "mono" and support.get("libass_color"):
         mode = "color"
         warn(emoji_mono_on_colour_note(support), "emoji_mono_drawn_in_colour")
-    plan = {"mode": mode, "count": len(clusters_all),
-            "clusters": sorted({emoji_codepoint_name(cl) for cl in clusters_all}),
-            "assets": assets, "missing": [], "overlays": []}
+    plan = {
+        "mode": mode,
+        "count": len(clusters_all),
+        "clusters": sorted({emoji_codepoint_name(cl) for cl in clusters_all}),
+        "assets": assets,
+        "missing": [],
+        "overlays": [],
+    }
     if mode == "none":
         out = []
         for start, end, text in cues:
@@ -301,18 +523,31 @@ def plan_emoji(cues, args, play_w, play_h, brand=None):
                 text = text.replace(cl, "")
             out.append((start, end, re.sub(r"[ \t]{2,}", " ", text).strip()))
         if want == "auto":
-            why = ("libass draws no emoji glyph on this build (an empty box at best)"
-                   if support.get("libass_glyph") is False else "no face here draws them")
-            msg = (f"emoji: {len(clusters_all)} left out of the drawn text: {why} -- pass --emoji-assets DIR "
-                   "to draw them as PNGs")
-            warn(msg, "emoji_not_drawn", count=len(clusters_all), reason=support.get("detail"))
+            why = (
+                "libass draws no emoji glyph on this build (an empty box at best)"
+                if support.get("libass_glyph") is False
+                else "no face here draws them"
+            )
+            msg = (
+                f"emoji: {len(clusters_all)} left out of the drawn text: {why} -- pass --emoji-assets DIR "
+                "to draw them as PNGs"
+            )
+            warn(
+                msg,
+                "emoji_not_drawn",
+                count=len(clusters_all),
+                reason=support.get("detail"),
+            )
         else:
             info("emoji: stripped from the drawn text (--emoji none)")
         return out, plan
     if mode in ("color", "mono"):
         if mode == "mono":
-            warn("emoji rendered monochrome (no colour path on this ffmpeg; "
-                 "--emoji-assets DIR for colour). " + support["detail"], "emoji_monochrome")
+            warn(
+                "emoji rendered monochrome (no colour path on this ffmpeg; "
+                "--emoji-assets DIR for colour). " + support["detail"],
+                "emoji_monochrome",
+            )
         return cues, plan
     # --- the PNG overlay route -------------------------------------------------------------
     if not play_w or not play_h:
@@ -320,7 +555,10 @@ def plan_emoji(cues, args, play_w, play_h, brand=None):
     scale = float(getattr(args, "emoji_scale", 1.0) or 1.0)
     # --animate moves the TEXT (\fad/\fscx in the ASS); the PNG has to move with it, or the emoji
     # pops in against a line that is still fading up. These match the \fad values below.
-    fade_in, fade_out = (ms / 1000.0 for ms in ANIMATE_FADE_MS.get(getattr(args, "animate", None) or "none", (0, 0)))
+    fade_in, fade_out = (
+        ms / 1000.0
+        for ms in ANIMATE_FADE_MS.get(getattr(args, "animate", None) or "none", (0, 0))
+    )
     size_px = args.size * play_h / 288.0
     margin_px = args.margin * play_h / 288.0
     line_h = size_px * 1.2
@@ -334,7 +572,9 @@ def plan_emoji(cues, args, play_w, play_h, brand=None):
         lines = _cue_lines(text)
         n = len(lines)
         new_lines = []
-        align = srt_alignment(text) or ALIGN[args.position]   # a cue's {\anN} moves its emoji too
+        align = (
+            srt_alignment(text) or ALIGN[args.position]
+        )  # a cue's {\anN} moves its emoji too
         for i, line in enumerate(lines):
             if align in (7, 8, 9):
                 y_top = margin_px + i * line_h
@@ -362,22 +602,34 @@ def plan_emoji(cues, args, play_w, play_h, brand=None):
                 if not asset:
                     if name not in plan["missing"]:
                         plan["missing"].append(name)
-                    rebuilt += line[cursor:idx + len(cluster)]
+                    rebuilt += line[cursor : idx + len(cluster)]
                     cursor = idx + len(cluster)
                     continue
-                prefix = strip_srt_markup(prefix)   # a tag before the emoji takes no room
+                prefix = strip_srt_markup(
+                    prefix
+                )  # a tag before the emoji takes no room
                 if rtl:
                     x = x0 + line_w - text_width_em(prefix + cluster, scale) * size_px
                 else:
                     x = x0 + text_width_em(prefix, scale) * size_px
                 y = y_top + (line_h - box_px) / 2.0
-                plan["overlays"].append({
-                    "asset": asset, "cluster": name,
-                    "x": int(round(max(0.0, min(x, play_w - box_px)))),
-                    "y": int(round(max(0.0, min(y, play_h - box_px)))),
-                    "start": round(start, 3), "end": round(end, 3), "box": int(round(box_px)),
-                    "fade_in": round(min(fade_in, max(0.0, (end - start) / 2.0)), 3),
-                    "fade_out": round(min(fade_out, max(0.0, (end - start) / 2.0)), 3)})
+                plan["overlays"].append(
+                    {
+                        "asset": asset,
+                        "cluster": name,
+                        "x": int(round(max(0.0, min(x, play_w - box_px)))),
+                        "y": int(round(max(0.0, min(y, play_h - box_px)))),
+                        "start": round(start, 3),
+                        "end": round(end, 3),
+                        "box": int(round(box_px)),
+                        "fade_in": round(
+                            min(fade_in, max(0.0, (end - start) / 2.0)), 3
+                        ),
+                        "fade_out": round(
+                            min(fade_out, max(0.0, (end - start) / 2.0)), 3
+                        ),
+                    }
+                )
                 rebuilt += line[cursor:idx] + EMOJI_SENTINEL
                 cursor = idx + len(cluster)
             rebuilt += line[cursor:]
@@ -387,19 +639,34 @@ def plan_emoji(cues, args, play_w, play_h, brand=None):
     _max = getattr(args, "emoji_max", None)
     limit = 60 if _max is None else int(_max)
     if len(plan["overlays"]) > limit:
-        die(f"{len(plan['overlays'])} emoji overlays would be built for this job (limit {limit}, "
+        die(
+            f"{len(plan['overlays'])} emoji overlays would be built for this job (limit {limit}, "
             "--emoji-max raises it); ffmpeg's filter graph and the per-frame cost both grow "
-            "linearly -- split the job, or use --emoji none", kind="input")
+            "linearly -- split the job, or use --emoji none",
+            kind="input",
+        )
     if plan["missing"]:
-        warn(emoji_missing_asset_note(plan["missing"], support), "emoji_assets_missing", missing=list(plan["missing"]))
+        warn(
+            emoji_missing_asset_note(plan["missing"], support),
+            "emoji_assets_missing",
+            missing=list(plan["missing"]),
+        )
     plan["box_px"] = int(round(box_px))
     return out_cues, plan
 
 
-def layout_cues(cues: List[Tuple[float, float, str]], *, max_em: Optional[float], max_lines: int,
-                min_duration: float, offset: float, wrap: str = "phrase",
-                lang: Optional[str] = None, per_cue_em: Optional[List[Optional[float]]] = None,
-                per_cue_size: Optional[List[int]] = None) -> Tuple[List[Tuple[float, float, str]], dict]:
+def layout_cues(
+    cues: List[Tuple[float, float, str]],
+    *,
+    max_em: Optional[float],
+    max_lines: int,
+    min_duration: float,
+    offset: float,
+    wrap: str = "phrase",
+    lang: Optional[str] = None,
+    per_cue_em: Optional[List[Optional[float]]] = None,
+    per_cue_size: Optional[List[int]] = None,
+) -> Tuple[List[Tuple[float, float, str]], dict]:
     """Shift, wrap, split and lengthen cues so they can actually be read.
 
     `offset` moves every cue (a transcript that runs early/late); `max_em` wraps each cue to the
@@ -415,8 +682,16 @@ def layout_cues(cues: List[Tuple[float, float, str]], *, max_em: Optional[float]
     size each OUTPUT cue belongs to after splits have renumbered them; it comes back as
     `stats["cue_sizes"]`, one entry per returned cue.
     """
-    stats = {"shifted": 0, "wrapped": 0, "split": 0, "extended": 0, "dropped": 0, "rebalanced": 0,
-             "wrap": wrap, "phrase_breaks": 0}
+    stats = {
+        "shifted": 0,
+        "wrapped": 0,
+        "split": 0,
+        "extended": 0,
+        "dropped": 0,
+        "rebalanced": 0,
+        "wrap": wrap,
+        "phrase_breaks": 0,
+    }
     # ass_units_local's floor + the escape hatch below mean an atom this loop hands to
     # wrap_variants(..., slice_overlong=True) can still overflow only if a SINGLE character is
     # wider than the column -- practically unreachable at any real --min-size. `overlong` stays
@@ -445,15 +720,23 @@ def layout_cues(cues: List[Tuple[float, float, str]], *, max_em: Optional[float]
             # SRT markup (<i>, <font color>, {\an8}) is not text: the wrap measures and breaks
             # the words a viewer reads, and the tags go back next to the characters they styled
             plain = strip_srt_markup(text)
-            lines, greedy, measured = wrap_variants(plain, own_em, mode=wrap, lang=lang,
-                                                     slice_overlong=True, sliced=sliced_atoms)
+            lines, greedy, measured = wrap_variants(
+                plain,
+                own_em,
+                mode=wrap,
+                lang=lang,
+                slice_overlong=True,
+                sliced=sliced_atoms,
+            )
             if lines != [l for l in plain.split("\n") if l.strip()]:
                 stats["wrapped"] += 1
             if sliced_atoms:
                 # the escape hatch fired: a word or run with no break point the wrapper may use
                 # was still wider than the column alone, even at the size in force, so it was
                 # hard-sliced at the column edge (or after its own hyphen) instead of clipping
-                stats["broken_inside_word"] = stats.get("broken_inside_word", 0) + len(sliced_atoms)
+                stats["broken_inside_word"] = stats.get("broken_inside_word", 0) + len(
+                    sliced_atoms
+                )
             if any(text_width_em(l) > own_em for l in lines):
                 # the escape hatch above could not make every piece fit -- only possible when a
                 # single character is wider than the column itself
@@ -464,11 +747,17 @@ def layout_cues(cues: List[Tuple[float, float, str]], *, max_em: Optional[float]
                 stats["phrase_breaks"] += 1
             marked = reinsert_srt_markup(text, lines) if plain != text else lines
             if len(lines) > max_lines:
-                chunks = [lines[i:i + max_lines] for i in range(0, len(lines), max_lines)]
+                chunks = [
+                    lines[i : i + max_lines] for i in range(0, len(lines), max_lines)
+                ]
                 weights = [max(1.0, sum(len(l) for l in c)) for c in chunks]
                 total_w = sum(weights)
-                pieces = carry_srt_markup(["\n".join(marked[i:i + max_lines])
-                                           for i in range(0, len(marked), max_lines)])
+                pieces = carry_srt_markup(
+                    [
+                        "\n".join(marked[i : i + max_lines])
+                        for i in range(0, len(marked), max_lines)
+                    ]
+                )
                 t = start
                 for piece, weight in zip(pieces, weights):
                     seg = (end - start) * weight / total_w
@@ -484,7 +773,11 @@ def layout_cues(cues: List[Tuple[float, float, str]], *, max_em: Optional[float]
     for i, (start, end, text) in enumerate(staged):
         if min_duration and end - start < min_duration:
             limit = staged[i + 1][0] if i + 1 < len(staged) else None
-            new_end = start + min_duration if limit is None else min(start + min_duration, limit)
+            new_end = (
+                start + min_duration
+                if limit is None
+                else min(start + min_duration, limit)
+            )
             if new_end > end:
                 stats["extended"] += 1
                 end = new_end
@@ -496,19 +789,36 @@ def layout_cues(cues: List[Tuple[float, float, str]], *, max_em: Optional[float]
 
 def report_layout(stats: dict) -> None:
     """One info line, only when a cue actually changed."""
-    parts = [f"{stats[k]} {k}" for k in ("shifted", "wrapped", "rebalanced", "phrase_breaks", "split",
-             "extended", "dropped", "broken_inside_word", "overlong") if stats.get(k)]
+    parts = [
+        f"{stats[k]} {k}"
+        for k in (
+            "shifted",
+            "wrapped",
+            "rebalanced",
+            "phrase_breaks",
+            "split",
+            "extended",
+            "dropped",
+            "broken_inside_word",
+            "overlong",
+        )
+        if stats.get(k)
+    ]
     if parts:
         info("cues: " + ", ".join(parts))
     if stats.get("broken_inside_word"):
-        info(f"{stats['broken_inside_word']} cue line(s) had a word or run with no break point "
-             "(Thai writes none inside a phrase) that was still wider than the column alone -- it "
-             "was sliced at the column edge (after its own hyphen when it has one) instead of "
-             "clipping past the frame; put a space or `|` where the line may break, or use a "
-             "smaller --size, to avoid the slice")
+        info(
+            f"{stats['broken_inside_word']} cue line(s) had a word or run with no break point "
+            "(Thai writes none inside a phrase) that was still wider than the column alone -- it "
+            "was sliced at the column edge (after its own hyphen when it has one) instead of "
+            "clipping past the frame; put a space or `|` where the line may break, or use a "
+            "smaller --size, to avoid the slice"
+        )
     if stats.get("overlong"):
-        info(f"{stats['overlong']} cue line(s) wider than the safe width even after slicing: a "
-             "single character was wider than the column -- use a smaller --size")
+        info(
+            f"{stats['overlong']} cue line(s) wider than the safe width even after slicing: a "
+            "single character was wider than the column -- use a smaller --size"
+        )
 
 
 def margins_x(args, play_w: Optional[int]) -> Tuple[int, int]:
@@ -529,7 +839,11 @@ def margins_x(args, play_w: Optional[int]) -> Tuple[int, int]:
     """
     if not play_w:
         return 0, 0
-    if getattr(args, "platform", None) and PLATFORMS[args.platform].get("frame") and draws_own_ass(args):
+    if (
+        getattr(args, "platform", None)
+        and PLATFORMS[args.platform].get("frame")
+        and draws_own_ass(args)
+    ):
         safe = PLATFORMS[args.platform]["safe"]
         left, right = float(safe["left"]), float(safe["right"])
     else:
@@ -545,8 +859,10 @@ def draws_own_ass(args) -> bool:
     play_w * SAFE_WIDTH_FRACTION, unchanged by 1.17.2.
     """
     if getattr(args, "ass", None):
-        return False          # the caller's own ASS: its Style is theirs, not ours
-    return (getattr(args, "animate", "none") or "none") != "none" or bool(getattr(args, "karaoke", False))
+        return False  # the caller's own ASS: its Style is theirs, not ours
+    return (getattr(args, "animate", "none") or "none") != "none" or bool(
+        getattr(args, "karaoke", False)
+    )
 
 
 def safe_width_fraction(args, play_w: Optional[int]) -> float:
@@ -576,7 +892,10 @@ def line_fraction(args, play_w: Optional[int]) -> float:
     layout after it (A58, #457).
     """
     frac = safe_width_fraction(args, play_w)
-    if getattr(args, "karaoke", False) and getattr(args, "karaoke_style", "sweep") == "word":
+    if (
+        getattr(args, "karaoke", False)
+        and getattr(args, "karaoke_style", "sweep") == "word"
+    ):
         frac = frac / max(1.0, getattr(args, "karaoke_scale", 112) / 100.0)
     return frac
 
@@ -587,7 +906,9 @@ def max_line_em(args, play_w: Optional[int], play_h: Optional[int]) -> Optional[
     --size is in ASS points against a 288-line script (what libass's force_style uses), so the
     rendered pixel size is size * play_h / 288; the width is line_fraction's.
     """
-    return line_em_for_size(args.size, play_w, play_h, safe_fraction=line_fraction(args, play_w))
+    return line_em_for_size(
+        args.size, play_w, play_h, safe_fraction=line_fraction(args, play_w)
+    )
 
 
 def parse_ass_dialogue(path: str) -> str:
@@ -602,10 +923,14 @@ def parse_ass_dialogue(path: str) -> str:
     return "\n".join(text)
 
 
-def parse_ass_cues(path: str, stats: Optional[dict] = None) -> List[Tuple[float, float, str]]:
+def parse_ass_cues(
+    path: str, stats: Optional[dict] = None
+) -> List[Tuple[float, float, str]]:
     """(start, end, drawn text) of every Dialogue line of an ASS file, override blocks stripped.
     A Dialogue line with too few fields or an unreadable start/end is left out; `stats`, when
-    given, gets their number as `malformed` so the caller can say how many it could not count."""
+    given, gets their number as `malformed` so the caller can say how many it could not count.
+    """
+
     def secs(stamp: str) -> float:
         h, m, rest = stamp.strip().split(":")
         return int(h) * 3600 + int(m) * 60 + float(rest)
@@ -614,7 +939,18 @@ def parse_ass_cues(path: str, stats: Optional[dict] = None) -> List[Tuple[float,
     malformed = 0
     # the [Events] Format line names the columns; Text is always last (libass reads it the same
     # way), and a file without one gets the standard ten
-    names = ["layer", "start", "end", "style", "name", "marginl", "marginr", "marginv", "effect", "text"]
+    names = [
+        "layer",
+        "start",
+        "end",
+        "style",
+        "name",
+        "marginl",
+        "marginr",
+        "marginv",
+        "effect",
+        "text",
+    ]
     for line in read_text_or_die(path, "--ass").split("\n"):
         if line.startswith("Format:") and "text" in line.lower():
             names = [n.strip().lower() for n in line.partition(":")[2].split(",")]
@@ -626,11 +962,18 @@ def parse_ass_cues(path: str, stats: Optional[dict] = None) -> List[Tuple[float,
             malformed += 1
             continue
         try:
-            start, end = secs(fields[names.index("start")]), secs(fields[names.index("end")])
+            start, end = secs(fields[names.index("start")]), secs(
+                fields[names.index("end")]
+            )
         except (ValueError, IndexError):
             malformed += 1
             continue
-        text = re.sub(r"\{[^}]*\}", "", fields[-1]).replace("\\N", "\n").replace("\\n", "\n").replace("\\h", " ")
+        text = (
+            re.sub(r"\{[^}]*\}", "", fields[-1])
+            .replace("\\N", "\n")
+            .replace("\\n", "\n")
+            .replace("\\h", " ")
+        )
         cues.append((start, end, text))
     if stats is not None:
         stats["malformed"] = malformed
@@ -638,7 +981,7 @@ def parse_ass_cues(path: str, stats: Optional[dict] = None) -> List[Tuple[float,
 
 
 def cue_text_visible(text: str) -> bool:
-    return bool(strip_srt_markup(text or "").strip())   # `<i></i>` draws nothing
+    return bool(strip_srt_markup(text or "").strip())  # `<i></i>` draws nothing
 
 
 def count_visible_cues(cues, duration) -> Tuple[int, int]:
@@ -668,6 +1011,7 @@ def shift_ass_file(src: str, dst: str, offset: float) -> Tuple[int, int]:
 def shift_ass_text(source: str, offset: float) -> Tuple[str, int, int]:
     """shift_ass_file() on text: (shifted text, lines shifted, Dialogue lines left as they were).
     Pure, so a dry run can report the counts without writing the copy."""
+
     def shift(stamp: str) -> str:
         h, m, rest = stamp.split(":")
         secs = int(h) * 3600 + int(m) * 60 + float(rest) + offset
@@ -689,20 +1033,25 @@ def shift_ass_text(source: str, offset: float) -> Tuple[str, int, int]:
             done = False
             if len(fields) >= 3:
                 try:
-                    fields[1], fields[2] = shift(fields[1].strip()), shift(fields[2].strip())
+                    fields[1], fields[2] = shift(fields[1].strip()), shift(
+                        fields[2].strip()
+                    )
                     line = head + sep + ",".join(fields)
                     n += 1
                     done = True
                 except (ValueError, IndexError):
                     pass
             if not done:
-                unshifted += 1  # copied as it was: counted and reported, not dropped unseen
+                unshifted += (
+                    1  # copied as it was: counted and reported, not dropped unseen
+                )
         out.append(line)
     return "\n".join(out) + "\n", n, unshifted
 
 
-def word_durations_from_timings(words: List[Tuple[float, float, str]], start: float, end: float,
-                                n_words: int) -> Optional[Tuple[int, List[int]]]:
+def word_durations_from_timings(
+    words: List[Tuple[float, float, str]], start: float, end: float, n_words: int
+) -> Optional[Tuple[int, List[int]]]:
     """(lead, centiseconds per word) for one cue from real word timings; None when they don't
     cover it. `lead` is the silence between the cue's start and its first word: the highlight
     waits for it rather than starting at the cue and running ahead of the speech by that much
@@ -714,15 +1063,18 @@ def word_durations_from_timings(words: List[Tuple[float, float, str]], start: fl
     first = min(end, max(start, inside[0][0]))
     lead = int(round((first - start) * 100))
     bounds = [first] + [max(first, min(end, w[1])) for w in inside]
-    out = [max(1, int(round((bounds[i + 1] - bounds[i]) * 100))) for i in range(n_words)]
+    out = [
+        max(1, int(round((bounds[i + 1] - bounds[i]) * 100))) for i in range(n_words)
+    ]
     out[-1] += total_cs - lead - sum(out)
     if out[-1] < 1:
         return None
     return lead, out
 
 
-def _karaoke_word_durations(args, video: Optional[str], start: float, end: float,
-                            n_words: int) -> Tuple[int, List[int]]:
+def _karaoke_word_durations(
+    args, video: Optional[str], start: float, end: float, n_words: int
+) -> Tuple[int, List[int]]:
     """(lead, centiseconds per word) for one cue, shared by --karaoke-style sweep and word.
 
     Real word timings from the transcript beat both the energy estimate and the even split --
@@ -730,16 +1082,22 @@ def _karaoke_word_durations(args, video: Optional[str], start: float, end: float
     silence before the first word); the other two share the whole cue out from its start.
     """
     dur_cs = max(1, int(round((end - start) * 100)))
-    timed = word_durations_from_timings(getattr(args, "_word_timings", None) or [], start, end, n_words)
+    timed = word_durations_from_timings(
+        getattr(args, "_word_timings", None) or [], start, end, n_words
+    )
     if timed is not None:
         return timed
     if getattr(args, "karaoke_timing", "even") == "energy" and video:
-        return 0, word_durations_from_audio(video, start, end, n_words, getattr(args, "audio_stream", 0))
+        return 0, word_durations_from_audio(
+            video, start, end, n_words, getattr(args, "audio_stream", 0)
+        )
     per = max(1, dur_cs // max(1, n_words))
     return 0, [per] * n_words
 
 
-def shift_words(words: List[Tuple[float, float, str]], offset: float) -> List[Tuple[float, float, str]]:
+def shift_words(
+    words: List[Tuple[float, float, str]], offset: float
+) -> List[Tuple[float, float, str]]:
     """Word timings moved by --offset, as the cues they belong to are (#505): the offset corrects a
     transcript that runs early or late against the sound, and its word timings come from the same
     transcript."""
@@ -760,7 +1118,9 @@ ANIMATE_FADE_MS = {"fade": (200, 200), "pop": (80, 120), "slide": (150, 150)}
 SLIDE_MS = 250
 
 
-def line_anchor(align: int, play_w: int, play_h: int, margin: int, margin_l: int, margin_r: int) -> Tuple[int, int]:
+def line_anchor(
+    align: int, play_w: int, play_h: int, margin: int, margin_l: int, margin_r: int
+) -> Tuple[int, int]:
     """The point libass anchors a line of alignment `align` (numpad) at, from the Style's margins:
     what a `\\move` has to end on so that --animate slide lands where the line is drawn without it
     (A56, #457: the slide always ended at the bottom centre)."""
@@ -779,13 +1139,16 @@ def line_anchor(align: int, play_w: int, play_h: int, margin: int, margin_l: int
     return x, y
 
 
-def animate_fx(kind: str, o: int, e: int, dur: int, anchor: Tuple[int, int], rise: int) -> str:
+def animate_fx(
+    kind: str, o: int, e: int, dur: int, anchor: Tuple[int, int], rise: int
+) -> str:
     """The --animate override for an event shown from `o` to `e` ms into a cue `dur` ms long.
 
     A whole cue (o == 0, e == dur) gets the envelope it always had. --karaoke-style word draws a
     cue as one event per word: each gets the part of the cue's one envelope that falls inside it,
     started where the event before left it, so the fade-out comes at the cue's end and not at the
-    end of the first word, and a slide or a pop does not restart or jump at a word (A57, #457)."""
+    end of the first word, and a slide or a pop does not restart or jump at a word (A57, #457).
+    """
     if kind not in ANIMATE_FADE_MS:
         return ""
     fin, fout = ANIMATE_FADE_MS[kind]
@@ -804,13 +1167,20 @@ def animate_fx(kind: str, o: int, e: int, dur: int, anchor: Tuple[int, int], ris
             if t > out_at and fout:
                 a = max(a, 255.0 * (t - out_at) / float(fout))
             return int(round(min(255.0, max(0.0, a))))
+
         if o >= fin and e <= out_at:
             fade = ""
         else:
             a1 = alpha(o)
             t2 = max(0, fin - o)
             t3 = max(t2, out_at - o)
-            fade = "\\fade(%d,%d,255,0,%d,%d,%d)" % (a1, a1 if o > out_at else 0, t2, t3, max(t3, dur - o))
+            fade = "\\fade(%d,%d,255,0,%d,%d,%d)" % (
+                a1,
+                a1 if o > out_at else 0,
+                t2,
+                t3,
+                max(t3, dur - o),
+            )
     if kind == "fade":
         tags = fade
     elif kind == "pop":
@@ -818,8 +1188,10 @@ def animate_fx(kind: str, o: int, e: int, dur: int, anchor: Tuple[int, int], ris
             scale = "\\fscx60\\fscy60\\t(0,120,\\fscx110\\fscy110)\\t(120,200,\\fscx100\\fscy100)"
         elif o < 120:
             v = int(round(60 + 50 * o / 120.0))
-            scale = ("\\fscx%d\\fscy%d\\t(0,%d,\\fscx110\\fscy110)\\t(%d,%d,\\fscx100\\fscy100)"
-                     % (v, v, 120 - o, 120 - o, 200 - o))
+            scale = (
+                "\\fscx%d\\fscy%d\\t(0,%d,\\fscx110\\fscy110)\\t(%d,%d,\\fscx100\\fscy100)"
+                % (v, v, 120 - o, 120 - o, 200 - o)
+            )
         elif o < 200:
             v = int(round(110 - 10 * (o - 120) / 80.0))
             scale = "\\fscx%d\\fscy%d\\t(0,%d,\\fscx100\\fscy100)" % (v, v, 200 - o)
@@ -830,7 +1202,13 @@ def animate_fx(kind: str, o: int, e: int, dur: int, anchor: Tuple[int, int], ris
         if o == 0:
             move = "\\move(%d,%d,%d,%d,0,%d)" % (x, y1, x, y2, SLIDE_MS)
         elif o < SLIDE_MS:
-            move = "\\move(%d,%d,%d,%d,0,%d)" % (x, int(round(y1 + (y2 - y1) * o / float(SLIDE_MS))), x, y2, SLIDE_MS - o)
+            move = "\\move(%d,%d,%d,%d,0,%d)" % (
+                x,
+                int(round(y1 + (y2 - y1) * o / float(SLIDE_MS))),
+                x,
+                y2,
+                SLIDE_MS - o,
+            )
         else:
             move = "\\pos(%d,%d)" % (x, y2)
         tags = fade + move
@@ -848,8 +1226,16 @@ def _karaoke_word(token: str) -> bool:
     return bool(_OVERRIDE_BLOCK_RE.sub("", token).strip(EMOJI_SENTINEL))
 
 
-def write_ass(cues: List[Tuple[float, float, str]], path: str, args, play_w: int, play_h: int, video: str = None) -> None:
+def write_ass(
+    cues: List[Tuple[float, float, str]],
+    path: str,
+    args,
+    play_w: int,
+    play_h: int,
+    video: str = None,
+) -> None:
     """Write a styled ASS file with optional animation and word-by-word highlight."""
+
     def t(sec: float) -> str:
         cs = int(round(sec * 100))
         h, rem = divmod(cs, 360000)
@@ -857,15 +1243,19 @@ def write_ass(cues: List[Tuple[float, float, str]], path: str, args, play_w: int
         s_, cs = divmod(rem, 100)
         return f"{h}:{m:02d}:{s_:02d}.{cs:02d}"
 
-    scale = play_h / 288.0  # our --size is relative to a 288-line script like force_style
+    scale = (
+        play_h / 288.0
+    )  # our --size is relative to a 288-line script like force_style
     size = int(round(args.size * scale))
-    margin = int(round(args.margin * scale))          # vertical: MarginV, and the slide origin
-    margin_l, margin_r = margins_x(args, play_w)      # horizontal: the frame's safe zone
+    margin = int(round(args.margin * scale))  # vertical: MarginV, and the slide origin
+    margin_l, margin_r = margins_x(args, play_w)  # horizontal: the frame's safe zone
     # karaoke: PrimaryColour is the "sung" colour, SecondaryColour the "not yet sung" one
     primary = ass_color(args.highlight_color if args.karaoke else args.color)
     secondary = ass_color(args.color)
     outline = ass_color(args.outline_color)
-    back_alpha = 0x80     # the --box colour is half transparent; an emoji placeholder restores it
+    back_alpha = (
+        0x80  # the --box colour is half transparent; an emoji placeholder restores it
+    )
     back = ass_color(args.outline_color, back_alpha)
     word_style = args.karaoke and getattr(args, "karaoke_style", "sweep") == "word"
     word_past = ass_color(args.color)
@@ -880,14 +1270,22 @@ def write_ass(cues: List[Tuple[float, float, str]], path: str, args, play_w: int
     # default, unchanged), scaling the active word up would re-flow the line and it would visibly
     # jump every time the highlight advances (the trap the issue this implements is filed against).
     header = [
-        "[Script Info]", "ScriptType: v4.00+", f"PlayResX: {play_w}", f"PlayResY: {play_h}",
+        "[Script Info]",
+        "ScriptType: v4.00+",
+        f"PlayResX: {play_w}",
+        f"PlayResY: {play_h}",
         # YCbCr Matrix: None -- the colours are RGB, to be put in the video's own matrix: FFmpeg 8.x's
         # ass filter reads an absent header as BT.601 whatever the picture is tagged (drawn_chain)
-        f"WrapStyle: {2 if word_style else 0}", "ScaledBorderAndShadow: yes", "YCbCr Matrix: None", "",
+        f"WrapStyle: {2 if word_style else 0}",
+        "ScaledBorderAndShadow: yes",
+        "YCbCr Matrix: None",
+        "",
         "[V4+ Styles]",
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
         f"Style: Default,{ass_font_name(args.font)},{size},{primary},{secondary},{outline},{back},{-1 if args.bold else 0},0,0,0,100,100,0,0,{3 if args.box else 1},{args.outline * scale:.1f},{args.shadow * scale:.1f},{ALIGN[args.position]},{margin_l},{margin_r},{margin},1",
-        "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+        "",
+        "[Events]",
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     lines = []
     for cue_index, (start, end, text) in enumerate(cues):
@@ -902,7 +1300,14 @@ def write_ass(cues: List[Tuple[float, float, str]], path: str, args, play_w: int
         # SRT markup is the exception (#X2): <i>/<b>/<u>/<s>, <font color> and {\anN} become the
         # overrides ffmpeg's SRT reader gives them, so this route draws what the plain one draws
         # the line's anchor for --animate slide: the cue's own {\anN} first, as libass reads it
-        anchor = line_anchor(srt_alignment(text) or ALIGN[args.position], play_w, play_h, margin, margin_l, margin_r)
+        anchor = line_anchor(
+            srt_alignment(text) or ALIGN[args.position],
+            play_w,
+            play_h,
+            margin,
+            margin_l,
+            margin_r,
+        )
         text = ass_escape_markup(text, colour=not args.karaoke)
         cue_ms = max(1, int(round((end - start) * 100))) * 10
         fx = animate_fx(args.animate, 0, cue_ms, cue_ms, anchor, int(30 * scale))
@@ -933,8 +1338,15 @@ def write_ass(cues: List[Tuple[float, float, str]], path: str, args, play_w: int
                 # today's karaoke-off rendering, rather than zero Dialogue lines for this cue
                 out_body = body
                 if EMOJI_SENTINEL in out_body:
-                    out_body = out_body.replace(EMOJI_SENTINEL, emoji_placeholder(getattr(args, "_emoji_box_px", size), back_alpha))
-                lines.append(f"Dialogue: 0,{t(start)},{t(end)},Default,,0,0,0,,{fx}{out_body}")
+                    out_body = out_body.replace(
+                        EMOJI_SENTINEL,
+                        emoji_placeholder(
+                            getattr(args, "_emoji_box_px", size), back_alpha
+                        ),
+                    )
+                lines.append(
+                    f"Dialogue: 0,{t(start)},{t(end)},Default,,0,0,0,,{fx}{out_body}"
+                )
                 continue
             n_words = len(real_idx)
             lead, durs = _karaoke_word_durations(args, video, start, end, n_words)
@@ -944,7 +1356,7 @@ def write_ass(cues: List[Tuple[float, float, str]], path: str, args, play_w: int
             for j, d in enumerate(durs):
                 events.append((acc, d, j))
                 acc += d
-            span_ms = acc * 10   # the --animate envelope spans the events, first to last
+            span_ms = acc * 10  # the --animate envelope spans the events, first to last
             for ev_cs, ev_len, j in events:
                 w_start = start + ev_cs / 100.0
                 w_end = start + (ev_cs + ev_len) / 100.0
@@ -965,25 +1377,44 @@ def write_ass(cues: List[Tuple[float, float, str]], path: str, args, play_w: int
                                 # also drop the cue's own <i>/<b>/colour and a --fit-size \fs
                                 styled_line.append(
                                     f"{{\\c{word_active}\\fscx{word_scale}\\fscy{word_scale}\\bord{word_bord}}}{w}"
-                                    f"{{\\fscx100\\fscy100\\bord{style_bord}}}")
+                                    f"{{\\fscx100\\fscy100\\bord{style_bord}}}"
+                                )
                             else:
                                 styled_line.append(f"{{\\c{word_upcoming}}}{w}")
                         flat_pos += 1
                     styled.append(" ".join(styled_line))
                 out_body = "\\N".join(styled)
                 if EMOJI_SENTINEL in out_body:
-                    out_body = out_body.replace(EMOJI_SENTINEL, emoji_placeholder(getattr(args, "_emoji_box_px", size), back_alpha))
+                    out_body = out_body.replace(
+                        EMOJI_SENTINEL,
+                        emoji_placeholder(
+                            getattr(args, "_emoji_box_px", size), back_alpha
+                        ),
+                    )
                 # the size/fit override (\fsN) belongs on every event; --animate is the cue's one
                 # envelope, and each event takes the part of it that falls inside the event: the
                 # fade-out at the cue's end, the slide and the pop carried on, not restarted (A57)
-                event_fx = animate_fx(args.animate, ev_cs * 10, (ev_cs + ev_len) * 10, span_ms, anchor,
-                                      int(30 * scale)) + size_fx
-                lines.append(f"Dialogue: 0,{t(w_start)},{t(w_end)},Default,,0,0,0,,{event_fx}{out_body}")
+                event_fx = (
+                    animate_fx(
+                        args.animate,
+                        ev_cs * 10,
+                        (ev_cs + ev_len) * 10,
+                        span_ms,
+                        anchor,
+                        int(30 * scale),
+                    )
+                    + size_fx
+                )
+                lines.append(
+                    f"Dialogue: 0,{t(w_start)},{t(w_end)},Default,,0,0,0,,{event_fx}{out_body}"
+                )
             continue
         if args.karaoke:
             # split each line into words and give every word an equal share of the cue (\k is in centiseconds)
             segments = body.split("\\N")
-            words = [w for seg in segments for w in seg.split(" ") if w and _karaoke_word(w)]
+            words = [
+                w for seg in segments for w in seg.split(" ") if w and _karaoke_word(w)
+            ]
             lead, durs = _karaoke_word_durations(args, video, start, end, len(words))
             it = iter(durs)
             out_segments = []
@@ -992,21 +1423,33 @@ def write_ass(cues: List[Tuple[float, float, str]], path: str, args, play_w: int
                 # An emoji placeholder is its own ZERO-duration \kf segment: the highlight sweeps
                 # past the reserved gap without spending cue time on a glyph nobody sees (rendered
                 # and confirmed -- libass keeps the full gap inside a karaoke run).
-                out_segments.append(" ".join(
-                    ("{\\kf0}" + w) if not _karaoke_word(w) else f"{{\\kf{next(it)}}}{w}" for w in ws))
+                out_segments.append(
+                    " ".join(
+                        (
+                            ("{\\kf0}" + w)
+                            if not _karaoke_word(w)
+                            else f"{{\\kf{next(it)}}}{w}"
+                        )
+                        for w in ws
+                    )
+                )
             body = "\\N".join(out_segments)
             if lead > 0:
                 # the silence before the first word: an empty \k syllable, so the fill starts
                 # with the speech and not at the cue's start (A59)
                 body = "{\\k%d}" % lead + body
         if EMOJI_SENTINEL in body:
-            body = body.replace(EMOJI_SENTINEL, emoji_placeholder(getattr(args, "_emoji_box_px", size), back_alpha))
+            body = body.replace(
+                EMOJI_SENTINEL,
+                emoji_placeholder(getattr(args, "_emoji_box_px", size), back_alpha),
+            )
         lines.append(f"Dialogue: 0,{t(start)},{t(end)},Default,,0,0,0,,{fx}{body}")
     with open(path, "w", encoding="utf-8-sig") as fh:
         fh.write("\n".join(header + lines) + "\n")
 
 
 # ------------------------------------------------------- multi-language subtitle tracks (1.16)
+
 
 class AppendPath(argparse.Action):
     """`--srt` repeated, without changing what the contract says `--srt` is.
@@ -1031,13 +1474,31 @@ LANG_TOKEN_RE = re.compile(r"^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
 # The name a player lists a track under, when the caller gives no --track-title. Data, not a
 # translation: a code that is not in the table gets the code itself, never an invented name.
 LANG_TITLES = {
-    "en": "English", "es": "Espanol", "pt": "Portugues", "fr": "Francais", "de": "Deutsch",
-    "it": "Italiano", "nl": "Nederlands", "pl": "Polski", "ru": "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
-    "ja": "\u65e5\u672c\u8a9e", "zh": "\u4e2d\u6587", "ko": "\ud55c\uad6d\uc5b4",
-    "ar": "\u0627\u0644\u0639\u0631\u0628\u064a\u0629", "he": "\u05e2\u05d1\u05e8\u05d9\u05ea",
-    "hi": "\u0939\u093f\u0928\u094d\u0926\u0940", "th": "\u0e44\u0e17\u0e22",
-    "tr": "Turkce", "id": "Bahasa Indonesia", "vi": "Tieng Viet", "sv": "Svenska",
-    "da": "Dansk", "no": "Norsk", "fi": "Suomi", "cs": "Cestina", "uk": "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430",
+    "en": "English",
+    "es": "Espanol",
+    "pt": "Portugues",
+    "fr": "Francais",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
+    "ja": "\u65e5\u672c\u8a9e",
+    "zh": "\u4e2d\u6587",
+    "ko": "\ud55c\uad6d\uc5b4",
+    "ar": "\u0627\u0644\u0639\u0631\u0628\u064a\u0629",
+    "he": "\u05e2\u05d1\u05e8\u05d9\u05ea",
+    "hi": "\u0939\u093f\u0928\u094d\u0926\u0940",
+    "th": "\u0e44\u0e17\u0e22",
+    "tr": "Turkce",
+    "id": "Bahasa Indonesia",
+    "vi": "Tieng Viet",
+    "sv": "Svenska",
+    "da": "Dansk",
+    "no": "Norsk",
+    "fi": "Suomi",
+    "cs": "Cestina",
+    "uk": "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430",
 }
 
 # MP4/MOV store the language in an ISO-639-2/T box and silently drop anything that is not three
@@ -1046,11 +1507,41 @@ LANG_TITLES = {
 # code verbatim, so `en` survives there. Only the codes this table knows are converted; an
 # unknown one is passed through with a note rather than guessed at.
 ISO639_1_TO_2 = {
-    "en": "eng", "es": "spa", "pt": "por", "fr": "fra", "de": "deu", "it": "ita", "nl": "nld",
-    "pl": "pol", "ru": "rus", "ja": "jpn", "zh": "zho", "ko": "kor", "ar": "ara", "he": "heb",
-    "hi": "hin", "th": "tha", "tr": "tur", "id": "ind", "vi": "vie", "sv": "swe", "da": "dan",
-    "no": "nor", "fi": "fin", "cs": "ces", "uk": "ukr", "el": "ell", "hu": "hun", "ro": "ron",
-    "bg": "bul", "ca": "cat", "fa": "fas", "ta": "tam", "bn": "ben", "ms": "msa", "fil": "fil",
+    "en": "eng",
+    "es": "spa",
+    "pt": "por",
+    "fr": "fra",
+    "de": "deu",
+    "it": "ita",
+    "nl": "nld",
+    "pl": "pol",
+    "ru": "rus",
+    "ja": "jpn",
+    "zh": "zho",
+    "ko": "kor",
+    "ar": "ara",
+    "he": "heb",
+    "hi": "hin",
+    "th": "tha",
+    "tr": "tur",
+    "id": "ind",
+    "vi": "vie",
+    "sv": "swe",
+    "da": "dan",
+    "no": "nor",
+    "fi": "fin",
+    "cs": "ces",
+    "uk": "ukr",
+    "el": "ell",
+    "hu": "hun",
+    "ro": "ron",
+    "bg": "bul",
+    "ca": "cat",
+    "fa": "fas",
+    "ta": "tam",
+    "bn": "ben",
+    "ms": "msa",
+    "fil": "fil",
 }
 
 
@@ -1069,10 +1560,18 @@ def split_srt_lang(token: str) -> Tuple[str, Optional[str]]:
         return head, tail
     # A tail that is clearly meant as a language code but is not one is a language error, not a
     # file called `en.srt:zzzz`: only say "file not found" when the whole token could be a path.
-    if head and tail and not os.path.exists(token) and os.path.exists(head) \
-            and re.match(r"^[A-Za-z][A-Za-z0-9-]*$", tail):
-        die(f"--srt {token}: '{tail}' is not a language code (two or three letters, optionally "
-            "with a region, e.g. en, ja, pt-BR)", kind="input")
+    if (
+        head
+        and tail
+        and not os.path.exists(token)
+        and os.path.exists(head)
+        and re.match(r"^[A-Za-z][A-Za-z0-9-]*$", tail)
+    ):
+        die(
+            f"--srt {token}: '{tail}' is not a language code (two or three letters, optionally "
+            "with a region, e.g. en, ja, pt-BR)",
+            kind="input",
+        )
     return token, None
 
 
@@ -1095,16 +1594,22 @@ def track_title_for(code: Optional[str], given: Optional[str]) -> Optional[str]:
 
 # a timing line in the grammar ffmpeg's SRT demuxer and parse_srt() read alike: hours, minutes,
 # seconds and three-digit milliseconds on both sides (ffmpeg allows position fields after it)
-_SHARED_SRT_TIMING = re.compile(r"^\s*\d{2,}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{2,}:\d{2}:\d{2}[,.]\d{3}(\s.*)?$")
+_SHARED_SRT_TIMING = re.compile(
+    r"^\s*\d{2,}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{2,}:\d{2}:\d{2}[,.]\d{3}(\s.*)?$"
+)
 
 
 def srt_timings_shared_grammar(path: str) -> bool:
     """True when every timing line of the SRT at `path` reads the same to ffmpeg's SRT demuxer as
     to parse_srt(). ffmpeg refuses `00:01,000` (no hours) and reads `00:00:01,5` as 1.005 s, where
-    parse_srt() reads 1.5 s (#414); such a file is handed to ffmpeg as a rewritten copy."""
+    parse_srt() reads 1.5 s (#414); such a file is handed to ffmpeg as a rewritten copy.
+    """
     # the timing lines parse_srt() reads, grouped as it groups them (srt_blocks()): a later line
     # that only holds "-->" is dialogue, not a timing this check should judge
-    return all(_SHARED_SRT_TIMING.match(times) for times, _body in srt_blocks(read_text_or_die(path, "--srt")))
+    return all(
+        _SHARED_SRT_TIMING.match(times)
+        for times, _body in srt_blocks(read_text_or_die(path, "--srt"))
+    )
 
 
 def mux_subtitle_codec(output: str) -> str:
@@ -1115,8 +1620,10 @@ def mux_subtitle_codec(output: str) -> str:
         return "srt"
     if ext == ".webm":
         return "webvtt"
-    die(f"--mode mux: don't know a soft-subtitle codec for '{ext}' output "
-        "(know .mp4/.m4v/.mov, .mkv, .webm) -- use --mode burn, or pick one of those containers with -o")
+    die(
+        f"--mode mux: don't know a soft-subtitle codec for '{ext}' output "
+        "(know .mp4/.m4v/.mov, .mkv, .webm) -- use --mode burn, or pick one of those containers with -o"
+    )
 
 
 def ass_color(hex_rgb: str, alpha: int = 0) -> str:
@@ -1134,7 +1641,8 @@ def ass_font_name(name: str) -> str:
     `, : \\ '`, so rather than chase a per-context escape (a Style line and a force_style list
     have different delimiter rules), those characters -- and control characters, which are never
     meaningful in a font name either -- are dropped outright, the same "no escape proven safe
-    everywhere it's used" call this codebase already makes for escape_drawtext()'s `'`/`%`."""
+    everywhere it's used" call this codebase already makes for escape_drawtext()'s `'`/`%`.
+    """
     name = re.sub(r"[\x00-\x1f\x7f]", "", name)
     for ch in ",:\\'":
         name = name.replace(ch, "")
@@ -1144,7 +1652,8 @@ def ass_font_name(name: str) -> str:
 def _glue_negative_offset(argv: List[str]) -> List[str]:
     """`--offset -0:00:02` reads as a flag to argparse, not a value: only bare negative NUMBERS
     are exempt from the "starts with -" rule, and a negative timecode is not one. Join the pair
-    into `--offset=-0:00:02` so the documented grammar works in the shape people type it."""
+    into `--offset=-0:00:02` so the documented grammar works in the shape people type it.
+    """
     out: List[str] = []
     i = 0
     while i < len(argv):
@@ -1159,116 +1668,289 @@ def _glue_negative_offset(argv: List[str]) -> List[str]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("input", nargs="?", help="video to burn captions into (omit with --write-srt to only generate)")
-    ap.add_argument("-o", "--output", help="output video (default: <name>_captioned.<ext>)")
-    ap.add_argument("--mode", choices=["burn", "mux"], default="burn",
-                     help="'burn' renders subtitles into the picture (default); "
-                          "'mux' copies video/audio untouched and adds the SRT as a soft, toggleable subtitle stream")
-    ap.add_argument("--audio-stream", type=int, default=0,
-                     help="which audio stream of the input to keep, 0-based in file order (probe.py lists them under "
-                          "audio_streams) -- matters on a multi-track input (dubbed languages, M&E stems); default 0, "
-                          "the first track, same as leaving it unset always did")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "input",
+        nargs="?",
+        help="video to burn captions into (omit with --write-srt to only generate)",
+    )
+    ap.add_argument(
+        "-o", "--output", help="output video (default: <name>_captioned.<ext>)"
+    )
+    ap.add_argument(
+        "--mode",
+        choices=["burn", "mux"],
+        default="burn",
+        help="'burn' renders subtitles into the picture (default); "
+        "'mux' copies video/audio untouched and adds the SRT as a soft, toggleable subtitle stream",
+    )
+    ap.add_argument(
+        "--audio-stream",
+        type=int,
+        default=0,
+        help="which audio stream of the input to keep, 0-based in file order (probe.py lists them under "
+        "audio_streams) -- matters on a multi-track input (dubbed languages, M&E stems); default 0, "
+        "the first track, same as leaving it unset always did",
+    )
     src = ap.add_argument_group("subtitle source")
-    src.add_argument("--srt", action=AppendPath, metavar="FILE[:LANG]",
-                     help="SRT file to burn, or (with --mode mux) to add as a soft subtitle track. Repeat it once "
-                          "per language to build a multi-track deliverable, each with an optional `:lang` suffix: "
-                          "`--srt en.srt:en --srt ja.srt:ja`. A single --srt with no suffix takes --language, as "
-                          "it always did. NOTE: .mp4/.mov hold several mov_text tracks but many players show only "
-                          "the first, and the format needs ISO-639-2 codes (`eng`, not `en`) -- this tool converts "
-                          "them; .mkv is the honest multi-track container and stores the code you give verbatim")
+    src.add_argument(
+        "--srt",
+        action=AppendPath,
+        metavar="FILE[:LANG]",
+        help="SRT file to burn, or (with --mode mux) to add as a soft subtitle track. Repeat it once "
+        "per language to build a multi-track deliverable, each with an optional `:lang` suffix: "
+        "`--srt en.srt:en --srt ja.srt:ja`. A single --srt with no suffix takes --language, as "
+        "it always did. NOTE: .mp4/.mov hold several mov_text tracks but many players show only "
+        "the first, and the format needs ISO-639-2 codes (`eng`, not `en`) -- this tool converts "
+        "them; .mkv is the honest multi-track container and stores the code you give verbatim",
+    )
     src.add_argument("--ass", help="ASS file to burn (styles inside the file are used)")
-    src.add_argument("--text", help="plain text cue file to convert into SRT (see format above)")
-    src.add_argument("--transcribe", action="store_true", help="generate the SRT from the audio with a local speech-to-text engine if one is installed (parakeet-mlx / parakeet.cpp / whisper-cli / whisper / faster-whisper); never required")
-    src.add_argument("--language", "--lang", help="language code (e.g. en, ja, zh, ko): the language for --transcribe (default auto), "
-                                                  "the tag on the subtitle stream with --mode mux, and the hint that says whether Han-only "
-                                                  "text is Chinese, Japanese or Korean when a font is picked by script")
-    src.add_argument("--track-title", action=AppendPath, metavar="TITLE",
-                     help="--mode mux: the name a player lists a track under, repeated in the same order as --srt "
-                          "(default: the language's display name from a frozen table, else the code itself -- the "
-                          "table is data, never a guessed or translated name)")
-    src.add_argument("--default-track", metavar="LANG",
-                     help="--mode mux: mark this language's track `default` so a player selects it by itself "
-                          "(default: none, so no player burns in a language the viewer did not ask for)")
-    src.add_argument("--offset", default="0", help="shift every cue by TIME (seconds, mm:ss, hh:mm:ss.ms or "
-                                                    "hh:mm:ss:ff; a leading - shifts earlier); works for --text, --srt and --ass")
-    src.add_argument("--model", default=None,
-                     help="speech model for --transcribe: a whisper model name/path (default: $FFMPEG_SKILL_ASR_MODEL, "
-                          "else base), or a Parakeet model (an mlx-community/parakeet-* repo or a .gguf) for the "
-                          "Parakeet engines")
-    src.add_argument("--engine", choices=ENGINE_CHOICES, default=None,
-                     help="speech engine for --transcribe (default: $FFMPEG_SKILL_ASR_ENGINE, else auto = Parakeet "
-                          "for English speech when installed, else whisper.cpp / faster-whisper / openai-whisper)")
-    src.add_argument("--write-srt", help="where to save the generated SRT (default: <text>.srt)")
-    src.add_argument("--auto-seconds", type=float, default=3.0, help="duration for cues without timing (default 3)")
-    src.add_argument("--gap", type=float, default=0.0, help="gap after auto-timed cues in seconds")
-    src.add_argument("--fps", type=float, default=None,
-                      help="frame rate for interpreting hh:mm:ss:ff SMPTE timecode cues in --text (non-drop-frame); "
-                           "defaults to the input video's own fps when --input is given, required otherwise")
+    src.add_argument(
+        "--text", help="plain text cue file to convert into SRT (see format above)"
+    )
+    src.add_argument(
+        "--transcribe",
+        action="store_true",
+        help="generate the SRT from the audio with a local speech-to-text engine if one is installed (parakeet-mlx / parakeet.cpp / whisper-cli / whisper / faster-whisper); never required",
+    )
+    src.add_argument(
+        "--language",
+        "--lang",
+        help="language code (e.g. en, ja, zh, ko): the language for --transcribe (default auto), "
+        "the tag on the subtitle stream with --mode mux, and the hint that says whether Han-only "
+        "text is Chinese, Japanese or Korean when a font is picked by script",
+    )
+    src.add_argument(
+        "--track-title",
+        action=AppendPath,
+        metavar="TITLE",
+        help="--mode mux: the name a player lists a track under, repeated in the same order as --srt "
+        "(default: the language's display name from a frozen table, else the code itself -- the "
+        "table is data, never a guessed or translated name)",
+    )
+    src.add_argument(
+        "--default-track",
+        metavar="LANG",
+        help="--mode mux: mark this language's track `default` so a player selects it by itself "
+        "(default: none, so no player burns in a language the viewer did not ask for)",
+    )
+    src.add_argument(
+        "--offset",
+        default="0",
+        help="shift every cue by TIME (seconds, mm:ss, hh:mm:ss.ms or "
+        "hh:mm:ss:ff; a leading - shifts earlier); works for --text, --srt and --ass",
+    )
+    src.add_argument(
+        "--model",
+        default=None,
+        help="speech model for --transcribe: a whisper model name/path (default: $FFMPEG_SKILL_ASR_MODEL, "
+        "else base), or a Parakeet model (an mlx-community/parakeet-* repo or a .gguf) for the "
+        "Parakeet engines",
+    )
+    src.add_argument(
+        "--engine",
+        choices=ENGINE_CHOICES,
+        default=None,
+        help="speech engine for --transcribe (default: $FFMPEG_SKILL_ASR_ENGINE, else auto = Parakeet "
+        "for English speech when installed, else whisper.cpp / faster-whisper / openai-whisper)",
+    )
+    src.add_argument(
+        "--write-srt", help="where to save the generated SRT (default: <text>.srt)"
+    )
+    src.add_argument(
+        "--auto-seconds",
+        type=float,
+        default=3.0,
+        help="duration for cues without timing (default 3)",
+    )
+    src.add_argument(
+        "--gap", type=float, default=0.0, help="gap after auto-timed cues in seconds"
+    )
+    src.add_argument(
+        "--fps",
+        type=float,
+        default=None,
+        help="frame rate for interpreting hh:mm:ss:ff SMPTE timecode cues in --text (non-drop-frame); "
+        "defaults to the input video's own fps when --input is given, required otherwise",
+    )
     sty = ap.add_argument_group("style (SRT only)")
-    sty.add_argument("--brand", help="brand.json: font, colours, caption size/position/animation defaults")
-    sty.add_argument("--font", default=None, help="font family, e.g. 'Noto Sans CJK JP' for Japanese (default DejaVu Sans or brand font)")
+    sty.add_argument(
+        "--brand",
+        help="brand.json: font, colours, caption size/position/animation defaults",
+    )
+    sty.add_argument(
+        "--font",
+        default=None,
+        help="font family, e.g. 'Noto Sans CJK JP' for Japanese (default DejaVu Sans or brand font)",
+    )
     sty.add_argument("--fonts-dir", help="directory with extra .ttf/.otf files")
-    sty.add_argument("--size", type=int, default=None, help="font size in ASS points (relative to a 288p script height, scales automatically)")
-    sty.add_argument("--color", default=None, help="text colour RRGGBB (default FFFFFF or brand text colour)")
+    sty.add_argument(
+        "--size",
+        type=int,
+        default=None,
+        help="font size in ASS points (relative to a 288p script height, scales automatically)",
+    )
+    sty.add_argument(
+        "--color",
+        default=None,
+        help="text colour RRGGBB (default FFFFFF or brand text colour)",
+    )
     sty.add_argument("--outline-color", default=None, help="outline colour RRGGBB")
-    sty.add_argument("--outline", type=float, default=None, help="outline width (default 2)")
-    sty.add_argument("--shadow", type=float, default=0.0, help="shadow depth (default 0)")
+    sty.add_argument(
+        "--outline", type=float, default=None, help="outline width (default 2)"
+    )
+    sty.add_argument(
+        "--shadow", type=float, default=0.0, help="shadow depth (default 0)"
+    )
     sty.add_argument("--bold", action="store_true")
-    sty.add_argument("--position", choices=sorted(ALIGN), default=None, help="on-screen placement (default bottom)")
-    sty.add_argument("--margin", type=int, default=None, help="vertical margin from the edge in ASS units (default 30, or the --platform safe zone)")
-    sty.add_argument("--platform", choices=PLATFORM_CHOICES, default=None,
-                     help="keep the captions out of this destination's UI: the margin becomes the platform's safe "
-                          "zone (TikTok's description bar, the Reels/Shorts chrome). An explicit --margin/--position wins")
-    sty.add_argument("--box", action="store_true", help="draw an opaque box behind text instead of an outline")
+    sty.add_argument(
+        "--position",
+        choices=sorted(ALIGN),
+        default=None,
+        help="on-screen placement (default bottom)",
+    )
+    sty.add_argument(
+        "--margin",
+        type=int,
+        default=None,
+        help="vertical margin from the edge in ASS units (default 30, or the --platform safe zone)",
+    )
+    sty.add_argument(
+        "--platform",
+        choices=PLATFORM_CHOICES,
+        default=None,
+        help="keep the captions out of this destination's UI: the margin becomes the platform's safe "
+        "zone (TikTok's description bar, the Reels/Shorts chrome). An explicit --margin/--position wins",
+    )
+    sty.add_argument(
+        "--box",
+        action="store_true",
+        help="draw an opaque box behind text instead of an outline",
+    )
     emo = ap.add_argument_group("emoji (1.15)")
-    emo.add_argument("--emoji", choices=["auto", "color", "png", "mono", "none"], default="auto",
-                     help="how emoji in the cues are drawn: 'auto' picks the best this machine can do "
-                          "(doctor --json .fonts.emoji), 'color' insists on a colour-capable libass, "
-                          "'png' composites the --emoji-assets PNGs, 'mono' draws whatever glyph the text "
-                          "font has, 'none' strips them")
-    emo.add_argument("--emoji-assets", metavar="DIR",
-                     help="directory of emoji PNGs named by code point (1f389.png, 1f1ef-1f1f5.png) -- "
-                          "Twemoji's assets/72x72 or Noto Emoji's png/128. Nothing is ever downloaded; "
-                          "also read from brand.json styles.caption.emoji_assets and FFMPEG_SKILL_EMOJI_ASSETS")
-    emo.add_argument("--emoji-scale", type=float, default=1.0,
-                     help="emoji box as a multiple of the line's font size (default 1.0)")
-    emo.add_argument("--emoji-max", type=int, default=60,
-                     help="most emoji overlays one run may build (default 60)")
-    sty.add_argument("--max-lines", type=int, default=2, help="most lines one cue may occupy; a longer cue is split into consecutive cues (default 2)")
-    sty.add_argument("--fit-size", choices=["auto", "on", "off"], default="auto",
-                     help="shrink the caption size until the cue fits --max-lines, BEFORE splitting it: "
-                          "'auto' (default) only when no --size was given, 'on' always, 'off' keeps --size and splits the cue instead")
-    sty.add_argument("--min-size", type=int, default=None,
-                     help="smallest size --fit-size may use, in ASS points (default 13 = 4.5%% of the frame height, "
-                          "the legibility floor)")
-    sty.add_argument("--fit-size-scope", choices=["file", "cue"], default="file",
-                     help="one fitted size for the whole file (default) or one per cue (a size that changes "
-                          "cue to cue reads as a mistake, so it is opt-in)")
-    sty.add_argument("--min-duration", type=float, default=1.0, help="shortest time a cue stays on screen in seconds, never past the next cue (default 1.0)")
-    sty.add_argument("--wrap", choices=list(WRAP_MODES), default="phrase",
-                     help="how a cue too wide for the safe area is broken into lines: 'phrase' (default, 1.16) never "
-                          "breaks inside a word or on the wrong side of a hyphen, never leaves a lone digit, kana or "
-                          "punctuation on a line, prefers Japanese sentence ends and particles over a mid-word break, "
-                          "and never ends a line on an article or preposition; 'measured' is 1.15's width-only wrap, "
-                          "kept so an older split can be reproduced. Neither ever changes the number of lines, "
-                          "rewrites the text or shortens a cue")
-    anim = ap.add_argument_group("animation (generates ASS; needs --text or --srt input)")
-    anim.add_argument("--animate", choices=["none", "fade", "pop", "slide"], default=None, help="per-cue entrance animation (default none, or brand caption.animate)")
-    anim.add_argument("--karaoke", action="store_true", help="word-by-word highlight (fills from --color to --highlight-color across each cue)")
-    anim.add_argument("--karaoke-style", choices=["sweep", "word"], default="sweep",
-                      help="'sweep' (default): today's \\kf colour fill, one Dialogue event per cue -- unchanged. "
-                           "'word': one Dialogue event per word, the active word scaled by --karaoke-scale and "
-                           "emboldened, past words in --color, upcoming words in --upcoming-color -- \\k/\\kf can only "
-                           "interpolate colour, so this is the only way to also scale/embolden the active word")
-    anim.add_argument("--highlight-color", default=None, help="karaoke fill/active-word colour RRGGBB (default FFD200 or brand primary)")
-    anim.add_argument("--upcoming-color", default=None,
-                      help="--karaoke-style word: colour RRGGBB for words not yet spoken (default B4B4B4)")
-    anim.add_argument("--karaoke-scale", type=float, default=112.0,
-                      help="--karaoke-style word: the active word's size as a percentage of the caption size (default 112)")
-    anim.add_argument("--karaoke-timing", choices=["even", "energy"], default="energy",
-                      help="how words are timed inside a cue: 'energy' follows the speech loudness in the audio (default), 'even' splits time equally")
-    anim.add_argument("--write-ass", help="where to save the generated ASS (default: next to the output)")
+    emo.add_argument(
+        "--emoji",
+        choices=["auto", "color", "png", "mono", "none"],
+        default="auto",
+        help="how emoji in the cues are drawn: 'auto' picks the best this machine can do "
+        "(doctor --json .fonts.emoji), 'color' insists on a colour-capable libass, "
+        "'png' composites the --emoji-assets PNGs, 'mono' draws whatever glyph the text "
+        "font has, 'none' strips them",
+    )
+    emo.add_argument(
+        "--emoji-assets",
+        metavar="DIR",
+        help="directory of emoji PNGs named by code point (1f389.png, 1f1ef-1f1f5.png) -- "
+        "Twemoji's assets/72x72 or Noto Emoji's png/128. Nothing is ever downloaded; "
+        "also read from brand.json styles.caption.emoji_assets and FFMPEG_SKILL_EMOJI_ASSETS",
+    )
+    emo.add_argument(
+        "--emoji-scale",
+        type=float,
+        default=1.0,
+        help="emoji box as a multiple of the line's font size (default 1.0)",
+    )
+    emo.add_argument(
+        "--emoji-max",
+        type=int,
+        default=60,
+        help="most emoji overlays one run may build (default 60)",
+    )
+    sty.add_argument(
+        "--max-lines",
+        type=int,
+        default=2,
+        help="most lines one cue may occupy; a longer cue is split into consecutive cues (default 2)",
+    )
+    sty.add_argument(
+        "--fit-size",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="shrink the caption size until the cue fits --max-lines, BEFORE splitting it: "
+        "'auto' (default) only when no --size was given, 'on' always, 'off' keeps --size and splits the cue instead",
+    )
+    sty.add_argument(
+        "--min-size",
+        type=int,
+        default=None,
+        help="smallest size --fit-size may use, in ASS points (default 13 = 4.5%% of the frame height, "
+        "the legibility floor)",
+    )
+    sty.add_argument(
+        "--fit-size-scope",
+        choices=["file", "cue"],
+        default="file",
+        help="one fitted size for the whole file (default) or one per cue (a size that changes "
+        "cue to cue reads as a mistake, so it is opt-in)",
+    )
+    sty.add_argument(
+        "--min-duration",
+        type=float,
+        default=1.0,
+        help="shortest time a cue stays on screen in seconds, never past the next cue (default 1.0)",
+    )
+    sty.add_argument(
+        "--wrap",
+        choices=list(WRAP_MODES),
+        default="phrase",
+        help="how a cue too wide for the safe area is broken into lines: 'phrase' (default, 1.16) never "
+        "breaks inside a word or on the wrong side of a hyphen, never leaves a lone digit, kana or "
+        "punctuation on a line, prefers Japanese sentence ends and particles over a mid-word break, "
+        "and never ends a line on an article or preposition; 'measured' is 1.15's width-only wrap, "
+        "kept so an older split can be reproduced. Neither ever changes the number of lines, "
+        "rewrites the text or shortens a cue",
+    )
+    anim = ap.add_argument_group(
+        "animation (generates ASS; needs --text or --srt input)"
+    )
+    anim.add_argument(
+        "--animate",
+        choices=["none", "fade", "pop", "slide"],
+        default=None,
+        help="per-cue entrance animation (default none, or brand caption.animate)",
+    )
+    anim.add_argument(
+        "--karaoke",
+        action="store_true",
+        help="word-by-word highlight (fills from --color to --highlight-color across each cue)",
+    )
+    anim.add_argument(
+        "--karaoke-style",
+        choices=["sweep", "word"],
+        default="sweep",
+        help="'sweep' (default): today's \\kf colour fill, one Dialogue event per cue -- unchanged. "
+        "'word': one Dialogue event per word, the active word scaled by --karaoke-scale and "
+        "emboldened, past words in --color, upcoming words in --upcoming-color -- \\k/\\kf can only "
+        "interpolate colour, so this is the only way to also scale/embolden the active word",
+    )
+    anim.add_argument(
+        "--highlight-color",
+        default=None,
+        help="karaoke fill/active-word colour RRGGBB (default FFD200 or brand primary)",
+    )
+    anim.add_argument(
+        "--upcoming-color",
+        default=None,
+        help="--karaoke-style word: colour RRGGBB for words not yet spoken (default B4B4B4)",
+    )
+    anim.add_argument(
+        "--karaoke-scale",
+        type=float,
+        default=112.0,
+        help="--karaoke-style word: the active word's size as a percentage of the caption size (default 112)",
+    )
+    anim.add_argument(
+        "--karaoke-timing",
+        choices=["even", "energy"],
+        default="energy",
+        help="how words are timed inside a cue: 'energy' follows the speech loudness in the audio (default), 'even' splits time equally",
+    )
+    anim.add_argument(
+        "--write-ass",
+        help="where to save the generated ASS (default: next to the output)",
+    )
     enc = ap.add_argument_group("encoding")
     enc.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
     enc.add_argument("--preset", default="medium", choices=X264_PRESETS)
@@ -1285,40 +1967,75 @@ def main() -> int:
     args.language = args.language or (brand.get("lang") if args.brand else None)
     if args.brand and bcap.get("box") and not args.box:
         args.box = True
-    args.font = args.font or (bcap.get("font") if args.brand else None) or brand.get("font") or "DejaVu Sans"
+    args.font = (
+        args.font
+        or (bcap.get("font") if args.brand else None)
+        or brand.get("font")
+        or "DejaVu Sans"
+    )
     # --fit-size auto shrinks only a size the skill itself chose. An explicit --size is a
     # statement about the look and is never quietly overridden; a brand's caption size is the
     # same kind of statement, so it counts as explicit too.
-    args._size_explicit = args.size is not None or bool(args.brand and bcap.get("size") is not None)
-    args.size = args.size if args.size is not None else (bcap.get("size", 24) if args.brand else 24)
-    args.color = color_hex(args.color or (bcap.get("color") if args.brand else None) or bc.get("text", "FFFFFF"))
+    args._size_explicit = args.size is not None or bool(
+        args.brand and bcap.get("size") is not None
+    )
+    args.size = (
+        args.size
+        if args.size is not None
+        else (bcap.get("size", 24) if args.brand else 24)
+    )
+    args.color = color_hex(
+        args.color
+        or (bcap.get("color") if args.brand else None)
+        or bc.get("text", "FFFFFF")
+    )
     args.outline_color = color_hex(args.outline_color or bc.get("outline", "000000"))
-    args.outline = args.outline if args.outline is not None else (float(bcap.get("outline", 2)) if args.brand else 2.0)
-    args.position = args.position or (bcap.get("position", "bottom") if args.brand else "bottom")
+    args.outline = (
+        args.outline
+        if args.outline is not None
+        else (float(bcap.get("outline", 2)) if args.brand else 2.0)
+    )
+    args.position = args.position or (
+        bcap.get("position", "bottom") if args.brand else "bottom"
+    )
     # --platform: the margin is the fraction of the frame that platform's own UI covers
     # (scripts/_platforms.py). An explicit --margin is the more specific statement and wins;
     # without either, the historical default 30 is unchanged.
     # every tool resolves the spellings people write ('youtube-shorts' is 'shorts') in one place
     args.platform = resolve_platform(args.platform)
     if args.margin is None and args.platform and PLATFORMS[args.platform].get("frame"):
-        edge = PLATFORMS[args.platform]["safe"]["top" if args.position.startswith("top") else "bottom"]
+        edge = PLATFORMS[args.platform]["safe"][
+            "top" if args.position.startswith("top") else "bottom"
+        ]
         args.margin = ass_units(edge)
-        info(f"--platform {args.platform}: caption margin {args.margin} ASS units ({edge * 100:.0f}% of the frame height, "
-             f"clear of the app's own UI)")
+        info(
+            f"--platform {args.platform}: caption margin {args.margin} ASS units ({edge * 100:.0f}% of the frame height, "
+            f"clear of the app's own UI)"
+        )
     if args.margin is None:
         args.margin = 30
     if args.ass and (args.animate not in (None, "none") or args.karaoke):
         # A74: both are drawn by the ASS this tool writes from cues; a caller's own --ass is burned
         # as it stands, so the flag was accepted and nothing moved (a brand's caption.animate or
         # caption.karaoke is a default for generated captions and is not a request here)
-        asked = "--animate " + args.animate if args.animate not in (None, "none") else "--karaoke"
-        die(f"{asked} is drawn by the ASS this tool generates from --srt, --text or --transcribe; --ass burns "
+        asked = (
+            "--animate " + args.animate
+            if args.animate not in (None, "none")
+            else "--karaoke"
+        )
+        die(
+            f"{asked} is drawn by the ASS this tool generates from --srt, --text or --transcribe; --ass burns "
             "the file as it is, with the animation and karaoke its own tags give it",
-            hint=f"drop {asked.split()[0]}, or pass the cues as --srt/--text and let this tool write the ASS")
+            hint=f"drop {asked.split()[0]}, or pass the cues as --srt/--text and let this tool write the ASS",
+        )
     # a brand's caption.animate is a burn-in default; over --mode mux (soft subtitles) it used
     # to be applied anyway and then refused as "animation is burn only" -- ignore it there
-    args.animate = args.animate or (bcap.get("animate", "none") if args.brand and args.mode != "mux" else "none")
-    args.highlight_color = color_hex(args.highlight_color or bc.get("primary", "FFD200"))
+    args.animate = args.animate or (
+        bcap.get("animate", "none") if args.brand and args.mode != "mux" else "none"
+    )
+    args.highlight_color = color_hex(
+        args.highlight_color or bc.get("primary", "FFD200")
+    )
     args.upcoming_color = color_hex(args.upcoming_color or bc.get("upcoming", "B4B4B4"))
     if args.karaoke_scale <= 0:
         die("--karaoke-scale must be positive")
@@ -1337,17 +2054,28 @@ def main() -> int:
         die("give one of --srt, --ass, --text or --transcribe")
     if args.mode == "mux":
         if args.ass:
-            die("--mode mux takes --srt (or --text/--transcribe), not --ass -- "
-                "ASS carries burn-only styling with no soft-subtitle equivalent; use --mode burn for an ASS file")
+            die(
+                "--mode mux takes --srt (or --text/--transcribe), not --ass -- "
+                "ASS carries burn-only styling with no soft-subtitle equivalent; use --mode burn for an ASS file"
+            )
         if args.animate != "none" or args.karaoke:
-            die("--animate/--karaoke render pixels into the picture and require --mode burn")
+            die(
+                "--animate/--karaoke render pixels into the picture and require --mode burn"
+            )
         if args.max_lines != 2 or args.wrap != "phrase":
             # A55: a soft track is wrapped by the player at the size it draws; this run does not wrap
             # or split it, so a layout flag would be accepted and do nothing
-            asked = f"--max-lines {args.max_lines}" if args.max_lines != 2 else f"--wrap {args.wrap}"
-            die(f"{asked} lays out burned captions; --mode mux adds the cues as they are and the player wraps "
-                "a soft subtitle at the size it draws it", kind="input",
-                hint=f"drop {asked.split()[0]}, or use --mode burn")
+            asked = (
+                f"--max-lines {args.max_lines}"
+                if args.max_lines != 2
+                else f"--wrap {args.wrap}"
+            )
+            die(
+                f"{asked} lays out burned captions; --mode mux adds the cues as they are and the player wraps "
+                "a soft subtitle at the size it draws it",
+                kind="input",
+                hint=f"drop {asked.split()[0]}, or use --mode burn",
+            )
 
     args.offset = signed_time_arg(str(args.offset), "--offset")
     if args.max_lines < 1:
@@ -1355,8 +2083,11 @@ def main() -> int:
     if args.min_size is not None and args.min_size < 1:
         die("--min-size must be at least 1", kind="input")
     if args.min_size is not None and args.min_size > args.size:
-        die(f"--min-size {args.min_size} is larger than --size {args.size}: the floor cannot be "
-            "above the size it is a floor for", kind="input")
+        die(
+            f"--min-size {args.min_size} is larger than --size {args.size}: the floor cannot be "
+            "above the size it is a floor for",
+            kind="input",
+        )
     if args.min_duration < 0:
         die("--min-duration cannot be negative")
     if args.gap < 0:
@@ -1371,18 +2102,30 @@ def main() -> int:
             die("input has no video stream")
         audio_streams = meta.get("audio_streams") or []
         if audio_streams and not (0 <= args.audio_stream < len(audio_streams)):
-            die(f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}")
+            die(
+                f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}"
+            )
         if args.audio_stream and not audio_streams:
             die("--audio-stream needs an input with audio streams")
         if args.transcribe and not audio_streams:
             # refused before any engine runs, as silence.py refuses it, not an unclassified
             # "Stream map '0:a:0' matches no streams" from the WAV extraction (#414)
-            die(f"--transcribe needs speech to transcribe, and {args.input} has no audio stream",
-                kind="input", hint="pick the file that carries the sound, or write the cues with --text")
+            die(
+                f"--transcribe needs speech to transcribe, and {args.input} has no audio stream",
+                kind="input",
+                hint="pick the file that carries the sound, or write the cues with --text",
+            )
         if args.mode != "mux":
             # before any transcription or sidecar: a build without libass fails these at parse time
             # with a message that names no filter (#393), so ask the build first, dry run included
-            require_filter("ass" if (args.ass or args.animate != "none" or args.karaoke) else "subtitles", "burning captions")
+            require_filter(
+                (
+                    "ass"
+                    if (args.ass or args.animate != "none" or args.karaoke)
+                    else "subtitles"
+                ),
+                "burning captions",
+            )
     fps_for_tc = args.fps
     if fps_for_tc is None and meta is not None:
         fps_for_tc = meta.get("video", {}).get("fps")
@@ -1399,31 +2142,66 @@ def main() -> int:
     # the frame, and size_used is reported as null rather than presenting the requested size as
     # the size that was used.
     planned_frame = False
-    if not (play_w and play_h) and args.platform and PLATFORMS[args.platform].get("frame"):
+    if (
+        not (play_w and play_h)
+        and args.platform
+        and PLATFORMS[args.platform].get("frame")
+    ):
         frame = PLATFORMS[args.platform]["frame"]
         play_w, play_h = frame["w"], frame["h"]
         planned_frame = True
-        info(f"[plan] no geometry to measure yet; fitting the caption size against the "
-             f"--platform {args.platform} frame ({play_w}x{play_h})")
+        info(
+            f"[plan] no geometry to measure yet; fitting the caption size against the "
+            f"--platform {args.platform} frame ({play_w}x{play_h})"
+        )
 
-    args._fit_floor = args.min_size if args.min_size is not None else ass_units(MIN_CAPTION_FRACTION)
+    args._fit_floor = (
+        args.min_size if args.min_size is not None else ass_units(MIN_CAPTION_FRACTION)
+    )
     fit_unmeasurable = not (play_w and play_h)
-    fit_stats: dict = {"fit_size": args.fit_size, "size_requested": args.size,
-                       # A76: null until a fit (or a stated size) decides it; a --transcribe
-                       # dry run has no cues, so nothing is fitted and nothing is claimed
-                       "size_used": args.size if (args.fit_size == "off" or (args.fit_size == "auto" and args._size_explicit)) else None,
-                       "size_floor": args._fit_floor,
-                       "size_pct_height": round(args.size * 100.0 / ASS_SCRIPT_HEIGHT, 2),
-                       "shrunk": 0, "fit_scope": args.fit_size_scope, "fit_exhausted": False}
-    caption_stats: dict = {"shifted": 0, "wrapped": 0, "split": 0, "extended": 0, "dropped": 0,
-                           "rebalanced": 0, "wrap": args.wrap, "phrase_breaks": 0}
+    fit_stats: dict = {
+        "fit_size": args.fit_size,
+        "size_requested": args.size,
+        # A76: null until a fit (or a stated size) decides it; a --transcribe
+        # dry run has no cues, so nothing is fitted and nothing is claimed
+        "size_used": (
+            args.size
+            if (
+                args.fit_size == "off"
+                or (args.fit_size == "auto" and args._size_explicit)
+            )
+            else None
+        ),
+        "size_floor": args._fit_floor,
+        "size_pct_height": round(args.size * 100.0 / ASS_SCRIPT_HEIGHT, 2),
+        "shrunk": 0,
+        "fit_scope": args.fit_size_scope,
+        "fit_exhausted": False,
+    }
+    caption_stats: dict = {
+        "shifted": 0,
+        "wrapped": 0,
+        "split": 0,
+        "extended": 0,
+        "dropped": 0,
+        "rebalanced": 0,
+        "wrap": args.wrap,
+        "phrase_breaks": 0,
+    }
     caption_stats.update(fit_stats)
 
     def fit_params():
-        return dict(size=fit_stats["size_requested"], min_size=args._fit_floor,
-                    max_lines=args.max_lines, play_w=play_w, play_h=play_h,
-                    mode=args.wrap, lang=args.language, scope=args.fit_size_scope,
-                    safe_fraction=line_fraction(args, play_w))
+        return dict(
+            size=fit_stats["size_requested"],
+            min_size=args._fit_floor,
+            max_lines=args.max_lines,
+            play_w=play_w,
+            play_h=play_h,
+            mode=args.wrap,
+            lang=args.language,
+            scope=args.fit_size_scope,
+            safe_fraction=line_fraction(args, play_w),
+        )
 
     def fit_the_size(cue_list):
         """Shrink --size until every cue fits --max-lines, BEFORE the cue is split.
@@ -1433,7 +2211,7 @@ def main() -> int:
         touched -- only the type size, and never below the legibility floor.
         """
         if args.fit_size == "off" or (args.fit_size == "auto" and args._size_explicit):
-            fit_stats["size_used"] = args.size    # a stated size IS the size used
+            fit_stats["size_used"] = args.size  # a stated size IS the size used
             return
         if fit_unmeasurable:
             # Nothing to measure against: size_used stays null rather than presenting the
@@ -1444,30 +2222,43 @@ def main() -> int:
             # viewer sees and would silently change the SRT this run writes, so the mux path is
             # left exactly as 1.16 wrote it.
             return
-        fit = fit_size([(s, e, strip_srt_markup(t)) for s, e, t in cue_list], **fit_params())
+        fit = fit_size(
+            [(s, e, strip_srt_markup(t)) for s, e, t in cue_list], **fit_params()
+        )
         fit_stats["size_used"] = fit["size"]
         fit_stats["size_source"] = "platform-frame" if planned_frame else "input"
         fit_stats["shrunk"] = fit["shrunk"]
         fit_stats["fit_exhausted"] = bool(fit["shrunk"]) and not fit["fits"]
         fit_stats["size_pct_height"] = round(fit["size"] * 100.0 / ASS_SCRIPT_HEIGHT, 2)
         if fit["size"] != args.size:
-            info(f"caption size {args.size} -> {fit['size']} ASS units "
-                 f"({fit_stats['size_pct_height']:.1f} % of frame height) so {fit['shrunk']} cue(s) "
-                 f"fit --max-lines {args.max_lines}; floor {args._fit_floor}")
+            info(
+                f"caption size {args.size} -> {fit['size']} ASS units "
+                f"({fit_stats['size_pct_height']:.1f} % of frame height) so {fit['shrunk']} cue(s) "
+                f"fit --max-lines {args.max_lines}; floor {args._fit_floor}"
+            )
             args.size = fit["size"]
         elif fit_stats["fit_exhausted"]:
-            info(f"caption size stays {args.size} ASS units: {fit['shrunk']} cue(s) still need more "
-                 f"than {args.max_lines} line(s) at the floor {args._fit_floor} and are split "
-                 "(--min-size goes smaller; `|` sets the break yourself)")
+            info(
+                f"caption size stays {args.size} ASS units: {fit['shrunk']} cue(s) still need more "
+                f"than {args.max_lines} line(s) at the floor {args._fit_floor} and are split "
+                "(--min-size goes smaller; `|` sets the break yourself)"
+            )
         if args.fit_size_scope == "cue":
             # Each cue is laid out at ITS OWN size, not at the file minimum. A cue drawn larger
             # has a NARROWER line in em, so wrapping everything to the minimum size's (widest)
             # budget and then drawing some cues large put lines off the side of the frame.
-            args._fit_cue_em = [line_em_for_size(fit["per_cue"].get(i, fit["size"]),
-                                                 play_w, play_h,
-                                                 safe_fraction=line_fraction(args, play_w))
-                                for i in range(len(cue_list))]
-            args._fit_cue_size = [fit["per_cue"].get(i, fit["size"]) for i in range(len(cue_list))]
+            args._fit_cue_em = [
+                line_em_for_size(
+                    fit["per_cue"].get(i, fit["size"]),
+                    play_w,
+                    play_h,
+                    safe_fraction=line_fraction(args, play_w),
+                )
+                for i in range(len(cue_list))
+            ]
+            args._fit_cue_size = [
+                fit["per_cue"].get(i, fit["size"]) for i in range(len(cue_list))
+            ]
 
     def lay_out(cue_list):
         """Wrap to the safe area, split past --max-lines, lengthen to --min-duration, shift by
@@ -1476,11 +2267,17 @@ def main() -> int:
         fit_the_size(cue_list)
         # A55 (#457): a soft subtitle is laid out by the player, at a size this run does not
         # know; wrapping it at the burn-in size split a cue on a portrait video into three
-        out, stats = layout_cues(cue_list, max_em=None if args.mode == "mux" else max_line_em(args, play_w, play_h),
-                                 max_lines=args.max_lines, min_duration=args.min_duration,
-                                 offset=args.offset, wrap=args.wrap, lang=args.language,
-                                 per_cue_em=getattr(args, "_fit_cue_em", None),
-                                 per_cue_size=getattr(args, "_fit_cue_size", None))
+        out, stats = layout_cues(
+            cue_list,
+            max_em=None if args.mode == "mux" else max_line_em(args, play_w, play_h),
+            max_lines=args.max_lines,
+            min_duration=args.min_duration,
+            offset=args.offset,
+            wrap=args.wrap,
+            lang=args.language,
+            per_cue_em=getattr(args, "_fit_cue_em", None),
+            per_cue_size=getattr(args, "_fit_cue_size", None),
+        )
         # which size each OUTPUT cue belongs to, after splits have renumbered them
         args._fit_sizes_out = stats.pop("cue_sizes", None)
         report_layout(stats)
@@ -1493,52 +2290,87 @@ def main() -> int:
     # Every path below that burns, adjusts or transcribes works on the FIRST one, which is what
     # `--srt x.srt` has always meant; the extra tracks only exist for --mode mux.
     srt_tracks: List[Tuple[str, Optional[str]]] = []
-    for token in (args.srt or []):
+    for token in args.srt or []:
         path_part, lang_part = split_srt_lang(token)
         srt_tracks.append((path_part, lang_part))
     # --language tags the track only where there is a track to tag (A71, #457): a burn reads it as
     # the script and wrap hint, and refusing it as an --srt suffix named a flag nobody had given
     tagged_by_language = False
-    if args.mode == "mux" and len(srt_tracks) == 1 and srt_tracks[0][1] is None and args.language:
+    if (
+        args.mode == "mux"
+        and len(srt_tracks) == 1
+        and srt_tracks[0][1] is None
+        and args.language
+    ):
         srt_tracks[0] = (srt_tracks[0][0], args.language)
         tagged_by_language = True
-    if args.mode == "mux" and args.language and not srt_tracks and not LANG_TOKEN_RE.match(args.language):
+    if (
+        args.mode == "mux"
+        and args.language
+        and not srt_tracks
+        and not LANG_TOKEN_RE.match(args.language)
+    ):
         # the --text/--transcribe track is tagged with it too, and was tagged unchecked
-        die(f"--language: '{args.language}' is not a language code (two or three letters, optionally with a "
-            "region, e.g. en, ja, pt-BR)", kind="input")
+        die(
+            f"--language: '{args.language}' is not a language code (two or three letters, optionally with a "
+            "region, e.g. en, ja, pt-BR)",
+            kind="input",
+        )
     if srt_tracks and args.mode != "mux" and len(srt_tracks) > 1:
-        die("burning renders pixels; only one language can be in the picture -- burn one and mux "
-            "the rest (caption.py OUT --mode mux --srt en.srt:en --srt ja.srt:ja)", kind="input")
+        die(
+            "burning renders pixels; only one language can be in the picture -- burn one and mux "
+            "the rest (caption.py OUT --mode mux --srt en.srt:en --srt ja.srt:ja)",
+            kind="input",
+        )
     seen_langs = [lang for _p, lang in srt_tracks if lang]
     for lang in seen_langs:
         if not LANG_TOKEN_RE.match(lang):
-            die(f"{'--language' if tagged_by_language else '--srt'}: '{lang}' is not a language code (two or "
+            die(
+                f"{'--language' if tagged_by_language else '--srt'}: '{lang}' is not a language code (two or "
                 "three letters, optionally with a "
-                "region, e.g. en, ja, pt-BR)", kind="input")
+                "region, e.g. en, ja, pt-BR)",
+                kind="input",
+            )
     if len(set(seen_langs)) != len(seen_langs):
         dup = sorted({l for l in seen_langs if seen_langs.count(l) > 1})
-        die(f"--srt: two tracks tagged '{', '.join(dup)}' -- a player cannot tell them apart; give "
-            "each track its own code (and --track-title to name them)", kind="input")
+        die(
+            f"--srt: two tracks tagged '{', '.join(dup)}' -- a player cannot tell them apart; give "
+            "each track its own code (and --track-title to name them)",
+            kind="input",
+        )
     if args.track_title and len(args.track_title) > max(1, len(srt_tracks)):
-        die(f"--track-title given {len(args.track_title)} times for {len(srt_tracks)} --srt file(s)",
-            kind="input")
+        die(
+            f"--track-title given {len(args.track_title)} times for {len(srt_tracks)} --srt file(s)",
+            kind="input",
+        )
     args.srt = srt_tracks[0][0] if srt_tracks else None
     # 2.2.1: the extra --srt tracks (always inputs; the first may be written by --text or
     # --transcribe) are checked up front, every missing one named together, before any work.
     # Dry-run plans on files earlier steps have not written yet, as join.py does.
-    missing_srt = [{"index": i, "path": p, "reason": "missing"}
-                   for i, (p, _l) in enumerate(srt_tracks) if i > 0 and not os.path.exists(p)]
+    missing_srt = [
+        {"index": i, "path": p, "reason": "missing"}
+        for i, (p, _l) in enumerate(srt_tracks)
+        if i > 0 and not os.path.exists(p)
+    ]
     if missing_srt and not STATE.dry_run:
-        die(f"{len(missing_srt)} SRT file(s) not found: " + ", ".join(m["path"] for m in missing_srt),
-            kind="input", problems=missing_srt)
+        die(
+            f"{len(missing_srt)} SRT file(s) not found: "
+            + ", ".join(m["path"] for m in missing_srt),
+            kind="input",
+            problems=missing_srt,
+        )
     if args.offset and args.mode == "mux":
         # --offset shifts every --srt track (A61); one it would leave with no cue is refused here,
         # before the first file of this run is written (the first track's empty copy used to reach
         # ffmpeg, which failed on it as kind ffmpeg and left the copy behind)
         for p, _l in srt_tracks:
-            if os.path.exists(p) and not any(e + args.offset > 0 for _s, e, _t in parse_srt(p)):
-                die(f"--offset {args.offset:+g} moves every cue of {p} before 0: the track would be empty",
-                    kind="input")
+            if os.path.exists(p) and not any(
+                e + args.offset > 0 for _s, e, _t in parse_srt(p)
+            ):
+                die(
+                    f"--offset {args.offset:+g} moves every cue of {p} before 0: the track would be empty",
+                    kind="input",
+                )
     srt_path = args.srt
     if args.transcribe and not args.input:
         die("--transcribe needs the input video")
@@ -1562,61 +2394,117 @@ def main() -> int:
             held = claimed.get(real)
             if held is None and os.path.exists(real):
                 # a second name for the same file (a hard link) is the same path (#413 review)
-                held = next((o for r, o in claimed.items()
-                             if os.path.exists(r) and os.path.samefile(r, real)), None)
+                held = next(
+                    (
+                        o
+                        for r, o in claimed.items()
+                        if os.path.exists(r) and os.path.samefile(r, real)
+                    ),
+                    None,
+                )
             if held is None:
                 claimed[real] = owner
                 todo.append(path)
             elif held != owner:
-                refuse("input", "output_path_taken",
-                       f"{path!r} is named for both the {held} and the {owner} this run writes; give each its own path",
-                       output=path, other=held)
+                refuse(
+                    "input",
+                    "output_path_taken",
+                    f"{path!r} is named for both the {held} and the {owner} this run writes; give each its own path",
+                    output=path,
+                    other=held,
+                )
         refuse_existing_outputs(todo)
         # and the rest of the side-file guards (#408): never an input, the video, a missing
         # directory or an option-shaped name, even under --overwrite
         # a brand file's font_file and logo are read too (review of #534's sweep: --write-srt or
         # --write-ass naming the brand's font replaced it)
-        side_inputs = [q for q in (args.input, getattr(args, "text", None), getattr(args, "ass", None),
-                                   getattr(args, "brand", None), brand.get("font_file"), brand.get("logo"),
-                                   *(t[0] for t in srt_tracks)) if isinstance(q, str) and q]
+        side_inputs = [
+            q
+            for q in (
+                args.input,
+                getattr(args, "text", None),
+                getattr(args, "ass", None),
+                getattr(args, "brand", None),
+                brand.get("font_file"),
+                brand.get("logo"),
+                *(t[0] for t in srt_tracks),
+            )
+            if isinstance(q, str) and q
+        ]
         for path in todo:
             guard_sidecar(path, *side_inputs)
 
-    planned_out = args.output or (default_output(args.input, "captioned") if args.input else None)
+    planned_out = args.output or (
+        default_output(args.input, "captioned") if args.input else None
+    )
     up_front: List[Tuple[str, str]] = []
     if args.transcribe:
-        up_front.append((args.write_srt or os.path.splitext(planned_out)[0] + ".srt", "SRT"))
+        up_front.append(
+            (args.write_srt or os.path.splitext(planned_out)[0] + ".srt", "SRT")
+        )
     elif args.text:
-        up_front.append((args.write_srt or (os.path.splitext(planned_out)[0] + ".srt" if args.input
-                                            else os.path.splitext(args.text)[0] + ".srt"), "SRT"))
+        up_front.append(
+            (
+                args.write_srt
+                or (
+                    os.path.splitext(planned_out)[0] + ".srt"
+                    if args.input
+                    else os.path.splitext(args.text)[0] + ".srt"
+                ),
+                "SRT",
+            )
+        )
     if args.input:
         if (args.animate != "none" or args.karaoke) and not args.ass:
-            up_front.append((args.write_ass or os.path.splitext(planned_out)[0] + ".ass", "ASS"))
+            up_front.append(
+                (args.write_ass or os.path.splitext(planned_out)[0] + ".ass", "ASS")
+            )
         if args.ass and args.offset and os.path.exists(args.ass):
-            up_front.append((os.path.splitext(planned_out)[0] + "_offset.ass", "offset ASS"))
+            up_front.append(
+                (os.path.splitext(planned_out)[0] + "_offset.ass", "offset ASS")
+            )
         # -o naming the input (the same name, a hard link, another case on a case-insensitive
         # volume) is refused here, before any sidecar or transcript is written: run()'s own guard
         # came after the .srt was already beside it (review of #530)
         if same_file(planned_out, args.input):
-            refuse_output_is_input(planned_out, args.input, why="the captioned video would replace the source")
+            refuse_output_is_input(
+                planned_out,
+                args.input,
+                why="the captioned video would replace the source",
+            )
         up_front.append((planned_out, "video"))
     claim(up_front)
     if args.transcribe:
         # the sidecar goes next to the output like the --text one, not into the source folder
         # where it silently replaced a hand-written <input>.srt (review 5)
-        srt_path = args.write_srt or os.path.splitext(args.output or default_output(args.input, "captioned"))[0] + ".srt"
+        srt_path = (
+            args.write_srt
+            or os.path.splitext(args.output or default_output(args.input, "captioned"))[
+                0
+            ]
+            + ".srt"
+        )
         if STATE.dry_run:
             cues = []
             info(f"[dry-run] would transcribe {args.input} and write {srt_path}")
         else:
             # the call's own result, not module state: engine, routing and words belong to this run
-            asr_run = _asr.transcribe_result(args.input, srt_path, args.language, args.model, args.audio_stream,
-                                             engine=args.engine)
+            asr_run = _asr.transcribe_result(
+                args.input,
+                srt_path,
+                args.language,
+                args.model,
+                args.audio_stream,
+                engine=args.engine,
+            )
             cues = asr_run.cues
             args._asr = dict(asr_run.facts)
             args._asr_notes = list(asr_run.notes)
-            args._word_timings = shift_words(whisper_word_timings(srt_path) or sorted(
-                (w["start"], w["end"], w["word"]) for w in asr_run.words), args.offset)
+            args._word_timings = shift_words(
+                whisper_word_timings(srt_path)
+                or sorted((w["start"], w["end"], w["word"]) for w in asr_run.words),
+                args.offset,
+            )
             cues, changed = lay_out(cues)
             if changed:
                 write_srt(cues, srt_path)
@@ -1628,8 +2516,10 @@ def main() -> int:
         if not cues:
             # --offset dropped every cue (one that ends at or before 0 goes): an empty SRT was
             # written, and with a frame rate known the report below indexed the empty list
-            die(f"--offset {args.offset:+g} moves every cue of {args.text} before 0: no cue would be left",
-                kind="input")
+            die(
+                f"--offset {args.offset:+g} moves every cue of {args.text} before 0: no cue would be left",
+                kind="input",
+            )
         if args.write_srt:
             srt_path = args.write_srt
         elif args.input:
@@ -1640,7 +2530,11 @@ def main() -> int:
             srt_path = os.path.splitext(args.text)[0] + ".srt"
         if not STATE.dry_run:
             write_srt(cues, srt_path)
-        tc_range = f", {fmt_smpte_time(cues[0][0], fps_for_tc)}-{fmt_smpte_time(cues[-1][1], fps_for_tc)} @ {fps_for_tc:g}fps" if fps_for_tc else ""
+        tc_range = (
+            f", {fmt_smpte_time(cues[0][0], fps_for_tc)}-{fmt_smpte_time(cues[-1][1], fps_for_tc)} @ {fps_for_tc:g}fps"
+            if fps_for_tc
+            else ""
+        )
         info(f"wrote {srt_path} ({len(cues)} cues{tc_range})")
         if not args.input:
             print(srt_path)
@@ -1660,10 +2554,18 @@ def main() -> int:
     planned_cues: Optional[List[Tuple[float, float, str]]] = None
     # an English-only transcript made on an assumption says so first (asr.assumed_english_note)
     side_notes: List[str] = list(getattr(args, "_asr_notes", None) or [])
-    ass_counts: dict = {}  # --ass: ass_shifted / ass_unshifted (with --offset) and ass_malformed, into `caption`
+    ass_counts: dict = (
+        {}
+    )  # --ass: ass_shifted / ass_unshifted (with --offset) and ass_malformed, into `caption`
     ass_sample_path = args.ass
-    normalised_only = False  # srt_path is a copy of the caller's SRT that only rewrites its timings
-    if args.srt and not (args.text or args.transcribe) and os.path.exists(srt_path or ""):
+    normalised_only = (
+        False  # srt_path is a copy of the caller's SRT that only rewrites its timings
+    )
+    if (
+        args.srt
+        and not (args.text or args.transcribe)
+        and os.path.exists(srt_path or "")
+    ):
         adjusted, changed = lay_out(parse_srt(srt_path))
         # ffmpeg's own SRT reader takes a narrower grammar than parse_srt(): a time without hours
         # is refused and ",5" is read as 5 ms where this tool reads 500. A file outside the grammar
@@ -1674,22 +2576,39 @@ def main() -> int:
             new_srt = os.path.splitext(output)[0] + "_adjusted.srt"
             claim([(new_srt, "adjusted SRT")])
             if STATE.dry_run:
-                info(f"[dry-run] would write {new_srt} ({len(adjusted)} cues, adjusted from {os.path.basename(srt_path)})")
+                info(
+                    f"[dry-run] would write {new_srt} ({len(adjusted)} cues, adjusted from {os.path.basename(srt_path)})"
+                )
             else:
                 write_srt(adjusted, new_srt)
-                info(f"wrote {new_srt} ({len(adjusted)} cues, adjusted from {os.path.basename(srt_path)})")
+                info(
+                    f"wrote {new_srt} ({len(adjusted)} cues, adjusted from {os.path.basename(srt_path)})"
+                )
             srt_path = new_srt
             planned_cues = adjusted
-            why = ("--offset/--max-lines/--min-duration" if changed else
-                   "its timings rewritten as hh:mm:ss,mmm, which ffmpeg reads as this tool does")
-            side_notes.append(f"the {'muxed' if args.mode == 'mux' else 'burned'} subtitles are {new_srt}, the adjusted copy of "
-                              f"{os.path.basename(args.srt)} this run writes ({why})"
-                              + ("; re-run this command without --dry-run to produce it" if STATE.dry_run else ""))
+            why = (
+                "--offset/--max-lines/--min-duration"
+                if changed
+                else "its timings rewritten as hh:mm:ss,mmm, which ffmpeg reads as this tool does"
+            )
+            side_notes.append(
+                f"the {'muxed' if args.mode == 'mux' else 'burned'} subtitles are {new_srt}, the adjusted copy of "
+                f"{os.path.basename(args.srt)} this run writes ({why})"
+                + (
+                    "; re-run this command without --dry-run to produce it"
+                    if STATE.dry_run
+                    else ""
+                )
+            )
     if args.ass and args.offset and os.path.exists(args.ass):
         shifted = os.path.splitext(output)[0] + "_offset.ass"
         if STATE.dry_run:
-            _text, n, unshifted = shift_ass_text(read_text_or_die(args.ass, "--ass"), args.offset)
-            info(f"[dry-run] would write {shifted} ({n} cues shifted by {args.offset:+g} s)")
+            _text, n, unshifted = shift_ass_text(
+                read_text_or_die(args.ass, "--ass"), args.offset
+            )
+            info(
+                f"[dry-run] would write {shifted} ({n} cues shifted by {args.offset:+g} s)"
+            )
         else:
             n, unshifted = shift_ass_file(args.ass, shifted, args.offset)
             info(f"wrote {shifted} ({n} cues shifted by {args.offset:+g} s)")
@@ -1697,21 +2616,35 @@ def main() -> int:
         # whose timestamps could not be read -- copied unshifted -- is a warning, not a silence
         ass_counts.update(ass_shifted=n, ass_unshifted=unshifted)
         if unshifted:
-            warn(f"{unshifted} Dialogue line(s) in {args.ass} have timestamps that could not be read, so they were not "
-                 f"shifted by {args.offset:+g} s (copied as they were)", "ass_lines_unshifted",
-                 path=args.ass, count=unshifted, offset=args.offset)
+            warn(
+                f"{unshifted} Dialogue line(s) in {args.ass} have timestamps that could not be read, so they were not "
+                f"shifted by {args.offset:+g} s (copied as they were)",
+                "ass_lines_unshifted",
+                path=args.ass,
+                count=unshifted,
+                offset=args.offset,
+            )
         args.ass = shifted
-        side_notes.append(f"the burned subtitles are {shifted}, the offset copy of "
-                          f"{os.path.basename(ass_sample_path)} this run writes"
-                          + ("; re-run this command without --dry-run to produce it" if STATE.dry_run else ""))
+        side_notes.append(
+            f"the burned subtitles are {shifted}, the offset copy of "
+            f"{os.path.basename(ass_sample_path)} this run writes"
+            + (
+                "; re-run this command without --dry-run to produce it"
+                if STATE.dry_run
+                else ""
+            )
+        )
     # a side file this run has planned but (under --dry-run) not written is still the file the
     # command names, so its absence must not be reported as a missing input
     planned_only = STATE.dry_run and planned_cues is not None
     planned_ass = STATE.dry_run and bool(args.ass) and args.ass != ass_sample_path
 
     if args.mode == "mux":
-        if not srt_path or (not os.path.exists(srt_path) and not planned_only
-                            and not (STATE.dry_run and (args.text or args.transcribe))):
+        if not srt_path or (
+            not os.path.exists(srt_path)
+            and not planned_only
+            and not (STATE.dry_run and (args.text or args.transcribe))
+        ):
             die(f"SRT file not found: {srt_path}")
         codec = mux_subtitle_codec(output)
         out_ext = Path(output).suffix.lower().lstrip(".")
@@ -1721,37 +2654,60 @@ def main() -> int:
             vcodec = (meta.get("video") or {}).get("codec")
             # the stream -map 0:a:N copies (--audio-stream), not always the first one
             audio_streams = meta.get("audio_streams") or []
-            acodec = audio_streams[args.audio_stream].get("codec") if args.audio_stream < len(audio_streams) else None
-            bad = [c for c in (vcodec,) if c and c not in ("vp8", "vp9", "av1")] + \
-                  [c for c in (acodec,) if c and c not in ("opus", "vorbis")]
+            acodec = (
+                audio_streams[args.audio_stream].get("codec")
+                if args.audio_stream < len(audio_streams)
+                else None
+            )
+            bad = [c for c in (vcodec,) if c and c not in ("vp8", "vp9", "av1")] + [
+                c for c in (acodec,) if c and c not in ("opus", "vorbis")
+            ]
             if bad:
-                die(f"--mode mux copies the picture and the sound, and a .webm holds only VP8/VP9/AV1 video and "
-                    f"Opus/Vorbis audio; {args.input} carries {' and '.join(bad)}", kind="input",
-                    hint="write .mkv (any codec) or .mp4 instead, or re-encode first with export.py")
+                die(
+                    f"--mode mux copies the picture and the sound, and a .webm holds only VP8/VP9/AV1 video and "
+                    f"Opus/Vorbis audio; {args.input} carries {' and '.join(bad)}",
+                    kind="input",
+                    hint="write .mkv (any codec) or .mp4 instead, or re-encode first with export.py",
+                )
         # Keep any subtitle track(s) the input already has (e.g. chaining --mode mux once per
         # language to build a multi-language set): copied where the output container holds them as
         # they are, else converted to its own text format as export.py converts them (#380, #414);
         # a track the container cannot hold at all (a bitmap one in MPEG-4 or WebM) is refused.
         existing_subs = meta.get("subtitle_streams") or 0
         existing_details = list(meta.get("subtitle_stream_details") or [])
-        existing_codecs = [(existing_details[i] if i < len(existing_details) else {}).get("codec") or ""
-                           for i in range(existing_subs)]
-        unheld = sorted({c or "unknown" for c in existing_codecs if not subtitle_container_holds(c, out_ext)})
+        existing_codecs = [
+            (existing_details[i] if i < len(existing_details) else {}).get("codec")
+            or ""
+            for i in range(existing_subs)
+        ]
+        unheld = sorted(
+            {
+                c or "unknown"
+                for c in existing_codecs
+                if not subtitle_container_holds(c, out_ext)
+            }
+        )
         if unheld:
-            die(f"{args.input} already carries a subtitle track ({', '.join(unheld)}) that a .{out_ext} file cannot "
-                "hold, and --mode mux keeps every existing track", kind="input",
-                hint="write .mkv, which holds any subtitle codec")
+            die(
+                f"{args.input} already carries a subtitle track ({', '.join(unheld)}) that a .{out_ext} file cannot "
+                "hold, and --mode mux keeps every existing track",
+                kind="input",
+                hint="write .mkv, which holds any subtitle codec",
+            )
         existing_out = [subtitle_codec_for(c, out_ext) for c in existing_codecs]
         # the first entry's path is srt_path, which --offset/--max-lines may have repointed at an
         # adjusted copy; the rest are taken as written
-        added = [(srt_path, srt_tracks[0][1] if srt_tracks else args.language)] + \
-                [(p, lang) for p, lang in srt_tracks[1:]]
+        added = [(srt_path, srt_tracks[0][1] if srt_tracks else args.language)] + [
+            (p, lang) for p, lang in srt_tracks[1:]
+        ]
         for path, _lang in added[1:]:
             if not os.path.exists(path) and not STATE.dry_run:
                 die(f"SRT file not found: {path}")
         for n in range(1, len(added)):
             path, lang = added[n]
-            pending = not os.path.exists(path)  # a dry run's pending track: an earlier step writes it
+            pending = not os.path.exists(
+                path
+            )  # a dry run's pending track: an earlier step writes it
             if pending and not args.offset:
                 continue
             if args.offset:
@@ -1763,13 +2719,24 @@ def main() -> int:
                 copy = f"{os.path.splitext(output)[0]}_track{n}.srt"
                 claim([(copy, f"shifted SRT {n}")])
                 if not pending and not STATE.dry_run:
-                    moved = [(max(0.0, s + args.offset), e + args.offset, t) for s, e, t in parse_srt(path)
-                             if e + args.offset > 0]  # never empty: refused before the first write, above
+                    moved = [
+                        (max(0.0, s + args.offset), e + args.offset, t)
+                        for s, e, t in parse_srt(path)
+                        if e + args.offset > 0
+                    ]  # never empty: refused before the first write, above
                     write_srt(moved, copy)
-                    info(f"wrote {copy} ({len(moved)} cues of {os.path.basename(path)} shifted by {args.offset:+g} s)")
-                side_notes.append(f"subtitle track {n} is {copy}, a copy of {os.path.basename(path)} shifted by "
-                                  f"--offset {args.offset:+g} s like the first track"
-                                  + ("; re-run this command without --dry-run to produce it" if STATE.dry_run else ""))
+                    info(
+                        f"wrote {copy} ({len(moved)} cues of {os.path.basename(path)} shifted by {args.offset:+g} s)"
+                    )
+                side_notes.append(
+                    f"subtitle track {n} is {copy}, a copy of {os.path.basename(path)} shifted by "
+                    f"--offset {args.offset:+g} s like the first track"
+                    + (
+                        "; re-run this command without --dry-run to produce it"
+                        if STATE.dry_run
+                        else ""
+                    )
+                )
                 added[n] = (copy, lang)
             elif not srt_timings_shared_grammar(path):
                 # the same rule as the first track (#414): ffmpeg is given what parse_srt() reads
@@ -1777,15 +2744,21 @@ def main() -> int:
                 claim([(copy, f"normalised SRT {n}")])
                 if not STATE.dry_run:
                     write_srt(parse_srt(path), copy)
-                    info(f"wrote {copy} (timings of {os.path.basename(path)} rewritten as hh:mm:ss,mmm)")
-                side_notes.append(f"subtitle track {n} is {copy}, a copy of {os.path.basename(path)} with its timings "
-                                  "rewritten as hh:mm:ss,mmm, which ffmpeg reads as this tool does")
+                    info(
+                        f"wrote {copy} (timings of {os.path.basename(path)} rewritten as hh:mm:ss,mmm)"
+                    )
+                side_notes.append(
+                    f"subtitle track {n} is {copy}, a copy of {os.path.basename(path)} with its timings "
+                    "rewritten as hh:mm:ss,mmm, which ffmpeg reads as this tool does"
+                )
                 added[n] = (copy, lang)
         if len(added) > 1 and caption_stats.get("extended"):
             # --min-duration lengthens the first --srt's cues; the others keep their own durations,
             # and the result says so (no track is wrapped or split in a mux, A55)
-            side_notes.append(f"--min-duration lengthened cues of the first --srt only: the other {len(added) - 1} "
-                              "added track(s) keep the cue lengths of their own files")
+            side_notes.append(
+                f"--min-duration lengthened cues of the first --srt only: the other {len(added) - 1} "
+                "added track(s) keep the cue lengths of their own files"
+            )
         titles = list(args.track_title or [])
         mp4_family = Path(output).suffix.lower() in (".mp4", ".m4v", ".mov")
         dropped_titles: List[str] = []
@@ -1797,7 +2770,9 @@ def main() -> int:
         if meta.get("audio"):
             maps += ["-map", f"0:a:{args.audio_stream}"]
         if existing_subs:
-            maps += ["-map", "0:s?"] + carried_stream_maps(args.input, output, chapters=False)  # their fonts (A256)
+            maps += ["-map", "0:s?"] + carried_stream_maps(
+                args.input, output, chapters=False
+            )  # their fonts (A256)
         for n in range(len(added)):
             maps += ["-map", f"{n + 1}:0"]
         cmd += maps + ["-c:v", "copy"] + (["-c:a", "copy"] if meta.get("audio") else [])
@@ -1810,20 +2785,36 @@ def main() -> int:
         # A60: a kept track is reported with the disposition the input gives it (the muxer copies
         # it), not False whatever the file says; when --default-track makes a new track the
         # default, the kept ones are cleared so the file does not carry two defaults
-        new_default = bool(args.default_track and any(
-            lang and lang.lower() == args.default_track.lower() for _p, lang in added))
+        new_default = bool(
+            args.default_track
+            and any(
+                lang and lang.lower() == args.default_track.lower()
+                for _p, lang in added
+            )
+        )
         for i in range(existing_subs):
             detail = existing_details[i] if i < len(existing_details) else {}
-            written = detail.get("codec") if existing_out[i] == "copy" else existing_out[i]
+            written = (
+                detail.get("codec") if existing_out[i] == "copy" else existing_out[i]
+            )
             if existing_out[i] != "copy":
                 converted.append(f"{detail.get('codec')} -> {existing_out[i]}")
             kept_default = bool(detail.get("default")) and not new_default
             if new_default and detail.get("default"):
                 # "-default" takes that one flag off; "0" would clear forced and the rest with it
                 cmd += [f"-disposition:s:{i}", "-default"]
-            tracks.append({"index": i, "file": None, "language": detail.get("language"),
-                           "title": detail.get("title"), "codec": written,
-                           "default": kept_default, "cues": None, "kept_from_input": True})
+            tracks.append(
+                {
+                    "index": i,
+                    "file": None,
+                    "language": detail.get("language"),
+                    "title": detail.get("title"),
+                    "codec": written,
+                    "default": kept_default,
+                    "cues": None,
+                    "kept_from_input": True,
+                }
+            )
         for n, (path, lang) in enumerate(added):
             idx = existing_subs + n
             cmd += [f"-c:s:{idx}", codec]
@@ -1839,8 +2830,11 @@ def main() -> int:
             elif title:
                 dropped_titles.append(title)
                 title = None
-            is_default = bool(args.default_track and lang
-                              and lang.lower() == args.default_track.lower())
+            is_default = bool(
+                args.default_track
+                and lang
+                and lang.lower() == args.default_track.lower()
+            )
             # ALWAYS stated, never only when it is "default": given two or more new subtitle
             # streams and nothing said, ffmpeg flags the first one `default` by itself -- which
             # is the opposite of what --default-track promises and made tracks[].default
@@ -1852,41 +2846,65 @@ def main() -> int:
                     cues_n = len(parse_srt(path))
                 except SystemExit:
                     cues_n = None
-            tracks.append({"index": idx, "file": path, "language": stored, "title": title,
-                           "codec": codec, "default": is_default, "cues": cues_n,
-                           "kept_from_input": False})
+            tracks.append(
+                {
+                    "index": idx,
+                    "file": path,
+                    "language": stored,
+                    "title": title,
+                    "codec": codec,
+                    "default": is_default,
+                    "cues": cues_n,
+                    "kept_from_input": False,
+                }
+            )
         # asked of the tracks this run adds: a default the input already carried does not make
         # --default-track fr true when no --srt was tagged fr
         if args.default_track and not new_default:
-            die(f"--default-track {args.default_track}: no --srt was tagged with that language",
-                kind="input")
+            die(
+                f"--default-track {args.default_track}: no --srt was tagged with that language",
+                kind="input",
+            )
         # MPEG-4 has no way to say "no default subtitle track": the muxer sets the track-header
         # ENABLED flag on the first subtitle track whatever `-disposition:s:N 0` asks for
         # (verified on ffmpeg 6.1; `-disposition:s:N default` does move it to another track).
         # Matroska honours the explicit 0. Report what the file carries, not what was asked.
         if mp4_family and tracks and not any(t["default"] for t in tracks):
             tracks[0]["default"] = True
-            notes.append("an MPEG-4 container always enables its first subtitle track, so "
-                         f"{tracks[0]['language'] or 'track 0'} is marked default even though none "
-                         "was asked for; .mkv is the container that can leave every track off")
+            notes.append(
+                "an MPEG-4 container always enables its first subtitle track, so "
+                f"{tracks[0]['language'] or 'track 0'} is marked default even though none "
+                "was asked for; .mkv is the container that can leave every track off"
+            )
         cmd += [output]
         total = existing_subs + len(added)
         if total > 2 and mp4_family:
-            notes.append(f"{total} subtitle tracks in an MPEG-4 container: the tracks are all there, "
-                         "but many players only ever show the first -- write to .mkv for a "
-                         "deliverable a viewer can actually switch")
+            notes.append(
+                f"{total} subtitle tracks in an MPEG-4 container: the tracks are all there, "
+                "but many players only ever show the first -- write to .mkv for a "
+                "deliverable a viewer can actually switch"
+            )
         if converted:
-            notes.append(f"the input's own subtitle track(s) were converted to the .{out_ext} container's text format "
-                         f"({', '.join(converted)}): their text and timing are kept, styling a format cannot carry is not")
+            notes.append(
+                f"the input's own subtitle track(s) were converted to the .{out_ext} container's text format "
+                f"({', '.join(converted)}): their text and timing are kept, styling a format cannot carry is not"
+            )
         if dropped_titles:
-            notes.append("an MPEG-4 container has no per-track title this tool can write back "
-                         f"({', '.join(dropped_titles)} would be dropped), so the tracks are "
-                         "reported with no title; .mkv keeps the names")
+            notes.append(
+                "an MPEG-4 container has no per-track title this tool can write back "
+                f"({', '.join(dropped_titles)} would be dropped), so the tracks are "
+                "reported with no title; .mkv keeps the names"
+            )
         if mp4_family and any(
-                t["language"] and len(t["language"]) != 3 for t in tracks if not t["kept_from_input"]):
-            notes.append("MPEG-4 stores the language as a three-letter ISO-639-2 code and drops "
-                         "anything else; a code this tool has no conversion for was passed through "
-                         "as given and may not survive")
+            t["language"] and len(t["language"]) != 3
+            for t in tracks
+            if not t["kept_from_input"]
+        ):
+            notes.append(
+                "MPEG-4 stores the language as a three-letter ISO-639-2 code and drops "
+                "anything else; a code this tool has no conversion for was passed through "
+                "as given and may not survive"
+            )
         run(cmd)
         result = probe(output, role="output")
         # the language and title each track carries in the written file: a converted track keeps
@@ -1897,35 +2915,68 @@ def main() -> int:
                 track["language"] = detail.get("language")
                 if track["kept_from_input"]:
                     track["title"] = detail.get("title")
-        info(f"wrote {output} ({fmt_secs(result.get('duration'))}, mux, {len(added)} "
-             f"subtitle track(s) added, codec {codec})")
-        emit(output, tracks=tracks, subtitle_tracks=total, **({"notes": notes} if notes else {}),
-             **({"transcription": args._asr} if getattr(args, "_asr", None) else {}))
+        info(
+            f"wrote {output} ({fmt_secs(result.get('duration'))}, mux, {len(added)} "
+            f"subtitle track(s) added, codec {codec})"
+        )
+        emit(
+            output,
+            tracks=tracks,
+            subtitle_tracks=total,
+            **({"notes": notes} if notes else {}),
+            **({"transcription": args._asr} if getattr(args, "_asr", None) else {}),
+        )
         return 0
 
     # A font that covers the text, before anything is rendered: non-Latin cues in a Latin-only
     # family come out as empty boxes, and ffmpeg exits 0 all the same (see references/gotchas.md).
     if args.ass:
-        sample = parse_ass_dialogue(ass_sample_path) if ass_sample_path and os.path.exists(ass_sample_path) else ""
+        sample = (
+            parse_ass_dialogue(ass_sample_path)
+            if ass_sample_path and os.path.exists(ass_sample_path)
+            else ""
+        )
     elif args.text or args.transcribe:
         sample = "\n".join(t for _, _, t in cues)
     elif planned_cues is not None:
         sample = "\n".join(t for _, _, t in planned_cues)
     else:
-        sample = "\n".join(t for _, _, t in parse_srt(srt_path)) if os.path.exists(srt_path or "") else ""
+        sample = (
+            "\n".join(t for _, _, t in parse_srt(srt_path))
+            if os.path.exists(srt_path or "")
+            else ""
+        )
     _script, font_file, font_family = script_font_for_text(
-        sample, lang=args.language, font=args.font, font_explicit=font_explicit,
-        fonts_dir=args.fonts_dir)
+        sample,
+        lang=args.language,
+        font=args.font,
+        font_explicit=font_explicit,
+        fonts_dir=args.fonts_dir,
+    )
     # the font libass draws with, reported as `font_used`: a --fonts-dir (or a brand's font
     # file) is searched first for the family, by libass itself; otherwise fontconfig resolves it
     if args.ass:
         # the caller's own ASS names its fonts in its styles; this run does not choose them
-        font_used = {"asked": None, "file": None, "family": None, "how": "ass_styles",
-                     "fonts_dir": args.fonts_dir or (os.path.dirname(font_file) if font_file else None), "substituted": False}
+        font_used = {
+            "asked": None,
+            "file": None,
+            "family": None,
+            "how": "ass_styles",
+            "fonts_dir": args.fonts_dir
+            or (os.path.dirname(font_file) if font_file else None),
+            "substituted": False,
+        }
     elif font_file or not args.fonts_dir:
         # the family libass is given is the sanitised one (ass_font_name): that is what it resolves
-        font_used = record_font_choice(font_choice(ass_font_name(args.font), script_file=font_file, script_family=font_family,
-                                                   renderer="libass", bold=bool(args.bold)))
+        font_used = record_font_choice(
+            font_choice(
+                ass_font_name(args.font),
+                script_file=font_file,
+                script_family=font_family,
+                renderer="libass",
+                bold=bool(args.bold),
+            )
+        )
     else:
         # libass looks the family up in the folder first and asks fontconfig when no face there
         # has its name, so a folder without it drew another face and the result said
@@ -1934,18 +2985,35 @@ def main() -> int:
         asked = ass_font_name(args.font)
         face, found = fonts_dir_face(args.fonts_dir, asked, bold=bool(args.bold))
         if found is False:
-            note(f"font: no face in {args.fonts_dir} is named '{asked}', so libass asks fontconfig for it as without --fonts-dir")
-            font_used = dict(record_font_choice(font_choice(asked, renderer="libass", bold=bool(args.bold))), fonts_dir=args.fonts_dir)
+            note(
+                f"font: no face in {args.fonts_dir} is named '{asked}', so libass asks fontconfig for it as without --fonts-dir"
+            )
+            font_used = dict(
+                record_font_choice(
+                    font_choice(asked, renderer="libass", bold=bool(args.bold))
+                ),
+                fonts_dir=args.fonts_dir,
+            )
         else:
             if found is None:
-                note(f"font: whether {args.fonts_dir} holds a face named '{asked}' could not be read (no fc-scan); "
-                     "font_used reports it as asked")
+                note(
+                    f"font: whether {args.fonts_dir} holds a face named '{asked}' could not be read (no fc-scan); "
+                    "font_used reports it as asked"
+                )
             elif face is None:
-                note(f"font: {args.fonts_dir} holds '{asked}' only in other styles than the one asked "
-                     f"({'bold' if args.bold else 'regular'}, upright); libass picks among those and the installed "
-                     "faces of the family, so font_used names no file (not measured)")
-            font_used = {"asked": asked, "file": face, "family": asked, "how": "fonts_dir",
-                         "fonts_dir": args.fonts_dir, "substituted": False}
+                note(
+                    f"font: {args.fonts_dir} holds '{asked}' only in other styles than the one asked "
+                    f"({'bold' if args.bold else 'regular'}, upright); libass picks among those and the installed "
+                    "faces of the family, so font_used names no file (not measured)"
+                )
+            font_used = {
+                "asked": asked,
+                "file": face,
+                "family": asked,
+                "how": "fonts_dir",
+                "fonts_dir": args.fonts_dir,
+                "substituted": False,
+            }
     if font_file:
         args.font = font_family or args.font
         if not args.fonts_dir:
@@ -1966,38 +3034,73 @@ def main() -> int:
         else:
             src_cues = []
         if src_cues and has_emoji("\n".join(t for _s, _e, t in src_cues)):
-            emoji_cues, emoji_plan = plan_emoji(src_cues, args, play_w, play_h,
-                                                brand if args.brand else None)
+            emoji_cues, emoji_plan = plan_emoji(
+                src_cues, args, play_w, play_h, brand if args.brand else None
+            )
     # the PNG route and --emoji none both change the drawn text, so they need the generated ASS
-    force_ass = bool(emoji_plan and (emoji_plan.get("overlays") or emoji_plan.get("mode") == "none"))
-    if (not args.ass and not force_ass and args.animate == "none" and not args.karaoke
-            and any(SRT_HIDDEN_BRACES_RE.search(t) for _s, _e, t in src_cues)):
+    force_ass = bool(
+        emoji_plan and (emoji_plan.get("overlays") or emoji_plan.get("mode") == "none")
+    )
+    if (
+        not args.ass
+        and not force_ass
+        and args.animate == "none"
+        and not args.karaoke
+        and any(SRT_HIDDEN_BRACES_RE.search(t) for _s, _e, t in src_cues)
+    ):
         # A68 (#457): ffmpeg's SRT reader hands `{curly}` to libass as an override block, which
         # draws nothing of it, while the generated ASS draws the braces and their text; the cues
         # go the generated-ASS way, so the burned words are the words given
         force_ass = True
-        info("cue text has braces that ffmpeg's SRT reader would hide; drawing the cues through the generated ASS")
-        side_notes.append("the cues hold text in braces, which a plain SRT burn does not draw ({...} is an override "
-                          "block to libass), so they were drawn through the generated ASS, braces included")
+        info(
+            "cue text has braces that ffmpeg's SRT reader would hide; drawing the cues through the generated ASS"
+        )
+        side_notes.append(
+            "the cues hold text in braces, which a plain SRT burn does not draw ({...} is an override "
+            "block to libass), so they were drawn through the generated ASS, braces included"
+        )
     if emoji_plan and emoji_plan.get("box_px"):
         args._emoji_box_px = emoji_plan["box_px"]
 
     if (args.animate != "none" or args.karaoke or force_ass) and not args.ass:
         # both sources are already laid out: `cues` above, and srt_path was rewritten in place of
         # the caller's file when --offset/--max-lines/--min-duration changed anything
-        cues_for_ass = emoji_cues if emoji_cues is not None else (
-            cues if (args.text or args.transcribe) else (
-                planned_cues if planned_cues is not None else parse_srt(srt_path)))
+        cues_for_ass = (
+            emoji_cues
+            if emoji_cues is not None
+            else (
+                cues
+                if (args.text or args.transcribe)
+                else (planned_cues if planned_cues is not None else parse_srt(srt_path))
+            )
+        )
         if args.karaoke and not getattr(args, "_word_timings", None):
             # Use the cue source's sidecar, even when layout rewrites the caller's SRT.
-            args._word_timings = shift_words(whisper_word_timings(
-                args.srt if args.srt and not (args.text or args.transcribe) else srt_path), args.offset)
+            args._word_timings = shift_words(
+                whisper_word_timings(
+                    args.srt
+                    if args.srt and not (args.text or args.transcribe)
+                    else srt_path
+                ),
+                args.offset,
+            )
         ass_path = args.write_ass or os.path.splitext(output)[0] + ".ass"
         claim([(ass_path, "ASS")])
         w, h = display_size(meta["video"])
-        if not STATE.dry_run:  # the generated ASS is an artifact of this run: a plan writes nothing
-            write_ass(cues_for_ass, ass_path, args, w, h, video=args.input if meta.get("audio") else None)
-        info(f"wrote {ass_path} ({len(cues_for_ass)} cues, animate={args.animate}, karaoke={args.karaoke})")
+        if (
+            not STATE.dry_run
+        ):  # the generated ASS is an artifact of this run: a plan writes nothing
+            write_ass(
+                cues_for_ass,
+                ass_path,
+                args,
+                w,
+                h,
+                video=args.input if meta.get("audio") else None,
+            )
+        info(
+            f"wrote {ass_path} ({len(cues_for_ass)} cues, animate={args.animate}, karaoke={args.karaoke})"
+        )
         args.ass = ass_path
         generated_ass = True
     else:
@@ -2009,12 +3112,16 @@ def main() -> int:
         # (styles, per-cue overrides): this tool decided none of them, so it claims no scope.
         if args.ass:
             caption_stats["fit_scope"] = None
-            side_notes.append("--fit-size-scope cue was not applied: the --ass file sets its own sizes, "
-                              "which this tool does not read or change")
+            side_notes.append(
+                "--fit-size-scope cue was not applied: the --ass file sets its own sizes, "
+                "which this tool does not read or change"
+            )
         else:
             caption_stats["fit_scope"] = "file"
-            side_notes.append("--fit-size-scope cue applies on the generated-ASS route (--animate, --karaoke, emoji "
-                              "overlays); this burn draws every cue at one size (size_used), so the fit is file-scoped")
+            side_notes.append(
+                "--fit-size-scope cue applies on the generated-ASS route (--animate, --karaoke, emoji "
+                "overlays); this burn draws every cue at one size (size_used), so the fit is file-scoped"
+            )
 
     if args.ass:
         if not generated_ass and not os.path.exists(args.ass) and not planned_ass:
@@ -2028,21 +3135,35 @@ def main() -> int:
         burn_cues = None
     elif args.ass:
         parsed: dict = {}
-        if planned_ass:  # dry run: the offset copy is not written yet, shift the caller's file
-            burn_cues = [(s + args.offset, e + args.offset, t) for s, e, t in parse_ass_cues(ass_sample_path, parsed)]
+        if (
+            planned_ass
+        ):  # dry run: the offset copy is not written yet, shift the caller's file
+            burn_cues = [
+                (s + args.offset, e + args.offset, t)
+                for s, e, t in parse_ass_cues(ass_sample_path, parsed)
+            ]
         else:
             burn_cues = parse_ass_cues(args.ass, parsed)
         ass_counts["ass_malformed"] = parsed.get("malformed", 0)
         if ass_counts["ass_malformed"]:
-            warn(f"{ass_counts['ass_malformed']} Dialogue line(s) in {ass_sample_path} could not be read (too few fields "
-                 "or an unreadable start/end) and are not counted as cues", "ass_lines_malformed",
-                 path=ass_sample_path, count=ass_counts["ass_malformed"])
+            warn(
+                f"{ass_counts['ass_malformed']} Dialogue line(s) in {ass_sample_path} could not be read (too few fields "
+                "or an unreadable start/end) and are not counted as cues",
+                "ass_lines_malformed",
+                path=ass_sample_path,
+                count=ass_counts["ass_malformed"],
+            )
         if not burn_cues:
-            die(f"no Dialogue lines found in {ass_sample_path} -- nothing would be drawn", kind="input")
+            die(
+                f"no Dialogue lines found in {ass_sample_path} -- nothing would be drawn",
+                kind="input",
+            )
     elif planned_cues is not None:
         burn_cues = planned_cues
     elif args.text or args.transcribe:
-        burn_cues = cues or None  # empty under a --transcribe dry run: nothing to count yet
+        burn_cues = (
+            cues or None
+        )  # empty under a --transcribe dry run: nothing to count yet
     elif srt_path and os.path.exists(srt_path):
         burn_cues = parse_srt(srt_path)
     else:
@@ -2053,12 +3174,22 @@ def main() -> int:
             die("every cue is blank -- nothing would be drawn", kind="input")
         if not burned:
             first = min(s for s, _e, t in burn_cues if cue_text_visible(t))
-            die(f"no cue falls inside the video (0\u2013{float(meta['duration']):.1f} s); first cue "
-                f"starts at {first:.1f} s -- check --offset or the cue file", kind="input")
+            die(
+                f"no cue falls inside the video (0\u2013{float(meta['duration']):.1f} s); first cue "
+                f"starts at {first:.1f} s -- check --offset or the cue file",
+                kind="input",
+            )
         if outside:
-            msg = (f"{outside} cue(s) fall outside the video (0\u2013{float(meta['duration']):.1f} s) "
-                   "and are not drawn")
-            warn(msg, "cues_outside_video", count=outside, duration=float(meta["duration"]))
+            msg = (
+                f"{outside} cue(s) fall outside the video (0\u2013{float(meta['duration']):.1f} s) "
+                "and are not drawn"
+            )
+            warn(
+                msg,
+                "cues_outside_video",
+                count=outside,
+                duration=float(meta["duration"]),
+            )
             side_notes.append(msg)
         caption_stats["cues_burned"] = burned
         caption_stats["cues_outside"] = outside
@@ -2070,8 +3201,11 @@ def main() -> int:
         if args.fonts_dir:
             vf += f":fontsdir={escape_filter_path(args.fonts_dir)}"
     else:
-        if not srt_path or (not os.path.exists(srt_path) and not planned_only
-                            and not (STATE.dry_run and (args.text or args.transcribe))):
+        if not srt_path or (
+            not os.path.exists(srt_path)
+            and not planned_only
+            and not (STATE.dry_run and (args.text or args.transcribe))
+        ):
             die(f"SRT file not found: {srt_path}")
         style = [
             f"FontName={ass_font_name(args.font)}",
@@ -2094,16 +3228,29 @@ def main() -> int:
         # a text/outline/karaoke colour with chroma lands in the BT.709 the output is tagged with
         # (drawn_chain). A caller's own --ass is burned as libass and FFmpeg read it: its colours,
         # and its YCbCr Matrix header, are the file's.
-        vf = drawn_chain(vf, meta, [args.color, args.outline_color]
-                         + ([args.highlight_color, args.upcoming_color] if args.karaoke else []))
+        vf = drawn_chain(
+            vf,
+            meta,
+            [args.color, args.outline_color]
+            + ([args.highlight_color, args.upcoming_color] if args.karaoke else []),
+        )
 
     if square_pixels((meta or {}).get("video")):
         vf = square_pixels(meta["video"]) + "," + vf
         side_notes.append(square_pixels_note(meta["video"]))
     cmd = ffmpeg_base() + ["-i", args.input]
-    chains, emoji_inputs = (emoji_filter_chain(emoji_plan or {}, "vsub", "vout", to_yuv=rgb_chain_to_bt709(meta),
-                                               base_chain=layer_base_chain(meta), overlay_opts=overlay_format(meta))
-                            if emoji_plan else ([], []))
+    chains, emoji_inputs = (
+        emoji_filter_chain(
+            emoji_plan or {},
+            "vsub",
+            "vout",
+            to_yuv=rgb_chain_to_bt709(meta),
+            base_chain=layer_base_chain(meta),
+            overlay_opts=overlay_format(meta),
+        )
+        if emoji_plan
+        else ([], [])
+    )
     if chains:
         for spec in emoji_inputs:
             cmd += spec
@@ -2134,10 +3281,13 @@ def main() -> int:
         not args.transcribe
         and not caption_stats.get("dropped")
         and not caption_stats.get("split")
-        and (emoji_plan or {}).get("mode") != "none")
+        and (emoji_plan or {}).get("mode") != "none"
+    )
     if caption_stats["text_unchanged"]:
-        info("caption text unchanged: the cues were burned exactly as given (line breaks, timing "
-             "and type size only)")
+        info(
+            "caption text unchanged: the cues were burned exactly as given (line breaks, timing "
+            "and type size only)"
+        )
     extra["caption"] = dict(caption_stats, **ass_counts)
     extra["font_used"] = font_used
     if getattr(args, "_asr", None):
@@ -2145,17 +3295,24 @@ def main() -> int:
     if emoji_plan:
         notes = list(extra.get("notes") or [])
         if emoji_plan["mode"] == "mono":
-            notes.append("emoji rendered monochrome (no colour path on this ffmpeg; "
-                         "--emoji-assets DIR for colour)")
+            notes.append(
+                "emoji rendered monochrome (no colour path on this ffmpeg; "
+                "--emoji-assets DIR for colour)"
+            )
         if emoji_plan["mode"] == "none":
             # --emoji none was asked for only when it was: an auto run that can draw none says that
-            notes.append("emoji stripped from the drawn text (--emoji none)" if getattr(args, "emoji", "auto") == "none" else
-                         "emoji left out of the drawn text: nothing here draws them (--emoji auto; the emoji_not_drawn warning says why)")
+            notes.append(
+                "emoji stripped from the drawn text (--emoji none)"
+                if getattr(args, "emoji", "auto") == "none"
+                else "emoji left out of the drawn text: nothing here draws them (--emoji auto; the emoji_not_drawn warning says why)"
+            )
         if emoji_plan["missing"]:
             notes.append("no PNG asset for " + ", ".join(emoji_plan["missing"]))
         if notes:
             extra["notes"] = notes
-        extra["emoji"] = {k: v for k, v in emoji_plan.items() if k not in ("overlays", "box_px")}
+        extra["emoji"] = {
+            k: v for k, v in emoji_plan.items() if k not in ("overlays", "box_px")
+        }
         extra["emoji"]["overlays"] = len(emoji_plan.get("overlays") or [])
     emit(output, **extra)
     return 0

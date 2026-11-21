@@ -23,7 +23,9 @@ request, each one of
   ("interrupt", keep)                   (patch) keep the first `keep` bytes of the body, then drop the connection
   ("stall", seconds)                    wait, then drop the connection without answering (the client times out)
   ("expire",)                           (patch/head) the upload is gone: 404
-  ("call", fn)                          run fn() first (e.g. edit the file mid-upload), then answer normally"""
+  ("call", fn)                          run fn() first (e.g. edit the file mid-upload), then answer normally
+"""
+
 from __future__ import annotations
 
 import json
@@ -41,26 +43,49 @@ TUS_TYPE = "application/offset+octet-stream"
 
 
 def vimeo_error(code: Optional[int], message: str = "") -> bytes:
-    doc: Dict[str, Any] = {"error": message or "error", "developer_message": message or "error", "link": None}
+    doc: Dict[str, Any] = {
+        "error": message or "error",
+        "developer_message": message or "error",
+        "link": None,
+    }
     if code is not None:
         doc["error_code"] = code
     return json.dumps(doc).encode()
 
 
 class MockVimeo:
-    def __init__(self, access_token: str, create_status: int = 200, report_privacy: Optional[str] = None,
-                 upload_link_base: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        access_token: str,
+        create_status: int = 200,
+        report_privacy: Optional[str] = None,
+        upload_link_base: Optional[str] = None,
+    ) -> None:
         self.token = access_token
         self.create_status = create_status
-        self.report_privacy = report_privacy          # answer with this privacy.view instead of the one sent
-        self.upload_link_base = upload_link_base      # hand out upload links on another base (a refused host)
+        self.report_privacy = (
+            report_privacy  # answer with this privacy.view instead of the one sent
+        )
+        self.upload_link_base = (
+            upload_link_base  # hand out upload links on another base (a refused host)
+        )
         self.faults: Dict[str, List[Any]] = {}
-        self.uploads: Dict[str, Dict[str, Any]] = {}  # upload id -> {"size", "data", "video", "body"}
+        self.uploads: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # upload id -> {"size", "data", "video", "body"}
         self.upload_links: List[str] = []
-        self.requests: List[Dict[str, Any]] = []      # every request: kind, method, path, headers, body length
-        self.videos: Dict[str, Dict[str, Any]] = {}   # completed: video id -> {"body", "data"}
-        self.created: List[Dict[str, Any]] = []       # every create body (placeholders included)
-        self.domains: Dict[str, List[str]] = {}       # video id -> its embed allowlist, in the order added
+        self.requests: List[Dict[str, Any]] = (
+            []
+        )  # every request: kind, method, path, headers, body length
+        self.videos: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # completed: video id -> {"body", "data"}
+        self.created: List[Dict[str, Any]] = (
+            []
+        )  # every create body (placeholders included)
+        self.domains: Dict[str, List[str]] = (
+            {}
+        )  # video id -> its embed allowlist, in the order added
         self.lock = threading.Lock()
         self.server: Optional[ThreadingHTTPServer] = None
 
@@ -87,7 +112,9 @@ class MockVimeo:
         class Server(ThreadingHTTPServer):
             daemon_threads = True
 
-            def handle_error(self, *_a: Any) -> None:     # a dropped connection is a scripted fault, not noise
+            def handle_error(
+                self, *_a: Any
+            ) -> None:  # a dropped connection is a scripted fault, not noise
                 pass
 
         self.server = Server(("127.0.0.1", 0), Handler)
@@ -95,7 +122,11 @@ class MockVimeo:
         self.url = f"http://127.0.0.1:{self.port}"
         self._allowed = allowed_ports
         allowed_ports.add(self.port)
-        threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
+        threading.Thread(
+            target=self.server.serve_forever,
+            kwargs={"poll_interval": 0.05},
+            daemon=True,
+        ).start()
         return self
 
     def stop(self) -> None:
@@ -111,8 +142,11 @@ class MockVimeo:
 
     def offsets(self) -> List[str]:
         """Upload-Offset of each PATCH, and "HEAD" for each status query, in order."""
-        return [r["headers"].get("upload-offset", "") if r["kind"] == "patch" else "HEAD"
-                for r in self.requests if r["kind"] in ("patch", "head")]
+        return [
+            r["headers"].get("upload-offset", "") if r["kind"] == "patch" else "HEAD"
+            for r in self.requests
+            if r["kind"] in ("patch", "head")
+        ]
 
     def _fault(self, kind: str) -> Any:
         with self.lock:
@@ -130,12 +164,24 @@ class MockVimeo:
             kind = "patch"
         elif method == "HEAD" and path.startswith("/tus/"):
             kind = "head"
-        elif method == "PUT" and path.startswith("/videos/") and "/privacy/domains/" in path:
+        elif (
+            method == "PUT"
+            and path.startswith("/videos/")
+            and "/privacy/domains/" in path
+        ):
             kind = "domain"
         else:
             kind = "unknown"
         with self.lock:
-            self.requests.append({"kind": kind, "method": method, "path": path, "headers": headers, "length": length})
+            self.requests.append(
+                {
+                    "kind": kind,
+                    "method": method,
+                    "path": path,
+                    "headers": headers,
+                    "length": length,
+                }
+            )
         fault = self._fault(kind)
         if fault is not None:
             if fault[0] == "call":
@@ -147,31 +193,46 @@ class MockVimeo:
             elif fault[0] == "status":
                 h.rfile.read(length)
                 extra = fault[3] if len(fault) > 3 else {}
-                return self._send(h, fault[1], vimeo_error(fault[2]), extra, head=method == "HEAD")
+                return self._send(
+                    h, fault[1], vimeo_error(fault[2]), extra, head=method == "HEAD"
+                )
             elif fault[0] == "expire" and kind in ("patch", "head"):
                 h.rfile.read(length)
                 with self.lock:
-                    self.uploads.pop(path[len("/tus/"):], None)
+                    self.uploads.pop(path[len("/tus/") :], None)
                 return self._send(h, 404, b"", head=method == "HEAD")
         if kind == "create":
             return self._create(h, headers, h.rfile.read(length))
         if kind in ("patch", "head"):
-            return self._tus(h, kind, path[len("/tus/"):], headers, length, fault)
+            return self._tus(h, kind, path[len("/tus/") :], headers, length, fault)
         if kind == "domain":
             h.rfile.read(length)
             return self._domain(h, path, headers)
         h.rfile.read(length)
-        return self._send(h, 404, vimeo_error(None, "unknown endpoint"), head=method == "HEAD")
+        return self._send(
+            h, 404, vimeo_error(None, "unknown endpoint"), head=method == "HEAD"
+        )
 
-    def _create(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes) -> None:
+    def _create(
+        self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes
+    ) -> None:
         if headers.get("authorization") != "bearer " + self.token:
-            return self._send(h, 401, vimeo_error(8003, "the access token is missing or not recognised"))
-        if headers.get("accept") != ACCEPT or headers.get("content-type") != "application/json":
+            return self._send(
+                h,
+                401,
+                vimeo_error(8003, "the access token is missing or not recognised"),
+            )
+        if (
+            headers.get("accept") != ACCEPT
+            or headers.get("content-type") != "application/json"
+        ):
             return self._send(h, 400, vimeo_error(2205, "headers"))
         try:
             body = json.loads(raw.decode("utf-8"))
         except ValueError:
-            return self._send(h, 400, vimeo_error(2205, "the body isn't formatted properly"))
+            return self._send(
+                h, 400, vimeo_error(2205, "the body isn't formatted properly")
+            )
         up = body.get("upload") or {}
         if up.get("approach") != "tus" or not str(up.get("size", "")).isdigit():
             return self._send(h, 400, vimeo_error(2230, "the upload type is invalid"))
@@ -182,33 +243,68 @@ class MockVimeo:
         privacy = dict(body.get("privacy") or {})
         if self.report_privacy:
             privacy["view"] = self.report_privacy
-        doc = {"uri": f"/videos/{vid}", "link": f"https://vimeo.com/{vid}", "name": body.get("name", "Untitled"),
-               "description": body.get("description"), "privacy": privacy,
-               "upload": {"status": "in_progress", "approach": "tus", "upload_link": link, "size": int(up["size"])}}
+        doc = {
+            "uri": f"/videos/{vid}",
+            "link": f"https://vimeo.com/{vid}",
+            "name": body.get("name", "Untitled"),
+            "description": body.get("description"),
+            "privacy": privacy,
+            "upload": {
+                "status": "in_progress",
+                "approach": "tus",
+                "upload_link": link,
+                "size": int(up["size"]),
+            },
+        }
         with self.lock:
             self.created.append(body)
             self.upload_links.append(link)
-            self.uploads[upload_id] = {"size": int(up["size"]), "data": bytearray(), "video": vid, "body": body}
+            self.uploads[upload_id] = {
+                "size": int(up["size"]),
+                "data": bytearray(),
+                "video": vid,
+                "body": body,
+            }
         return self._send(h, self.create_status, json.dumps(doc).encode())
 
-    def _domain(self, h: BaseHTTPRequestHandler, path: str, headers: Dict[str, str]) -> None:
+    def _domain(
+        self, h: BaseHTTPRequestHandler, path: str, headers: Dict[str, str]
+    ) -> None:
         from urllib.parse import unquote
+
         if headers.get("authorization") != "bearer " + self.token:
-            return self._send(h, 401, vimeo_error(8003, "the access token is missing or not recognised"))
-        vid, domain = path[len("/videos/"):].split("/privacy/domains/", 1)
-        body = next((b for i, b in enumerate(self.created) if str(100000000 + i) == vid), None)
+            return self._send(
+                h,
+                401,
+                vimeo_error(8003, "the access token is missing or not recognised"),
+            )
+        vid, domain = path[len("/videos/") :].split("/privacy/domains/", 1)
+        body = next(
+            (b for i, b in enumerate(self.created) if str(100000000 + i) == vid), None
+        )
         if body is None:
             return self._send(h, 404, vimeo_error(5000, "no such video"))
         if (body.get("privacy") or {}).get("embed") != "whitelist":
-            return self._send(h, 403, vimeo_error(3200, "The video doesn't have a user-defined access list."))
+            return self._send(
+                h,
+                403,
+                vimeo_error(3200, "The video doesn't have a user-defined access list."),
+            )
         with self.lock:
             lst = self.domains.setdefault(vid, [])
             if unquote(domain) not in lst:
                 lst.append(unquote(domain))
         return self._send(h, 204, b"")
 
-    def _tus(self, h: BaseHTTPRequestHandler, kind: str, upload_id: str, headers: Dict[str, str], length: int,
-             fault: Any) -> None:
+    def _tus(
+        self,
+        h: BaseHTTPRequestHandler,
+        kind: str,
+        upload_id: str,
+        headers: Dict[str, str],
+        length: int,
+        fault: Any,
+    ) -> None:
         head = kind == "head"
         with self.lock:
             u = self.uploads.get(upload_id)
@@ -219,8 +315,17 @@ class MockVimeo:
             h.rfile.read(length)
             return self._send(h, 412, b"", {"Tus-Version": TUS}, head=head)
         if head:
-            return self._send(h, 200, b"", {"Upload-Offset": str(len(u["data"])), "Upload-Length": str(u["size"]),
-                                            "Cache-Control": "no-store"}, head=True)
+            return self._send(
+                h,
+                200,
+                b"",
+                {
+                    "Upload-Offset": str(len(u["data"])),
+                    "Upload-Length": str(u["size"]),
+                    "Cache-Control": "no-store",
+                },
+                head=True,
+            )
         if headers.get("content-type") != TUS_TYPE:
             h.rfile.read(length)
             return self._send(h, 415, b"")
@@ -230,7 +335,9 @@ class MockVimeo:
         if len(u["data"]) + length > u["size"]:
             h.rfile.read(length)
             return self._send(h, 400, vimeo_error(None, "more bytes than upload.size"))
-        if fault is not None and fault[0] == "interrupt":            # keep part of the body, then drop the connection
+        if (
+            fault is not None and fault[0] == "interrupt"
+        ):  # keep part of the body, then drop the connection
             kept = h.rfile.read(fault[1])
             with self.lock:
                 u["data"] += kept
@@ -243,8 +350,13 @@ class MockVimeo:
         return self._send(h, 204, b"", {"Upload-Offset": str(len(u["data"]))})
 
     @staticmethod
-    def _send(h: BaseHTTPRequestHandler, code: int, body: bytes, headers: Optional[Dict[str, str]] = None,
-              head: bool = False) -> None:
+    def _send(
+        h: BaseHTTPRequestHandler,
+        code: int,
+        body: bytes,
+        headers: Optional[Dict[str, str]] = None,
+        head: bool = False,
+    ) -> None:
         try:
             h.send_response(code)
             h.send_header("Tus-Resumable", TUS)
@@ -252,7 +364,9 @@ class MockVimeo:
                 h.send_header(k, v)
             if body:
                 h.send_header("Content-Type", "application/vnd.vimeo.video+json")
-            h.send_header("Content-Length", "0" if head or code == 204 else str(len(body)))
+            h.send_header(
+                "Content-Length", "0" if head or code == 204 else str(len(body))
+            )
             h.end_headers()
             if not head and code != 204:
                 h.wfile.write(body)

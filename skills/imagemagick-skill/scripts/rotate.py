@@ -9,6 +9,7 @@ for the new corners (there is no default fill).
 sips covers a single operation - one multiple-of-90 rotation, or one flip - on an
 image without EXIF orientation handling; anything else needs ImageMagick.
 """
+
 import os
 import sys
 
@@ -38,14 +39,32 @@ from _common import (  # noqa: E402
 
 
 def build_parser():
-    parser = JSONArgumentParser(description="Rotate, mirror, or bake EXIF orientation into an image")
+    parser = JSONArgumentParser(
+        description="Rotate, mirror, or bake EXIF orientation into an image"
+    )
     parser.add_argument("input", help="image file to read (never modified)")
     add_output_args(parser)
-    parser.add_argument("--degrees", type=float, default=0.0, help="clockwise rotation in degrees (default 0)")
-    parser.add_argument("--flip-horizontal", action="store_true", help="mirror left-right (after rotating)")
-    parser.add_argument("--flip-vertical", action="store_true", help="mirror top-bottom (after rotating)")
-    parser.add_argument("--background", type=color_arg,
-                        help="fill for the corners a non-multiple-of-90 rotation exposes (required then), or none")
+    parser.add_argument(
+        "--degrees",
+        type=float,
+        default=0.0,
+        help="clockwise rotation in degrees (default 0)",
+    )
+    parser.add_argument(
+        "--flip-horizontal",
+        action="store_true",
+        help="mirror left-right (after rotating)",
+    )
+    parser.add_argument(
+        "--flip-vertical",
+        action="store_true",
+        help="mirror top-bottom (after rotating)",
+    )
+    parser.add_argument(
+        "--background",
+        type=color_arg,
+        help="fill for the corners a non-multiple-of-90 rotation exposes (required then), or none",
+    )
     return parser
 
 
@@ -55,17 +74,32 @@ def run_rotate(args):
     degrees = args.degrees % 360
     right_angle = degrees % 90 == 0
     if not right_angle and not args.background:
-        raise ImageSkillError(f"rotating by {args.degrees} degrees exposes new corners: pass --background (or none)")
-    if args.background and color_is_transparent(args.background) and ext_of(args.output) not in ALPHA_CAPABLE_EXTS:
-        raise ImageSkillError(f".{ext_of(args.output)} has no alpha channel for a transparent --background")
+        raise ImageSkillError(
+            f"rotating by {args.degrees} degrees exposes new corners: pass --background (or none)"
+        )
+    if (
+        args.background
+        and color_is_transparent(args.background)
+        and ext_of(args.output) not in ALPHA_CAPABLE_EXTS
+    ):
+        raise ImageSkillError(
+            f".{ext_of(args.output)} has no alpha channel for a transparent --background"
+        )
 
     ops = int(degrees != 0) + int(args.flip_horizontal) + int(args.flip_vertical)
-    sips_ok = True if right_angle and ops == 1 else "sips handles exactly one 90-degree rotation or one flip"
+    sips_ok = (
+        True
+        if right_angle and ops == 1
+        else "sips handles exactly one 90-degree rotation or one flip"
+    )
     backend, binary = select_backend(sips_ok)
 
     orientation = None
     if backend == "magick":
-        orientation = magick_info(binary, args.input, "%[orientation]", auto_orient=False).strip() or None
+        orientation = (
+            magick_info(binary, args.input, "%[orientation]", auto_orient=False).strip()
+            or None
+        )
     in_w, in_h = oriented_dims(args.input)
 
     if backend == "magick":
@@ -83,7 +117,14 @@ def run_rotate(args):
         if degrees:
             cmd = [binary, "-r", f"{degrees:g}", args.input, "--out", args.output]
         else:
-            cmd = [binary, "-f", "horizontal" if args.flip_horizontal else "vertical", args.input, "--out", args.output]
+            cmd = [
+                binary,
+                "-f",
+                "horizontal" if args.flip_horizontal else "vertical",
+                args.input,
+                "--out",
+                args.output,
+            ]
     run(cmd, dry_run=args.dry_run)
     if args.dry_run:
         return {"dry_run": True, "would_run": cmd}
@@ -93,7 +134,9 @@ def run_rotate(args):
     if right_angle:
         expected = (in_h, in_w) if degrees in (90, 270) else (in_w, in_h)
         if (out_w, out_h) != expected:
-            raise ImageSkillError(f"rotation produced {out_w}x{out_h}, expected {expected[0]}x{expected[1]}")
+            raise ImageSkillError(
+                f"rotation produced {out_w}x{out_h}, expected {expected[0]}x{expected[1]}"
+            )
     return {
         "input": args.input,
         "output": args.output,

@@ -10,7 +10,11 @@ import importlib.util
 from pathlib import Path
 
 from artifact_skill.adapters.base import RenderResult
-from artifact_skill.core.errors import ArtifactCapabilityError, ArtifactInputError, ArtifactSecurityError
+from artifact_skill.core.errors import (
+    ArtifactCapabilityError,
+    ArtifactInputError,
+    ArtifactSecurityError,
+)
 from artifact_skill.security.limits import DEFAULT_LIMITS, Limits
 
 
@@ -76,11 +80,18 @@ def render_pdf_pages(
 
     if reader.is_encrypted:
         return RenderResult(
-            kind="page_images", files=[], backend="pypdfium2",
+            kind="page_images",
+            files=[],
+            backend="pypdfium2",
             warnings=["Document is encrypted; rendering was skipped."],
         )
     if len(reader.pages) == 0:
-        return RenderResult(kind="page_images", files=[], backend="pypdfium2", warnings=["0 pages to render."])
+        return RenderResult(
+            kind="page_images",
+            files=[],
+            backend="pypdfium2",
+            warnings=["0 pages to render."],
+        )
     if len(reader.pages) > limits.max_pages:
         raise ArtifactSecurityError(
             code="ARTIFACT_TOO_MANY_PAGES",
@@ -88,7 +99,11 @@ def render_pdf_pages(
             f"{limits.max_pages}.",
             remediation="Not rendered; increase Limits.max_pages if this document is legitimately expected, "
             "or render a subset instead.",
-            evidence={"path": str(pdf_path), "page_count": len(reader.pages), "max_pages": limits.max_pages},
+            evidence={
+                "path": str(pdf_path),
+                "page_count": len(reader.pages),
+                "max_pages": limits.max_pages,
+            },
         )
 
     doc = pdfium.PdfDocument(str(pdf_path))

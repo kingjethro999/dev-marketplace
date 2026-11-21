@@ -29,7 +29,9 @@ entry per request, each one of
   ("lost",)                              (put) keep the chunk, then drop the connection (the answer is lost)
   ("stall", seconds)                     wait, then drop the connection without answering (the client times out)
   ("expire",)                            (put) the upload URL has expired: 403
-  ("call", fn)                           run fn() first (e.g. edit the file mid-upload), then answer normally"""
+  ("call", fn)                           run fn() first (e.g. edit the file mid-upload), then answer normally
+"""
+
 from __future__ import annotations
 
 import json
@@ -50,26 +52,55 @@ STATUS = "/v2/post/publish/status/fetch/"
 _RANGE = re.compile(r"^bytes (\d+)-(\d+)/(\d+)$")
 
 
-def tiktok_body(data: Optional[Dict[str, Any]] = None, code: str = "ok", message: str = "") -> bytes:
-    return json.dumps({"data": data or {}, "error": {"code": code, "message": message, "log_id": "202610310000"}}).encode()
+def tiktok_body(
+    data: Optional[Dict[str, Any]] = None, code: str = "ok", message: str = ""
+) -> bytes:
+    return json.dumps(
+        {
+            "data": data or {},
+            "error": {"code": code, "message": message, "log_id": "202610310000"},
+        }
+    ).encode()
 
 
 class MockTikTok:
-    def __init__(self, access_token: str, privacy_level_options: Optional[List[str]] = None,
-                 statuses: Optional[List[Dict[str, Any]]] = None, upload_url_base: Optional[str] = None,
-                 username: str = "studio_test") -> None:
+    def __init__(
+        self,
+        access_token: str,
+        privacy_level_options: Optional[List[str]] = None,
+        statuses: Optional[List[Dict[str, Any]]] = None,
+        upload_url_base: Optional[str] = None,
+        username: str = "studio_test",
+    ) -> None:
         self.token = access_token
-        self.options = privacy_level_options or ["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"]
-        self.statuses = statuses or [{"status": "PUBLISH_COMPLETE", "publicaly_available_post_id": [7300000000000000001]}]
-        self.upload_url_base = upload_url_base       # hand out upload URLs on another base (a refused host)
+        self.options = privacy_level_options or [
+            "PUBLIC_TO_EVERYONE",
+            "MUTUAL_FOLLOW_FRIENDS",
+            "SELF_ONLY",
+        ]
+        self.statuses = statuses or [
+            {
+                "status": "PUBLISH_COMPLETE",
+                "publicaly_available_post_id": [7300000000000000001],
+            }
+        ]
+        self.upload_url_base = (
+            upload_url_base  # hand out upload URLs on another base (a refused host)
+        )
         self.username = username
         self.faults: Dict[str, List[Any]] = {}
-        self.uploads: Dict[str, Dict[str, Any]] = {}  # upload id -> {"size", "data", "publish_id", "body"}
-        self.by_publish: Dict[str, str] = {}          # publish id -> upload id
+        self.uploads: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # upload id -> {"size", "data", "publish_id", "body"}
+        self.by_publish: Dict[str, str] = {}  # publish id -> upload id
         self.upload_urls: List[str] = []
-        self.requests: List[Dict[str, Any]] = []      # every request: kind, method, path, headers, body length
-        self.posts: Dict[str, Dict[str, Any]] = {}    # completed: publish id -> {"body", "data"}
-        self.inits: List[Dict[str, Any]] = []         # every init body
+        self.requests: List[Dict[str, Any]] = (
+            []
+        )  # every request: kind, method, path, headers, body length
+        self.posts: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # completed: publish id -> {"body", "data"}
+        self.inits: List[Dict[str, Any]] = []  # every init body
         self.lock = threading.Lock()
         self.server: Optional[ThreadingHTTPServer] = None
 
@@ -90,7 +121,9 @@ class MockTikTok:
         class Server(ThreadingHTTPServer):
             daemon_threads = True
 
-            def handle_error(self, *_a: Any) -> None:     # a dropped connection is a scripted fault, not noise
+            def handle_error(
+                self, *_a: Any
+            ) -> None:  # a dropped connection is a scripted fault, not noise
                 pass
 
         self.server = Server(("127.0.0.1", 0), Handler)
@@ -98,7 +131,11 @@ class MockTikTok:
         self.url = f"http://127.0.0.1:{self.port}"
         self._allowed = allowed_ports
         allowed_ports.add(self.port)
-        threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
+        threading.Thread(
+            target=self.server.serve_forever,
+            kwargs={"poll_interval": 0.05},
+            daemon=True,
+        ).start()
         return self
 
     def stop(self) -> None:
@@ -114,8 +151,11 @@ class MockTikTok:
 
     def ranges(self) -> List[str]:
         """Content-Range of each PUT, and "STATUS" for each status query, in order."""
-        return [r["headers"].get("content-range", "") if r["kind"] == "put" else "STATUS"
-                for r in self.requests if r["kind"] in ("put", "status")]
+        return [
+            r["headers"].get("content-range", "") if r["kind"] == "put" else "STATUS"
+            for r in self.requests
+            if r["kind"] in ("put", "status")
+        ]
 
     def _fault(self, kind: str) -> Any:
         with self.lock:
@@ -128,10 +168,22 @@ class MockTikTok:
         path = parts.path
         headers = {k.lower(): v for k, v in h.headers.items()}
         length = int(headers.get("content-length") or 0)
-        kind = {("POST", CREATOR): "creator_info", ("POST", INIT): "init", ("POST", STATUS): "status",
-                ("PUT", "/upload/"): "put"}.get((method, path), "unknown")
+        kind = {
+            ("POST", CREATOR): "creator_info",
+            ("POST", INIT): "init",
+            ("POST", STATUS): "status",
+            ("PUT", "/upload/"): "put",
+        }.get((method, path), "unknown")
         with self.lock:
-            self.requests.append({"kind": kind, "method": method, "path": path, "headers": headers, "length": length})
+            self.requests.append(
+                {
+                    "kind": kind,
+                    "method": method,
+                    "path": path,
+                    "headers": headers,
+                    "length": length,
+                }
+            )
         fault = self._fault(kind)
         if fault is not None:
             if fault[0] == "call":
@@ -143,26 +195,53 @@ class MockTikTok:
             elif fault[0] == "status":
                 h.rfile.read(length)
                 extra = fault[3] if len(fault) > 3 else {}
-                return self._send(h, fault[1], tiktok_body(code=fault[2] or "internal_error"), extra)
+                return self._send(
+                    h, fault[1], tiktok_body(code=fault[2] or "internal_error"), extra
+                )
             elif fault[0] == "expire" and kind == "put":
                 h.rfile.read(length)
                 return self._send(h, 403, b"")
         raw_fault = fault
         if kind == "put":
-            return self._put(h, parse_qs(parts.query).get("upload_id", [""])[0], headers, length, raw_fault)
+            return self._put(
+                h,
+                parse_qs(parts.query).get("upload_id", [""])[0],
+                headers,
+                length,
+                raw_fault,
+            )
         raw = h.rfile.read(length)
         if kind == "unknown":
             return self._send(h, 404, tiktok_body(code="not_found"))
         if headers.get("authorization") != "Bearer " + self.token:
-            return self._send(h, 401, tiktok_body(code="access_token_invalid", message="The access token is invalid"))
+            return self._send(
+                h,
+                401,
+                tiktok_body(
+                    code="access_token_invalid", message="The access token is invalid"
+                ),
+            )
         if headers.get("content-type") != JSON_TYPE:
-            return self._send(h, 400, tiktok_body(code="invalid_param", message="Content-Type"))
+            return self._send(
+                h, 400, tiktok_body(code="invalid_param", message="Content-Type")
+            )
         if kind == "creator_info":
-            return self._send(h, 200, tiktok_body({"creator_avatar_url": "https://p16.example/avatar.jpg",
-                                                   "creator_username": self.username, "creator_nickname": "Studio Test",
-                                                   "privacy_level_options": self.options, "comment_disabled": False,
-                                                   "duet_disabled": False, "stitch_disabled": False,
-                                                   "max_video_post_duration_sec": 600}))
+            return self._send(
+                h,
+                200,
+                tiktok_body(
+                    {
+                        "creator_avatar_url": "https://p16.example/avatar.jpg",
+                        "creator_username": self.username,
+                        "creator_nickname": "Studio Test",
+                        "privacy_level_options": self.options,
+                        "comment_disabled": False,
+                        "duet_disabled": False,
+                        "stitch_disabled": False,
+                        "max_video_post_duration_sec": 600,
+                    }
+                ),
+            )
         try:
             body = json.loads(raw.decode("utf-8"))
         except ValueError:
@@ -175,37 +254,74 @@ class MockTikTok:
         post, src = body.get("post_info") or {}, body.get("source_info") or {}
         if post.get("privacy_level") not in self.options:
             return self._send(h, 403, tiktok_body(code="privacy_level_option_mismatch"))
-        size, chunk, total = src.get("video_size"), src.get("chunk_size"), src.get("total_chunk_count")
-        if src.get("source") != "FILE_UPLOAD" or not all(isinstance(v, int) and v > 0 for v in (size, chunk, total)):
-            return self._send(h, 400, tiktok_body(code="invalid_param", message="source_info"))
-        if not (total == size // chunk or (total == 1 and chunk == size)) or total > 1000:
-            return self._send(h, 400, tiktok_body(code="invalid_param", message="total_chunk_count"))
+        size, chunk, total = (
+            src.get("video_size"),
+            src.get("chunk_size"),
+            src.get("total_chunk_count"),
+        )
+        if src.get("source") != "FILE_UPLOAD" or not all(
+            isinstance(v, int) and v > 0 for v in (size, chunk, total)
+        ):
+            return self._send(
+                h, 400, tiktok_body(code="invalid_param", message="source_info")
+            )
+        if (
+            not (total == size // chunk or (total == 1 and chunk == size))
+            or total > 1000
+        ):
+            return self._send(
+                h, 400, tiktok_body(code="invalid_param", message="total_chunk_count")
+            )
         upload_id = secrets.token_hex(12)
         publish_id = f"v_pub_file~v2-1.{7200000000000000000 + len(self.inits)}"
         base = self.upload_url_base or self.url
-        url = f"{base}/upload/?upload_id={upload_id}&upload_token={secrets.token_hex(16)}"
+        url = (
+            f"{base}/upload/?upload_id={upload_id}&upload_token={secrets.token_hex(16)}"
+        )
         with self.lock:
             self.inits.append(body)
             self.upload_urls.append(url)
-            self.uploads[upload_id] = {"size": size, "data": bytearray(), "publish_id": publish_id, "body": body,
-                                       "polls": 0}
+            self.uploads[upload_id] = {
+                "size": size,
+                "data": bytearray(),
+                "publish_id": publish_id,
+                "body": body,
+                "polls": 0,
+            }
             self.by_publish[publish_id] = upload_id
-        return self._send(h, 200, tiktok_body({"publish_id": publish_id, "upload_url": url}))
+        return self._send(
+            h, 200, tiktok_body({"publish_id": publish_id, "upload_url": url})
+        )
 
-    def _put(self, h: BaseHTTPRequestHandler, upload_id: str, headers: Dict[str, str], length: int, fault: Any) -> None:
+    def _put(
+        self,
+        h: BaseHTTPRequestHandler,
+        upload_id: str,
+        headers: Dict[str, str],
+        length: int,
+        fault: Any,
+    ) -> None:
         with self.lock:
             u = self.uploads.get(upload_id)
         if u is None:
             h.rfile.read(length)
             return self._send(h, 404, b"")
-        if "authorization" in headers:                          # the token never goes to the upload URL
+        if "authorization" in headers:  # the token never goes to the upload URL
             h.rfile.read(length)
-            return self._send(h, 400, tiktok_body(code="invalid_param", message="unexpected Authorization"))
+            return self._send(
+                h,
+                400,
+                tiktok_body(code="invalid_param", message="unexpected Authorization"),
+            )
         if headers.get("content-type") not in VIDEO_TYPES:
             h.rfile.read(length)
             return self._send(h, 400, b"")
         m = _RANGE.match(headers.get("content-range", ""))
-        if not m or int(m.group(3)) != u["size"] or int(m.group(2)) - int(m.group(1)) + 1 != length:
+        if (
+            not m
+            or int(m.group(3)) != u["size"]
+            or int(m.group(2)) - int(m.group(1)) + 1 != length
+        ):
             h.rfile.read(length)
             return self._send(h, 400, b"")
         if int(m.group(1)) != len(u["data"]):
@@ -218,7 +334,10 @@ class MockTikTok:
             u["data"] += data
             done = len(u["data"]) == u["size"]
             if done:
-                self.posts[u["publish_id"]] = {"body": u["body"], "data": bytes(u["data"])}
+                self.posts[u["publish_id"]] = {
+                    "body": u["body"],
+                    "data": bytes(u["data"]),
+                }
         if fault is not None and fault[0] == "lost":
             return self._drop(h)
         return self._send(h, 201 if done else 206, b"")
@@ -228,7 +347,10 @@ class MockTikTok:
             u = self.uploads.get(self.by_publish.get(str(body.get("publish_id")), ""))
             if u is None:
                 return self._send(h, 400, tiktok_body(code="invalid_publish_id"))
-            data: Dict[str, Any] = {"uploaded_bytes": len(u["data"]), "publicaly_available_post_id": []}
+            data: Dict[str, Any] = {
+                "uploaded_bytes": len(u["data"]),
+                "publicaly_available_post_id": [],
+            }
             if len(u["data"]) < u["size"]:
                 data["status"] = "PROCESSING_UPLOAD"
             else:
@@ -237,7 +359,12 @@ class MockTikTok:
         return self._send(h, 200, tiktok_body(data))
 
     @staticmethod
-    def _send(h: BaseHTTPRequestHandler, code: int, body: bytes, headers: Optional[Dict[str, str]] = None) -> None:
+    def _send(
+        h: BaseHTTPRequestHandler,
+        code: int,
+        body: bytes,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> None:
         try:
             h.send_response(code)
             for k, v in (headers or {}).items():

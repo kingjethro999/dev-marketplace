@@ -47,8 +47,12 @@ from ..runner import ffmpeg_rawvideo_argv, run_argv
 
 OPAQUE_MIN_ALPHA = 253  # of ALPHA_SCALE: a pixel covers when its alpha is at least this (2 of 255 of tolerance)
 ALPHA_SCALE = 255
-ON_FRAME_TOLERANCE = Fraction(1, 1000)  # of a frame: how far a stated time may sit from the frame it names
-SEEK_LEAD = Fraction(1, 4)  # of a frame: the seek lands a quarter frame before the frame it wants
+ON_FRAME_TOLERANCE = Fraction(
+    1, 1000
+)  # of a frame: how far a stated time may sit from the frame it names
+SEEK_LEAD = Fraction(
+    1, 4
+)  # of a frame: the seek lands a quarter frame before the frame it wants
 
 ALPHA_NOTE = (
     f"alpha plane of the stinger's frame at its cut point (extractplanes=a, native bit depth); a pixel covers when "
@@ -59,7 +63,9 @@ CUT_FRAMES_NOTE = (
     "frame at its cut point scaled to the delivered size; difference_before/after are the neighbouring frames"
 )
 
-_SHOWINFO_FIRST_RE = re.compile(r"Parsed_showinfo[^\n]*?\bn:\s*0\s+pts:\s*-?\d+\s+pts_time:\s*(-?[\d.]+)[^\n]*")
+_SHOWINFO_FIRST_RE = re.compile(
+    r"Parsed_showinfo[^\n]*?\bn:\s*0\s+pts:\s*-?\d+\s+pts_time:\s*(-?[\d.]+)[^\n]*"
+)
 _FMT_RE = re.compile(r"\bfmt:(\S+)")
 _SIZE_RE = re.compile(r"\bs:(\d+)x(\d+)")
 _GRAY_FMT_RE = re.compile(r"^gray(\d+)?(le|be)?$")
@@ -76,15 +82,27 @@ def alpha_pixel_formats(ffprobe_path: str) -> Optional[Set[str]]:
     names: Optional[Set[str]] = None
     try:
         result = run_argv(
-            [ffprobe_path, "-hide_banner", "-v", "error", "-show_pixel_formats",
-             "-show_entries", "pixel_format=name:flags=alpha", "-of", "json"],
+            [
+                ffprobe_path,
+                "-hide_banner",
+                "-v",
+                "error",
+                "-show_pixel_formats",
+                "-show_entries",
+                "pixel_format=name:flags=alpha",
+                "-of",
+                "json",
+            ],
             timeout=15,
         )
         if result.returncode == 0 and not result.timed_out:
             doc = json.loads(result.stdout or "{}")
             names = {
-                p["name"] for p in doc.get("pixel_formats", [])
-                if isinstance(p, dict) and isinstance(p.get("name"), str) and (p.get("flags") or {}).get("alpha") == 1
+                p["name"]
+                for p in doc.get("pixel_formats", [])
+                if isinstance(p, dict)
+                and isinstance(p.get("name"), str)
+                and (p.get("flags") or {}).get("alpha") == 1
             } or None
     except (FileNotFoundError, ValueError):
         names = None
@@ -114,7 +132,7 @@ def frame_at(seconds: float, rate: Fraction) -> Tuple[int, float]:
     """The frame index a time names and how far (in frames) the time sits
     from that frame."""
 
-    exact = Fraction(seconds).limit_denominator(10 ** 9) * rate
+    exact = Fraction(seconds).limit_denominator(10**9) * rate
     n = int(round(exact))
     return n, float(abs(exact - n))
 
@@ -124,7 +142,11 @@ def _stream_origin(probe_data: Dict[str, Any], stream: Dict[str, Any]) -> float:
     input seek counts from the file's start)."""
 
     try:
-        return max(0.0, float(stream.get("start_time")) - float(probe_data.get("format", {}).get("start_time")))
+        return max(
+            0.0,
+            float(stream.get("start_time"))
+            - float(probe_data.get("format", {}).get("start_time")),
+        )
     except (TypeError, ValueError):
         return 0.0
 
@@ -161,15 +183,31 @@ def grab_frame(
 
     seek = origin + float(max(Fraction(0), (frame - SEEK_LEAD) / rate))
     argv = ffmpeg_rawvideo_argv(
-        ffmpeg_path, path, filters + ["showinfo"], stream_select=f"0:{stream_index}",
-        pix_fmt=pix_fmt, keep_pix_fmt=pix_fmt is None, seek_sec=seek, max_frames=1, log_level="info",
+        ffmpeg_path,
+        path,
+        filters + ["showinfo"],
+        stream_select=f"0:{stream_index}",
+        pix_fmt=pix_fmt,
+        keep_pix_fmt=pix_fmt is None,
+        seek_sec=seek,
+        max_frames=1,
+        log_level="info",
     )
     try:
         res = run_argv(argv, timeout=timeout, binary_stdout=True)
     except FileNotFoundError:
-        raise error("DEPENDENCY_ERROR", "ffmpeg executable could not be run", executable=ffmpeg_path)
+        raise error(
+            "DEPENDENCY_ERROR",
+            "ffmpeg executable could not be run",
+            executable=ffmpeg_path,
+        )
     if res.timed_out:
-        raise error("TOOL_ERROR", "ffmpeg stinger frame grab timed out", argv=argv, timeout=timeout)
+        raise error(
+            "TOOL_ERROR",
+            "ffmpeg stinger frame grab timed out",
+            argv=argv,
+            timeout=timeout,
+        )
     when = f"frame {frame} ({float(frame / rate):.6f}s)"
     info = _SHOWINFO_FIRST_RE.search(res.stderr)
     if info is None or not res.stdout_bytes:
@@ -177,18 +215,27 @@ def grab_frame(
     line = info.group(0)
     fmt_m, size_m = _FMT_RE.search(line), _SIZE_RE.search(line)
     if fmt_m is None or size_m is None:
-        return {"reason": f"the decoded frame at {when} did not report its format and size"}
+        return {
+            "reason": f"the decoded frame at {when} did not report its format and size"
+        }
     time_sec = float(f"{float(seek - origin) + float(info.group(1)):.6f}")
-    got = int(round(Fraction(time_sec).limit_denominator(10 ** 9) * rate))
+    got = int(round(Fraction(time_sec).limit_denominator(10**9) * rate))
     if got != frame:
-        return {"reason": f"the decoder returned the frame at {time_sec}s (frame {got}), not {when}"}
+        return {
+            "reason": f"the decoder returned the frame at {time_sec}s (frame {got}), not {when}"
+        }
     return {
-        "raw": res.stdout_bytes, "fmt": fmt_m.group(1),
-        "width": int(size_m.group(1)), "height": int(size_m.group(2)), "time": time_sec,
+        "raw": res.stdout_bytes,
+        "fmt": fmt_m.group(1),
+        "width": int(size_m.group(1)),
+        "height": int(size_m.group(2)),
+        "time": time_sec,
     }
 
 
-def _media_stream(ffprobe_path: str, path: Path) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[str]]:
+def _media_stream(
+    ffprobe_path: str, path: Path
+) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[str]]:
     try:
         probe_data = probe_media(ffprobe_path, path)
     except QCError as exc:
@@ -202,10 +249,19 @@ def _media_stream(ffprobe_path: str, path: Path) -> Tuple[Optional[Dict[str, Any
 
 
 def _alpha_entry(
-    ffmpeg_path: str, ffprobe_path: str, path: Path, probe_data: Dict[str, Any], stream: Dict[str, Any],
-    cut_point: float, source: str,
+    ffmpeg_path: str,
+    ffprobe_path: str,
+    path: Path,
+    probe_data: Dict[str, Any],
+    stream: Dict[str, Any],
+    cut_point: float,
+    source: str,
 ) -> Dict[str, Any]:
-    entry: Dict[str, Any] = {"source": source, "cut_point": cut_point, "measured": False}
+    entry: Dict[str, Any] = {
+        "source": source,
+        "cut_point": cut_point,
+        "measured": False,
+    }
     pix_fmt = stream.get("pix_fmt")
     entry["pix_fmt"] = pix_fmt
     formats = alpha_pixel_formats(ffprobe_path)
@@ -229,8 +285,14 @@ def _alpha_entry(
         )
         return entry
     got = grab_frame(
-        ffmpeg_path, path, int(stream["index"]), frame, rate, ["extractplanes=a"],
-        pix_fmt=None, origin=_stream_origin(probe_data, stream),
+        ffmpeg_path,
+        path,
+        int(stream["index"]),
+        frame,
+        rate,
+        ["extractplanes=a"],
+        pix_fmt=None,
+        origin=_stream_origin(probe_data, stream),
     )
     if "reason" in got:
         entry["reason"] = got["reason"]
@@ -239,18 +301,24 @@ def _alpha_entry(
     width, height = got["width"], got["height"]
     pixels = width * height
     if depth is None:
-        entry["reason"] = f"the alpha plane came out as {got['fmt']!r}, which is not read"
+        entry["reason"] = (
+            f"the alpha plane came out as {got['fmt']!r}, which is not read"
+        )
         return entry
     bits, order = depth
     raw = got["raw"]
     if bits == 8:
         if len(raw) < pixels:
-            entry["reason"] = f"the alpha plane of frame {frame} is shorter than {width}x{height}"
+            entry["reason"] = (
+                f"the alpha plane of frame {frame} is shorter than {width}x{height}"
+            )
             return entry
         values: Any = raw[:pixels]
     else:
         if len(raw) < 2 * pixels:
-            entry["reason"] = f"the alpha plane of frame {frame} is shorter than {width}x{height}"
+            entry["reason"] = (
+                f"the alpha plane of frame {frame} is shorter than {width}x{height}"
+            )
             return entry
         values = array("H")
         values.frombytes(raw[: 2 * pixels])
@@ -259,10 +327,22 @@ def _alpha_entry(
     below, low, native_threshold = alpha_coverage(values, bits)
     top = (1 << bits) - 1
     entry.update(
-        measured=True, frame_time=got["time"], width=width, height=height, alpha_format=got["fmt"], alpha_bit_depth=bits,
-        pixels=pixels, pixels_below=below, below_fraction=round(below / pixels, 6),
-        min_alpha=low, min_alpha_255=round(low * ALPHA_SCALE / top, 3),
-        threshold={"min_alpha_255": OPAQUE_MIN_ALPHA, "scale": ALPHA_SCALE, "native": native_threshold},
+        measured=True,
+        frame_time=got["time"],
+        width=width,
+        height=height,
+        alpha_format=got["fmt"],
+        alpha_bit_depth=bits,
+        pixels=pixels,
+        pixels_below=below,
+        below_fraction=round(below / pixels, 6),
+        min_alpha=low,
+        min_alpha_255=round(low * ALPHA_SCALE / top, 3),
+        threshold={
+            "min_alpha_255": OPAQUE_MIN_ALPHA,
+            "scale": ALPHA_SCALE,
+            "native": native_threshold,
+        },
     )
     return entry
 
@@ -288,53 +368,94 @@ def _mean_abs_difference(a: bytes, b: bytes) -> float:
 
 
 def _cut_frames(
-    ffmpeg_path: str, input_path: Path, input_probe: Dict[str, Any], input_stream: Dict[str, Any],
-    stinger_path: Path, stinger_probe: Dict[str, Any], stinger_stream: Dict[str, Any],
-    cut_point: float, cut_at: List[float],
+    ffmpeg_path: str,
+    input_path: Path,
+    input_probe: Dict[str, Any],
+    input_stream: Dict[str, Any],
+    stinger_path: Path,
+    stinger_probe: Dict[str, Any],
+    stinger_stream: Dict[str, Any],
+    cut_point: float,
+    cut_at: List[float],
 ) -> Dict[str, Any]:
     def unmeasured_all(reason: str) -> Dict[str, Any]:
         return {
             "stinger_frame": {"measured": False, "reason": reason},
-            "cuts": [{"cut_at": t, "measured": False, "reason": reason} for t in cut_at],
+            "cuts": [
+                {"cut_at": t, "measured": False, "reason": reason} for t in cut_at
+            ],
         }
 
     out_rate = stream_frame_rate(input_stream)
     width, height = input_stream.get("width"), input_stream.get("height")
     if out_rate is None:
         return unmeasured_all("the delivered video's frame rate could not be measured")
-    if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
+    if (
+        not isinstance(width, int)
+        or not isinstance(height, int)
+        or width <= 0
+        or height <= 0
+    ):
         return unmeasured_all("the delivered video's frame size could not be measured")
     st_rate = stream_frame_rate(stinger_stream)
     if st_rate is None:
         return unmeasured_all("the stinger's frame rate could not be measured")
     st_frame, off = frame_at(cut_point, st_rate)
     if off > ON_FRAME_TOLERANCE:
-        return unmeasured_all(f"the cut point {cut_point}s is not on a frame of the stinger")
+        return unmeasured_all(
+            f"the cut point {cut_point}s is not on a frame of the stinger"
+        )
     ref = grab_frame(
-        ffmpeg_path, stinger_path, int(stinger_stream["index"]), st_frame, st_rate,
-        ["format=rgb24", f"scale={width}:{height}:flags=bicubic"], pix_fmt="rgb24",
+        ffmpeg_path,
+        stinger_path,
+        int(stinger_stream["index"]),
+        st_frame,
+        st_rate,
+        ["format=rgb24", f"scale={width}:{height}:flags=bicubic"],
+        pix_fmt="rgb24",
         origin=_stream_origin(stinger_probe, stinger_stream),
     )
     size = width * height * 3
     if "reason" in ref or len(ref.get("raw", b"")) < size:
-        return unmeasured_all(f"the stinger's frame at its cut point could not be read: {ref.get('reason', 'short frame')}")
+        return unmeasured_all(
+            f"the stinger's frame at its cut point could not be read: {ref.get('reason', 'short frame')}"
+        )
     reference = ref["raw"][:size]
     stinger_frame = {
-        "measured": True, "frame": st_frame, "frame_time": ref["time"],
-        "scaled_to": [width, height], "source_size": [stinger_stream.get("width"), stinger_stream.get("height")],
+        "measured": True,
+        "frame": st_frame,
+        "frame_time": ref["time"],
+        "scaled_to": [width, height],
+        "source_size": [stinger_stream.get("width"), stinger_stream.get("height")],
     }
     origin = _stream_origin(input_probe, input_stream)
 
-    def difference(frame: int) -> Tuple[Optional[float], Optional[float], Optional[str]]:
+    def difference(
+        frame: int,
+    ) -> Tuple[Optional[float], Optional[float], Optional[str]]:
         got = grab_frame(
-            ffmpeg_path, input_path, int(input_stream["index"]), frame, out_rate, ["format=rgb24"],
-            pix_fmt="rgb24", origin=origin,
+            ffmpeg_path,
+            input_path,
+            int(input_stream["index"]),
+            frame,
+            out_rate,
+            ["format=rgb24"],
+            pix_fmt="rgb24",
+            origin=origin,
         )
         if "reason" in got:
             return None, None, got["reason"]
         if len(got["raw"]) < size:
-            return None, None, f"frame {frame} of the delivered video is shorter than {width}x{height}"
-        return round(_mean_abs_difference(got["raw"][:size], reference), 3), got["time"], None
+            return (
+                None,
+                None,
+                f"frame {frame} of the delivered video is shorter than {width}x{height}",
+            )
+        return (
+            round(_mean_abs_difference(got["raw"][:size], reference), 3),
+            got["time"],
+            None,
+        )
 
     cuts: List[Dict[str, Any]] = []
     for t in cut_at:
@@ -354,7 +475,13 @@ def _cut_frames(
             continue
         before = difference(frame - 1)[0] if frame > 0 else None
         after = difference(frame + 1)[0]
-        entry.update(measured=True, frame_time=at, difference=value, difference_before=before, difference_after=after)
+        entry.update(
+            measured=True,
+            frame_time=at,
+            difference=value,
+            difference_before=before,
+            difference_after=after,
+        )
         cuts.append(entry)
     return {"stinger_frame": stinger_frame, "cuts": cuts}
 
@@ -380,28 +507,63 @@ def analyze_stinger(
         probe_data, stream, failure = _media_stream(ffprobe_path, stinger_path)
         source = "stinger_file"
     if failure is not None:
-        alpha: Dict[str, Any] = {"source": source, "cut_point": rule.cut_point, "measured": False, "reason": failure}
+        alpha: Dict[str, Any] = {
+            "source": source,
+            "cut_point": rule.cut_point,
+            "measured": False,
+            "reason": failure,
+        }
     else:
         alpha = _alpha_entry(
-            ffmpeg_path, ffprobe_path, stinger_path or input_path, probe_data, stream, rule.cut_point, source,
+            ffmpeg_path,
+            ffprobe_path,
+            stinger_path or input_path,
+            probe_data,
+            stream,
+            rule.cut_point,
+            source,
         )
     measurements.append(
-        QCMeasurement("video.stinger_cut_point_alpha", "video", "stinger_cut_point_alpha", alpha, source="ffmpeg:extractplanes", notes=ALPHA_NOTE)
+        QCMeasurement(
+            "video.stinger_cut_point_alpha",
+            "video",
+            "stinger_cut_point_alpha",
+            alpha,
+            source="ffmpeg:extractplanes",
+            notes=ALPHA_NOTE,
+        )
     )
     if rule.cut_at:
         if failure is not None or stinger_path is None:
             reason = failure or "no stinger file to compare against"
             frames: Dict[str, Any] = {
                 "stinger_frame": {"measured": False, "reason": reason},
-                "cuts": [{"cut_at": t, "measured": False, "reason": reason} for t in rule.cut_at],
+                "cuts": [
+                    {"cut_at": t, "measured": False, "reason": reason}
+                    for t in rule.cut_at
+                ],
             }
         else:
             frames = _cut_frames(
-                ffmpeg_path, input_path, input_probe, input_stream, stinger_path, probe_data, stream,
-                rule.cut_point, list(rule.cut_at),
+                ffmpeg_path,
+                input_path,
+                input_probe,
+                input_stream,
+                stinger_path,
+                probe_data,
+                stream,
+                rule.cut_point,
+                list(rule.cut_at),
             )
         measurements.append(
-            QCMeasurement("video.stinger_cut_frames", "video", "stinger_cut_frames", frames, source="ffmpeg:rawvideo", notes=CUT_FRAMES_NOTE)
+            QCMeasurement(
+                "video.stinger_cut_frames",
+                "video",
+                "stinger_cut_frames",
+                frames,
+                source="ffmpeg:rawvideo",
+                notes=CUT_FRAMES_NOTE,
+            )
         )
     return measurements
 
@@ -412,20 +574,34 @@ def not_performed(rule: Any, reason: str) -> List[QCMeasurement]:
 
     out = [
         QCMeasurement(
-            "video.stinger_cut_point_alpha", "video", "stinger_cut_point_alpha",
-            {"source": "stinger_file" if rule.file else "input", "cut_point": rule.cut_point, "measured": False, "reason": reason},
-            source="ffmpeg:extractplanes", notes=ALPHA_NOTE,
+            "video.stinger_cut_point_alpha",
+            "video",
+            "stinger_cut_point_alpha",
+            {
+                "source": "stinger_file" if rule.file else "input",
+                "cut_point": rule.cut_point,
+                "measured": False,
+                "reason": reason,
+            },
+            source="ffmpeg:extractplanes",
+            notes=ALPHA_NOTE,
         )
     ]
     if rule.cut_at:
         out.append(
             QCMeasurement(
-                "video.stinger_cut_frames", "video", "stinger_cut_frames",
+                "video.stinger_cut_frames",
+                "video",
+                "stinger_cut_frames",
                 {
                     "stinger_frame": {"measured": False, "reason": reason},
-                    "cuts": [{"cut_at": t, "measured": False, "reason": reason} for t in rule.cut_at],
+                    "cuts": [
+                        {"cut_at": t, "measured": False, "reason": reason}
+                        for t in rule.cut_at
+                    ],
                 },
-                source="ffmpeg:rawvideo", notes=CUT_FRAMES_NOTE,
+                source="ffmpeg:rawvideo",
+                notes=CUT_FRAMES_NOTE,
             )
         )
     return out

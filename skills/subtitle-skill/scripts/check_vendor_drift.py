@@ -20,6 +20,7 @@ does not depend on network access to another repository. It runs on the
     python3 scripts/check_vendor_drift.py
     python3 scripts/check_vendor_drift.py --ref v3.0.0
 """
+
 from __future__ import annotations
 
 import argparse
@@ -36,14 +37,20 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def main(argv: "list[str] | None" = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--ref", default=None, help="ffmpeg-skill branch or tag to check (default: main)")
+    ap.add_argument(
+        "--ref",
+        default=None,
+        help="ffmpeg-skill branch or tag to check (default: main)",
+    )
     args = ap.parse_args(argv)
     ref = args.ref or "main"
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = Path(tmp_str) / "ffmpeg-skill"
         try:
             subprocess.run(
-                ["git", "clone", "--depth", "1"] + (["--branch", args.ref] if args.ref else []) + [REPO_URL, str(tmp)],
+                ["git", "clone", "--depth", "1"]
+                + (["--branch", args.ref] if args.ref else [])
+                + [REPO_URL, str(tmp)],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -53,16 +60,23 @@ def main(argv: "list[str] | None" = None) -> int:
             return 2
 
         head = subprocess.run(
-            ["git", "-C", str(tmp), "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+            ["git", "-C", str(tmp), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
         try:
-            version = json.loads((tmp / "package.json").read_text(encoding="utf-8")).get("version", "?")
+            version = json.loads(
+                (tmp / "package.json").read_text(encoding="utf-8")
+            ).get("version", "?")
         except (OSError, ValueError):
             version = "?"
         print(f"ffmpeg-skill {ref} is at {head} (version {version})")
 
         env = dict(os.environ, SUBTITLE_SKILL_TEST_FFMPEG_SKILL_SRC=str(tmp))
-        result = subprocess.run([sys.executable, "-m", "pytest", "-q"], cwd=ROOT, env=env)
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q"], cwd=ROOT, env=env
+        )
         if result.returncode != 0:
             print(
                 f"\nINCOMPATIBLE: the test suite fails against ffmpeg-skill {version} ({head}). "

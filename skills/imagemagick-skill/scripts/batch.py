@@ -10,6 +10,7 @@ is recorded as a failure and the rest of the batch still runs.
   compare: each file against the file of the same name in --against DIR; a heatmap
       per pair is written into the output folder
 """
+
 import glob
 import importlib
 import os
@@ -27,14 +28,39 @@ from _common import (  # noqa: E402
     timeout_fields,
 )
 
-PER_FILE_TOOLS = ("convert", "resize", "thumb", "strip", "trim", "crop", "pad", "rotate", "optimize",
-                  "adjust", "overlay", "preset")
+PER_FILE_TOOLS = (
+    "convert",
+    "resize",
+    "thumb",
+    "strip",
+    "trim",
+    "crop",
+    "pad",
+    "rotate",
+    "optimize",
+    "adjust",
+    "overlay",
+    "preset",
+)
 AGGREGATE_TOOLS = ("look", "montage")
 PAIRED_TOOLS = ("compare",)
 DIR_TOOLS = ("icons",)
-TOOL_MODULES = {name: name for name in PER_FILE_TOOLS + AGGREGATE_TOOLS + PAIRED_TOOLS + DIR_TOOLS}
+TOOL_MODULES = {
+    name: name for name in PER_FILE_TOOLS + AGGREGATE_TOOLS + PAIRED_TOOLS + DIR_TOOLS
+}
 
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".tif", ".tiff", ".bmp", ".webp", ".gif"}
+IMAGE_EXTS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".heic",
+    ".heif",
+    ".tif",
+    ".tiff",
+    ".bmp",
+    ".webp",
+    ".gif",
+}
 
 
 def build_parser():
@@ -43,16 +69,45 @@ def build_parser():
         epilog="Extra args after -- are forwarded to the tool, e.g.: "
         "batch.py resize -i ./photos -o ./out --json -- --width 1200 --height 1200 --mode fit",
     )
-    parser.add_argument("tool", choices=sorted(TOOL_MODULES), help="tool to run on each file")
-    parser.add_argument("-i", "--input-dir", required=True, help="folder of images to read (not recursive)")
-    parser.add_argument("-o", "--output-dir", required=True, help="folder to write results into; must differ from --input-dir")
-    parser.add_argument("--ext", default=None,
-                        help="output extension, e.g. webp: required for convert, optional for the other tools")
-    parser.add_argument("--against", default=None,
-                        help="compare only: folder holding the second image of each pair (matched by file name)")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
-    parser.add_argument("--dry-run", action="store_true", help="print the backend command that would run, write nothing")
-    add_timeout_arg(parser, scope="each file's run (forwarded to the tool; a --timeout after -- wins)")
+    parser.add_argument(
+        "tool", choices=sorted(TOOL_MODULES), help="tool to run on each file"
+    )
+    parser.add_argument(
+        "-i",
+        "--input-dir",
+        required=True,
+        help="folder of images to read (not recursive)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        required=True,
+        help="folder to write results into; must differ from --input-dir",
+    )
+    parser.add_argument(
+        "--ext",
+        default=None,
+        help="output extension, e.g. webp: required for convert, optional for the other tools",
+    )
+    parser.add_argument(
+        "--against",
+        default=None,
+        help="compare only: folder holding the second image of each pair (matched by file name)",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the backend command that would run, write nothing",
+    )
+    add_timeout_arg(
+        parser,
+        scope="each file's run (forwarded to the tool; a --timeout after -- wins)",
+    )
     return parser
 
 
@@ -93,7 +148,10 @@ def run_batch(args):
     module = importlib.import_module(TOOL_MODULES[args.tool])
     parser = module.build_parser()
     run_fn = getattr(module, f"run_{args.tool}")
-    forwarded = (["--dry-run"] if args.dry_run else []) + ["--timeout", f"{args.timeout:g}"]
+    forwarded = (["--dry-run"] if args.dry_run else []) + [
+        "--timeout",
+        f"{args.timeout:g}",
+    ]
 
     files = sorted(
         f
@@ -118,31 +176,64 @@ def run_batch(args):
     if args.tool in AGGREGATE_TOOLS:
         dest = os.path.join(out_dir, f"{args.tool}.{args.ext or 'png'}")
         if files:
-            results.append(attempt({"files": files, "output": dest}, files + ["-o", dest] + forwarded + tool_args))
+            results.append(
+                attempt(
+                    {"files": files, "output": dest},
+                    files + ["-o", dest] + forwarded + tool_args,
+                )
+            )
     elif args.tool in PAIRED_TOOLS:
         against = os.path.realpath(args.against)
         if not os.path.isdir(against):
             raise ImageSkillError(f"--against dir not found: {args.against}")
         for src in files:
             other = os.path.join(against, os.path.basename(src))
-            dest = os.path.join(out_dir, f"{os.path.splitext(os.path.basename(src))[0]}.{args.ext or 'png'}")
+            dest = os.path.join(
+                out_dir,
+                f"{os.path.splitext(os.path.basename(src))[0]}.{args.ext or 'png'}",
+            )
             entry = {"file": src, "against": other, "output": dest}
             if not os.path.isfile(other):
-                results.append(dict(entry, ok=False, reason=f"no file named {os.path.basename(src)} in {args.against}"))
+                results.append(
+                    dict(
+                        entry,
+                        ok=False,
+                        reason=f"no file named {os.path.basename(src)} in {args.against}",
+                    )
+                )
                 continue
-            results.append(attempt(entry, [src, other, "-o", dest] + forwarded + tool_args))
+            results.append(
+                attempt(entry, [src, other, "-o", dest] + forwarded + tool_args)
+            )
     elif args.tool in DIR_TOOLS:
         for src in files:
             dest = os.path.join(out_dir, os.path.splitext(os.path.basename(src))[0])
-            results.append(attempt({"file": src, "output": dest}, [src, "-o", dest] + forwarded + tool_args))
+            results.append(
+                attempt(
+                    {"file": src, "output": dest},
+                    [src, "-o", dest] + forwarded + tool_args,
+                )
+            )
     else:
         for src in files:
             base = os.path.splitext(os.path.basename(src))[0]
-            dest = os.path.join(out_dir, f"{base}.{args.ext}" if args.ext else os.path.basename(src))
-            results.append(attempt({"file": src, "output": dest}, [src, "-o", dest] + forwarded + tool_args))
+            dest = os.path.join(
+                out_dir, f"{base}.{args.ext}" if args.ext else os.path.basename(src)
+            )
+            results.append(
+                attempt(
+                    {"file": src, "output": dest},
+                    [src, "-o", dest] + forwarded + tool_args,
+                )
+            )
 
     all_ok = all(r["ok"] for r in results)
-    return {"tool": args.tool, "count": len(results), "all_ok": all_ok, "results": results}
+    return {
+        "tool": args.tool,
+        "count": len(results),
+        "all_ok": all_ok,
+        "results": results,
+    }
 
 
 def main(argv=None):

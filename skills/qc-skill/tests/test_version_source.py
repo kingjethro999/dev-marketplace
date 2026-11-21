@@ -36,11 +36,18 @@ def test_doctor_version_equals_pyproject_version(tmp_path):
 
 def test_cli_contract_json_reports_pyproject_version():
     # Run from outside the checkout so the answer cannot depend on the cwd.
-    result = subprocess.run(CLI + ["contract", "--json"], capture_output=True, text=True, cwd=str(Path.home()))
+    result = subprocess.run(
+        CLI + ["contract", "--json"],
+        capture_output=True,
+        text=True,
+        cwd=str(Path.home()),
+    )
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["version"] == PYPROJECT_VERSION
 
 
 def test_cli_doctor_json_reports_pyproject_version():
-    result = subprocess.run(CLI + ["doctor", "--json"], capture_output=True, text=True, cwd=str(Path.home()))
+    result = subprocess.run(
+        CLI + ["doctor", "--json"], capture_output=True, text=True, cwd=str(Path.home())
+    )
     assert json.loads(result.stdout)["skill"]["version"] == PYPROJECT_VERSION

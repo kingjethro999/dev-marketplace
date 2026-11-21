@@ -1,6 +1,8 @@
 """Locate an installed video-editing-skill (kajisho5/video-editing-skill). Two shapes are accepted: a source checkout
 (<dir>/src/video_editing_skill/cli.py, run as `python -m video_editing_skill.cli` (without the current directory on sys.path, ADR-074) with PYTHONPATH=<dir>/src) or the
-installed console script `video-editing` on PATH. The agent never imports the package: the CLI is the boundary."""
+installed console script `video-editing` on PATH. The agent never imports the package: the CLI is the boundary.
+"""
+
 from __future__ import annotations
 
 import os
@@ -16,9 +18,13 @@ ENV_DIR = "VIDEO_AGENT_VIDEO_EDITING_DIR"
 
 @dataclass
 class VideoEditingSkill:
-    command: List[str]            # argv prefix, e.g. [python, "-m", "video_editing_skill.cli"] or ["video-editing"]
-    root: Optional[Path]          # checkout root when run from source
-    env: Dict[str, str]           # extra environment for the child (PYTHONPATH for a checkout); never credentials
+    command: List[
+        str
+    ]  # argv prefix, e.g. [python, "-m", "video_editing_skill.cli"] or ["video-editing"]
+    root: Optional[Path]  # checkout root when run from source
+    env: Dict[
+        str, str
+    ]  # extra environment for the child (PYTHONPATH for a checkout); never credentials
 
     def describe(self) -> str:
         return str(self.root) if self.root else self.command[0]
@@ -27,11 +33,17 @@ class VideoEditingSkill:
 def _from_checkout(root: Path) -> Optional[VideoEditingSkill]:
     cli = root / "src" / "video_editing_skill" / "cli.py"
     if cli.is_file():
-        return VideoEditingSkill(python_module_command("video_editing_skill.cli"), root, {"PYTHONPATH": str(root / "src")})
+        return VideoEditingSkill(
+            python_module_command("video_editing_skill.cli"),
+            root,
+            {"PYTHONPATH": str(root / "src")},
+        )
     return None
 
 
-def locate_video_editing(explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None) -> Optional[VideoEditingSkill]:
+def locate_video_editing(
+    explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None
+) -> Optional[VideoEditingSkill]:
     env = os.environ if env is None else env
     authoritative: List[Path] = []
     if explicit:

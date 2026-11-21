@@ -3,6 +3,7 @@
 Contract facts it relies on (ARCHITECTURE_REVIEW §1.1): one process per script, `--json` prints one JSON
 document on stdout, non-zero exit + `error:` on stderr on failure, exit 127 when ffmpeg is missing,
 `check.py` exits 1 when a check FAILs (that is a result, not an error)."""
+
 from __future__ import annotations
 
 import json
@@ -40,7 +41,9 @@ class PathPolicy:
 
     def check_input(self, p: str) -> None:
         rp = self._norm(p)
-        roots = [os.path.normcase(a) for a in self.allowed_inputs] + [os.path.normcase(self.workspace)]
+        roots = [os.path.normcase(a) for a in self.allowed_inputs] + [
+            os.path.normcase(self.workspace)
+        ]
         if not any(rp == a or rp.startswith(a + os.sep) for a in roots):
             raise ToolError(f"input outside allowed roots: {p}")
 
@@ -56,7 +59,12 @@ class PathPolicy:
 class FfmpegSkillAdapter(ToolAdapter):
     name = "ffmpeg-skill"
 
-    def __init__(self, skill: Optional[FfmpegSkill] = None, path_policy: Optional[PathPolicy] = None, python: Optional[str] = None):
+    def __init__(
+        self,
+        skill: Optional[FfmpegSkill] = None,
+        path_policy: Optional[PathPolicy] = None,
+        python: Optional[str] = None,
+    ):
         self.skill = skill or locate_ffmpeg_skill()
         if not self.skill:
             raise ToolError("ffmpeg-skill not found (set VIDEO_AGENT_FFMPEG_SKILL_DIR)")
@@ -66,32 +74,49 @@ class FfmpegSkillAdapter(ToolAdapter):
 
     # ---- description
     def describe(self) -> Dict[str, Any]:
-        return {"name": self.name, "version": self.version, "root": str(self.skill.root), "tools": {PREFIX + k: v for k, v in CATALOG.items()},
-                "contract": self.skill.catalog_check().to_dict()}
+        return {
+            "name": self.name,
+            "version": self.version,
+            "root": str(self.skill.root),
+            "tools": {PREFIX + k: v for k, v in CATALOG.items()},
+            "contract": self.skill.catalog_check().to_dict(),
+        }
 
     def unavailable_reason(self, tool: str) -> Optional[str]:
         """ADR-056: why the installed checkout's contract (or doctor) rules this catalogued tool out, or None."""
-        return self.skill.catalog_check().tool_reason(tool[len(PREFIX):]) if tool.startswith(PREFIX) else None
+        return (
+            self.skill.catalog_check().tool_reason(tool[len(PREFIX) :])
+            if tool.startswith(PREFIX)
+            else None
+        )
 
     def supports(self, tool: str) -> bool:
-        if not (tool.startswith(PREFIX) and tool[len(PREFIX):] in CATALOG and tool[len(PREFIX):] in self.skill.scripts):
+        if not (
+            tool.startswith(PREFIX)
+            and tool[len(PREFIX) :] in CATALOG
+            and tool[len(PREFIX) :] in self.skill.scripts
+        ):
             return False
         # a tool the agent drives through one specific flag (render.py --export-timeline, ADR-052) is unsupported on a checkout
         # whose --help does not offer it: the decision is BLOCKED at plan time instead of failing at render time
-        flag = CATALOG[tool[len(PREFIX):]].get("requires_flag")
-        return not flag or self.skill.offers_flag(tool[len(PREFIX):], flag)
+        flag = CATALOG[tool[len(PREFIX) :]].get("requires_flag")
+        return not flag or self.skill.offers_flag(tool[len(PREFIX) :], flag)
 
     def package(self) -> SkillPackage:
         return package(self.version)
 
     # ---- argv construction (typed args -> argv; never free-form)
-    def build_argv(self, tool: str, args: Dict[str, Any], paths: Dict[str, str]) -> List[str]:
-        script = tool[len(PREFIX):]
+    def build_argv(
+        self, tool: str, args: Dict[str, Any], paths: Dict[str, str]
+    ) -> List[str]:
+        script = tool[len(PREFIX) :]
         spec = CATALOG.get(script)
         if spec is None:
             raise ToolError(f"unknown tool {tool}")
         why = self.unavailable_reason(tool)
-        if why:   # ADR-056: refused here with the contract's reason, never handed to argparse to fail on a renamed flag
+        if (
+            why
+        ):  # ADR-056: refused here with the contract's reason, never handed to argparse to fail on a renamed flag
             raise ToolError(f"{tool} is unavailable: {why}")
         args = dict(args)
         argv: List[str] = []
@@ -109,16 +134,22 @@ class FfmpegSkillAdapter(ToolAdapter):
                 argv.append(p)
         for key, val in args.items():
             if key in spec.get("document", {}):
-                self._timeline_clips(tool, val, paths)   # validated here; written into the project document, never onto the command line
+                self._timeline_clips(
+                    tool, val, paths
+                )  # validated here; written into the project document, never onto the command line
                 continue
             typ = spec["flags"].get(key)
             if typ is None:
                 raise ToolError(f"{tool}: flag '{key}' is not in the catalog")
             if val is None or val is False:
                 continue
-            flag = FLAG_ALIASES.get((script, key)) or FLAG_ALIASES.get(("*", key)) or "--" + key.replace("_", "-")
+            flag = (
+                FLAG_ALIASES.get((script, key))
+                or FLAG_ALIASES.get(("*", key))
+                or "--" + key.replace("_", "-")
+            )
             if key == "crf" and self.skill.offers_flag(script, QUALITY_FLAG):
-                flag = QUALITY_FLAG   # ffmpeg-skill 1.10 renamed --crf to --quality (same CRF scale) and 2.x refuses --crf
+                flag = QUALITY_FLAG  # ffmpeg-skill 1.10 renamed --crf to --quality (same CRF scale) and 2.x refuses --crf
             if typ == "bool":
                 if val is not True:
                     raise ToolError(f"{tool}: '{key}' must be bool")
@@ -126,7 +157,9 @@ class FfmpegSkillAdapter(ToolAdapter):
             elif typ == "list[str]":
                 for v in val:
                     argv += [flag, str(v)]
-            elif typ == "list[path_in]":   # ADR-090: broll --insert, one input file per cutaway
+            elif (
+                typ == "list[path_in]"
+            ):  # ADR-090: broll --insert, one input file per cutaway
                 for v in val:
                     p = paths.get(v, v)
                     if self.policy:
@@ -149,9 +182,12 @@ class FfmpegSkillAdapter(ToolAdapter):
                 argv += [flag, str(val)]
         return argv
 
-    def _timeline_clips(self, tool: str, clips: Any, paths: Dict[str, str]) -> List[Dict[str, Any]]:
+    def _timeline_clips(
+        self, tool: str, clips: Any, paths: Dict[str, str]
+    ) -> List[Dict[str, Any]]:
         """Typed clip records {input (artifact id or path), in, out} → render-project clips {src, in, out}; every source must lie
-        inside the allowed input roots and every range must be a forward range of non-negative seconds."""
+        inside the allowed input roots and every range must be a forward range of non-negative seconds.
+        """
         if not isinstance(clips, list) or not clips:
             raise ToolError(f"{tool}: 'clips' must be a non-empty list")
         out: List[Dict[str, Any]] = []
@@ -163,17 +199,28 @@ class FfmpegSkillAdapter(ToolAdapter):
             except (TypeError, ValueError):
                 raise ToolError(f"{tool}: clip {n} in / out must be numbers") from None
             if not (0.0 <= start < end):
-                raise ToolError(f"{tool}: clip {n} must satisfy 0 <= in < out, got {start:g}..{end:g}")
+                raise ToolError(
+                    f"{tool}: clip {n} must satisfy 0 <= in < out, got {start:g}..{end:g}"
+                )
             src = paths.get(c["input"], c["input"])
             if self.policy:
                 self.policy.check_input(src)
-            out.append({"src": str(Path(src).resolve()), "in": round(start, 3), "out": round(end, 3)})
+            out.append(
+                {
+                    "src": str(Path(src).resolve()),
+                    "in": round(start, 3),
+                    "out": round(end, 3),
+                }
+            )
         return out
 
-    def project_document(self, tool: str, args: Dict[str, Any], paths: Dict[str, str]) -> Optional["tuple[str, Dict[str, Any]]"]:
+    def project_document(
+        self, tool: str, args: Dict[str, Any], paths: Dict[str, str]
+    ) -> Optional["tuple[str, Dict[str, Any]]"]:
         """(path, document) of the project a tool with a catalogued `document` reads (render.py, ADR-052), built only from the catalogued
-        typed keys: the clips and a hard-cut transition. The path must be a workspace file that is not one of the sources."""
-        spec = CATALOG.get(tool[len(PREFIX):]) or {}
+        typed keys: the clips and a hard-cut transition. The path must be a workspace file that is not one of the sources.
+        """
+        spec = CATALOG.get(tool[len(PREFIX) :]) or {}
         if not spec.get("document"):
             return None
         clips = self._timeline_clips(tool, args.get("clips"), paths)
@@ -182,9 +229,19 @@ class FfmpegSkillAdapter(ToolAdapter):
             self.policy.check_output(path, [c["src"] for c in clips])
         return path, {"clips": clips, "transition": {"type": "none"}}
 
-    def command(self, tool: str, args: Dict[str, Any], paths: Dict[str, str], dry_run: bool = False) -> List[str]:
-        script = tool[len(PREFIX):]
-        cmd = [self.python, str(self.skill.script(script))] + self.build_argv(tool, args, paths) + ["--json"]
+    def command(
+        self,
+        tool: str,
+        args: Dict[str, Any],
+        paths: Dict[str, str],
+        dry_run: bool = False,
+    ) -> List[str]:
+        script = tool[len(PREFIX) :]
+        cmd = (
+            [self.python, str(self.skill.script(script))]
+            + self.build_argv(tool, args, paths)
+            + ["--json"]
+        )
         if dry_run:
             cmd.append("--dry-run")
         return cmd
@@ -193,45 +250,107 @@ class FfmpegSkillAdapter(ToolAdapter):
         return [" ".join(self.command(op.tool, op.args, paths))]
 
     # ---- execution
-    def run(self, op: Operation, paths: Dict[str, str], timeout: Optional[float] = None, dry_run: bool = False, attempt: int = 1) -> ToolResult:
+    def run(
+        self,
+        op: Operation,
+        paths: Dict[str, str],
+        timeout: Optional[float] = None,
+        dry_run: bool = False,
+        attempt: int = 1,
+    ) -> ToolResult:
         cmd = self.command(op.tool, op.args, paths, dry_run=dry_run)
-        script = op.tool[len(PREFIX):]
+        script = op.tool[len(PREFIX) :]
         doc = self.project_document(op.tool, op.args, paths)
-        if doc is not None:   # an intermediate of this operation inside the workspace (written for a dry run too: render.py reads it then as well)
+        if (
+            doc is not None
+        ):  # an intermediate of this operation inside the workspace (written for a dry run too: render.py reads it then as well)
             Path(doc[0]).parent.mkdir(parents=True, exist_ok=True)
-            Path(doc[0]).write_text(json.dumps(doc[1], indent=2) + "\n", encoding="utf-8")
+            Path(doc[0]).write_text(
+                json.dumps(doc[1], indent=2) + "\n", encoding="utf-8"
+            )
         t0 = time.time()
-        out_path = paths.get(op.args["output"], op.args["output"]) if isinstance(op.args.get("output"), str) else None
+        out_path = (
+            paths.get(op.args["output"], op.args["output"])
+            if isinstance(op.args.get("output"), str)
+            else None
+        )
         code, out, err = run_process_group(cmd, timeout)
-        if code != 0 and out_path and not dry_run and code != 124 and os.path.exists(out_path) and _is_fresh(out_path, t0):
+        if (
+            code != 0
+            and out_path
+            and not dry_run
+            and code != 124
+            and os.path.exists(out_path)
+            and _is_fresh(out_path, t0)
+        ):
             _remove_partial(out_path)
-        if code == 124 and out_path and os.path.exists(out_path) and _is_fresh(out_path, t0):
-            _remove_partial(out_path)  # never let a retry write next to a half-written file
+        if (
+            code == 124
+            and out_path
+            and os.path.exists(out_path)
+            and _is_fresh(out_path, t0)
+        ):
+            _remove_partial(
+                out_path
+            )  # never let a retry write next to a half-written file
         data = _parse_json(out)
-        exit_is_result = CATALOG[script].get("exit_code_means_fail") and data is not None
+        exit_is_result = (
+            CATALOG[script].get("exit_code_means_fail") and data is not None
+        )
         ok = code == 0 or bool(exit_is_result)
         output = data.get("output") if isinstance(data, dict) else None
-        if output is None and CATALOG[script]["produces_output"] and isinstance(op.args.get("output"), str):
+        if (
+            output is None
+            and CATALOG[script]["produces_output"]
+            and isinstance(op.args.get("output"), str)
+        ):
             output = paths.get(op.args["output"], op.args["output"]) if ok else None
-        return ToolResult(op_id=op.id, tool=op.tool, ok=ok, exit_code=code, output=output, data=data if isinstance(data, dict) else {"result": data},
-                          commands=list((data or {}).get("commands", [])) if isinstance(data, dict) else [], stderr_tail="\n".join(err.strip().splitlines()[-12:]),
-                          seconds=round(time.time() - t0, 2), attempt=attempt, dry_run=dry_run)
+        return ToolResult(
+            op_id=op.id,
+            tool=op.tool,
+            ok=ok,
+            exit_code=code,
+            output=output,
+            data=data if isinstance(data, dict) else {"result": data},
+            commands=(
+                list((data or {}).get("commands", [])) if isinstance(data, dict) else []
+            ),
+            stderr_tail="\n".join(err.strip().splitlines()[-12:]),
+            seconds=round(time.time() - t0, 2),
+            attempt=attempt,
+            dry_run=dry_run,
+        )
 
     # ---- convenience measurement helpers (used by MediaAnalyzer / QA; they build Operations too)
-    def measure(self, tool: str, args: Dict[str, Any], paths: Optional[Dict[str, str]] = None, timeout: Optional[float] = None) -> ToolResult:
+    def measure(
+        self,
+        tool: str,
+        args: Dict[str, Any],
+        paths: Optional[Dict[str, str]] = None,
+        timeout: Optional[float] = None,
+    ) -> ToolResult:
         op = Operation(tool=tool, args=args, inputs=[], outputs=[], kind="measure")
         return self.run(op, paths or {}, timeout=timeout)
 
 
-CHILD_ENV = {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}  # ffmpeg-skill prints UTF-8 JSON; Windows consoles default to cp932 etc.
+CHILD_ENV = {
+    "PYTHONUTF8": "1",
+    "PYTHONIOENCODING": "utf-8",
+}  # ffmpeg-skill prints UTF-8 JSON; Windows consoles default to cp932 etc.
 
 
-def run_process_group(cmd: List[str], timeout: Optional[float], stdin: Optional[str] = None) -> "tuple[int, str, str]":
+def run_process_group(
+    cmd: List[str], timeout: Optional[float], stdin: Optional[str] = None
+) -> "tuple[int, str, str]":
     """Run cmd in its own process group so a timeout or an interrupt kills the script AND the ffmpeg it spawned.
     `stdin` (a JSON document for stdin-driven Skills) is written once and closed. Returns (exit_code, stdout, stderr);
     exit 124 means timeout, 130 means interrupted."""
-    env = child_env(CHILD_ENV)   # never the AI provider credentials (ADR-069)
-    kw: Dict[str, Any] = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "env": env}
+    env = child_env(CHILD_ENV)  # never the AI provider credentials (ADR-069)
+    kw: Dict[str, Any] = {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "env": env,
+    }
     if stdin is not None:
         kw["stdin"] = subprocess.PIPE
     if os.name == "nt":
@@ -240,7 +359,9 @@ def run_process_group(cmd: List[str], timeout: Optional[float], stdin: Optional[
         kw["start_new_session"] = True
     proc = subprocess.Popen(cmd, **kw)
     try:
-        out_b, err_b = proc.communicate(input=stdin.encode("utf-8") if stdin is not None else None, timeout=timeout)
+        out_b, err_b = proc.communicate(
+            input=stdin.encode("utf-8") if stdin is not None else None, timeout=timeout
+        )
         return proc.returncode, _dec(out_b), _dec(err_b)
     except subprocess.TimeoutExpired:
         kill_tree(proc)
@@ -255,7 +376,11 @@ def run_process_group(cmd: List[str], timeout: Optional[float], stdin: Optional[
 def kill_tree(proc: "subprocess.Popen[bytes]") -> None:
     try:
         if os.name == "nt":
-            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         else:
             os.killpg(proc.pid, signal.SIGKILL)
     except (ProcessLookupError, PermissionError, OSError):

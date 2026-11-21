@@ -9,6 +9,7 @@ Usage:
   python3 scripts/anim.py character.glb --extract --action Walk -o walk_only.glb
   python3 scripts/anim.py character.glb --combine walk.glb run.glb idle.glb -o all_anims.glb
 """
+
 import argparse
 import json
 import sys
@@ -26,13 +27,30 @@ _MULTI_ACTION_FORMATS = {"gltf", "fbx"}
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
     ap.add_argument("-o", "--output", required=True)
     mode = ap.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--extract", action="store_true", help="strip every non-armature object, keeping only the skeleton(s) and their actions")
-    mode.add_argument("--combine", nargs="+", metavar="ANIM_FILE", help="import each file's actions (matched to this file's armature by bone name) and merge them all into one output")
-    ap.add_argument("--action", action="append", dest="actions", metavar="NAME", help="with --extract, keep only this action (repeatable); default: keep every action found")
+    mode.add_argument(
+        "--extract",
+        action="store_true",
+        help="strip every non-armature object, keeping only the skeleton(s) and their actions",
+    )
+    mode.add_argument(
+        "--combine",
+        nargs="+",
+        metavar="ANIM_FILE",
+        help="import each file's actions (matched to this file's armature by bone name) and merge them all into one output",
+    )
+    ap.add_argument(
+        "--action",
+        action="append",
+        dest="actions",
+        metavar="NAME",
+        help="with --extract, keep only this action (repeatable); default: keep every action found",
+    )
     _common.add_common_args(ap, fast=False, progress=False)
     args = ap.parse_args()
 
@@ -40,11 +58,15 @@ def main() -> int:
         in_path = _common.require_exists(args.input, "input")
         in_fmt = _formats.detect_format(str(in_path))
         if in_fmt is None:
-            raise SkillError(f"unrecognized input extension: {in_path.suffix}", kind="input")
+            raise SkillError(
+                f"unrecognized input extension: {in_path.suffix}", kind="input"
+            )
         out_path = Path(args.output)
         out_fmt = _formats.detect_format(str(out_path))
         if out_fmt is None:
-            raise SkillError(f"unrecognized output extension: {out_path.suffix}", kind="input")
+            raise SkillError(
+                f"unrecognized output extension: {out_path.suffix}", kind="input"
+            )
 
         if args.combine:
             if out_fmt not in _MULTI_ACTION_FORMATS:
@@ -58,20 +80,27 @@ def main() -> int:
                 p = _common.require_exists(raw, "combine source")
                 fmt = _formats.detect_format(str(p))
                 if fmt is None:
-                    raise SkillError(f"unrecognized extension for combine source: {p.suffix}", kind="input")
+                    raise SkillError(
+                        f"unrecognized extension for combine source: {p.suffix}",
+                        kind="input",
+                    )
                 anim_sources.append([str(p.resolve()), fmt])
             bpy_args = {
                 "mode": "combine",
-                "path": str(in_path.resolve()), "format": in_fmt,
+                "path": str(in_path.resolve()),
+                "format": in_fmt,
                 "anim_sources": anim_sources,
-                "output": str(out_path.resolve()), "output_format": out_fmt,
+                "output": str(out_path.resolve()),
+                "output_format": out_fmt,
             }
         else:
             bpy_args = {
                 "mode": "extract",
-                "path": str(in_path.resolve()), "format": in_fmt,
+                "path": str(in_path.resolve()),
+                "format": in_fmt,
                 "actions": args.actions,
-                "output": str(out_path.resolve()), "output_format": out_fmt,
+                "output": str(out_path.resolve()),
+                "output_format": out_fmt,
             }
 
         if args.dry_run:
@@ -79,12 +108,19 @@ def main() -> int:
             return 0
 
         blender_bin = _run.find_blender(args.blender)
-        result = _run.run_bpy("anim.py", bpy_args, blender_bin=blender_bin, timeout=args.timeout)
+        result = _run.run_bpy(
+            "anim.py", bpy_args, blender_bin=blender_bin, timeout=args.timeout
+        )
     except SkillError as err:
         return _common.fail(err, args.json)
 
     if not result.get("ok"):
-        return _common.fail(SkillError(result["error"]["message"], kind=result["error"].get("kind", "internal")), args.json)
+        return _common.fail(
+            SkillError(
+                result["error"]["message"], kind=result["error"].get("kind", "internal")
+            ),
+            args.json,
+        )
 
     data = result["data"]
     if args.json:
@@ -93,7 +129,9 @@ def main() -> int:
         print(f"{args.input} + {len(data['combined'])} animation(s) -> {args.output}")
         print(f"  actions: {', '.join(data['actions_in_output'])}")
     else:
-        print(f"{args.input} -> {args.output} ({len(data['actions'])} action(s) kept, mesh stripped)")
+        print(
+            f"{args.input} -> {args.output} ({len(data['actions'])} action(s) kept, mesh stripped)"
+        )
         print(f"  actions: {', '.join(data['actions'])}")
     return 0
 

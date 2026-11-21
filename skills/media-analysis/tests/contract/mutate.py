@@ -1,5 +1,7 @@
 """Apply the mutation vocabulary of tests/contract/cases/*.json to a live contract document. The fixtures never
-carry a full contract (that would be a second, hand-maintained copy); they describe a change to the real one."""
+carry a full contract (that would be a second, hand-maintained copy); they describe a change to the real one.
+"""
+
 from __future__ import annotations
 
 import copy
@@ -12,7 +14,7 @@ def apply(contract: Dict[str, Any], mutations: List[Dict[str, Any]]) -> Dict[str
         op = m["op"]
         if op == "set":
             if isinstance(m["value"], str) and m["value"].startswith("APPEND:"):
-                doc[m["path"]] = list(doc[m["path"]]) + [m["value"][len("APPEND:"):]]
+                doc[m["path"]] = list(doc[m["path"]]) + [m["value"][len("APPEND:") :]]
             else:
                 doc[m["path"]] = m["value"]
         elif op == "set_map":
@@ -21,7 +23,14 @@ def apply(contract: Dict[str, Any], mutations: List[Dict[str, Any]]) -> Dict[str
             doc["tools"] = [t for t in doc["tools"] if t["tool_id"] != m["tool_id"]]
         elif op == "add_tool":
             base = copy.deepcopy(doc["tools"][0])
-            base.update({"tool_id": m["tool_id"], "kinds": m["kinds"], "output_observation_kinds": m["kinds"], "parameters": {k: {} for k in m["kinds"]}})
+            base.update(
+                {
+                    "tool_id": m["tool_id"],
+                    "kinds": m["kinds"],
+                    "output_observation_kinds": m["kinds"],
+                    "parameters": {k: {} for k in m["kinds"]},
+                }
+            )
             doc["tools"].append(base)
         elif op == "set_tool_field":
             for t in doc["tools"]:

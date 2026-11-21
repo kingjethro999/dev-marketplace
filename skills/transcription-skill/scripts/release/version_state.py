@@ -20,6 +20,7 @@ shell=True) rather than via shell word-splitting in the caller -- consistent wit
 git-log-as-data approach. --tags remains available for tests and for callers that already have the
 tag list.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,7 +33,13 @@ from typing import List, Optional, Tuple
 
 
 def list_tags(repo: Path) -> List[str]:
-    proc = subprocess.run(["git", "-C", str(repo), "tag", "--list", "v*"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+    proc = subprocess.run(
+        ["git", "-C", str(repo), "tag", "--list", "v*"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
     return [line for line in proc.stdout.split("\n") if line]
 
 
@@ -45,14 +52,17 @@ def read_pyproject_version(path: Path) -> str:
     """The current top-level `version = "..."` value. Rejects anything that is not strict semver
     (`X.Y.Z`) -- this value later flows into shell command lines and GitHub Actions step outputs
     downstream (git tag names, `bump_version.py --new-version`, etc.), so it is validated at the
-    point it first enters the pipeline rather than trusted as free-form text from a repo file."""
+    point it first enters the pipeline rather than trusted as free-form text from a repo file.
+    """
     text = path.read_text(encoding="utf-8")
     m = VERSION_LINE_RE.search(text)
     if not m:
-        raise SystemExit(f"no top-level version = \"...\" line found in {path}")
+        raise SystemExit(f'no top-level version = "..." line found in {path}')
     version = m.group(1)
     if not SEMVER_RE.match(version):
-        raise SystemExit(f"pyproject.toml version {version!r} is not strict semver (X.Y.Z); refusing to use it")
+        raise SystemExit(
+            f"pyproject.toml version {version!r} is not strict semver (X.Y.Z); refusing to use it"
+        )
     return version
 
 
@@ -85,8 +95,18 @@ def decide(current_version: str, latest_tag_ver: Optional[str]) -> str:
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--pyproject", required=True, type=Path)
-    ap.add_argument("--repo", type=Path, default=None, help="read tags from this repo via `git tag --list`")
-    ap.add_argument("--tags", nargs="*", default=None, help="explicit tag list (overrides --repo; mainly for tests)")
+    ap.add_argument(
+        "--repo",
+        type=Path,
+        default=None,
+        help="read tags from this repo via `git tag --list`",
+    )
+    ap.add_argument(
+        "--tags",
+        nargs="*",
+        default=None,
+        help="explicit tag list (overrides --repo; mainly for tests)",
+    )
     args = ap.parse_args(argv)
     if args.tags is None and args.repo is None:
         ap.error("one of --repo or --tags is required")
@@ -95,7 +115,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     tags = args.tags if args.tags is not None else list_tags(args.repo)
     latest = latest_tag_version(tags)
     mode = decide(current, latest)
-    print(json.dumps({"current_version": current, "latest_tag_version": latest, "mode": mode}))
+    print(
+        json.dumps(
+            {"current_version": current, "latest_tag_version": latest, "mode": mode}
+        )
+    )
     return 0
 
 

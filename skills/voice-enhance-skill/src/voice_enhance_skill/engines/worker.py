@@ -5,6 +5,7 @@ real and an engine crash cannot take the caller down (transcription-skill ADR-00
 file paths in a private temporary directory vary. The Hugging Face libraries are switched offline before any
 engine import. Errors go to the result file as structured JSON, never as free text on stdout.
 """
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,11 @@ import sys
 import traceback
 from typing import List, Optional
 
-OFFLINE_ENV = {"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "HF_DATASETS_OFFLINE": "1"}
+OFFLINE_ENV = {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "HF_DATASETS_OFFLINE": "1",
+}
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -37,9 +42,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     except VoiceEnhanceError as exc:
         payload = {"ok": False, "error": exc.to_dict()}
         code = 1
-    except Exception as exc:  # anything else is an engine failure, reported structurally
-        payload = {"ok": False, "error": {"code": "ENGINE_FAILED", "message": f"{type(exc).__name__}: {exc}", "retryable": False,
-                                          "details": {"traceback": traceback.format_exc().splitlines()[-6:]}}}
+    except (
+        Exception
+    ) as exc:  # anything else is an engine failure, reported structurally
+        payload = {
+            "ok": False,
+            "error": {
+                "code": "ENGINE_FAILED",
+                "message": f"{type(exc).__name__}: {exc}",
+                "retryable": False,
+                "details": {"traceback": traceback.format_exc().splitlines()[-6:]},
+            },
+        }
         code = 1
     tmp = out_path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:

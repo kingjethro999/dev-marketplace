@@ -14,13 +14,28 @@ Examples:
   python3 sequence.py --dir frames --pattern "frame_%04d.png" --fps 24 -o out.mp4
   python3 sequence.py --dir frames --pattern "*.png" --fps 30 --start-number 1
 """
+
 import argparse
 import re
 import sys
 import tempfile
 from pathlib import Path
 
-from _common import add_common, apply_common, default_output, die, emit, ffmpeg_base, info, probe, run, video_args, X264_PRESETS, concat_list_line, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run,
+    video_args,
+    X264_PRESETS,
+    concat_list_line,
+    fmt_secs,
+)
 
 
 def even(n: float) -> int:
@@ -42,7 +57,13 @@ def _frames_after(directory: Path, pattern: str, index: int) -> list:
     m = re.search(r"%0?(\d*)d", pattern)
     if not m:
         return []
-    rx = re.compile("^" + re.escape(pattern[:m.start()]) + r"(\d+)" + re.escape(pattern[m.end():]) + "$")
+    rx = re.compile(
+        "^"
+        + re.escape(pattern[: m.start()])
+        + r"(\d+)"
+        + re.escape(pattern[m.end() :])
+        + "$"
+    )
     found = []
     for f in directory.iterdir():
         hit = rx.match(f.name)
@@ -52,16 +73,39 @@ def _frames_after(directory: Path, pattern: str, index: int) -> list:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--dir", required=True, help="directory containing the frames")
-    ap.add_argument("--pattern", required=True, help="printf pattern (frame_%%04d.png) or glob (*.png)")
+    ap.add_argument(
+        "--pattern",
+        required=True,
+        help="printf pattern (frame_%%04d.png) or glob (*.png)",
+    )
     ap.add_argument("-o", "--output", help="output file (default: <dir>_sequence.mp4)")
-    ap.add_argument("--fps", type=float, default=30.0, help="output frame rate (default 30)")
-    ap.add_argument("--start-number", type=int, default=0, help="first frame index, for a printf pattern (default 0)")
-    ap.add_argument("--width", type=int, help="output width in px; with --height also given, both are used directly")
-    ap.add_argument("--height", type=int, help="output height in px; with --width also given, both are used directly")
+    ap.add_argument(
+        "--fps", type=float, default=30.0, help="output frame rate (default 30)"
+    )
+    ap.add_argument(
+        "--start-number",
+        type=int,
+        default=0,
+        help="first frame index, for a printf pattern (default 0)",
+    )
+    ap.add_argument(
+        "--width",
+        type=int,
+        help="output width in px; with --height also given, both are used directly",
+    )
+    ap.add_argument(
+        "--height",
+        type=int,
+        help="output height in px; with --width also given, both are used directly",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -91,14 +135,18 @@ def main() -> int:
             frames.append(directory / (args.pattern % i))
             i += 1
         if not frames:
-            die(f"first frame not found: {directory / (args.pattern % args.start_number)} (check --pattern / --start-number)")
+            die(
+                f"first frame not found: {directory / (args.pattern % args.start_number)} (check --pattern / --start-number)"
+            )
         info(f"found {len(frames)} consecutive frames from index {args.start_number}")
         # 2.2.1: frames past a gap in the numbering (one render or export step that failed) used
         # to be dropped silently, giving a shorter video; name the gap and what was left out
         later = _frames_after(directory, args.pattern, i)
         if later:
-            info(f"WARNING: frame {args.pattern % i} is missing; {len(later)} later frame(s) "
-                 f"(from {later[0].name}) are NOT in the sequence -- fill the gap or rename them")
+            info(
+                f"WARNING: frame {args.pattern % i} is missing; {len(later)} later frame(s) "
+                f"(from {later[0].name}) are NOT in the sequence -- fill the gap or rename them"
+            )
 
     frame_meta = probe(str(frames[0]))
     if not frame_meta.get("video"):
@@ -116,7 +164,9 @@ def main() -> int:
     else:
         out_w, out_h = even(sw), even(sh)
 
-    output = args.output or default_output(str(directory).rstrip("/\\") or "sequence", "sequence", "mp4")
+    output = args.output or default_output(
+        str(directory).rstrip("/\\") or "sequence", "sequence", "mp4"
+    )
     frame_duration = 1.0 / args.fps
 
     with tempfile.TemporaryDirectory(prefix="ffmpeg-skill-sequence-") as tmp:
@@ -125,7 +175,9 @@ def main() -> int:
         for f in frames:
             lines.append(_concat_list_line(f.resolve()))
             lines.append(f"duration {frame_duration:.6f}")
-        lines.append(_concat_list_line(frames[-1].resolve()))  # concat demuxer: last entry's duration is ignored, so repeat it
+        lines.append(
+            _concat_list_line(frames[-1].resolve())
+        )  # concat demuxer: last entry's duration is ignored, so repeat it
         list_path.write_text("\n".join(lines), encoding="utf-8")
 
         cmd = ffmpeg_base() + ["-f", "concat", "-safe", "0", "-i", str(list_path)]
@@ -142,7 +194,9 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {v['fps']:g}fps)")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {v['fps']:g}fps)"
+    )
     emit(output)
     return 0
 

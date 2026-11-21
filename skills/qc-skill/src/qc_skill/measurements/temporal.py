@@ -54,10 +54,16 @@ FLASH_DARKER_BELOW_CD_M2 = 160.0
 FLASH_GRID = 32
 _HDR_TRANSFERS = {"smpte2084", "arib-std-b67"}
 
-_SHOWINFO_RE = re.compile(r"Parsed_showinfo.*?\bn:\s*(\d+)\s+pts:\s*-?\d+\s+pts_time:\s*(-?[\d.]+)")
-_META_FRAME_RE = re.compile(r"Parsed_metadata.*?frame:(\d+)\s+pts:\s*-?\d+\s+pts_time:\s*(-?[\d.]+)")
+_SHOWINFO_RE = re.compile(
+    r"Parsed_showinfo.*?\bn:\s*(\d+)\s+pts:\s*-?\d+\s+pts_time:\s*(-?[\d.]+)"
+)
+_META_FRAME_RE = re.compile(
+    r"Parsed_metadata.*?frame:(\d+)\s+pts:\s*-?\d+\s+pts_time:\s*(-?[\d.]+)"
+)
 _META_SCD_TIME_RE = re.compile(r"Parsed_metadata.*?lavfi\.scd\.time=(-?[\d.]+)")
-_SCDET_SCORE_RE = re.compile(r"lavfi\.scd\.score:\s*([\d.]+),\s*lavfi\.scd\.time:\s*(-?[\d.]+)")
+_SCDET_SCORE_RE = re.compile(
+    r"lavfi\.scd\.score:\s*([\d.]+),\s*lavfi\.scd\.time:\s*(-?[\d.]+)"
+)
 
 RED_FLASH_NOTE = (
     "UNKNOWN - not evaluated: ITU-R BT.1702-3 says a transition to or from a saturated red is "
@@ -77,7 +83,7 @@ def _luminance_lut() -> List[float]:
     lut = []
     for y in range(256):
         v = min(1.0, max(0.0, (y - 16) / 219.0))
-        lut.append(SDR_PEAK_WHITE_CD_M2 * (v ** SDR_DISPLAY_GAMMA))
+        lut.append(SDR_PEAK_WHITE_CD_M2 * (v**SDR_DISPLAY_GAMMA))
     return lut
 
 
@@ -112,11 +118,17 @@ def _cell_change_frames(frames: List[bytes]) -> List[List[int]]:
             lum = lut[frame[c]]
             d = direction[c]
             if d == 0:
-                if lum - lo[c] >= FLASH_MIN_DELTA_CD_M2 and lo[c] < FLASH_DARKER_BELOW_CD_M2:
+                if (
+                    lum - lo[c] >= FLASH_MIN_DELTA_CD_M2
+                    and lo[c] < FLASH_DARKER_BELOW_CD_M2
+                ):
                     changes[c].append(fi)
                     direction[c] = 1
                     hi[c] = lum
-                elif hi[c] - lum >= FLASH_MIN_DELTA_CD_M2 and lum < FLASH_DARKER_BELOW_CD_M2:
+                elif (
+                    hi[c] - lum >= FLASH_MIN_DELTA_CD_M2
+                    and lum < FLASH_DARKER_BELOW_CD_M2
+                ):
                     changes[c].append(fi)
                     direction[c] = -1
                     lo[c] = lum
@@ -128,14 +140,20 @@ def _cell_change_frames(frames: List[bytes]) -> List[List[int]]:
             elif d == 1:
                 if lum > hi[c]:
                     hi[c] = lum
-                elif hi[c] - lum >= FLASH_MIN_DELTA_CD_M2 and lum < FLASH_DARKER_BELOW_CD_M2:
+                elif (
+                    hi[c] - lum >= FLASH_MIN_DELTA_CD_M2
+                    and lum < FLASH_DARKER_BELOW_CD_M2
+                ):
                     changes[c].append(fi)
                     direction[c] = -1
                     lo[c] = lum
             else:
                 if lum < lo[c]:
                     lo[c] = lum
-                elif lum - lo[c] >= FLASH_MIN_DELTA_CD_M2 and lo[c] < FLASH_DARKER_BELOW_CD_M2:
+                elif (
+                    lum - lo[c] >= FLASH_MIN_DELTA_CD_M2
+                    and lo[c] < FLASH_DARKER_BELOW_CD_M2
+                ):
                     changes[c].append(fi)
                     direction[c] = 1
                     hi[c] = lum
@@ -157,7 +175,10 @@ def _qualified_count(hist: Dict[int, int], needed_cells: int) -> Tuple[int, int]
 
 
 def _window_counts(
-    events: List[Tuple[float, int]], n_cells: int, needed_cells: int, starts: List[Tuple[float, float]]
+    events: List[Tuple[float, int]],
+    n_cells: int,
+    needed_cells: int,
+    starts: List[Tuple[float, float]],
 ) -> List[Tuple[int, int]]:
     """For each [start, end) window, (area-qualified change count, cells
     reaching it). ``events`` are (time, cell) sorted by time; windows are
@@ -189,32 +210,47 @@ def _window_counts(
     return out
 
 
-def analyze_flashes(frames: List[bytes], times: List[float], area_fraction: float) -> Dict[str, Any]:
+def analyze_flashes(
+    frames: List[bytes], times: List[float], area_fraction: float
+) -> Dict[str, Any]:
     """Pure function over grid frames -> per-second and worst-window
     area-qualified flash counts. Exposed for unit tests."""
 
     if not frames:
         return {"per_second": [], "worst_window": None}
     n_cells = len(frames[0])
-    needed_cells = int(area_fraction * n_cells) + 1  # strictly more than area_fraction of the screen
+    needed_cells = (
+        int(area_fraction * n_cells) + 1
+    )  # strictly more than area_fraction of the screen
     if needed_cells > n_cells:
         needed_cells = n_cells
     change_frames = _cell_change_frames(frames)
-    events = sorted((times[fi], cell) for cell, fis in enumerate(change_frames) for fi in fis)
+    events = sorted(
+        (times[fi], cell) for cell, fis in enumerate(change_frames) for fi in fis
+    )
 
     duration_end = times[-1] if times else 0.0
     n_seconds = int(duration_end) + 1
     second_windows = [(float(k), float(k + 1)) for k in range(n_seconds)]
     per_second = []
-    for (start, end), (changes, cells) in zip(second_windows, _window_counts(events, n_cells, needed_cells, second_windows)):
-        per_second.append({"start": start, "end": end, "flashes": changes / 2.0, "changes": changes})
+    for (start, end), (changes, cells) in zip(
+        second_windows, _window_counts(events, n_cells, needed_cells, second_windows)
+    ):
+        per_second.append(
+            {"start": start, "end": end, "flashes": changes / 2.0, "changes": changes}
+        )
 
     sliding = [(t, t + 1.0) for t in times]
     worst = None
-    for (start, end), (changes, cells) in zip(sliding, _window_counts(events, n_cells, needed_cells, sliding)):
+    for (start, end), (changes, cells) in zip(
+        sliding, _window_counts(events, n_cells, needed_cells, sliding)
+    ):
         if worst is None or changes > worst["changes"]:
             worst = {
-                "start": round(start, 6), "end": round(end, 6), "flashes": changes / 2.0, "changes": changes,
+                "start": round(start, 6),
+                "end": round(end, 6),
+                "flashes": changes / 2.0,
+                "changes": changes,
                 "area_fraction": round(cells / n_cells, 4) if changes else 0.0,
             }
     return {"per_second": per_second, "worst_window": worst}
@@ -246,7 +282,13 @@ def parse_scene_cuts(stderr: str, frame_rate: Optional[float]) -> List[Dict[str,
         m = _META_SCD_TIME_RE.search(line)
         if m and pending is not None:
             frame_index, pts_time = pending
-            cuts.append({"time": pts_time, "frame": frame_index, "score": scores.get(m.group(1))})
+            cuts.append(
+                {
+                    "time": pts_time,
+                    "frame": frame_index,
+                    "score": scores.get(m.group(1)),
+                }
+            )
             pending = None
     return cuts
 
@@ -269,33 +311,73 @@ def analyze_temporal(
 
     filters: List[str] = []
     if want_cuts:
-        filters += [f"scdet=threshold={float(scene_cut_threshold)}", "metadata=mode=print:key=lavfi.scd.time"]
+        filters += [
+            f"scdet=threshold={float(scene_cut_threshold)}",
+            "metadata=mode=print:key=lavfi.scd.time",
+        ]
     if flash_supported:
-        filters += ["format=yuv444p", "extractplanes=y", f"scale={FLASH_GRID}:{FLASH_GRID}:flags=area", "showinfo"]
+        filters += [
+            "format=yuv444p",
+            "extractplanes=y",
+            f"scale={FLASH_GRID}:{FLASH_GRID}:flags=area",
+            "showinfo",
+        ]
 
     result = None
     if filters:
         argv = ffmpeg_rawvideo_argv(
-            ffmpeg_path, input_path, filters,
+            ffmpeg_path,
+            input_path,
+            filters,
             stream_select=f"0:{video_stream_index}",
             pix_fmt="gray" if flash_supported else None,
         )
         try:
             result = run_argv(argv, timeout=timeout, binary_stdout=True)
         except FileNotFoundError:
-            raise error("DEPENDENCY_ERROR", "ffmpeg executable could not be run", executable=ffmpeg_path)
+            raise error(
+                "DEPENDENCY_ERROR",
+                "ffmpeg executable could not be run",
+                executable=ffmpeg_path,
+            )
         if result.timed_out:
-            raise error("TOOL_ERROR", "ffmpeg temporal analysis timed out", argv=argv, timeout=timeout)
+            raise error(
+                "TOOL_ERROR",
+                "ffmpeg temporal analysis timed out",
+                argv=argv,
+                timeout=timeout,
+            )
 
     if want_flashes:
         if not flash_supported:
             note = f"not performed: HDR transfer {color_transfer!r} has no implemented BT.1702 display mapping"
-            measurements.append(QCMeasurement("video.flash_per_second", "video", "flash_per_second", None, source="ffmpeg:extractplanes", notes=note))
-            measurements.append(QCMeasurement("video.flash_worst_window", "video", "flash_worst_window", None, source="ffmpeg:extractplanes", notes=note))
+            measurements.append(
+                QCMeasurement(
+                    "video.flash_per_second",
+                    "video",
+                    "flash_per_second",
+                    None,
+                    source="ffmpeg:extractplanes",
+                    notes=note,
+                )
+            )
+            measurements.append(
+                QCMeasurement(
+                    "video.flash_worst_window",
+                    "video",
+                    "flash_worst_window",
+                    None,
+                    source="ffmpeg:extractplanes",
+                    notes=note,
+                )
+            )
         else:
             cell_bytes = FLASH_GRID * FLASH_GRID
             raw = result.stdout_bytes if result is not None else b""
-            frames = [raw[i:i + cell_bytes] for i in range(0, len(raw) - cell_bytes + 1, cell_bytes)]
+            frames = [
+                raw[i : i + cell_bytes]
+                for i in range(0, len(raw) - cell_bytes + 1, cell_bytes)
+            ]
             times = _parse_frame_times(result.stderr if result is not None else "")
             note = FLASH_ASSUMPTION_NOTE
             if len(times) != len(frames):
@@ -310,15 +392,48 @@ def analyze_temporal(
                 per_second, worst = analysis["per_second"], analysis["worst_window"]
             else:
                 per_second, worst = None, None
-            measurements.append(QCMeasurement("video.flash_per_second", "video", "flash_per_second", per_second, unit="flashes", source="ffmpeg:extractplanes", notes=note))
-            measurements.append(QCMeasurement("video.flash_worst_window", "video", "flash_worst_window", worst, unit="flashes", source="ffmpeg:extractplanes", notes=note))
-        measurements.append(QCMeasurement("video.red_flash_count", "video", "red_flash_count", None, source="not_measured", notes=RED_FLASH_NOTE))
+            measurements.append(
+                QCMeasurement(
+                    "video.flash_per_second",
+                    "video",
+                    "flash_per_second",
+                    per_second,
+                    unit="flashes",
+                    source="ffmpeg:extractplanes",
+                    notes=note,
+                )
+            )
+            measurements.append(
+                QCMeasurement(
+                    "video.flash_worst_window",
+                    "video",
+                    "flash_worst_window",
+                    worst,
+                    unit="flashes",
+                    source="ffmpeg:extractplanes",
+                    notes=note,
+                )
+            )
+        measurements.append(
+            QCMeasurement(
+                "video.red_flash_count",
+                "video",
+                "red_flash_count",
+                None,
+                source="not_measured",
+                notes=RED_FLASH_NOTE,
+            )
+        )
 
     if want_cuts:
         cuts = parse_scene_cuts(result.stderr if result is not None else "", frame_rate)
         measurements.append(
             QCMeasurement(
-                "video.scene_cuts", "video", "scene_cuts", cuts, source="ffmpeg:scdet",
+                "video.scene_cuts",
+                "video",
+                "scene_cuts",
+                cuts,
+                source="ffmpeg:scdet",
                 notes=f"scdet threshold {float(scene_cut_threshold)}; time/frame of the first frame of each new shot",
             )
         )

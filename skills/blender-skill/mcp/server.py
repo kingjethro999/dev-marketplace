@@ -15,6 +15,7 @@ Claude Desktop / Claude Code config example:
   On Windows, use "python" instead of "python3" unless Python was installed from the Microsoft
   Store (a python.org install exposes python/py, not python3).
 """
+
 import json
 import sys
 from pathlib import Path
@@ -23,12 +24,31 @@ from typing import Any, Dict, List
 HERE = Path(__file__).resolve().parent
 SCRIPTS = HERE.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-from _version import __version__  # noqa: E402 -- the one version source release-please bumps
-from _render_output import RESOLUTION_PRESETS  # noqa: E402 -- render's named frame sizes (RM-058)
+from _version import (
+    __version__,
+)  # noqa: E402 -- the one version source release-please bumps
+from _render_output import (
+    RESOLUTION_PRESETS,
+)  # noqa: E402 -- render's named frame sizes (RM-058)
 
 PROTOCOL_VERSION = "2024-11-05"
 
-TOOLS = ["info", "convert", "split", "anim", "lod", "optimize", "render", "look", "check", "fit", "bake", "scene", "batch", "verify"]
+TOOLS = [
+    "info",
+    "convert",
+    "split",
+    "anim",
+    "lod",
+    "optimize",
+    "render",
+    "look",
+    "check",
+    "fit",
+    "bake",
+    "scene",
+    "batch",
+    "verify",
+]
 
 _DESCRIPTIONS = {
     "info": "Inspect a 3D file: object/mesh/material/texture/animation counts, unit scale, bounding box, non-manifold/duplicate-vertex checks, UV presence.",
@@ -38,7 +58,8 @@ _DESCRIPTIONS = {
     "lod": "Batch-generate LOD0 (original) through LOD3 files at decreasing triangle counts, one output file per level.",
     "optimize": "Decimate, weld vertices, recalc normals, triangulate, cap texture size, purge unused data.",
     "render": "Render a thumbnail, turntable animation, or 4-view sheet. Frame size: --resolution-preset "
-              + "|".join(RESOLUTION_PRESETS) + " or an explicit --resolution W H (wins over the preset).",
+    + "|".join(RESOLUTION_PRESETS)
+    + " or an explicit --resolution W H (wins over the preset).",
     "look": "UV layout, wireframe render, texture grid, or before/after comparison image.",
     "check": "PASS/WARN/FAIL a file against a delivery target's budget (three.js, Unity, Unreal, Godot, iOS/Android AR, WebXR, 3D printing, Sketchfab).",
     "fit": "Automatically re-optimize in escalating stages until a file fits a check.py target's own budget, or report honestly that it still doesn't.",
@@ -53,10 +74,17 @@ def list_tools() -> List[Dict[str, Any]]:
     return [
         {
             "name": name,
-            "description": _DESCRIPTIONS[name] + " Pass the exact CLI arguments as `argv` (see `argv: [\"--help\"]` for the full flag list).",
+            "description": _DESCRIPTIONS[name]
+            + ' Pass the exact CLI arguments as `argv` (see `argv: ["--help"]` for the full flag list).',
             "inputSchema": {
                 "type": "object",
-                "properties": {"argv": {"type": "array", "items": {"type": "string"}, "description": "CLI arguments, e.g. [\"model.glb\", \"-o\", \"out.glb\"]"}},
+                "properties": {
+                    "argv": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": 'CLI arguments, e.g. ["model.glb", "-o", "out.glb"]',
+                    }
+                },
                 "required": ["argv"],
             },
         }
@@ -67,30 +95,54 @@ def list_tools() -> List[Dict[str, Any]]:
 def call_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     script = SCRIPTS / f"{name}.py"
     if name not in TOOLS or not script.exists():
-        return {"isError": True, "content": [{"type": "text", "text": f"unknown tool {name}"}]}
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"unknown tool {name}"}],
+        }
     argv = [str(a) for a in (args or {}).get("argv", [])]
     if "--json" not in argv and "--help" not in argv and "-h" not in argv:
         argv = argv + ["--json"]
 
     import subprocess
-    proc = subprocess.run([sys.executable, str(script)] + argv, capture_output=True, text=True)
+
+    proc = subprocess.run(
+        [sys.executable, str(script)] + argv, capture_output=True, text=True
+    )
     stdout = proc.stdout.strip()
     structured = None
     try:
-        structured = json.loads(stdout) if stdout.startswith("{") or stdout.startswith("[") else None
+        structured = (
+            json.loads(stdout)
+            if stdout.startswith("{") or stdout.startswith("[")
+            else None
+        )
     except ValueError:
         structured = None
 
-    if proc.returncode not in (0, 1):  # 1 is a "real" FAIL result from check/verify, not a crash
+    if proc.returncode not in (
+        0,
+        1,
+    ):  # 1 is a "real" FAIL result from check/verify, not a crash
         tail = "\n".join((proc.stderr or "").strip().splitlines()[-12:])
-        failed: Dict[str, Any] = {"isError": True, "content": [{"type": "text", "text": f"{name} failed (exit {proc.returncode})\n{tail}"}]}
+        failed: Dict[str, Any] = {
+            "isError": True,
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"{name} failed (exit {proc.returncode})\n{tail}",
+                }
+            ],
+        }
         if isinstance(structured, dict):
             failed["structuredContent"] = structured
         return failed
 
     if structured is None:
         return {"content": [{"type": "text", "text": stdout or "(no output)"}]}
-    return {"content": [{"type": "text", "text": json.dumps(structured, indent=2)}], "structuredContent": structured}
+    return {
+        "content": [{"type": "text", "text": json.dumps(structured, indent=2)}],
+        "structuredContent": structured,
+    }
 
 
 def _send(obj: Dict[str, Any]) -> None:
@@ -102,11 +154,17 @@ def _handle(msg: Dict[str, Any]) -> None:
     method = msg.get("method")
     msg_id = msg.get("id")
     if method == "initialize":
-        _send({"jsonrpc": "2.0", "id": msg_id, "result": {
-            "protocolVersion": PROTOCOL_VERSION,
-            "capabilities": {"tools": {}},
-            "serverInfo": {"name": "blender-skill", "version": __version__},
-        }})
+        _send(
+            {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "protocolVersion": PROTOCOL_VERSION,
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "blender-skill", "version": __version__},
+                },
+            }
+        )
     elif method == "notifications/initialized":
         pass  # no response expected for a notification
     elif method == "tools/list":
@@ -116,7 +174,13 @@ def _handle(msg: Dict[str, Any]) -> None:
         result = call_tool(params.get("name"), params.get("arguments") or {})
         _send({"jsonrpc": "2.0", "id": msg_id, "result": result})
     elif msg_id is not None:
-        _send({"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32601, "message": f"unknown method {method}"}})
+        _send(
+            {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32601, "message": f"unknown method {method}"},
+            }
+        )
 
 
 def main() -> int:

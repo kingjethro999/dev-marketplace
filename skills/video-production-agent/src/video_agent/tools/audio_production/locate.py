@@ -1,6 +1,8 @@
 """Locate an installed audio-production-skill (kajisho5/audio-production-skill). Two shapes are accepted: a source checkout
 (<dir>/src/audio_production/cli.py, run as `python -m audio_production.cli` (without the current directory on sys.path, ADR-074) with PYTHONPATH=<dir>/src) or the installed
-console script `audio-production` on PATH. The agent never imports the package: the CLI is the boundary."""
+console script `audio-production` on PATH. The agent never imports the package: the CLI is the boundary.
+"""
+
 from __future__ import annotations
 
 import os
@@ -16,9 +18,13 @@ ENV_DIR = "VIDEO_AGENT_AUDIO_PRODUCTION_DIR"
 
 @dataclass
 class AudioProductionSkill:
-    command: List[str]            # argv prefix, e.g. [python, "-m", "audio_production.cli"] or ["audio-production"]
-    root: Optional[Path]          # checkout root when run from source
-    env: Dict[str, str]           # extra environment for the child (PYTHONPATH for a checkout); never credentials
+    command: List[
+        str
+    ]  # argv prefix, e.g. [python, "-m", "audio_production.cli"] or ["audio-production"]
+    root: Optional[Path]  # checkout root when run from source
+    env: Dict[
+        str, str
+    ]  # extra environment for the child (PYTHONPATH for a checkout); never credentials
 
     def describe(self) -> str:
         return str(self.root) if self.root else self.command[0]
@@ -27,11 +33,17 @@ class AudioProductionSkill:
 def _from_checkout(root: Path) -> Optional[AudioProductionSkill]:
     cli = root / "src" / "audio_production" / "cli.py"
     if cli.is_file():
-        return AudioProductionSkill(python_module_command("audio_production.cli"), root, {"PYTHONPATH": str(root / "src")})
+        return AudioProductionSkill(
+            python_module_command("audio_production.cli"),
+            root,
+            {"PYTHONPATH": str(root / "src")},
+        )
     return None
 
 
-def locate_audio_production(explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None) -> Optional[AudioProductionSkill]:
+def locate_audio_production(
+    explicit: Optional[str] = None, env: Optional[Dict[str, str]] = None
+) -> Optional[AudioProductionSkill]:
     env_map: Mapping[str, str] = os.environ if env is None else env
     authoritative: List[Path] = []
     if explicit:

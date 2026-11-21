@@ -18,7 +18,9 @@ from artifact_skill.security.limits import Limits
 from artifact_skill.security.subprocess_exec import ExecResult
 
 
-def test_convert_to_pdf_raises_capability_error_when_soffice_missing(tmp_path, monkeypatch):
+def test_convert_to_pdf_raises_capability_error_when_soffice_missing(
+    tmp_path, monkeypatch
+):
     monkeypatch.setattr(office_convert, "soffice_binary", lambda: None)
     with pytest.raises(ArtifactCapabilityError) as exc_info:
         office_convert.convert_to_pdf(tmp_path / "input.pptx", tmp_path / "out")
@@ -29,7 +31,9 @@ def test_convert_to_pdf_raises_backend_failed_on_nonzero_exit(tmp_path, monkeypa
     monkeypatch.setattr(office_convert, "soffice_binary", lambda: "/usr/bin/soffice")
 
     def _fake_run(argv, **kwargs):
-        return ExecResult(argv=argv, returncode=1, stdout="", stderr="fake failure", timed_out=False)
+        return ExecResult(
+            argv=argv, returncode=1, stdout="", stderr="fake failure", timed_out=False
+        )
 
     monkeypatch.setattr(office_convert, "run_subprocess", _fake_run)
 
@@ -39,13 +43,17 @@ def test_convert_to_pdf_raises_backend_failed_on_nonzero_exit(tmp_path, monkeypa
     assert exc_info.value.evidence["stderr"] == "fake failure"
 
 
-def test_convert_to_pdf_raises_backend_failed_when_exit_zero_but_no_output(tmp_path, monkeypatch):
+def test_convert_to_pdf_raises_backend_failed_when_exit_zero_but_no_output(
+    tmp_path, monkeypatch
+):
     """The real failure mode this project hit: soffice launches, exits 0,
     but produces no PDF (see docs/adapters.md's PPTX section)."""
     monkeypatch.setattr(office_convert, "soffice_binary", lambda: "/usr/bin/soffice")
 
     def _fake_run(argv, **kwargs):
-        return ExecResult(argv=argv, returncode=0, stdout="", stderr="", timed_out=False)
+        return ExecResult(
+            argv=argv, returncode=0, stdout="", stderr="", timed_out=False
+        )
 
     monkeypatch.setattr(office_convert, "run_subprocess", _fake_run)
 
@@ -61,7 +69,9 @@ def test_convert_to_pdf_returns_produced_pdf_path(tmp_path, monkeypatch):
     def _fake_run(argv, **kwargs):
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "input.pdf").write_bytes(b"%PDF-1.4 fake")
-        return ExecResult(argv=argv, returncode=0, stdout="", stderr="", timed_out=False)
+        return ExecResult(
+            argv=argv, returncode=0, stdout="", stderr="", timed_out=False
+        )
 
     monkeypatch.setattr(office_convert, "run_subprocess", _fake_run)
 
@@ -69,7 +79,9 @@ def test_convert_to_pdf_returns_produced_pdf_path(tmp_path, monkeypatch):
     assert result == out_dir / "input.pdf"
 
 
-def test_convert_to_pdf_ignores_a_stray_unrelated_pdf_already_in_the_out_dir(tmp_path, monkeypatch):
+def test_convert_to_pdf_ignores_a_stray_unrelated_pdf_already_in_the_out_dir(
+    tmp_path, monkeypatch
+):
     """Self-audit finding (FIX_PROMPT P3-4): glob("*.pdf")[0]'s match
     order is arbitrary - a stray PDF already sitting in pdf_out_dir
     (e.g. left over from a prior failed run sharing the directory) could
@@ -79,10 +91,14 @@ def test_convert_to_pdf_ignores_a_stray_unrelated_pdf_already_in_the_out_dir(tmp
     monkeypatch.setattr(office_convert, "soffice_binary", lambda: "/usr/bin/soffice")
     out_dir = tmp_path / "out"
     out_dir.mkdir()
-    (out_dir / "some_other_document.pdf").write_bytes(b"%PDF-1.4 decoy, not this call's output")
+    (out_dir / "some_other_document.pdf").write_bytes(
+        b"%PDF-1.4 decoy, not this call's output"
+    )
 
     def _fake_run(argv, **kwargs):
-        return ExecResult(argv=argv, returncode=0, stdout="", stderr="", timed_out=False)
+        return ExecResult(
+            argv=argv, returncode=0, stdout="", stderr="", timed_out=False
+        )
 
     monkeypatch.setattr(office_convert, "run_subprocess", _fake_run)
 
@@ -93,7 +109,9 @@ def test_convert_to_pdf_ignores_a_stray_unrelated_pdf_already_in_the_out_dir(tmp
     assert "some_other_document.pdf" in exc_info.value.message
 
 
-def test_convert_to_pdf_forwards_a_custom_limits_to_the_subprocess_call(tmp_path, monkeypatch):
+def test_convert_to_pdf_forwards_a_custom_limits_to_the_subprocess_call(
+    tmp_path, monkeypatch
+):
     """Issue #28: a caller-supplied Limits override must actually reach
     run_subprocess() (which reads limits.subprocess_timeout_seconds) -
     previously convert_to_pdf() didn't accept a limits parameter at all,
@@ -107,12 +125,16 @@ def test_convert_to_pdf_forwards_a_custom_limits_to_the_subprocess_call(tmp_path
         seen_kwargs.update(kwargs)
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "input.pdf").write_bytes(b"%PDF-1.4 fake")
-        return ExecResult(argv=argv, returncode=0, stdout="", stderr="", timed_out=False)
+        return ExecResult(
+            argv=argv, returncode=0, stdout="", stderr="", timed_out=False
+        )
 
     monkeypatch.setattr(office_convert, "run_subprocess", _fake_run)
 
     custom_limits = Limits(subprocess_timeout_seconds=7)
-    office_convert.convert_to_pdf(tmp_path / "input.pptx", out_dir, limits=custom_limits)
+    office_convert.convert_to_pdf(
+        tmp_path / "input.pptx", out_dir, limits=custom_limits
+    )
     assert seen_kwargs["limits"] is custom_limits
 
 
@@ -133,13 +155,17 @@ def test_user_installation_arg_is_a_real_file_uri(tmp_path, monkeypatch):
         seen_argv.append(argv)
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "input.pdf").write_bytes(b"%PDF-1.4 fake")
-        return ExecResult(argv=argv, returncode=0, stdout="", stderr="", timed_out=False)
+        return ExecResult(
+            argv=argv, returncode=0, stdout="", stderr="", timed_out=False
+        )
 
     monkeypatch.setattr(office_convert, "run_subprocess", _fake_run)
 
     office_convert.convert_to_pdf(tmp_path / "input.pptx", out_dir)
 
-    user_installation_arg = next(a for a in seen_argv[0] if a.startswith("-env:UserInstallation="))
+    user_installation_arg = next(
+        a for a in seen_argv[0] if a.startswith("-env:UserInstallation=")
+    )
     uri = user_installation_arg.removeprefix("-env:UserInstallation=")
     assert uri.startswith("file:///")
     assert " " not in uri

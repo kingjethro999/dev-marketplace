@@ -4,6 +4,7 @@
 Usage:
     python3 scripts/release/bump_version.py --pyproject pyproject.toml --new-version 1.2.0
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,7 +23,7 @@ def bump(path: Path, new_version: str) -> None:
     text = path.read_text(encoding="utf-8")
     new_text, count = VERSION_RE.subn(f'version = "{new_version}"', text, count=1)
     if count != 1:
-        raise SystemExit(f"no top-level version = \"...\" line found in {path}")
+        raise SystemExit(f'no top-level version = "..." line found in {path}')
     path.write_text(new_text, encoding="utf-8")
 
 

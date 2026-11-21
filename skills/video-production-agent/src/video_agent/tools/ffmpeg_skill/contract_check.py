@@ -27,6 +27,7 @@ Delivery names (ADR-056 addendum, roadmap step 31): the same read also takes the
 and platform names (check's `--platform` enum) the contract publishes, aliases included. The validator checks a delivery
 target's preset / platform against these, so the agent keeps no copy of either list. A contract without the enum leaves the
 names unknown (None), and the validator says it could not check them."""
+
 from __future__ import annotations
 
 import json
@@ -43,7 +44,10 @@ SKILL_ID = "ffmpeg-skill"
 CONTRACT_SCRIPT = "_contract.py"
 CONTRACT_ARGS = ["--json", "--static"]
 DOCTOR_ARGS = ["doctor", "--json"]
-SUPPORTED_CONTRACT_MAJORS = (1, 2)   # ADR-082: 2.0 = ffmpeg-skill 3.x, same ToolSpec shape as 1.0
+SUPPORTED_CONTRACT_MAJORS = (
+    1,
+    2,
+)  # ADR-082: 2.0 = ffmpeg-skill 3.x, same ToolSpec shape as 1.0
 # flags the adapter appends to every command (adapter.command): --json always, --dry-run for a dry run
 RUNNER_FLAGS = ("--json", "--dry-run")
 CHECKED, UNCHECKED, REFUSED = "checked", "unchecked", "refused"
@@ -51,21 +55,34 @@ CHECKED, UNCHECKED, REFUSED = "checked", "unchecked", "refused"
 
 def flag_for(script: str, key: str) -> str:
     """The CLI spelling the adapter emits for a catalogued key (adapter.build_argv's rule, without the crf choice)."""
-    return FLAG_ALIASES.get((script, key)) or FLAG_ALIASES.get(("*", key)) or "--" + key.replace("_", "-")
+    return (
+        FLAG_ALIASES.get((script, key))
+        or FLAG_ALIASES.get(("*", key))
+        or "--" + key.replace("_", "-")
+    )
 
 
 @dataclass
 class CatalogCheck:
     """Result of comparing CATALOG with one checkout's contract (+ doctor). `tool_reason(name)` is None when the tool is usable."""
-    status: str                                   # checked | unchecked | refused
-    reason: str = ""                              # package level: why refused / unchecked
+
+    status: str  # checked | unchecked | refused
+    reason: str = ""  # package level: why refused / unchecked
     contract_version: Optional[str] = None
     skill_version: Optional[str] = None
-    unavailable: Dict[str, str] = field(default_factory=dict)   # catalogued tool -> why it cannot be used
-    doctor: Optional[Dict[str, Any]] = None      # {ok, missing, missing_optional, unknown, tools: {name: {usable, missing, fix}}} (non-yes tools only)
+    unavailable: Dict[str, str] = field(
+        default_factory=dict
+    )  # catalogued tool -> why it cannot be used
+    doctor: Optional[Dict[str, Any]] = (
+        None  # {ok, missing, missing_optional, unknown, tools: {name: {usable, missing, fix}}} (non-yes tools only)
+    )
     notes: List[str] = field(default_factory=list)
-    presets: Optional[List[str]] = None           # export.py --preset names the contract publishes (aliases included); None: not published
-    platforms: Optional[List[str]] = None         # check.py --platform names the contract publishes (aliases included); None: not published
+    presets: Optional[List[str]] = (
+        None  # export.py --preset names the contract publishes (aliases included); None: not published
+    )
+    platforms: Optional[List[str]] = (
+        None  # check.py --platform names the contract publishes (aliases included); None: not published
+    )
 
     def tool_reason(self, name: str) -> Optional[str]:
         if self.status == REFUSED:
@@ -73,9 +90,17 @@ class CatalogCheck:
         return self.unavailable.get(name)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"status": self.status, "reason": self.reason, "contract_version": self.contract_version, "skill_version": self.skill_version,
-                "unavailable": dict(self.unavailable), "doctor": self.doctor, "notes": list(self.notes),
-                "presets": None if self.presets is None else list(self.presets), "platforms": None if self.platforms is None else list(self.platforms)}
+        return {
+            "status": self.status,
+            "reason": self.reason,
+            "contract_version": self.contract_version,
+            "skill_version": self.skill_version,
+            "unavailable": dict(self.unavailable),
+            "doctor": self.doctor,
+            "notes": list(self.notes),
+            "presets": None if self.presets is None else list(self.presets),
+            "platforms": None if self.platforms is None else list(self.platforms),
+        }
 
 
 def _contract_major(v: Any) -> Optional[int]:
@@ -85,22 +110,43 @@ def _contract_major(v: Any) -> Optional[int]:
         return None
 
 
-def check_catalog(contract: Any, doctor: Optional[Dict[str, Any]] = None, scripts: Optional[List[str]] = None) -> CatalogCheck:
+def check_catalog(
+    contract: Any,
+    doctor: Optional[Dict[str, Any]] = None,
+    scripts: Optional[List[str]] = None,
+) -> CatalogCheck:
     """Pure: CATALOG against a `_contract.py --json --static` document (and optionally a `doctor --json` document).
-    `scripts`: the checkout's public scripts; a catalogued tool whose script is absent is left to supports() (not a contract fact)."""
+    `scripts`: the checkout's public scripts; a catalogued tool whose script is absent is left to supports() (not a contract fact).
+    """
     if not isinstance(contract, dict):
         return CatalogCheck(REFUSED, "ffmpeg-skill contract is not a JSON object")
     cv = contract.get("contract_version")
     skill = contract.get("skill") if isinstance(contract.get("skill"), dict) else {}
-    chk = CatalogCheck(CHECKED, contract_version=None if cv is None else str(cv), skill_version=skill.get("version"))
+    chk = CatalogCheck(
+        CHECKED,
+        contract_version=None if cv is None else str(cv),
+        skill_version=skill.get("version"),
+    )
     if _contract_major(cv) not in SUPPORTED_CONTRACT_MAJORS:
-        chk.status, chk.reason = REFUSED, f"ffmpeg-skill contract_version {cv!r} is not 1.x / 2.x (the catalog check reads the 1.x / 2.x shape only)"
+        chk.status, chk.reason = (
+            REFUSED,
+            f"ffmpeg-skill contract_version {cv!r} is not 1.x / 2.x (the catalog check reads the 1.x / 2.x shape only)",
+        )
         return chk
     if skill.get("id") != SKILL_ID:
-        chk.status, chk.reason = REFUSED, f"contract skill.id {skill.get('id')!r} != {SKILL_ID!r}"
+        chk.status, chk.reason = (
+            REFUSED,
+            f"contract skill.id {skill.get('id')!r} != {SKILL_ID!r}",
+        )
         return chk
-    tools = {str(t.get("name")): t for t in contract.get("tools") or [] if isinstance(t, dict)}
-    chk.presets, chk.platforms = option_enum(tools.get("export"), "--preset"), option_enum(tools.get("check"), "--platform")
+    tools = {
+        str(t.get("name")): t
+        for t in contract.get("tools") or []
+        if isinstance(t, dict)
+    }
+    chk.presets, chk.platforms = option_enum(
+        tools.get("export"), "--preset"
+    ), option_enum(tools.get("check"), "--platform")
     for name, spec in CATALOG.items():
         if scripts is not None and name not in scripts:
             continue
@@ -115,20 +161,36 @@ def check_catalog(contract: Any, doctor: Optional[Dict[str, Any]] = None, script
 def option_enum(tool: Optional[Dict[str, Any]], flag: str) -> Optional[List[str]]:
     """The names a tool's value flag takes, from its input_schema (`enum` of the property whose `cli` lists the flag), sorted;
     None when the tool, the flag or its enum is not published."""
-    schema = (tool or {}).get("input_schema") if isinstance((tool or {}).get("input_schema"), dict) else {}
-    props = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    schema = (
+        (tool or {}).get("input_schema")
+        if isinstance((tool or {}).get("input_schema"), dict)
+        else {}
+    )
+    props = (
+        schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    )
     for p in props.values():
         if isinstance(p, dict) and isinstance(p.get("cli"), list) and flag in p["cli"]:
             enum = p.get("enum")
-            return sorted(str(x) for x in enum) if isinstance(enum, list) and enum else None
+            return (
+                sorted(str(x) for x in enum)
+                if isinstance(enum, list) and enum
+                else None
+            )
     return None
 
 
-def _tool_problems(name: str, spec: Dict[str, Any], tool: Optional[Dict[str, Any]]) -> List[str]:
+def _tool_problems(
+    name: str, spec: Dict[str, Any], tool: Optional[Dict[str, Any]]
+) -> List[str]:
     if tool is None:
         return [f"tool {name!r} is not published"]
-    schema = tool.get("input_schema") if isinstance(tool.get("input_schema"), dict) else {}
-    props = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    schema = (
+        tool.get("input_schema") if isinstance(tool.get("input_schema"), dict) else {}
+    )
+    props = (
+        schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+    )
     by_flag: Dict[str, Dict[str, Any]] = {}
     for p in props.values():
         if isinstance(p, dict) and isinstance(p.get("cli"), list):
@@ -137,87 +199,143 @@ def _tool_problems(name: str, spec: Dict[str, Any], tool: Optional[Dict[str, Any
     out: List[str] = []
     for key, typ in spec["flags"].items():
         flag = flag_for(name, key)
-        if key == "crf":   # ADR-048: --quality where the script offers it, else --crf; either satisfies the catalog
+        if (
+            key == "crf"
+        ):  # ADR-048: --quality where the script offers it, else --crf; either satisfies the catalog
             flag = QUALITY_FLAG if QUALITY_FLAG in by_flag else flag
         p = by_flag.get(flag)
         if p is None:
             out.append(f"{name}.py has no {flag} (catalog key {key!r})")
         elif (typ == "bool") != (p.get("type") == "boolean"):
-            out.append(f"{name}.py {flag} is {'a switch' if p.get('type') == 'boolean' else 'a value flag'} but the catalog uses it as {'a switch' if typ == 'bool' else 'a value flag'}")
+            out.append(
+                f"{name}.py {flag} is {'a switch' if p.get('type') == 'boolean' else 'a value flag'} but the catalog uses it as {'a switch' if typ == 'bool' else 'a value flag'}"
+            )
     for flag in RUNNER_FLAGS:
         if flag not in by_flag:
             out.append(f"{name}.py has no {flag}")
     positional = [str(x) for x in schema.get("positional") or []]
     want = list(spec["positional"])
-    if positional[:len(want)] != want:
-        out.append(f"{name}.py positionals {positional} do not start with the catalog's {want}")
+    if positional[: len(want)] != want:
+        out.append(
+            f"{name}.py positionals {positional} do not start with the catalog's {want}"
+        )
     else:
         required = set(schema.get("required") or [])
-        extra = [p for p in positional[len(want):] if p in required]
+        extra = [p for p in positional[len(want) :] if p in required]
         if extra:
-            out.append(f"{name}.py requires positionals the catalog does not pass: {extra}")
+            out.append(
+                f"{name}.py requires positionals the catalog does not pass: {extra}"
+            )
     return out
 
 
-def _apply_doctor(chk: CatalogCheck, doctor: Dict[str, Any], scripts: Optional[List[str]]) -> None:
+def _apply_doctor(
+    chk: CatalogCheck, doctor: Dict[str, Any], scripts: Optional[List[str]]
+) -> None:
     """Surface doctor: per catalogued tool, `usable: no` makes it unavailable with doctor's own missing list and fix; `unknown`
     is recorded (detection failed, not proven missing) and never blocks."""
     per = doctor.get("tools") if isinstance(doctor.get("tools"), dict) else {}
-    summary: Dict[str, Any] = {"ok": doctor.get("ok"), "missing": list(doctor.get("missing") or []), "missing_optional": list(doctor.get("missing_optional") or []),
-                               "unknown": list(doctor.get("unknown") or []), "tools": {}}
+    summary: Dict[str, Any] = {
+        "ok": doctor.get("ok"),
+        "missing": list(doctor.get("missing") or []),
+        "missing_optional": list(doctor.get("missing_optional") or []),
+        "unknown": list(doctor.get("unknown") or []),
+        "tools": {},
+    }
     for name in CATALOG:
         if scripts is not None and name not in scripts:
             continue
         t = per.get(name)
         if not isinstance(t, dict) or t.get("usable") == "yes":
             continue
-        summary["tools"][name] = {k: t.get(k) for k in ("usable", "missing", "unknown", "fix") if t.get(k) is not None}
+        summary["tools"][name] = {
+            k: t.get(k)
+            for k in ("usable", "missing", "unknown", "fix")
+            if t.get(k) is not None
+        }
         if t.get("usable") == "no":
-            msg = f"ffmpeg-skill doctor: missing {', '.join(map(str, t.get('missing') or [])) or 'a required capability'}" + (f" (fix: {t['fix']})" if t.get("fix") else "")
-            chk.unavailable[name] = (chk.unavailable[name] + "; " + msg) if name in chk.unavailable else msg
+            msg = (
+                f"ffmpeg-skill doctor: missing {', '.join(map(str, t.get('missing') or [])) or 'a required capability'}"
+                + (f" (fix: {t['fix']})" if t.get("fix") else "")
+            )
+            chk.unavailable[name] = (
+                (chk.unavailable[name] + "; " + msg) if name in chk.unavailable else msg
+            )
     chk.doctor = summary
 
 
 def _run_json(cmd: List[str], timeout: float) -> Tuple[Optional[Any], str]:
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace", env=child_env())
+        p = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            encoding="utf-8",
+            errors="replace",
+            env=child_env(),
+        )
     except (OSError, subprocess.SubprocessError) as e:
         return None, f"{type(e).__name__}: {e}"
     try:
         return json.loads(p.stdout), ""
     except ValueError:
-        return None, f"exit {p.returncode}, no JSON document on stdout: {(p.stderr or p.stdout).strip()[-200:]}"
+        return (
+            None,
+            f"exit {p.returncode}, no JSON document on stdout: {(p.stderr or p.stdout).strip()[-200:]}",
+        )
 
 
-def read_contract(root: Path, python: Optional[str] = None) -> Tuple[Optional[Any], str]:
+def read_contract(
+    root: Path, python: Optional[str] = None
+) -> Tuple[Optional[Any], str]:
     """(`_contract.py --json --static` document, error). No environment detection: the contract alone."""
-    return _run_json([python or sys.executable, str(Path(root) / "scripts" / CONTRACT_SCRIPT)] + CONTRACT_ARGS, timeout=120.0)
+    return _run_json(
+        [python or sys.executable, str(Path(root) / "scripts" / CONTRACT_SCRIPT)]
+        + CONTRACT_ARGS,
+        timeout=120.0,
+    )
 
 
 def read_doctor(root: Path, python: Optional[str] = None) -> Tuple[Optional[Any], str]:
     """(`_contract.py doctor --json` document, error). doctor exits 1 (a required capability missing) or 2 (unknown) and
     still prints its document, so the exit code is not read."""
-    return _run_json([python or sys.executable, str(Path(root) / "scripts" / CONTRACT_SCRIPT)] + DOCTOR_ARGS, timeout=180.0)
+    return _run_json(
+        [python or sys.executable, str(Path(root) / "scripts" / CONTRACT_SCRIPT)]
+        + DOCTOR_ARGS,
+        timeout=180.0,
+    )
 
 
-def read_catalog_check(root: Path, scripts: Optional[List[str]] = None, python: Optional[str] = None) -> CatalogCheck:
+def read_catalog_check(
+    root: Path, scripts: Optional[List[str]] = None, python: Optional[str] = None
+) -> CatalogCheck:
     """Run the checkout's contract (and doctor) and check the catalog. Never raises: every failure is a status with a reason."""
     if not (Path(root) / "scripts" / CONTRACT_SCRIPT).exists():
-        return CatalogCheck(UNCHECKED, f"no scripts/{CONTRACT_SCRIPT} in this checkout (ffmpeg-skill < 0.9.0): the catalog is used unchecked")
+        return CatalogCheck(
+            UNCHECKED,
+            f"no scripts/{CONTRACT_SCRIPT} in this checkout (ffmpeg-skill < 0.9.0): the catalog is used unchecked",
+        )
     contract, err = read_contract(root, python)
     if contract is None:
-        return CatalogCheck(REFUSED, f"`_contract.py --json --static` gave no contract ({err})")
+        return CatalogCheck(
+            REFUSED, f"`_contract.py --json --static` gave no contract ({err})"
+        )
     doc, derr = read_doctor(root, python)
     chk = check_catalog(contract, doc if isinstance(doc, dict) else None, scripts)
     if chk.status == CHECKED and not isinstance(doc, dict):
-        chk.notes.append(f"`_contract.py doctor --json` gave no document ({derr}); per-tool usability not surfaced")
+        chk.notes.append(
+            f"`_contract.py doctor --json` gave no document ({derr}); per-tool usability not surfaced"
+        )
     return chk
 
 
 _CACHE: Dict[Tuple[str, str], CatalogCheck] = {}
 
 
-def catalog_check(root: Path, version: str, scripts: Optional[List[str]] = None) -> CatalogCheck:
+def catalog_check(
+    root: Path, version: str, scripts: Optional[List[str]] = None
+) -> CatalogCheck:
     """Cached per (checkout, version): the contract is static for a checkout, doctor is machine state read once per process."""
     key = (str(Path(root).resolve()), str(version))
     if key not in _CACHE:

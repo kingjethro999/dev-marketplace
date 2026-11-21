@@ -96,7 +96,9 @@ _RESOURCE_ATTRS = {
 _EXTRA_RESOURCE_ATTRS = {"video": "poster"}
 _SRCSET_TAGS = {"img", "source"}
 _CSS_URL_RE = re.compile(r"url\(\s*['\"]?([^'\")]+?)['\"]?\s*\)", re.IGNORECASE)
-_CSS_IMPORT_RE = re.compile(r"@import\s+(?:url\(\s*)?['\"]([^'\"]+)['\"]", re.IGNORECASE)
+_CSS_IMPORT_RE = re.compile(
+    r"@import\s+(?:url\(\s*)?['\"]([^'\"]+)['\"]", re.IGNORECASE
+)
 
 
 def _urls_from_srcset(value: str) -> list[str]:
@@ -114,7 +116,9 @@ def _urls_from_srcset(value: str) -> list[str]:
 def _urls_from_css_text(css: str) -> list[str]:
     urls = [m.group(1).strip() for m in _CSS_URL_RE.finditer(css)]
     urls += [m.group(1).strip() for m in _CSS_IMPORT_RE.finditer(css)]
-    return [u for u in urls if u and not u.startswith("#")]  # bare CSS custom-property refs etc.
+    return [
+        u for u in urls if u and not u.startswith("#")
+    ]  # bare CSS custom-property refs etc.
 
 
 def _has(module: str) -> bool:
@@ -153,10 +157,14 @@ class _ResourceCollector(HTMLParser):
         if tag in _SRCSET_TAGS:
             srcset = attr_map.get("srcset")
             if srcset:
-                self.resources.extend((f"{tag}[srcset]", u) for u in _urls_from_srcset(srcset))
+                self.resources.extend(
+                    (f"{tag}[srcset]", u) for u in _urls_from_srcset(srcset)
+                )
         style_attr = attr_map.get("style")
         if style_attr:
-            self.resources.extend((f"{tag}[style]", u) for u in _urls_from_css_text(style_attr))
+            self.resources.extend(
+                (f"{tag}[style]", u) for u in _urls_from_css_text(style_attr)
+            )
         if tag == "meta" and (attr_map.get("http-equiv") or "").lower() == "refresh":
             content = attr_map.get("content") or ""
             _delay, _sep, url_part = content.partition(";")
@@ -209,7 +217,8 @@ class HtmlAdapter(ArtifactAdapter):
 
     def capabilities(self) -> list[Capability]:
         structural = Capability(
-            id="html.structural", status=CapabilityStatus.AVAILABLE,
+            id="html.structural",
+            status=CapabilityStatus.AVAILABLE,
             detail="Uses only the standard library (html.parser); always available.",
             detected_via="stdlib",
         )
@@ -221,17 +230,21 @@ class HtmlAdapter(ArtifactAdapter):
             except im.PackageNotFoundError:
                 version = None
             render = Capability(
-                id="html.render", status=CapabilityStatus.AVAILABLE,
+                id="html.render",
+                status=CapabilityStatus.AVAILABLE,
                 detail="playwright importable. A matching Chromium build must also be installed "
                 "(`playwright install chromium`) — that is verified at render() time, not here, the same "
                 "way a present `soffice` binary doesn't guarantee a specific document converts (see "
                 "adapters/pptx/adapter.py's docstring for that precedent).",
-                detected_via="import playwright", version=version,
+                detected_via="import playwright",
+                version=version,
             )
         else:
             render = Capability(
-                id="html.render", status=CapabilityStatus.MISSING,
-                detail="playwright not importable.", detected_via="import playwright",
+                id="html.render",
+                status=CapabilityStatus.MISSING,
+                detail="playwright not importable.",
+                detected_via="import playwright",
             )
         return [structural, render]
 
@@ -251,7 +264,9 @@ class HtmlAdapter(ArtifactAdapter):
         ]
 
     def recognized_policy_keys(self) -> frozenset[str]:
-        return frozenset({"require_title", "forbid_external_resources", "forbid_placeholder_text"})
+        return frozenset(
+            {"require_title", "forbid_external_resources", "forbid_placeholder_text"}
+        )
 
     # ---- inspect ---------------------------------------------------
 
@@ -301,7 +316,9 @@ class HtmlAdapter(ArtifactAdapter):
                     # an element that will show up broken/missing in the
                     # rendered evidence, the same as a missing local
                     # resource, not merely a theoretical risk.
-                    warnings.append(f"Local resource reference escapes the document's directory: {url}")
+                    warnings.append(
+                        f"Local resource reference escapes the document's directory: {url}"
+                    )
                     continue
                 if outcome.exists:
                     local_present += 1
@@ -318,11 +335,18 @@ class HtmlAdapter(ArtifactAdapter):
             # output shouldn't balloon with a large page's entire text.
             "leftover_markers": find_leftover_markers("\n".join(parser.text_parts)),
         }
-        return InspectionReport(artifact=ref, details=details, warnings=warnings, text="\n".join(parser.text_parts))
+        return InspectionReport(
+            artifact=ref,
+            details=details,
+            warnings=warnings,
+            text="\n".join(parser.text_parts),
+        )
 
     # ---- plan / execute -----------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"HTML adapter has no mutating operations (requested '{operation}').",
@@ -330,7 +354,9 @@ class HtmlAdapter(ArtifactAdapter):
             evidence={"operation": operation},
         )
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"HTML adapter has no mutating operations (requested '{operation}').",
@@ -340,28 +366,49 @@ class HtmlAdapter(ArtifactAdapter):
 
     # ---- render ----------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
-        out_path = render_local_file(ref.path, out_dir / "page-001.png", capability_id="html.render", limits=limits)
-        return RenderResult(kind="page_images", files=[out_path], backend="playwright+chromium")
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
+        out_path = render_local_file(
+            ref.path,
+            out_dir / "page-001.png",
+            capability_id="html.render",
+            limits=limits,
+        )
+        return RenderResult(
+            kind="page_images", files=[out_path], backend="playwright+chromium"
+        )
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="html_validity", name="HTML is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="html_validity",
+                    name="HTML is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="html_validity", name="HTML is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(id="html_validity", name="HTML is readable", status=CheckStatus.PASS)
+        )
 
         details = report.details
         if policy.get("require_title", False):
             has_title = bool(details["title"])
             checks.append(
                 Check(
-                    id="title_presence", name="Title present",
+                    id="title_presence",
+                    name="Title present",
                     status=CheckStatus.PASS if has_title else CheckStatus.FAIL,
                     message=details["title"] or "No <title> element (or it is empty).",
                 )
@@ -379,14 +426,24 @@ class HtmlAdapter(ArtifactAdapter):
                 )
             )
         else:
-            checks.append(Check(id="local_resources", name="Local resource references resolve", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="local_resources",
+                    name="Local resource references resolve",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         if details["external_resources"]:
             checks.append(
                 Check(
                     id="external_resources",
                     name="No external resource references",
-                    status=CheckStatus.FAIL if policy.get("forbid_external_resources") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_external_resources")
+                        else CheckStatus.WARN
+                    ),
                     message=f"{len(details['external_resources'])} external resource(s) referenced; not "
                     "fetched (network access is off by default — see docs/security.md), and render() blocks "
                     "them too, so they will appear broken/missing in the rendered evidence.",
@@ -394,7 +451,13 @@ class HtmlAdapter(ArtifactAdapter):
                 )
             )
         else:
-            checks.append(Check(id="external_resources", name="No external resource references", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="external_resources",
+                    name="No external resource references",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         leftover_markers = details["leftover_markers"]
         if leftover_markers:
@@ -402,14 +465,22 @@ class HtmlAdapter(ArtifactAdapter):
                 Check(
                     id="leftover_placeholder_text",
                     name="No leftover generation placeholder text",
-                    status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_placeholder_text")
+                        else CheckStatus.WARN
+                    ),
                     message=f"Found likely-unreviewed placeholder text: {leftover_markers}.",
                     evidence={"markers": leftover_markers},
                 )
             )
         else:
             checks.append(
-                Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                Check(
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=CheckStatus.PASS,
+                )
             )
 
         return VerificationResult(kind="structural", checks=checks)

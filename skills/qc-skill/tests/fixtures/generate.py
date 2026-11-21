@@ -24,10 +24,14 @@ def _run(*args: str) -> None:
         text=True,
     )
     if result.returncode != 0:
-        raise RuntimeError(f"fixture generation failed: {' '.join(args)}\n{result.stderr}")
+        raise RuntimeError(
+            f"fixture generation failed: {' '.join(args)}\n{result.stderr}"
+        )
 
 
-def _sine_samples(*, sample_rate: int, duration_sec: int, frequency: int, amplitude: float) -> bytes:
+def _sine_samples(
+    *, sample_rate: int, duration_sec: int, frequency: int, amplitude: float
+) -> bytes:
     """16-bit PCM samples for a sine wave at an explicit amplitude
     (fraction of full scale), computed directly rather than through any
     ffmpeg source filter.
@@ -41,7 +45,9 @@ def _sine_samples(*, sample_rate: int, duration_sec: int, frequency: int, amplit
     return bytes(frames)
 
 
-def _write_clipped_square_wave(path: Path, *, sample_rate: int, duration_sec: int, frequency: int) -> None:
+def _write_clipped_square_wave(
+    path: Path, *, sample_rate: int, duration_sec: int, frequency: int
+) -> None:
     """Write mono 16-bit PCM samples pinned to full scale (+/-32767) - a
     square wave, not a sine, so every single sample (not just the crest of
     a sine) sits at the digital ceiling. This is already clipped audio by
@@ -75,17 +81,38 @@ def build_all(out_dir: Path) -> Dict[str, Path]:
     # moderate level - no black frames, no freeze, no clipping.
     clean = out_dir / "clean.mp4"
     _run(
-        "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=25:duration=4",
-        "-f", "lavfi", "-i", "sine=frequency=440:duration=4,volume=-6dB",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(clean),
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=320x240:rate=25:duration=4",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=440:duration=4,volume=-6dB",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-shortest",
+        str(clean),
     )
     paths["clean"] = clean
 
     # video_no_audio.mp4: same picture, no audio stream at all.
     no_audio = out_dir / "video_no_audio.mp4"
     _run(
-        "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=25:duration=3",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", str(no_audio),
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=320x240:rate=25:duration=3",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-an",
+        str(no_audio),
     )
     paths["video_no_audio"] = no_audio
 
@@ -93,21 +120,55 @@ def build_all(out_dir: Path) -> Dict[str, Path]:
     black_a = out_dir / "_black_a.mp4"
     black_b = out_dir / "_black_b.mp4"
     black = out_dir / "black.mp4"
-    _run("-f", "lavfi", "-i", "testsrc2=size=320x240:rate=25:duration=2", "-pix_fmt", "yuv420p", str(black_a))
-    _run("-f", "lavfi", "-i", "color=black:size=320x240:rate=25:duration=1.5", "-pix_fmt", "yuv420p", str(black_b))
     _run(
-        "-i", str(black_a), "-i", str(black_b),
-        "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[out]", "-map", "[out]",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", str(black),
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=320x240:rate=25:duration=2",
+        "-pix_fmt",
+        "yuv420p",
+        str(black_a),
+    )
+    _run(
+        "-f",
+        "lavfi",
+        "-i",
+        "color=black:size=320x240:rate=25:duration=1.5",
+        "-pix_fmt",
+        "yuv420p",
+        str(black_b),
+    )
+    _run(
+        "-i",
+        str(black_a),
+        "-i",
+        str(black_b),
+        "-filter_complex",
+        "[0:v][1:v]concat=n=2:v=1:a=0[out]",
+        "-map",
+        "[out]",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        str(black),
     )
     paths["black"] = black
 
     # freeze.mp4: 2s of motion, then the last frame held for 2s (tpad clone).
     freeze = out_dir / "freeze.mp4"
     _run(
-        "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=25:duration=2",
-        "-vf", "tpad=stop_mode=clone:stop_duration=2",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", str(freeze),
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=320x240:rate=25:duration=2",
+        "-vf",
+        "tpad=stop_mode=clone:stop_duration=2",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        str(freeze),
     )
     paths["freeze"] = freeze
 
@@ -118,15 +179,40 @@ def build_all(out_dir: Path) -> Dict[str, Path]:
     legal_part = out_dir / "_legal.mp4"
     illegal_part = out_dir / "_illegal.mp4"
     illegal_luminance = out_dir / "illegal_luminance.mp4"
-    _run("-f", "lavfi", "-i", "color=gray:size=320x240:rate=25:duration=1", "-pix_fmt", "yuv420p", str(legal_part))
     _run(
-        "-f", "lavfi", "-i", "color=gray:size=320x240:rate=25:duration=1",
-        "-vf", "lutyuv=y=250", "-pix_fmt", "yuv420p", str(illegal_part),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=gray:size=320x240:rate=25:duration=1",
+        "-pix_fmt",
+        "yuv420p",
+        str(legal_part),
     )
     _run(
-        "-i", str(legal_part), "-i", str(illegal_part),
-        "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[out]", "-map", "[out]",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", str(illegal_luminance),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=gray:size=320x240:rate=25:duration=1",
+        "-vf",
+        "lutyuv=y=250",
+        "-pix_fmt",
+        "yuv420p",
+        str(illegal_part),
+    )
+    _run(
+        "-i",
+        str(legal_part),
+        "-i",
+        str(illegal_part),
+        "-filter_complex",
+        "[0:v][1:v]concat=n=2:v=1:a=0[out]",
+        "-map",
+        "[out]",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        str(illegal_luminance),
     )
     paths["illegal_luminance"] = illegal_luminance
     for name in ("_legal.mp4", "_illegal.mp4"):
@@ -152,7 +238,9 @@ def build_all(out_dir: Path) -> Dict[str, Path]:
     # builds/platforms).
     silence_gap = out_dir / "silence_gap.wav"
     sample_rate = 44100
-    tone_samples = _sine_samples(sample_rate=sample_rate, duration_sec=2, frequency=880, amplitude=0.3)
+    tone_samples = _sine_samples(
+        sample_rate=sample_rate, duration_sec=2, frequency=880, amplitude=0.3
+    )
     silence_samples = struct.pack("<h", 0) * (sample_rate * 2)
     with wave.open(str(silence_gap), "wb") as wav_file:
         wav_file.setnchannels(1)
@@ -170,7 +258,9 @@ def build_all(out_dir: Path) -> Dict[str, Path]:
     # file already contains guaranteed, unambiguous digital clipping;
     # ffmpeg is only used to *measure* it via astats/ebur128.
     loud_clipping = out_dir / "loud_clipping.wav"
-    _write_clipped_square_wave(loud_clipping, sample_rate=44100, duration_sec=2, frequency=200)
+    _write_clipped_square_wave(
+        loud_clipping, sample_rate=44100, duration_sec=2, frequency=200
+    )
     paths["loud_clipping"] = loud_clipping
 
     # subtitle_valid.srt: cues aligned with clean.mp4's 4s duration.
@@ -184,7 +274,9 @@ def build_all(out_dir: Path) -> Dict[str, Path]:
 
     # subtitle_mismatch.srt: ends far short of clean.mp4's 4s duration.
     subtitle_mismatch = out_dir / "subtitle_mismatch.srt"
-    subtitle_mismatch.write_text("1\n00:00:00,000 --> 00:00:01,000\nOnly the start\n\n", encoding="utf-8")
+    subtitle_mismatch.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\nOnly the start\n\n", encoding="utf-8"
+    )
     paths["subtitle_mismatch"] = subtitle_mismatch
 
     # subtitle_malformed.srt: invalid timestamp order, duplicate id, empty cue.
@@ -213,8 +305,17 @@ def _geq_clip(path: Path, *, size: str, rate: int, duration: int, lum: str) -> N
     expression (``geq``; N = frame index, X/Y = pixel position)."""
 
     _run(
-        "-f", "lavfi", "-i", f"color=c=black:s={size}:r={rate}:d={duration},geq=lum='{lum}':cb=128:cr=128",
-        "-c:v", "libx264", "-crf", "1", "-pix_fmt", "yuv420p", str(path),
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=black:s={size}:r={rate}:d={duration},geq=lum='{lum}':cb=128:cr=128",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "1",
+        "-pix_fmt",
+        "yuv420p",
+        str(path),
     )
 
 
@@ -225,12 +326,12 @@ def _build_visual_qc_fixtures(out_dir: Path, paths: Dict[str, Path]) -> None:
     # Photosensitive flash (20 fps, 3 s, 160x90). Alternating every frame
     # = 10 Hz (20 luminance changes, 10 flashes per second).
     flash_cases = {
-        "flash_10hz": "if(lt(mod(N,2),1),235,16)",                       # full screen, 10 Hz -> FAIL
-        "flash_2hz": "if(lt(mod(N,10),5),235,16)",                       # full screen, 2 Hz -> PASS
+        "flash_10hz": "if(lt(mod(N,2),1),235,16)",  # full screen, 10 Hz -> FAIL
+        "flash_2hz": "if(lt(mod(N,10),5),235,16)",  # full screen, 2 Hz -> PASS
         "flash_small_area": "if(lt(X,48)*lt(Y,27)*lt(mod(N,2),1),235,16)",  # 9% of the screen, 10 Hz -> PASS
-        "flash_half_area": "if(lt(X,80)*lt(mod(N,2),1),235,16)",          # 50% of the screen, 10 Hz -> FAIL
-        "flash_dim": "if(lt(mod(N,2),1),40,16)",                          # ~1 cd/m2 swing (< 20) -> PASS
-        "flash_bright_only": "if(lt(mod(N,2),1),235,225)",                # darker side ~179 cd/m2 (>= 160) -> PASS
+        "flash_half_area": "if(lt(X,80)*lt(mod(N,2),1),235,16)",  # 50% of the screen, 10 Hz -> FAIL
+        "flash_dim": "if(lt(mod(N,2),1),40,16)",  # ~1 cd/m2 swing (< 20) -> PASS
+        "flash_bright_only": "if(lt(mod(N,2),1),235,225)",  # darker side ~179 cd/m2 (>= 160) -> PASS
     }
     for name, lum in flash_cases.items():
         path = out_dir / f"{name}.mp4"
@@ -240,7 +341,13 @@ def _build_visual_qc_fixtures(out_dir: Path, paths: Dict[str, Path]) -> None:
     # Planned cuts: 25 fps, 4 s, four flat shots with cuts at frames 25,
     # 60, 90 (= 1.0 s, 2.4 s, 3.6 s).
     cuts = out_dir / "cuts.mp4"
-    _geq_clip(cuts, size="160x90", rate=25, duration=4, lum="if(lt(N,25),40,if(lt(N,60),200,if(lt(N,90),90,160)))")
+    _geq_clip(
+        cuts,
+        size="160x90",
+        rate=25,
+        duration=4,
+        lum="if(lt(N,25),40,if(lt(N,60),200,if(lt(N,90),90,160)))",
+    )
     paths["cuts"] = cuts
 
     # Text legibility: 640x360 (short side 360 -> x3 to 1080), 2 s, on a
@@ -256,8 +363,19 @@ def _build_visual_qc_fixtures(out_dir: Path, paths: Dict[str, Path]) -> None:
         bars.append(f"drawbox=x={60 + 30 * i}:y=236:w=16:h=6:color=white:t=fill")
     text_boxes = out_dir / "text_boxes.mp4"
     _run(
-        "-f", "lavfi", "-i", "color=c=0x202020:s=640x360:r=25:d=2",
-        "-vf", ",".join(bars), "-c:v", "libx264", "-crf", "1", "-pix_fmt", "yuv420p", str(text_boxes),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=0x202020:s=640x360:r=25:d=2",
+        "-vf",
+        ",".join(bars),
+        "-c:v",
+        "libx264",
+        "-crf",
+        "1",
+        "-pix_fmt",
+        "yuv420p",
+        str(text_boxes),
     )
     paths["text_boxes"] = text_boxes
 
@@ -268,33 +386,87 @@ def _build_reference_fixtures(out_dir: Path, paths: Dict[str, Path]) -> None:
 
     master = out_dir / "ref_master.mp4"
     _run(
-        "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=25:duration=2",
-        "-c:v", "libx264", "-crf", "1", "-pix_fmt", "yuv420p", str(master),
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=320x240:rate=25:duration=2",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "1",
+        "-pix_fmt",
+        "yuv420p",
+        str(master),
     )
     paths["ref_master"] = master
 
     # Same frames, crushed by the encoder (crf 51) and blurred: SSIM ~0.8,
     # PSNR ~25 dB - far below the 0.95 / 31 dB / VMAF 93 defaults.
     degraded = out_dir / "ref_degraded.mp4"
-    _run("-i", str(master), "-vf", "boxblur=2:1", "-c:v", "libx264", "-crf", "51", "-pix_fmt", "yuv420p", str(degraded))
+    _run(
+        "-i",
+        str(master),
+        "-vf",
+        "boxblur=2:1",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "51",
+        "-pix_fmt",
+        "yuv420p",
+        str(degraded),
+    )
     paths["ref_degraded"] = degraded
 
     # Same frames at half size: compared after a bicubic upscale to 320x240.
     small = out_dir / "ref_small.mp4"
-    _run("-i", str(master), "-vf", "scale=160:120", "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", str(small))
+    _run(
+        "-i",
+        str(master),
+        "-vf",
+        "scale=160:120",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        str(small),
+    )
     paths["ref_small"] = small
 
     # 30 fps instead of 25: refused (FRAME_RATE_MISMATCH).
     fps30 = out_dir / "ref_30fps.mp4"
     _run(
-        "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=30:duration=2",
-        "-c:v", "libx264", "-crf", "1", "-pix_fmt", "yuv420p", str(fps30),
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=320x240:rate=30:duration=2",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "1",
+        "-pix_fmt",
+        "yuv420p",
+        str(fps30),
     )
     paths["ref_30fps"] = fps30
 
     # First second only (25 of 50 frames): refused (FRAME_COUNT_MISMATCH).
     short = out_dir / "ref_short.mp4"
-    _run("-i", str(master), "-frames:v", "25", "-c:v", "libx264", "-crf", "1", "-pix_fmt", "yuv420p", str(short))
+    _run(
+        "-i",
+        str(master),
+        "-frames:v",
+        "25",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "1",
+        "-pix_fmt",
+        "yuv420p",
+        str(short),
+    )
     paths["ref_short"] = short
 
 
@@ -313,24 +485,44 @@ def _build_stinger_fixtures(out_dir: Path, paths: Dict[str, Path]) -> None:
 
     wipe = out_dir / "stinger_wipe.mov"  # QuickTime Animation, 8-bit argb
     _run(
-        "-f", "lavfi", "-i",
+        "-f",
+        "lavfi",
+        "-i",
         f"color=c=black:s=64x36:r=30:d=1.2,format=rgba,geq=r='230':g='230':b='230':a='{STINGER_ALPHA}'",
-        "-c:v", "qtrle", str(wipe),
+        "-c:v",
+        "qtrle",
+        str(wipe),
     )
     paths["stinger_wipe"] = wipe
 
-    prores = out_dir / "stinger_prores.mov"  # ProRes 4444: alpha decoded at more than 8 bits
-    _run("-i", str(wipe), "-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", "yuva444p10le", str(prores))
+    prores = (
+        out_dir / "stinger_prores.mov"
+    )  # ProRes 4444: alpha decoded at more than 8 bits
+    _run(
+        "-i",
+        str(wipe),
+        "-c:v",
+        "prores_ks",
+        "-profile:v",
+        "4444",
+        "-pix_fmt",
+        "yuva444p10le",
+        str(prores),
+    )
     paths["stinger_prores"] = prores
 
     # Frame 10: every alpha exactly 253 (opaque by the rule); frame 20: one
     # pixel at 252 (not); every other frame transparent.
     edge = out_dir / "stinger_edge.mov"
     _run(
-        "-f", "lavfi", "-i",
+        "-f",
+        "lavfi",
+        "-i",
         "color=c=black:s=64x36:r=30:d=1,format=rgba,geq=r='230':g='230':b='230':"
         "a='if(eq(N,10),253,if(eq(N,20),if(eq(X,0)*eq(Y,0),252,255),0))'",
-        "-c:v", "qtrle", str(edge),
+        "-c:v",
+        "qtrle",
+        str(edge),
     )
     paths["stinger_edge"] = edge
 
@@ -340,19 +532,42 @@ def _build_stinger_fixtures(out_dir: Path, paths: Dict[str, Path]) -> None:
     for name, start_frames in (("stinger_edit", 45), ("stinger_edit_late", 46)):
         path = out_dir / f"{name}.mp4"
         _run(
-            "-f", "lavfi", "-i", "color=c=red:s=64x36:r=30:d=2",
-            "-f", "lavfi", "-i", "color=c=blue:s=64x36:r=30:d=2",
-            "-i", str(wipe),
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=64x36:r=30:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:s=64x36:r=30:d=2",
+            "-i",
+            str(wipe),
             "-filter_complex",
             f"[0:v][1:v]concat=n=2:v=1[base];[2:v]setpts=PTS+{start_frames}/(30*TB)[st];"
             "[base][st]overlay=eof_action=pass[out]",
-            "-map", "[out]", "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", str(path),
+            "-map",
+            "[out]",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "18",
+            "-pix_fmt",
+            "yuv420p",
+            str(path),
         )
         paths[name] = path
 
 
 def _aeval_wav(path: Path, expr: str, duration: float, rate: int = 16000) -> None:
-    _run("-f", "lavfi", "-i", f"aevalsrc='{expr}':s={rate}:d={duration}", "-c:a", "pcm_s16le", str(path))
+    _run(
+        "-f",
+        "lavfi",
+        "-i",
+        f"aevalsrc='{expr}':s={rate}:d={duration}",
+        "-c:a",
+        "pcm_s16le",
+        str(path),
+    )
 
 
 def _repeat_wav(src: Path, dst: Path, times: int) -> None:
@@ -385,16 +600,21 @@ def _build_loop_seam_fixtures(out_dir: Path, paths: Dict[str, Path]) -> None:
     level = out_dir / "loop_level_step.wav"  # quieter before the wrap than after it
     _aeval_wav(level, "(0.3+0.2*sin(2*PI*t/4))*sin(2*PI*250*t)", 4)
     paths["loop_level_step"] = level
-    spectrum = out_dir / "loop_spectrum_step.wav"  # 2000 Hz before the wrap, 250 Hz after it, at one level
+    spectrum = (
+        out_dir / "loop_spectrum_step.wav"
+    )  # 2000 Hz before the wrap, 250 Hz after it, at one level
     _aeval_wav(
         spectrum,
-        "(0.5+0.5*sin(2*PI*t/4))*0.4*sin(2*PI*250*t)+(0.5-0.5*sin(2*PI*t/4))*0.4*sin(2*PI*2000*t)", 4,
+        "(0.5+0.5*sin(2*PI*t/4))*0.4*sin(2*PI*250*t)+(0.5-0.5*sin(2*PI*t/4))*0.4*sin(2*PI*2000*t)",
+        4,
     )
     paths["loop_spectrum_step"] = spectrum
     silence = out_dir / "loop_silence.wav"
     _aeval_wav(silence, "0", 2)
     paths["loop_silence"] = silence
-    stereo = out_dir / "loop_stereo_click.wav"  # the right channel flips phase at 1.0 s: a jump there and at the wrap
+    stereo = (
+        out_dir / "loop_stereo_click.wav"
+    )  # the right channel flips phase at 1.0 s: a jump there and at the wrap
     _aeval_wav(stereo, "0.4*sin(2*PI*250*t)|0.4*sin(2*PI*250*t+PI*gt(t,1))", 2)
     paths["loop_stereo_click"] = stereo
 
@@ -429,14 +649,35 @@ PAN = "128+90*sin(2*PI*(X+N)/32)*cos(2*PI*Y/18)"
 # ADR-028: a 230/200/60 box, 24x16 px, moving right 1 px a frame over black.
 KEY_BOX = "between(X\\,4+N\\,27+N)*between(Y\\,10\\,25)"
 KEY_LIT = "eq(N\\,10)*eq(X\\,60)*eq(Y\\,2)"  # one white pixel under alpha 0 on frame 10
-PRORES_HQ = ["-c:v", "prores_ks", "-profile:v", "3", "-vendor", "apl0", "-pix_fmt", "yuv422p10le", "-an"]
+PRORES_HQ = [
+    "-c:v",
+    "prores_ks",
+    "-profile:v",
+    "3",
+    "-vendor",
+    "apl0",
+    "-pix_fmt",
+    "yuv422p10le",
+    "-an",
+]
 PRORES_4444 = ["-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", "yuva444p10le"]
 
 
 def _gray_loop(path: Path, lum: str, frames: int) -> None:
     _run(
-        "-f", "lavfi", "-i", f"color=c=black:s=64x36:r=30:d=4,format=gray,geq=lum='{lum}'",
-        "-frames:v", str(frames), "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", str(path),
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=black:s=64x36:r=30:d=4,format=gray,geq=lum='{lum}'",
+        "-frames:v",
+        str(frames),
+        "-c:v",
+        "libx264",
+        "-crf",
+        "0",
+        "-pix_fmt",
+        "yuv420p",
+        str(path),
     )
 
 
@@ -445,9 +686,18 @@ def _key_fill_pair(src: Path, fill: Path, key: Path) -> None:
     one decode split into a ProRes 422 HQ fill and key."""
 
     _run(
-        "-i", str(src), "-filter_complex",
+        "-i",
+        str(src),
+        "-filter_complex",
         "[0:v]split[f][k];[f]format=yuv422p10le[fill];[k]alphaextract,format=yuv422p10le[key]",
-        "-map", "[fill]", *PRORES_HQ, str(fill), "-map", "[key]", *PRORES_HQ, str(key),
+        "-map",
+        "[fill]",
+        *PRORES_HQ,
+        str(fill),
+        "-map",
+        "[key]",
+        *PRORES_HQ,
+        str(key),
     )
 
 
@@ -455,8 +705,11 @@ def _build_video_material_fixtures(out_dir: Path, paths: Dict[str, Path]) -> Non
     """ADR-026/027/028 fixtures: loops, alpha edges, key / fill pairs."""
 
     for name, lum, frames in (
-        ("vloop_orbit", ORBIT.format(n="N"), 30), ("vloop_orbit_short", ORBIT.format(n="N"), 29),
-        ("vloop_pan", PAN, 32), ("vloop_pan_short", PAN, 31), ("vloop_one_frame", PAN, 1),
+        ("vloop_orbit", ORBIT.format(n="N"), 30),
+        ("vloop_orbit_short", ORBIT.format(n="N"), 29),
+        ("vloop_pan", PAN, 32),
+        ("vloop_pan_short", PAN, 31),
+        ("vloop_one_frame", PAN, 1),
     ):
         path = out_dir / f"{name}.mp4"
         _gray_loop(path, lum, frames)
@@ -469,10 +722,18 @@ def _build_video_material_fixtures(out_dir: Path, paths: Dict[str, Path]) -> Non
     paths["vloop_title"] = title
     # The orbit with its picture data zeroed: it probes (moov first), no frame decodes.
     undecodable = out_dir / "vloop_undecodable.mp4"
-    _run("-i", str(out_dir / "vloop_orbit.mp4"), "-c", "copy", "-movflags", "+faststart", str(undecodable))
+    _run(
+        "-i",
+        str(out_dir / "vloop_orbit.mp4"),
+        "-c",
+        "copy",
+        "-movflags",
+        "+faststart",
+        str(undecodable),
+    )
     data = bytearray(undecodable.read_bytes())
     at = data.find(b"mdat")
-    data[at + 4:] = bytes(len(data) - at - 4)
+    data[at + 4 :] = bytes(len(data) - at - 4)
     undecodable.write_bytes(bytes(data))
     paths["vloop_undecodable"] = undecodable
 
@@ -481,21 +742,40 @@ def _build_video_material_fixtures(out_dir: Path, paths: Dict[str, Path]) -> Non
     # premultiplied copy is ffmpeg's premultiply of it.
     straight = out_dir / "alpha_straight.mov"
     _run(
-        "-f", "lavfi", "-i",
+        "-f",
+        "lavfi",
+        "-i",
         "color=c=black:s=64x36:r=30:d=1,format=rgba,geq=r='230':g='230':b='230':a='clip((X-16)*255/6\\,0\\,255)'",
-        "-c:v", "qtrle", str(straight),
+        "-c:v",
+        "qtrle",
+        str(straight),
     )
     paths["alpha_straight"] = straight
     premult = out_dir / "alpha_premultiplied.mov"
-    _run("-i", str(straight), "-vf", "premultiply=inplace=1", "-c:v", "qtrle", str(premult))
+    _run(
+        "-i",
+        str(straight),
+        "-vf",
+        "premultiply=inplace=1",
+        "-c:v",
+        "qtrle",
+        str(premult),
+    )
     paths["alpha_premultiplied"] = premult
     prores = out_dir / "alpha_straight_prores.mov"
     _run("-i", str(straight), *PRORES_4444, str(prores))
     paths["alpha_straight_prores"] = prores
-    glow = out_dir / "alpha_glow.mov"  # partly transparent everywhere, nothing opaque: no edge to judge
+    glow = (
+        out_dir / "alpha_glow.mov"
+    )  # partly transparent everywhere, nothing opaque: no edge to judge
     _run(
-        "-f", "lavfi", "-i", "color=c=black:s=64x36:r=30:d=0.2,format=rgba,geq=r='230':g='230':b='230':a='128'",
-        "-c:v", "qtrle", str(glow),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=black:s=64x36:r=30:d=0.2,format=rgba,geq=r='230':g='230':b='230':a='128'",
+        "-c:v",
+        "qtrle",
+        str(glow),
     )
     paths["alpha_glow"] = glow
 
@@ -504,18 +784,30 @@ def _build_video_material_fixtures(out_dir: Path, paths: Dict[str, Path]) -> Non
     lit = out_dir / "kf_source_lit.mov"
     for path, extra in ((box, ""), (lit, f"+255*{KEY_LIT}")):
         _run(
-            "-f", "lavfi", "-i",
+            "-f",
+            "lavfi",
+            "-i",
             f"color=c=black:s=64x36:r=30:d=1,format=rgba,geq=r='230*{KEY_BOX}{extra}':g='200*{KEY_BOX}{extra}':"
             f"b='60*{KEY_BOX}{extra}':a='255*{KEY_BOX}'",
-            *PRORES_4444, str(path),
+            *PRORES_4444,
+            str(path),
         )
     paths["kf_source"] = box
     for name, src in (("kf", box), ("kf_lit", lit)):
         fill, key = out_dir / f"{name}_fill.mov", out_dir / f"{name}_key.mov"
         _key_fill_pair(src, fill, key)
         paths[f"{name}_fill"], paths[f"{name}_key"] = fill, key
-    late = out_dir / "kf_key_late.mov"  # the key one frame behind: frame n shows the source's alpha at n - 1
-    _run("-i", str(box), "-vf", "alphaextract,tpad=start=1:start_mode=clone,trim=end_frame=30,format=yuv422p10le", *PRORES_HQ, str(late))
+    late = (
+        out_dir / "kf_key_late.mov"
+    )  # the key one frame behind: frame n shows the source's alpha at n - 1
+    _run(
+        "-i",
+        str(box),
+        "-vf",
+        "alphaextract,tpad=start=1:start_mode=clone,trim=end_frame=30,format=yuv422p10le",
+        *PRORES_HQ,
+        str(late),
+    )
     paths["kf_key_late"] = late
     small = out_dir / "kf_key_small.mov"
     _run("-i", str(paths["kf_key"]), "-vf", "scale=64:34", *PRORES_HQ, str(small))
@@ -533,14 +825,21 @@ def _build_video_material_fixtures(out_dir: Path, paths: Dict[str, Path]) -> Non
     # ProRes encoder, so the stored values are the same on every version.
     soft = out_dir / "kf_soft_source.mov"
     _run(
-        "-f", "lavfi", "-i", "color=c=black:s=64x36:r=30:d=0.2,format=rgba,geq=r='230':g='230':b='230':a='X*4'",
-        *PRORES_4444, str(soft),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=black:s=64x36:r=30:d=0.2,format=rgba,geq=r='230':g='230':b='230':a='X*4'",
+        *PRORES_4444,
+        str(soft),
     )
     paths["kf_soft_source"] = soft
     soft_key = out_dir / "kf_soft_key.mov"
     _run(
-        "-f", "lavfi", "-i",
+        "-f",
+        "lavfi",
+        "-i",
         "color=c=black:s=64x36:r=30:d=0.2,format=yuv422p10le,geq=lum='X*16':cb=512:cr=512,setrange=tv",
-        *PRORES_HQ, str(soft_key),
+        *PRORES_HQ,
+        str(soft_key),
     )
     paths["kf_soft_key"] = soft_key

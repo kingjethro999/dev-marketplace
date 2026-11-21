@@ -29,7 +29,11 @@ class OptimizeTests(unittest.TestCase):
         write_png(self.src, 320, 240, busy)
 
     def run_cli(self, *args):
-        proc = subprocess.run([sys.executable, SCRIPT, self.src, *args, "--json"], capture_output=True, text=True)
+        proc = subprocess.run(
+            [sys.executable, SCRIPT, self.src, *args, "--json"],
+            capture_output=True,
+            text=True,
+        )
         return proc.returncode, json.loads(proc.stdout)
 
     def test_fits_the_budget_and_keeps_dimensions(self):
@@ -68,10 +72,20 @@ class OptimizeTests(unittest.TestCase):
         self.assertIsNone(payload["quality"])
 
     def test_refuses_unsupported_formats_and_bad_bounds(self):
-        code, payload = self.run_cli("-o", os.path.join(self.tmp.name, "o.gif"), "--max-kb", "10")
+        code, payload = self.run_cli(
+            "-o", os.path.join(self.tmp.name, "o.gif"), "--max-kb", "10"
+        )
         self.assertEqual(code, 1)
-        code, payload = self.run_cli("-o", os.path.join(self.tmp.name, "o.jpg"), "--max-kb", "10",
-                                     "--min-quality", "90", "--max-quality", "50")
+        code, payload = self.run_cli(
+            "-o",
+            os.path.join(self.tmp.name, "o.jpg"),
+            "--max-kb",
+            "10",
+            "--min-quality",
+            "90",
+            "--max-quality",
+            "50",
+        )
         self.assertEqual(code, 1)
 
 
@@ -93,16 +107,26 @@ class WebpFallbackDecisionTests(unittest.TestCase):
             src = os.path.join(tmp, "in.png")
             write_png(src, 4, 4, busy)
             out = os.path.join(tmp, "o.webp")
-            args = optimize.build_parser().parse_args([src, "-o", out, "--max-kb", "30"])
-            with mock.patch.object(optimize, "select_backend", return_value=("magick", "magick")), \
-                 mock.patch.object(optimize, "run", side_effect=fake_run), \
-                 mock.patch.object(optimize, "oriented_dims", return_value=(4, 4)), \
-                 mock.patch.object(optimize, "identify_dims", return_value=(4, 4)), \
-                 mock.patch.object(optimize, "finish_output"):
+            args = optimize.build_parser().parse_args(
+                [src, "-o", out, "--max-kb", "30"]
+            )
+            with mock.patch.object(
+                optimize, "select_backend", return_value=("magick", "magick")
+            ), mock.patch.object(
+                optimize, "run", side_effect=fake_run
+            ), mock.patch.object(
+                optimize, "oriented_dims", return_value=(4, 4)
+            ), mock.patch.object(
+                optimize, "identify_dims", return_value=(4, 4)
+            ), mock.patch.object(
+                optimize, "finish_output"
+            ):
                 payload = optimize.run_optimize(args)
         self.assertEqual(payload["method"], "webp:target-size")
         self.assertIsNone(payload["quality"])
-        self.assertEqual([a.get("quality") for a in payload["attempts"]], [95, 40, None])
+        self.assertEqual(
+            [a.get("quality") for a in payload["attempts"]], [95, 40, None]
+        )
 
 
 if __name__ == "__main__":

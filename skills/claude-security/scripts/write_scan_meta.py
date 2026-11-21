@@ -158,7 +158,9 @@ def tree_extent(scan_root: str) -> Extent | None:
     kept = sorted(n for n in names if not n.startswith(plugin.REPORT_DIR_PREFIX))
     on_disk = {n for n in kept if os.path.lexists(os.path.join(scan_root, n))}
     dirs = [n for n in kept if n in on_disk]
-    return Extent(dirs, sorted(symlinks), [n for n in kept if n not in on_disk], bool(listing))
+    return Extent(
+        dirs, sorted(symlinks), [n for n in kept if n not in on_disk], bool(listing)
+    )
 
 
 def sparse_checkout(scan_root: str, extent: Extent | None) -> list[str] | None:
@@ -173,18 +175,28 @@ def target_files(scan_root: str, scope: list[str]) -> list[str] | None:
     listing = git(scan_root, "ls-files", "-z", "--", *scope)
     if listing is None:
         return None
-    return sorted({
-        path
-        for path in listing.split("\0")
-        if path
-        and not path.startswith(plugin.REPORT_DIR_PREFIX)
-        and regular_file(os.path.join(scan_root, path))
-    })
+    return sorted(
+        {
+            path
+            for path in listing.split("\0")
+            if path
+            and not path.startswith(plugin.REPORT_DIR_PREFIX)
+            and regular_file(os.path.join(scan_root, path))
+        }
+    )
 
 
 def changed_files(scan_root: str, scope: list[str], *, commits: str) -> Change:
     """The change `commits` names (`<base>..<commit>`) within `scope`, from `git diff-tree`."""
-    numstat = ("diff-tree", "-r", "--no-commit-id", "--numstat", "-z", "-M", "--relative")
+    numstat = (
+        "diff-tree",
+        "-r",
+        "--no-commit-id",
+        "--numstat",
+        "-z",
+        "-M",
+        "--relative",
+    )
     listing = git(scan_root, *numstat, commits, "--", *scope)
     if listing is None:
         msg = f"git could not diff {commits} in {scan_root!r}"
@@ -283,7 +295,9 @@ def worktree_dirty(scan_root: str) -> bool | None:
         if len(line) < len("XY P"):
             continue
         path = line[3:].split(" -> ")[-1]
-        if any(part.startswith(plugin.REPORT_DIR_PREFIX) for part in path.split("/")[:-1]):
+        if any(
+            part.startswith(plugin.REPORT_DIR_PREFIX) for part in path.split("/")[:-1]
+        ):
             continue
         return True
     return False
@@ -296,7 +310,9 @@ def capture_revision(scan_root: str, opts: Args) -> Revision:
         raise MetaError(msg)
     if opts.mode == "commit":
         commit_arg = opts.commit or ""
-        sha = git(scan_root, "rev-parse", "--verify", "--quiet", commit_arg + "^{commit}")
+        sha = git(
+            scan_root, "rev-parse", "--verify", "--quiet", commit_arg + "^{commit}"
+        )
         if not sha:
             msg = f"--commit {commit_arg!r} does not resolve to a commit"
             raise MetaError(msg)
@@ -339,7 +355,9 @@ def capture_revision(scan_root: str, opts: Args) -> Revision:
             msg = "HEAD names no commit yet, so there is no change to scan"
             raise MetaError(msg)
         base_arg = opts.merge_base or ""
-        merge_base = git(scan_root, "rev-parse", "--verify", "--quiet", base_arg + "^{commit}")
+        merge_base = git(
+            scan_root, "rev-parse", "--verify", "--quiet", base_arg + "^{commit}"
+        )
         if not merge_base:
             msg = (
                 f"--merge-base {opts.merge_base!r} does not resolve to a commit "
@@ -363,7 +381,9 @@ def names_a_parent(scan_root: str, sha: str) -> bool:
     if body is None:
         msg = f"git could not read commit {sha[: plugin.SHORT_ID_CHARS]}, so its parent is unknown"
         raise MetaError(msg)
-    return any(line.startswith("parent ") for line in body.split("\n\n", 1)[0].splitlines())
+    return any(
+        line.startswith("parent ") for line in body.split("\n\n", 1)[0].splitlines()
+    )
 
 
 def scoped(entry: str, scan_root: str) -> str:
@@ -395,7 +415,9 @@ def tier(word: str) -> Effort:
     try:
         return Effort(word.strip().lower())
     except ValueError:
-        offered = ", ".join(effort.value for effort in Effort if effort is not Effort.MAX)
+        offered = ", ".join(
+            effort.value for effort in Effort if effort is not Effort.MAX
+        )
         msg = (
             f"{word!r} is not an effort tier; the tiers are {offered}. "
             "Tell the user so and start no scan; do not choose a tier for them"
@@ -436,21 +458,29 @@ def record(opts: Args) -> None:
         revision["sparse"] = True
         revision["not_checked_out_dirs"] = absent
     scan_prefix = (
-        git(scan_root, "rev-parse", "--show-prefix") if revision.get("versioned") else None
+        git(scan_root, "rev-parse", "--show-prefix")
+        if revision.get("versioned")
+        else None
     )
     remote = (
         sanitize_remote(git(scan_root, "remote", "get-url", "origin"))
         if revision.get("versioned")
         else None
     )
-    scope = [scoped(entry.strip(), scan_root) for entry in opts.scope.split(",") if entry.strip()]
+    scope = [
+        scoped(entry.strip(), scan_root)
+        for entry in opts.scope.split(",")
+        if entry.strip()
+    ]
     if scope and all(s in {".", "./"} for s in scope):
         scope = []
     whole_repo = opts.mode == "scan" and not scope
     tracked = opts.mode == "scan" and extent is not None and extent.tracked
     files = target_files(scan_root, scope) if tracked else None
     if tracked and files is None:
-        sys.stderr.write(f"write_scan_meta.py: could not list {scan_root}; file_count unknown\n")
+        sys.stderr.write(
+            f"write_scan_meta.py: could not list {scan_root}; file_count unknown\n"
+        )
     change = None
     if opts.mode != "scan":
         commits = change_range(revision)
@@ -462,7 +492,9 @@ def record(opts: Args) -> None:
         sys.stderr.write(
             f"write_scan_meta.py: could not list {scan_root}; top_level_dirs unknown\n"
         )
-    top_level, symlinks = (extent.dirs, extent.symlinks) if whole_repo and extent else (None, None)
+    top_level, symlinks = (
+        (extent.dirs, extent.symlinks) if whole_repo and extent else (None, None)
+    )
     dir_file_counts = None
     if top_level is not None and files is not None:
         per_dir = Counter(path.partition("/")[0] for path in files if "/" in path)
@@ -508,9 +540,13 @@ def record(opts: Args) -> None:
         )
         raise MetaError(msg) from error
     if files is not None:
-        (run_dir / plugin.TARGET_FILES_NAME).write_bytes((strictjson.text(files) + "\n").encode())
+        (run_dir / plugin.TARGET_FILES_NAME).write_bytes(
+            (strictjson.text(files) + "\n").encode()
+        )
     if change is not None:
-        for number, start in enumerate(range(0, len(change.files), CHANGED_FILES_CHUNK), start=1):
+        for number, start in enumerate(
+            range(0, len(change.files), CHANGED_FILES_CHUNK), start=1
+        ):
             chunk: ChangedFiles = {
                 "chunk": number,
                 "total_files": len(change.files),
@@ -522,7 +558,9 @@ def record(opts: Args) -> None:
     print(f"scan-meta.json written: {path}")
     print(f"revision: {revision.get('commit') or 'UNVERSIONED'}")
     if absent is not None:
-        print(f"sparse checkout: top-level directories not checked out: {strictjson.text(absent)}")
+        print(
+            f"sparse checkout: top-level directories not checked out: {strictjson.text(absent)}"
+        )
     if retired:
         print(plugin.RETIRED_MAX_RELAY)
     print(f"top_level_dirs: {strictjson.text(top_level)}")
@@ -540,7 +578,9 @@ def main(argv: list[str]) -> int:
         sys.stderr.write(f"write_scan_meta.py: {error}\n")
         return 1
     except OSError as error:
-        sys.stderr.write(f"write_scan_meta.py: could not write the run's output: {error}\n")
+        sys.stderr.write(
+            f"write_scan_meta.py: could not write the run's output: {error}\n"
+        )
         return 1
     return 0
 

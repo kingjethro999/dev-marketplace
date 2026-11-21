@@ -42,7 +42,10 @@ from artifact_skill.core.verification import CheckStatus
 from artifact_skill.doctor.detect import detect_environment
 from artifact_skill.policies import PRESETS as _PRESET_NAMES
 from artifact_skill.policies import resolve_policy
-from artifact_skill.rendering.contact_sheet import build_before_after, build_contact_sheet
+from artifact_skill.rendering.contact_sheet import (
+    build_before_after,
+    build_contact_sheet,
+)
 from artifact_skill.security.limits import DEFAULT_LIMITS
 from artifact_skill.security.subprocess_exec import treat_sigterm_as_interrupt
 from artifact_skill.text_checks import verify_structural_with_text_checks
@@ -75,17 +78,25 @@ def _exit_for_status(status: CheckStatus) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="artifacts-skill", description="Artifact production + verification engine.")
-    parser.add_argument("--version", action="version", version=f"artifacts-skill {__version__}")
+    parser = argparse.ArgumentParser(
+        prog="artifacts-skill", description="Artifact production + verification engine."
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"artifacts-skill {__version__}"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     def common(p: argparse.ArgumentParser) -> None:
-        p.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+        p.add_argument(
+            "--json", action="store_true", help="Emit machine-readable JSON."
+        )
 
     p_doctor = sub.add_parser("doctor", help="Detect local capabilities.")
     common(p_doctor)
 
-    p_contract = sub.add_parser("contract", help="Print the machine-readable tool contract.")
+    p_contract = sub.add_parser(
+        "contract", help="Print the machine-readable tool contract."
+    )
     common(p_contract)
 
     p_inspect = sub.add_parser("inspect", help="Read-only inspection of an artifact.")
@@ -95,17 +106,26 @@ def build_parser() -> argparse.ArgumentParser:
     p_plan = sub.add_parser("plan", help="Pure, read-only plan for an operation.")
     p_plan.add_argument("input")
     p_plan.add_argument("--operation", required=True)
-    p_plan.add_argument("--args", default="{}", help="JSON object of operation arguments.")
-    p_plan.add_argument("--output", help="Intended output path (default: derived from input).")
+    p_plan.add_argument(
+        "--args", default="{}", help="JSON object of operation arguments."
+    )
+    p_plan.add_argument(
+        "--output", help="Intended output path (default: derived from input)."
+    )
     common(p_plan)
 
-    p_execute = sub.add_parser("execute", help="Perform an operation, writing a new output artifact.")
+    p_execute = sub.add_parser(
+        "execute", help="Perform an operation, writing a new output artifact."
+    )
     p_execute.add_argument("input")
     p_execute.add_argument("--operation", required=True)
     p_execute.add_argument("--args", default="{}")
-    p_execute.add_argument("--output", help="Output path (default: derived, never the input path).")
     p_execute.add_argument(
-        "--policy", default="{}",
+        "--output", help="Output path (default: derived, never the input path)."
+    )
+    p_execute.add_argument(
+        "--policy",
+        default="{}",
         help="JSON object to gate execute's own receipt.json structural verification. "
         "Without this, execute always verifies against an empty policy (barely gates anything) - "
         "use `receipt` instead of `execute` when you need a real submission gate.",
@@ -123,15 +143,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_execute.add_argument("--dry-run", action="store_true")
     common(p_execute)
 
-    p_render = sub.add_parser("render", help="Produce page images for visual inspection.")
+    p_render = sub.add_parser(
+        "render", help="Produce page images for visual inspection."
+    )
     p_render.add_argument("input")
-    p_render.add_argument("--out-dir", help="Directory for rendered images (default: a fresh ./reports/<run-id>/rendered per run).")
+    p_render.add_argument(
+        "--out-dir",
+        help="Directory for rendered images (default: a fresh ./reports/<run-id>/rendered per run).",
+    )
     p_render.add_argument("--dry-run", action="store_true")
     common(p_render)
 
-    p_verify = sub.add_parser("verify", help="Run structural verification against an optional policy.")
+    p_verify = sub.add_parser(
+        "verify", help="Run structural verification against an optional policy."
+    )
     p_verify.add_argument("input")
-    p_verify.add_argument("--policy", default="{}", help="JSON object, e.g. '{\"min_pages\": 1}'.")
+    p_verify.add_argument(
+        "--policy", default="{}", help="JSON object, e.g. '{\"min_pages\": 1}'."
+    )
     p_verify.add_argument(
         "--policy-preset",
         help=f"Named starting policy (see policies.py); explicit --policy fields override it. "
@@ -139,14 +168,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     common(p_verify)
 
-    p_look = sub.add_parser("look", help="Build a contact sheet (or before/after) for Agent visual review.")
+    p_look = sub.add_parser(
+        "look", help="Build a contact sheet (or before/after) for Agent visual review."
+    )
     p_look.add_argument("input")
-    p_look.add_argument("--compare-to", help="A second artifact to render as a before/after comparison.")
-    p_look.add_argument("--out-dir", help="Directory for evidence images (default: a fresh ./reports/<run-id>/ per run).")
+    p_look.add_argument(
+        "--compare-to", help="A second artifact to render as a before/after comparison."
+    )
+    p_look.add_argument(
+        "--out-dir",
+        help="Directory for evidence images (default: a fresh ./reports/<run-id>/ per run).",
+    )
     p_look.add_argument("--dry-run", action="store_true")
     common(p_look)
 
-    p_receipt = sub.add_parser("receipt", help="Run the full lifecycle and emit an Artifact Verification Receipt.")
+    p_receipt = sub.add_parser(
+        "receipt",
+        help="Run the full lifecycle and emit an Artifact Verification Receipt.",
+    )
     p_receipt.add_argument("input")
     p_receipt.add_argument(
         "--operation",
@@ -163,11 +202,16 @@ def build_parser() -> argparse.ArgumentParser:
         f"Choices: {sorted(_PRESET_NAMES)}.",
     )
     p_receipt.add_argument(
-        "--max-iterations", type=int, default=None,
+        "--max-iterations",
+        type=int,
+        default=None,
         help=f"Fix-loop retry cap, must be in [1, {DEFAULT_LIMITS.max_fix_iterations}] "
         f"(default when omitted: {DEFAULT_LIMITS.max_fix_iterations}).",
     )
-    p_receipt.add_argument("--evidence-dir", help="Directory for the receipt and evidence (default: a fresh ./reports/<run-id>/ per run).")
+    p_receipt.add_argument(
+        "--evidence-dir",
+        help="Directory for the receipt and evidence (default: a fresh ./reports/<run-id>/ per run).",
+    )
     p_receipt.add_argument("--dry-run", action="store_true")
     common(p_receipt)
 
@@ -192,14 +236,14 @@ def _load_json_arg(raw: str, flag: str) -> dict[str, Any]:
         raise ArtifactInputError(
             code="ARTIFACT_INVALID_ARGS",
             message=f"{flag} is not valid JSON: {exc}",
-            remediation=f"{flag} must be a JSON object, e.g. '{{\"key\": \"value\"}}'.",
+            remediation=f'{flag} must be a JSON object, e.g. \'{{"key": "value"}}\'.',
             evidence={"flag": flag, "raw": raw},
         ) from exc
     if not isinstance(value, dict):
         raise ArtifactInputError(
             code="ARTIFACT_INVALID_ARGS",
             message=f"{flag} must be a JSON object, got {type(value).__name__}.",
-            remediation=f"{flag} must be a JSON object, e.g. '{{\"key\": \"value\"}}'.",
+            remediation=f'{flag} must be a JSON object, e.g. \'{{"key": "value"}}\'.',
             evidence={"flag": flag, "raw": raw},
         )
     return value
@@ -210,7 +254,9 @@ def _resolve_policy_arg(args: argparse.Namespace) -> dict[str, Any]:
     try:
         return resolve_policy(getattr(args, "policy_preset", None), policy)
     except KeyError as exc:
-        raise ArtifactInputError(code="ARTIFACT_INVALID_ARGS", message=str(exc)) from exc
+        raise ArtifactInputError(
+            code="ARTIFACT_INVALID_ARGS", message=str(exc)
+        ) from exc
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -283,7 +329,11 @@ def _cmd_inspect(args: argparse.Namespace) -> int:
 def _cmd_plan(args: argparse.Namespace) -> int:
     op_args = _load_json_arg(args.args, "--args")
     input_path = Path(args.input)
-    output_path = Path(args.output) if args.output else default_output_path(input_path, args.operation)
+    output_path = (
+        Path(args.output)
+        if args.output
+        else default_output_path(input_path, args.operation)
+    )
     _ref, _adapter, plan = build_plan(input_path, args.operation, op_args, output_path)
     result = plan.to_dict()
     _emit(result, args.json, human=None if args.json else json.dumps(result, indent=2))
@@ -294,7 +344,11 @@ def _cmd_execute(args: argparse.Namespace) -> int:
     op_args = _load_json_arg(args.args, "--args")
     policy = _resolve_policy_arg(args)
     input_path = Path(args.input)
-    output_path = Path(args.output) if args.output else default_output_path(input_path, args.operation)
+    output_path = (
+        Path(args.output)
+        if args.output
+        else default_output_path(input_path, args.operation)
+    )
     # FIX_PROMPT P2-5: the default lives under cwd-relative "./reports",
     # matching `receipt`'s own default exactly, instead of output_path.parent
     # / "reports" - the latter put an `--output /tmp/out.pdf` execute's
@@ -304,12 +358,21 @@ def _cmd_execute(args: argparse.Namespace) -> int:
     # concurrent runs never overwrite each other's evidence.
     with evidence_dir_for(args.evidence_dir, dry_run=args.dry_run) as evidence_dir:
         result = run_lifecycle(
-            input_path, args.operation, op_args, output_path,
-            policy=policy, evidence_dir=evidence_dir, dry_run=args.dry_run,
+            input_path,
+            args.operation,
+            op_args,
+            output_path,
+            policy=policy,
+            evidence_dir=evidence_dir,
+            dry_run=args.dry_run,
         )
     if args.dry_run:
         payload = {"dry_run": True, "plan": result.plan.to_dict()}
-        _emit(payload, args.json, human=None if args.json else json.dumps(payload, indent=2))
+        _emit(
+            payload,
+            args.json,
+            human=None if args.json else json.dumps(payload, indent=2),
+        )
         return EXIT_OK
 
     payload = {
@@ -317,7 +380,9 @@ def _cmd_execute(args: argparse.Namespace) -> int:
         "receipt": result.receipt.to_dict() if result.receipt else None,
         "evidence_dir": str(evidence_dir),
     }
-    _emit(payload, args.json, human=None if args.json else json.dumps(payload, indent=2))
+    _emit(
+        payload, args.json, human=None if args.json else json.dumps(payload, indent=2)
+    )
     if result.receipt is None:
         return EXIT_FAIL
     return _exit_for_status(result.receipt.status)
@@ -333,12 +398,22 @@ def _cmd_render(args: argparse.Namespace) -> int:
         if args.dry_run:
             report = adapter.inspect(ref)
             page_count = report.details.get("page_count", "unknown")
-            payload = {"dry_run": True, "would_render_to": str(out_dir), "estimated_files": page_count}
-            _emit(payload, args.json, human=None if args.json else json.dumps(payload, indent=2))
+            payload = {
+                "dry_run": True,
+                "would_render_to": str(out_dir),
+                "estimated_files": page_count,
+            }
+            _emit(
+                payload,
+                args.json,
+                human=None if args.json else json.dumps(payload, indent=2),
+            )
             return EXIT_OK
         rendered = adapter.render(ref, out_dir)
     payload = rendered.to_dict()
-    _emit(payload, args.json, human=None if args.json else json.dumps(payload, indent=2))
+    _emit(
+        payload, args.json, human=None if args.json else json.dumps(payload, indent=2)
+    )
     return EXIT_OK
 
 
@@ -348,7 +423,9 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     adapter = adapter_for(ref)
     result = verify_structural_with_text_checks(adapter, ref, policy)
     payload = result.to_dict()
-    _emit(payload, args.json, human=None if args.json else json.dumps(payload, indent=2))
+    _emit(
+        payload, args.json, human=None if args.json else json.dumps(payload, indent=2)
+    )
     return _exit_for_status(result.status)
 
 
@@ -359,20 +436,35 @@ def _cmd_look(args: argparse.Namespace) -> int:
     # ./reports/<run-id>/ instead of a shared ./reports.
     with evidence_dir_for(args.out_dir, dry_run=args.dry_run) as out_dir:
         if args.dry_run:
-            payload = {"dry_run": True, "would_write_to": str(out_dir / "contact-sheet.png")}
-            _emit(payload, args.json, human=None if args.json else json.dumps(payload, indent=2))
+            payload = {
+                "dry_run": True,
+                "would_write_to": str(out_dir / "contact-sheet.png"),
+            }
+            _emit(
+                payload,
+                args.json,
+                human=None if args.json else json.dumps(payload, indent=2),
+            )
             return EXIT_OK
 
         rendered = adapter.render(ref, out_dir / "rendered")
         if args.compare_to:
             other_ref = ArtifactRef.from_path(args.compare_to)
             other_adapter = adapter_for(other_ref)
-            other_rendered = other_adapter.render(other_ref, out_dir / "rendered_compare")
-            sheet_path = build_before_after(rendered.files, other_rendered.files, out_dir / "before-after.png")
+            other_rendered = other_adapter.render(
+                other_ref, out_dir / "rendered_compare"
+            )
+            sheet_path = build_before_after(
+                rendered.files, other_rendered.files, out_dir / "before-after.png"
+            )
         else:
-            sheet_path = build_contact_sheet(rendered.files, out_dir / "contact-sheet.png")
+            sheet_path = build_contact_sheet(
+                rendered.files, out_dir / "contact-sheet.png"
+            )
     payload = {"contact_sheet": str(sheet_path), "source_pages": len(rendered.files)}
-    _emit(payload, args.json, human=None if args.json else json.dumps(payload, indent=2))
+    _emit(
+        payload, args.json, human=None if args.json else json.dumps(payload, indent=2)
+    )
     return EXIT_OK
 
 
@@ -392,18 +484,31 @@ def _cmd_receipt(args: argparse.Namespace) -> int:
             )
         output_path = None
     else:
-        output_path = Path(args.output) if args.output else default_output_path(input_path, args.operation)
+        output_path = (
+            Path(args.output)
+            if args.output
+            else default_output_path(input_path, args.operation)
+        )
     # Issue #47: without --evidence-dir, each run gets its own fresh
     # ./reports/<run-id>/ (see core/run_dir.py).
     with evidence_dir_for(args.evidence_dir, dry_run=args.dry_run) as evidence_dir:
         result = run_lifecycle(
-            input_path, args.operation, op_args, output_path,
-            policy=policy, evidence_dir=evidence_dir, dry_run=args.dry_run,
+            input_path,
+            args.operation,
+            op_args,
+            output_path,
+            policy=policy,
+            evidence_dir=evidence_dir,
+            dry_run=args.dry_run,
             max_iterations=args.max_iterations,
         )
     if args.dry_run:
         payload = {"dry_run": True, "plan": result.plan.to_dict()}
-        _emit(payload, args.json, human=None if args.json else json.dumps(payload, indent=2))
+        _emit(
+            payload,
+            args.json,
+            human=None if args.json else json.dumps(payload, indent=2),
+        )
         return EXIT_OK
 
     if result.receipt is None:
@@ -416,10 +521,13 @@ def _cmd_receipt(args: argparse.Namespace) -> int:
     return _exit_for_status(result.receipt.status)
 
 
-def _human_report(result, evidence_dir: Path) -> Any:  # LifecycleResult, avoid import cycle in the type hint
+def _human_report(
+    result, evidence_dir: Path
+) -> Any:  # LifecycleResult, avoid import cycle in the type hint
     r = result.receipt
     lines = [
-        "ARTIFACT REPORT", "",
+        "ARTIFACT REPORT",
+        "",
         f"Input:  {r.input['path']}",
         f"Output: {result.output.path if result.output else '(none)'}",
         "",

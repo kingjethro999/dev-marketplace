@@ -31,17 +31,22 @@ def _require_pillow():
     return Image, ImageDraw
 
 
-def build_contact_sheet(image_paths: list[Path], out_path: Path, columns: int = 4) -> Path:
+def build_contact_sheet(
+    image_paths: list[Path], out_path: Path, columns: int = 4
+) -> Path:
     Image, ImageDraw = _require_pillow()
     if not image_paths:
         raise ArtifactInputError(
-            code="ARTIFACT_INPUT_NOT_FOUND", message="No rendered images were provided to build a contact sheet from."
+            code="ARTIFACT_INPUT_NOT_FOUND",
+            message="No rendered images were provided to build a contact sheet from.",
         )
     columns = max(1, min(columns, len(image_paths)))
     rows = math.ceil(len(image_paths) / columns)
     cell_w = _THUMB_SIZE[0] + _MARGIN
     cell_h = _THUMB_SIZE[1] + _MARGIN + _LABEL_HEIGHT
-    sheet = Image.new("RGB", (columns * cell_w + _MARGIN, rows * cell_h + _MARGIN), color="white")
+    sheet = Image.new(
+        "RGB", (columns * cell_w + _MARGIN, rows * cell_h + _MARGIN), color="white"
+    )
     draw = ImageDraw.Draw(sheet)
 
     for i, img_path in enumerate(image_paths):
@@ -58,11 +63,14 @@ def build_contact_sheet(image_paths: list[Path], out_path: Path, columns: int = 
     return out_path
 
 
-def build_before_after(before_paths: list[Path], after_paths: list[Path], out_path: Path) -> Path:
+def build_before_after(
+    before_paths: list[Path], after_paths: list[Path], out_path: Path
+) -> Path:
     Image, ImageDraw = _require_pillow()
     if not before_paths or not after_paths:
         raise ArtifactInputError(
-            code="ARTIFACT_INPUT_NOT_FOUND", message="Both `before` and `after` need at least one rendered page."
+            code="ARTIFACT_INPUT_NOT_FOUND",
+            message="Both `before` and `after` need at least one rendered page.",
         )
     # strict=False: before/after page counts can legitimately differ (e.g. delete_pages);
     # pairing up to the shorter list is the desired comparison, not an error.
@@ -80,8 +88,14 @@ def build_before_after(before_paths: list[Path], after_paths: list[Path], out_pa
         a_img.thumbnail(_THUMB_SIZE)
         sheet.paste(b_img, (_MARGIN, y))
         sheet.paste(a_img, (_MARGIN * 2 + _THUMB_SIZE[0], y))
-        draw.text((_MARGIN, y + _THUMB_SIZE[1] + 2), f"before: {before.name}", fill="black")
-        draw.text((_MARGIN * 2 + _THUMB_SIZE[0], y + _THUMB_SIZE[1] + 2), f"after: {after.name}", fill="black")
+        draw.text(
+            (_MARGIN, y + _THUMB_SIZE[1] + 2), f"before: {before.name}", fill="black"
+        )
+        draw.text(
+            (_MARGIN * 2 + _THUMB_SIZE[0], y + _THUMB_SIZE[1] + 2),
+            f"after: {after.name}",
+            fill="black",
+        )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(out_path)

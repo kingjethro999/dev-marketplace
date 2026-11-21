@@ -17,6 +17,7 @@ container holds the alpha line (ProRes 4444 by default: .mov / .mkv) and the mod
 
 FAKE_CG_CALLS: a file every invocation (subcommand + argv) is appended to. Never runs ffmpeg or ffmpeg-skill, never imports
 color_grading. Test double only."""
+
 from __future__ import annotations
 
 import hashlib
@@ -28,7 +29,16 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-CONTRACT = json.loads((HERE.parent / "src" / "video_agent" / "tools" / "color_grading" / "contract_1.1.0.json").read_text(encoding="utf-8"))
+CONTRACT = json.loads(
+    (
+        HERE.parent
+        / "src"
+        / "video_agent"
+        / "tools"
+        / "color_grading"
+        / "contract_1.1.0.json"
+    ).read_text(encoding="utf-8")
+)
 MODE = os.environ.get("FAKE_CG_MODE", "ok")
 CALLS_LOG = os.environ.get("FAKE_CG_CALLS")
 EXIT = CONTRACT["errors"]["exit_codes"]
@@ -38,13 +48,32 @@ UNSUPPORTED = {u["type"] for u in CONTRACT["unsupported_operations"]}
 FORBIDDEN = set(CONTRACT["request"]["forbidden_fields"])
 ID_RE = re.compile(CONTRACT["request"]["id_pattern"])
 RESPONSE = "color-grading/response@1"
-TOOL_VERSIONS = {"ffmpeg-skill": "0.9.2-fake", "ffmpeg-skill_contract": "1.0", "ffmpeg": "fake", "ffprobe": "fake"}
+TOOL_VERSIONS = {
+    "ffmpeg-skill": "0.9.2-fake",
+    "ffmpeg-skill_contract": "1.0",
+    "ffmpeg": "fake",
+    "ffprobe": "fake",
+}
 
 
 def log(kind: str, argv) -> None:
     if CALLS_LOG:
         with open(CALLS_LOG, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps({"cmd": kind, "argv": list(argv), "cwd": os.getcwd(), "env_video": {k: v for k, v in os.environ.items() if k.startswith("VIDEO_")}}) + "\n")
+            fh.write(
+                json.dumps(
+                    {
+                        "cmd": kind,
+                        "argv": list(argv),
+                        "cwd": os.getcwd(),
+                        "env_video": {
+                            k: v
+                            for k, v in os.environ.items()
+                            if k.startswith("VIDEO_")
+                        },
+                    }
+                )
+                + "\n"
+            )
 
 
 def emit(doc) -> None:
@@ -53,14 +82,30 @@ def emit(doc) -> None:
 
 
 def err(code: str, message: str, details=None, retryable=None, dry_run=False) -> int:
-    emit({"schema": RESPONSE, "skill": {"id": "color-grading", "version": CONTRACT["version"]}, "ok": False, "status": "cancelled" if code == "CANCELLED" else "error",
-          "dry_run": dry_run, "error": {"code": code, "message": message, "retryable": RETRY[code] if retryable is None else retryable, "details": details or {}}, "warnings": []})
+    emit(
+        {
+            "schema": RESPONSE,
+            "skill": {"id": "color-grading", "version": CONTRACT["version"]},
+            "ok": False,
+            "status": "cancelled" if code == "CANCELLED" else "error",
+            "dry_run": dry_run,
+            "error": {
+                "code": code,
+                "message": message,
+                "retryable": RETRY[code] if retryable is None else retryable,
+                "details": details or {},
+            },
+            "warnings": [],
+        }
+    )
     return EXIT[code]
 
 
 def within(root: str, path: str) -> bool:
     try:
-        return os.path.commonpath([os.path.normcase(root), os.path.normcase(path)]) == os.path.normcase(root)
+        return os.path.commonpath(
+            [os.path.normcase(root), os.path.normcase(path)]
+        ) == os.path.normcase(root)
     except ValueError:
         return False
 
@@ -87,10 +132,19 @@ def scan(obj, where):
 
 def probe(path: str) -> dict:
     raw = Path(path).read_bytes()
-    meta = {"duration": 16.0, "width": 640, "height": 360, "hdr": False, "video": True, "channels": 2}
+    meta = {
+        "duration": 16.0,
+        "width": 640,
+        "height": 360,
+        "hdr": False,
+        "video": True,
+        "channels": 2,
+    }
     if raw.startswith(b'{"fake"'):
         try:
-            meta.update({k: v for k, v in json.loads(raw.decode()).items() if k != "fake"})
+            meta.update(
+                {k: v for k, v in json.loads(raw.decode()).items() if k != "fake"}
+            )
         except (ValueError, TypeError):
             pass
     return meta
@@ -109,37 +163,99 @@ def main() -> int:
         if MODE == "wrong_schema":
             c["schema"] = "color-grading/contract@2"
         if MODE == "wrong_skill":
-            c["skill_id"] = "other-skill"; c["id"] = "other-skill"
+            c["skill_id"] = "other-skill"
+            c["id"] = "other-skill"
         if MODE == "wrong_version":
-            c["version"] = "9.0.0"; c["tools"][0]["version"] = "9.0.0"
+            c["version"] = "9.0.0"
+            c["tools"][0]["version"] = "9.0.0"
         if MODE == "bad_contract":
             c["execution"]["shell"] = True
         if MODE == "contract_fail":
             sys.stderr.write("boom\n")
             return 1
-        if MODE == "contract_drift":   # a compatible newer contract with one more operation: reported as drift, never silently kept
-            c["operations"].append(dict(c["operations"][2], type="EXPOSURE", parameters={"stops": {"type": "number", "required": True, "min": -5, "max": 5}}))
-            c["unsupported_operations"] = [u for u in c["unsupported_operations"] if u["type"] != "EXPOSURE"]
-            c["tools"][0]["operations"] = sorted(c["tools"][0]["operations"] + ["EXPOSURE"])
+        if (
+            MODE == "contract_drift"
+        ):  # a compatible newer contract with one more operation: reported as drift, never silently kept
+            c["operations"].append(
+                dict(
+                    c["operations"][2],
+                    type="EXPOSURE",
+                    parameters={
+                        "stops": {
+                            "type": "number",
+                            "required": True,
+                            "min": -5,
+                            "max": 5,
+                        }
+                    },
+                )
+            )
+            c["unsupported_operations"] = [
+                u for u in c["unsupported_operations"] if u["type"] != "EXPOSURE"
+            ]
+            c["tools"][0]["operations"] = sorted(
+                c["tools"][0]["operations"] + ["EXPOSURE"]
+            )
         emit(c)
         return 0
     if cmd == "doctor":
-        status = {"doctor_fail": "fail", "doctor_degraded": "degraded", "doctor_no_ocio": "degraded", "doctor_old_engine": "degraded"}.get(MODE, "ok")
+        status = {
+            "doctor_fail": "fail",
+            "doctor_degraded": "degraded",
+            "doctor_no_ocio": "degraded",
+            "doctor_old_engine": "degraded",
+        }.get(MODE, "ok")
         ok = status != "fail"
         ops = {}
         for t, spec in OPS.items():
             st = "supported" if ok else "unavailable"
             if MODE == "doctor_degraded" and t == "LUT_APPLY":
                 st = "unavailable"
-            if (MODE == "doctor_no_ocio" and t == "OCIO_TRANSFORM") or (MODE == "doctor_old_engine" and t in ("MATCH_CAMERA", "LEGALIZE")):   # ADR-100
-                st = "unsupported"   # what the real doctor reports for an operation whose capability (PyOpenColorIO / the LUT legs) is missing
-            ops[t] = {"status": st, "tool": spec["tool"], "required_capabilities": spec["required_capabilities"], "missing": [] if st != "unavailable" else ["filter:lut3d"], "unknown": []}
-        emit({"schema": "color-grading/doctor@1", "skill": {"id": "color-grading", "version": CONTRACT["version"]}, "status": status,
-              "checks": {"python": {"status": "ok"}, "ffmpeg_skill": {"status": "ok" if ok else "missing", "directory": (flag_values(argv, "--ffmpeg-skill") or [None])[0], "version": "0.9.1-fake", "contract_version": "1.0"},
-                         "ffmpeg": {"status": "ok" if ok else "missing"}, "ffprobe": {"status": "ok" if ok else "missing"}, "capabilities": {}, "operations": ops,
-                         "unsupported_operations": {u: "" for u in UNSUPPORTED}, "output_formats": list(CONTRACT["output_formats"]),
-                         "path_policy": {"status": "ok", "workspace": (flag_values(argv, "--workspace") or [None])[0], "allowed_input_roots": flag_values(argv, "--allowed-input"), "allowed_lut_roots": flag_values(argv, "--allowed-lut")}},
-              "unavailable_operations": [t for t, o in ops.items() if o["status"] == "unavailable"], "problems": [] if ok else ["ffmpeg-skill: not found"], "warnings": [], "secrets_shown": False})
+            if (MODE == "doctor_no_ocio" and t == "OCIO_TRANSFORM") or (
+                MODE == "doctor_old_engine" and t in ("MATCH_CAMERA", "LEGALIZE")
+            ):  # ADR-100
+                st = "unsupported"  # what the real doctor reports for an operation whose capability (PyOpenColorIO / the LUT legs) is missing
+            ops[t] = {
+                "status": st,
+                "tool": spec["tool"],
+                "required_capabilities": spec["required_capabilities"],
+                "missing": [] if st != "unavailable" else ["filter:lut3d"],
+                "unknown": [],
+            }
+        emit(
+            {
+                "schema": "color-grading/doctor@1",
+                "skill": {"id": "color-grading", "version": CONTRACT["version"]},
+                "status": status,
+                "checks": {
+                    "python": {"status": "ok"},
+                    "ffmpeg_skill": {
+                        "status": "ok" if ok else "missing",
+                        "directory": (flag_values(argv, "--ffmpeg-skill") or [None])[0],
+                        "version": "0.9.1-fake",
+                        "contract_version": "1.0",
+                    },
+                    "ffmpeg": {"status": "ok" if ok else "missing"},
+                    "ffprobe": {"status": "ok" if ok else "missing"},
+                    "capabilities": {},
+                    "operations": ops,
+                    "unsupported_operations": {u: "" for u in UNSUPPORTED},
+                    "output_formats": list(CONTRACT["output_formats"]),
+                    "path_policy": {
+                        "status": "ok",
+                        "workspace": (flag_values(argv, "--workspace") or [None])[0],
+                        "allowed_input_roots": flag_values(argv, "--allowed-input"),
+                        "allowed_lut_roots": flag_values(argv, "--allowed-lut"),
+                    },
+                },
+                "unavailable_operations": [
+                    t for t, o in ops.items() if o["status"] == "unavailable"
+                ],
+                "problems": [] if ok else ["ffmpeg-skill: not found"],
+                "warnings": [],
+                "secrets_shown": False,
+            }
+        )
         return 0 if ok else 1
     if cmd not in ("run", "plan", "validate"):
         sys.stderr.write("unknown command\n")
@@ -152,9 +268,15 @@ def main() -> int:
         return err("INVALID_REQUEST", "--workspace is required")
     ws = os.path.realpath(ws_list[0])
     if not os.path.isdir(ws):
-        return err("PATH_NOT_ALLOWED", "workspace is not a directory", {"reason": "workspace_missing"})
+        return err(
+            "PATH_NOT_ALLOWED",
+            "workspace is not a directory",
+            {"reason": "workspace_missing"},
+        )
     roots = [os.path.realpath(r) for r in flag_values(argv, "--allowed-input")] or None
-    lut_roots = [os.path.realpath(r) for r in flag_values(argv, "--allowed-lut")] or roots
+    lut_roots = [
+        os.path.realpath(r) for r in flag_values(argv, "--allowed-lut")
+    ] or roots
     try:
         req = json.loads(sys.stdin.read())
     except ValueError:
@@ -172,52 +294,115 @@ def main() -> int:
     if MODE == "internal_error":
         return err("INTERNAL_ERROR", "TypeError: bug")
     if MODE == "unknown_code":
-        emit({"ok": False, "error": {"code": "WEIRD", "message": "?", "retryable": True, "details": {}}})
+        emit(
+            {
+                "ok": False,
+                "error": {
+                    "code": "WEIRD",
+                    "message": "?",
+                    "retryable": True,
+                    "details": {},
+                },
+            }
+        )
         return 1
     hit = scan(req, "request")
     if hit:
         return err("INVALID_REQUEST", f"forbidden field {hit}", {"field": hit})
-    if not isinstance(req, dict) or req.get("schema") != CONTRACT["request"]["schema"] or set(req) - {"schema", "project", "options"} or "project" not in req:
-        return err("INVALID_REQUEST", "unsupported request shape / schema", {"field": "schema"})
+    if (
+        not isinstance(req, dict)
+        or req.get("schema") != CONTRACT["request"]["schema"]
+        or set(req) - {"schema", "project", "options"}
+        or "project" not in req
+    ):
+        return err(
+            "INVALID_REQUEST", "unsupported request shape / schema", {"field": "schema"}
+        )
     pj = req["project"]
-    if not isinstance(pj, dict) or set(pj) != {"project_id", "source", "operations", "outputs"} or not ID_RE.match(str(pj["project_id"])):
+    if (
+        not isinstance(pj, dict)
+        or set(pj) != {"project_id", "source", "operations", "outputs"}
+        or not ID_RE.match(str(pj["project_id"]))
+    ):
         return err("INVALID_REQUEST", "project shape")
     src_raw = pj["source"].get("path")
     src = os.path.realpath(src_raw) if isinstance(src_raw, str) else ""
     if roots and not any(within(r, src) for r in roots):
-        return err("PATH_NOT_ALLOWED", "source outside allowed roots", {"reason": "outside_allowed_roots"})
+        return err(
+            "PATH_NOT_ALLOWED",
+            "source outside allowed roots",
+            {"reason": "outside_allowed_roots"},
+        )
     if not os.path.isfile(src):
         return err("INVALID_INPUT", "source not found", {"reason": "not_found"})
     ops = pj["operations"]
-    if not isinstance(ops, list) or not ops or len(ops) > CONTRACT["request"]["max_operations"]:
+    if (
+        not isinstance(ops, list)
+        or not ops
+        or len(ops) > CONTRACT["request"]["max_operations"]
+    ):
         return err("INVALID_REQUEST", "operations must be a non-empty array")
     meta = probe(src)
     # color-grading-skill 0.5.0 (its ADR-25): a source with an alpha plane is refused before anything runs for every operation the contract's
     # `alpha.refused_for` lists (they re-encode through ffmpeg-skill/color, which writes no alpha); RETAG / STRIP_DOVI stream-copy and keep it
     alpha = CONTRACT.get("alpha") or {}
-    if alpha and re.match(alpha["pix_fmt_pattern"], str(meta.get("pix_fmt") or "")) and isinstance(pj.get("operations"), list):
+    if (
+        alpha
+        and re.match(alpha["pix_fmt_pattern"], str(meta.get("pix_fmt") or ""))
+        and isinstance(pj.get("operations"), list)
+    ):
         ka = alpha.get("keep_alpha") or {}
-        line = (ka.get("alpha_codec_by_input_codec") or {}).get(str(meta.get("codec") or ""), ka.get("alpha_codec_default"))
-        keeps = MODE != "no_keep_alpha" and Path(src).suffix.lower() in ((ka.get("containers") or {}).get(line) or [])
-        lossy = sorted(str(o.get("op_id")) for o in pj["operations"] if isinstance(o, dict) and o.get("type") in alpha["refused_for"]
-                       and not (keeps and o.get("type") in (ka.get("operations") or [])))
+        line = (ka.get("alpha_codec_by_input_codec") or {}).get(
+            str(meta.get("codec") or ""), ka.get("alpha_codec_default")
+        )
+        keeps = MODE != "no_keep_alpha" and Path(src).suffix.lower() in (
+            (ka.get("containers") or {}).get(line) or []
+        )
+        lossy = sorted(
+            str(o.get("op_id"))
+            for o in pj["operations"]
+            if isinstance(o, dict)
+            and o.get("type") in alpha["refused_for"]
+            and not (keeps and o.get("type") in (ka.get("operations") or []))
+        )
         if lossy:
-            return err("UNSUPPORTED_FORMAT", f"source has an alpha channel ({meta['pix_fmt']}); operation(s) {lossy} would lose it",
-                       {"reason": "alpha_not_preserved", "pix_fmt": meta["pix_fmt"], "op_ids": lossy})
+            return err(
+                "UNSUPPORTED_FORMAT",
+                f"source has an alpha channel ({meta['pix_fmt']}); operation(s) {lossy} would lose it",
+                {
+                    "reason": "alpha_not_preserved",
+                    "pix_fmt": meta["pix_fmt"],
+                    "op_ids": lossy,
+                },
+            )
     results = []
     for i, op in enumerate(ops):
         where = f"operations[{i}]"
-        if not isinstance(op, dict) or set(op) != {"op_id", "type", "input", "parameters"} or not ID_RE.match(str(op["op_id"])):
+        if (
+            not isinstance(op, dict)
+            or set(op) != {"op_id", "type", "input", "parameters"}
+            or not ID_RE.match(str(op["op_id"]))
+        ):
             return err("INVALID_REQUEST", f"{where}: operation shape")
         t = op["type"]
         if t in UNSUPPORTED:
-            return err("UNSUPPORTED_OPERATION", f"{where}.type {t!r} is not implemented", {"type": t})
+            return err(
+                "UNSUPPORTED_OPERATION",
+                f"{where}.type {t!r} is not implemented",
+                {"type": t},
+            )
         if t not in OPS:
-            return err("UNSUPPORTED_OPERATION", f"{where}.type {t!r} is unknown", {"type": t})
+            return err(
+                "UNSUPPORTED_OPERATION", f"{where}.type {t!r} is unknown", {"type": t}
+            )
         schema = OPS[t]["parameters"]
         params = op["parameters"]
         if not isinstance(params, dict) or set(params) - set(schema):
-            return err("INVALID_REQUEST", f"{where}: unknown parameters", {"field": f"{where}.parameters"})
+            return err(
+                "INVALID_REQUEST",
+                f"{where}: unknown parameters",
+                {"field": f"{where}.parameters"},
+            )
         for name, spec in schema.items():
             if spec.get("required") and name not in params:
                 return err("INVALID_REQUEST", f"{where}: {t} needs {name}")
@@ -231,85 +416,302 @@ def main() -> int:
                 if not isinstance(v, bool):
                     return err("INVALID_REQUEST", f"{where}.{name} must be boolean")
             else:
-                if isinstance(v, bool) or not isinstance(v, (int, float)) or ("min" in spec and v < spec["min"]) or ("max" in spec and v > spec["max"]):
+                if (
+                    isinstance(v, bool)
+                    or not isinstance(v, (int, float))
+                    or ("min" in spec and v < spec["min"])
+                    or ("max" in spec and v > spec["max"])
+                ):
                     return err("INVALID_REQUEST", f"{where}.{name} out of range")
         if t == "LUT_APPLY":
             lut = os.path.realpath(str(params["lut_path"]))
             if lut_roots and not any(within(r, lut) for r in lut_roots):
-                return err("PATH_NOT_ALLOWED", "LUT outside allowed roots", {"reason": "outside_allowed_lut_roots"})
+                return err(
+                    "PATH_NOT_ALLOWED",
+                    "LUT outside allowed roots",
+                    {"reason": "outside_allowed_lut_roots"},
+                )
             if not os.path.isfile(lut) or Path(lut).suffix.lower() != ".cube":
-                return err("INVALID_INPUT", "LUT not found or not a .cube", {"reason": "lut"})
-        if t == "MATCH_CAMERA":   # ADR-100: the reference video through the input path policy
+                return err(
+                    "INVALID_INPUT", "LUT not found or not a .cube", {"reason": "lut"}
+                )
+        if (
+            t == "MATCH_CAMERA"
+        ):  # ADR-100: the reference video through the input path policy
             ref = os.path.realpath(str(params["reference_path"]))
-            if (roots and not any(within(r, ref) for r in roots)) or not os.path.isfile(ref):
-                return err("PATH_NOT_ALLOWED", "reference outside the allowed input roots", {"reason": "outside_allowed_roots"})
-        if t == "OCIO_TRANSFORM" and not str(params.get("config", "ocio://")).startswith("ocio://"):   # ADR-100: a .ocio file through the LUT roots
+            if (roots and not any(within(r, ref) for r in roots)) or not os.path.isfile(
+                ref
+            ):
+                return err(
+                    "PATH_NOT_ALLOWED",
+                    "reference outside the allowed input roots",
+                    {"reason": "outside_allowed_roots"},
+                )
+        if t == "OCIO_TRANSFORM" and not str(
+            params.get("config", "ocio://")
+        ).startswith(
+            "ocio://"
+        ):  # ADR-100: a .ocio file through the LUT roots
             cfg = os.path.realpath(str(params["config"]))
             if lut_roots and not any(within(r, cfg) for r in lut_roots):
-                return err("PATH_NOT_ALLOWED", "OCIO config outside allowed roots", {"reason": "outside_allowed_lut_roots"})
-        if t == "HDR_TO_SDR" and (MODE == "not_hdr" or not meta.get("hdr")) and not params.get("force"):
-            return err("TOOL_ERROR", "ffmpeg-skill/color --to-sdr failed: source is not tagged HDR (use force to tone-map anyway)", {"reason": "not_hdr"})   # like the real Skill: the engine refuses, reported as TOOL_ERROR
+                return err(
+                    "PATH_NOT_ALLOWED",
+                    "OCIO config outside allowed roots",
+                    {"reason": "outside_allowed_lut_roots"},
+                )
+        if (
+            t == "HDR_TO_SDR"
+            and (MODE == "not_hdr" or not meta.get("hdr"))
+            and not params.get("force")
+        ):
+            return err(
+                "TOOL_ERROR",
+                "ffmpeg-skill/color --to-sdr failed: source is not tagged HDR (use force to tone-map anyway)",
+                {"reason": "not_hdr"},
+            )  # like the real Skill: the engine refuses, reported as TOOL_ERROR
         extra = {}
-        if t == "HDR_TO_SDR":   # color-grading-skill 0.5.1 (its ADR-28): no tonemap -> mobius for an HLG input, hable otherwise; the choice is recorded
+        if (
+            t == "HDR_TO_SDR"
+        ):  # color-grading-skill 0.5.1 (its ADR-28): no tonemap -> mobius for an HLG input, hable otherwise; the choice is recorded
             transfer = meta.get("color_transfer")
-            rule = "request" if params.get("tonemap") else ("hlg_default" if transfer == "arib-std-b67" else "default")
-            params = dict(params, tonemap=params.get("tonemap") or ("mobius" if rule == "hlg_default" else "hable"))
-            extra["tonemap_selection"] = {"tonemap": params["tonemap"], "rule": rule, "input_transfer": transfer}
-        if alpha and re.match(alpha["pix_fmt_pattern"], str(meta.get("pix_fmt") or "")) and t in ((alpha.get("keep_alpha") or {}).get("operations") or []):
-            extra["alpha"] = {"kept": True, "precision_bits": 8, "alpha_codec": line, "alpha_mode": "straight", "source_colour": "taken as straight (not un-premultiplied)",
-                              "tool": "ffmpeg-skill/color --keep-alpha", "verification": {"step": "alpha", "ok": True},
-                              # 1.1.0 (its ADR-33): how the alpha mode was chosen; the agent sends no alpha_mode, so it is assumed straight
-                              "alpha_mode_selection": {"alpha_mode": "straight", "rule": "assumed", "format_states": False, "codec": str(meta.get("codec") or "")}}
-        results.append({"node_id": f"op:{op['op_id']}", "operation_id": hashlib.sha256(json.dumps([t, params, sha(src)], sort_keys=True).encode()).hexdigest(), "type": t, **extra,
-                        "tool": OPS[t]["tool"], "required_capabilities": OPS[t]["required_capabilities"], "input": op["input"], "parameters": params,
-                        "status": "reused" if MODE == "reused" else "completed", "input_hash": sha(src), "seconds": 0.01, "tool_commands_observed": ["fake ffmpeg -i in -vf x out"], "measurements": {}})
+            rule = (
+                "request"
+                if params.get("tonemap")
+                else ("hlg_default" if transfer == "arib-std-b67" else "default")
+            )
+            params = dict(
+                params,
+                tonemap=params.get("tonemap")
+                or ("mobius" if rule == "hlg_default" else "hable"),
+            )
+            extra["tonemap_selection"] = {
+                "tonemap": params["tonemap"],
+                "rule": rule,
+                "input_transfer": transfer,
+            }
+        if (
+            alpha
+            and re.match(alpha["pix_fmt_pattern"], str(meta.get("pix_fmt") or ""))
+            and t in ((alpha.get("keep_alpha") or {}).get("operations") or [])
+        ):
+            extra["alpha"] = {
+                "kept": True,
+                "precision_bits": 8,
+                "alpha_codec": line,
+                "alpha_mode": "straight",
+                "source_colour": "taken as straight (not un-premultiplied)",
+                "tool": "ffmpeg-skill/color --keep-alpha",
+                "verification": {"step": "alpha", "ok": True},
+                # 1.1.0 (its ADR-33): how the alpha mode was chosen; the agent sends no alpha_mode, so it is assumed straight
+                "alpha_mode_selection": {
+                    "alpha_mode": "straight",
+                    "rule": "assumed",
+                    "format_states": False,
+                    "codec": str(meta.get("codec") or ""),
+                },
+            }
+        results.append(
+            {
+                "node_id": f"op:{op['op_id']}",
+                "operation_id": hashlib.sha256(
+                    json.dumps([t, params, sha(src)], sort_keys=True).encode()
+                ).hexdigest(),
+                "type": t,
+                **extra,
+                "tool": OPS[t]["tool"],
+                "required_capabilities": OPS[t]["required_capabilities"],
+                "input": op["input"],
+                "parameters": params,
+                "status": "reused" if MODE == "reused" else "completed",
+                "input_hash": sha(src),
+                "seconds": 0.01,
+                "tool_commands_observed": ["fake ffmpeg -i in -vf x out"],
+                "measurements": {},
+            }
+        )
     outs = pj["outputs"]
     if not isinstance(outs, list) or len(outs) != 1:
         return err("INVALID_REQUEST", "exactly one output is expected by this fake")
     o = outs[0]
-    if set(o) - {"output_id", "operation", "path", "format", "overwrite", "expect"} or o.get("format") not in CONTRACT["output_formats"]:
+    if (
+        set(o) - {"output_id", "operation", "path", "format", "overwrite", "expect"}
+        or o.get("format") not in CONTRACT["output_formats"]
+    ):
         return err("UNSUPPORTED_FORMAT", "output shape / format")
     out_path = os.path.realpath(str(o["path"]))
     if not within(ws, out_path):
-        return err("PATH_NOT_ALLOWED", "output must be inside the workspace", {"reason": "outside_workspace"})
-    if Path(out_path).suffix.lstrip(".").lower() != o["format"] or Path(src).suffix.lstrip(".").lower() != o["format"]:
-        return err("UNSUPPORTED_FORMAT", "the container is never converted", {"reason": "container"})
-    plan = {"plan_id": hashlib.sha256(json.dumps(pj, sort_keys=True).encode()).hexdigest(), "project_id": pj["project_id"], "work_dir": os.path.join(ws, ".color-grading", pj["project_id"]),
-            "graph": {"order": ["source"] + [r["node_id"] for r in results], "nodes": [], "outputs": {o["output_id"]: o["operation"]}},
-            "source": {"path": src, "sha256": sha(src), "size": os.path.getsize(src), "duration": meta["duration"], "has_video": True, "has_audio": bool(meta.get("channels")), "width": meta["width"], "height": meta["height"], "hdr": bool(meta.get("hdr"))}}
-    base = {"schema": RESPONSE, "skill": {"id": "color-grading", "version": CONTRACT["version"]}, "ok": True, "warnings": [], "plan": plan}
+        return err(
+            "PATH_NOT_ALLOWED",
+            "output must be inside the workspace",
+            {"reason": "outside_workspace"},
+        )
+    if (
+        Path(out_path).suffix.lstrip(".").lower() != o["format"]
+        or Path(src).suffix.lstrip(".").lower() != o["format"]
+    ):
+        return err(
+            "UNSUPPORTED_FORMAT",
+            "the container is never converted",
+            {"reason": "container"},
+        )
+    plan = {
+        "plan_id": hashlib.sha256(json.dumps(pj, sort_keys=True).encode()).hexdigest(),
+        "project_id": pj["project_id"],
+        "work_dir": os.path.join(ws, ".color-grading", pj["project_id"]),
+        "graph": {
+            "order": ["source"] + [r["node_id"] for r in results],
+            "nodes": [],
+            "outputs": {o["output_id"]: o["operation"]},
+        },
+        "source": {
+            "path": src,
+            "sha256": sha(src),
+            "size": os.path.getsize(src),
+            "duration": meta["duration"],
+            "has_video": True,
+            "has_audio": bool(meta.get("channels")),
+            "width": meta["width"],
+            "height": meta["height"],
+            "hdr": bool(meta.get("hdr")),
+        },
+    }
+    base = {
+        "schema": RESPONSE,
+        "skill": {"id": "color-grading", "version": CONTRACT["version"]},
+        "ok": True,
+        "warnings": [],
+        "plan": plan,
+    }
     if dry_run:
-        emit({**base, "status": "ok", "dry_run": True, "results": [], "outputs": [], "tool_runs": []})
+        emit(
+            {
+                **base,
+                "status": "ok",
+                "dry_run": True,
+                "results": [],
+                "outputs": [],
+                "tool_runs": [],
+            }
+        )
         return 0
     if MODE in ("tool_error", "tool_error_final"):
-        return err("TOOL_ERROR", "ffmpeg exited 1", {"reason": "tool_failed", "argv": ["never", "forwarded"]}, retryable=MODE == "tool_error")
+        return err(
+            "TOOL_ERROR",
+            "ffmpeg exited 1",
+            {"reason": "tool_failed", "argv": ["never", "forwarded"]},
+            retryable=MODE == "tool_error",
+        )
     if MODE == "validation_error":
-        return err("VALIDATION_ERROR", "output colour tags do not match the request", {"reason": "verification"})
-    if MODE in ("alpha_lost", "alpha_mismatch", "alpha_unverified", "legal_levels_failed"):   # 0.6.0: ffmpeg-skill/color's own check of the written file failed
-        return err("VALIDATION_ERROR", f"ffmpeg-skill/color's check failed ({MODE})", {"reason": MODE, "path": out_path})
+        return err(
+            "VALIDATION_ERROR",
+            "output colour tags do not match the request",
+            {"reason": "verification"},
+        )
+    if MODE in (
+        "alpha_lost",
+        "alpha_mismatch",
+        "alpha_unverified",
+        "legal_levels_failed",
+    ):  # 0.6.0: ffmpeg-skill/color's own check of the written file failed
+        return err(
+            "VALIDATION_ERROR",
+            f"ffmpeg-skill/color's check failed ({MODE})",
+            {"reason": MODE, "path": out_path},
+        )
     if MODE == "cancelled":
         return err("CANCELLED", "interrupted", {"reason": "signal"})
     last = results[-1]
-    payload = {"fake": True, "duration": meta["duration"], "video": True, "channels": meta.get("channels", 2), "hdr": False if last["type"] == "HDR_TO_SDR" else bool(meta.get("hdr")),
-               "color": last["type"].lower(), "lufs": meta.get("lufs", -11.0),
-               **({"pix_fmt": "yuva444p12le", "codec": "prores"} if last.get("alpha") else {})}   # a kept alpha stays in the file (a later op sees it)
+    payload = {
+        "fake": True,
+        "duration": meta["duration"],
+        "video": True,
+        "channels": meta.get("channels", 2),
+        "hdr": False if last["type"] == "HDR_TO_SDR" else bool(meta.get("hdr")),
+        "color": last["type"].lower(),
+        "lufs": meta.get("lufs", -11.0),
+        **({"pix_fmt": "yuva444p12le", "codec": "prores"} if last.get("alpha") else {}),
+    }  # a kept alpha stays in the file (a later op sees it)
     if MODE != "output_missing":
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         Path(out_path).write_bytes(json.dumps(payload).encode())
     digest = sha(out_path) if os.path.exists(out_path) else "0" * 64
     if MODE == "hash_mismatch":
         digest = "1" * 64
-    art = {"path": out_path, "duration": meta["duration"], "width": meta["width"], "height": meta["height"],
-           "pix_fmt": "yuva444p12le" if last.get("alpha") else "yuv420p", "codec": "prores" if last.get("alpha") else "h264",
-           "color_space": "bt709", "color_primaries": "bt709", "color_transfer": "bt709", "color_range": "tv", "hdr": payload["hdr"], "dolby_vision": False,
-           "size": os.path.getsize(out_path) if os.path.exists(out_path) else 0, "sha256": digest}
-    prov = {"skill": "color-grading", "skill_version": CONTRACT["version"], "tool_versions": TOOL_VERSIONS, "output_hash": digest, "node_id": last["node_id"], "operation_id": last["operation_id"],
-            "operations": [{k: r.get(k) for k in ("node_id", "operation_id", "type", "status", "tool", "parameters", "input_hash")} | {"output_hash": digest} for r in results], "source": {"sha256": sha(src)}}
+    art = {
+        "path": out_path,
+        "duration": meta["duration"],
+        "width": meta["width"],
+        "height": meta["height"],
+        "pix_fmt": "yuva444p12le" if last.get("alpha") else "yuv420p",
+        "codec": "prores" if last.get("alpha") else "h264",
+        "color_space": "bt709",
+        "color_primaries": "bt709",
+        "color_transfer": "bt709",
+        "color_range": "tv",
+        "hdr": payload["hdr"],
+        "dolby_vision": False,
+        "size": os.path.getsize(out_path) if os.path.exists(out_path) else 0,
+        "sha256": digest,
+    }
+    prov = {
+        "skill": "color-grading",
+        "skill_version": CONTRACT["version"],
+        "tool_versions": TOOL_VERSIONS,
+        "output_hash": digest,
+        "node_id": last["node_id"],
+        "operation_id": last["operation_id"],
+        "operations": [
+            {
+                k: r.get(k)
+                for k in (
+                    "node_id",
+                    "operation_id",
+                    "type",
+                    "status",
+                    "tool",
+                    "parameters",
+                    "input_hash",
+                )
+            }
+            | {"output_hash": digest}
+            for r in results
+        ],
+        "source": {"sha256": sha(src)},
+    }
     if MODE == "no_provenance":
         prov = {}
-    doc = {**base, "status": "ok", "dry_run": False, "results": results,
-           "outputs": [{"output_id": o["output_id"], "status": "completed", "path": out_path, "format": o["format"], "artifact": art, "seconds": 0.02, "tool_commands_observed": [], "provenance": prov}],
-           "tool_runs": [{"tool": "ffmpeg-skill/probe", "exit_code": 0, "seconds": 0.01, "commands_observed": []}, {"tool": "ffmpeg-skill/color", "exit_code": 0, "seconds": 0.01, "commands_observed": ["fake ffmpeg -i in -vf x out"]}]}
+    doc = {
+        **base,
+        "status": "ok",
+        "dry_run": False,
+        "results": results,
+        "outputs": [
+            {
+                "output_id": o["output_id"],
+                "status": "completed",
+                "path": out_path,
+                "format": o["format"],
+                "artifact": art,
+                "seconds": 0.02,
+                "tool_commands_observed": [],
+                "provenance": prov,
+            }
+        ],
+        "tool_runs": [
+            {
+                "tool": "ffmpeg-skill/probe",
+                "exit_code": 0,
+                "seconds": 0.01,
+                "commands_observed": [],
+            },
+            {
+                "tool": "ffmpeg-skill/color",
+                "exit_code": 0,
+                "seconds": 0.01,
+                "commands_observed": ["fake ffmpeg -i in -vf x out"],
+            },
+        ],
+    }
     emit(doc)
     if MODE == "two_docs":
         emit(doc)

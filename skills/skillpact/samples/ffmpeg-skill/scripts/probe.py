@@ -9,6 +9,7 @@ Examples:
   python3 probe.py a.mp4 b.mov --compact
   python3 probe.py input.mp4 --field duration
 """
+
 import argparse
 import sys
 
@@ -16,12 +17,27 @@ from _common import add_common, analyze_levels, apply_common, print_json, probe
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("inputs", nargs="+", help="media file(s) to inspect")
-    ap.add_argument("--compact", action="store_true", help="one human-readable line per file instead of JSON")
-    ap.add_argument("--field", help="print only this top-level field (e.g. duration) or dotted path (video.fps)")
-    ap.add_argument("--analyze", action="store_true", help="also sample picture levels (first 20 s) and flag Log-looking footage")
-    add_common(ap)  # --json / --dry-run / --fast / --progress accepted for uniformity; output is JSON already
+    ap.add_argument(
+        "--compact",
+        action="store_true",
+        help="one human-readable line per file instead of JSON",
+    )
+    ap.add_argument(
+        "--field",
+        help="print only this top-level field (e.g. duration) or dotted path (video.fps)",
+    )
+    ap.add_argument(
+        "--analyze",
+        action="store_true",
+        help="also sample picture levels (first 20 s) and flag Log-looking footage",
+    )
+    add_common(
+        ap
+    )  # --json / --dry-run / --fast / --progress accepted for uniformity; output is JSON already
     args = ap.parse_args()
     apply_common(args)
 

@@ -11,6 +11,7 @@ DEFAULT_SECONDS and still runs.
 Before anything runs, the split is verified against the loader's own list of test ids: every id in exactly one shard.
 The chosen shard then runs through `unittest.main`, exactly as `python -m unittest -v <class> <class> ...` would.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,19 +23,46 @@ MODULE = "tests.test_integration"
 # Measured seconds per class on the slower engine leg (ffmpeg-skill v2.24.1, ubuntu-latest). Balance only.
 # VideoEditingFeaturesRealTests: 222 measured, plus about 64 estimated for ADR-112's end-to-end stinger case (its local time at the class's CI / local ratio).
 SECONDS = {
-    "RealMediaTests": 758, "IntegratedPipelineRealTests": 710, "AudioProductionRealTests": 309,
-    "VideoEditingFeaturesRealTests": 286, "VideoEditingOperationsRealTests": 192, "MediaAnalysisRealTests": 191,
-    "SubtitleFeaturesRealTests": 127, "VoiceEnhanceRealTests": 108, "SubtitleMuxRealTests": 96,
-    "ThumbnailFeaturesRealTests": 83, "MotionGraphicsFeaturesRealTests": 82, "NleBridgeRealTests": 69,
-    "PriorityAToolsRealTests": 68, "VideoEditingRealTests": 66, "DocumentVerifyRealTests": 57,
-    "IngestOffloadRealTests": 50, "CropProposalRealTests": 48, "MultiSourceSyncRealTests": 46,
-    "NoAudioSourceTests": 45, "FfmpegSkillContractTests": 44, "CameraSwitchRealTests": 44,
-    "TakeCrossfadeRealTests": 42, "ImagePrepareRealTests": 39, "SlideSyncRealTests": 36,
-    "FaceRedactionRealTests": 34, "TimelineExportRealTests": 33, "DubbingRealTests": 32, "SpeakerIdsRealTests": 32,
-    "SoundDesignBgmRealTests": 30, "ThumbnailDocumentRealTests": 23, "IngestFetchRealTests": 22,
-    "DiarizationRealTests": 22, "RemotionRealTests": 22, "BeatGridRealTests": 18, "TranscriptionRealTests": 18,
-    "PublishRealTests": 2, "ProductionContextRealTests": 1, "ProductionDecisionEngineRealTests": 1,
-    "SpeechToPlanRealTests": 1, "ConcatWholeFramesRealTests": 10,
+    "RealMediaTests": 758,
+    "IntegratedPipelineRealTests": 710,
+    "AudioProductionRealTests": 309,
+    "VideoEditingFeaturesRealTests": 286,
+    "VideoEditingOperationsRealTests": 192,
+    "MediaAnalysisRealTests": 191,
+    "SubtitleFeaturesRealTests": 127,
+    "VoiceEnhanceRealTests": 108,
+    "SubtitleMuxRealTests": 96,
+    "ThumbnailFeaturesRealTests": 83,
+    "MotionGraphicsFeaturesRealTests": 82,
+    "NleBridgeRealTests": 69,
+    "PriorityAToolsRealTests": 68,
+    "VideoEditingRealTests": 66,
+    "DocumentVerifyRealTests": 57,
+    "IngestOffloadRealTests": 50,
+    "CropProposalRealTests": 48,
+    "MultiSourceSyncRealTests": 46,
+    "NoAudioSourceTests": 45,
+    "FfmpegSkillContractTests": 44,
+    "CameraSwitchRealTests": 44,
+    "TakeCrossfadeRealTests": 42,
+    "ImagePrepareRealTests": 39,
+    "SlideSyncRealTests": 36,
+    "FaceRedactionRealTests": 34,
+    "TimelineExportRealTests": 33,
+    "DubbingRealTests": 32,
+    "SpeakerIdsRealTests": 32,
+    "SoundDesignBgmRealTests": 30,
+    "ThumbnailDocumentRealTests": 23,
+    "IngestFetchRealTests": 22,
+    "DiarizationRealTests": 22,
+    "RemotionRealTests": 22,
+    "BeatGridRealTests": 18,
+    "TranscriptionRealTests": 18,
+    "PublishRealTests": 2,
+    "ProductionContextRealTests": 1,
+    "ProductionDecisionEngineRealTests": 1,
+    "SpeechToPlanRealTests": 1,
+    "ConcatWholeFramesRealTests": 10,
 }
 DEFAULT_SECONDS = 60
 
@@ -48,7 +76,9 @@ def discover() -> dict:
         if isinstance(item, unittest.TestSuite):
             stack.extend(item)
             continue
-        if type(item).__module__ != MODULE:   # unittest's stand-in for a module that failed to import
+        if (
+            type(item).__module__ != MODULE
+        ):  # unittest's stand-in for a module that failed to import
             raise SystemExit(f"could not load {MODULE}: {item.id()}")
         classes.setdefault(type(item).__name__, []).append(item.id())
     if not classes:
@@ -58,7 +88,7 @@ def discover() -> dict:
 
 def split(names, shards: int) -> list:
     """Heaviest class first into the lightest shard so far; shards returned lightest first (shard 1 is the lightest)."""
-    weight = lambda n: SECONDS.get(n, DEFAULT_SECONDS)   # noqa: E731
+    weight = lambda n: SECONDS.get(n, DEFAULT_SECONDS)  # noqa: E731
     bins = [[] for _ in range(shards)]
     for name in sorted(names, key=lambda n: (-weight(n), n)):
         min(bins, key=lambda b: sum(map(weight, b))).append(name)
@@ -72,7 +102,9 @@ def verify(classes: dict, bins: list) -> None:
     got = sorted(i for b in bins for name in b for i in classes[name])
     problems = []
     if got != wanted:
-        problems.append(f"shards cover {len(got)} test ids ({len(set(got))} distinct), the module has {len(wanted)}")
+        problems.append(
+            f"shards cover {len(got)} test ids ({len(set(got))} distinct), the module has {len(wanted)}"
+        )
     for name in classes:
         holders = [n for n, b in enumerate(bins, 1) if name in b]
         if len(holders) != 1:
@@ -86,9 +118,13 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--of", type=int, required=True, help="number of shards")
     ap.add_argument("--shard", type=int, help="shard to run, 1..OF")
-    ap.add_argument("--check", action="store_true", help="print and verify the split, run nothing")
+    ap.add_argument(
+        "--check", action="store_true", help="print and verify the split, run nothing"
+    )
     args = ap.parse_args(argv)
-    if args.of < 1 or (not args.check and not (args.shard and 1 <= args.shard <= args.of)):
+    if args.of < 1 or (
+        not args.check and not (args.shard and 1 <= args.shard <= args.of)
+    ):
         ap.error("--shard must be within 1..--of (or pass --check)")
     classes = discover()
     bins = split(classes, args.of)
@@ -96,14 +132,24 @@ def main(argv=None) -> None:
     for n, b in enumerate(bins, 1):
         tests = sum(len(classes[c]) for c in b)
         secs = sum(SECONDS.get(c, DEFAULT_SECONDS) for c in b)
-        print(f"shard {n}/{args.of}: {len(b)} classes, {tests} tests, ~{secs}s: {' '.join(b)}")
+        print(
+            f"shard {n}/{args.of}: {len(b)} classes, {tests} tests, ~{secs}s: {' '.join(b)}"
+        )
     unknown = sorted(set(classes) - set(SECONDS))
     if unknown:
-        print(f"no measured duration (balanced as {DEFAULT_SECONDS}s each): {' '.join(unknown)}")
-    print(f"total: {len(classes)} classes, {sum(map(len, classes.values()))} tests, each in exactly one shard", flush=True)
+        print(
+            f"no measured duration (balanced as {DEFAULT_SECONDS}s each): {' '.join(unknown)}"
+        )
+    print(
+        f"total: {len(classes)} classes, {sum(map(len, classes.values()))} tests, each in exactly one shard",
+        flush=True,
+    )
     if args.check:
         return
-    unittest.main(module=None, argv=["unittest", "-v"] + [f"{MODULE}.{c}" for c in bins[args.shard - 1]])
+    unittest.main(
+        module=None,
+        argv=["unittest", "-v"] + [f"{MODULE}.{c}" for c in bins[args.shard - 1]],
+    )
 
 
 if __name__ == "__main__":

@@ -27,7 +27,9 @@ class QCReportCache:
     def _path_for(self, key: str) -> Path:
         return self.directory / key[:2] / f"{key}.json"
 
-    def get(self, key: str, expected_metadata: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def get(
+        self, key: str, expected_metadata: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         path = self._path_for(key)
         if not path.exists():
             return None
@@ -65,7 +67,9 @@ class QCReportCache:
             "result_hash": stable_hash(report),
             "report": report,
         }
-        fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp-", suffix=".json")
+        fd, tmp_path = tempfile.mkstemp(
+            dir=str(path.parent), prefix=".tmp-", suffix=".json"
+        )
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
                 json.dump(entry, fh, sort_keys=True, separators=(",", ":"))

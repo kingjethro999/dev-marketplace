@@ -1,5 +1,6 @@
 """Tiny stdlib-only PNG writer for tests. No Pillow, no committed binaries -
 fixtures are generated on the fly with struct + zlib."""
+
 import struct
 import zlib
 
@@ -34,7 +35,9 @@ def write_solid_png(path, width, height, rgb=(200, 60, 60)):
     write_png(path, width, height, lambda x, y: rgb)
 
 
-def write_bordered_png(path, width, height, border, border_rgb=(255, 255, 255), center_rgb=(20, 120, 200)):
+def write_bordered_png(
+    path, width, height, border, border_rgb=(255, 255, 255), center_rgb=(20, 120, 200)
+):
     def pixel(x, y):
         if border <= x < width - border and border <= y < height - border:
             return center_rgb
@@ -90,7 +93,12 @@ def build_exif_gps_app1(lat_deg=40.0, lon_deg=10.0):
     add_ascii(3, "E" if lon_deg >= 0 else "W")  # GPSLongitudeRef
     add_rational3(4, dms(abs(lon_deg)))  # GPSLongitude
 
-    gps_ifd = struct.pack("<H", gps_entry_count) + b"".join(entries) + struct.pack("<I", 0) + bytes(data)
+    gps_ifd = (
+        struct.pack("<H", gps_entry_count)
+        + b"".join(entries)
+        + struct.pack("<I", 0)
+        + bytes(data)
+    )
     ifd0 = (
         struct.pack("<H", 1)
         + struct.pack("<HHII", 0x8825, 4, 1, gps_ifd_offset)
@@ -102,13 +110,17 @@ def build_exif_gps_app1(lat_deg=40.0, lon_deg=10.0):
     return b"\xff\xe1" + struct.pack(">H", len(payload) + 2) + payload
 
 
-def write_jpeg_with_gps(magick_bin, base_png_path, dest_jpg_path, lat_deg=40.0, lon_deg=10.0):
+def write_jpeg_with_gps(
+    magick_bin, base_png_path, dest_jpg_path, lat_deg=40.0, lon_deg=10.0
+):
     """Convert base_png_path to a plain JPEG (no metadata) with `magick`, then splice
     in a hand-built EXIF/GPS APP1 segment right after the SOI marker."""
     import subprocess
 
     plain_jpg = dest_jpg_path + ".plain.jpg"
-    subprocess.run([magick_bin, base_png_path, plain_jpg], check=True, capture_output=True)
+    subprocess.run(
+        [magick_bin, base_png_path, plain_jpg], check=True, capture_output=True
+    )
 
     with open(plain_jpg, "rb") as f:
         jpeg_bytes = f.read()
@@ -140,7 +152,9 @@ def write_jpeg_with_orientation(magick_bin, base_png_path, dest_jpg_path, orient
     import subprocess
 
     plain_jpg = dest_jpg_path + ".plain.jpg"
-    subprocess.run([magick_bin, base_png_path, plain_jpg], check=True, capture_output=True)
+    subprocess.run(
+        [magick_bin, base_png_path, plain_jpg], check=True, capture_output=True
+    )
     with open(plain_jpg, "rb") as f:
         jpeg_bytes = f.read()
     if jpeg_bytes[:2] != b"\xff\xd8":
@@ -176,6 +190,7 @@ def fringed_disc_alpha(x, y, cx, cy, radius):
 def write_fringed_logo_png(path, size=40, rgb=(200, 20, 40), matte=(255, 255, 255)):
     """A cut-out disc whose soft edge was blended with `matte` (the white fringe of a
     logo cut from a white background): straight alpha, colour = a*rgb + (1-a)*matte."""
+
     def pixel(x, y):
         a = fringed_disc_alpha(x, y, size / 2, size / 2, size / 2 - 4)
         if a == 0:

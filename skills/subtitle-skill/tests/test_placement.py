@@ -1,4 +1,5 @@
 """Roadmap step 8: captions placed away from faces (docs/adr/ADR-006-caption-placement.md)."""
+
 import json
 import shutil
 import subprocess
@@ -30,7 +31,12 @@ def _doc(cues, language="en"):
 
 def _ten_cues():
     # one cue a second, 0.9 s long: c0 [0, 0.9) ... c9 [9, 9.9)
-    return _doc([{"id": f"c{i}", "start": i, "end": i + 0.9, "text": f"line {i}"} for i in range(10)])
+    return _doc(
+        [
+            {"id": f"c{i}", "start": i, "end": i + 0.9, "text": f"line {i}"}
+            for i in range(10)
+        ]
+    )
 
 
 def _workspace(tmp_path):
@@ -56,20 +62,33 @@ def test_face_low_for_2_to_5_s_moves_only_those_cues(tmp_path):
 def test_one_decision_per_cue_never_mid_cue(tmp_path):
     # a cue spanning the face's arrival (1.5 - 2.5 s) moves as a whole
     policy = _workspace(tmp_path)
-    doc = _doc([{"id": "a", "start": 0.0, "end": 1.4, "text": "a"},
-                {"id": "b", "start": 1.5, "end": 2.5, "text": "b"}])
+    doc = _doc(
+        [
+            {"id": "a", "start": 0.0, "end": 1.4, "text": "a"},
+            {"id": "b", "start": 1.5, "end": 2.5, "text": "b"},
+        ]
+    )
     plan = plan_placement(doc, parse_placement({"faces": "faces.json"}, policy))
     assert plan.positions == {"a": "bottom", "b": "top"}
 
 
 def test_min_hold_keeps_a_short_bottom_run_at_the_top():
     low = Box(0.4, 0.75, 0.2, 0.2)
-    faces = [Obstacle("face", low, t, t, t=t, source_box=[1, 2, 3, 4]) for t in (0.5, 2.5)]
-    doc = _doc([
-        {"id": "a", "start": 0.0, "end": 1.0, "text": "a"},
-        {"id": "b", "start": 1.2, "end": 1.8, "text": "b"},  # no face; 1.0 s between a and c
-        {"id": "c", "start": 2.0, "end": 3.0, "text": "c"},
-    ])
+    faces = [
+        Obstacle("face", low, t, t, t=t, source_box=[1, 2, 3, 4]) for t in (0.5, 2.5)
+    ]
+    doc = _doc(
+        [
+            {"id": "a", "start": 0.0, "end": 1.0, "text": "a"},
+            {
+                "id": "b",
+                "start": 1.2,
+                "end": 1.8,
+                "text": "b",
+            },  # no face; 1.0 s between a and c
+            {"id": "c", "start": 2.0, "end": 3.0, "text": "c"},
+        ]
+    )
     held = plan_from_obstacles(doc, faces, [], step=0.0, min_hold=1.5)
     assert held.positions == {"a": "top", "b": "top", "c": "top"}
     assert [m["reason"] for m in held.moves] == ["face", "min_hold", "face"]
@@ -80,17 +99,36 @@ def test_min_hold_keeps_a_short_bottom_run_at_the_top():
 def test_named_region_is_avoided_like_a_face(tmp_path):
     policy = PathPolicy(str(tmp_path))
     spec = parse_placement(
-        {"avoid": [{"name": "lower-third", "box": [0.0, 0.7, 1.0, 0.2], "start": 3.0, "end": 6.0}]}, policy
+        {
+            "avoid": [
+                {
+                    "name": "lower-third",
+                    "box": [0.0, 0.7, 1.0, 0.2],
+                    "start": 3.0,
+                    "end": 6.0,
+                }
+            ]
+        },
+        policy,
     )
     plan = plan_placement(_ten_cues(), spec)
     assert plan.top_cue_ids() == {"c3", "c4", "c5"}
-    assert plan.moves[0]["cause"] == {"kind": "region", "name": "lower-third", "box_norm": [0.0, 0.7, 1.0, 0.2]}
+    assert plan.moves[0]["cause"] == {
+        "kind": "region",
+        "name": "lower-third",
+        "box_norm": [0.0, 0.7, 1.0, 0.2],
+    }
 
 
 def test_both_boxes_blocked_keeps_the_cue_down_and_reports_it():
     tall = Box(0.0, 0.0, 1.0, 1.0)
-    plan = plan_from_obstacles(_doc([{"id": "a", "start": 0, "end": 1, "text": "a"}]),
-                               [], [Obstacle("region", tall, 0, 10, name="sign-language")], step=0, min_hold=1)
+    plan = plan_from_obstacles(
+        _doc([{"id": "a", "start": 0, "end": 1, "text": "a"}]),
+        [],
+        [Obstacle("region", tall, 0, 10, name="sign-language")],
+        step=0,
+        min_hold=1,
+    )
     assert plan.positions == {"a": "bottom"}
     assert plan.unavoidable[0]["cue_id"] == "a"
 
@@ -99,15 +137,34 @@ def test_reframe_maps_face_boxes_into_the_crop(tmp_path):
     # the 9:16 crop [400, 0, 202, 360] of the 640x360 source: the low face (x 260-380)
     # is outside it, so nothing moves after the crop
     policy = _workspace(tmp_path)
-    reframe = {"schema": "detection-skill/reframe@1", "frame_size": {"width": 640, "height": 360},
-               "shots": [{"index": 0, "start": 0.0, "end": 10.0, "x": 400, "y": 0, "width": 202, "height": 360}]}
+    reframe = {
+        "schema": "detection-skill/reframe@1",
+        "frame_size": {"width": 640, "height": 360},
+        "shots": [
+            {
+                "index": 0,
+                "start": 0.0,
+                "end": 10.0,
+                "x": 400,
+                "y": 0,
+                "width": 202,
+                "height": 360,
+            }
+        ],
+    }
     (tmp_path / "reframe.json").write_text(json.dumps(reframe), encoding="utf-8")
-    plan = plan_placement(_ten_cues(), parse_placement({"faces": "faces.json", "reframe": "reframe.json"}, policy))
+    plan = plan_placement(
+        _ten_cues(),
+        parse_placement({"faces": "faces.json", "reframe": "reframe.json"}, policy),
+    )
     assert plan.top_cue_ids() == frozenset()
     # a crop that contains the face: the same three cues move
     reframe["shots"][0]["x"] = 220
     (tmp_path / "reframe.json").write_text(json.dumps(reframe), encoding="utf-8")
-    plan = plan_placement(_ten_cues(), parse_placement({"faces": "faces.json", "reframe": "reframe.json"}, policy))
+    plan = plan_placement(
+        _ten_cues(),
+        parse_placement({"faces": "faces.json", "reframe": "reframe.json"}, policy),
+    )
     assert plan.top_cue_ids() == {"c2", "c3", "c4"}
     assert plan.inputs["reframe"]["windows"] == 1
 
@@ -132,14 +189,21 @@ def test_bad_placement_is_refused(tmp_path, raw):
 
 def test_faces_must_be_a_face_detections_document(tmp_path):
     policy = PathPolicy(str(tmp_path))
-    (tmp_path / "f.json").write_text(json.dumps({"schema": "detection-skill/detections@1", "kind": "text"}))
+    (tmp_path / "f.json").write_text(
+        json.dumps({"schema": "detection-skill/detections@1", "kind": "text"})
+    )
     with pytest.raises(SubtitleSkillError) as exc:
         plan_placement(_ten_cues(), parse_placement({"faces": "f.json"}, policy))
     assert exc.value.code == "INVALID_INPUT"
 
 
 def test_ass_has_per_event_alignment_and_escapes_text():
-    doc = _doc([{"id": "a", "start": 0, "end": 1, "text": "{x}\\N"}, {"id": "b", "start": 1, "end": 2, "text": "b"}])
+    doc = _doc(
+        [
+            {"id": "a", "start": 0, "end": 1, "text": "{x}\\N"},
+            {"id": "b", "start": 1, "end": 2, "text": "b"},
+        ]
+    )
     ass = generate_ass(doc, width=640, height=360, positions={"b": "top"})
     assert "PlayResX: 640" in ass and "PlayResY: 360" in ass
     events = [line for line in ass.splitlines() if line.startswith("Dialogue:")]
@@ -152,8 +216,15 @@ def test_ass_has_per_event_alignment_and_escapes_text():
 
 
 def test_soft_track_gets_an8_on_moved_cues():
-    srt = generate_srt(_doc([{"id": "a", "start": 0, "end": 1, "text": "a"}, {"id": "b", "start": 1, "end": 2, "text": "b"}]),
-                       top_cue_ids=frozenset({"b"}))
+    srt = generate_srt(
+        _doc(
+            [
+                {"id": "a", "start": 0, "end": 1, "text": "a"},
+                {"id": "b", "start": 1, "end": 2, "text": "b"},
+            ]
+        ),
+        top_cue_ids=frozenset({"b"}),
+    )
     assert "\n{\\an8}b\n" in srt and "\na\n" in srt
 
 
@@ -169,16 +240,35 @@ def test_caption_boxes_follow_caption_py_defaults():
 @pytest.fixture
 def ffmpeg_skill_install(tmp_path, monkeypatch):
     install_dir = tmp_path / "ffmpeg-skill-install"
-    shutil.copytree(VENDOR_ROOT / "scripts", install_dir / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(
+        VENDOR_ROOT / "scripts",
+        install_dir / "scripts",
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
     monkeypatch.setenv("SUBTITLE_SKILL_FFMPEG_SKILL_DIR", str(install_dir))
     return install_dir
 
 
 def _gray_frame(path, t, width, height):
     proc = subprocess.run(
-        [shutil.which("ffmpeg"), "-v", "error", "-ss", str(t), "-i", str(path), "-frames:v", "1",
-         "-f", "rawvideo", "-pix_fmt", "gray", "-"],
-        capture_output=True, check=True,
+        [
+            shutil.which("ffmpeg"),
+            "-v",
+            "error",
+            "-ss",
+            str(t),
+            "-i",
+            str(path),
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "gray",
+            "-",
+        ],
+        capture_output=True,
+        check=True,
     )
     data = proc.stdout
     assert len(data) == width * height
@@ -186,7 +276,9 @@ def _gray_frame(path, t, width, height):
 
 
 def _bright_rows(frame, width, y0, y1):
-    return sum(1 for y in range(y0, y1) if max(frame[y * width:(y + 1) * width]) > 200)
+    return sum(
+        1 for y in range(y0, y1) if max(frame[y * width : (y + 1) * width]) > 200
+    )
 
 
 def test_render_burns_moved_cues_at_the_top(tmp_path, ffmpeg_skill_install):
@@ -196,9 +288,21 @@ def test_render_burns_moved_cues_at_the_top(tmp_path, ffmpeg_skill_install):
 
     width, height = 640, 360
     subprocess.run(
-        [shutil.which("ffmpeg"), "-y", "-f", "lavfi", "-i", f"color=c=0x203040:s={width}x{height}:d=10:r=25",
-         "-c:v", "libx264", "-pix_fmt", "yuv420p", str(tmp_path / "in.mp4")],
-        check=True, capture_output=True,
+        [
+            shutil.which("ffmpeg"),
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c=0x203040:s={width}x{height}:d=10:r=25",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            str(tmp_path / "in.mp4"),
+        ],
+        check=True,
+        capture_output=True,
     )
     shutil.copy(FIXTURES / "faces_low_2_5s.json", tmp_path / "faces.json")
     request = {
@@ -214,7 +318,12 @@ def test_render_burns_moved_cues_at_the_top(tmp_path, ffmpeg_skill_install):
     assert response["status"] == "ok"
     assert response["placement"]["top_cues"] == ["c2", "c3", "c4"]
     sidecar = json.loads((tmp_path / "out.mp4.subtitle-skill.json").read_text())
-    assert sidecar["placement"]["moves"][0]["cause"]["box"] == [260.0, 250.0, 120.0, 100.0]
+    assert sidecar["placement"]["moves"][0]["cause"]["box"] == [
+        260.0,
+        250.0,
+        120.0,
+        100.0,
+    ]
     # burned from subtitle-skill's ASS (per-event alignment), not caption.py's SRT force_style
     commands = sidecar["engine_response"]["commands"]
     assert any("ass=" in c and ".subtitle-skill-src.ass" in c for c in commands)
@@ -224,9 +333,15 @@ def test_render_burns_moved_cues_at_the_top(tmp_path, ffmpeg_skill_install):
     top = (0, height // 2)
     bottom = (height // 2, height)
     at_top = _gray_frame(out, 3.4, width, height)  # c3: moved
-    assert _bright_rows(at_top, width, *top) > 5 and _bright_rows(at_top, width, *bottom) == 0
+    assert (
+        _bright_rows(at_top, width, *top) > 5
+        and _bright_rows(at_top, width, *bottom) == 0
+    )
     at_bottom = _gray_frame(out, 6.4, width, height)  # c6: not moved
-    assert _bright_rows(at_bottom, width, *bottom) > 5 and _bright_rows(at_bottom, width, *top) == 0
+    assert (
+        _bright_rows(at_bottom, width, *bottom) > 5
+        and _bright_rows(at_bottom, width, *top) == 0
+    )
 
     # a second run with the same inputs is reused; changing the faces file is not
     assert execute(request)["reused"] is True
@@ -238,19 +353,51 @@ def test_render_mux_with_placement_tags_moved_cues(tmp_path, ffmpeg_skill_instal
     from subtitle_skill.operations import execute
 
     subprocess.run(
-        [shutil.which("ffmpeg"), "-y", "-f", "lavfi", "-i", "color=c=blue:s=640x360:d=10:r=25",
-         "-c:v", "libx264", "-pix_fmt", "yuv420p", str(tmp_path / "in.mp4")],
-        check=True, capture_output=True,
+        [
+            shutil.which("ffmpeg"),
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=blue:s=640x360:d=10:r=25",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            str(tmp_path / "in.mp4"),
+        ],
+        check=True,
+        capture_output=True,
     )
     shutil.copy(FIXTURES / "faces_low_2_5s.json", tmp_path / "faces.json")
-    response = execute({
-        "operation": "render", "workspace": str(tmp_path), "format": "srt", "output_path": "out.mkv",
-        "video_input": "in.mp4", "subtitle": _ten_cues().to_dict(), "mode": "mux",
-        "placement": {"faces": "faces.json"},
-    })
+    response = execute(
+        {
+            "operation": "render",
+            "workspace": str(tmp_path),
+            "format": "srt",
+            "output_path": "out.mkv",
+            "video_input": "in.mp4",
+            "subtitle": _ten_cues().to_dict(),
+            "mode": "mux",
+            "placement": {"faces": "faces.json"},
+        }
+    )
     assert response["placement"]["top_cues"] == ["c2", "c3", "c4"]
     proc = subprocess.run(
-        [shutil.which("ffmpeg"), "-v", "error", "-i", str(tmp_path / "out.mkv"), "-map", "0:s:0", "-f", "srt", "-"],
-        capture_output=True, text=True, check=True,
+        [
+            shutil.which("ffmpeg"),
+            "-v",
+            "error",
+            "-i",
+            str(tmp_path / "out.mkv"),
+            "-map",
+            "0:s:0",
+            "-f",
+            "srt",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     )
     assert proc.stdout.count("{\\an8}") == 3

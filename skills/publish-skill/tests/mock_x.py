@@ -24,7 +24,9 @@ consumed one entry per request, each one of
   ("drop",)                              (append) read the segment, keep none of it, drop the connection
   ("lost",)                              (append, post) do the work, then drop the connection (the answer is lost)
   ("stall", seconds)                     wait, then drop the connection without answering (the client times out)
-  ("call", fn)                           run fn() first (e.g. edit the file mid-upload), then answer normally"""
+  ("call", fn)                           run fn() first (e.g. edit the file mid-upload), then answer normally
+"""
+
 from __future__ import annotations
 
 import json
@@ -41,7 +43,11 @@ _PATH = re.compile(r"^/2/media/upload/([0-9]{1,19})/(append|finalize)$")
 
 
 def problem(status: int, detail: Optional[str] = None, title: str = "Error") -> bytes:
-    body: Dict[str, Any] = {"type": "https://api.x.com/2/problems/invalid-request", "title": title, "status": status}
+    body: Dict[str, Any] = {
+        "type": "https://api.x.com/2/problems/invalid-request",
+        "title": title,
+        "status": status,
+    }
     if detail:
         body["detail"] = detail
     return json.dumps(body).encode()
@@ -63,13 +69,19 @@ def parse_multipart(content_type: str, raw: bytes) -> Dict[str, bytes]:
 
 
 class MockX:
-    def __init__(self, access_token: str, processing: Optional[List[Dict[str, Any]]] = None) -> None:
+    def __init__(
+        self, access_token: str, processing: Optional[List[Dict[str, Any]]] = None
+    ) -> None:
         self.token = access_token
         self.processing = processing or []
         self.faults: Dict[str, List[Any]] = {}
-        self.media: Dict[str, Dict[str, Any]] = {}    # media id -> {"total", "type", "segments", "data", "polls"}
-        self.requests: List[Dict[str, Any]] = []      # every request: kind, method, path, headers, length, segment
-        self.posts: List[Dict[str, Any]] = []         # every post made: {"id", "body", "data"}
+        self.media: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # media id -> {"total", "type", "segments", "data", "polls"}
+        self.requests: List[Dict[str, Any]] = (
+            []
+        )  # every request: kind, method, path, headers, length, segment
+        self.posts: List[Dict[str, Any]] = []  # every post made: {"id", "body", "data"}
         self.inits: List[Dict[str, Any]] = []
         self.lock = threading.Lock()
         self.server: Optional[ThreadingHTTPServer] = None
@@ -99,7 +111,11 @@ class MockX:
         self.url = f"http://127.0.0.1:{self.port}"
         self._allowed = allowed_ports
         allowed_ports.add(self.port)
-        threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
+        threading.Thread(
+            target=self.server.serve_forever,
+            kwargs={"poll_interval": 0.05},
+            daemon=True,
+        ).start()
         return self
 
     def stop(self) -> None:
@@ -137,8 +153,14 @@ class MockX:
             kind, media_id = "post", ""
         else:
             kind, media_id = "unknown", ""
-        record: Dict[str, Any] = {"kind": kind, "method": method, "path": parts.path, "query": parts.query,
-                                  "headers": headers, "length": length}
+        record: Dict[str, Any] = {
+            "kind": kind,
+            "method": method,
+            "path": parts.path,
+            "query": parts.query,
+            "headers": headers,
+            "length": length,
+        }
         with self.lock:
             self.requests.append(record)
         raw = h.rfile.read(length) if length else b""
@@ -151,7 +173,12 @@ class MockX:
                 time.sleep(fault[1])
                 return self._drop(h)
             elif fault[0] == "status":
-                return self._send(h, fault[1], problem(fault[1], fault[2]), fault[3] if len(fault) > 3 else {})
+                return self._send(
+                    h,
+                    fault[1],
+                    problem(fault[1], fault[2]),
+                    fault[3] if len(fault) > 3 else {},
+                )
         if kind == "unknown":
             return self._send(h, 404, problem(404, "not found"))
         if headers.get("authorization") != "Bearer " + self.token:
@@ -166,26 +193,55 @@ class MockX:
             return self._status(h, parse_qs(parts.query), media_id)
         return self._post(h, headers, raw, fault)
 
-    def _init(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes) -> None:
+    def _init(
+        self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes
+    ) -> None:
         if headers.get("content-type") != "application/json":
             return self._send(h, 400, problem(400, "Content-Type"))
         try:
             body = json.loads(raw.decode("utf-8"))
         except ValueError:
             return self._send(h, 400, problem(400, "body"))
-        if body.get("media_type") not in VIDEO_TYPES or not isinstance(body.get("total_bytes"), int) \
-                or body["total_bytes"] <= 0 or body.get("media_category") != "tweet_video":
+        if (
+            body.get("media_type") not in VIDEO_TYPES
+            or not isinstance(body.get("total_bytes"), int)
+            or body["total_bytes"] <= 0
+            or body.get("media_category") != "tweet_video"
+        ):
             return self._send(h, 400, problem(400, "invalid initialize body"))
         with self.lock:
             media_id = str(1880000000000000000 + len(self.inits))
             self.inits.append(body)
-            self.media[media_id] = {"total": body["total_bytes"], "type": body["media_type"], "segments": {},
-                                    "data": None, "polls": 0}
-        return self._send(h, 200, json.dumps({"data": {"id": media_id, "media_key": "7_" + media_id,
-                                                       "expires_after_secs": 86400}}).encode())
+            self.media[media_id] = {
+                "total": body["total_bytes"],
+                "type": body["media_type"],
+                "segments": {},
+                "data": None,
+                "polls": 0,
+            }
+        return self._send(
+            h,
+            200,
+            json.dumps(
+                {
+                    "data": {
+                        "id": media_id,
+                        "media_key": "7_" + media_id,
+                        "expires_after_secs": 86400,
+                    }
+                }
+            ).encode(),
+        )
 
-    def _append(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes, media_id: str,
-                record: Dict[str, Any], fault: Any) -> None:
+    def _append(
+        self,
+        h: BaseHTTPRequestHandler,
+        headers: Dict[str, str],
+        raw: bytes,
+        media_id: str,
+        record: Dict[str, Any],
+        fault: Any,
+    ) -> None:
         u = self.media.get(media_id)
         if u is None:
             return self._send(h, 404, problem(404, "unknown media id"))
@@ -205,7 +261,9 @@ class MockX:
             u["segments"][index] = fields["media"]
         if fault is not None and fault[0] == "lost":
             return self._drop(h)
-        return self._send(h, 200, json.dumps({"data": {"expires_at": 1793000000}}).encode())
+        return self._send(
+            h, 200, json.dumps({"data": {"expires_at": 1793000000}}).encode()
+        )
 
     def _info(self, u: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not self.processing:
@@ -221,9 +279,17 @@ class MockX:
                 return self._send(h, 404, problem(404, "unknown media id"))
             data = b"".join(u["segments"][i] for i in sorted(u["segments"]))
             if len(data) != u["total"]:
-                return self._send(h, 400, problem(400, f"expected {u['total']} bytes, got {len(data)}"))
+                return self._send(
+                    h,
+                    400,
+                    problem(400, f"expected {u['total']} bytes, got {len(data)}"),
+                )
             u["data"] = data
-            out: Dict[str, Any] = {"id": media_id, "size": len(data), "expires_after_secs": 86399}
+            out: Dict[str, Any] = {
+                "id": media_id,
+                "size": len(data),
+                "expires_after_secs": 86399,
+            }
             info = self._info(u)
             if info is not None:
                 out["processing_info"] = info
@@ -232,16 +298,24 @@ class MockX:
                 u["state"] = "succeeded"
         return self._send(h, 200, json.dumps({"data": out}).encode())
 
-    def _status(self, h: BaseHTTPRequestHandler, query: Dict[str, List[str]], media_id: str) -> None:
+    def _status(
+        self, h: BaseHTTPRequestHandler, query: Dict[str, List[str]], media_id: str
+    ) -> None:
         with self.lock:
             u = self.media.get(media_id)
             if u is None or query.get("command") != ["STATUS"]:
                 return self._send(h, 400, problem(400, "media_id"))
             info = self._info(u) or {"state": "succeeded", "progress_percent": 100}
             u["state"] = info.get("state")
-        return self._send(h, 200, json.dumps({"data": {"id": media_id, "processing_info": info}}).encode())
+        return self._send(
+            h,
+            200,
+            json.dumps({"data": {"id": media_id, "processing_info": info}}).encode(),
+        )
 
-    def _post(self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes, fault: Any) -> None:
+    def _post(
+        self, h: BaseHTTPRequestHandler, headers: Dict[str, str], raw: bytes, fault: Any
+    ) -> None:
         if headers.get("content-type") != "application/json":
             return self._send(h, 400, problem(400, "Content-Type"))
         try:
@@ -257,17 +331,36 @@ class MockX:
             self.posts.append({"id": post_id, "body": body, "data": u["data"]})
         if fault is not None and fault[0] == "lost":
             return self._drop(h)
-        return self._send(h, 201, json.dumps({"data": {"id": post_id, "text": body.get("text", ""),
-                                                       "edit_history_post_ids": [post_id]}}).encode())
+        return self._send(
+            h,
+            201,
+            json.dumps(
+                {
+                    "data": {
+                        "id": post_id,
+                        "text": body.get("text", ""),
+                        "edit_history_post_ids": [post_id],
+                    }
+                }
+            ).encode(),
+        )
 
     @staticmethod
-    def _send(h: BaseHTTPRequestHandler, code: int, body: bytes, headers: Optional[Dict[str, str]] = None) -> None:
+    def _send(
+        h: BaseHTTPRequestHandler,
+        code: int,
+        body: bytes,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> None:
         try:
             h.send_response(code)
             for k, v in (headers or {}).items():
                 h.send_header(k, v)
             if body:
-                h.send_header("Content-Type", "application/json" if code < 400 else "application/problem+json")
+                h.send_header(
+                    "Content-Type",
+                    "application/json" if code < 400 else "application/problem+json",
+                )
             h.send_header("Content-Length", str(len(body)))
             h.end_headers()
             if body:

@@ -26,6 +26,7 @@ never imports anything from `execution/` — it only reads a Capability Contract
 (a plain dict, already fetched by the caller) and the Agent's own already-registered,
 static `SkillPackage` / `SkillSpec` declarations. It is pure and side-effect-free.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -34,7 +35,13 @@ from typing import Any, Dict, List, Optional
 from .contract import SkillPackage
 from .registry import SkillSpec
 
-STATUSES = ("PROVIDES_VALID", "PROVIDES_MISMATCH", "CAPABILITY_UNCONSUMED", "CAPABILITY_MISSING", "UNKNOWN")
+STATUSES = (
+    "PROVIDES_VALID",
+    "PROVIDES_MISMATCH",
+    "CAPABILITY_UNCONSUMED",
+    "CAPABILITY_MISSING",
+    "UNKNOWN",
+)
 
 
 @dataclass
@@ -46,16 +53,23 @@ class ProvidesFinding:
     name/status/detail/evidence — deliberately, so a reader already familiar with
     either reads this the same way; not a new, unrelated reporting shape.
     """
-    capability_id: str      # "" when there is no known Capability id (a CAPABILITY_MISSING/UNKNOWN case with no provides[] match at all)
+
+    capability_id: str  # "" when there is no known Capability id (a CAPABILITY_MISSING/UNKNOWN case with no provides[] match at all)
     skill_id: str
     tool_id: str
-    status: str              # one of STATUSES
+    status: str  # one of STATUSES
     detail: str
     evidence: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"capability_id": self.capability_id, "skill_id": self.skill_id, "tool_id": self.tool_id,
-                "status": self.status, "detail": self.detail, "evidence": self.evidence}
+        return {
+            "capability_id": self.capability_id,
+            "skill_id": self.skill_id,
+            "tool_id": self.tool_id,
+            "status": self.status,
+            "detail": self.detail,
+            "evidence": self.evidence,
+        }
 
 
 def extract_provides(contract: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -73,7 +87,11 @@ def extract_provides(contract: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]
     return provides if isinstance(provides, list) else []
 
 
-def check_provides(package: SkillPackage, contract: Optional[Dict[str, Any]], skill_specs: List[SkillSpec]) -> List[ProvidesFinding]:
+def check_provides(
+    package: SkillPackage,
+    contract: Optional[Dict[str, Any]],
+    skill_specs: List[SkillSpec],
+) -> List[ProvidesFinding]:
     """The core algorithm; pure, no I/O.
 
     `package` — this Skill's already-registered `SkillPackage` (whatever tool ids this
@@ -89,14 +107,25 @@ def check_provides(package: SkillPackage, contract: Optional[Dict[str, Any]], sk
     individual capabilities from the Agent's own expectations alone.
     """
     if contract is None:
-        return [ProvidesFinding("", package.skill_id, "", "UNKNOWN",
-                                 "no Capability Contract document was available for this package (not installed, "
-                                 "or its adapter does not expose a fetched contract) -- consumption cannot be verified")]
+        return [
+            ProvidesFinding(
+                "",
+                package.skill_id,
+                "",
+                "UNKNOWN",
+                "no Capability Contract document was available for this package (not installed, "
+                "or its adapter does not expose a fetched contract) -- consumption cannot be verified",
+            )
+        ]
 
     prefix = package.skill_id + "/"
     agent_tool_ids = {t.tool_id for t in package.tools}
     consumed_tool_ids = {tid for spec in skill_specs for tid in spec.tools}
-    entries = [e for e in extract_provides(contract) if isinstance(e, dict) and e.get("id") and e.get("tool_id")]
+    entries = [
+        e
+        for e in extract_provides(contract)
+        if isinstance(e, dict) and e.get("id") and e.get("tool_id")
+    ]
 
     # Some Skills expose every Capability id through one shared, generic tool id (e.g. "qc/run",
     # "color-grading/run") -- the internal operation is a request parameter, not a distinguishable
@@ -107,7 +136,9 @@ def check_provides(package: SkillPackage, contract: Optional[Dict[str, Any]], sk
     for e in entries:
         tool_id_to_cap_ids.setdefault(str(e["tool_id"]), []).append(str(e["id"]))
 
-    provided_tool_ids: Dict[str, str] = {}   # tool_id -> the first Capability id seen for it
+    provided_tool_ids: Dict[str, str] = (
+        {}
+    )  # tool_id -> the first Capability id seen for it
     findings: List[ProvidesFinding] = []
 
     for entry in entries:
@@ -116,52 +147,100 @@ def check_provides(package: SkillPackage, contract: Optional[Dict[str, Any]], sk
         provided_tool_ids.setdefault(tool_id, cap_id)
         lifecycle = entry.get("lifecycle")
         siblings = [c for c in tool_id_to_cap_ids[tool_id] if c != cap_id]
-        shared_note = (f" -- this tool id is shared by {len(siblings) + 1} Capability ids "
-                        f"({', '.join(sorted([cap_id] + siblings))}); this finding reflects only that the shared "
-                        "tool id is reachable/consumed, not that this specific Capability id is separately "
-                        "requested" if siblings else "")
+        shared_note = (
+            f" -- this tool id is shared by {len(siblings) + 1} Capability ids "
+            f"({', '.join(sorted([cap_id] + siblings))}); this finding reflects only that the shared "
+            "tool id is reachable/consumed, not that this specific Capability id is separately "
+            "requested"
+            if siblings
+            else ""
+        )
         evidence: Dict[str, Any] = {"lifecycle": lifecycle}
         if siblings:
             evidence["shared_tool_id_capabilities"] = sorted([cap_id] + siblings)
         if tool_id in agent_tool_ids:
             if tool_id in consumed_tool_ids:
-                findings.append(ProvidesFinding(cap_id, package.skill_id, tool_id, "PROVIDES_VALID",
-                                 "published under provides[], recognized by this Agent's registered package, "
-                                 "and referenced by at least one production SkillSpec" + shared_note, evidence))
+                findings.append(
+                    ProvidesFinding(
+                        cap_id,
+                        package.skill_id,
+                        tool_id,
+                        "PROVIDES_VALID",
+                        "published under provides[], recognized by this Agent's registered package, "
+                        "and referenced by at least one production SkillSpec"
+                        + shared_note,
+                        evidence,
+                    )
+                )
             else:
-                findings.append(ProvidesFinding(cap_id, package.skill_id, tool_id, "CAPABILITY_UNCONSUMED",
-                                 "published under provides[] and recognized by this Agent's registered package, "
-                                 "but no registered SkillSpec references this tool id yet" + shared_note, evidence))
+                findings.append(
+                    ProvidesFinding(
+                        cap_id,
+                        package.skill_id,
+                        tool_id,
+                        "CAPABILITY_UNCONSUMED",
+                        "published under provides[] and recognized by this Agent's registered package, "
+                        "but no registered SkillSpec references this tool id yet"
+                        + shared_note,
+                        evidence,
+                    )
+                )
         else:
             evidence["agent_tool_ids"] = sorted(agent_tool_ids)
-            findings.append(ProvidesFinding(cap_id, package.skill_id, tool_id, "PROVIDES_MISMATCH",
-                             f"the Skill's own Capability Contract publishes {cap_id!r} via tool_id {tool_id!r}, but "
-                             f"this Agent's registered package for {package.skill_id!r} has no ToolSpec with that "
-                             "tool id -- if the Agent still reaches this operation, it does so through a tool id of "
-                             "its own choosing, not one derived from this contract; verify any integration by "
-                             "Capability id, never by tool-id string equality" + shared_note, evidence))
+            findings.append(
+                ProvidesFinding(
+                    cap_id,
+                    package.skill_id,
+                    tool_id,
+                    "PROVIDES_MISMATCH",
+                    f"the Skill's own Capability Contract publishes {cap_id!r} via tool_id {tool_id!r}, but "
+                    f"this Agent's registered package for {package.skill_id!r} has no ToolSpec with that "
+                    "tool id -- if the Agent still reaches this operation, it does so through a tool id of "
+                    "its own choosing, not one derived from this contract; verify any integration by "
+                    "Capability id, never by tool-id string equality" + shared_note,
+                    evidence,
+                )
+            )
 
     for spec in skill_specs:
         for tool_id in spec.tools:
             if not tool_id.startswith(prefix) or tool_id in provided_tool_ids:
                 continue
             if tool_id in agent_tool_ids:
-                findings.append(ProvidesFinding("", package.skill_id, tool_id, "UNKNOWN",
-                                 f"SkillSpec {spec.name!r} references tool id {tool_id!r}, which this Agent's "
-                                 "registered package does recognize, but the Skill's own Capability Contract does "
-                                 "not publish any Capability id for it under provides[] yet -- likely just not "
-                                 "migrated to provides[] yet, not necessarily broken",
-                                 {"skill_spec": spec.name}))
+                findings.append(
+                    ProvidesFinding(
+                        "",
+                        package.skill_id,
+                        tool_id,
+                        "UNKNOWN",
+                        f"SkillSpec {spec.name!r} references tool id {tool_id!r}, which this Agent's "
+                        "registered package does recognize, but the Skill's own Capability Contract does "
+                        "not publish any Capability id for it under provides[] yet -- likely just not "
+                        "migrated to provides[] yet, not necessarily broken",
+                        {"skill_spec": spec.name},
+                    )
+                )
             else:
-                findings.append(ProvidesFinding("", package.skill_id, tool_id, "CAPABILITY_MISSING",
-                                 f"SkillSpec {spec.name!r} references tool id {tool_id!r} for package "
-                                 f"{package.skill_id!r}, but neither this Agent's registered package nor the "
-                                 "Skill's own Capability Contract's provides[] recognizes that tool id at all",
-                                 {"skill_spec": spec.name}))
+                findings.append(
+                    ProvidesFinding(
+                        "",
+                        package.skill_id,
+                        tool_id,
+                        "CAPABILITY_MISSING",
+                        f"SkillSpec {spec.name!r} references tool id {tool_id!r} for package "
+                        f"{package.skill_id!r}, but neither this Agent's registered package nor the "
+                        "Skill's own Capability Contract's provides[] recognizes that tool id at all",
+                        {"skill_spec": spec.name},
+                    )
+                )
     return findings
 
 
-def check_all(packages: List[SkillPackage], contracts: Dict[str, Optional[Dict[str, Any]]], skill_specs: List[SkillSpec]) -> List[ProvidesFinding]:
+def check_all(
+    packages: List[SkillPackage],
+    contracts: Dict[str, Optional[Dict[str, Any]]],
+    skill_specs: List[SkillSpec],
+) -> List[ProvidesFinding]:
     """`check_provides()` for every package, keyed by `package.skill_id` in `contracts`.
     A package with no entry in `contracts` is treated the same as an explicit `None`."""
     out: List[ProvidesFinding] = []

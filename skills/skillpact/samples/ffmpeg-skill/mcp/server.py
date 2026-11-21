@@ -16,6 +16,7 @@ Claude Desktop / Claude Code config example:
   On Windows, use "python" instead of "python3" unless Python was installed from the Microsoft
   Store (a python.org install exposes python/py, not python3) -- see README.md's MCP section.
 """
+
 import json
 import os
 import subprocess
@@ -46,7 +47,9 @@ class _Positional(dict):
     """Positional argument names per tool, read from the contract (kept as a mapping for compatibility)."""
 
     def __missing__(self, name: str) -> List[str]:
-        return list(specs()[name]["mcp"]["positional"]) if name in specs() else ["input"]
+        return (
+            list(specs()[name]["mcp"]["positional"]) if name in specs() else ["input"]
+        )
 
     def get(self, name: str, default: Any = None) -> Any:  # type: ignore[override]
         return self[name] if name in specs() else default
@@ -59,7 +62,11 @@ def build_argv(name: str, args: Dict[str, Any]) -> List[str]:
     """Structured arguments -> argv, using the mapping the contract states (invocation.structured)."""
     if isinstance(args.get("argv"), list):
         argv = [str(a) for a in args["argv"]]
-        if name not in _contract.MCP_JSON_EXEMPT and "--json" not in argv and "--help" not in argv:
+        if (
+            name not in _contract.MCP_JSON_EXEMPT
+            and "--json" not in argv
+            and "--help" not in argv
+        ):
             argv.append("--json")
         return argv
     spec = specs().get(name)
@@ -85,7 +92,11 @@ def build_argv(name: str, args: Dict[str, Any]) -> List[str]:
                 argv += [flag, str(v)]
         else:
             argv += [flag, str(val)]
-    if name not in _contract.MCP_JSON_EXEMPT and "--json" not in argv and "--help" not in argv:
+    if (
+        name not in _contract.MCP_JSON_EXEMPT
+        and "--json" not in argv
+        and "--help" not in argv
+    ):
         argv.append("--json")
     return argv
 
@@ -143,7 +154,10 @@ def timeout_from_call(args: Dict[str, Any]) -> float:
 def call_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     script = SCRIPTS / f"{name}.py"
     if name not in specs() or not script.exists():
-        return {"isError": True, "content": [{"type": "text", "text": f"unknown tool {name}"}]}
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"unknown tool {name}"}],
+        }
     argv = build_argv(name, args or {})
     # The child enforces --timeout on each ffmpeg call; this outer ceiling (4x that plus 60 s)
     # is the only thing that ends a child hung for any other reason. Structured `timeout` or
@@ -155,13 +169,25 @@ def call_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     text = stdout
     structured = None
     try:
-        structured = json.loads(stdout) if stdout.startswith("{") or stdout.startswith("[") else None
+        structured = (
+            json.loads(stdout)
+            if stdout.startswith("{") or stdout.startswith("[")
+            else None
+        )
     except ValueError:
         structured = None
     if proc.returncode != 0:
         err = proc.stderr.strip().splitlines()
         tail = "\n".join(err[-12:])
-        failed: Dict[str, Any] = {"isError": True, "content": [{"type": "text", "text": f"{name} failed (exit {proc.returncode})\n{tail}"}]}
+        failed: Dict[str, Any] = {
+            "isError": True,
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"{name} failed (exit {proc.returncode})\n{tail}",
+                }
+            ],
+        }
         # The child's own failure document (status, error.kind/code/hint, commands) is the
         # machine-readable half of the contract; dropping it here left an MCP caller regex-
         # parsing prose to tell a timeout from a missing binary.
@@ -172,7 +198,9 @@ def call_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         text = stdout or "\n".join(proc.stderr.strip().splitlines()[-5:])
     result: Dict[str, Any] = {"content": [{"type": "text", "text": text}]}
     if structured is not None:
-        result["structuredContent"] = structured if isinstance(structured, dict) else {"result": structured}
+        result["structuredContent"] = (
+            structured if isinstance(structured, dict) else {"result": structured}
+        )
     return result
 
 
@@ -198,9 +226,12 @@ def handle(req: Dict[str, Any]) -> Dict[str, Any]:
         # 1.20.0: the structured-arguments note used to be appended to every one of the 42 tool
         # descriptions verbatim; it's server-wide, not per-tool, so it now lives here once instead
         # -- `tools/list` descriptions stay each tool's own one-line sentence.
-        return {"protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {}, "prompts": {}},
-                "serverInfo": {"name": "ffmpeg-skill", "version": version()},
-                "instructions": _contract.MCP_STRUCTURED_NOTE}
+        return {
+            "protocolVersion": PROTOCOL_VERSION,
+            "capabilities": {"tools": {}, "prompts": {}},
+            "serverInfo": {"name": "ffmpeg-skill", "version": version()},
+            "instructions": _contract.MCP_STRUCTURED_NOTE,
+        }
     if method == "tools/list":
         return {"tools": tool_list()}
     if method == "tools/call":
@@ -210,7 +241,9 @@ def handle(req: Dict[str, Any]) -> Dict[str, Any]:
         return {"prompts": _contract.mcp_prompt_list()}
     if method == "prompts/get":
         try:
-            return _contract.mcp_prompt_get(params.get("name", ""), params.get("arguments") or {})
+            return _contract.mcp_prompt_get(
+                params.get("name", ""), params.get("arguments") or {}
+            )
         except KeyError as exc:
             # not "method not found" (-32601, handle()'s own KeyError below): the *method*
             # prompts/get exists, only this prompt *name* doesn't -- a caller mistake, same as
@@ -263,9 +296,17 @@ def main() -> int:
             result = handle(req)
             resp = {"jsonrpc": "2.0", "id": req["id"], "result": result}
         except KeyError as exc:
-            resp = {"jsonrpc": "2.0", "id": req["id"], "error": {"code": -32601, "message": f"method not found: {exc}"}}
+            resp = {
+                "jsonrpc": "2.0",
+                "id": req["id"],
+                "error": {"code": -32601, "message": f"method not found: {exc}"},
+            }
         except Exception as exc:  # noqa: BLE001
-            resp = {"jsonrpc": "2.0", "id": req["id"], "error": {"code": -32000, "message": str(exc)}}
+            resp = {
+                "jsonrpc": "2.0",
+                "id": req["id"],
+                "error": {"code": -32000, "message": str(exc)},
+            }
         stdout.write((json.dumps(resp) + "\n").encode("utf-8"))
         stdout.flush()
     return 0

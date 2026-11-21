@@ -4,6 +4,7 @@ This is the foundation every other script leans on (`inspect -> operate -> verif
 diffs two info() calls to validate a round-trip, check.py compares an info() result against a
 target's budget, optimize.py decides what needs shrinking from these same numbers.
 """
+
 import re
 import sys
 from pathlib import Path
@@ -17,7 +18,6 @@ import bpy
 import mathutils
 from mathutils.bvhtree import BVHTree
 
-
 # Non-internal mesh attributes Blender itself creates that are not something a user/importer
 # added -- Mesh.Attribute.is_internal is False for these too (it only flags the dot-prefixed
 # bookkeeping ones like .corner_vert), so they must be excluded by name. Confirmed present on a
@@ -26,8 +26,15 @@ from mathutils.bvhtree import BVHTree
 # via ordinary edit-mode operators adds material_index, bevel_weight_edge, and crease_edge the
 # same way -- confirmed on real Blender, not from documentation alone.
 _BUILTIN_ATTR_NAMES = {
-    "position", "sharp_face", "sharp_edge", "material_index",
-    "crease_edge", "crease_vert", "bevel_weight_edge", "bevel_weight_vert", "id",
+    "position",
+    "sharp_face",
+    "sharp_edge",
+    "material_index",
+    "crease_edge",
+    "crease_vert",
+    "bevel_weight_edge",
+    "bevel_weight_vert",
+    "id",
 }
 
 
@@ -42,10 +49,18 @@ def _attribute_lists(obj):
     mesh = obj.data
     uv_names = {uv.name for uv in mesh.uv_layers}
     color_names = {ca.name for ca in mesh.color_attributes}
-    vertex_colors = [{"name": ca.name, "domain": ca.domain, "data_type": ca.data_type} for ca in mesh.color_attributes]
+    vertex_colors = [
+        {"name": ca.name, "domain": ca.domain, "data_type": ca.data_type}
+        for ca in mesh.color_attributes
+    ]
     custom = []
     for a in mesh.attributes:
-        if a.is_internal or a.name in _BUILTIN_ATTR_NAMES or a.name in uv_names or a.name in color_names:
+        if (
+            a.is_internal
+            or a.name in _BUILTIN_ATTR_NAMES
+            or a.name in uv_names
+            or a.name in color_names
+        ):
             continue
         custom.append({"name": a.name, "domain": a.domain, "data_type": a.data_type})
     return vertex_colors, custom
@@ -108,7 +123,9 @@ def _flipped_normal_faces(bm) -> int:
     bmesh.ops.recalc_face_normals(bm2, faces=bm2.faces[:])
     bm2.normal_update()
     flipped = sum(
-        1 for a, b in zip(before, bm2.faces) if a[0] * b.normal[0] + a[1] * b.normal[1] + a[2] * b.normal[2] < 0
+        1
+        for a, b in zip(before, bm2.faces)
+        if a[0] * b.normal[0] + a[1] * b.normal[1] + a[2] * b.normal[2] < 0
     )
     bm2.free()
     return flipped
@@ -130,6 +147,7 @@ def _local_bbox_reference_points(obj):
 def _seg_intersect(p1, p2, p3, p4) -> bool:
     def ccw(a, b, c):
         return (c[1] - a[1]) * (b[0] - a[0]) - (b[1] - a[1]) * (c[0] - a[0])
+
     d1, d2 = ccw(p3, p4, p1), ccw(p3, p4, p2)
     d3, d4 = ccw(p1, p2, p3), ccw(p1, p2, p4)
     return ((d1 > 0) != (d2 > 0)) and ((d3 > 0) != (d4 > 0))
@@ -138,7 +156,12 @@ def _seg_intersect(p1, p2, p3, p4) -> bool:
 def _point_in_tri(p, tri) -> bool:
     def sign(a, b, c):
         return (a[0] - c[0]) * (b[1] - c[1]) - (b[0] - c[0]) * (a[1] - c[1])
-    d1, d2, d3 = sign(p, tri[0], tri[1]), sign(p, tri[1], tri[2]), sign(p, tri[2], tri[0])
+
+    d1, d2, d3 = (
+        sign(p, tri[0], tri[1]),
+        sign(p, tri[1], tri[2]),
+        sign(p, tri[2], tri[0]),
+    )
     has_neg, has_pos = (d1 < 0 or d2 < 0 or d3 < 0), (d1 > 0 or d2 > 0 or d3 > 0)
     return not (has_neg and has_pos)
 
@@ -410,9 +433,11 @@ def _alpha_is_binary_mask(image):
     """
     if not image:
         return None
-    pixels = image.pixels[:]  # forces the lazy load -- has_data/size are stale until this (see
-                               # references/pitfalls.md's "has_data is False until you touch
-                               # .pixels" entry)
+    pixels = image.pixels[
+        :
+    ]  # forces the lazy load -- has_data/size are stale until this (see
+    # references/pitfalls.md's "has_data is False until you touch
+    # .pixels" entry)
     if not image.has_data or image.channels < 4:
         return None
     w, h = image.size
@@ -434,7 +459,8 @@ _DATA_SOCKETS = {"Metallic", "Roughness", "Alpha"}
 
 def _connected_image(socket):
     """The Image directly feeding a Principled BSDF input via an Image Texture node, or None --
-    same "one direct link, not a full node-graph evaluation" scope as _find_alpha_image."""
+    same "one direct link, not a full node-graph evaluation" scope as _find_alpha_image.
+    """
     if socket is None or not socket.is_linked:
         return None
     node = socket.links[0].from_node
@@ -468,29 +494,46 @@ def _colorspace_issues(materials):
     for mat in materials:
         if not mat.use_nodes or not mat.node_tree:
             continue
-        bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        bsdf = next(
+            (n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None
+        )
         if not bsdf:
             continue
         for socket_name in _COLOR_SOCKETS:
             image = _connected_image(bsdf.inputs.get(socket_name))
             if image and image.colorspace_settings.name != "sRGB":
-                issues.append({
-                    "material": mat.name, "socket": socket_name, "image": image.name,
-                    "colorspace": image.colorspace_settings.name, "expected": "sRGB",
-                })
+                issues.append(
+                    {
+                        "material": mat.name,
+                        "socket": socket_name,
+                        "image": image.name,
+                        "colorspace": image.colorspace_settings.name,
+                        "expected": "sRGB",
+                    }
+                )
         for socket_name in _DATA_SOCKETS:
             image = _connected_image(bsdf.inputs.get(socket_name))
             if image and image.colorspace_settings.name != "Non-Color":
-                issues.append({
-                    "material": mat.name, "socket": socket_name, "image": image.name,
-                    "colorspace": image.colorspace_settings.name, "expected": "Non-Color",
-                })
+                issues.append(
+                    {
+                        "material": mat.name,
+                        "socket": socket_name,
+                        "image": image.name,
+                        "colorspace": image.colorspace_settings.name,
+                        "expected": "Non-Color",
+                    }
+                )
         normal_image = _normal_map_image(bsdf)
         if normal_image and normal_image.colorspace_settings.name != "Non-Color":
-            issues.append({
-                "material": mat.name, "socket": "Normal", "image": normal_image.name,
-                "colorspace": normal_image.colorspace_settings.name, "expected": "Non-Color",
-            })
+            issues.append(
+                {
+                    "material": mat.name,
+                    "socket": "Normal",
+                    "image": normal_image.name,
+                    "colorspace": normal_image.colorspace_settings.name,
+                    "expected": "Non-Color",
+                }
+            )
     return issues
 
 
@@ -516,15 +559,17 @@ def _transparency_issues(materials):
             continue
         is_binary = _alpha_is_binary_mask(image)
         if is_binary and mat.surface_render_method == "BLENDED":
-            issues.append({
-                "material": mat.name,
-                "issue": (
-                    "alpha texture looks like a hard mask, but this material uses real alpha "
-                    "blending (BLENDED) -- try surface_render_method = 'DITHERED' instead "
-                    "(cheaper, avoids transparency sorting-order artifacts, no visual downside "
-                    "for a mask that's already just 0/1)"
-                ),
-            })
+            issues.append(
+                {
+                    "material": mat.name,
+                    "issue": (
+                        "alpha texture looks like a hard mask, but this material uses real alpha "
+                        "blending (BLENDED) -- try surface_render_method = 'DITHERED' instead "
+                        "(cheaper, avoids transparency sorting-order artifacts, no visual downside "
+                        "for a mask that's already just 0/1)"
+                    ),
+                }
+            )
     return issues
 
 
@@ -544,15 +589,17 @@ def _texture_info():
             else:
                 missing = True
         w, h = (img.size[0], img.size[1]) if img.has_data else (0, 0)
-        textures.append({
-            "name": img.name,
-            "filepath": img.filepath or None,
-            "packed": bool(img.packed_file),
-            "width": w,
-            "height": h,
-            "missing": missing,
-            "size_bytes": size_bytes,
-        })
+        textures.append(
+            {
+                "name": img.name,
+                "filepath": img.filepath or None,
+                "packed": bool(img.packed_file),
+                "width": w,
+                "height": h,
+                "missing": missing,
+                "size_bytes": size_bytes,
+            }
+        )
     return textures
 
 
@@ -572,7 +619,11 @@ def _root_bone_names():
 
 
 def _animations(scene):
-    fps = scene.render.fps / scene.render.fps_base if scene.render.fps_base else scene.render.fps
+    fps = (
+        scene.render.fps / scene.render.fps_base
+        if scene.render.fps_base
+        else scene.render.fps
+    )
     root_bones = _root_bone_names()
     out = []
     for action in bpy.data.actions:
@@ -592,15 +643,17 @@ def _animations(scene):
                 values = [kp.co[1] for kp in fc.keyframe_points]
                 if values and (max(values) - min(values)) > 1e-5:
                     root_motion = True
-        out.append({
-            "name": action.name,
-            "frame_start": start,
-            "frame_end": end,
-            "fps": fps,
-            "duration_seconds": (end - start) / fps if fps else None,
-            "bone_count": len(bone_names),
-            "root_motion": root_motion,
-        })
+        out.append(
+            {
+                "name": action.name,
+                "frame_start": start,
+                "frame_end": end,
+                "fps": fps,
+                "duration_seconds": (end - start) / fps if fps else None,
+                "bone_count": len(bone_names),
+                "root_motion": root_motion,
+            }
+        )
     return out
 
 
@@ -608,7 +661,10 @@ def _bone_hierarchy(armature_data):
     # parent name (or None for a root) per bone, not a nested tree -- flat is easier for an
     # agent to query ("what's b_Hip_01's parent?") and just as complete; depth/children are
     # trivially derived from this by whoever needs them.
-    return [{"name": b.name, "parent": b.parent.name if b.parent else None} for b in armature_data.bones]
+    return [
+        {"name": b.name, "parent": b.parent.name if b.parent else None}
+        for b in armature_data.bones
+    ]
 
 
 def _lod_suggestions(total_triangles):
@@ -634,12 +690,14 @@ def _lod_suggestions(total_triangles):
         target = round(total_triangles * ratio)
         if target < 1:
             continue
-        out.append({
-            "level": level,
-            "ratio": ratio,
-            "target_triangles": target,
-            "command": f"optimize.py <file> -o <out> --decimate-ratio {ratio}",
-        })
+        out.append(
+            {
+                "level": level,
+                "ratio": ratio,
+                "target_triangles": target,
+                "command": f"optimize.py <file> -o <out> --decimate-ratio {ratio}",
+            }
+        )
     return out
 
 
@@ -665,8 +723,18 @@ def _mesh_signature(obj):
     xs = [v.co.x for v in obj.data.vertices]
     ys = [v.co.y for v in obj.data.vertices]
     zs = [v.co.z for v in obj.data.vertices]
-    dims = ((max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs)) if xs else (0.0, 0.0, 0.0))
-    return (vert_count, tri_count, area, volume, tuple(sorted(round(d, 4) for d in dims)))
+    dims = (
+        (max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs))
+        if xs
+        else (0.0, 0.0, 0.0)
+    )
+    return (
+        vert_count,
+        tri_count,
+        area,
+        volume,
+        tuple(sorted(round(d, 4) for d in dims)),
+    )
 
 
 def _instancing_report(mesh_objs):
@@ -684,7 +752,9 @@ def _instancing_report(mesh_objs):
     by_data = {}
     for o in mesh_objs:
         by_data.setdefault(o.data, []).append(o.name)
-    already_instanced = [{"objects": names} for names in by_data.values() if len(names) > 1]
+    already_instanced = [
+        {"objects": names} for names in by_data.values() if len(names) > 1
+    ]
 
     by_signature = {}
     for data, names in by_data.items():
@@ -692,7 +762,8 @@ def _instancing_report(mesh_objs):
         by_signature.setdefault(_mesh_signature(obj), []).append(names[0])
     duplicate_mesh_candidates = [
         {"objects": names, "vertices": sig[0], "triangles": sig[1]}
-        for sig, names in by_signature.items() if len(names) > 1
+        for sig, names in by_signature.items()
+        if len(names) > 1
     ]
 
     return {
@@ -705,11 +776,13 @@ def _armatures():
     out = []
     for obj in bpy.data.objects:
         if obj.type == "ARMATURE":
-            out.append({
-                "name": obj.name,
-                "bone_count": len(obj.data.bones),
-                "bones": _bone_hierarchy(obj.data),
-            })
+            out.append(
+                {
+                    "name": obj.name,
+                    "bone_count": len(obj.data.bones),
+                    "bones": _bone_hierarchy(obj.data),
+                }
+            )
     return out
 
 
@@ -773,19 +846,32 @@ def run(args):
         )
     for stats in per_object:
         if stats["non_manifold_edges"]:
-            fix = ("try: optimize.py <file> -o <out> --fill-holes" if stats["boundary_edges"]
-                   else "no automatic fix for this shape of non-manifold edge (not a simple hole) -- needs manual cleanup")
-            warnings.append(f"{stats['name']}: {stats['non_manifold_edges']} non-manifold edge(s) (hole/gap in the surface, after welding split normals/UV seams) -- {fix}")
+            fix = (
+                "try: optimize.py <file> -o <out> --fill-holes"
+                if stats["boundary_edges"]
+                else "no automatic fix for this shape of non-manifold edge (not a simple hole) -- needs manual cleanup"
+            )
+            warnings.append(
+                f"{stats['name']}: {stats['non_manifold_edges']} non-manifold edge(s) (hole/gap in the surface, after welding split normals/UV seams) -- {fix}"
+            )
         if stats["flipped_normal_faces"]:
-            warnings.append(f"{stats['name']}: {stats['flipped_normal_faces']} face(s) with a flipped/inward normal -- try: optimize.py <file> -o <out> --recalc-normals")
+            warnings.append(
+                f"{stats['name']}: {stats['flipped_normal_faces']} face(s) with a flipped/inward normal -- try: optimize.py <file> -o <out> --recalc-normals"
+            )
         elif stats["flipped_normal_faces"] is None:
-            warnings.append(f"{stats['name']}: flipped-normal check skipped (unreliable while non-manifold edges are present -- fix those first, then re-run info.py)")
+            warnings.append(
+                f"{stats['name']}: flipped-normal check skipped (unreliable while non-manifold edges are present -- fix those first, then re-run info.py)"
+            )
         if stats["self_intersecting_faces_approx"]:
-            warnings.append(f"{stats['name']}: ~{stats['self_intersecting_faces_approx']} face pair(s) look self-intersecting (approximate, bounding-box based -- worth a manual look, no automatic fix)")
+            warnings.append(
+                f"{stats['name']}: ~{stats['self_intersecting_faces_approx']} face pair(s) look self-intersecting (approximate, bounding-box based -- worth a manual look, no automatic fix)"
+            )
         if not stats["has_uv"] and not stats["is_point_cloud"]:
             warnings.append(f"{stats['name']}: no UV map")
         if stats["empty_material_slots"]:
-            warnings.append(f"{stats['name']}: {stats['empty_material_slots']} empty material slot(s)")
+            warnings.append(
+                f"{stats['name']}: {stats['empty_material_slots']} empty material slot(s)"
+            )
         if any(abs(s - 1.0) > 1e-4 for s in stats["scale"]):
             warnings.append(
                 f"{stats['name']}: unapplied scale {tuple(round(s, 4) for s in stats['scale'])} "
@@ -828,7 +914,9 @@ def run(args):
             "vertices": total_verts,
             "per_object": per_object,
             "lod_suggestions": _lod_suggestions(total_tris),
-            "draw_calls_estimate": sum(stats["draw_calls_estimate"] for stats in per_object),
+            "draw_calls_estimate": sum(
+                stats["draw_calls_estimate"] for stats in per_object
+            ),
         },
         "instancing": instancing,
         "materials": {

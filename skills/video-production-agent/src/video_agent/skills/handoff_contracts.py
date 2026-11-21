@@ -11,6 +11,7 @@ is still missing, and where the output goes next in this agent's pipeline.
 Each parameter is checked before analysis (a value outside the pinned vocabulary, a file that is not there, a parameter without the
 `job.<skill>=true` switch is refused, never guessed). File / folder parameters are resolved to absolute paths; nothing is read from them
 beyond their existence (and, for a scene folder, its index.html)."""
+
 from __future__ import annotations
 
 import json
@@ -41,27 +42,35 @@ def _tool_entry(contract: Dict[str, Any], tool: str) -> Dict[str, Any]:
 
 @dataclass(frozen=True)
 class HandoffParam:
-    name: str                                   # requirement key suffix: job.<skill>.<name>
-    arg: str                                    # the contract's name for it (input_schema property, or the flag / positional it documents)
-    kind: str                                   # file | dir | enum | bool
-    choices: Callable[[Dict[str, Any]], Tuple[str, ...]] = lambda c: ()   # enum values, read from the pinned contract
-    suffixes: Tuple[str, ...] = ()              # file: accepted extensions (lower case)
-    marker: Optional[str] = None                # dir: a file that must be inside it
-    required: bool = False                      # the tool cannot run without it (the handoff lists it as missing when not given)
+    name: str  # requirement key suffix: job.<skill>.<name>
+    arg: str  # the contract's name for it (input_schema property, or the flag / positional it documents)
+    kind: str  # file | dir | enum | bool
+    choices: Callable[[Dict[str, Any]], Tuple[str, ...]] = (
+        lambda c: ()
+    )  # enum values, read from the pinned contract
+    suffixes: Tuple[str, ...] = ()  # file: accepted extensions (lower case)
+    marker: Optional[str] = None  # dir: a file that must be inside it
+    required: bool = (
+        False  # the tool cannot run without it (the handoff lists it as missing when not given)
+    )
     doc: str = ""
-    withheld: Tuple[str, ...] = ()              # enum values the pinned contract declares but this agent does not hand off yet (refused, never guessed)
+    withheld: Tuple[
+        str, ...
+    ] = ()  # enum values the pinned contract declares but this agent does not hand off yet (refused, never guessed)
 
 
 @dataclass(frozen=True)
 class HandoffPin:
-    skill: str                                  # the agent's SkillSpec name
-    package: str                                # the Skill's own skill_id (prefix of its tool ids)
-    version: str                                # the pinned contract's version
-    pin_file: str                               # skills/pins/<file>
-    source: str                                 # where the pin was read from
-    tool: str                                   # provides[].tool_id the job is
+    skill: str  # the agent's SkillSpec name
+    package: str  # the Skill's own skill_id (prefix of its tool ids)
+    version: str  # the pinned contract's version
+    pin_file: str  # skills/pins/<file>
+    source: str  # where the pin was read from
+    tool: str  # provides[].tool_id the job is
     params: Tuple[HandoffParam, ...]
-    next_step: Callable[[Dict[str, Any]], str]  # where the output goes next in this agent, given the parameters asked for
+    next_step: Callable[
+        [Dict[str, Any]], str
+    ]  # where the output goes next in this agent, given the parameters asked for
     note: str = ""
 
     def contract(self) -> Dict[str, Any]:
@@ -76,17 +85,27 @@ class HandoffPin:
 
 
 def _blender_presets(c: Dict[str, Any]) -> Tuple[str, ...]:
-    return tuple(_tool_entry(c, "blender-skill/render")["options"]["--resolution-preset"]["choices"])
+    return tuple(
+        _tool_entry(c, "blender-skill/render")["options"]["--resolution-preset"][
+            "choices"
+        ]
+    )
 
 
 def _hyperframes_codecs(c: Dict[str, Any]) -> Tuple[str, ...]:
-    return tuple(_tool_entry(c, "hyperframes-skill/render")["input_schema"]["properties"]["codec"]["enum"])
+    return tuple(
+        _tool_entry(c, "hyperframes-skill/render")["input_schema"]["properties"][
+            "codec"
+        ]["enum"]
+    )
 
 
 def _render_3d_next(args: Dict[str, Any]) -> str:
     if args.get("transparent"):
-        return ("a B-roll layer with alpha (ProRes 4444 .mov, or an RGBA PNG sequence whose `sequence` block is ffmpeg-skill/sequence's interface) "
-                "to composite over the programme with ffmpeg-skill/overlay; .mp4 / .jpg are refused with transparent")
+        return (
+            "a B-roll layer with alpha (ProRes 4444 .mov, or an RGBA PNG sequence whose `sequence` block is ffmpeg-skill/sequence's interface) "
+            "to composite over the programme with ffmpeg-skill/overlay; .mp4 / .jpg are refused with transparent"
+        )
     return "a B-roll clip (turntable .mp4) or still (.png) to place over the programme with ffmpeg-skill/overlay"
 
 
@@ -97,33 +116,88 @@ def _html_scene_next(args: Dict[str, Any]) -> str:
 
 
 # blender-skill's own list of the 3D files it reads (SKILL.md description: glb/gltf, fbx, obj, stl, usd/usdz, ply, abc, .blend)
-_BLENDER_MODELS = (".glb", ".gltf", ".fbx", ".obj", ".stl", ".usd", ".usda", ".usdc", ".usdz", ".ply", ".abc", ".blend")
+_BLENDER_MODELS = (
+    ".glb",
+    ".gltf",
+    ".fbx",
+    ".obj",
+    ".stl",
+    ".usd",
+    ".usda",
+    ".usdc",
+    ".usdz",
+    ".ply",
+    ".abc",
+    ".blend",
+)
 
-PINS: Dict[str, HandoffPin] = {p.skill: p for p in (
-    HandoffPin(
-        skill="render_3d", package="blender-skill", version="0.31.0", pin_file="blender-skill_0.31.0.json",
-        source="kajisho5/blender-skill main befc3e3 (`python3 scripts/_contract.py --json`; = the blender-skill-v0.31.0 contract)",
-        tool="blender-skill/render",
-        params=(
-            HandoffParam("model", "file", "file", suffixes=_BLENDER_MODELS, required=True, doc="the 3D file to render (positional FILE)"),
-            HandoffParam("preset", "--resolution-preset", "enum", choices=_blender_presets, doc="frame size by name (the contract's resolution presets)"),
-            HandoffParam("transparent", "--transparent", "bool", doc="render with alpha for compositing (SKILL.md: RGBA PNG or ProRes 4444 .mov)"),
+PINS: Dict[str, HandoffPin] = {
+    p.skill: p
+    for p in (
+        HandoffPin(
+            skill="render_3d",
+            package="blender-skill",
+            version="0.31.0",
+            pin_file="blender-skill_0.31.0.json",
+            source="kajisho5/blender-skill main befc3e3 (`python3 scripts/_contract.py --json`; = the blender-skill-v0.31.0 contract)",
+            tool="blender-skill/render",
+            params=(
+                HandoffParam(
+                    "model",
+                    "file",
+                    "file",
+                    suffixes=_BLENDER_MODELS,
+                    required=True,
+                    doc="the 3D file to render (positional FILE)",
+                ),
+                HandoffParam(
+                    "preset",
+                    "--resolution-preset",
+                    "enum",
+                    choices=_blender_presets,
+                    doc="frame size by name (the contract's resolution presets)",
+                ),
+                HandoffParam(
+                    "transparent",
+                    "--transparent",
+                    "bool",
+                    doc="render with alpha for compositing (SKILL.md: RGBA PNG or ProRes 4444 .mov)",
+                ),
+            ),
+            next_step=_render_3d_next,
+            note="needs Blender 4.2+ on the machine (the contract's external_tools.required); `python3 scripts/_contract.py doctor --json` says whether it is found",
         ),
-        next_step=_render_3d_next,
-        note="needs Blender 4.2+ on the machine (the contract's external_tools.required); `python3 scripts/_contract.py doctor --json` says whether it is found"),
-    HandoffPin(
-        skill="html_scene_render", package="hyperframes-skill", version="0.10.0", pin_file="hyperframes-skill_0.10.0.json",
-        source="kajisho5/hyperframes-skill v0.10.0 tag 193f84d (`node bin/hyperframes-skill.mjs contract --json`)",
-        tool="hyperframes-skill/render",
-        params=(
-            HandoffParam("scene", "scene_dir", "dir", marker="index.html", required=True, doc="the scene directory with index.html"),
-            HandoffParam("codec", "codec", "enum", choices=_hyperframes_codecs, doc="h264 (.mp4), vp9 (.webm) or prores (.mov, ProRes 4444 with alpha)",
-                         withheld=("png",)),   # 0.8.0's PNG sequence (ADR-107 addendum 12): pinned, not handed off yet
+        HandoffPin(
+            skill="html_scene_render",
+            package="hyperframes-skill",
+            version="0.10.0",
+            pin_file="hyperframes-skill_0.10.0.json",
+            source="kajisho5/hyperframes-skill v0.10.0 tag 193f84d (`node bin/hyperframes-skill.mjs contract --json`)",
+            tool="hyperframes-skill/render",
+            params=(
+                HandoffParam(
+                    "scene",
+                    "scene_dir",
+                    "dir",
+                    marker="index.html",
+                    required=True,
+                    doc="the scene directory with index.html",
+                ),
+                HandoffParam(
+                    "codec",
+                    "codec",
+                    "enum",
+                    choices=_hyperframes_codecs,
+                    doc="h264 (.mp4), vp9 (.webm) or prores (.mov, ProRes 4444 with alpha)",
+                    withheld=("png",),
+                ),  # 0.8.0's PNG sequence (ADR-107 addendum 12): pinned, not handed off yet
+            ),
+            next_step=_html_scene_next,
+            note="needs Node.js 22+, HyperFrames and a headless Chromium (the contract's render capabilities); the render records the argv of every "
+            "process it starts (execution.argv_recorder) and cross-checks its output with ffmpeg-skill/probe when a checkout is present",
         ),
-        next_step=_html_scene_next,
-        note="needs Node.js 22+, HyperFrames and a headless Chromium (the contract's render capabilities); the render records the argv of every "
-             "process it starts (execution.argv_recorder) and cross-checks its output with ffmpeg-skill/probe when a checkout is present"),
-)}
+    )
+}
 
 
 def pin(skill: str) -> Optional[HandoffPin]:
@@ -132,11 +206,15 @@ def pin(skill: str) -> Optional[HandoffPin]:
 
 def parse_param(p: HandoffPin, name: str, value: Any) -> Any:
     """The checked value of `job.<skill>.<name>` (a path made absolute, a bool, an enum value), or HandoffParameterError naming the
-    accepted values. Enum values come from the pinned contract, never from this module."""
+    accepted values. Enum values come from the pinned contract, never from this module.
+    """
     key = f"job.{p.skill}.{name}"
     hp = p.param(name)
     if hp is None:
-        raise HandoffParameterError(f"unknown parameter {key!r}; {p.skill} takes " + ", ".join(f"job.{p.skill}.{x.name}" for x in p.params))
+        raise HandoffParameterError(
+            f"unknown parameter {key!r}; {p.skill} takes "
+            + ", ".join(f"job.{p.skill}.{x.name}" for x in p.params)
+        )
     if hp.kind == "bool":
         v = value.strip().lower() if isinstance(value, str) else value
         if v in _ON:
@@ -149,17 +227,23 @@ def parse_param(p: HandoffPin, name: str, value: Any) -> Any:
     if hp.kind == "enum":
         choices = tuple(c for c in hp.choices(p.contract()) if c not in hp.withheld)
         if value in hp.withheld:
-            raise HandoffParameterError(f"{key}={value} is in the {p.package} {p.version} contract but is not handed off by this agent yet; "
-                                        f"use one of {', '.join(choices)}")
+            raise HandoffParameterError(
+                f"{key}={value} is in the {p.package} {p.version} contract but is not handed off by this agent yet; "
+                f"use one of {', '.join(choices)}"
+            )
         if value not in choices:
-            raise HandoffParameterError(f"{key} must be one of {', '.join(choices)} ({p.package} {p.version} contract), got {value!r}")
+            raise HandoffParameterError(
+                f"{key} must be one of {', '.join(choices)} ({p.package} {p.version} contract), got {value!r}"
+            )
         return value
     path = Path(value).expanduser()
     if hp.kind == "file":
         if not path.is_file():
             raise HandoffParameterError(f"{key}: no such file {value!r}")
         if hp.suffixes and path.suffix.lower() not in hp.suffixes:
-            raise HandoffParameterError(f"{key}: {path.name} is not a file {p.package} reads ({', '.join(hp.suffixes)})")
+            raise HandoffParameterError(
+                f"{key}: {path.name} is not a file {p.package} reads ({', '.join(hp.suffixes)})"
+            )
     else:
         if not path.is_dir():
             raise HandoffParameterError(f"{key}: no such folder {value!r}")
@@ -170,7 +254,8 @@ def parse_param(p: HandoffPin, name: str, value: Any) -> Any:
 
 def handoff_request(skill: str, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """The handoff's `contract` block: the pinned Skill, the tool, the arguments by the contract's names, what the tool still needs, and
-    where its output goes next here. None for a job without a pin. Data for the host; the agent runs nothing."""
+    where its output goes next here. None for a job without a pin. Data for the host; the agent runs nothing.
+    """
     if skill == LAYER_SKILL:
         return layer_handoff_request(params)
     p = PINS.get(skill)
@@ -178,10 +263,24 @@ def handoff_request(skill: str, params: Dict[str, Any]) -> Optional[Dict[str, An
         return None
     prov = p.provides()
     args = {hp.arg: params[hp.name] for hp in p.params if hp.name in params}
-    missing = [f"job.{skill}.{hp.name} ({hp.doc})" for hp in p.params if hp.required and hp.name not in params]
-    return {"package": p.package, "version": p.version, "source": p.source, "tool": p.tool, "capability": prov.get("id"), "lifecycle": prov.get("lifecycle"),
-            "args": args, "missing": missing, "output": "chosen by whoever runs the tool, never the input; the agent does not admit it into the plan",
-            "next": p.next_step(params), "note": p.note}
+    missing = [
+        f"job.{skill}.{hp.name} ({hp.doc})"
+        for hp in p.params
+        if hp.required and hp.name not in params
+    ]
+    return {
+        "package": p.package,
+        "version": p.version,
+        "source": p.source,
+        "tool": p.tool,
+        "capability": prov.get("id"),
+        "lifecycle": prov.get("lifecycle"),
+        "args": args,
+        "missing": missing,
+        "output": "chosen by whoever runs the tool, never the input; the agent does not admit it into the plan",
+        "next": p.next_step(params),
+        "note": p.note,
+    }
 
 
 # ADR-114: the motion.layer clip (skill html_scene_layer) has an adapter; without hyperframes-skill installed (or able to render) its step is handed
@@ -194,21 +293,42 @@ def layer_handoff_request(params: Dict[str, Any]) -> Dict[str, Any]:
     p = PINS["html_scene_render"]
     prov = p.provides()
     seg = params.get("segments")
-    steps = ([f"hyperframes-skill/template {params['template']} --values <the values> --output request.json"] if params.get("template") else []) \
-        + [f"hyperframes-skill/scene {'request.json' if params.get('template') else params.get('request')} --output scene",
-           "hyperframes-skill/render scene --output layer.mov --codec prores" + (" --segments" if seg else "")]
+    steps = (
+        [
+            f"hyperframes-skill/template {params['template']} --values <the values> --output request.json"
+        ]
+        if params.get("template")
+        else []
+    ) + [
+        f"hyperframes-skill/scene {'request.json' if params.get('template') else params.get('request')} --output scene",
+        "hyperframes-skill/render scene --output layer.mov --codec prores"
+        + (" --segments" if seg else ""),
+    ]
     args: Dict[str, Any] = {"codec": "prores"}
     for k in ("template", "values", "request"):
         if params.get(k) is not None:
             args[k] = params[k]
     if seg:
         args["segments"] = True
-    timing = (f"in_duration {seg['in']:g}, out_duration {seg['out']:g}, loop true" if seg else "in_duration 0, out_duration 0, loop false")
-    return {"package": p.package, "version": p.version, "source": p.source, "tool": p.tool, "capability": prov.get("id"), "lifecycle": prov.get("lifecycle"),
-            "args": args, "steps": steps, "missing": [],
-            "output": "a ProRes 4444 .mov with alpha (and with --segments its .in / .loop / .out pieces next to it)",
-            "next": f"give the .mov as motion.layer=<file> with motion.layer.{timing.replace(', ', ' / motion.layer.')}: motion-graphics-skill's rendered_layer places it",
-            "note": p.note}
+    timing = (
+        f"in_duration {seg['in']:g}, out_duration {seg['out']:g}, loop true"
+        if seg
+        else "in_duration 0, out_duration 0, loop false"
+    )
+    return {
+        "package": p.package,
+        "version": p.version,
+        "source": p.source,
+        "tool": p.tool,
+        "capability": prov.get("id"),
+        "lifecycle": prov.get("lifecycle"),
+        "args": args,
+        "steps": steps,
+        "missing": [],
+        "output": "a ProRes 4444 .mov with alpha (and with --segments its .in / .loop / .out pieces next to it)",
+        "next": f"give the .mov as motion.layer=<file> with motion.layer.{timing.replace(', ', ' / motion.layer.')}: motion-graphics-skill's rendered_layer places it",
+        "note": p.note,
+    }
 
 
 def check_pin_against(contract: Dict[str, Any], p: HandoffPin) -> List[str]:
@@ -218,7 +338,10 @@ def check_pin_against(contract: Dict[str, Any], p: HandoffPin) -> List[str]:
     sid = contract.get("skill_id") or (contract.get("skill") or {}).get("id")
     if sid != p.package:
         errs.append(f"skill_id {sid!r} != {p.package}")
-    if not any(isinstance(x, dict) and x.get("tool_id") == p.tool for x in contract.get("provides") or []):
+    if not any(
+        isinstance(x, dict) and x.get("tool_id") == p.tool
+        for x in contract.get("provides") or []
+    ):
         errs.append(f"provides[] has no {p.tool}")
     pinned = p.contract()
     for hp in p.params:

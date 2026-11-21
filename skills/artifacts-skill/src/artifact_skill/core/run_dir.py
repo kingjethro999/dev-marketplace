@@ -67,12 +67,17 @@ def new_run_dir(root: Path = DEFAULT_EVIDENCE_ROOT, *, create: bool = True) -> P
             last_error = exc
             continue
         return candidate
-    raise RuntimeError(f"could not reserve a unique run directory under '{root}'") from last_error
+    raise RuntimeError(
+        f"could not reserve a unique run directory under '{root}'"
+    ) from last_error
 
 
 @contextmanager
 def evidence_dir_for(
-    explicit: str | Path | None, *, dry_run: bool = False, root: Path = DEFAULT_EVIDENCE_ROOT,
+    explicit: str | Path | None,
+    *,
+    dry_run: bool = False,
+    root: Path = DEFAULT_EVIDENCE_ROOT,
 ) -> Iterator[Path]:
     """Yield the directory a CLI/MCP call should write its evidence to.
 

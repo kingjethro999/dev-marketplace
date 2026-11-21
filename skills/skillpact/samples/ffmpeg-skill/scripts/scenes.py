@@ -17,24 +17,51 @@ Examples:
   python3 scenes.py event.mp4 --sheet scenes.png             # one thumbnail per scene
   python3 scenes.py talk.mp4 --highlights 5 --rank-by duration  # longest unbroken scenes, not loudest
 """
+
 import argparse
 import math
 import sys
 from typing import Dict, List, Optional, Tuple
 
 # `detect_scenes` moved into _common/probe.py in 1.16.0 (see silence.py); the body is unchanged.
-from _common import (detect_scenes, STATE, add_common, apply_common, beat_grid, default_font_file, die, emit,
-                     escape_filter_path, ffmpeg_base, info, print_json, probe, run, decode_pcm_mono,
-                     rms_envelope, BEAT_MIN_CONFIDENCE, decode_gray_frames, frame_flow, label_shot_flow)
+from _common import (
+    detect_scenes,
+    STATE,
+    add_common,
+    apply_common,
+    beat_grid,
+    default_font_file,
+    die,
+    emit,
+    escape_filter_path,
+    ffmpeg_base,
+    info,
+    print_json,
+    probe,
+    run,
+    decode_pcm_mono,
+    rms_envelope,
+    BEAT_MIN_CONFIDENCE,
+    decode_gray_frames,
+    frame_flow,
+    label_shot_flow,
+)
 
-SHOT_FPS = 4.0          # frames/second sampled for --shots' flow estimate
-SHOT_W, SHOT_H = 48, 27  # decode size for --shots (16:9-ish; enough blocks, still a few KB/shot)
-SPEECH_STEP_S = 1.0      # --speech energy-ratio window
+SHOT_FPS = 4.0  # frames/second sampled for --shots' flow estimate
+SHOT_W, SHOT_H = (
+    48,
+    27,
+)  # decode size for --shots (16:9-ish; enough blocks, still a few KB/shot)
+SPEECH_STEP_S = 1.0  # --speech energy-ratio window
 
 
-
-def audio_envelope(path: str, step_s: float, *, rate: int = 8000,
-                   samples: "Optional[List[float]]" = None) -> List[float]:
+def audio_envelope(
+    path: str,
+    step_s: float,
+    *,
+    rate: int = 8000,
+    samples: "Optional[List[float]]" = None,
+) -> List[float]:
     """RMS level per step_s window, absolute (a loud scene scores higher); [] when the audio
     cannot be decoded (the cut scoring then runs on the picture alone).
 
@@ -52,7 +79,10 @@ def parse_beat_range(text: str) -> "tuple":
     try:
         lo, hi = (float(p) for p in str(text).replace(" ", "").split("-", 1))
     except ValueError:
-        die(f"--beat-range: expected LO-HI in BPM (e.g. 60-200), got {text!r}", kind="input")
+        die(
+            f"--beat-range: expected LO-HI in BPM (e.g. 60-200), got {text!r}",
+            kind="input",
+        )
     if not (0 < lo < hi):
         die(f"--beat-range {text}: LO must be above 0 and below HI", kind="input")
     return (lo, hi)
@@ -63,16 +93,35 @@ def shot_flow_label(path: str, start: float, end: float) -> Dict:
     and block-match consecutive frames (see _common.decision.frame_flow / label_shot_flow). A
     shot under two sampled frames has nothing to compare and is reported static with
     flow_magnitude 0 -- there is no motion measurement to make on a single frame."""
-    frames = decode_gray_frames(path, SHOT_FPS, SHOT_W, SHOT_H, start=start, seconds=max(0.0, end - start), check=False)
-    flows = [frame_flow(frames[i], frames[i + 1], SHOT_W, SHOT_H) for i in range(len(frames) - 1)]
+    frames = decode_gray_frames(
+        path,
+        SHOT_FPS,
+        SHOT_W,
+        SHOT_H,
+        start=start,
+        seconds=max(0.0, end - start),
+        check=False,
+    )
+    flows = [
+        frame_flow(frames[i], frames[i + 1], SHOT_W, SHOT_H)
+        for i in range(len(frames) - 1)
+    ]
     label = label_shot_flow(flows)
-    return {"start": round(start, 3), "end": round(end, 3), "label": label["label"], "flow_magnitude": label["flow_magnitude"]}
+    return {
+        "start": round(start, 3),
+        "end": round(end, 3),
+        "label": label["label"],
+        "flow_magnitude": label["flow_magnitude"],
+    }
 
 
-def audio_peaks_db(samples: "List[float]", rate: int, step_s: float = 0.25) -> List[Dict]:
+def audio_peaks_db(
+    samples: "List[float]", rate: int, step_s: float = 0.25
+) -> List[Dict]:
     """--audio-peaks: local maxima of the loudness envelope reported as measured dBFS, not the
     unitless RMS scenes.py has always put in the (unconditional) `audio_peaks` key -- a
-    different unit needs a different key so the existing one keeps meaning what it always has."""
+    different unit needs a different key so the existing one keeps meaning what it always has.
+    """
     env = rms_envelope(samples, int(rate * step_s))
     peaks = []
     for i, val in enumerate(env):
@@ -84,7 +133,9 @@ def audio_peaks_db(samples: "List[float]", rate: int, step_s: float = 0.25) -> L
     return peaks
 
 
-def speech_music_ratio(samples: "List[float]", rate: int, step_s: float = SPEECH_STEP_S) -> List[Dict]:
+def speech_music_ratio(
+    samples: "List[float]", rate: int, step_s: float = SPEECH_STEP_S
+) -> List[Dict]:
     """--speech: a per-second zero-crossing-rate ratio, reported as a measured number, not a
     speech/music label. Speech's rapid consonant transients drive the zero-crossing rate up and
     make it jump window to window; sustained tones (music, a held note, room tone) cross zero at
@@ -94,48 +145,118 @@ def speech_music_ratio(samples: "List[float]", rate: int, step_s: float = SPEECH
     step = max(1, int(rate * step_s))
     zcrs: List[float] = []
     for i in range(0, len(samples) - step + 1, step):
-        block = samples[i:i + step]
+        block = samples[i : i + step]
         crossings = sum(1 for a, b in zip(block, block[1:]) if (a >= 0) != (b >= 0))
         zcrs.append(crossings / max(1, len(block) - 1))
     if not zcrs:
         return []
     med = sorted(zcrs)[len(zcrs) // 2] or 1e-9
-    return [{"time": round(i * step_s, 2), "speech_music_ratio": round(z / med, 3)} for i, z in enumerate(zcrs)]
+    return [
+        {"time": round(i * step_s, 2), "speech_music_ratio": round(z / med, 3)}
+        for i, z in enumerate(zcrs)
+    ]
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("--threshold", type=float, default=8.0, help="minimum scdet score for a cut, 0-100 (default 8)")
-    ap.add_argument("--ratio", type=float, default=3.0, help="a cut must exceed this multiple of the neighbouring frames' median score (default 3; lower = more cuts)")
-    ap.add_argument("--min-scene", type=float, default=1.0, help="ignore cuts closer than this in seconds (default 1)")
-    ap.add_argument("--highlights", type=int, default=0, help="number of highlight ranges to propose")
-    ap.add_argument("--rank-by", choices=["audio", "duration"], default="audio",
-                    help="how to rank scenes for --highlights: audio energy (default) or scene duration")
-    ap.add_argument("--target", type=float, help="with --highlights: total seconds the picks should add up to (trims long scenes)")
-    ap.add_argument("--max-scene", type=float, default=15.0, help="cap a highlight range at this many seconds (default 15)")
-    ap.add_argument("--edl", help="write highlight ranges as START-END lines (cut.py --segments format)")
-    ap.add_argument("--beats", action="store_true",
-                    help="measure the music's beat grid (tempo, beat times, confidence) and report it; "
-                         "a measurement, not a proposal -- no cut is made and no beat is invented")
-    ap.add_argument("--beat-step", type=float, default=0.01,
-                    help="envelope resolution in seconds for the onset pass with --beats (default 0.01)")
-    ap.add_argument("--beat-range", default="60-200",
-                    help="tempo search range in BPM for --beats (default 60-200)")
-    ap.add_argument("--min-confidence", type=float, default=BEAT_MIN_CONFIDENCE,
-                    help="with --beats: below this confidence the grid is still reported, marked "
-                         f"usable: false (default {BEAT_MIN_CONFIDENCE})")
-    ap.add_argument("--shots", action="store_true",
-                    help="label each detected shot static / pan / motion by a measured optical-flow "
-                         "proxy (lightweight block matching over sampled frames); reports flow_magnitude too")
-    ap.add_argument("--audio-peaks", action="store_true",
-                    help="report loudness peaks as {time, level} in measured dBFS (separate from the "
-                         "always-on `audio_peaks` RMS list used to pick --highlights)")
-    ap.add_argument("--speech", action="store_true",
-                    help="report a per-second speech-vs-music energy ratio (zero-crossing-rate proxy, "
-                         "a measurement, not a speech/music classification)")
-    ap.add_argument("--sheet", help="write a contact sheet PNG with the first frame of every scene")
-    ap.add_argument("--no-timecode", action="store_true", help="--sheet without the burnt-in timecode stamp (a way out if drawtext itself is unusable, see doctor)")
+    ap.add_argument(
+        "--threshold",
+        type=float,
+        default=8.0,
+        help="minimum scdet score for a cut, 0-100 (default 8)",
+    )
+    ap.add_argument(
+        "--ratio",
+        type=float,
+        default=3.0,
+        help="a cut must exceed this multiple of the neighbouring frames' median score (default 3; lower = more cuts)",
+    )
+    ap.add_argument(
+        "--min-scene",
+        type=float,
+        default=1.0,
+        help="ignore cuts closer than this in seconds (default 1)",
+    )
+    ap.add_argument(
+        "--highlights",
+        type=int,
+        default=0,
+        help="number of highlight ranges to propose",
+    )
+    ap.add_argument(
+        "--rank-by",
+        choices=["audio", "duration"],
+        default="audio",
+        help="how to rank scenes for --highlights: audio energy (default) or scene duration",
+    )
+    ap.add_argument(
+        "--target",
+        type=float,
+        help="with --highlights: total seconds the picks should add up to (trims long scenes)",
+    )
+    ap.add_argument(
+        "--max-scene",
+        type=float,
+        default=15.0,
+        help="cap a highlight range at this many seconds (default 15)",
+    )
+    ap.add_argument(
+        "--edl",
+        help="write highlight ranges as START-END lines (cut.py --segments format)",
+    )
+    ap.add_argument(
+        "--beats",
+        action="store_true",
+        help="measure the music's beat grid (tempo, beat times, confidence) and report it; "
+        "a measurement, not a proposal -- no cut is made and no beat is invented",
+    )
+    ap.add_argument(
+        "--beat-step",
+        type=float,
+        default=0.01,
+        help="envelope resolution in seconds for the onset pass with --beats (default 0.01)",
+    )
+    ap.add_argument(
+        "--beat-range",
+        default="60-200",
+        help="tempo search range in BPM for --beats (default 60-200)",
+    )
+    ap.add_argument(
+        "--min-confidence",
+        type=float,
+        default=BEAT_MIN_CONFIDENCE,
+        help="with --beats: below this confidence the grid is still reported, marked "
+        f"usable: false (default {BEAT_MIN_CONFIDENCE})",
+    )
+    ap.add_argument(
+        "--shots",
+        action="store_true",
+        help="label each detected shot static / pan / motion by a measured optical-flow "
+        "proxy (lightweight block matching over sampled frames); reports flow_magnitude too",
+    )
+    ap.add_argument(
+        "--audio-peaks",
+        action="store_true",
+        help="report loudness peaks as {time, level} in measured dBFS (separate from the "
+        "always-on `audio_peaks` RMS list used to pick --highlights)",
+    )
+    ap.add_argument(
+        "--speech",
+        action="store_true",
+        help="report a per-second speech-vs-music energy ratio (zero-crossing-rate proxy, "
+        "a measurement, not a speech/music classification)",
+    )
+    ap.add_argument(
+        "--sheet", help="write a contact sheet PNG with the first frame of every scene"
+    )
+    ap.add_argument(
+        "--no-timecode",
+        action="store_true",
+        help="--sheet without the burnt-in timecode stamp (a way out if drawtext itself is unusable, see doctor)",
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -159,7 +280,11 @@ def main() -> int:
     # one pass: the 0.5 s scene blocks are an exact multiple of the 10 ms onset blocks.
     beat_rate = 22050
     need_fine = args.beats or args.audio_peaks or args.speech
-    fine_samples = decode_pcm_mono(args.input, beat_rate, check=False) if (need_fine and meta.get("audio")) else None
+    fine_samples = (
+        decode_pcm_mono(args.input, beat_rate, check=False)
+        if (need_fine and meta.get("audio"))
+        else None
+    )
     if fine_samples is not None:
         env = audio_envelope(args.input, step_s, rate=beat_rate, samples=fine_samples)
     else:
@@ -170,38 +295,75 @@ def main() -> int:
         s, e = bounds[i], bounds[i + 1]
         if e - s <= 0.05:
             continue
-        seg = env[int(s / step_s): max(int(s / step_s) + 1, int(e / step_s))] if env else []
+        seg = (
+            env[int(s / step_s) : max(int(s / step_s) + 1, int(e / step_s))]
+            if env
+            else []
+        )
         energy = (sum(seg) / len(seg)) if seg else 0.0
         peak = max(seg) if seg else 0.0
-        scenes.append({"index": len(scenes), "start": round(s, 3), "end": round(e, 3), "duration": round(e - s, 3),
-                       "audio_rms": round(energy, 4), "audio_peak": round(peak, 4)})
+        scenes.append(
+            {
+                "index": len(scenes),
+                "start": round(s, 3),
+                "end": round(e, 3),
+                "duration": round(e - s, 3),
+                "audio_rms": round(energy, 4),
+                "audio_peak": round(peak, 4),
+            }
+        )
     peaks = []
     if env:
         thr = sorted(env)[int(len(env) * 0.9)] if len(env) > 10 else max(env)
         for i, val in enumerate(env):
-            if val >= thr and val > 0.02 and (i == 0 or env[i - 1] < val) and (i == len(env) - 1 or env[i + 1] <= val):
+            if (
+                val >= thr
+                and val > 0.02
+                and (i == 0 or env[i - 1] < val)
+                and (i == len(env) - 1 or env[i + 1] <= val)
+            ):
                 peaks.append({"time": round(i * step_s, 2), "rms": round(val, 4)})
         peaks = sorted(peaks, key=lambda p: -p["rms"])[:20]
         peaks.sort(key=lambda p: p["time"])
 
-    result: Dict = {"file": args.input, "duration": round(dur, 3), "scene_count": len(scenes), "scenes": scenes, "audio_peaks": peaks}
+    result: Dict = {
+        "file": args.input,
+        "duration": round(dur, 3),
+        "scene_count": len(scenes),
+        "scenes": scenes,
+        "audio_peaks": peaks,
+    }
     info(f"{len(scenes)} scenes, {len(peaks)} audio peaks over {dur:.1f}s")
 
     if args.shots:
-        shots = [shot_flow_label(args.input, s, e) for s, e in zip(bounds[:-1], bounds[1:]) if e - s > 0.05]
+        shots = [
+            shot_flow_label(args.input, s, e)
+            for s, e in zip(bounds[:-1], bounds[1:])
+            if e - s > 0.05
+        ]
         result["shots"] = shots
         counts = {}
         for sh in shots:
             counts[sh["label"]] = counts.get(sh["label"], 0) + 1
-        info(f"--shots: {len(shots)} shots (" + ", ".join(f"{v} {k}" for k, v in sorted(counts.items())) + ")")
+        info(
+            f"--shots: {len(shots)} shots ("
+            + ", ".join(f"{v} {k}" for k, v in sorted(counts.items()))
+            + ")"
+        )
 
     if args.audio_peaks:
         if not meta.get("audio"):
             result["audio_peaks_db"] = []
             info("--audio-peaks: no audio stream, nothing to measure")
         else:
-            db_samples = fine_samples if fine_samples is not None else decode_pcm_mono(args.input, 22050, check=False)
-            result["audio_peaks_db"] = audio_peaks_db(db_samples, 22050 if fine_samples is not None else 22050)
+            db_samples = (
+                fine_samples
+                if fine_samples is not None
+                else decode_pcm_mono(args.input, 22050, check=False)
+            )
+            result["audio_peaks_db"] = audio_peaks_db(
+                db_samples, 22050 if fine_samples is not None else 22050
+            )
             info(f"--audio-peaks: {len(result['audio_peaks_db'])} peaks")
 
     if args.speech:
@@ -209,7 +371,11 @@ def main() -> int:
             result["speech"] = []
             info("--speech: no audio stream, nothing to measure")
         else:
-            sp_samples = fine_samples if fine_samples is not None else decode_pcm_mono(args.input, 22050, check=False)
+            sp_samples = (
+                fine_samples
+                if fine_samples is not None
+                else decode_pcm_mono(args.input, 22050, check=False)
+            )
             result["speech"] = speech_music_ratio(sp_samples, 22050)
             info(f"--speech: {len(result['speech'])} one-second windows")
 
@@ -217,29 +383,50 @@ def main() -> int:
         # A beat grid is a measurement of the music's periodicity, not a statement about where a
         # cut belongs. scenes.py reports what it measured, including a low confidence: reporting a
         # weak measurement is honest, and only a tool that CHANGES a file refuses to act on one.
-        fine = rms_envelope(fine_samples or [], max(1, int(round(beat_rate * args.beat_step))))
-        grid = beat_grid(fine, args.beat_step, bpm_range=beat_range,
-                         min_confidence=args.min_confidence, duration=dur)
+        fine = rms_envelope(
+            fine_samples or [], max(1, int(round(beat_rate * args.beat_step)))
+        )
+        grid = beat_grid(
+            fine,
+            args.beat_step,
+            bpm_range=beat_range,
+            min_confidence=args.min_confidence,
+            duration=dur,
+        )
         result["beats"] = grid["beats"]
         result["beat_grid"] = {
             # The regular grid AND the subset a measured onset supports. A tool that MOVES
             # something (cut.py --snap beats) may only use the subset; scenes.py reports both,
             # because here the regular grid is the measurement being made.
             "supported_beats": grid["supported_beats"],
-            "tempo_bpm": grid["tempo_bpm"], "interval": grid["interval"],
-            "confidence": grid["confidence"], "phase": grid["phase"],
-            "onsets": len(grid["onsets"]), "supported": grid["supported"],
-            "unsupported": grid["unsupported"], "method": grid["method"],
-            "step_s": grid["step_s"], "range_bpm": grid["range_bpm"], "usable": grid["usable"],
+            "tempo_bpm": grid["tempo_bpm"],
+            "interval": grid["interval"],
+            "confidence": grid["confidence"],
+            "phase": grid["phase"],
+            "onsets": len(grid["onsets"]),
+            "supported": grid["supported"],
+            "unsupported": grid["unsupported"],
+            "method": grid["method"],
+            "step_s": grid["step_s"],
+            "range_bpm": grid["range_bpm"],
+            "usable": grid["usable"],
         }
         if grid["tempo_bpm"] is None:
-            info(f"--beats: no steady pulse in this audio (confidence {grid['confidence']:.2f}) -- "
-                 "speech, ambience or rubato has no tempo to measure")
+            info(
+                f"--beats: no steady pulse in this audio (confidence {grid['confidence']:.2f}) -- "
+                "speech, ambience or rubato has no tempo to measure"
+            )
         else:
-            info(f"--beats: {grid['tempo_bpm']:.1f} BPM, {len(grid['beats'])} beats, confidence "
-                 f"{grid['confidence']:.2f} ({grid['supported']} of {len(grid['beats'])} grid points "
-                 f"have a measured onset)"
-                 + ("" if grid["usable"] else f" -- below --min-confidence {args.min_confidence}, usable: false"))
+            info(
+                f"--beats: {grid['tempo_bpm']:.1f} BPM, {len(grid['beats'])} beats, confidence "
+                f"{grid['confidence']:.2f} ({grid['supported']} of {len(grid['beats'])} grid points "
+                f"have a measured onset)"
+                + (
+                    ""
+                    if grid["usable"]
+                    else f" -- below --min-confidence {args.min_confidence}, usable: false"
+                )
+            )
 
     if args.highlights:
         if args.rank_by == "duration":
@@ -257,19 +444,27 @@ def main() -> int:
             if env and length < sc["duration"]:
                 best, best_s = -1.0, sc["start"]
                 win = max(1, int(length / step_s))
-                lo, hi = int(sc["start"] / step_s), max(int(sc["start"] / step_s) + 1, int(sc["end"] / step_s) - win)
+                lo, hi = int(sc["start"] / step_s), max(
+                    int(sc["start"] / step_s) + 1, int(sc["end"] / step_s) - win
+                )
                 for i in range(lo, hi + 1):
-                    val = sum(env[i:i + win])
+                    val = sum(env[i : i + win])
                     if val > best:
                         best, best_s = val, i * step_s
             picks.append((round(best_s, 2), round(min(sc["end"], best_s + length), 2)))
         picks.sort()
-        result["highlights"] = [{"start": s, "end": e, "duration": round(e - s, 2)} for s, e in picks]
+        result["highlights"] = [
+            {"start": s, "end": e, "duration": round(e - s, 2)} for s, e in picks
+        ]
         result["highlights_total"] = round(sum(e - s for s, e in picks), 2)
         result["highlights_rank_by"] = args.rank_by
-        info(f"proposed {len(picks)} highlight ranges totalling {result['highlights_total']:.1f}s")
+        info(
+            f"proposed {len(picks)} highlight ranges totalling {result['highlights_total']:.1f}s"
+        )
         if args.edl:
-            if not STATE.dry_run:  # the contract says --edl is not written under --dry-run
+            if (
+                not STATE.dry_run
+            ):  # the contract says --edl is not written under --dry-run
                 with open(args.edl, "w", encoding="utf-8") as fh:
                     for s, e in picks:
                         fh.write(f"{s:.2f}-{e:.2f}\n")
@@ -286,11 +481,28 @@ def main() -> int:
         stamp = ""
         if not args.no_timecode:
             default_font = default_font_file("DejaVu Sans")
-            font_prefix = f"fontfile={escape_filter_path(default_font)}:" if default_font else ""
+            font_prefix = (
+                f"fontfile={escape_filter_path(default_font)}:" if default_font else ""
+            )
             stamp = f",drawtext=text='%{{pts\\:hms}}':{font_prefix}fontcolor=white:fontsize=h/14:box=1:boxcolor=black@0.55:boxborderw=4:x=6:y=6"
-        vf = (f"select='{expr}',scale={tile_w}:-2{stamp},"
-              f"tile={cols}x{rows}:padding=2:margin=2:color=0x202020")
-        run(ffmpeg_base() + ["-i", args.input, "-vf", vf, "-frames:v", "1", "-fps_mode", "vfr", args.sheet])
+        vf = (
+            f"select='{expr}',scale={tile_w}:-2{stamp},"
+            f"tile={cols}x{rows}:padding=2:margin=2:color=0x202020"
+        )
+        run(
+            ffmpeg_base()
+            + [
+                "-i",
+                args.input,
+                "-vf",
+                vf,
+                "-frames:v",
+                "1",
+                "-fps_mode",
+                "vfr",
+                args.sheet,
+            ]
+        )
         info(f"wrote {args.sheet}")
         result["sheet"] = args.sheet
 

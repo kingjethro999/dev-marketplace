@@ -17,6 +17,7 @@ less than 1 when the logo has more colours than --palette. Merging everything in
 --palette colours instead would report averages that are not in the logo. It reports the
 logo's colours; it never picks colours for the caller.
 """
+
 import os
 import re
 import sys
@@ -41,7 +42,9 @@ from _common import (  # noqa: E402
     wants_json,
 )
 
-QUANTISE = 32  # colours the logo is reduced to before the largest --palette are reported
+QUANTISE = (
+    32  # colours the logo is reduced to before the largest --palette are reported
+)
 VARIANTS = ("color", "mono", "white", "black", "clearspace")
 VARIANT_OPS = {
     "color": [],
@@ -53,7 +56,9 @@ VARIANT_OPS = {
 
 def _sizes(value):
     if not re.fullmatch(r"\s*\d+(\s*,\s*\d+)*\s*", value or ""):
-        raise ImageSkillError(f"--sizes must be a comma-separated list of pixel sizes, got {value!r}")
+        raise ImageSkillError(
+            f"--sizes must be a comma-separated list of pixel sizes, got {value!r}"
+        )
     sizes = sorted({int(v) for v in value.split(",")}, reverse=True)
     if any(s <= 0 for s in sizes):
         raise ImageSkillError("--sizes must be positive")
@@ -62,18 +67,49 @@ def _sizes(value):
 
 def build_parser():
     parser = JSONArgumentParser(
-        description="Make colour, mono, white, black and clear-space logo variants at given sizes, plus a colour palette")
-    parser.add_argument("input", help="logo with a transparent background (never modified)")
-    parser.add_argument("-o", "--output-dir", required=True, help="folder to write the variants into (created if missing)")
-    parser.add_argument("--sizes", required=True,
-                        help="long edges in pixels to write every variant at, e.g. 1024,512,256 (never above the logo's)")
-    parser.add_argument("--clear-space", type=non_negative_int, required=True,
-                        help="transparent margin on every side of the clearspace variant, in pixels of the full-size logo")
-    parser.add_argument("--palette", type=positive_int, required=True,
-                        help="report at most this many main colours, largest share first (2-32)")
-    parser.add_argument("--overwrite", action="store_true", help="allow replacing existing variant files")
-    parser.add_argument("--json", action="store_true", help="print one JSON object (ok:true/false) instead of text")
-    parser.add_argument("--dry-run", action="store_true", help="print the backend commands that would run, write nothing")
+        description="Make colour, mono, white, black and clear-space logo variants at given sizes, plus a colour palette"
+    )
+    parser.add_argument(
+        "input", help="logo with a transparent background (never modified)"
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        required=True,
+        help="folder to write the variants into (created if missing)",
+    )
+    parser.add_argument(
+        "--sizes",
+        required=True,
+        help="long edges in pixels to write every variant at, e.g. 1024,512,256 (never above the logo's)",
+    )
+    parser.add_argument(
+        "--clear-space",
+        type=non_negative_int,
+        required=True,
+        help="transparent margin on every side of the clearspace variant, in pixels of the full-size logo",
+    )
+    parser.add_argument(
+        "--palette",
+        type=positive_int,
+        required=True,
+        help="report at most this many main colours, largest share first (2-32)",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow replacing existing variant files",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print one JSON object (ok:true/false) instead of text",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the backend commands that would run, write nothing",
+    )
     add_timeout_arg(parser)
     return parser
 
@@ -86,11 +122,35 @@ def scaled(width, height, long_edge):
 
 def palette(magick, path, count):
     """Main colours of the pixels with alpha >= 50%: [{hex, share}], largest share first."""
-    out = run([magick, f"{path}[0]", "-auto-orient", "-colorspace", "sRGB", "-alpha", "set", "-channel", "A", "-threshold", "50%", "+channel",
-               "+dither", "-colors", str(QUANTISE + 1), "-depth", "8", "-format", "%c", "histogram:info:"])["stdout"]
+    out = run(
+        [
+            magick,
+            f"{path}[0]",
+            "-auto-orient",
+            "-colorspace",
+            "sRGB",
+            "-alpha",
+            "set",
+            "-channel",
+            "A",
+            "-threshold",
+            "50%",
+            "+channel",
+            "+dither",
+            "-colors",
+            str(QUANTISE + 1),
+            "-depth",
+            "8",
+            "-format",
+            "%c",
+            "histogram:info:",
+        ]
+    )["stdout"]
     entries = []
     for line in out.splitlines():
-        m = re.match(r"\s*(\d+):\s*\(([^)]*)\)\s*#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?", line)
+        m = re.match(
+            r"\s*(\d+):\s*\(([^)]*)\)\s*#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?", line
+        )
         if not m:
             continue
         values = [float(v) for v in m.group(2).split(",")]
@@ -104,7 +164,9 @@ def palette(magick, path, count):
     ranked = sorted(merged.items(), key=lambda kv: (-kv[1], kv[0]))[:count]
     total = sum(merged.values())
     if not total:
-        raise ImageSkillError("the logo has no pixel with alpha of 50% or more, so it has no colours to report")
+        raise ImageSkillError(
+            "the logo has no pixel with alpha of 50% or more, so it has no colours to report"
+        )
     return [{"hex": h, "share": round(n / total, 4)} for h, n in ranked], total
 
 
@@ -119,11 +181,13 @@ def run_brandkit(args):
     if alpha.lower() in ("false", "undefined"):
         raise ImageSkillError(
             f"{args.input} has no alpha channel; the white, black and clear-space variants need a logo with a "
-            "transparent background (cut it out first)")
+            "transparent background (cut it out first)"
+        )
     if max(sizes) > max(width, height):
         raise ImageSkillError(
             f"the logo is {width}x{height} but --sizes asks for a long edge of {max(sizes)}; variants are never "
-            "upscaled - use a larger source or smaller sizes")
+            "upscaled - use a larger source or smaller sizes"
+        )
 
     out_dir = os.path.abspath(args.output_dir)
     parent = os.path.dirname(out_dir)
@@ -135,8 +199,17 @@ def run_brandkit(args):
     full["clearspace"] = (width + 2 * pad, height + 2 * pad)
     plan = []
     for name in VARIANTS:
-        ops = VARIANT_OPS.get(name, ["-background", "none", "-gravity", "center",
-                                     "-extent", f"{full['clearspace'][0]}x{full['clearspace'][1]}"])
+        ops = VARIANT_OPS.get(
+            name,
+            [
+                "-background",
+                "none",
+                "-gravity",
+                "center",
+                "-extent",
+                f"{full['clearspace'][0]}x{full['clearspace'][1]}",
+            ],
+        )
         for size in [None] + sizes:
             w, h = full[name] if size is None else scaled(*full[name], size)
             resize = [] if size is None else ["-resize", f"{w}x{h}!"]
@@ -144,9 +217,30 @@ def run_brandkit(args):
             path = os.path.join(out_dir, fname)
             check_output_not_input(args.input, path)
             check_output_not_exists(path, allow_overwrite=args.overwrite)
-            cmd = [magick, f"{args.input}[0]", "-auto-orient", "-colorspace", "sRGB", "-alpha", "set"] + ops + resize + [f"PNG32:{path}"]
-            plan.append({"variant": name, "long_edge": size or max(full[name]), "width": w, "height": h,
-                         "path": path, "cmd": cmd})
+            cmd = (
+                [
+                    magick,
+                    f"{args.input}[0]",
+                    "-auto-orient",
+                    "-colorspace",
+                    "sRGB",
+                    "-alpha",
+                    "set",
+                ]
+                + ops
+                + resize
+                + [f"PNG32:{path}"]
+            )
+            plan.append(
+                {
+                    "variant": name,
+                    "long_edge": size or max(full[name]),
+                    "width": w,
+                    "height": h,
+                    "path": path,
+                    "cmd": cmd,
+                }
+            )
 
     if args.dry_run:
         return {"dry_run": True, "would_run": [p["cmd"] for p in plan]}
@@ -156,11 +250,20 @@ def run_brandkit(args):
     for item in plan:
         run(item["cmd"])
         verify_output_format(item["path"], backend)
-        got = tuple(int(v) for v in magick_info(magick, item["path"], "%w %h", auto_orient=False).split())
+        got = tuple(
+            int(v)
+            for v in magick_info(
+                magick, item["path"], "%w %h", auto_orient=False
+            ).split()
+        )
         if got != (item["width"], item["height"]):
             os.remove(item["path"])
-            raise ImageSkillError(f"{item['path']} is {got[0]}x{got[1]}, expected {item['width']}x{item['height']}")
-        files.append({k: item[k] for k in ("path", "variant", "long_edge", "width", "height")})
+            raise ImageSkillError(
+                f"{item['path']} is {got[0]}x{got[1]}, expected {item['width']}x{item['height']}"
+            )
+        files.append(
+            {k: item[k] for k in ("path", "variant", "long_edge", "width", "height")}
+        )
 
     colours, counted = palette(magick, args.input, args.palette)
     return {

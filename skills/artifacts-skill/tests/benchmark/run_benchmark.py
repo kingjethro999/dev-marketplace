@@ -29,7 +29,10 @@ from cases import (  # noqa: E402
 
 from artifact_skill.adapters.registry import get_adapter  # noqa: E402
 from artifact_skill.core.artifact import ArtifactRef  # noqa: E402
-from artifact_skill.core.errors import ArtifactCapabilityError, ArtifactError  # noqa: E402
+from artifact_skill.core.errors import (
+    ArtifactCapabilityError,
+    ArtifactError,
+)  # noqa: E402
 from artifact_skill.text_checks import verify_structural_with_text_checks  # noqa: E402
 
 
@@ -48,7 +51,11 @@ def _check_type_rejected(case) -> Outcome:
     ref = ArtifactRef.from_path(_fixture_path(case.fixture))
     try:
         get_adapter(ref.type)
-        return Outcome(case.fixture, False, f"expected ARTIFACT_TYPE_UNSUPPORTED, got a working adapter for type={ref.type.value}")
+        return Outcome(
+            case.fixture,
+            False,
+            f"expected ARTIFACT_TYPE_UNSUPPORTED, got a working adapter for type={ref.type.value}",
+        )
     except ArtifactCapabilityError as exc:
         ok = exc.code == "ARTIFACT_TYPE_UNSUPPORTED"
         return Outcome(case.fixture, ok, f"type={ref.type.value}, code={exc.code}")
@@ -60,9 +67,17 @@ def _check_structural_defect(case) -> Outcome:
     try:
         result = verify_structural_with_text_checks(adapter, ref, case.policy)
     except ArtifactError as exc:
-        return Outcome(case.fixture, False, f"expected status={case.expected_status.value}, but verify_structural() raised {exc.code}")
+        return Outcome(
+            case.fixture,
+            False,
+            f"expected status={case.expected_status.value}, but verify_structural() raised {exc.code}",
+        )
     ok = result.status == case.expected_status
-    return Outcome(case.fixture, ok, f"expected={case.expected_status.value}, actual={result.status.value}")
+    return Outcome(
+        case.fixture,
+        ok,
+        f"expected={case.expected_status.value}, actual={result.status.value}",
+    )
 
 
 def _check_exception(case) -> Outcome:
@@ -70,10 +85,18 @@ def _check_exception(case) -> Outcome:
     adapter = get_adapter(ref.type)
     try:
         adapter.verify_structural(ref, {})
-        return Outcome(case.fixture, False, f"expected {case.expected_exception_code} to be raised, but verify_structural() returned normally")
+        return Outcome(
+            case.fixture,
+            False,
+            f"expected {case.expected_exception_code} to be raised, but verify_structural() returned normally",
+        )
     except ArtifactError as exc:
         ok = exc.code == case.expected_exception_code
-        return Outcome(case.fixture, ok, f"expected={case.expected_exception_code}, actual={exc.code}")
+        return Outcome(
+            case.fixture,
+            ok,
+            f"expected={case.expected_exception_code}, actual={exc.code}",
+        )
 
 
 def _check_known_good(case) -> Outcome:
@@ -81,16 +104,26 @@ def _check_known_good(case) -> Outcome:
     adapter = get_adapter(ref.type)
     result = verify_structural_with_text_checks(adapter, ref, case.policy)
     ok = result.status == case.expected_status
-    return Outcome(case.fixture, ok, f"expected={case.expected_status.value}, actual={result.status.value}")
+    return Outcome(
+        case.fixture,
+        ok,
+        f"expected={case.expected_status.value}, actual={result.status.value}",
+    )
 
 
 def _check_type_detection(case) -> Outcome:
     ref = ArtifactRef.from_path(_fixture_path(case.fixture))
     ok = ref.type == case.expected_type
-    return Outcome(case.fixture, ok, f"expected={case.expected_type.value}, actual={ref.type.value}")
+    return Outcome(
+        case.fixture,
+        ok,
+        f"expected={case.expected_type.value}, actual={ref.type.value}",
+    )
 
 
-def run() -> tuple[list[Outcome], list[Outcome], list[Outcome], list[Outcome], list[Outcome]]:
+def run() -> (
+    tuple[list[Outcome], list[Outcome], list[Outcome], list[Outcome], list[Outcome]]
+):
     type_rejected = [_check_type_rejected(c) for c in TYPE_REJECTED_CASES]
     structural_defect = [_check_structural_defect(c) for c in STRUCTURAL_DEFECT_CASES]
     exceptions = [_check_exception(c) for c in EXCEPTION_CASES]
@@ -117,11 +150,19 @@ def main() -> int:
     print("=" * 72)
 
     all_ok = True
-    all_ok &= _report_group("Type-rejected (garbage content correctly refused)", type_rejected)
-    all_ok &= _report_group("Structural defects correctly flagged (WARN/FAIL)", structural_defect)
+    all_ok &= _report_group(
+        "Type-rejected (garbage content correctly refused)", type_rejected
+    )
+    all_ok &= _report_group(
+        "Structural defects correctly flagged (WARN/FAIL)", structural_defect
+    )
     all_ok &= _report_group("Security-control exceptions correctly raised", exceptions)
-    all_ok &= _report_group("Known-good fixtures verify cleanly (no false positives)", known_good)
-    all_ok &= _report_group("Type detection overrides misleading extensions", type_detection)
+    all_ok &= _report_group(
+        "Known-good fixtures verify cleanly (no false positives)", known_good
+    )
+    all_ok &= _report_group(
+        "Type detection overrides misleading extensions", type_detection
+    )
 
     detection_cases = type_rejected + structural_defect + exceptions
     detection_passed = sum(1 for o in detection_cases if o.passed)

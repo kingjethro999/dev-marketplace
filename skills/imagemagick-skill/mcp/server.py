@@ -18,6 +18,7 @@ Run:
 Config (Claude Desktop / Cursor / .mcp.json):
   {"mcpServers": {"imagemagick-skill": {"command": "python3", "args": ["/abs/path/mcp/server.py"]}}}
 """
+
 import json
 import os
 import signal
@@ -79,8 +80,14 @@ def _run_script(cmd, ceiling):
     SIGTERM first - it then kills the ImageMagick process group it started - and is
     killed with its whole tree 5 s later. Returns (returncode, stdout, stderr), or
     (None, "", "") when the ceiling ran out."""
-    proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            text=True, **_group_kwargs())
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        **_group_kwargs(),
+    )
     try:
         out, err = proc.communicate(timeout=ceiling)
         return proc.returncode, out, err
@@ -120,20 +127,36 @@ def call_tool(name, arguments):
     cmd = [sys.executable, os.path.join(SCRIPTS, spec["script"])] + argv
     ceiling = _timeout()
     tool_timeout = arguments.get("timeout")
-    if ceiling is not None and isinstance(tool_timeout, (int, float)) and not isinstance(tool_timeout, bool):
+    if (
+        ceiling is not None
+        and isinstance(tool_timeout, (int, float))
+        and not isinstance(tool_timeout, bool)
+    ):
         ceiling = max(ceiling, float(tool_timeout) + TOOL_TIMEOUT_GRACE)
     returncode, out, err = _run_script(cmd, ceiling)
     if returncode is None:
-        return _error_result(f"{name} timed out after {ceiling:g} s (IMAGEMAGICK_SKILL_MCP_TIMEOUT)")
+        return _error_result(
+            f"{name} timed out after {ceiling:g} s (IMAGEMAGICK_SKILL_MCP_TIMEOUT)"
+        )
     proc = subprocess.CompletedProcess(cmd, returncode, out, err)
     stdout = proc.stdout.strip()
     try:
         structured = json.loads(stdout)
     except ValueError:
         tail = "\n".join((proc.stderr or proc.stdout).strip().splitlines()[-12:])
-        return _error_result(f"{name} did not return JSON (exit {proc.returncode})\n{tail}")
-    ok = isinstance(structured, dict) and structured.get("ok") is True and proc.returncode == 0
-    result = {"content": [{"type": "text", "text": stdout}], "structuredContent": structured, "isError": not ok}
+        return _error_result(
+            f"{name} did not return JSON (exit {proc.returncode})\n{tail}"
+        )
+    ok = (
+        isinstance(structured, dict)
+        and structured.get("ok") is True
+        and proc.returncode == 0
+    )
+    result = {
+        "content": [{"type": "text", "text": stdout}],
+        "structuredContent": structured,
+        "isError": not ok,
+    }
     return result
 
 
@@ -147,13 +170,18 @@ def handle(request):
     requested = meta.get(META_VERSION) if isinstance(meta, dict) else None
     modern = requested is not None
     if modern and requested not in MODERN_VERSIONS:
-        raise RpcError(-32022, "Unsupported protocol version",
-                       {"supported": list(SUPPORTED_VERSIONS), "requested": requested})
+        raise RpcError(
+            -32022,
+            "Unsupported protocol version",
+            {"supported": list(SUPPORTED_VERSIONS), "requested": requested},
+        )
 
     if method == "initialize":
         asked = params.get("protocolVersion")
         return {
-            "protocolVersion": asked if asked in LEGACY_VERSIONS else LEGACY_VERSIONS[0],
+            "protocolVersion": (
+                asked if asked in LEGACY_VERSIONS else LEGACY_VERSIONS[0]
+            ),
             "capabilities": {"tools": {}},
             "serverInfo": server_info(),
             "instructions": _contract.MCP_INSTRUCTIONS,
@@ -183,10 +211,17 @@ def respond(line):
     try:
         request = json.loads(line)
     except ValueError:
-        return {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}
+        return {
+            "jsonrpc": "2.0",
+            "id": None,
+            "error": {"code": -32700, "message": "Parse error"},
+        }
     if not isinstance(request, dict) or "method" not in request:
-        return {"jsonrpc": "2.0", "id": request.get("id") if isinstance(request, dict) else None,
-                "error": {"code": -32600, "message": "Invalid Request"}}
+        return {
+            "jsonrpc": "2.0",
+            "id": request.get("id") if isinstance(request, dict) else None,
+            "error": {"code": -32600, "message": "Invalid Request"},
+        }
     if "id" not in request:
         return None  # notification (e.g. notifications/initialized): no response
     try:
@@ -197,7 +232,11 @@ def respond(line):
             error["data"] = e.data
         return {"jsonrpc": "2.0", "id": request["id"], "error": error}
     except Exception as e:  # noqa: BLE001 - a server must answer, not die
-        return {"jsonrpc": "2.0", "id": request["id"], "error": {"code": -32603, "message": f"Internal error: {e}"}}
+        return {
+            "jsonrpc": "2.0",
+            "id": request["id"],
+            "error": {"code": -32603, "message": f"Internal error: {e}"},
+        }
 
 
 def main(argv=None):

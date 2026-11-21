@@ -40,7 +40,9 @@ SECTION_HEADINGS = {
     "refactor": "Changed",
     "docs": "Documentation",
 }
-_TYPE_RE = re.compile(r"^(?P<type>[a-zA-Z]+)(\([^)]*\))?(?P<breaking>!)?:\s*(?P<desc>.+)$")
+_TYPE_RE = re.compile(
+    r"^(?P<type>[a-zA-Z]+)(\([^)]*\))?(?P<breaking>!)?:\s*(?P<desc>.+)$"
+)
 # Conventional Commits defines this as a footer *trailer* - a line on its
 # own starting with this token - not a bare substring match anywhere in the
 # body. A bare substring match is a real false-positive risk: this exact
@@ -64,7 +66,7 @@ def _run(*args: str) -> str:
 def read_version() -> str:
     match = re.search(r'^version = "([^"]+)"', PYPROJECT.read_text(), re.MULTILINE)
     if not match:
-        raise SystemExit("Could not find a version = \"...\" line in pyproject.toml")
+        raise SystemExit('Could not find a version = "..." line in pyproject.toml')
     return match.group(1)
 
 
@@ -112,7 +114,9 @@ def classify(commits: list[tuple[str, str]]) -> tuple[str | None, dict[str, list
         if not match:
             continue
         commit_type = match.group("type").lower()
-        breaking = bool(match.group("breaking")) or bool(_BREAKING_FOOTER_RE.search(body))
+        breaking = bool(match.group("breaking")) or bool(
+            _BREAKING_FOOTER_RE.search(body)
+        )
         desc = match.group("desc").strip()
         if breaking:
             level = "major"
@@ -137,12 +141,25 @@ def bump(version: str, level: str) -> str:
 
 def write_version_files(new_version: str) -> None:
     PYPROJECT.write_text(
-        re.sub(r'^version = "[^"]+"', f'version = "{new_version}"', PYPROJECT.read_text(), count=1, flags=re.MULTILINE)
+        re.sub(
+            r'^version = "[^"]+"',
+            f'version = "{new_version}"',
+            PYPROJECT.read_text(),
+            count=1,
+            flags=re.MULTILINE,
+        )
     )
     package = json.loads(PACKAGE_JSON.read_text())
     package["version"] = new_version
     PACKAGE_JSON.write_text(json.dumps(package, indent=2) + "\n")
-    INIT_PY.write_text(re.sub(r'^__version__ = "[^"]+"', f'__version__ = "{new_version}"', INIT_PY.read_text(), count=1))
+    INIT_PY.write_text(
+        re.sub(
+            r'^__version__ = "[^"]+"',
+            f'__version__ = "{new_version}"',
+            INIT_PY.read_text(),
+            count=1,
+        )
+    )
 
 
 def insert_changelog_section(new_version: str, sections: dict[str, list[str]]) -> None:

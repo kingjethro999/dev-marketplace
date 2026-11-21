@@ -10,7 +10,9 @@ mechanism every other requirement already uses (agent/requirements.py). Tier 2 (
 module's own OS-level `DEFAULT_PROVIDERS` (skills/registry.py -- the package each collision silently resolved to
 before this module existed), overridden per skill by a flat `{"skill_name": "package"}` object in a `providers.json`
 file at the workspace root, when one exists. A skill with zero or one real tool candidate never consults either:
-there is nothing to choose (`select_tool()`'s own short-circuit, not this module's concern)."""
+there is nothing to choose (`select_tool()`'s own short-circuit, not this module's concern).
+"""
+
 from __future__ import annotations
 
 import json
@@ -24,17 +26,21 @@ PROVIDER_REQUIREMENT_PREFIX = "provider."
 
 def explicit_providers(user_requirements: Dict[str, Any]) -> Dict[str, str]:
     """{skill_name: package} from `--set provider.<skill_name>=<package>` requirement keys. Any other requirement
-    key is left untouched -- this only ever reads keys under PROVIDER_REQUIREMENT_PREFIX."""
+    key is left untouched -- this only ever reads keys under PROVIDER_REQUIREMENT_PREFIX.
+    """
     out: Dict[str, str] = {}
     for key, value in (user_requirements or {}).items():
-        if key.startswith(PROVIDER_REQUIREMENT_PREFIX) and len(key) > len(PROVIDER_REQUIREMENT_PREFIX):
-            out[key[len(PROVIDER_REQUIREMENT_PREFIX):]] = str(value)
+        if key.startswith(PROVIDER_REQUIREMENT_PREFIX) and len(key) > len(
+            PROVIDER_REQUIREMENT_PREFIX
+        ):
+            out[key[len(PROVIDER_REQUIREMENT_PREFIX) :]] = str(value)
     return out
 
 
 def default_providers(workspace: str) -> Dict[str, str]:
     """OS-level DEFAULT_PROVIDERS, overridden per skill by `<workspace>/providers.json` when present. A malformed
-    file is a configuration error, raised loudly here rather than silently ignored or guessed at."""
+    file is a configuration error, raised loudly here rather than silently ignored or guessed at.
+    """
     out = dict(DEFAULT_PROVIDERS)
     path = Path(workspace) / "providers.json"
     if not path.exists():
@@ -43,7 +49,11 @@ def default_providers(workspace: str) -> Dict[str, str]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
         raise ValueError(f"invalid workspace provider policy {path}: {e}") from e
-    if not isinstance(data, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in data.items()):
-        raise ValueError(f"invalid workspace provider policy {path}: expected a flat {{\"skill_name\": \"package\"}} object")
+    if not isinstance(data, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in data.items()
+    ):
+        raise ValueError(
+            f'invalid workspace provider policy {path}: expected a flat {{"skill_name": "package"}} object'
+        )
     out.update(data)
     return out

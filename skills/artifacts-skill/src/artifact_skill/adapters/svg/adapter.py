@@ -61,7 +61,8 @@ class SvgAdapter(ArtifactAdapter):
 
     def capabilities(self) -> list[Capability]:
         structural = Capability(
-            id="svg.structural", status=CapabilityStatus.AVAILABLE,
+            id="svg.structural",
+            status=CapabilityStatus.AVAILABLE,
             detail="Uses only the standard library (xml.etree.ElementTree); always available.",
             detected_via="stdlib",
         )
@@ -75,16 +76,20 @@ class SvgAdapter(ArtifactAdapter):
             except im.PackageNotFoundError:
                 version = None
             render = Capability(
-                id="svg.render", status=CapabilityStatus.AVAILABLE,
+                id="svg.render",
+                status=CapabilityStatus.AVAILABLE,
                 detail="playwright importable. A matching Chromium build must also be installed "
                 "(`playwright install chromium`) — verified at render() time, not here; see "
                 "adapters/html/adapter.py's docstring for the precedent this follows.",
-                detected_via="import playwright", version=version,
+                detected_via="import playwright",
+                version=version,
             )
         else:
             render = Capability(
-                id="svg.render", status=CapabilityStatus.MISSING,
-                detail="playwright not importable.", detected_via="import playwright",
+                id="svg.render",
+                status=CapabilityStatus.MISSING,
+                detail="playwright not importable.",
+                detected_via="import playwright",
             )
         return [structural, render]
 
@@ -110,7 +115,9 @@ class SvgAdapter(ArtifactAdapter):
         reject_xml_entities_in_file(ref.path)
         warnings: list[str] = []
         try:
-            tree = ET.parse(ref.path)  # noqa: S314 - reject_xml_entities_in_file() above already rejects DOCTYPE/entity payloads
+            tree = ET.parse(
+                ref.path
+            )  # noqa: S314 - reject_xml_entities_in_file() above already rejects DOCTYPE/entity payloads
         except ET.ParseError as exc:
             raise ArtifactInputError(
                 code="ARTIFACT_SVG_UNREADABLE",
@@ -152,21 +159,33 @@ class SvgAdapter(ArtifactAdapter):
                 # format) was worth extracting.
                 outcome = resolve_local_reference(svg_dir, url)
                 if outcome.escaped:
-                    warnings.append(f"Local resource reference escapes the document's directory: {url}")
+                    warnings.append(
+                        f"Local resource reference escapes the document's directory: {url}"
+                    )
                     continue
                 if outcome.exists:
                     local_present += 1
                 else:
                     local_missing.append(url)
 
-        text_parts = [elem.text for elem in root.iter() if _local_name(elem.tag) in ("text", "tspan") and elem.text]
+        text_parts = [
+            elem.text
+            for elem in root.iter()
+            if _local_name(elem.tag) in ("text", "tspan") and elem.text
+        ]
 
         # The document's text for InspectionReport.text: each <text>
         # element's whole content in order, tspan tails included (the
         # .text-only list above misses "10 mg" in
         # "<text><tspan>Note</tspan> 10 mg</text>").
         full_text = "\n".join(
-            part for part in ("".join(elem.itertext()) for elem in root.iter() if _local_name(elem.tag) == "text") if part
+            part
+            for part in (
+                "".join(elem.itertext())
+                for elem in root.iter()
+                if _local_name(elem.tag) == "text"
+            )
+            if part
         )
 
         details = {
@@ -182,11 +201,15 @@ class SvgAdapter(ArtifactAdapter):
             # marker list found, not every <text>/<tspan>'s full content.
             "leftover_markers": find_leftover_markers("\n".join(text_parts)),
         }
-        return InspectionReport(artifact=ref, details=details, warnings=warnings, text=full_text)
+        return InspectionReport(
+            artifact=ref, details=details, warnings=warnings, text=full_text
+        )
 
     # ---- plan / execute -----------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"SVG adapter has no mutating operations (requested '{operation}').",
@@ -194,7 +217,9 @@ class SvgAdapter(ArtifactAdapter):
             evidence={"operation": operation},
         )
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         raise ArtifactInputError(
             code="ARTIFACT_OPERATION_UNKNOWN",
             message=f"SVG adapter has no mutating operations (requested '{operation}').",
@@ -204,37 +229,62 @@ class SvgAdapter(ArtifactAdapter):
 
     # ---- render ----------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         check_input_size(ref.path)
         reject_xml_entities_in_file(ref.path)
         # full_page=False: see rendering/chromium_render.py's docstring —
         # a standalone SVG document hangs Playwright's full-page screenshot.
         out_path = render_local_file(
-            ref.path, out_dir / "page-001.png", capability_id="svg.render", full_page=False, limits=limits
+            ref.path,
+            out_dir / "page-001.png",
+            capability_id="svg.render",
+            full_page=False,
+            limits=limits,
         )
-        return RenderResult(kind="page_images", files=[out_path], backend="playwright+chromium")
+        return RenderResult(
+            kind="page_images", files=[out_path], backend="playwright+chromium"
+        )
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         checks: list[Check] = []
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="svg_validity", name="SVG is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="svg_validity",
+                    name="SVG is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="svg_validity", name="SVG is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(id="svg_validity", name="SVG is readable", status=CheckStatus.PASS)
+        )
 
         details = report.details
         checks.append(
             Check(
                 id="explicit_size",
                 name="Explicit size (width/height or viewBox)",
-                status=CheckStatus.PASS if details["has_explicit_size"] else CheckStatus.WARN,
-                message=f"width={details['width']}, height={details['height']}, viewBox={details['view_box']}."
-                if details["has_explicit_size"]
-                else "No width/height or viewBox — a viewer may fall back to an arbitrary default size.",
+                status=(
+                    CheckStatus.PASS
+                    if details["has_explicit_size"]
+                    else CheckStatus.WARN
+                ),
+                message=(
+                    f"width={details['width']}, height={details['height']}, viewBox={details['view_box']}."
+                    if details["has_explicit_size"]
+                    else "No width/height or viewBox — a viewer may fall back to an arbitrary default size."
+                ),
             )
         )
 
@@ -250,14 +300,24 @@ class SvgAdapter(ArtifactAdapter):
                 )
             )
         else:
-            checks.append(Check(id="local_resources", name="Local resource references resolve", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="local_resources",
+                    name="Local resource references resolve",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         if details["external_resources"]:
             checks.append(
                 Check(
                     id="external_resources",
                     name="No external resource references",
-                    status=CheckStatus.FAIL if policy.get("forbid_external_resources") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_external_resources")
+                        else CheckStatus.WARN
+                    ),
                     message=f"{len(details['external_resources'])} external resource(s) referenced; not "
                     "fetched (network access is off by default — see docs/security.md), and render() blocks "
                     "them too, so they will appear broken/missing in the rendered evidence.",
@@ -265,7 +325,13 @@ class SvgAdapter(ArtifactAdapter):
                 )
             )
         else:
-            checks.append(Check(id="external_resources", name="No external resource references", status=CheckStatus.PASS))
+            checks.append(
+                Check(
+                    id="external_resources",
+                    name="No external resource references",
+                    status=CheckStatus.PASS,
+                )
+            )
 
         leftover_markers = details.get("leftover_markers", [])
         if leftover_markers:
@@ -273,14 +339,22 @@ class SvgAdapter(ArtifactAdapter):
                 Check(
                     id="leftover_placeholder_text",
                     name="No leftover generation placeholder text",
-                    status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_placeholder_text")
+                        else CheckStatus.WARN
+                    ),
                     message=f"Found likely-unreviewed placeholder text: {leftover_markers}.",
                     evidence={"markers": leftover_markers},
                 )
             )
         else:
             checks.append(
-                Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                Check(
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=CheckStatus.PASS,
+                )
             )
 
         return VerificationResult(kind="structural", checks=checks)

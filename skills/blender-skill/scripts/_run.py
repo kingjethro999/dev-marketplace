@@ -8,6 +8,7 @@ and reads the result JSON that the bpy-side script wrote. stdout/stderr from Ble
 only used for the error message when something goes wrong (nothing about a successful call is
 parsed from them).
 """
+
 from __future__ import annotations
 
 import json
@@ -37,7 +38,11 @@ def _os_default_paths() -> List[str]:
         return ["/Applications/Blender.app/Contents/MacOS/Blender"]
     if system == "Windows":
         import glob
-        return sorted(glob.glob(r"C:\Program Files\Blender Foundation\Blender *\blender.exe"), reverse=True)
+
+        return sorted(
+            glob.glob(r"C:\Program Files\Blender Foundation\Blender *\blender.exe"),
+            reverse=True,
+        )
     # Linux: apt package, Steam, snap, flatpak wrapper locations.
     return [
         "/usr/bin/blender",
@@ -65,22 +70,41 @@ def find_blender(explicit: Optional[str] = None) -> str:
     hint = _INSTALL_HINT.get(platform.system(), "see https://www.blender.org/download/")
     raise SkillError(
         "Blender was not found (checked --blender, $BLENDER, PATH, and the usual install locations).",
-        kind="missing_tool", hint=hint,
+        kind="missing_tool",
+        hint=hint,
     )
 
 
-def blender_command(bpy_script: str, args_path: str, result_path: str, blender_bin: str,
-                     extra_args: Optional[List[str]] = None) -> List[str]:
-    cmd = [blender_bin, "-b", "--factory-startup", "--python", str(BPY_DIR / bpy_script), "--"]
+def blender_command(
+    bpy_script: str,
+    args_path: str,
+    result_path: str,
+    blender_bin: str,
+    extra_args: Optional[List[str]] = None,
+) -> List[str]:
+    cmd = [
+        blender_bin,
+        "-b",
+        "--factory-startup",
+        "--python",
+        str(BPY_DIR / bpy_script),
+        "--",
+    ]
     if extra_args:
         cmd += extra_args
     cmd += [args_path, result_path]
     return cmd
 
 
-def run_bpy(bpy_script: str, args: Dict[str, Any], *, blender_bin: Optional[str] = None,
-            timeout: float = 1800.0, extra_args: Optional[List[str]] = None,
-            progress: bool = False) -> Dict[str, Any]:
+def run_bpy(
+    bpy_script: str,
+    args: Dict[str, Any],
+    *,
+    blender_bin: Optional[str] = None,
+    timeout: float = 1800.0,
+    extra_args: Optional[List[str]] = None,
+    progress: bool = False,
+) -> Dict[str, Any]:
     """Run scripts/bpy/<bpy_script> with `args`, return its result JSON.
 
     Raises SkillError(kind="timeout") if Blender doesn't finish in `timeout` seconds, or
@@ -93,13 +117,20 @@ def run_bpy(bpy_script: str, args: Dict[str, Any], *, blender_bin: Optional[str]
         args_path = str(Path(tmp) / "args.json")
         result_path = str(Path(tmp) / "result.json")
         Path(args_path).write_text(json.dumps(args), encoding="utf-8")
-        cmd = blender_command(bpy_script, args_path, result_path, blender_bin, extra_args)
+        cmd = blender_command(
+            bpy_script, args_path, result_path, blender_bin, extra_args
+        )
         try:
             proc = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout,
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
             )
         except subprocess.TimeoutExpired as exc:
-            raise SkillError(f"Blender did not finish within {timeout:.0f}s", kind="timeout") from exc
+            raise SkillError(
+                f"Blender did not finish within {timeout:.0f}s", kind="timeout"
+            ) from exc
         if progress and proc.stderr:
             print(proc.stderr, file=sys.stderr)
         result_file = Path(result_path)
@@ -107,12 +138,18 @@ def run_bpy(bpy_script: str, args: Dict[str, Any], *, blender_bin: Optional[str]
             try:
                 result = json.loads(result_file.read_text(encoding="utf-8"))
             except json.JSONDecodeError as exc:
-                raise SkillError(f"Blender wrote an unreadable result file: {exc}", kind="internal") from exc
+                raise SkillError(
+                    f"Blender wrote an unreadable result file: {exc}", kind="internal"
+                ) from exc
             if not result.get("ok", False) and "error" not in result:
-                result["error"] = {"kind": "internal", "message": "bpy script reported failure with no error detail"}
+                result["error"] = {
+                    "kind": "internal",
+                    "message": "bpy script reported failure with no error detail",
+                }
             return result
         tail = "\n".join((proc.stderr or "").splitlines()[-25:])
         raise SkillError(
             f"Blender exited {proc.returncode} without writing a result (no crash-safe error available)",
-            kind="internal", hint=tail or None,
+            kind="internal",
+            hint=tail or None,
         )

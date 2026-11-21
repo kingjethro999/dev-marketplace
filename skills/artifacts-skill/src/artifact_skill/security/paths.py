@@ -43,7 +43,10 @@ def reject_output_overwrites_input(input_path: Path, output_path: Path) -> None:
         try:
             in_stat = input_path.stat()
             out_stat = output_path.stat()
-            same_inode = (in_stat.st_dev, in_stat.st_ino) == (out_stat.st_dev, out_stat.st_ino)
+            same_inode = (in_stat.st_dev, in_stat.st_ino) == (
+                out_stat.st_dev,
+                out_stat.st_ino,
+            )
         except OSError:
             same_inode = False
 
@@ -78,7 +81,11 @@ def resolve_within(base_dir: Path, candidate: Path) -> Path:
     imply is already in place.
     """
     base_resolved = base_dir.resolve()
-    target = (base_dir / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+    target = (
+        (base_dir / candidate).resolve()
+        if not candidate.is_absolute()
+        else candidate.resolve()
+    )
     try:
         target.relative_to(base_resolved)
     except ValueError as exc:
@@ -96,7 +103,9 @@ def atomic_write_bytes(path: Path, data: bytes) -> Path:
     directory, fsync, then os.replace. Never leaves a partial file at `path`.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp")
+    fd, tmp_name = tempfile.mkstemp(
+        dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp"
+    )
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(data)
@@ -116,7 +125,9 @@ def atomic_copy(src: Path, dst: Path) -> Path:
     return atomic_write_bytes(dst, src.read_bytes())
 
 
-def safe_extract_zip(archive_path: Path, dest_dir: Path, limits: Limits = DEFAULT_LIMITS) -> list[Path]:
+def safe_extract_zip(
+    archive_path: Path, dest_dir: Path, limits: Limits = DEFAULT_LIMITS
+) -> list[Path]:
     """Extract a zip archive with path-escape and zip-bomb protection.
 
     Rejects: absolute member paths, `..` traversal, symlink members, more
@@ -157,19 +168,29 @@ def safe_extract_zip(archive_path: Path, dest_dir: Path, limits: Limits = DEFAUL
             total_uncompressed += info.file_size
             if info.compress_size > 0:
                 ratio = info.file_size / max(info.compress_size, 1)
-                if ratio > limits.max_zip_compression_ratio and info.file_size > 10 * 1024 * 1024:
+                if (
+                    ratio > limits.max_zip_compression_ratio
+                    and info.file_size > 10 * 1024 * 1024
+                ):
                     raise ArtifactSecurityError(
                         code="ARTIFACT_ZIP_BOMB_SUSPECTED",
                         message=f"Archive member '{name}' has a suspicious compression ratio ({ratio:.0f}x).",
                         remediation="Not extracted; this looks like a zip bomb.",
-                        evidence={"archive": str(archive_path), "member": name, "ratio": ratio},
+                        evidence={
+                            "archive": str(archive_path),
+                            "member": name,
+                            "ratio": ratio,
+                        },
                     )
         if total_uncompressed > limits.max_zip_uncompressed_bytes:
             raise ArtifactSecurityError(
                 code="ARTIFACT_ZIP_TOO_LARGE",
                 message=f"Archive would expand to {total_uncompressed} bytes, exceeding limit.",
                 remediation="Not extracted; increase Limits.max_zip_uncompressed_bytes if this is expected.",
-                evidence={"archive": str(archive_path), "total_uncompressed": total_uncompressed},
+                evidence={
+                    "archive": str(archive_path),
+                    "total_uncompressed": total_uncompressed,
+                },
             )
         for info in infos:
             target = resolve_within(dest_dir, Path(info.filename))

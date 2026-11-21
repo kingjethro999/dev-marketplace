@@ -6,7 +6,9 @@ import os
 import subprocess
 
 REDIRECTS = frozenset({"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"})
-ENV = {k: v for k, v in os.environ.items() if k not in REDIRECTS} | {"GIT_TERMINAL_PROMPT": "0"}
+ENV = {k: v for k, v in os.environ.items() if k not in REDIRECTS} | {
+    "GIT_TERMINAL_PROMPT": "0"
+}
 
 
 def run(cwd: str, *args: str) -> str | None:

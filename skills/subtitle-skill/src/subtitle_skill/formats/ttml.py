@@ -27,6 +27,7 @@ Ruby (roadmap step 10) is IMSC 1.1 ruby in `ttml` and the reading in brackets
 after its base in `ebu-tt-d`, which has none. A vertical cue (`style.vertical`)
 gets a region at the right edge with `tts:writingMode="tbrl"`.
 """
+
 from __future__ import annotations
 
 import re
@@ -71,9 +72,16 @@ def _clock(seconds: float) -> str:
 def _parse_clock(value: str) -> float:
     m = _CLOCK.match(value or "")
     if not m:
-        raise SubtitleSkillError("INVALID_INPUT", f"TTML time {value!r} is not hh:mm:ss.fff")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"TTML time {value!r} is not hh:mm:ss.fff"
+        )
     hours, minutes, secs, frac = m.groups()
-    return int(hours) * 3600 + int(minutes) * 60 + int(secs) + (float(frac) if frac else 0.0)
+    return (
+        int(hours) * 3600
+        + int(minutes) * 60
+        + int(secs)
+        + (float(frac) if frac else 0.0)
+    )
 
 
 def _pct(value: float) -> str:
@@ -100,7 +108,9 @@ def decode_id(xml_id: str) -> str:
 def _color(value: str) -> str:
     m = re.match(r"^(?:#|0x)?([0-9A-Fa-f]{6})$", value.strip())
     if not m:
-        raise SubtitleSkillError("INVALID_INPUT", f"style.color must be RRGGBB hex, got {value!r}")
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"style.color must be RRGGBB hex, got {value!r}"
+        )
     return "#" + m.group(1).lower()
 
 
@@ -141,14 +151,20 @@ def _span_style(cue: SubtitleCue) -> tuple:
     style = cue.style
     if style is None:
         return (False, False, None)
-    return (bool(style.bold), bool(style.italic), _color(style.color) if style.color is not None else None)
+    return (
+        bool(style.bold),
+        bool(style.italic),
+        _color(style.color) if style.color is not None else None,
+    )
 
 
 def _lines(text: str) -> str:
     return "<br/>".join(escape(line) for line in text.split("\n"))
 
 
-def _span(cue: SubtitleCue, style_id: Optional[str], *, profile: str, language: str) -> str:
+def _span(
+    cue: SubtitleCue, style_id: Optional[str], *, profile: str, language: str
+) -> str:
     """The cue's content span. Ruby is IMSC 1.1 ruby (`tts:ruby` container / base /
     text spans) in `ttml`; EBU-TT-D has no ruby, so the reading is written in
     brackets after its base there (as in SRT)."""
@@ -158,8 +174,11 @@ def _span(cue: SubtitleCue, style_id: Optional[str], *, profile: str, language: 
             parts.append(_lines(segment))
         elif profile == "ttml":
             parts.append(
-                '<span tts:ruby="container"><span tts:ruby="base">' + escape(segment)
-                + '</span><span tts:ruby="text">' + escape(reading) + "</span></span>"
+                '<span tts:ruby="container"><span tts:ruby="base">'
+                + escape(segment)
+                + '</span><span tts:ruby="text">'
+                + escape(reading)
+                + "</span></span>"
             )
         else:
             parts.append(escape(ruby_as_text(segment, reading, language)))
@@ -181,7 +200,9 @@ def _span_style_attrs(key: tuple) -> str:
 
 def generate_ttml(document: SubtitleDocument, *, profile: str = "ttml") -> str:
     if profile not in PROFILES:
-        raise SubtitleSkillError("UNSUPPORTED_FORMAT", f"unknown TTML profile {profile!r}")
+        raise SubtitleSkillError(
+            "UNSUPPORTED_FORMAT", f"unknown TTML profile {profile!r}"
+        )
     ordered = sorted(document.cues, key=lambda c: (c.start, c.end, c.id))
 
     regions: dict = {}  # geometry -> region id
@@ -192,7 +213,9 @@ def generate_ttml(document: SubtitleDocument, *, profile: str = "ttml") -> str:
         geometry = _region_for(cue.style)
         if geometry not in regions:
             positioned = sum(1 for rid in regions.values() if rid != "bottom")
-            regions[geometry] = "bottom" if geometry == _region_for(None) else f"r{positioned + 1}"
+            regions[geometry] = (
+                "bottom" if geometry == _region_for(None) else f"r{positioned + 1}"
+            )
         region_id = regions[geometry]
         align = _text_align(cue.style)
         style_id = styles.setdefault(align, "s_" + align)
@@ -221,12 +244,18 @@ def generate_ttml(document: SubtitleDocument, *, profile: str = "ttml") -> str:
     else:
         root_attrs.append(f'ttp:contentProfiles="{IMSC11_TEXT_PROFILE}"')
 
-    out = ['<?xml version="1.0" encoding="UTF-8"?>', f'<tt {" ".join(ns)} {" ".join(root_attrs)}>', "  <head>"]
+    out = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        f'<tt {" ".join(ns)} {" ".join(root_attrs)}>',
+        "  <head>",
+    ]
     out.append("    <metadata>")
     out.append(f"      <ttm:title>{escape(document.id)}</ttm:title>")
     if profile == "ebu-tt-d":
         out.append("      <ebuttm:documentMetadata>")
-        out.append(f"        <ebuttm:conformsToStandard>{EBU_TT_D_STANDARD}</ebuttm:conformsToStandard>")
+        out.append(
+            f"        <ebuttm:conformsToStandard>{EBU_TT_D_STANDARD}</ebuttm:conformsToStandard>"
+        )
         out.append("      </ebuttm:documentMetadata>")
     out.append("    </metadata>")
     out.append("    <styling>")
@@ -234,9 +263,13 @@ def generate_ttml(document: SubtitleDocument, *, profile: str = "ttml") -> str:
         '      <style xml:id="s_base" tts:fontFamily="proportionalSansSerif" tts:fontSize="100%" '
         'tts:lineHeight="normal" tts:color="#ffffff" tts:backgroundColor="#000000c2"/>'
     )
-    for align, style_id in sorted(styles.items(), key=lambda kv: kv[1]) or [("center", "s_center")]:
+    for align, style_id in sorted(styles.items(), key=lambda kv: kv[1]) or [
+        ("center", "s_center")
+    ]:
         out.append(f'      <style xml:id="{style_id}" tts:textAlign="{align}"/>')
-    for key, style_id in sorted(span_styles.items(), key=lambda kv: int(kv[1][len("s_span"):])):
+    for key, style_id in sorted(
+        span_styles.items(), key=lambda kv: int(kv[1][len("s_span") :])
+    ):
         out.append(f'      <style xml:id="{style_id}" {_span_style_attrs(key)}/>')
     out.append("    </styling>")
     out.append("    <layout>")
@@ -268,7 +301,20 @@ def generate_ebu_tt_d(document: SubtitleDocument) -> str:
 
 # ---------------------------------------------------------------- validation
 
-_ALLOWED_TT = {"tt", "head", "metadata", "styling", "style", "layout", "region", "body", "div", "p", "span", "br"}
+_ALLOWED_TT = {
+    "tt",
+    "head",
+    "metadata",
+    "styling",
+    "style",
+    "layout",
+    "region",
+    "body",
+    "div",
+    "p",
+    "span",
+    "br",
+}
 
 
 def _q(ns: str, name: str) -> str:
@@ -290,8 +336,14 @@ def validate_ttml(text: str, *, profile: str) -> list:
         problems.append('tt must have ttp:timeBase="media"')
     if root.get(_q(NS_TTS, "extent")) is not None:
         problems.append("tt must not carry tts:extent (regions are in percent)")
-    if profile == "ttml" and IMSC11_TEXT_PROFILE not in (root.get(_q(NS_TTP, "contentProfiles")) or "").split():
-        problems.append("tt does not name the IMSC 1.1 Text profile in ttp:contentProfiles")
+    if (
+        profile == "ttml"
+        and IMSC11_TEXT_PROFILE
+        not in (root.get(_q(NS_TTP, "contentProfiles")) or "").split()
+    ):
+        problems.append(
+            "tt does not name the IMSC 1.1 Text profile in ttp:contentProfiles"
+        )
 
     head = root.find(_q(NS_TT, "head"))
     body = root.find(_q(NS_TT, "body"))
@@ -313,15 +365,23 @@ def validate_ttml(text: str, *, profile: str) -> list:
             if xml_id in ids:
                 problems.append(f"duplicate xml:id {xml_id!r}")
             ids[xml_id] = el
-        if el.tag.startswith("{" + NS_TT + "}") and el.tag.split("}")[1] not in _ALLOWED_TT:
+        if (
+            el.tag.startswith("{" + NS_TT + "}")
+            and el.tag.split("}")[1] not in _ALLOWED_TT
+        ):
             problems.append(f"element {el.tag.split('}')[1]!r} is not allowed")
 
-    style_ids = {s.get(_q(NS_XML, "id")) for s in (styling.findall(_q(NS_TT, "style")) if styling is not None else [])}
+    style_ids = {
+        s.get(_q(NS_XML, "id"))
+        for s in (styling.findall(_q(NS_TT, "style")) if styling is not None else [])
+    }
     region_ids = set()
     for region in layout.findall(_q(NS_TT, "region")) if layout is not None else []:
         rid = region.get(_q(NS_XML, "id"))
         region_ids.add(rid)
-        origin, extent = region.get(_q(NS_TTS, "origin")), region.get(_q(NS_TTS, "extent"))
+        origin, extent = region.get(_q(NS_TTS, "origin")), region.get(
+            _q(NS_TTS, "extent")
+        )
         if origin is None or extent is None:
             problems.append(f"region {rid!r} needs tts:origin and tts:extent")
             continue
@@ -341,7 +401,9 @@ def validate_ttml(text: str, *, profile: str) -> list:
         if not pid:
             problems.append("a p has no xml:id")
         try:
-            begin, end = _parse_clock(p.get("begin", "")), _parse_clock(p.get("end", ""))
+            begin, end = _parse_clock(p.get("begin", "")), _parse_clock(
+                p.get("end", "")
+            )
             if end <= begin:
                 problems.append(f"p {pid!r}: end is not after begin")
         except SubtitleSkillError as exc:
@@ -355,15 +417,21 @@ def validate_ttml(text: str, *, profile: str) -> list:
             for sid in (span.get("style") or "").split():
                 if sid not in style_ids:
                     problems.append(f"p {pid!r}: span style {sid!r} is not defined")
-        if profile == "ebu-tt-d" and any(sp.get(_q(NS_TTS, "ruby")) for sp in p.iter(_q(NS_TT, "span"))):
+        if profile == "ebu-tt-d" and any(
+            sp.get(_q(NS_TTS, "ruby")) for sp in p.iter(_q(NS_TT, "span"))
+        ):
             problems.append(f"p {pid!r}: EBU-TT-D has no ruby")
         if profile == "ebu-tt-d":
             for el in [p, *p.iter(_q(NS_TT, "span"))]:
                 if any(k.startswith("{" + NS_TTS + "}") for k in el.attrib):
-                    problems.append(f"p {pid!r}: EBU-TT-D allows no inline tts: styling on p or span")
+                    problems.append(
+                        f"p {pid!r}: EBU-TT-D allows no inline tts: styling on p or span"
+                    )
             for span in p.iter(_q(NS_TT, "span")):
                 if any(child.tag != _q(NS_TT, "br") for child in span):
-                    problems.append(f"p {pid!r}: an EBU-TT-D span may hold only text and br")
+                    problems.append(
+                        f"p {pid!r}: an EBU-TT-D span may hold only text and br"
+                    )
     return problems
 
 
@@ -371,7 +439,8 @@ def check_ttml(text: str, *, profile: str) -> None:
     problems = validate_ttml(text, profile=profile)
     if problems:
         raise SubtitleSkillError(
-            "OUTPUT_ERROR", f"the written {profile} document does not conform: {'; '.join(problems[:5])}"
+            "OUTPUT_ERROR",
+            f"the written {profile} document does not conform: {'; '.join(problems[:5])}",
         )
 
 
@@ -385,9 +454,16 @@ def _text_of(el: ET.Element, ruby: Optional[list] = None) -> str:
     for child in el:
         if child.tag == _q(NS_TT, "br"):
             parts.append("\n")
-        elif child.tag == _q(NS_TT, "span") and child.get(_q(NS_TTS, "ruby")) == "container":
-            base = "".join(_text_of(c) for c in child if c.get(_q(NS_TTS, "ruby")) == "base")
-            reading = "".join(_text_of(c) for c in child if c.get(_q(NS_TTS, "ruby")) == "text")
+        elif (
+            child.tag == _q(NS_TT, "span")
+            and child.get(_q(NS_TTS, "ruby")) == "container"
+        ):
+            base = "".join(
+                _text_of(c) for c in child if c.get(_q(NS_TTS, "ruby")) == "base"
+            )
+            reading = "".join(
+                _text_of(c) for c in child if c.get(_q(NS_TTS, "ruby")) == "text"
+            )
             parts.append(base)
             if ruby is not None:
                 ruby.append({"base": base, "text": reading})
@@ -404,7 +480,9 @@ def parse_ttml(text: str, *, document_id: str = "ttml") -> SubtitleDocument:
     try:
         root = ET.fromstring(text.encode("utf-8"))
     except ET.ParseError as exc:
-        raise SubtitleSkillError("INVALID_INPUT", f"not well-formed TTML: {exc}") from None
+        raise SubtitleSkillError(
+            "INVALID_INPUT", f"not well-formed TTML: {exc}"
+        ) from None
     language = root.get(_q(NS_XML, "lang")) or "und"
     regions = {}
     for region in root.iter(_q(NS_TT, "region")):
@@ -412,7 +490,10 @@ def parse_ttml(text: str, *, document_id: str = "ttml") -> SubtitleDocument:
         me = _PERCENT_PAIR.match(region.get(_q(NS_TTS, "extent")) or "")
         if mo and me:
             regions[region.get(_q(NS_XML, "id"))] = (
-                float(mo.group(1)), float(mo.group(2)), float(me.group(1)), float(me.group(2)),
+                float(mo.group(1)),
+                float(mo.group(2)),
+                float(me.group(1)),
+                float(me.group(2)),
                 region.get(_q(NS_TTS, "displayAlign")) or "before",
                 region.get(_q(NS_TTS, "writingMode")) or "lrtb",
             )
@@ -464,4 +545,6 @@ def parse_ttml(text: str, *, document_id: str = "ttml") -> SubtitleDocument:
         if ruby:
             cue["ruby"] = ruby
         cues.append(cue)
-    return SubtitleDocument.from_dict({"id": document_id, "language": language, "cues": cues})
+    return SubtitleDocument.from_dict(
+        {"id": document_id, "language": language, "cues": cues}
+    )

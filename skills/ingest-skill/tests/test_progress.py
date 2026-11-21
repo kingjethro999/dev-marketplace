@@ -6,6 +6,7 @@ The simulated drives are folders of one real disk, so the real time of a write i
 machine that shared time can be larger than the delays (seen on a macOS CI runner: every write took tens of
 milliseconds), and it hides the difference between the drives. The tests that compare drive speeds therefore give the
 writer threads a clock on which a write takes exactly its drive's delay (DriveClock)."""
+
 from __future__ import annotations
 
 import io
@@ -33,7 +34,8 @@ SMALL_CHUNK = 64 * 1024
 
 class DriveClock:
     """Replaces the time module inside ingest_skill.core. perf_counter(), which the writer threads use to time a write,
-    counts only the delays of the calling thread's own simulated drive; every other name is the real time module's."""
+    counts only the delays of the calling thread's own simulated drive; every other name is the real time module's.
+    """
 
     def __init__(self):
         self._local = threading.local()
@@ -67,12 +69,26 @@ class ProgressTests(unittest.TestCase):
         exactly that long, whatever the real disk under the test does."""
         events = []
         clock = DriveClock()
-        with OpenRecorder() as rec, mock.patch.object(core, "CHUNK", SMALL_CHUNK), mock.patch.object(core, "time", clock if delays else time):
+        with OpenRecorder() as rec, mock.patch.object(
+            core, "CHUNK", SMALL_CHUNK
+        ), mock.patch.object(core, "time", clock if delays else time):
             for name, delay in (delays or {}).items():
                 d = self.tmp / name
-                rec.faults.append((lambda p, mode, d=d: "w" in mode and d in p.parents and p.name.endswith(".part"),
-                                   {"write_delay": delay, "on_write": clock.advance}))
-            r = offload(str(self.card), [str(self.tmp / d) for d in dests], progress=events.append, progress_interval_s=0, **kw)
+                rec.faults.append(
+                    (
+                        lambda p, mode, d=d: "w" in mode
+                        and d in p.parents
+                        and p.name.endswith(".part"),
+                        {"write_delay": delay, "on_write": clock.advance},
+                    )
+                )
+            r = offload(
+                str(self.card),
+                [str(self.tmp / d) for d in dests],
+                progress=events.append,
+                progress_interval_s=0,
+                **kw,
+            )
         return r, events
 
     def assert_monotonic(self, events):
@@ -91,41 +107,81 @@ class ProgressTests(unittest.TestCase):
         self.assertTrue(r.ok)
         self.assert_monotonic(events)
         progress = [e for e in events if e["event"] == "progress"]
-        self.assertGreaterEqual(len(progress), 20, "one line per chunk with a zero interval")
+        self.assertGreaterEqual(
+            len(progress), 20, "one line per chunk with a zero interval"
+        )
         for e in progress:
-            self.assertEqual(set(e) >= {"file", "file_bytes", "file_size", "mb_s", "eta_s", "destinations"}, True)
+            self.assertEqual(
+                set(e)
+                >= {"file", "file_bytes", "file_size", "mb_s", "eta_s", "destinations"},
+                True,
+            )
             self.assertLessEqual(e["file_bytes"], e["file_size"])
-            self.assertEqual([d["root"] for d in e["destinations"]], [d.root for d in r.destinations])
-        self.assertTrue(all(e["eta_s"] is not None and e["eta_s"] >= 0 for e in progress if e["mb_s"]))
+            self.assertEqual(
+                [d["root"] for d in e["destinations"]], [d.root for d in r.destinations]
+            )
+        self.assertTrue(
+            all(
+                e["eta_s"] is not None and e["eta_s"] >= 0
+                for e in progress
+                if e["mb_s"]
+            )
+        )
         files = [e for e in events if e["event"] == "file"]
-        self.assertEqual([(e["file"], e["status"]) for e in files], [("CLIP/C0001.MP4", "copied"), ("CLIP/C0002.MP4", "copied"), ("CLIP/C0003.MP4", "copied")])
+        self.assertEqual(
+            [(e["file"], e["status"]) for e in files],
+            [
+                ("CLIP/C0001.MP4", "copied"),
+                ("CLIP/C0002.MP4", "copied"),
+                ("CLIP/C0003.MP4", "copied"),
+            ],
+        )
         for d in r.destinations:
             self.assertEqual(d.bytes_written, self.total)
             self.assertIsNotNone(d.write_mb_s)
         self.assertFalse([e for e in events if e["event"] == "slow_destination"])
-        for line in events:   # every event is one JSON line
+        for line in events:  # every event is one JSON line
             self.assertEqual(json.loads(json.dumps(line)), line)
 
     def test_a_throttled_destination_is_warned_about_while_the_copy_runs(self):
         # 64 kB chunks in 10 ms, 50 ms and 10 ms: 6.6, 1.3 and 6.6 MB/s on the drives' clock.
-        r, events = self.run_offload(["ssd1", "ssd2", "ssd3"], delays={"ssd1": 0.01, "ssd2": 0.05, "ssd3": 0.01}, slow_min_bytes=256 * 1024)
+        r, events = self.run_offload(
+            ["ssd1", "ssd2", "ssd3"],
+            delays={"ssd1": 0.01, "ssd2": 0.05, "ssd3": 0.01},
+            slow_min_bytes=256 * 1024,
+        )
         self.assertTrue(r.ok, "slow is not failed: every copy is still verified")
         self.assert_monotonic(events)
         slow = [e for e in events if e["event"] == "slow_destination"]
-        self.assertEqual([e["root"] for e in slow], [r.destinations[1].root], "warned once, about ssd2 only")
+        self.assertEqual(
+            [e["root"] for e in slow],
+            [r.destinations[1].root],
+            "warned once, about ssd2 only",
+        )
         first_file = next(i for i, e in enumerate(events) if e["event"] == "file")
-        self.assertLess(events.index(slow[0]), first_file, "raised while the first (1.2 MB) file is still being copied")
+        self.assertLess(
+            events.index(slow[0]),
+            first_file,
+            "raised while the first (1.2 MB) file is still being copied",
+        )
         self.assertEqual(slow[0]["dest_mb_s"], 1.3)
         # Judged against both fast drives (median 6.6), or against one if the other's thread has not written 256 kB yet.
         self.assertIn(slow[0]["median_mb_s"], (6.6, round((1.3 + 6.6) / 2, 1)))
         self.assertLess(slow[0]["dest_mb_s"], 0.5 * slow[0]["median_mb_s"])
         self.assertIn("sets the pace", slow[0]["detail"])
-        self.assertEqual([any("MB/s" in w for w in d.warnings) for d in r.destinations], [False, True, False])
+        self.assertEqual(
+            [any("MB/s" in w for w in d.warnings) for d in r.destinations],
+            [False, True, False],
+        )
         # The whole card: 1.5 MB in 24 writes (the last chunk of a file is a short one).
         self.assertEqual([d.write_mb_s for d in r.destinations], [6.2, 1.2, 6.2])
 
     def test_equally_slow_destinations_are_not_warned_about(self):
-        r, events = self.run_offload(["ssd1", "ssd2"], delays={"ssd1": 0.01, "ssd2": 0.01}, slow_min_bytes=256 * 1024)
+        r, events = self.run_offload(
+            ["ssd1", "ssd2"],
+            delays={"ssd1": 0.01, "ssd2": 0.01},
+            slow_min_bytes=256 * 1024,
+        )
         self.assertTrue(r.ok)
         self.assertFalse([e for e in events if e["event"] == "slow_destination"])
         self.assertEqual([d.write_mb_s for d in r.destinations], [6.2, 6.2])
@@ -134,8 +190,13 @@ class ProgressTests(unittest.TestCase):
         self.run_offload(["ssd1"])
         r, events = self.run_offload(["ssd1"])
         self.assert_monotonic(events)
-        self.assertEqual([e["status"] for e in events if e["event"] == "file"], ["skipped_identical"] * 3)
-        self.assertEqual((r.destinations[0].bytes_written, r.destinations[0].write_mb_s), (0, None))
+        self.assertEqual(
+            [e["status"] for e in events if e["event"] == "file"],
+            ["skipped_identical"] * 3,
+        )
+        self.assertEqual(
+            (r.destinations[0].bytes_written, r.destinations[0].write_mb_s), (0, None)
+        )
 
     def test_follow_has_no_eta(self):
         r, events = self.run_offload(["ssd1"], follow=True, settle_s=0, poll_s=0.01)
@@ -146,12 +207,24 @@ class ProgressTests(unittest.TestCase):
     def test_cli_writes_json_lines_to_stderr_and_one_report_to_stdout(self):
         out, err = io.StringIO(), io.StringIO()
         with redirect_stdout(out), redirect_stderr(err):
-            code = main(["offload", str(self.card), "--dest", str(self.tmp / "ssd1"), "--progress", "--json"])
+            code = main(
+                [
+                    "offload",
+                    str(self.card),
+                    "--dest",
+                    str(self.tmp / "ssd1"),
+                    "--progress",
+                    "--json",
+                ]
+            )
         self.assertEqual(code, 0)
         report = json.loads(out.getvalue())
         self.assertEqual(report["destinations"][0]["bytes_written"], self.total)
         lines = [json.loads(x) for x in err.getvalue().splitlines()]
-        self.assertEqual((lines[0]["event"], lines[-1]["event"], lines[-1]["bytes_done"]), ("start", "done", self.total))
+        self.assertEqual(
+            (lines[0]["event"], lines[-1]["event"], lines[-1]["bytes_done"]),
+            ("start", "done", self.total),
+        )
 
 
 if __name__ == "__main__":

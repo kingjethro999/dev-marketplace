@@ -1,6 +1,8 @@
 """Canonical JSON and hashing. Every identity (asset identity, cache key, plan id) derives from
 canonical JSON so key order, whitespace and float formatting never change an identity. No
-timestamps, no random values: two identical requests against identical inputs get the same hash."""
+timestamps, no random values: two identical requests against identical inputs get the same hash.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -9,7 +11,9 @@ from typing import Any
 
 
 def canonical_json(obj: Any) -> str:
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    return json.dumps(
+        obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    )
 
 
 def sha256_text(text: str) -> str:

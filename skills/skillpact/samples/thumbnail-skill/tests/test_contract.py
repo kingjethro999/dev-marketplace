@@ -1,5 +1,7 @@
 """Contract / doctor shape tests, and drift checks: the contract must actually match what the
-skill implements (only implemented tools, only registered fonts, only real error codes)."""
+skill implements (only implemented tools, only registered fonts, only real error codes).
+"""
+
 from __future__ import annotations
 
 from thumbnail_skill.contract import skill_contract
@@ -12,6 +14,7 @@ from thumbnail_skill.model import ELEMENT_TYPES, OUTPUT_FORMATS
 
 def test_contract_is_json_serialisable():
     import json
+
     json.dumps(skill_contract())
 
 
@@ -22,7 +25,14 @@ def test_contract_tool_ids_match_executor():
 
 def test_contract_lists_no_unimplemented_operation():
     c = skill_contract()
-    forbidden_terms = ("select_best_frame", "auto_layout", "generate_title", "rank_frames", "face_detect", "click_through")
+    forbidden_terms = (
+        "select_best_frame",
+        "auto_layout",
+        "generate_title",
+        "rank_frames",
+        "face_detect",
+        "click_through",
+    )
     text = str(c).lower()
     for term in forbidden_terms:
         assert term not in text
@@ -59,6 +69,7 @@ def test_contract_declares_no_shell_or_arbitrary_execution():
 
 def test_doctor_report_is_json_serialisable():
     import json
+
     json.dumps(doctor_report())
 
 

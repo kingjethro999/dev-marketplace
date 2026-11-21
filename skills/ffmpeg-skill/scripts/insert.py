@@ -23,12 +23,27 @@ Examples:
   python3 insert.py slate.jpg --duration 5 --width 1920 --height 1080 --fps 30 -o slate.mp4
   python3 insert.py photo.jpg --duration 6 --zoom in --pan right --width 1920 --height 1080
 """
+
 import argparse
 import math
 import sys
 
 from _common import still_input_args  # noqa: E402
-from _common import add_common, apply_common, default_output, die, emit, ffmpeg_base, info, probe, run, video_args, X264_PRESETS, time_arg, fmt_secs
+from _common import (
+    add_common,
+    apply_common,
+    default_output,
+    die,
+    emit,
+    ffmpeg_base,
+    info,
+    probe,
+    run,
+    video_args,
+    X264_PRESETS,
+    time_arg,
+    fmt_secs,
+)
 from _common.emit import note
 from _common.probe import display_size, square_pixels, square_pixels_note
 
@@ -39,18 +54,47 @@ def even(n: float) -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input", help="still image (PNG/JPG/...)")
     ap.add_argument("-o", "--output", help="output file (default: <name>_insert.mp4)")
-    ap.add_argument("--duration", required=True, help="clip duration (seconds or mm:ss)")
-    ap.add_argument("--width", type=int, help="output width in px; with --height also given, both are used directly")
-    ap.add_argument("--height", type=int, help="output height in px; with --width also given, both are used directly")
-    ap.add_argument("--fps", type=float, default=30.0, help="output frame rate (default 30)")
-    ap.add_argument("--zoom", choices=["in", "out"], help="Ken Burns: slow linear zoom in or out across the clip")
-    ap.add_argument("--zoom-amount", type=float, default=1.3, help="end (zoom in) or start (zoom out) zoom factor, > 1.0 (default 1.3)")
-    ap.add_argument("--pan", choices=["left", "right", "up", "down"], help="drift the visible window this direction while zoomed (needs --zoom)")
+    ap.add_argument(
+        "--duration", required=True, help="clip duration (seconds or mm:ss)"
+    )
+    ap.add_argument(
+        "--width",
+        type=int,
+        help="output width in px; with --height also given, both are used directly",
+    )
+    ap.add_argument(
+        "--height",
+        type=int,
+        help="output height in px; with --width also given, both are used directly",
+    )
+    ap.add_argument(
+        "--fps", type=float, default=30.0, help="output frame rate (default 30)"
+    )
+    ap.add_argument(
+        "--zoom",
+        choices=["in", "out"],
+        help="Ken Burns: slow linear zoom in or out across the clip",
+    )
+    ap.add_argument(
+        "--zoom-amount",
+        type=float,
+        default=1.3,
+        help="end (zoom in) or start (zoom out) zoom factor, > 1.0 (default 1.3)",
+    )
+    ap.add_argument(
+        "--pan",
+        choices=["left", "right", "up", "down"],
+        help="drift the visible window this direction while zoomed (needs --zoom)",
+    )
     ap.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
-    ap.add_argument("--preset", default="medium", choices=X264_PRESETS, help="x264 preset")
+    ap.add_argument(
+        "--preset", default="medium", choices=X264_PRESETS, help="x264 preset"
+    )
     add_common(ap)
     args = ap.parse_args()
     apply_common(args)
@@ -69,8 +113,10 @@ def main() -> int:
     if not meta.get("video"):
         die("input has no image/video stream")
     if (meta.get("duration") or 0) > 0.5 or meta.get("audio"):
-        die(f"{args.input} is a video, not a still image; insert.py animates a still (Ken Burns). "
-            f"For a clip use broll.py (cutaway) or cut.py/join.py")
+        die(
+            f"{args.input} is a video, not a still image; insert.py animates a still (Ken Burns). "
+            f"For a clip use broll.py (cutaway) or cut.py/join.py"
+        )
     # the displayed picture: ffmpeg turns an EXIF-rotated still upright on decode (probe reads
     # the Orientation off the decoded frame), and non-square pixels are squared (#411)
     sw, sh = display_size(meta["video"])
@@ -122,9 +168,21 @@ def main() -> int:
         ]
 
     if square_pixels(meta["video"]):
-        vf.insert(0, square_pixels(meta["video"]))  # the scale and crop above size the squared picture
+        vf.insert(
+            0, square_pixels(meta["video"])
+        )  # the scale and crop above size the squared picture
     output = args.output or default_output(args.input, "insert", "mp4")
-    cmd = ffmpeg_base() + ["-loop", "1", *still_input_args(args.input), "-i", args.input, "-t", f"{target:.3f}", "-vf", ",".join(vf)]
+    cmd = ffmpeg_base() + [
+        "-loop",
+        "1",
+        *still_input_args(args.input),
+        "-i",
+        args.input,
+        "-t",
+        f"{target:.3f}",
+        "-vf",
+        ",".join(vf),
+    ]
     # the SDR line, whatever the image is; its RGB (PNG) or BT.601 (JPEG) pixels are converted to
     # the BT.709 that line is tagged with
     cmd += video_args(None, args.crf, args.preset, source=meta)
@@ -133,7 +191,9 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {v['fps']:g}fps)")
+    info(
+        f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {v['fps']:g}fps)"
+    )
     emit(output)
     return 0
 

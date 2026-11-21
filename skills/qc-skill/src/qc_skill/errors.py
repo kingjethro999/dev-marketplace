@@ -35,7 +35,9 @@ ERROR_CODES = {
 class QCError(Exception):
     """Base class for all qc-skill execution errors (not QC verdicts)."""
 
-    def __init__(self, code: str, message: str, details: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, code: str, message: str, details: Optional[Dict[str, Any]] = None
+    ):
         if code not in ERROR_CODES:
             raise ValueError(f"unknown error code: {code}")
         super().__init__(message)

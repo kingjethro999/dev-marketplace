@@ -11,6 +11,7 @@ the encoder's output does not change between the lowest and highest quality, Web
 falls back to libwebp's own size targeting (-define webp:target-size) and says so in
 `method`.
 """
+
 import os
 import sys
 
@@ -34,7 +35,14 @@ from _common import (  # noqa: E402
     fail_error,
 )
 
-LOSSY = {"jpg": "jpeg", "jpeg": "jpeg", "webp": "webp", "avif": "avif", "heic": "heic", "heif": "heic"}
+LOSSY = {
+    "jpg": "jpeg",
+    "jpeg": "jpeg",
+    "webp": "webp",
+    "avif": "avif",
+    "heic": "heic",
+    "heif": "heic",
+}
 LOSSLESS = {"png"}
 SIPS_FORMATS = {"jpg": "jpeg", "jpeg": "jpeg", "heic": "heic", "heif": "heic"}
 
@@ -46,26 +54,66 @@ class OptimizeFailed(ImageSkillError):
 
 
 def build_parser():
-    parser = JSONArgumentParser(description="Re-encode an image to fit a file-size budget without changing its dimensions")
+    parser = JSONArgumentParser(
+        description="Re-encode an image to fit a file-size budget without changing its dimensions"
+    )
     parser.add_argument("input", help="image file to read (never modified)")
-    add_output_args(parser, output_help="file to write; its extension picks the format (jpg, webp, avif, heic, png)")
-    parser.add_argument("--max-kb", type=float, required=True, help="size budget in kilobytes (1 KB = 1000 bytes)")
-    parser.add_argument("--min-quality", type=int, default=40, help="lowest quality the search may use, 1-100 (default 40)")
-    parser.add_argument("--max-quality", type=int, default=95, help="highest quality the search may use, 1-100 (default 95)")
-    parser.add_argument("--strip", action="store_true", help="also drop metadata (EXIF/GPS/ICC comments) to save bytes; magick only")
+    add_output_args(
+        parser,
+        output_help="file to write; its extension picks the format (jpg, webp, avif, heic, png)",
+    )
+    parser.add_argument(
+        "--max-kb",
+        type=float,
+        required=True,
+        help="size budget in kilobytes (1 KB = 1000 bytes)",
+    )
+    parser.add_argument(
+        "--min-quality",
+        type=int,
+        default=40,
+        help="lowest quality the search may use, 1-100 (default 40)",
+    )
+    parser.add_argument(
+        "--max-quality",
+        type=int,
+        default=95,
+        help="highest quality the search may use, 1-100 (default 95)",
+    )
+    parser.add_argument(
+        "--strip",
+        action="store_true",
+        help="also drop metadata (EXIF/GPS/ICC comments) to save bytes; magick only",
+    )
     return parser
 
 
 def _encode_cmd(backend, binary, src, dst, fmt, quality, strip, target_bytes=None):
     if backend == "sips":
-        return [binary, "-s", "format", SIPS_FORMATS[ext_of(dst)], "-s", "formatOptions", str(quality), src, "--out", dst]
+        return [
+            binary,
+            "-s",
+            "format",
+            SIPS_FORMATS[ext_of(dst)],
+            "-s",
+            "formatOptions",
+            str(quality),
+            src,
+            "--out",
+            dst,
+        ]
     cmd = [binary, src, "-auto-orient"]
     if strip:
         cmd.append("-strip")
     if target_bytes is not None:
         cmd += ["-define", f"webp:target-size={int(target_bytes)}"]
     elif fmt == "png":
-        cmd += ["-define", "png:compression-level=9", "-define", "png:compression-filter=5"]
+        cmd += [
+            "-define",
+            "png:compression-level=9",
+            "-define",
+            "png:compression-filter=5",
+        ]
     else:
         cmd += ["-quality", str(quality)]
     return cmd + [dst]
@@ -76,21 +124,36 @@ def run_optimize(args):
     prepare_output([args.input], args.output, args.overwrite)
     ext = ext_of(args.output)
     if ext not in LOSSY and ext not in LOSSLESS:
-        raise ImageSkillError(f"optimize writes jpg, webp, avif, heic or png - not .{ext or '(no extension)'}")
+        raise ImageSkillError(
+            f"optimize writes jpg, webp, avif, heic or png - not .{ext or '(no extension)'}"
+        )
     if args.max_kb <= 0:
         raise ImageSkillError("--max-kb must be positive")
     if not (1 <= args.min_quality <= args.max_quality <= 100):
         raise ImageSkillError("need 1 <= --min-quality <= --max-quality <= 100")
 
-    sips_ok = True if ext in SIPS_FORMATS and not args.strip else (
-        "sips can only re-encode JPEG/HEIC at a quality, and cannot --strip"
+    sips_ok = (
+        True
+        if ext in SIPS_FORMATS and not args.strip
+        else ("sips can only re-encode JPEG/HEIC at a quality, and cannot --strip")
     )
     backend, binary = select_backend(sips_ok)
     fmt = "png" if ext in LOSSLESS else LOSSY[ext]
     budget = int(args.max_kb * 1000)
 
     if args.dry_run:
-        return {"dry_run": True, "would_run": _encode_cmd(backend, binary, args.input, args.output, fmt, args.max_quality, args.strip)}
+        return {
+            "dry_run": True,
+            "would_run": _encode_cmd(
+                backend,
+                binary,
+                args.input,
+                args.output,
+                fmt,
+                args.max_quality,
+                args.strip,
+            ),
+        }
 
     in_dims = oriented_dims(args.input)
     out_dir = os.path.dirname(os.path.abspath(args.output))
@@ -101,11 +164,18 @@ def run_optimize(args):
     def encode(quality, target_bytes=None):
         key = f"t{target_bytes}" if target_bytes is not None else str(quality)
         tmp = os.path.join(out_dir, f".{base}.optimize-{key}.{ext}")
-        run(_encode_cmd(backend, binary, args.input, tmp, fmt, quality, args.strip, target_bytes))
+        run(
+            _encode_cmd(
+                backend, binary, args.input, tmp, fmt, quality, args.strip, target_bytes
+            )
+        )
         size = os.path.getsize(tmp)
         temps[key] = tmp
-        attempts.append({"quality": quality, "bytes": size} if target_bytes is None
-                        else {"target_bytes": target_bytes, "bytes": size})
+        attempts.append(
+            {"quality": quality, "bytes": size}
+            if target_bytes is None
+            else {"target_bytes": target_bytes, "bytes": size}
+        )
         return size, key
 
     chosen = None  # (key, quality, bytes, method)
@@ -143,9 +213,16 @@ def run_optimize(args):
         if chosen is None:
             raise OptimizeFailed(
                 f"could not get under {args.max_kb:g} KB: the smallest result was {smallest / 1000:.1f} KB"
-                + (" (PNG is lossless) - resize first or write a lossy format (jpg/webp)" if fmt == "png"
-                   else f" at quality {args.min_quality} - resize first or lower --min-quality"),
-                {"smallest_bytes": smallest, "smallest_kb": round(smallest / 1000, 1), "attempts": attempts},
+                + (
+                    " (PNG is lossless) - resize first or write a lossy format (jpg/webp)"
+                    if fmt == "png"
+                    else f" at quality {args.min_quality} - resize first or lower --min-quality"
+                ),
+                {
+                    "smallest_bytes": smallest,
+                    "smallest_kb": round(smallest / 1000, 1),
+                    "attempts": attempts,
+                },
             )
         key, quality, size, method = chosen
         os.replace(temps.pop(key), args.output)
@@ -158,7 +235,9 @@ def run_optimize(args):
     out_dims = identify_dims(args.output)
     if tuple(out_dims) != tuple(in_dims):
         os.remove(args.output)
-        raise ImageSkillError(f"dimensions changed from {in_dims[0]}x{in_dims[1]} to {out_dims[0]}x{out_dims[1]}")
+        raise ImageSkillError(
+            f"dimensions changed from {in_dims[0]}x{in_dims[1]} to {out_dims[0]}x{out_dims[1]}"
+        )
 
     return {
         "input": args.input,

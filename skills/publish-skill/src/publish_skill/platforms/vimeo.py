@@ -28,6 +28,7 @@ the owner"), nothing else; tags, a thumbnail or captions are refused by `plan` a
 (metadata_fields). The file is hashed as its bytes are confirmed, and the final chunk is held back unless the bytes so
 far plus that chunk have the sha256 the token bound, so a file edited after the gate is never completed
 (CONFIRM_MISMATCH)."""
+
 from __future__ import annotations
 
 import hashlib
@@ -47,19 +48,39 @@ CREATE_PATH = "/me/videos"
 ACCEPT = "application/vnd.vimeo.*+json;version=3.4"
 TUS_VERSION = "1.0.0"
 TUS_CONTENT_TYPE = "application/offset+octet-stream"
-DEFAULT_CHUNK = 128 * 1024 * 1024              # within the guide's "128–512 MB" under either reading of MB
-PRIVACY_VIEW = {"private": "nobody", "unlisted": "unlisted", "public": "anybody", "password": "password",
-                "domains": "disable"}              # ADR-013: password, and embed-only on the allowlisted domains
+DEFAULT_CHUNK = (
+    128 * 1024 * 1024
+)  # within the guide's "128–512 MB" under either reading of MB
+PRIVACY_VIEW = {
+    "private": "nobody",
+    "unlisted": "unlisted",
+    "public": "anybody",
+    "password": "password",
+    "domains": "disable",
+}  # ADR-013: password, and embed-only on the allowlisted domains
 PASSWORD_ENV = "PUBLISH_VIMEO_VIDEO_PASSWORD"
-PASSWORD_MAX_CHARS = 32                         # "This field can hold a maximum of 32 characters." (Edit a video)
+PASSWORD_MAX_CHARS = (
+    32  # "This field can hold a maximum of 32 characters." (Edit a video)
+)
 DOMAINS_PATH = "/videos/{id}/privacy/domains/{domain}"
 RETRIABLE_STATUS = (429, 500, 502, 503, 504)
-GONE_STATUS = (403, 404, 410)                  # tus: "404 Not Found, 410 Gone or 403 Forbidden" for a missing upload
-RATE_LIMIT_CODE = 9000                         # 429, error code 9000 (rate limiting guide)
-STORAGE_FULL_CODE = 4101                       # "maximum disk space has been reached"
-QUOTA_CODES = {4102: "weekly", 4104: "daily"}  # "allotted weekly / daily quota has been reached"
+GONE_STATUS = (
+    403,
+    404,
+    410,
+)  # tus: "404 Not Found, 410 Gone or 403 Forbidden" for a missing upload
+RATE_LIMIT_CODE = 9000  # 429, error code 9000 (rate limiting guide)
+STORAGE_FULL_CODE = 4101  # "maximum disk space has been reached"
+QUOTA_CODES = {
+    4102: "weekly",
+    4104: "daily",
+}  # "allotted weekly / daily quota has been reached"
 UPLOAD_HOST_SUFFIX = ".vimeo.com"
-LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")      # plain http only to these: the tests' mock server
+LOOPBACK_HOSTS = (
+    "127.0.0.1",
+    "::1",
+    "localhost",
+)  # plain http only to these: the tests' mock server
 VIDEO_URL = "https://vimeo.com/"
 
 
@@ -75,21 +96,40 @@ class _Response:
 
 
 def _hold(value: str) -> None:
-    from .. import credentials                         # imported here: credentials imports the platform registry
+    from .. import (
+        credentials,
+    )  # imported here: credentials imports the platform registry
+
     credentials.hold(value)
 
 
-def create_body(metadata: Dict[str, Any], size: int, password: str = "") -> Dict[str, Any]:
+def create_body(
+    metadata: Dict[str, Any], size: int, password: str = ""
+) -> Dict[str, Any]:
     """The POST /me/videos body for the bound metadata: the tus approach and size, then exactly the bound name,
     description and privacy.view. A field the metadata leaves unset is left out; nothing is added. ADR-013: privacy
     `password` adds the password (the credential, given by the caller), privacy `domains` sends privacy.view `disable`
-    (embed only, hidden on Vimeo) with privacy.embed `whitelist`; the domains themselves are separate requests."""
+    (embed only, hidden on Vimeo) with privacy.embed `whitelist`; the domains themselves are separate requests.
+    """
     privacy = metadata["privacy"]
     if privacy not in PRIVACY_VIEW:
-        raise PublishError("INVALID_ARGUMENT", f"privacy {privacy!r} is not one of {', '.join(PRIVACY_VIEW)}")
-    for field in ("tags", "thumbnail", "captions", "language", "localizations", "publish_at"):
+        raise PublishError(
+            "INVALID_ARGUMENT",
+            f"privacy {privacy!r} is not one of {', '.join(PRIVACY_VIEW)}",
+        )
+    for field in (
+        "tags",
+        "thumbnail",
+        "captions",
+        "language",
+        "localizations",
+        "publish_at",
+    ):
         if metadata.get(field):
-            raise PublishError("INVALID_ARGUMENT", f"the Vimeo uploader does not send {field}; nothing was uploaded")
+            raise PublishError(
+                "INVALID_ARGUMENT",
+                f"the Vimeo uploader does not send {field}; nothing was uploaded",
+            )
     body: Dict[str, Any] = {"upload": {"approach": "tus", "size": str(size)}}
     if metadata.get("title") is not None:
         body["name"] = metadata["title"]
@@ -102,7 +142,9 @@ def create_body(metadata: Dict[str, Any], size: int, password: str = "") -> Dict
         body["password"] = password
     if privacy == "domains":
         if not metadata.get("embed_domains"):
-            raise PublishError("INVALID_ARGUMENT", "privacy domains needs at least one embed domain")
+            raise PublishError(
+                "INVALID_ARGUMENT", "privacy domains needs at least one embed domain"
+            )
         body["privacy"]["embed"] = "whitelist"
     elif metadata.get("embed_domains"):
         raise PublishError("INVALID_ARGUMENT", "embed domains go with privacy domains")
@@ -117,9 +159,9 @@ class VimeoUploader(Uploader):
     # a personal access token (scopes upload, edit), from the environment or the OS keychain (ADR-003)
     credential_env = ("PUBLISH_VIMEO_ACCESS_TOKEN",)
     docs_url = "https://developer.vimeo.com/api/upload/videos"
-    ffmpeg_skill_platform = ""                         # ffmpeg-skill has no vimeo delivery spec (ADR-005)
+    ffmpeg_skill_platform = ""  # ffmpeg-skill has no vimeo delivery spec (ADR-005)
     metadata_fields = ("title", "description", "privacy", "embed_domains")
-    optional_credential_env = (PASSWORD_ENV,)          # only for --privacy password (ADR-013)
+    optional_credential_env = (PASSWORD_ENV,)  # only for --privacy password (ADR-013)
 
     # Endpoints and tuning. Only code changes these (the tests point them at a loopback mock server); no flag,
     # environment variable or file does.
@@ -130,14 +172,24 @@ class VimeoUploader(Uploader):
     max_backoff_s = 64.0
     max_retry_after_s = 300.0
 
-    def __init__(self, sleep: Optional[Callable[[float], None]] = None, rand: Optional[Callable[[], float]] = None) -> None:
+    def __init__(
+        self,
+        sleep: Optional[Callable[[float], None]] = None,
+        rand: Optional[Callable[[], float]] = None,
+    ) -> None:
         self._sleep_fn = sleep
         self._rand_fn = rand
         self._stats: Dict[str, Any] = {}
 
     def spec(self) -> Dict[str, Any]:
-        return dict(super().spec(), protocol="Vimeo API 3.4 resumable (tus 1.0.0) upload; personal access token",
-                    endpoints=[API_BASE + CREATE_PATH, "upload.upload_link (https, *.vimeo.com)"])
+        return dict(
+            super().spec(),
+            protocol="Vimeo API 3.4 resumable (tus 1.0.0) upload; personal access token",
+            endpoints=[
+                API_BASE + CREATE_PATH,
+                "upload.upload_link (https, *.vimeo.com)",
+            ],
+        )
 
     # ---- the upload ---------------------------------------------------------------------------------------------
     def upload(self, request: UploadRequest, credentials: Any) -> Dict[str, Any]:
@@ -145,41 +197,81 @@ class VimeoUploader(Uploader):
         if self.chunk_size <= 0:
             raise PublishError("INTERNAL_ERROR", "chunk size must be positive")
         if request.size <= 0:
-            raise PublishError("INVALID_ARGUMENT", "the file is empty; nothing was uploaded")
-        self._stats = {"requests": 0, "retries": 0, "resumed": 0, "waited_s": 0.0, "bytes_sent": 0}
+            raise PublishError(
+                "INVALID_ARGUMENT", "the file is empty; nothing was uploaded"
+            )
+        self._stats = {
+            "requests": 0,
+            "retries": 0,
+            "resumed": 0,
+            "waited_s": 0.0,
+            "bytes_sent": 0,
+        }
         md = request.metadata
         password = ""
-        if md["privacy"] == "password":                       # before any request (ADR-013)
+        if md["privacy"] == "password":  # before any request (ADR-013)
             password = credentials.get_optional(PASSWORD_ENV)
             if not password:
-                raise PublishError("CREDENTIALS_MISSING", f"privacy password needs {PASSWORD_ENV}, in the environment "
-                                   "or the keychain (`publish auth login --platform vimeo --variable "
-                                   f"{PASSWORD_ENV}`); nothing was uploaded (values are never printed)",
-                                   {"platform": self.id, "missing": [PASSWORD_ENV], "uploaded": False})
+                raise PublishError(
+                    "CREDENTIALS_MISSING",
+                    f"privacy password needs {PASSWORD_ENV}, in the environment "
+                    "or the keychain (`publish auth login --platform vimeo --variable "
+                    f"{PASSWORD_ENV}`); nothing was uploaded (values are never printed)",
+                    {"platform": self.id, "missing": [PASSWORD_ENV], "uploaded": False},
+                )
             if len(password) > PASSWORD_MAX_CHARS:
-                raise PublishError("INVALID_ARGUMENT", f"the video password is longer than {PASSWORD_MAX_CHARS} "
-                                   "characters (Vimeo's limit); store a shorter one. Nothing was uploaded",
-                                   {"platform": self.id, "uploaded": False})
+                raise PublishError(
+                    "INVALID_ARGUMENT",
+                    f"the video password is longer than {PASSWORD_MAX_CHARS} "
+                    "characters (Vimeo's limit); store a shorter one. Nothing was uploaded",
+                    {"platform": self.id, "uploaded": False},
+                )
             _hold(password)
         body = create_body(md, request.size, password)
         token = credentials.get("PUBLISH_VIMEO_ACCESS_TOKEN")
         video = self._create(body, token)
         upload_link, uri = video["upload"]["upload_link"], video["uri"]
         video_id = uri.rsplit("/", 1)[-1]
-        link = video.get("link") if isinstance(video.get("link"), str) else VIDEO_URL + video_id
+        link = (
+            video.get("link")
+            if isinstance(video.get("link"), str)
+            else VIDEO_URL + video_id
+        )
         try:
             self._transfer(upload_link, request.path, request.size, request.sha256)
         except PublishError as e:
             details = dict(e.details, video_uri=uri, placeholder=True)
-            raise PublishError(e.code, e.message + f". Vimeo keeps the empty video placeholder {uri} (privacy "
-                               f"{body['privacy']['view']}); delete it on Vimeo, or leave it", details, e.retryable) from None
-        privacy_view = (video.get("privacy") or {}).get("view") if isinstance(video.get("privacy"), dict) else None
+            raise PublishError(
+                e.code,
+                e.message + f". Vimeo keeps the empty video placeholder {uri} (privacy "
+                f"{body['privacy']['view']}); delete it on Vimeo, or leave it",
+                details,
+                e.retryable,
+            ) from None
+        privacy_view = (
+            (video.get("privacy") or {}).get("view")
+            if isinstance(video.get("privacy"), dict)
+            else None
+        )
         reverse = {v: k for k, v in PRIVACY_VIEW.items()}
-        sent = dict(body, password="[REDACTED]") if "password" in body else body      # never in a receipt
-        result: Dict[str, Any] = {"video_id": video_id, "uri": uri, "url": link,
-                                  "privacy": reverse.get(privacy_view, privacy_view) if privacy_view else md["privacy"],
-                                  "privacy_view": privacy_view or body["privacy"]["view"], "sent": sent,
-                                  "thumbnail": None, "captions": [], "warnings": []}
+        sent = (
+            dict(body, password="[REDACTED]") if "password" in body else body
+        )  # never in a receipt
+        result: Dict[str, Any] = {
+            "video_id": video_id,
+            "uri": uri,
+            "url": link,
+            "privacy": (
+                reverse.get(privacy_view, privacy_view)
+                if privacy_view
+                else md["privacy"]
+            ),
+            "privacy_view": privacy_view or body["privacy"]["view"],
+            "sent": sent,
+            "thumbnail": None,
+            "captions": [],
+            "warnings": [],
+        }
         if md["privacy"] == "domains":
             done: list = []
             try:
@@ -187,26 +279,42 @@ class VimeoUploader(Uploader):
                     self._allow_domain(video_id, domain, token)
                     done.append(domain)
             except PublishError as e:
-                raise PublishError("UPLOAD_PARTIAL", f"the video was uploaded ({link}, embed only, privacy.embed "
-                                   f"whitelist) but adding the domain {md['embed_domains'][len(done)]} failed ({e.code}: "
-                                   f"{e.message}); it plays on {', '.join(done) or 'no domain'} so far. Add the rest on "
-                                   "Vimeo; do not run upload again: it would upload the video a second time",
-                                   {"platform": self.id, "uploaded": True, "video_id": video_id, "url": link,
-                                    "failed_step": "privacy domains", "domains_added": done, "cause": e.to_dict(),
-                                    "transfer": dict(self._stats)}) from None
+                raise PublishError(
+                    "UPLOAD_PARTIAL",
+                    f"the video was uploaded ({link}, embed only, privacy.embed "
+                    f"whitelist) but adding the domain {md['embed_domains'][len(done)]} failed ({e.code}: "
+                    f"{e.message}); it plays on {', '.join(done) or 'no domain'} so far. Add the rest on "
+                    "Vimeo; do not run upload again: it would upload the video a second time",
+                    {
+                        "platform": self.id,
+                        "uploaded": True,
+                        "video_id": video_id,
+                        "url": link,
+                        "failed_step": "privacy domains",
+                        "domains_added": done,
+                        "cause": e.to_dict(),
+                        "transfer": dict(self._stats),
+                    },
+                ) from None
             result["embed_domains"] = done
         if privacy_view is not None and privacy_view != body["privacy"]["view"]:
-            result["warnings"].append(f"sent privacy.view {body['privacy']['view']!r}, Vimeo reports {privacy_view!r} "
-                                      "(the account's plan or settings can override it)")
+            result["warnings"].append(
+                f"sent privacy.view {body['privacy']['view']!r}, Vimeo reports {privacy_view!r} "
+                "(the account's plan or settings can override it)"
+            )
         result["transfer"] = dict(self._stats)
-        result["processing"] = "Vimeo transcodes the video after the upload; it may not be playable yet"
+        result["processing"] = (
+            "Vimeo transcodes the video after the upload; it may not be playable yet"
+        )
         return result
 
     # ---- ADR-013: the embed allowlist ---------------------------------------------------------------------------
     def _allow_domain(self, video_id: str, domain: str, token: str) -> None:
         """PUT /videos/{id}/privacy/domains/{domain} (204). Retried on 429 and 5xx answers and on no answer: adding a
         domain twice leaves one entry, so a retry cannot do harm."""
-        url = self.api_base + DOMAINS_PATH.format(id=quote(video_id, safe=""), domain=quote(domain, safe=""))
+        url = self.api_base + DOMAINS_PATH.format(
+            id=quote(video_id, safe=""), domain=quote(domain, safe="")
+        )
         headers = {"Authorization": "bearer " + token, "Accept": ACCEPT}
         attempt = 0
         while True:
@@ -225,18 +333,32 @@ class VimeoUploader(Uploader):
 
     # ---- step 1: create the video -------------------------------------------------------------------------------
     def _create(self, body: Dict[str, Any], token: str) -> Dict[str, Any]:
-        data = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        headers = {"Authorization": "bearer " + token, "Content-Type": "application/json", "Accept": ACCEPT}
+        data = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        headers = {
+            "Authorization": "bearer " + token,
+            "Content-Type": "application/json",
+            "Accept": ACCEPT,
+        }
         attempt = 0
         while True:
             try:
                 resp = self._send("POST", self.api_base + CREATE_PATH, data, headers)
             except (OSError, http.client.HTTPException):
                 # Not retried: the video placeholder may exist already, and a second POST would add another.
-                raise PublishError("UPLOAD_INTERRUPTED", "creating the video got no answer; nothing was uploaded (an "
-                                   "empty, unpublished placeholder may exist in the account). Run the same upload again "
-                                   "later", {"platform": self.id, "step": "create", "uploaded": False,
-                                             "transfer": dict(self._stats)}) from None
+                raise PublishError(
+                    "UPLOAD_INTERRUPTED",
+                    "creating the video got no answer; nothing was uploaded (an "
+                    "empty, unpublished placeholder may exist in the account). Run the same upload again "
+                    "later",
+                    {
+                        "platform": self.id,
+                        "step": "create",
+                        "uploaded": False,
+                        "transfer": dict(self._stats),
+                    },
+                ) from None
             if resp.status in (200, 201):
                 break
             if resp.status not in RETRIABLE_STATUS:
@@ -248,11 +370,17 @@ class VimeoUploader(Uploader):
         doc = resp.json()
         up = doc.get("upload") if isinstance(doc, dict) else None
         if not isinstance(up, dict) or up.get("approach") != "tus":
-            raise self._protocol_error("create", "the answer's upload.approach is not tus")
+            raise self._protocol_error(
+                "create", "the answer's upload.approach is not tus"
+            )
         link, uri = up.get("upload_link"), doc.get("uri")
         if not isinstance(link, str) or not link:
             raise self._protocol_error("create", "the answer has no upload.upload_link")
-        if not isinstance(uri, str) or not uri.startswith("/videos/") or not uri.rsplit("/", 1)[-1]:
+        if (
+            not isinstance(uri, str)
+            or not uri.startswith("/videos/")
+            or not uri.rsplit("/", 1)[-1]
+        ):
             raise self._protocol_error("create", "the answer has no video uri")
         self._check_upload_link(link)
         _hold(link)
@@ -260,7 +388,11 @@ class VimeoUploader(Uploader):
 
     # ---- steps 2 and 3: the tus transfer ------------------------------------------------------------------------
     def _transfer(self, link: str, file: str, size: int, sha256: str) -> None:
-        offset, hashed, attempt = 0, hashlib.sha256(), 0      # `hashed` covers bytes [0, offset), as confirmed
+        offset, hashed, attempt = (
+            0,
+            hashlib.sha256(),
+            0,
+        )  # `hashed` covers bytes [0, offset), as confirmed
         with open(file, "rb") as fh:
             while offset < size:
                 n = min(self.chunk_size, size - offset)
@@ -268,31 +400,50 @@ class VimeoUploader(Uploader):
                 buf = fh.read(n)
                 last = offset + n == size
                 if len(buf) != n or (last and _digest(hashed, buf) != sha256):
-                    raise PublishError("CONFIRM_MISMATCH", "the file changed after the confirmation token was checked; "
-                                       "its final bytes were not sent, so the upload was not completed. Run the dry run "
-                                       "again", {"platform": self.id, "step": "patch", "path": file, "uploaded": False})
-                headers = {"Tus-Resumable": TUS_VERSION, "Upload-Offset": str(offset), "Content-Type": TUS_CONTENT_TYPE}
+                    raise PublishError(
+                        "CONFIRM_MISMATCH",
+                        "the file changed after the confirmation token was checked; "
+                        "its final bytes were not sent, so the upload was not completed. Run the dry run "
+                        "again",
+                        {
+                            "platform": self.id,
+                            "step": "patch",
+                            "path": file,
+                            "uploaded": False,
+                        },
+                    )
+                headers = {
+                    "Tus-Resumable": TUS_VERSION,
+                    "Upload-Offset": str(offset),
+                    "Content-Type": TUS_CONTENT_TYPE,
+                }
                 try:
                     resp: Optional[_Response] = self._send("PATCH", link, buf, headers)
                     self._stats["bytes_sent"] += n
                 except (OSError, http.client.HTTPException):
-                    resp = None                                # interrupted: no answer, a reset or a timeout
+                    resp = None  # interrupted: no answer, a reset or a timeout
                 if resp is not None and resp.status in (200, 204):
                     before = offset
-                    offset = self._advance(offset, buf, hashed, self._offset(resp, "patch"))
+                    offset = self._advance(
+                        offset, buf, hashed, self._offset(resp, "patch")
+                    )
                     if offset > before:
                         attempt = 0
                         continue
-                    attempt += 1                               # a PATCH that kept none of the chunk: retry, bounded
+                    attempt += 1  # a PATCH that kept none of the chunk: retry, bounded
                     if attempt > self.max_retries:
                         raise self._interrupted("patch", offset, size, resp)
                     self._backoff(attempt, resp)
                     continue
                 if resp is not None and resp.status in GONE_STATUS:
                     raise self._gone(resp, offset, size)
-                if resp is not None and resp.status != 409 and resp.status not in RETRIABLE_STATUS:
+                if (
+                    resp is not None
+                    and resp.status != 409
+                    and resp.status not in RETRIABLE_STATUS
+                ):
                     raise self._api_error(resp, "patch")
-                attempt += 1                                   # interrupted, 5xx, 429, or 409 (offset mismatch)
+                attempt += 1  # interrupted, 5xx, 429, or 409 (offset mismatch)
                 if attempt > self.max_retries:
                     raise self._interrupted("patch", offset, size, resp)
                 self._backoff(attempt, resp)
@@ -312,7 +463,9 @@ class VimeoUploader(Uploader):
             if resp is not None and resp.status in (200, 204):
                 length = (resp.headers.get("upload-length") or "").strip()
                 if length and length != str(size):
-                    raise self._protocol_error("head", f"the upload link expects {length} bytes, not {size}")
+                    raise self._protocol_error(
+                        "head", f"the upload link expects {length} bytes, not {size}"
+                    )
                 return self._offset(resp, "head")
             if resp is not None and resp.status in GONE_STATUS:
                 raise self._gone(resp, offset, size)
@@ -326,81 +479,151 @@ class VimeoUploader(Uploader):
     def _offset(self, resp: _Response, what: str) -> int:
         value = (resp.headers.get("upload-offset") or "").strip()
         if not value.isdigit():
-            raise self._protocol_error(what, f"unreadable Upload-Offset header {value!r}")
+            raise self._protocol_error(
+                what, f"unreadable Upload-Offset header {value!r}"
+            )
         return int(value)
 
     def _advance(self, offset: int, buf: bytes, hashed: Any, confirmed: int) -> int:
         """Bytes the upload link confirms must come from the chunk just sent; they join the running hash."""
         if not offset <= confirmed <= offset + len(buf):
-            raise self._protocol_error("patch", f"the upload link holds {confirmed} bytes, outside the chunk just sent "
-                                                f"({offset}-{offset + len(buf)})")
-        hashed.update(buf[:confirmed - offset])
+            raise self._protocol_error(
+                "patch",
+                f"the upload link holds {confirmed} bytes, outside the chunk just sent "
+                f"({offset}-{offset + len(buf)})",
+            )
+        hashed.update(buf[: confirmed - offset])
         return confirmed
 
     # ---- requests, retries and errors ---------------------------------------------------------------------------
     def _backoff(self, attempt: int, resp: Optional[_Response]) -> None:
-        delay = min(self.max_backoff_s, (self._rand_fn or _rand)() * (2 ** attempt))
-        retry_after = (resp.headers.get("retry-after") or "").strip() if resp is not None else ""
+        delay = min(self.max_backoff_s, (self._rand_fn or _rand)() * (2**attempt))
+        retry_after = (
+            (resp.headers.get("retry-after") or "").strip() if resp is not None else ""
+        )
         if retry_after.isdigit():
             delay = max(delay, min(float(retry_after), self.max_retry_after_s))
         self._stats["retries"] += 1
         self._stats["waited_s"] = round(self._stats["waited_s"] + delay, 3)
         (self._sleep_fn or _sleep)(delay)
 
-    def _send(self, method: str, url: str, body: bytes, headers: Dict[str, str]) -> _Response:
+    def _send(
+        self, method: str, url: str, body: bytes, headers: Dict[str, str]
+    ) -> _Response:
         parts = urlsplit(url)
         conn = self._connection(parts.scheme, parts.hostname or "", parts.port)
         self._stats["requests"] = self._stats.get("requests", 0) + 1
         try:
-            conn.request(method, (parts.path or "/") + ("?" + parts.query if parts.query else ""), body=body,
-                         headers=dict(headers, **{"Content-Length": str(len(body))}))
+            conn.request(
+                method,
+                (parts.path or "/") + ("?" + parts.query if parts.query else ""),
+                body=body,
+                headers=dict(headers, **{"Content-Length": str(len(body))}),
+            )
             r = conn.getresponse()
-            return _Response(r.status, {k.lower(): v for k, v in r.getheaders()}, r.read())
+            return _Response(
+                r.status, {k.lower(): v for k, v in r.getheaders()}, r.read()
+            )
         finally:
             conn.close()
 
-    def _connection(self, scheme: str, host: str, port: Optional[int]) -> http.client.HTTPConnection:
+    def _connection(
+        self, scheme: str, host: str, port: Optional[int]
+    ) -> http.client.HTTPConnection:
         if scheme == "https":
-            return http.client.HTTPSConnection(host, port or 443, timeout=self.timeout_s,
-                                               context=ssl.create_default_context())
+            return http.client.HTTPSConnection(
+                host,
+                port or 443,
+                timeout=self.timeout_s,
+                context=ssl.create_default_context(),
+            )
         if scheme == "http" and host in LOOPBACK_HOSTS:
             return http.client.HTTPConnection(host, port or 80, timeout=self.timeout_s)
-        raise PublishError("INTERNAL_ERROR", f"refusing {scheme}://{host}: only https, or http to a loopback test server")
+        raise PublishError(
+            "INTERNAL_ERROR",
+            f"refusing {scheme}://{host}: only https, or http to a loopback test server",
+        )
 
     def _check_endpoint(self) -> None:
         parts = urlsplit(self.api_base)
-        if not (parts.scheme == "https" or (parts.scheme == "http" and parts.hostname in LOOPBACK_HOSTS)):
-            raise PublishError("INTERNAL_ERROR", f"refusing endpoint {self.api_base}: only https, or http to a loopback "
-                               "test server")
+        if not (
+            parts.scheme == "https"
+            or (parts.scheme == "http" and parts.hostname in LOOPBACK_HOSTS)
+        ):
+            raise PublishError(
+                "INTERNAL_ERROR",
+                f"refusing endpoint {self.api_base}: only https, or http to a loopback "
+                "test server",
+            )
 
     def _check_upload_link(self, link: str) -> None:
         """The file goes only to Vimeo: an https upload link on a vimeo.com host. Only a loopback API base (the tests'
         mock) may hand out an upload link on its own scheme, host and port."""
         base, loc = urlsplit(self.api_base), urlsplit(link)
         host = (loc.hostname or "").lower()
-        on_vimeo = loc.scheme == "https" and (host == "vimeo.com" or host.endswith(UPLOAD_HOST_SUFFIX))
-        on_test_mock = base.hostname in LOOPBACK_HOSTS and (loc.scheme, loc.hostname, loc.port) == (
-            base.scheme, base.hostname, base.port)
+        on_vimeo = loc.scheme == "https" and (
+            host == "vimeo.com" or host.endswith(UPLOAD_HOST_SUFFIX)
+        )
+        on_test_mock = base.hostname in LOOPBACK_HOSTS and (
+            loc.scheme,
+            loc.hostname,
+            loc.port,
+        ) == (base.scheme, base.hostname, base.port)
         if not (on_vimeo or on_test_mock):
-            raise self._protocol_error("create", "the upload link is not https on a vimeo.com host")
+            raise self._protocol_error(
+                "create", "the upload link is not https on a vimeo.com host"
+            )
 
     def _gone(self, resp: _Response, offset: Optional[int], size: int) -> PublishError:
-        return PublishError("UPLOAD_INTERRUPTED", f"the upload link is gone ({resp.status}: the upload expired); the "
-                            "video was not completed. Run the same upload again (it creates a new video)",
-                            {"platform": self.id, "step": "patch", "status": resp.status, "bytes_confirmed": offset,
-                             "size": size, "uploaded": False, "transfer": dict(self._stats)})
+        return PublishError(
+            "UPLOAD_INTERRUPTED",
+            f"the upload link is gone ({resp.status}: the upload expired); the "
+            "video was not completed. Run the same upload again (it creates a new video)",
+            {
+                "platform": self.id,
+                "step": "patch",
+                "status": resp.status,
+                "bytes_confirmed": offset,
+                "size": size,
+                "uploaded": False,
+                "transfer": dict(self._stats),
+            },
+        )
 
-    def _interrupted(self, what: str, offset: Optional[int], size: Optional[int], resp: Optional[_Response]) -> PublishError:
-        last = ({"status": resp.status, "error_code": _error_code(resp)} if resp is not None
-                else {"status": None, "error_code": None, "reason": "no answer"})
-        return PublishError("UPLOAD_INTERRUPTED", f"{what}: still failing after {self.max_retries} retries "
-                            f"(last: {last['status'] or 'no answer'}); the video was not completed. Run the same upload "
-                            "again later", {"platform": self.id, "step": what, "last": last, "bytes_confirmed": offset,
-                                            "size": size, "uploaded": False, "transfer": dict(self._stats)})
+    def _interrupted(
+        self,
+        what: str,
+        offset: Optional[int],
+        size: Optional[int],
+        resp: Optional[_Response],
+    ) -> PublishError:
+        last = (
+            {"status": resp.status, "error_code": _error_code(resp)}
+            if resp is not None
+            else {"status": None, "error_code": None, "reason": "no answer"}
+        )
+        return PublishError(
+            "UPLOAD_INTERRUPTED",
+            f"{what}: still failing after {self.max_retries} retries "
+            f"(last: {last['status'] or 'no answer'}); the video was not completed. Run the same upload "
+            "again later",
+            {
+                "platform": self.id,
+                "step": what,
+                "last": last,
+                "bytes_confirmed": offset,
+                "size": size,
+                "uploaded": False,
+                "transfer": dict(self._stats),
+            },
+        )
 
     def _protocol_error(self, what: str, why: str) -> PublishError:
-        return PublishError("UPLOAD_REJECTED", f"{what}: {why}; the video was not completed",
-                            {"platform": self.id, "step": what, "uploaded": False})
+        return PublishError(
+            "UPLOAD_REJECTED",
+            f"{what}: {why}; the video was not completed",
+            {"platform": self.id, "step": what, "uploaded": False},
+        )
 
     def _api_error(self, resp: _Response, what: str) -> PublishError:
         code = _error_code(resp)
@@ -408,21 +631,44 @@ class VimeoUploader(Uploader):
         message = ""
         if isinstance(doc, dict):
             message = str(doc.get("developer_message") or doc.get("error") or "")[:300]
-        details = {"platform": self.id, "step": what, "status": resp.status, "error_code": code, "message": message,
-                   "uploaded": False}
+        details = {
+            "platform": self.id,
+            "step": what,
+            "status": resp.status,
+            "error_code": code,
+            "message": message,
+            "uploaded": False,
+        }
         if code in QUOTA_CODES:
-            return PublishError("UPLOAD_LIMIT_EXCEEDED", f"{what}: the account's {QUOTA_CODES[code]} upload quota is "
-                                f"reached (error {code}); nothing was uploaded. Try again after it resets", details)
+            return PublishError(
+                "UPLOAD_LIMIT_EXCEEDED",
+                f"{what}: the account's {QUOTA_CODES[code]} upload quota is "
+                f"reached (error {code}); nothing was uploaded. Try again after it resets",
+                details,
+            )
         if code == STORAGE_FULL_CODE:
-            return PublishError("UPLOAD_REJECTED", f"{what}: the account's storage is full (error {code}); nothing was "
-                                "uploaded. Free space or upgrade the plan, then run the dry run again", details)
+            return PublishError(
+                "UPLOAD_REJECTED",
+                f"{what}: the account's storage is full (error {code}); nothing was "
+                "uploaded. Free space or upgrade the plan, then run the dry run again",
+                details,
+            )
         if resp.status == 401:
-            return PublishError("AUTH_FAILED", f"{what}: Vimeo refused the access token (401"
-                                + (f", error {code}" if code else "") + "); store a new personal access token with "
-                                "`publish auth login --platform vimeo` (values are never printed). Nothing was uploaded",
-                                details)
-        return PublishError("UPLOAD_REJECTED", f"{what}: Vimeo refused the request ({resp.status}"
-                            + (f", error {code}" if code else "") + "); nothing was uploaded", details)
+            return PublishError(
+                "AUTH_FAILED",
+                f"{what}: Vimeo refused the access token (401"
+                + (f", error {code}" if code else "")
+                + "); store a new personal access token with "
+                "`publish auth login --platform vimeo` (values are never printed). Nothing was uploaded",
+                details,
+            )
+        return PublishError(
+            "UPLOAD_REJECTED",
+            f"{what}: Vimeo refused the request ({resp.status}"
+            + (f", error {code}" if code else "")
+            + "); nothing was uploaded",
+            details,
+        )
 
 
 def _sleep(seconds: float) -> None:
@@ -446,4 +692,3 @@ def _error_code(resp: Optional[_Response]) -> Optional[int]:
     if isinstance(code, int):
         return code
     return int(code) if isinstance(code, str) and code.isdigit() else None
-

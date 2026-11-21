@@ -15,10 +15,15 @@ from fixtures import write_solid_png  # noqa: E402
 # HEIC bytes anyway - see verify_output_format's whole reason for existing).
 # Instead this generates a tiny one on the fly with whatever real backend on
 # this machine can actually write HEIC, and skips everywhere else.
-_HEIC_WRITE_CAPABLE = _contract.build_doctor_payload().get("heic", {}).get("write", False)
+_HEIC_WRITE_CAPABLE = (
+    _contract.build_doctor_payload().get("heic", {}).get("write", False)
+)
 
 
-@unittest.skipUnless(_HEIC_WRITE_CAPABLE, "no backend on this machine can write HEIC (see doctor's heic.write)")
+@unittest.skipUnless(
+    _HEIC_WRITE_CAPABLE,
+    "no backend on this machine can write HEIC (see doctor's heic.write)",
+)
 class TestHeicRoundTrip(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -29,11 +34,17 @@ class TestHeicRoundTrip(unittest.TestCase):
         write_solid_png(src, 32, 24)
 
         heic_path = os.path.join(self.tmp.name, "out.heic")
-        convert.run_convert(convert.build_parser().parse_args([src, "-o", heic_path, "--json"]))
+        convert.run_convert(
+            convert.build_parser().parse_args([src, "-o", heic_path, "--json"])
+        )
 
         with open(heic_path, "rb") as f:
             head = f.read(12)
-        self.assertEqual(head[4:8], b"ftyp", "output should be a real ISOBMFF/HEIC container, not a mislabeled file")
+        self.assertEqual(
+            head[4:8],
+            b"ftyp",
+            "output should be a real ISOBMFF/HEIC container, not a mislabeled file",
+        )
 
         probed = probe.run_probe(probe.build_parser().parse_args([heic_path, "--json"]))
         self.assertEqual(probed["width"], 32)

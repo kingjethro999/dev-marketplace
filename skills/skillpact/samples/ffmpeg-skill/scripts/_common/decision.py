@@ -4,6 +4,7 @@ arguments or the value that follows from them.
 Nothing here starts a subprocess or touches a media file, which is what makes the copy-vs-re-encode
 and encoder-selection rules testable on their own.
 """
+
 from __future__ import annotations
 
 import json
@@ -14,14 +15,36 @@ import argparse
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from _common.color import (bt709_label_filter, bt709_matrix_args, bt709_matrix_filter, bt709_tag_args, drawn_stream_format,
-                           is_neutral_color, rgb_island, rgb_to_bt709_filter, _sdr_bt709)
+from _common.color import (
+    bt709_label_filter,
+    bt709_matrix_args,
+    bt709_matrix_filter,
+    bt709_tag_args,
+    drawn_stream_format,
+    is_neutral_color,
+    rgb_island,
+    rgb_to_bt709_filter,
+    _sdr_bt709,
+)
 from _common.emit import die
-from _common.runner import CODECS, STATE, ffmpeg_encoders, ffmpeg_version, hw_platform_reason
+from _common.runner import (
+    CODECS,
+    STATE,
+    ffmpeg_encoders,
+    ffmpeg_version,
+    hw_platform_reason,
+)
 
 
-def pad_filters(out_w: int, out_h: int, fill: str, color: str, blur: int, darken: float = 0.0,
-                meta: Optional[Dict[str, Any]] = None) -> str:
+def pad_filters(
+    out_w: int,
+    out_h: int,
+    fill: str,
+    color: str,
+    blur: int,
+    darken: float = 0.0,
+    meta: Optional[Dict[str, Any]] = None,
+) -> str:
     """The letterbox/pillarbox step shared by fit.py and export.py, as one -vf segment.
 
     fill="color": scale to fit, then pad with a solid colour (the historical behaviour).
@@ -40,20 +63,36 @@ def pad_filters(out_w: int, out_h: int, fill: str, color: str, blur: int, darken
         # boxblur rejects a radius larger than half the smaller dimension ("radius 20, must be
         # <= 8" on a 16 px target); clamp instead of failing an otherwise valid request
         radius = max(1, min(int(blur), max(1, min(out_w, out_h) // 2 - 1)))
-        return (f"split[__fitfg][__fitbg];"
-                f"[__fitbg]scale={out_w}:{out_h}:force_original_aspect_ratio=increase,crop={out_w}:{out_h},"
-                f"boxblur={radius}:2" + (f",eq=brightness=-{darken:g}" if darken else "") + "[__fitbgb];"
-                f"[__fitfg]scale={out_w}:{out_h}:force_original_aspect_ratio=decrease[__fitfgs];"
-                f"[__fitbgb][__fitfgs]overlay=(W-w)/2:(H-h)/2:format=auto")
+        return (
+            f"split[__fitfg][__fitbg];"
+            f"[__fitbg]scale={out_w}:{out_h}:force_original_aspect_ratio=increase,crop={out_w}:{out_h},"
+            f"boxblur={radius}:2"
+            + (f",eq=brightness=-{darken:g}" if darken else "")
+            + "[__fitbgb];"
+            f"[__fitfg]scale={out_w}:{out_h}:force_original_aspect_ratio=decrease[__fitfgs];"
+            f"[__fitbgb][__fitfgs]overlay=(W-w)/2:(H-h)/2:format=auto"
+        )
     pad = f"pad={out_w}:{out_h}:(ow-iw)/2:(oh-ih)/2:color="
-    return (f"scale={out_w}:{out_h}:force_original_aspect_ratio=decrease,"
-            + (pad + color if meta is None else drawn_chain(pad + color, meta, [color], pad + "black", tag="pad")))
+    return f"scale={out_w}:{out_h}:force_original_aspect_ratio=decrease," + (
+        pad + color
+        if meta is None
+        else drawn_chain(pad + color, meta, [color], pad + "black", tag="pad")
+    )
 
 
 def add_pad_fill_args(parser: "argparse.ArgumentParser") -> None:
-    parser.add_argument("--pad-fill", choices=["color", "blur"], default="color",
-                        help="what fills the letterbox/pillarbox bars under --fit pad: a solid --pad-color (default) or a blurred, scaled-up copy of the frame")
-    parser.add_argument("--pad-blur", type=int, default=20, help="blur radius in pixels for --pad-fill blur (default 20)")
+    parser.add_argument(
+        "--pad-fill",
+        choices=["color", "blur"],
+        default="color",
+        help="what fills the letterbox/pillarbox bars under --fit pad: a solid --pad-color (default) or a blurred, scaled-up copy of the frame",
+    )
+    parser.add_argument(
+        "--pad-blur",
+        type=int,
+        default=20,
+        help="blur radius in pixels for --pad-fill blur (default 20)",
+    )
 
 
 def aspect_ratio(value: Any) -> Optional[Fraction]:
@@ -79,8 +118,13 @@ def _even(n: float) -> int:
     return v if v % 2 == 0 else v + 1
 
 
-def frame_size(ratio: Optional[Fraction], width: Optional[int], height: Optional[int],
-               src_w: int, src_h: int) -> Tuple[int, int]:
+def frame_size(
+    ratio: Optional[Fraction],
+    width: Optional[int],
+    height: Optional[int],
+    src_w: int,
+    src_h: int,
+) -> Tuple[int, int]:
     """The frame fit.py sizes for --aspect `ratio` (None: the source's own) and --width/--height,
     from a src_w x src_h picture -- and so the sequence frame render.py --export-timeline writes
     for the same project frame. Both sides given are used directly; one side takes the other from
@@ -111,7 +155,18 @@ def frame_size(ratio: Optional[Fraction], width: Optional[int], height: Optional
 
 
 # x264 preset names mapped onto SVT-AV1's 0-13 speed scale (lower = slower / better)
-SVT_PRESET = {"ultrafast": 12, "superfast": 11, "veryfast": 10, "faster": 9, "fast": 8, "medium": 6, "slow": 4, "slower": 3, "veryslow": 2, "placebo": 1}
+SVT_PRESET = {
+    "ultrafast": 12,
+    "superfast": 11,
+    "veryfast": 10,
+    "faster": 9,
+    "fast": 8,
+    "medium": 6,
+    "slow": 4,
+    "slower": 3,
+    "veryslow": 2,
+    "placebo": 1,
+}
 
 
 def default_output(input_path: str, suffix: str, ext: Optional[str] = None) -> str:
@@ -131,7 +186,8 @@ def concat_list_line(path: str) -> str:
     """One `file '...'` line for the concat demuxer. The demuxer reads backslash as an escape
     inside the quoted form, so a Windows path (C:\\Users\\...\\part000.mp4) must be written
     with forward slashes -- ffmpeg opens either spelling on Windows -- and a single quote in the
-    name is closed, escaped and reopened. Shared by cut.py (multi-segment) and sequence.py."""
+    name is closed, escaped and reopened. Shared by cut.py (multi-segment) and sequence.py.
+    """
     escaped = str(path).replace("\\", "/").replace("'", "'\\''")
     return f"file '{escaped}'"
 
@@ -146,7 +202,8 @@ def fmt_secs(value: Optional[float]) -> str:
 
 def parse_time(value: str, fps: Optional[float] = None) -> float:
     """Accept seconds ('12.5'), mm:ss ('1:30'), hh:mm:ss(.ms) ('00:01:30.250'), SRT '00:01:30,250',
-    or -- when `fps` is given -- SMPTE non-drop-frame timecode 'hh:mm:ss:ff' ('00:01:30:15')."""
+    or -- when `fps` is given -- SMPTE non-drop-frame timecode 'hh:mm:ss:ff' ('00:01:30:15').
+    """
     v = value.strip().replace(",", ".")
     if not v:
         raise ValueError("empty time")
@@ -160,21 +217,29 @@ def parse_time(value: str, fps: Optional[float] = None) -> float:
         try:
             fps = float(rate)
         except ValueError:
-            raise ValueError(f"bad @fps suffix in '{value}' (expected a number such as @29.97)")
+            raise ValueError(
+                f"bad @fps suffix in '{value}' (expected a number such as @29.97)"
+            )
         if fps <= 0:
             raise ValueError(f"bad @fps suffix in '{value}': the rate must be positive")
         if len(v.split(":")) != 4:
-            raise ValueError(f"'{value}': the @fps suffix belongs to an hh:mm:ss:ff timecode, not to seconds or mm:ss")
+            raise ValueError(
+                f"'{value}': the @fps suffix belongs to an hh:mm:ss:ff timecode, not to seconds or mm:ss"
+            )
     parts = v.split(":")
     if len(parts) == 4:
         if fps is None or fps <= 0:
-            raise MissingFpsError(f"'{value}' looks like an hh:mm:ss:ff SMPTE timecode, but no fps was given to convert its frame count to seconds (append @fps, e.g. {value}@29.97, or use seconds / mm:ss / hh:mm:ss.ms)")
+            raise MissingFpsError(
+                f"'{value}' looks like an hh:mm:ss:ff SMPTE timecode, but no fps was given to convert its frame count to seconds (append @fps, e.g. {value}@29.97, or use seconds / mm:ss / hh:mm:ss.ms)"
+            )
         h, m, s, f = parts
         if "." in f:
             raise ValueError(f"bad SMPTE timecode: {value}")
         frame, whole_fps = int(f), int(round(fps))
         if not (0 <= frame < whole_fps):
-            raise ValueError(f"bad SMPTE timecode '{value}': frame {frame} is out of range for {fps:g} fps (0-{whole_fps - 1})")
+            raise ValueError(
+                f"bad SMPTE timecode '{value}': frame {frame} is out of range for {fps:g} fps (0-{whole_fps - 1})"
+            )
         # Non-drop-frame: the timecode counts whole_fps frames per timecode-second, so the real
         # time is the total frame count over the true rate (at 29.97 an hour of timecode is
         # 3596.4 s of video). This is exactly what fmt_smpte_time() inverts; before, the two
@@ -202,21 +267,26 @@ def time_arg(value: str, flag: str, fps: Optional[float] = None) -> float:
     except MissingFpsError as e:
         die(f"{flag} {value!r}: {e}")
     except ValueError as e:
-        die(f"{flag} {value!r}: {e} (use seconds, mm:ss, hh:mm:ss.ms, or hh:mm:ss:ff at the source's fps or with an explicit @fps suffix)")
+        die(
+            f"{flag} {value!r}: {e} (use seconds, mm:ss, hh:mm:ss.ms, or hh:mm:ss:ff at the source's fps or with an explicit @fps suffix)"
+        )
     return 0.0  # unreachable
 
 
 def signed_time_arg(value: str, flag: str, fps: Optional[float] = None) -> float:
     """time_arg() for a flag that may also be negative (an offset, not a point in time): a single
     leading '-'/'+' is taken as the sign and the rest goes through the ordinary time grammar, so
-    `--offset -00:00:02`, `--offset -1.5` and `--offset 0:02` all mean what they read as."""
+    `--offset -00:00:02`, `--offset -1.5` and `--offset 0:02` all mean what they read as.
+    """
     text = (value or "").strip()
     sign = 1.0
     if text[:1] in "+-":
         sign = -1.0 if text[0] == "-" else 1.0
         text = text[1:].strip()
     if not text:
-        die(f"{flag} {value!r}: not a time (use seconds, mm:ss, hh:mm:ss.ms, or hh:mm:ss:ff)")
+        die(
+            f"{flag} {value!r}: not a time (use seconds, mm:ss, hh:mm:ss.ms, or hh:mm:ss:ff)"
+        )
     return sign * time_arg(text, flag, fps)
 
 
@@ -232,7 +302,8 @@ def fmt_srt_time(seconds: float) -> str:
 
 def fmt_smpte_time(seconds: float, fps: float) -> str:
     """SMPTE non-drop-frame timecode 'hh:mm:ss:ff' for a real fps (not the fractional NTSC rates
-    -- 29.97/59.94 need drop-frame counting to stay wall-clock accurate, which this does not do)."""
+    -- 29.97/59.94 need drop-frame counting to stay wall-clock accurate, which this does not do).
+    """
     if seconds < 0:
         seconds = 0.0
     whole_fps = int(round(fps))
@@ -263,7 +334,9 @@ def escape_filter_path(path: str, *, bind: bool = True) -> str:
     uses that: its SRT lives in a temp directory that is gone before any plan is written.
     """
     if bind and os.path.isfile(path) and path not in STATE.plan_inputs:
-        STATE.plan_inputs.append(path)  # a plan binds subtitle/LUT/font files too (review 6)
+        STATE.plan_inputs.append(
+            path
+        )  # a plan binds subtitle/LUT/font files too (review 6)
     p = str(Path(path))
     p = p.replace("\\", "/")
     p = p.replace(":", "\\\\:")
@@ -299,7 +372,9 @@ def cfr_args(meta: Optional[Dict[str, Any]], fps: Optional[float] = None) -> Lis
 
 
 def vt_quality(codec: str, crf: int, hdr: bool = False) -> int:
-    base, slope = (63.0, 1.6) if hdr else (75.0, 2.2) if codec == "h264" else (78.0, 2.0)
+    base, slope = (
+        (63.0, 1.6) if hdr else (75.0, 2.2) if codec == "h264" else (78.0, 2.0)
+    )
     return max(1, min(100, int(round(base - slope * (crf - 18)))))
 
 
@@ -309,15 +384,25 @@ def _vt_bt709(codec: str) -> List[str]:
     no -x264-params VUI route; a bitstream filter writes the VUI after encoding, which the filter
     graph never sees (measured: 49.9 dB PSNR tag-neutral vs 23.8 dB through the output options).
     It is used on every version, not only >= 7.1: it is tag-only everywhere, and a git build of
-    7.1 reads as (7, 0) from its libavutil major, which would otherwise take the converting path."""
-    return ["-bsf:v", f"{codec}_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1"]
+    7.1 reads as (7, 0) from its libavutil major, which would otherwise take the converting path.
+    """
+    return [
+        "-bsf:v",
+        f"{codec}_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1",
+    ]
 
 
-def _vt_args(codec: str, crf: int, meta: Optional[Dict[str, Any]], keep_bt709: bool) -> Optional[List[str]]:
+def _vt_args(
+    codec: str, crf: int, meta: Optional[Dict[str, Any]], keep_bt709: bool
+) -> Optional[List[str]]:
     """VideoToolbox encoder options for `codec`, or None (with a note in STATE.hw_notes) when the
     request stays on the CPU: no VideoToolbox encoder for the codec, this machine cannot, or the
     ffmpeg build lacks it."""
-    name = {"h264": "h264_videotoolbox", "hevc": "hevc_videotoolbox", "prores": "prores_videotoolbox"}.get(codec)
+    name = {
+        "h264": "h264_videotoolbox",
+        "hevc": "hevc_videotoolbox",
+        "prores": "prores_videotoolbox",
+    }.get(codec)
     reason = None if name else f"no VideoToolbox encoder for {codec}"
     reason = reason or hw_platform_reason()
     if not reason and name not in ffmpeg_encoders():
@@ -329,22 +414,65 @@ def _vt_args(codec: str, crf: int, meta: Optional[Dict[str, Any]], keep_bt709: b
         return None
     v = (meta or {}).get("video") or {}
     hdr = bool(v.get("bt2020_or_hdr"))
-    hdr_tags = ["-colorspace", v.get("color_space") or "bt2020nc", "-color_primaries", v.get("color_primaries") or "bt2020",
-                "-color_trc", v.get("color_transfer") or "arib-std-b67"]
+    hdr_tags = [
+        "-colorspace",
+        v.get("color_space") or "bt2020nc",
+        "-color_primaries",
+        v.get("color_primaries") or "bt2020",
+        "-color_trc",
+        v.get("color_transfer") or "arib-std-b67",
+    ]
     if codec == "prores":
-        return ["-c:v", name, "-profile:v", "hq", "-pix_fmt", "p210le"] + (hdr_tags if hdr else [])
+        return ["-c:v", name, "-profile:v", "hq", "-pix_fmt", "p210le"] + (
+            hdr_tags if hdr else []
+        )
     # The HDR curve was fitted on the Main10 HEVC line; an 8-bit H.264 line (an export preset on
     # an HDR source) replaces x264 at the same CRF and keeps the H.264 curve.
     q = str(vt_quality(codec, crf, hdr and codec == "hevc"))
     if codec == "h264":
-        return ["-c:v", name, "-q:v", q, "-profile:v", "high", "-pix_fmt", "yuv420p", "-movflags", "+faststart"] + \
-            (_vt_bt709("h264") if keep_bt709 else [])
+        return [
+            "-c:v",
+            name,
+            "-q:v",
+            q,
+            "-profile:v",
+            "high",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+        ] + (_vt_bt709("h264") if keep_bt709 else [])
     if hdr:
         # Measured on FFmpeg 9.0: HDR10 mastering-display and content-light side data carry through
         # hevc_videotoolbox exactly as through libx265 (test_hw_hdr10_side_data_survives).
-        return ["-c:v", name, "-q:v", q, "-profile:v", "main10", "-pix_fmt", "p010le", "-tag:v", "hvc1"] + hdr_tags + ["-movflags", "+faststart"]
-    return ["-c:v", name, "-q:v", q, "-pix_fmt", "yuv420p", "-tag:v", "hvc1", "-movflags", "+faststart"] + \
-        (_vt_bt709("hevc") if keep_bt709 else [])
+        return (
+            [
+                "-c:v",
+                name,
+                "-q:v",
+                q,
+                "-profile:v",
+                "main10",
+                "-pix_fmt",
+                "p010le",
+                "-tag:v",
+                "hvc1",
+            ]
+            + hdr_tags
+            + ["-movflags", "+faststart"]
+        )
+    return [
+        "-c:v",
+        name,
+        "-q:v",
+        q,
+        "-pix_fmt",
+        "yuv420p",
+        "-tag:v",
+        "hvc1",
+        "-movflags",
+        "+faststart",
+    ] + (_vt_bt709("hevc") if keep_bt709 else [])
 
 
 # An LGPL ffmpeg (the kind a desktop app ships) has VideoToolbox but neither libx264 nor libx265.
@@ -361,7 +489,12 @@ def _vt_in_place_of(cpu_encoder: Optional[str]) -> Optional[str]:
     encoder list, so Linux and Windows never read it for this. An empty list (ffmpeg's could not
     be read) proves nothing is missing."""
     vt = _VT_FOR_CPU.get(cpu_encoder or "")
-    if vt is None or STATE.hw or STATE.hw_source == "flag" or hw_platform_reason() is not None:
+    if (
+        vt is None
+        or STATE.hw
+        or STATE.hw_source == "flag"
+        or hw_platform_reason() is not None
+    ):
         return None
     have = ffmpeg_encoders()
     return vt if have and cpu_encoder not in have and vt in have else None
@@ -375,7 +508,13 @@ def _note_vt_in_place_of(cpu_encoder: str, vt: str) -> None:
         STATE.hw_notes.append(note)
 
 
-def _maybe_hw(codec: str, crf: int, meta: Optional[Dict[str, Any]], keep_bt709: bool, cpu: List[str]) -> List[str]:
+def _maybe_hw(
+    codec: str,
+    crf: int,
+    meta: Optional[Dict[str, Any]],
+    keep_bt709: bool,
+    cpu: List[str],
+) -> List[str]:
     """`cpu` unchanged unless --hw / $FFMPEG_SKILL_HW is on and VideoToolbox can take `codec`, or
     unless the build has no CPU encoder for it (_vt_in_place_of); the --hw swap is remembered so
     run() can put the CPU line back if the GPU refuses the job. A build without the CPU encoder
@@ -399,7 +538,9 @@ def _maybe_hw(codec: str, crf: int, meta: Optional[Dict[str, Any]], keep_bt709: 
 _CPU_TO_CODEC = {"libx264": "h264", "libx265": "hevc", "prores_ks": "prores"}
 
 
-def hw_preset_video(video: List[str], meta: Optional[Dict[str, Any]], *, bt709: bool) -> List[str]:
+def hw_preset_video(
+    video: List[str], meta: Optional[Dict[str, Any]], *, bt709: bool
+) -> List[str]:
     """export.py's fixed-preset encoder line moved to VideoToolbox (same codec, the preset's -crf
     mapped to -q:v, its -r kept); unchanged -- with the reason noted -- when that cannot apply.
     Called under --hw, and for a preset whose libx264/libx265 this build lacks (_vt_in_place_of),
@@ -429,27 +570,52 @@ def hw_preset_video(video: List[str], meta: Optional[Dict[str, Any]], *, bt709: 
         return vt
     # the CPU line export would have written: the preset's own options plus the BT.709 tags export
     # adds to it (only to the CPU line), so a GPU->CPU fallback is tagged exactly like a CPU run
-    STATE.hw_swaps.append((list(vt), list(video) + (bt709_tag_args(enc) if bt709 else [])))
+    STATE.hw_swaps.append(
+        (list(vt), list(video) + (bt709_tag_args(enc) if bt709 else []))
+    )
     return vt
 
 
 def strip_movflags(args: List[str]) -> List[str]:
-    return [a for i, a in enumerate(args) if not (a == "-movflags" or (i and args[i - 1] == "-movflags"))]
+    return [
+        a
+        for i, a in enumerate(args)
+        if not (a == "-movflags" or (i and args[i - 1] == "-movflags"))
+    ]
 
 
 def restate_last_swap(before: List[str], after: List[str]) -> None:
     """A caller that edits an encoder line after encoder_args() returned it (export.py strips
-    -movflags) restates the recorded swap, so run()'s GPU->CPU fallback still finds the slice."""
+    -movflags) restates the recorded swap, so run()'s GPU->CPU fallback still finds the slice.
+    """
     if STATE.hw_swaps and STATE.hw_swaps[-1][0] == before:
         STATE.hw_swaps[-1] = (list(after), strip_movflags(STATE.hw_swaps[-1][1]))
 
 
-def encoder_args(codec: str, crf: int, preset: str, meta: Optional[Dict[str, Any]] = None, keep_bt709: bool = True) -> List[str]:
+def encoder_args(
+    codec: str,
+    crf: int,
+    preset: str,
+    meta: Optional[Dict[str, Any]] = None,
+    keep_bt709: bool = True,
+) -> List[str]:
     """encoder options for `codec` (_cpu_encoder_args), on VideoToolbox when --hw asks and it can."""
-    return _maybe_hw(codec, crf, meta, keep_bt709, _cpu_encoder_args(codec, crf, preset, meta, keep_bt709))
+    return _maybe_hw(
+        codec,
+        crf,
+        meta,
+        keep_bt709,
+        _cpu_encoder_args(codec, crf, preset, meta, keep_bt709),
+    )
 
 
-def _cpu_encoder_args(codec: str, crf: int, preset: str, meta: Optional[Dict[str, Any]] = None, keep_bt709: bool = True) -> List[str]:
+def _cpu_encoder_args(
+    codec: str,
+    crf: int,
+    preset: str,
+    meta: Optional[Dict[str, Any]] = None,
+    keep_bt709: bool = True,
+) -> List[str]:
     """The one place that turns (--codec, --quality, --preset, source) into encoder options.
 
     h264 -> x264 8-bit BT.709 (refuses HDR: 8-bit H.264 cannot carry it); hevc -> x265, Main10
@@ -465,65 +631,167 @@ def _cpu_encoder_args(codec: str, crf: int, preset: str, meta: Optional[Dict[str
     hdr_tags = ["-colorspace", cs, "-color_primaries", prim, "-color_trc", trc]
     if codec == "h264":
         if hdr:
-            die(f"--codec h264 cannot carry HDR ({v.get('hdr_format') or 'BT.2020'}): 8-bit H.264 is SDR only",
-                hint="run color.py --to-sdr first, or use --codec hevc / av1 / prores, which keep the source's HDR")
+            die(
+                f"--codec h264 cannot carry HDR ({v.get('hdr_format') or 'BT.2020'}): 8-bit H.264 is SDR only",
+                hint="run color.py --to-sdr first, or use --codec hevc / av1 / prores, which keep the source's HDR",
+            )
         return _x264_raw(crf, preset, keep_bt709)
     if codec == "hevc":
         if hdr:
-            x265 = f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}:range=limited:hdr10-opt=1" if trc == "smpte2084" else f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}"
-            return ["-c:v", "libx265", "-preset", preset, "-crf", str(min(51, crf + 2)), "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1",
-                    "-x265-params", x265] + hdr_tags + ["-movflags", "+faststart"]
+            x265 = (
+                f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}:range=limited:hdr10-opt=1"
+                if trc == "smpte2084"
+                else f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}"
+            )
+            return (
+                [
+                    "-c:v",
+                    "libx265",
+                    "-preset",
+                    preset,
+                    "-crf",
+                    str(min(51, crf + 2)),
+                    "-pix_fmt",
+                    "yuv420p10le",
+                    "-tag:v",
+                    "hvc1",
+                    "-x265-params",
+                    x265,
+                ]
+                + hdr_tags
+                + ["-movflags", "+faststart"]
+            )
         params, extra = _sdr_bt709("libx265") if keep_bt709 else ("", [])
-        return ["-c:v", "libx265", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", "-tag:v", "hvc1",
-                "-x265-params", "log-level=error" + (":" + params if params else "")] + extra + ["-movflags", "+faststart"]
+        return (
+            [
+                "-c:v",
+                "libx265",
+                "-preset",
+                preset,
+                "-crf",
+                str(crf),
+                "-pix_fmt",
+                "yuv420p",
+                "-tag:v",
+                "hvc1",
+                "-x265-params",
+                "log-level=error" + (":" + params if params else ""),
+            ]
+            + extra
+            + ["-movflags", "+faststart"]
+        )
     if codec == "av1":
         pix = "yuv420p10le" if hdr else "yuv420p"
         if "libsvtav1" in ffmpeg_encoders():
-            args = ["-c:v", "libsvtav1", "-preset", str(SVT_PRESET.get(preset, 6)), "-crf", str(min(63, crf)), "-pix_fmt", pix]
+            args = [
+                "-c:v",
+                "libsvtav1",
+                "-preset",
+                str(SVT_PRESET.get(preset, 6)),
+                "-crf",
+                str(min(63, crf)),
+                "-pix_fmt",
+                pix,
+            ]
             if hdr:
                 args += hdr_tags
             elif keep_bt709:
                 params, extra = _sdr_bt709("libsvtav1")
                 args += (["-svtav1-params", params] if params else []) + extra
         elif "libaom-av1" in ffmpeg_encoders():
-            args = ["-c:v", "libaom-av1", "-crf", str(min(63, crf)), "-b:v", "0", "-cpu-used", "6", "-row-mt", "1", "-pix_fmt", pix]
-            args += hdr_tags if hdr else (_sdr_bt709("libaom-av1")[1] if keep_bt709 else [])
+            args = [
+                "-c:v",
+                "libaom-av1",
+                "-crf",
+                str(min(63, crf)),
+                "-b:v",
+                "0",
+                "-cpu-used",
+                "6",
+                "-row-mt",
+                "1",
+                "-pix_fmt",
+                pix,
+            ]
+            args += (
+                hdr_tags if hdr else (_sdr_bt709("libaom-av1")[1] if keep_bt709 else [])
+            )
         else:
-            die("--codec av1 needs an AV1 encoder (libsvtav1 or libaom-av1) and this ffmpeg build has neither", kind="missing_tool",
-                hint="install an ffmpeg built with SVT-AV1 (most distribution builds are), or use --codec hevc")
+            die(
+                "--codec av1 needs an AV1 encoder (libsvtav1 or libaom-av1) and this ffmpeg build has neither",
+                kind="missing_tool",
+                hint="install an ffmpeg built with SVT-AV1 (most distribution builds are), or use --codec hevc",
+            )
         return args + ["-movflags", "+faststart"]
     if codec == "prores":
         if "prores_ks" not in ffmpeg_encoders():
-            die("--codec prores needs the prores_ks encoder and this ffmpeg build lacks it", kind="missing_tool")
-        return ["-c:v", "prores_ks", "-profile:v", "3", "-vendor", "apl0", "-pix_fmt", "yuv422p10le"] + (hdr_tags if hdr else [])
+            die(
+                "--codec prores needs the prores_ks encoder and this ffmpeg build lacks it",
+                kind="missing_tool",
+            )
+        return [
+            "-c:v",
+            "prores_ks",
+            "-profile:v",
+            "3",
+            "-vendor",
+            "apl0",
+            "-pix_fmt",
+            "yuv422p10le",
+        ] + (hdr_tags if hdr else [])
     die(f"unknown --codec {codec!r} (one of {', '.join(CODECS)})")
     return []
 
 
 def _x264_raw(crf: int, preset: str, keep_bt709: bool = True) -> List[str]:
-    args = ["-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
+    args = [
+        "-c:v",
+        "libx264",
+        "-preset",
+        preset,
+        "-crf",
+        str(crf),
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+    ]
     if keep_bt709:
         args += bt709_tag_args("libx264")
     return args
 
 
-def x264_args(crf: int = 18, preset: str = "medium", keep_bt709: bool = True,
-              source: Optional[Dict[str, Any]] = None) -> List[str]:
+def x264_args(
+    crf: int = 18,
+    preset: str = "medium",
+    keep_bt709: bool = True,
+    source: Optional[Dict[str, Any]] = None,
+) -> List[str]:
     """SDR H.264 encoder args -- or, when --codec named another encoder, that encoder's SDR args
     (color.py's --to-sdr path builds its own H.264 line; the flag still has to reach it).
 
     `source`: the probe of the file being re-encoded, when the pixels reaching the encoder are
     still that file's. A BT.709-tagged line then carries the conversion of a non-BT.709 matrix
-    (bt709_matrix_args); a caller whose graph already outputs BT.709 (--to-sdr) leaves it out."""
+    (bt709_matrix_args); a caller whose graph already outputs BT.709 (--to-sdr) leaves it out.
+    """
     if STATE.codec and STATE.codec != "h264":
         args = encoder_args(STATE.codec, crf, preset, None, keep_bt709)
     else:
-        args = _maybe_hw("h264", crf, None, keep_bt709, _x264_raw(crf, preset, keep_bt709))
-    return args + (bt709_matrix_args(source) if keep_bt709 and STATE.codec != "prores" else [])
+        args = _maybe_hw(
+            "h264", crf, None, keep_bt709, _x264_raw(crf, preset, keep_bt709)
+        )
+    return args + (
+        bt709_matrix_args(source) if keep_bt709 and STATE.codec != "prores" else []
+    )
 
 
-def video_args(meta: Optional[Dict[str, Any]], crf: int = 18, preset: str = "medium", convert_matrix: bool = True,
-               source: Optional[Dict[str, Any]] = None) -> List[str]:
+def video_args(
+    meta: Optional[Dict[str, Any]],
+    crf: int = 18,
+    preset: str = "medium",
+    convert_matrix: bool = True,
+    source: Optional[Dict[str, Any]] = None,
+) -> List[str]:
     """Encoder args that preserve what the source is.
 
     SDR sources -> H.264 8-bit tagged BT.709 (x264_args). HDR sources (HDR10/PQ, HLG,
@@ -543,7 +811,11 @@ def video_args(meta: Optional[Dict[str, Any]], crf: int = 18, preset: str = "med
     video_args(None)); its RGB or BT.601 pixels are converted to the BT.709 that line is tagged with.
     """
     v = (meta or {}).get("video") or {}
-    fix = bt709_matrix_args(meta if source is None else source) if convert_matrix and STATE.codec != "prores" else []
+    fix = (
+        bt709_matrix_args(meta if source is None else source)
+        if convert_matrix and STATE.codec != "prores"
+        else []
+    )
     if STATE.codec:
         return encoder_args(STATE.codec, crf, preset, meta) + fix
     if not v.get("bt2020_or_hdr"):
@@ -551,35 +823,49 @@ def video_args(meta: Optional[Dict[str, Any]], crf: int = 18, preset: str = "med
     return _maybe_hw("hevc", crf, meta, True, _x265_hdr_default(v, crf, preset))
 
 
-def matrix_chain(meta: Optional[Dict[str, Any]], line_meta: Optional[Dict[str, Any]]) -> str:
+def matrix_chain(
+    meta: Optional[Dict[str, Any]], line_meta: Optional[Dict[str, Any]]
+) -> str:
     """For a tool that mixes several sources in one graph and encodes it through
     video_args(line_meta, convert_matrix=False): the conversion one source's own chain starts
     with ("<filter>," -- bt709_matrix_filter), or "" when that source needs none or the line does
-    not tag BT.709 (an HDR/BT.2020 line keeps its tags, --codec prores keeps the source's)."""
-    if STATE.codec == "prores" or ((line_meta or {}).get("video") or {}).get("bt2020_or_hdr"):
+    not tag BT.709 (an HDR/BT.2020 line keeps its tags, --codec prores keeps the source's).
+    """
+    if STATE.codec == "prores" or ((line_meta or {}).get("video") or {}).get(
+        "bt2020_or_hdr"
+    ):
         return ""
     f = bt709_matrix_filter(meta)
     return f + "," if f else ""
 
 
-def label_chain(meta: Optional[Dict[str, Any]], line_meta: Optional[Dict[str, Any]]) -> str:
+def label_chain(
+    meta: Optional[Dict[str, Any]], line_meta: Optional[Dict[str, Any]]
+) -> str:
     """For a picture that meets a converted one in a mixing filter (a still over the video, a grid
     cell beside a converted cell), encoded through video_args(line_meta): the BT.709 label an
     untagged one's chain starts with ("<setparams>," -- bt709_label_filter), or "" (a tagged, RGB or
     HDR picture, or a line that does not tag BT.709)."""
-    if STATE.codec == "prores" or ((line_meta or {}).get("video") or {}).get("bt2020_or_hdr"):
+    if STATE.codec == "prores" or ((line_meta or {}).get("video") or {}).get(
+        "bt2020_or_hdr"
+    ):
         return ""
     f = bt709_label_filter(meta)
     return f + "," if f else ""
 
 
-def rgb_chain_to_bt709(line_meta: Optional[Dict[str, Any]], pix_fmt: str = "yuva420p") -> str:
+def rgb_chain_to_bt709(
+    line_meta: Optional[Dict[str, Any]], pix_fmt: str = "yuva420p"
+) -> str:
     """For a picture the tool's own graph has made RGB(A) -- a still's `format=rgba` chain
     (overlay.py --image, an emoji PNG) or an RGBA composite (waveform.py's --image plate) -- that
     is encoded through video_args(line_meta): "," + the conversion to BT.709 YUV to end that chain
     with (rgb_to_bt709_filter), or "" when the line does not tag BT.709 (the lines matrix_chain()
-    leaves alone). Without it the graph's own RGB-to-YUV step used FFmpeg's BT.601 default."""
-    if STATE.codec == "prores" or ((line_meta or {}).get("video") or {}).get("bt2020_or_hdr"):
+    leaves alone). Without it the graph's own RGB-to-YUV step used FFmpeg's BT.601 default.
+    """
+    if STATE.codec == "prores" or ((line_meta or {}).get("video") or {}).get(
+        "bt2020_or_hdr"
+    ):
         return ""
     return "," + rgb_to_bt709_filter(pix_fmt)
 
@@ -587,12 +873,22 @@ def rgb_chain_to_bt709(line_meta: Optional[Dict[str, Any]], pix_fmt: str = "yuva
 def draws_chroma(colours: Sequence[Any], line_meta: Optional[Dict[str, Any]]) -> bool:
     """True when one of `colours` has chroma (is_neutral_color) and the line video_args(line_meta)
     tags the output BT.709 -- when a drawn colour needs drawn_chain() at all."""
-    return (not all(is_neutral_color(c) for c in colours if c is not None) and STATE.codec != "prores"
-            and not ((line_meta or {}).get("video") or {}).get("bt2020_or_hdr"))
+    return (
+        not all(is_neutral_color(c) for c in colours if c is not None)
+        and STATE.codec != "prores"
+        and not ((line_meta or {}).get("video") or {}).get("bt2020_or_hdr")
+    )
 
 
-def drawn_chain(colour_chain: str, meta: Optional[Dict[str, Any]], colours: Sequence[Any], neutral_chain: str = "null",
-                line_meta: Any = "same", tag: str = "d", labelled: bool = False) -> str:
+def drawn_chain(
+    colour_chain: str,
+    meta: Optional[Dict[str, Any]],
+    colours: Sequence[Any],
+    neutral_chain: str = "null",
+    line_meta: Any = "same",
+    tag: str = "d",
+    labelled: bool = False,
+) -> str:
     """`colour_chain` -- filters that draw a colour into the picture `meta` probes (drawtext's
     font/box/border colours, pad/tpad's fill, rotate's fillcolor, libass) -- so that a colour of
     `colours` lands in the BT.709 the line video_args(line_meta) tags the output with (line_meta
@@ -607,7 +903,8 @@ def drawn_chain(colour_chain: str, meta: Optional[Dict[str, Any]], colours: Sequ
 
     Unchanged: a chain whose colours are all greys (the same YUV under every matrix: the default
     black pads and white text), a line that does not tag BT.709 (HDR, prores). `labelled`: the
-    caller's graph already labels this picture (label_chain()) earlier in the same chain."""
+    caller's graph already labels this picture (label_chain()) earlier in the same chain.
+    """
     line = meta if line_meta == "same" else line_meta
     if not draws_chroma(colours, line):
         return colour_chain
@@ -617,15 +914,24 @@ def drawn_chain(colour_chain: str, meta: Optional[Dict[str, Any]], colours: Sequ
     return rgb_island(colour_chain, neutral_chain, pix_fmt, full, tag)
 
 
-def source_codec_video_args(meta: Optional[Dict[str, Any]], crf: int = 18, preset: str = "medium",
-                            keep_hevc: bool = False) -> List[str]:
+def source_codec_video_args(
+    meta: Optional[Dict[str, Any]],
+    crf: int = 18,
+    preset: str = "medium",
+    keep_hevc: bool = False,
+) -> List[str]:
     """video_args(), except that with `keep_hevc` (cut.py --keep-hevc) an SDR HEVC source re-encodes
     to HEVC (8-bit, BT.709-tagged, on VideoToolbox when --hw asks) instead of H.264: a cut is a trim,
     so a re-encoded segment can come out in the codec the source (and any copied segment beside it)
     is in. Opt-in within 2.x, where an SDR re-encode stays x264 unless asked. An HDR or BT.2020
     source always takes video_args()'s Main10 line, and --codec always wins."""
     v = (meta or {}).get("video") or {}
-    if keep_hevc and not STATE.codec and v.get("codec") == "hevc" and not v.get("bt2020_or_hdr"):
+    if (
+        keep_hevc
+        and not STATE.codec
+        and v.get("codec") == "hevc"
+        and not v.get("bt2020_or_hdr")
+    ):
         return encoder_args("hevc", crf, preset, meta) + bt709_matrix_args(meta)
     return video_args(meta, crf, preset)
 
@@ -634,9 +940,33 @@ def _x265_hdr_default(v: Dict[str, Any], crf: int, preset: str) -> List[str]:
     cs = v.get("color_space") or "bt2020nc"
     prim = v.get("color_primaries") or "bt2020"
     trc = v.get("color_transfer") or "arib-std-b67"
-    x265 = f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}:range=limited:hdr10-opt=1" if trc == "smpte2084" else f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}"
-    return ["-c:v", "libx265", "-preset", preset, "-crf", str(min(51, crf + 2)), "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1",
-            "-x265-params", x265, "-colorspace", cs, "-color_primaries", prim, "-color_trc", trc, "-movflags", "+faststart"]
+    x265 = (
+        f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}:range=limited:hdr10-opt=1"
+        if trc == "smpte2084"
+        else f"log-level=error:colorprim={prim}:transfer={trc}:colormatrix={cs}"
+    )
+    return [
+        "-c:v",
+        "libx265",
+        "-preset",
+        preset,
+        "-crf",
+        str(min(51, crf + 2)),
+        "-pix_fmt",
+        "yuv420p10le",
+        "-tag:v",
+        "hvc1",
+        "-x265-params",
+        x265,
+        "-colorspace",
+        cs,
+        "-color_primaries",
+        prim,
+        "-color_trc",
+        trc,
+        "-movflags",
+        "+faststart",
+    ]
 
 
 def aac_args(bitrate: str = "192k") -> List[str]:
@@ -676,13 +1006,26 @@ def db_to_linear(db: float) -> float:
 BRAND_DEFAULTS: Dict[str, Any] = {
     "font": "DejaVu Sans",
     "font_file": None,
-    "colors": {"primary": "FFD200", "text": "FFFFFF", "outline": "000000", "background": "101418", "accent": "1E6F8E"},
+    "colors": {
+        "primary": "FFD200",
+        "text": "FFFFFF",
+        "outline": "000000",
+        "background": "101418",
+        "accent": "1E6F8E",
+    },
     "logo": None,
     "logo_position": "top-right",
     "logo_scale": 160,
     "logo_opacity": 0.9,
     "safe_margin": 48,
-    "caption": {"size": 26, "position": "bottom", "animate": "pop", "karaoke": False, "bold": True, "outline": 2},
+    "caption": {
+        "size": 26,
+        "position": "bottom",
+        "animate": "pop",
+        "karaoke": False,
+        "bold": True,
+        "outline": 2,
+    },
     # 1.12: one place for the caption look every project shares. `styles.caption` is the documented
     # spelling (`{font, size, colour, box, position}`, British or American "colour"); the older
     # top-level `caption` block still works and `styles.caption` wins where both name the same key.
@@ -695,6 +1038,7 @@ BRAND_DEFAULTS: Dict[str, Any] = {
 def load_brand(path: Optional[str]) -> Dict[str, Any]:
     """Load brand.json (fonts, colours, logo, safe margins, caption defaults); missing keys fall back to defaults."""
     import copy
+
     brand = copy.deepcopy(BRAND_DEFAULTS)
     brand["_stated"] = {}
     if not path:
@@ -737,7 +1081,8 @@ def brand_states_font(brand: Dict[str, Any]) -> bool:
 
 def brand_caption_style(brand: Dict[str, Any]) -> Dict[str, Any]:
     """The effective caption style of a brand file: the top-level `caption` block updated with
-    `styles.caption`, with `colour` normalised to `color`. Explicit flags still beat both."""
+    `styles.caption`, with `colour` normalised to `color`. Explicit flags still beat both.
+    """
     style: Dict[str, Any] = dict(brand.get("caption") or {})
     extra = (brand.get("styles") or {}).get("caption") or {}
     style.update(extra)
@@ -749,9 +1094,11 @@ def brand_caption_style(brand: Dict[str, Any]) -> Dict[str, Any]:
 
 # ------------------------------------------------------------------- chapter proposal (1.16)
 
+
 def fmt_chapter_time(t: float) -> str:
     """The YouTube description convention: `00:00`, `03:12`, `1:02:03` past the hour, always
-    rounded DOWN to the second so the timestamp never lands after the moment it names."""
+    rounded DOWN to the second so the timestamp never lands after the moment it names.
+    """
     total = max(0, int(t))
     h, rem = divmod(total, 3600)
     m, sec = divmod(rem, 60)
@@ -769,9 +1116,15 @@ def _evidence_rank(ev: Dict[str, Any]) -> tuple:
     return (tier, within)
 
 
-def propose_chapters(duration: float, silences: "Sequence", scene_cuts: "Sequence", *,
-                     min_chapter: float = 60.0, max_chapters: int = 0,
-                     source: str = "both") -> "List[Dict[str, Any]]":
+def propose_chapters(
+    duration: float,
+    silences: "Sequence",
+    scene_cuts: "Sequence",
+    *,
+    min_chapter: float = 60.0,
+    max_chapters: int = 0,
+    source: str = "both",
+) -> "List[Dict[str, Any]]":
     """Chapter markers proposed from measured structure. Pure: the detectors' outputs go in,
     a list of `{"at", "title", "evidence"}` comes out, and nothing is decoded here.
 
@@ -793,23 +1146,36 @@ def propose_chapters(duration: float, silences: "Sequence", scene_cuts: "Sequenc
             if end is None or end == float("inf"):
                 continue
             end = float(end)
-            candidates.append({"at": end, "evidence": {
-                "kind": "silence", "silence": [round(start, 3), round(end, 3)],
-                "silence_length": round(end - start, 3)}})
+            candidates.append(
+                {
+                    "at": end,
+                    "evidence": {
+                        "kind": "silence",
+                        "silence": [round(start, 3), round(end, 3)],
+                        "silence_length": round(end - start, 3),
+                    },
+                }
+            )
     if source in ("scenes", "both"):
         for cut in scene_cuts or []:
             cut = float(cut)
             if cut <= 0.0:
-                continue     # scenes.py always reports 0.0 as the first cut; that is the start
-            candidates.append({"at": cut, "evidence": {"kind": "scene", "scene_at": round(cut, 3)}})
+                continue  # scenes.py always reports 0.0 as the first cut; that is the start
+            candidates.append(
+                {"at": cut, "evidence": {"kind": "scene", "scene_at": round(cut, 3)}}
+            )
 
     # merge a scene cut that stands within 1 s of a silence end: one event, two witnesses
     candidates.sort(key=lambda c: c["at"])
     merged: "List[Dict[str, Any]]" = []
     for cand in candidates:
         prior = merged[-1] if merged else None
-        if prior and abs(cand["at"] - prior["at"]) <= 1.0 and \
-                {prior["evidence"]["kind"], cand["evidence"]["kind"]} == {"silence", "scene"}:
+        if (
+            prior
+            and abs(cand["at"] - prior["at"]) <= 1.0
+            and {prior["evidence"]["kind"], cand["evidence"]["kind"]}
+            == {"silence", "scene"}
+        ):
             ev = dict(prior["evidence"])
             ev.update(cand["evidence"])
             ev["kind"] = "silence+scene"
@@ -827,18 +1193,22 @@ def propose_chapters(duration: float, silences: "Sequence", scene_cuts: "Sequenc
         if cand["at"] - last["at"] < min_chapter:
             # too close to the marker already kept: keep whichever the evidence supports better,
             # never replacing the 0.0 start
-            if last["evidence"]["kind"] != "start" and \
-                    _evidence_rank(cand["evidence"]) > _evidence_rank(last["evidence"]) and \
-                    (len(kept) < 2 or cand["at"] - kept[-2]["at"] >= min_chapter):
+            if (
+                last["evidence"]["kind"] != "start"
+                and _evidence_rank(cand["evidence"]) > _evidence_rank(last["evidence"])
+                and (len(kept) < 2 or cand["at"] - kept[-2]["at"] >= min_chapter)
+            ):
                 kept[-1] = dict(cand)
             continue
         kept.append(dict(cand))
 
     if max_chapters and len(kept) > max_chapters:
         # drop the weakest evidence first, never index 0, then put the survivors back in order
-        order = sorted(range(1, len(kept)),
-                       key=lambda i: (_evidence_rank(kept[i]["evidence"]), -kept[i]["at"]))
-        drop = set(order[:len(kept) - max_chapters])
+        order = sorted(
+            range(1, len(kept)),
+            key=lambda i: (_evidence_rank(kept[i]["evidence"]), -kept[i]["at"]),
+        )
+        drop = set(order[: len(kept) - max_chapters])
         kept = [c for i, c in enumerate(kept) if i not in drop]
 
     for n, chapter in enumerate(kept, start=1):
@@ -858,30 +1228,41 @@ def description_block(chapters: "Sequence") -> str:
 # belongs. Everything here is arithmetic on an RMS envelope somebody else decoded; nothing in this
 # module decides to cut anything, and nothing invents a beat the audio does not support.
 
-BEAT_ONSET_K = 1.5          # peak threshold: median + k * MAD over the local window
-BEAT_WINDOW_S = 1.0         # +/- this many seconds is "local" for the threshold
-BEAT_REFRACTORY_S = 0.06    # two onsets closer than this are one onset
-BEAT_SUPPORT_DIVISOR = 4    # a grid point with no onset within interval/4 is "unsupported"
-BEAT_ALIGN_DIVISOR = 8      # an onset within interval/8 of a grid point counts as aligned
-BEAT_MIN_CONFIDENCE = 0.5   # the default below which a tool that CHANGES a file refuses to snap
-BEAT_OCTAVE_MARGIN = 1.2    # a half/double-tempo grid must explain this much more onset strength
-BEAT_Z_FLOOR = 2.0          # autocorrelation z-score at which periodicity starts counting
-BEAT_Z_SPAN = 4.0           # ... and the span over which it reaches 1.0
+BEAT_ONSET_K = 1.5  # peak threshold: median + k * MAD over the local window
+BEAT_WINDOW_S = 1.0  # +/- this many seconds is "local" for the threshold
+BEAT_REFRACTORY_S = 0.06  # two onsets closer than this are one onset
+BEAT_SUPPORT_DIVISOR = (
+    4  # a grid point with no onset within interval/4 is "unsupported"
+)
+BEAT_ALIGN_DIVISOR = 8  # an onset within interval/8 of a grid point counts as aligned
+BEAT_MIN_CONFIDENCE = (
+    0.5  # the default below which a tool that CHANGES a file refuses to snap
+)
+BEAT_OCTAVE_MARGIN = (
+    1.2  # a half/double-tempo grid must explain this much more onset strength
+)
+BEAT_Z_FLOOR = 2.0  # autocorrelation z-score at which periodicity starts counting
+BEAT_Z_SPAN = 4.0  # ... and the span over which it reaches 1.0
 
 
 def _onset_strength(envelope: "Sequence[float]") -> "List[float]":
     """Half-wave-rectified first difference of log(env), i.e. a compression-domain spectral-flux
     analogue. The log matters: the level-domain difference over-weights the loud sections, so a
-    quiet verse contributes no onsets at all and the tempo is measured on the chorus alone."""
+    quiet verse contributes no onsets at all and the tempo is measured on the chorus alone.
+    """
     import math as _math
+
     log_env = [_math.log(max(0.0, float(e)) + 1e-9) for e in envelope]
-    return [0.0] + [max(0.0, log_env[i] - log_env[i - 1]) for i in range(1, len(log_env))]
+    return [0.0] + [
+        max(0.0, log_env[i] - log_env[i - 1]) for i in range(1, len(log_env))
+    ]
 
 
 def _pick_onsets(strength: "Sequence[float]", step_s: float) -> "List[int]":
     """Indices of local maxima above median + k*MAD over a +/-BEAT_WINDOW_S window, with a
     refractory gap. A median/MAD threshold rather than a mean/stdev one because a handful of very
-    strong hits would drag a mean-based threshold above every other onset in the piece."""
+    strong hits would drag a mean-based threshold above every other onset in the piece.
+    """
     n = len(strength)
     if n < 3:
         return []
@@ -892,7 +1273,7 @@ def _pick_onsets(strength: "Sequence[float]", step_s: float) -> "List[int]":
         s = strength[i]
         if s <= 0 or s < strength[i - 1] or s < strength[i + 1]:
             continue
-        window = sorted(strength[max(0, i - half):min(n, i + half + 1)])
+        window = sorted(strength[max(0, i - half) : min(n, i + half + 1)])
         if not window:
             continue
         med = window[len(window) // 2]
@@ -908,8 +1289,9 @@ def _pick_onsets(strength: "Sequence[float]", step_s: float) -> "List[int]":
     return picked
 
 
-def _autocorrelation_peak(strength: "Sequence[float]", step_s: float,
-                          bpm_range: "Sequence[float]") -> "tuple":
+def _autocorrelation_peak(
+    strength: "Sequence[float]", step_s: float, bpm_range: "Sequence[float]"
+) -> "tuple":
     """(best lag in samples, peak, mean, standard deviation) of the onset signal's
     autocorrelation over the lags `bpm_range` allows, or (None, 0.0, 0.0, 0.0).
 
@@ -930,7 +1312,7 @@ def _autocorrelation_peak(strength: "Sequence[float]", step_s: float,
     values = []
     for lag in range(lag_min, lag_max + 1):
         acc = sum(centred[i] * centred[i + lag] for i in range(n - lag))
-        acc /= (n - lag)
+        acc /= n - lag
         values.append(acc)
         if best_lag is None or acc > best:
             best_lag, best = lag, acc
@@ -939,8 +1321,12 @@ def _autocorrelation_peak(strength: "Sequence[float]", step_s: float,
     return (best_lag, best, mean_acc, math.sqrt(var))
 
 
-def _grid_score(onset_times: "Sequence[float]", strength_at: "Dict[int, float]",
-                interval: float, phase: float) -> float:
+def _grid_score(
+    onset_times: "Sequence[float]",
+    strength_at: "Dict[int, float]",
+    interval: float,
+    phase: float,
+) -> float:
     """Total onset strength landing within interval/BEAT_ALIGN_DIVISOR of the grid."""
     if interval <= 0:
         return 0.0
@@ -953,10 +1339,14 @@ def _grid_score(onset_times: "Sequence[float]", strength_at: "Dict[int, float]",
     return total
 
 
-def beat_grid(envelope: "Sequence[float]", step_s: float, *,
-              bpm_range: "Sequence[float]" = (60, 200),
-              min_confidence: float = BEAT_MIN_CONFIDENCE,
-              duration: "Optional[float]" = None) -> "Dict[str, Any]":
+def beat_grid(
+    envelope: "Sequence[float]",
+    step_s: float,
+    *,
+    bpm_range: "Sequence[float]" = (60, 200),
+    min_confidence: float = BEAT_MIN_CONFIDENCE,
+    duration: "Optional[float]" = None,
+) -> "Dict[str, Any]":
     """A beat grid from an RMS envelope. Pure: numbers in, a dict out -- no ffmpeg, no I/O.
 
     Returns {"beats": [t, ...], "tempo_bpm": float|None, "interval": float|None,
@@ -991,10 +1381,19 @@ def beat_grid(envelope: "Sequence[float]", step_s: float, *,
     env = list(envelope or [])
     lo_bpm, hi_bpm = float(min(bpm_range)), float(max(bpm_range))
     out: "Dict[str, Any]" = {
-        "beats": [], "supported_beats": [], "tempo_bpm": None, "interval": None,
-        "confidence": 0.0, "onsets": [],
-        "phase": 0.0, "supported": 0, "unsupported": 0, "usable": False,
-        "method": "rms-flux-autocorrelation", "step_s": step_s, "range_bpm": [lo_bpm, hi_bpm],
+        "beats": [],
+        "supported_beats": [],
+        "tempo_bpm": None,
+        "interval": None,
+        "confidence": 0.0,
+        "onsets": [],
+        "phase": 0.0,
+        "supported": 0,
+        "unsupported": 0,
+        "usable": False,
+        "method": "rms-flux-autocorrelation",
+        "step_s": step_s,
+        "range_bpm": [lo_bpm, hi_bpm],
     }
     if len(env) < 4 or step_s <= 0:
         return out
@@ -1009,7 +1408,9 @@ def beat_grid(envelope: "Sequence[float]", step_s: float, *,
     if len(idx) < 2:
         return out
 
-    best_lag, peak, mean_acc, sd_acc = _autocorrelation_peak(strength, step_s, (lo_bpm, hi_bpm))
+    best_lag, peak, mean_acc, sd_acc = _autocorrelation_peak(
+        strength, step_s, (lo_bpm, hi_bpm)
+    )
     if not best_lag or peak <= 0:
         return out
     interval = best_lag * step_s
@@ -1051,12 +1452,16 @@ def beat_grid(envelope: "Sequence[float]", step_s: float, *,
         beats.append(round(t, 4))
         t += interval
     support_tol = interval / BEAT_SUPPORT_DIVISOR
-    supported_beats = [b for b in beats
-                       if any(abs(b - o) <= support_tol for o in onset_times)]
+    supported_beats = [
+        b for b in beats if any(abs(b - o) <= support_tol for o in onset_times)
+    ]
     supported = len(supported_beats)
     align_tol = interval / BEAT_ALIGN_DIVISOR
-    aligned = sum(1 for o in onset_times
-                  if min((o - phase) % interval, interval - (o - phase) % interval) <= align_tol)
+    aligned = sum(
+        1
+        for o in onset_times
+        if min((o - phase) % interval, interval - (o - phase) % interval) <= align_tol
+    )
 
     # How many spreads the best lag stands above the rest of them, mapped onto [0, 1]: a click
     # track measures z ~= 6, a jittery human performance ~= 5, pseudo-random levels ~= 2.4, so
@@ -1066,18 +1471,25 @@ def beat_grid(envelope: "Sequence[float]", step_s: float, *,
     alignment = aligned / len(onset_times) if onset_times else 0.0
     confidence = round(0.5 * periodicity + 0.5 * alignment, 3)
 
-    out.update({
-        "beats": beats, "supported_beats": supported_beats,
-        "interval": round(interval, 6), "tempo_bpm": round(60.0 / interval, 2),
-        "phase": round(phase, 4), "confidence": confidence, "supported": supported,
-        "unsupported": len(beats) - supported,
-        "usable": confidence >= float(min_confidence),
-    })
+    out.update(
+        {
+            "beats": beats,
+            "supported_beats": supported_beats,
+            "interval": round(interval, 6),
+            "tempo_bpm": round(60.0 / interval, 2),
+            "phase": round(phase, 4),
+            "confidence": confidence,
+            "supported": supported,
+            "unsupported": len(beats) - supported,
+            "usable": confidence >= float(min_confidence),
+        }
+    )
     return out
 
 
-def snap_points(points: "Sequence[float]", beats: "Sequence[float]",
-                tolerance: float) -> "List[Dict[str, Any]]":
+def snap_points(
+    points: "Sequence[float]", beats: "Sequence[float]", tolerance: float
+) -> "List[Dict[str, Any]]":
     """Move each given point to the nearest beat within `tolerance` seconds.
 
     Pure. Returns [{"from": t, "to": t2, "delta": d, "snapped": bool, "beat_index": i|None}].
@@ -1097,10 +1509,19 @@ def snap_points(points: "Sequence[float]", beats: "Sequence[float]",
             if best_d is None or d < best_d:
                 best_i, best_d = i, d
         if best_i is not None and best_d is not None and best_d <= float(tolerance):
-            out.append({"from": p, "to": grid[best_i], "delta": round(grid[best_i] - p, 6),
-                        "snapped": True, "beat_index": best_i})
+            out.append(
+                {
+                    "from": p,
+                    "to": grid[best_i],
+                    "delta": round(grid[best_i] - p, 6),
+                    "snapped": True,
+                    "beat_index": best_i,
+                }
+            )
         else:
-            out.append({"from": p, "to": p, "delta": 0.0, "snapped": False, "beat_index": None})
+            out.append(
+                {"from": p, "to": p, "delta": 0.0, "snapped": False, "beat_index": None}
+            )
     return out
 
 
@@ -1119,7 +1540,19 @@ FILLER_WORDS = {
     # なんか is the most common Japanese filler AND a pronoun/adverb spelled identically. It is in the
     # default list because leaving it out makes --filler useless for Japanese, and every run that
     # removes one warns that it is often a content word (--filler-keep なんか takes it out).
-    "ja": frozenset({"えー", "えーと", "えっと", "あの", "あのー", "その", "そのー", "まあ", "なんか"}),
+    "ja": frozenset(
+        {
+            "えー",
+            "えーと",
+            "えっと",
+            "あの",
+            "あのー",
+            "その",
+            "そのー",
+            "まあ",
+            "なんか",
+        }
+    ),
     "es": frozenset({"eh", "este", "esto", "mmm"}),
     "de": frozenset({"äh", "ähm", "hm"}),
     "fr": frozenset({"euh", "hein"}),
@@ -1142,9 +1575,9 @@ FILLER_DISCOURSE_MARKERS = {
     "it": ("cioè",),
 }
 
-FILLER_MAX_WORD = 1.2   # a longer "uhhh" is a held vowel someone meant
-FILLER_MIN_GAP = 0.05   # spans closer than this become one span
-FILLER_PAD = 0.02       # trimmed either side of the word
+FILLER_MAX_WORD = 1.2  # a longer "uhhh" is a held vowel someone meant
+FILLER_MIN_GAP = 0.05  # spans closer than this become one span
+FILLER_PAD = 0.02  # trimmed either side of the word
 
 
 def normalise_filler_token(word: str) -> str:
@@ -1152,14 +1585,22 @@ def normalise_filler_token(word: str) -> str:
     surrounding punctuation and whitespace removed. Never a substring match -- "umbrella" must
     survive a list containing "um"."""
     import unicodedata as _ud
+
     text = str(word or "").strip()
-    text = "".join(ch for ch in text
-                   if not _ud.category(ch).startswith("P") or ch in "-'’")
+    text = "".join(
+        ch for ch in text if not _ud.category(ch).startswith("P") or ch in "-'’"
+    )
     return text.strip("-'’").casefold()
 
 
-def filler_spans(words, wordlist, *, pad: float = FILLER_PAD, min_gap: float = FILLER_MIN_GAP,
-                 max_word: float = FILLER_MAX_WORD) -> "List[Dict[str, Any]]":
+def filler_spans(
+    words,
+    wordlist,
+    *,
+    pad: float = FILLER_PAD,
+    min_gap: float = FILLER_MIN_GAP,
+    max_word: float = FILLER_MAX_WORD,
+) -> "List[Dict[str, Any]]":
     """Time spans to remove, from measured word timings. Pure: no subprocess, no I/O.
 
     `words` is [{"word", "start", "end"}] as whisper emits. A word is removed only when its
@@ -1179,7 +1620,7 @@ def filler_spans(words, wordlist, *, pad: float = FILLER_PAD, min_gap: float = F
         try:
             start, end = float(entry["start"]), float(entry["end"])
         except (KeyError, TypeError, ValueError):
-            continue     # no measured timing: nothing to cut
+            continue  # no measured timing: nothing to cut
         if not (end > start) or (end - start) > max_word:
             continue
         hits.append({"start": max(0.0, start - pad), "end": end + pad, "word": token})
@@ -1200,18 +1641,29 @@ def filler_spans(words, wordlist, *, pad: float = FILLER_PAD, min_gap: float = F
 # --- 1.18.0: lightweight block-matching motion estimate (scenes.py --shots, cropdetect.py
 # --motion-centre) ---------------------------------------------------------------------------
 
-MOTION_GRID = 4          # NxN anchor blocks per frame
-MOTION_SEARCH = 3         # +/- pixels searched per block, at the decoded (low) resolution
-MOTION_STATIC_PX = 0.35   # average per-frame displacement below this, at decode resolution, is "static"
-MOTION_PAN_SPREAD = 0.6   # block-to-block direction agreement above this (0..1) reads as a pan
+MOTION_GRID = 4  # NxN anchor blocks per frame
+MOTION_SEARCH = 3  # +/- pixels searched per block, at the decoded (low) resolution
+MOTION_STATIC_PX = (
+    0.35  # average per-frame displacement below this, at decode resolution, is "static"
+)
+MOTION_PAN_SPREAD = (
+    0.6  # block-to-block direction agreement above this (0..1) reads as a pan
+)
 
 
-def _block_match(prev: bytes, cur: bytes, w: int, h: int, cx: int, cy: int, half: int, search: int) -> "Tuple[float, float]":
+def _block_match(
+    prev: bytes, cur: bytes, w: int, h: int, cx: int, cy: int, half: int, search: int
+) -> "Tuple[float, float]":
     """(dx, dy) that best aligns a `half*2` square centred at (cx, cy) in `prev` to `cur`,
     searched over +/- `search` px by sum-of-absolute-differences. Coordinates and the returned
-    offset are in decoded-frame pixels (a handful of pixels a side at 1.18.0's sample size)."""
+    offset are in decoded-frame pixels (a handful of pixels a side at 1.18.0's sample size).
+    """
     x0, y0 = max(half, min(w - half - 1, cx)), max(half, min(h - half - 1, cy))
-    ref = [prev[(y0 + dy) * w + (x0 + dx)] for dy in range(-half, half + 1) for dx in range(-half, half + 1)]
+    ref = [
+        prev[(y0 + dy) * w + (x0 + dx)]
+        for dy in range(-half, half + 1)
+        for dx in range(-half, half + 1)
+    ]
 
     def sad_at(xx: int, yy: int) -> "Optional[int]":
         if xx - half < 0 or xx + half >= w or yy - half < 0 or yy + half >= h:
@@ -1220,7 +1672,9 @@ def _block_match(prev: bytes, cur: bytes, w: int, h: int, cx: int, cy: int, half
         for dy in range(-half, half + 1):
             row = (yy + dy) * w
             for dx in range(-half, half + 1):
-                sad += abs(ref[(dy + half) * (2 * half + 1) + (dx + half)] - cur[row + xx + dx])
+                sad += abs(
+                    ref[(dy + half) * (2 * half + 1) + (dx + half)] - cur[row + xx + dx]
+                )
         return sad
 
     # Zero shift is the tie-break candidate, not the search order's first cell: on a textureless
@@ -1241,8 +1695,15 @@ def _block_match(prev: bytes, cur: bytes, w: int, h: int, cx: int, cy: int, half
     return best
 
 
-def frame_flow(prev: bytes, cur: bytes, w: int, h: int, *, grid: int = MOTION_GRID,
-               search: int = MOTION_SEARCH) -> "Dict[str, Any]":
+def frame_flow(
+    prev: bytes,
+    cur: bytes,
+    w: int,
+    h: int,
+    *,
+    grid: int = MOTION_GRID,
+    search: int = MOTION_SEARCH,
+) -> "Dict[str, Any]":
     """One measurement between two consecutive decoded grayscale frames: the mean block
     displacement vector, its magnitude, and how consistently the blocks agree on direction
     (0 = every block moved a different way, 1 = every block agrees -- a pan or dolly moves the
@@ -1258,8 +1719,15 @@ def frame_flow(prev: bytes, cur: bytes, w: int, h: int, *, grid: int = MOTION_GR
     mdy = sum(v[1] for v in vecs) / len(vecs)
     magnitude = math.hypot(mdx, mdy)
     mean_len = sum(math.hypot(*v) for v in vecs) / len(vecs)
-    agreement = (magnitude / mean_len) if mean_len > 1e-6 else 1.0  # 1.0 = every block agrees
-    return {"dx": mdx, "dy": mdy, "magnitude": magnitude, "agreement": min(1.0, agreement)}
+    agreement = (
+        (magnitude / mean_len) if mean_len > 1e-6 else 1.0
+    )  # 1.0 = every block agrees
+    return {
+        "dx": mdx,
+        "dy": mdy,
+        "magnitude": magnitude,
+        "agreement": min(1.0, agreement),
+    }
 
 
 def label_shot_flow(flows: "Sequence[Dict[str, Any]]") -> "Dict[str, Any]":

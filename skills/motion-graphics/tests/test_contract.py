@@ -1,6 +1,8 @@
 """Contract <-> implementation consistency; contract/doctor are deterministic and valid JSON; `skill` is an alias
 of `contract`. Pure / structural where possible; doctor's environment-dependent fields are only checked for
-shape, not for specific values (those are covered by test_integration.py against a real ffmpeg-skill)."""
+shape, not for specific values (those are covered by test_integration.py against a real ffmpeg-skill).
+"""
+
 import json
 
 from motion_graphics import VERSION
@@ -8,7 +10,12 @@ from motion_graphics.adapter import FLAGS_USED
 from motion_graphics.contract import skill_contract
 from motion_graphics.doctor import doctor_report
 from motion_graphics.errors import ERROR_CODES
-from motion_graphics.model import ANIMATION_KINDS, ELEMENT_TYPES, UNSUPPORTED_ANIMATIONS, UNSUPPORTED_ELEMENT_TYPES
+from motion_graphics.model import (
+    ANIMATION_KINDS,
+    ELEMENT_TYPES,
+    UNSUPPORTED_ANIMATIONS,
+    UNSUPPORTED_ELEMENT_TYPES,
+)
 
 from conftest import run_cli, one_json
 
@@ -42,7 +49,9 @@ def test_contract_unsupported_element_types_do_not_overlap_supported():
 def test_contract_animations_match_implementation_table():
     c = skill_contract()
     assert {a["kind"] for a in c["animations"]} == set(ANIMATION_KINDS)
-    assert {a["kind"] for a in c["unsupported_animations"]} == set(UNSUPPORTED_ANIMATIONS)
+    assert {a["kind"] for a in c["unsupported_animations"]} == set(
+        UNSUPPORTED_ANIMATIONS
+    )
 
 
 def test_contract_error_codes_match_error_table():
@@ -83,7 +92,13 @@ def test_contract_provides_one_capability_entry_per_element_type():
     for p in provides:
         assert isinstance(p["id"], str) and p["id"]
         assert p["tool_id"] == "motion-graphics/run"
-        assert p["lifecycle"] in ("PROPOSED", "EXPERIMENTAL", "STABLE", "DEPRECATED", "RETIRED")
+        assert p["lifecycle"] in (
+            "PROPOSED",
+            "EXPERIMENTAL",
+            "STABLE",
+            "DEPRECATED",
+            "RETIRED",
+        )
     by_type = {p["element_type"]: p["id"] for p in provides}
     assert by_type["title"] == "motion_graphics.title_card"
     assert by_type["lower_third"] == "motion_graphics.lower_third"
@@ -98,14 +113,29 @@ def test_contract_os_registry_contract_version_and_dependencies():
     c = skill_contract()
     assert c["contract_version"] == 1
     (dep,) = c["dependencies"]
-    assert dep["skill_id"] == "ffmpeg-skill" and dep["version_range"] == ">=1.0 <3.0" and dep["range_of"] == "contract_version"
+    assert (
+        dep["skill_id"] == "ffmpeg-skill"
+        and dep["version_range"] == ">=1.0 <3.0"
+        and dep["range_of"] == "contract_version"
+    )
     # background: shape (ADR-22) and the layer export canvas; color: the canvas's colour tags (ADR-30)
-    assert dep["tools"] == [f"ffmpeg-skill/{t}" for t in ("probe", "graphics", "overlay", "background", "color")]
+    assert dep["tools"] == [
+        f"ffmpeg-skill/{t}"
+        for t in ("probe", "graphics", "overlay", "background", "color")
+    ]
 
 
 def test_contract_forbidden_fields_present():
     c = skill_contract()
-    for key in ("filter", "filter_complex", "shell", "command", "argv", "executable", "env"):
+    for key in (
+        "filter",
+        "filter_complex",
+        "shell",
+        "command",
+        "argv",
+        "executable",
+        "env",
+    ):
         assert key in c["request"]["forbidden_fields"]
 
 
@@ -120,7 +150,9 @@ def test_cli_skill_and_contract_are_identical(tmp_path):
 def test_cli_contract_stdout_is_exactly_one_json_document(tmp_path):
     code, out, err = run_cli(["contract", "--json"], cwd=str(tmp_path))
     assert code == 0
-    one_json(out)  # raises if there is more than a single JSON document / trailing garbage
+    one_json(
+        out
+    )  # raises if there is more than a single JSON document / trailing garbage
 
 
 def test_cli_doctor_reports_shape(tmp_path):
@@ -136,7 +168,9 @@ def test_doctor_report_never_claims_support_for_unsupported_element_types():
     doc = doctor_report()
     for etype in UNSUPPORTED_ELEMENT_TYPES:
         assert etype not in doc["checks"]["element_types"]
-    assert set(doc["checks"]["unsupported_element_types"]) == set(UNSUPPORTED_ELEMENT_TYPES)
+    assert set(doc["checks"]["unsupported_element_types"]) == set(
+        UNSUPPORTED_ELEMENT_TYPES
+    )
 
 
 # ---- video_overlay / audio_stream / dropped_non_av_streams (issue #10 items 2-4)

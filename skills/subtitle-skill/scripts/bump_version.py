@@ -10,6 +10,7 @@ committed or tagged.
 
 Usage (from the repository root): NEW_VERSION=X.Y.Z python3 scripts/bump_version.py
 """
+
 from __future__ import annotations
 
 import os
@@ -29,24 +30,37 @@ def reported_versions() -> set:
     from subtitle_skill.contract import build_contract
     from subtitle_skill.doctor import build_doctor_report
 
-    return {subtitle_skill.__version__, build_contract()["version"], build_doctor_report()["version"]}
+    return {
+        subtitle_skill.__version__,
+        build_contract()["version"],
+        build_doctor_report()["version"],
+    }
 
 
 def main() -> int:
     new_version = os.environ.get("NEW_VERSION", "")
     if not SEMVER_RE.match(new_version):
-        print(f"::error::NEW_VERSION {new_version!r} is not a plain X.Y.Z semver", file=sys.stderr)
+        print(
+            f"::error::NEW_VERSION {new_version!r} is not a plain X.Y.Z semver",
+            file=sys.stderr,
+        )
         return 1
     text = PYPROJECT.read_text(encoding="utf-8")
     new_text, count = VERSION_LINE_RE.subn(f'version = "{new_version}"', text, count=1)
     if count != 1:
-        print('::error::expected a `version = "X.Y.Z"` line in pyproject.toml', file=sys.stderr)
+        print(
+            '::error::expected a `version = "X.Y.Z"` line in pyproject.toml',
+            file=sys.stderr,
+        )
         return 1
     PYPROJECT.write_text(new_text, encoding="utf-8")
     print(f"pyproject.toml version -> {new_version}")
     reported = reported_versions()
     if reported != {new_version}:
-        print(f"::error::after the bump the package still reports {sorted(reported)}, not {new_version}", file=sys.stderr)
+        print(
+            f"::error::after the bump the package still reports {sorted(reported)}, not {new_version}",
+            file=sys.stderr,
+        )
         return 1
     print(f"__version__, contract --json and doctor --json report {new_version}")
     return 0

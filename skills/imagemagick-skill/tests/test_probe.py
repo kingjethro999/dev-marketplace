@@ -18,7 +18,9 @@ class TestProbe(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
 
     def test_missing_input_fails(self):
-        args = probe.build_parser().parse_args([os.path.join(self.tmp.name, "nope.png"), "--json"])
+        args = probe.build_parser().parse_args(
+            [os.path.join(self.tmp.name, "nope.png"), "--json"]
+        )
         with self.assertRaises(ImageSkillError):
             probe.run_probe(args)
 

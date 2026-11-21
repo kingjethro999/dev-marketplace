@@ -9,6 +9,7 @@ installed checkout, never inferred from its version number:
 Each layout is a fake checkout (fake_engine.py `layout=`) whose tools reject a flag they do not list, so a wrong
 spelling fails here exactly as it would against the real release.
 """
+
 import json
 import os
 import shutil
@@ -21,7 +22,12 @@ from helpers import cli, make_workspace, request, write_fake_media
 from video_editing_skill.compiler import OPERATION_FLAGS
 from video_editing_skill.contract import ffmpeg_skill_version_range
 from video_editing_skill.executor import _hdr_of
-from video_editing_skill.ffmpeg_skill import MIN_VERSION, FfmpegSkill, _flags_from_contract, locate
+from video_editing_skill.ffmpeg_skill import (
+    MIN_VERSION,
+    FfmpegSkill,
+    _flags_from_contract,
+    locate,
+)
 
 
 class LayoutCase(unittest.TestCase):
@@ -50,9 +56,21 @@ class LayoutCase(unittest.TestCase):
         out = {"id": "o", "operation": ops[-1]["id"], "path": "out/o.mp4"}
         if encoding:
             out["encoding"] = encoding
-        doc = request([{"id": "A", "path": src}, {"id": "B", "path": "in/b.mp4"}, {"id": "logo", "path": "in/logo.png", "kind": "image"}],
-                      ops, [out], options)
-        rc, res, err = cli(["run", "-", "--json", "--workspace", self.ws], stdin=json.dumps(doc).encode(), env=self.env)
+        doc = request(
+            [
+                {"id": "A", "path": src},
+                {"id": "B", "path": "in/b.mp4"},
+                {"id": "logo", "path": "in/logo.png", "kind": "image"},
+            ],
+            ops,
+            [out],
+            options,
+        )
+        rc, res, err = cli(
+            ["run", "-", "--json", "--workspace", self.ws],
+            stdin=json.dumps(doc).encode(),
+            env=self.env,
+        )
         self.assertIsInstance(res, dict, err)
         return rc, res
 
@@ -66,25 +84,45 @@ class Engine2xTests(LayoutCase):
 
     def test_detected_from_contract(self):
         skill = locate(self.root)
-        self.assertTrue(skill.version_supported())   # no ceiling
-        self.assertEqual(skill.cli_flags("cut") and "--quality" in skill.cli_flags("cut"), True)
+        self.assertTrue(skill.version_supported())  # no ceiling
+        self.assertEqual(
+            skill.cli_flags("cut") and "--quality" in skill.cli_flags("cut"), True
+        )
         self.assertEqual(skill.flag_source["fit"], "contract")
         self.assertEqual(skill.resolve_flag("cut", "--crf"), "--quality")
         self.assertEqual(skill.resolve_flag("fit", "--rotate"), "--rotate")
         self.assertIsNone(skill.resolve_flag("fit", "--no-such-flag"))
 
     def test_encoding_crf_is_passed_as_quality(self):
-        rc, res = self.run_([{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1, "precision": "frame"}}],
-                            encoding={"crf": 23, "preset": "fast"})
+        rc, res = self.run_(
+            [
+                {
+                    "id": "t",
+                    "type": "TRIM",
+                    "input": "A",
+                    "params": {"start": 0, "end": 1, "precision": "frame"},
+                }
+            ],
+            encoding={"crf": 23, "preset": "fast"},
+        )
         self.assertTrue(res["ok"], res)
-        self.assertEqual(self.delivered_header()["encoding"], {"crf": 23, "preset": "fast"})
+        self.assertEqual(
+            self.delivered_header()["encoding"], {"crf": 23, "preset": "fast"}
+        )
         self.assertIn("--quality", self.delivered_header()["args"])
         self.assertNotIn("--crf", self.delivered_header()["args"])
 
     def test_rerun_needs_no_overwrite(self):
         """Every tool writes to a fresh .partial path the executor removes first, so 2.x's overwrite refusal never
         applies and --overwrite is never passed."""
-        ops = [{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1, "precision": "frame"}}]
+        ops = [
+            {
+                "id": "t",
+                "type": "TRIM",
+                "input": "A",
+                "params": {"start": 0, "end": 1, "precision": "frame"},
+            }
+        ]
         for _ in range(2):
             rc, res = self.run_(ops, options={"reuse": False, "overwrite": True})
             self.assertTrue(res["ok"], res)
@@ -93,17 +131,43 @@ class Engine2xTests(LayoutCase):
     def test_plan_previews_and_still_writes_nothing(self):
         """1.x+ refuses a dry run into a directory that does not exist; plan creates the work directory for its previews
         and removes it again."""
-        doc = request([{"id": "A", "path": "in/a.mp4"}], [{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1}}],
-                      [{"id": "o", "operation": "t", "path": "out/o.mp4"}])
-        rc, res, err = cli(["plan", "-", "--json", "--workspace", self.ws], stdin=json.dumps(doc).encode(), env=self.env)
+        doc = request(
+            [{"id": "A", "path": "in/a.mp4"}],
+            [
+                {
+                    "id": "t",
+                    "type": "TRIM",
+                    "input": "A",
+                    "params": {"start": 0, "end": 1},
+                }
+            ],
+            [{"id": "o", "operation": "t", "path": "out/o.mp4"}],
+        )
+        rc, res, err = cli(
+            ["plan", "-", "--json", "--workspace", self.ws],
+            stdin=json.dumps(doc).encode(),
+            env=self.env,
+        )
         self.assertTrue(res["ok"], res)
-        self.assertTrue(all(s["preview"]["ok"] for s in res["plan"]["steps"]), res["plan"]["steps"])
+        self.assertTrue(
+            all(s["preview"]["ok"] for s in res["plan"]["steps"]), res["plan"]["steps"]
+        )
         self.assertFalse(os.path.exists(os.path.join(self.ws, ".video-editing")))
         self.assertFalse(os.path.exists(os.path.join(self.ws, "out")))
 
     def test_bt2020_sdr_keeps_the_wide_hdr_meaning(self):
         """2.x says hdr: false for BT.2020 SDR but still encodes it as hevc; validation reads bt2020_or_hdr and expects hevc."""
-        rc, res = self.run_([{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1, "precision": "frame"}}], src="in/bt2020.mp4")
+        rc, res = self.run_(
+            [
+                {
+                    "id": "t",
+                    "type": "TRIM",
+                    "input": "A",
+                    "params": {"start": 0, "end": 1, "precision": "frame"},
+                }
+            ],
+            src="in/bt2020.mp4",
+        )
         self.assertTrue(res["ok"], res)
         self.assertEqual(self.delivered_header()["codec"], "hevc")
 
@@ -116,23 +180,44 @@ class Engine2xTests(LayoutCase):
         self.assertIsNone(comp["upper_bound"])
         self.assertEqual(comp["version_floor"], ">=" + ".".join(map(str, MIN_VERSION)))
         self.assertEqual(comp["tools"]["cut"]["flags_from"], "contract")
-        self.assertEqual(comp["tools"]["cut"]["flag_count"], len(locate(self.root).cli_flags("cut")))
+        self.assertEqual(
+            comp["tools"]["cut"]["flag_count"], len(locate(self.root).cli_flags("cut"))
+        )
         self.assertEqual(comp["tools"]["cut"]["spellings"], {"--crf": "--quality"})
         rows = {c["check"]: c for c in rep["checks"]}
         self.assertEqual(rows["tool:ffmpeg-skill/fit"]["uses_crf"], "--quality")
 
-
     def test_fit_canvas_never_exceeds_the_source(self):
         """fit.py 0.16.10+ bounds an aspect-only canvas by the source: 640x360 at 9:16 is 202x360 (before: 640x1138)."""
-        for aspect, frame in (("9:16", [202, 360]), ("21:9", [640, 274]), ("1:1", [360, 360])):
-            rc, res = self.run_([{"id": "f", "type": "FIT", "input": "A", "params": {"aspect": aspect}}], options={"overwrite": True})
+        for aspect, frame in (
+            ("9:16", [202, 360]),
+            ("21:9", [640, 274]),
+            ("1:1", [360, 360]),
+        ):
+            rc, res = self.run_(
+                [
+                    {
+                        "id": "f",
+                        "type": "FIT",
+                        "input": "A",
+                        "params": {"aspect": aspect},
+                    }
+                ],
+                options={"overwrite": True},
+            )
             self.assertTrue(res["ok"], res)
-            self.assertEqual(res["execution"]["operations"][0]["normalized"]["target_frame"], frame)
-            self.assertEqual([self.delivered_header()["width"], self.delivered_header()["height"]], frame)
+            self.assertEqual(
+                res["execution"]["operations"][0]["normalized"]["target_frame"], frame
+            )
+            self.assertEqual(
+                [self.delivered_header()["width"], self.delivered_header()["height"]],
+                frame,
+            )
 
 
 class Engine1xTests(Engine2xTests):
     """1.10+ accepts both spellings: --quality (the non-deprecated one) is chosen; probe still has the wide hdr."""
+
     layout = "1.x"
     version = "1.26.0"
 
@@ -144,76 +229,159 @@ class Engine0xTests(LayoutCase):
     def test_crf_kept_where_quality_does_not_exist(self):
         skill = locate(self.root)
         self.assertEqual(skill.resolve_flag("cut", "--crf"), "--crf")
-        rc, res = self.run_([{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1, "precision": "frame"}}],
-                            encoding={"crf": 21})
+        rc, res = self.run_(
+            [
+                {
+                    "id": "t",
+                    "type": "TRIM",
+                    "input": "A",
+                    "params": {"start": 0, "end": 1, "precision": "frame"},
+                }
+            ],
+            encoding={"crf": 21},
+        )
         self.assertTrue(res["ok"], res)
         self.assertIn("--crf", self.delivered_header()["args"])
         self.assertEqual(self.delivered_header()["encoding"]["crf"], 21)
 
     def test_bt2020_reads_old_hdr_key(self):
-        rc, res = self.run_([{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1, "precision": "frame"}}], src="in/bt2020.mp4")
+        rc, res = self.run_(
+            [
+                {
+                    "id": "t",
+                    "type": "TRIM",
+                    "input": "A",
+                    "params": {"start": 0, "end": 1, "precision": "frame"},
+                }
+            ],
+            src="in/bt2020.mp4",
+        )
         self.assertTrue(res["ok"], res)
         self.assertEqual(self.delivered_header()["codec"], "hevc")
 
     def test_fit_canvas_keeps_the_old_rule(self):
         """fit.py before 0.16.10 kept the source width for a narrower aspect: 640x360 at 9:16 is 640x1138."""
         for aspect, frame in (("9:16", [640, 1138]), ("21:9", [840, 360])):
-            rc, res = self.run_([{"id": "f", "type": "FIT", "input": "A", "params": {"aspect": aspect}}], options={"overwrite": True})
+            rc, res = self.run_(
+                [
+                    {
+                        "id": "f",
+                        "type": "FIT",
+                        "input": "A",
+                        "params": {"aspect": aspect},
+                    }
+                ],
+                options={"overwrite": True},
+            )
             self.assertTrue(res["ok"], res)
-            self.assertEqual(res["execution"]["operations"][0]["normalized"]["target_frame"], frame)
-            self.assertEqual([self.delivered_header()["width"], self.delivered_header()["height"]], frame)
+            self.assertEqual(
+                res["execution"]["operations"][0]["normalized"]["target_frame"], frame
+            )
+            self.assertEqual(
+                [self.delivered_header()["width"], self.delivered_header()["height"]],
+                frame,
+            )
 
     def test_rotate_available(self):
-        rc, res = self.run_([{"id": "r", "type": "ROTATE", "input": "A", "params": {"degrees": 90}}])
+        rc, res = self.run_(
+            [{"id": "r", "type": "ROTATE", "input": "A", "params": {"degrees": 90}}]
+        )
         self.assertTrue(res["ok"], res)
 
 
 class Engine010Tests(LayoutCase):
     """0.10.0's fit.py has no --rotate / --flip: ROTATE is MISSING in doctor and refused before anything runs; the
     other operations are unaffected."""
+
     layout = "0.10"
     version = "0.10.0"
 
     def test_rotate_refused_up_front(self):
-        rc, res = self.run_([{"id": "r", "type": "ROTATE", "input": "A", "params": {"degrees": 90}}])
+        rc, res = self.run_(
+            [{"id": "r", "type": "ROTATE", "input": "A", "params": {"degrees": 90}}]
+        )
         self.assertFalse(res["ok"])
         self.assertEqual(res["error"]["code"], "TOOL_ERROR")
         self.assertIn("flag:--rotate", res["error"]["details"]["missing"])
         self.assertFalse(res["error"]["retryable"])
         self.assertFalse(os.path.exists(os.path.join(self.ws, "out", "o.mp4")))
         work = os.path.join(self.ws, ".video-editing", "work")
-        self.assertEqual([f for _, _, fs in os.walk(work) for f in fs if f.endswith(".mp4")] if os.path.isdir(work) else [], [])
+        self.assertEqual(
+            (
+                [f for _, _, fs in os.walk(work) for f in fs if f.endswith(".mp4")]
+                if os.path.isdir(work)
+                else []
+            ),
+            [],
+        )
 
     def test_doctor_marks_only_rotate_missing(self):
         rc, rep, err = cli(["doctor", "--json"], env=self.env)
         rows = {r["type"]: r for r in rep["operations"]}
         self.assertEqual(rows["ROTATE"]["status"], "MISSING")
-        self.assertEqual(rows["ROTATE"]["missing"], ["flag:ffmpeg-skill/fit --rotate", "flag:ffmpeg-skill/fit --flip"])
-        self.assertEqual(sorted(t for t, r in rows.items() if r["status"] == "AVAILABLE"), sorted(set(OPERATION_FLAGS) - {"ROTATE"}))
+        self.assertEqual(
+            rows["ROTATE"]["missing"],
+            ["flag:ffmpeg-skill/fit --rotate", "flag:ffmpeg-skill/fit --flip"],
+        )
+        self.assertEqual(
+            sorted(t for t, r in rows.items() if r["status"] == "AVAILABLE"),
+            sorted(set(OPERATION_FLAGS) - {"ROTATE"}),
+        )
 
     def test_trim_still_runs(self):
-        rc, res = self.run_([{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1}}])
+        rc, res = self.run_(
+            [
+                {
+                    "id": "t",
+                    "type": "TRIM",
+                    "input": "A",
+                    "params": {"start": 0, "end": 1},
+                }
+            ]
+        )
         self.assertTrue(res["ok"], res)
 
 
 class EngineHelpOnlyTests(LayoutCase):
     """A checkout whose contract describes no tools: flags are read from each tool's --help."""
+
     layout = "help-only"
     version = "2.10.3"
 
     def test_flags_from_help(self):
         skill = locate(self.root)
         self.assertEqual(skill.resolve_flag("cut", "--crf"), "--quality")
-        self.assertEqual({skill.flag_source[t] for t in ("cut", "join", "fit", "overlay")}, {"help"})
-        rc, res = self.run_([{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1, "precision": "frame"}}],
-                            encoding={"crf": 20})
+        self.assertEqual(
+            {skill.flag_source[t] for t in ("cut", "join", "fit", "overlay")}, {"help"}
+        )
+        rc, res = self.run_(
+            [
+                {
+                    "id": "t",
+                    "type": "TRIM",
+                    "input": "A",
+                    "params": {"start": 0, "end": 1, "precision": "frame"},
+                }
+            ],
+            encoding={"crf": 20},
+        )
         self.assertTrue(res["ok"], res)
         self.assertIn("--quality", self.delivered_header()["args"])
 
 
 class VersionPolicyTests(unittest.TestCase):
     def test_no_upper_bound(self):
-        for v in ("0.10.0", "0.12.5", "1.0.0", "1.26.0", "2.0.0", "2.10.3", "3.0.0", "17.4.2", "unknown"):
+        for v in (
+            "0.10.0",
+            "0.12.5",
+            "1.0.0",
+            "1.26.0",
+            "2.0.0",
+            "2.10.3",
+            "3.0.0",
+            "17.4.2",
+            "unknown",
+        ):
             self.assertTrue(FfmpegSkill("/x", v, []).version_supported(), v)
         for v in ("0.9.1", "0.1.0"):
             self.assertFalse(FfmpegSkill("/x", v, []).version_supported(), v)
@@ -229,9 +397,23 @@ class VersionPolicyTests(unittest.TestCase):
         try:
             make_fake_skill(root, version="0.9.1", layout="0.10")
             write_fake_media(os.path.join(ws, "in", "a.mp4"))
-            doc = request([{"id": "A", "path": "in/a.mp4"}], [{"id": "t", "type": "TRIM", "input": "A", "params": {"start": 0, "end": 1}}],
-                          [{"id": "o", "operation": "t", "path": "out/o.mp4"}])
-            rc, out, err = cli(["run", "-", "--json", "--workspace", ws], stdin=json.dumps(doc).encode(), env={"VIDEO_EDITING_FFMPEG_SKILL_DIR": root})
+            doc = request(
+                [{"id": "A", "path": "in/a.mp4"}],
+                [
+                    {
+                        "id": "t",
+                        "type": "TRIM",
+                        "input": "A",
+                        "params": {"start": 0, "end": 1},
+                    }
+                ],
+                [{"id": "o", "operation": "t", "path": "out/o.mp4"}],
+            )
+            rc, out, err = cli(
+                ["run", "-", "--json", "--workspace", ws],
+                stdin=json.dumps(doc).encode(),
+                env={"VIDEO_EDITING_FFMPEG_SKILL_DIR": root},
+            )
             self.assertEqual(out["error"]["code"], "TOOL_ERROR")
             self.assertEqual(out["error"]["details"]["reason"], "below_floor")
         finally:
@@ -245,16 +427,38 @@ class VersionPolicyTests(unittest.TestCase):
         self.assertEqual(skill.missing_flags("cut", ["--rotate"]), [])
 
     def test_contract_parsing_ignores_malformed_entries(self):
-        doc = {"tools": [None, {"id": "ffmpeg-skill/cut", "input_schema": {"properties": {"start": {"cli": ["--start"]}, "input": {"cli": "positional"},
-                                                                                           "x": "junk"}}},
-                         {"id": "ffmpeg-skill/join"}, {"name": "fit", "input_schema": {"properties": {"q": {"cli": ["--quality", "-q"]}}}}]}
-        self.assertEqual(_flags_from_contract(doc), {"cut": frozenset({"--start"}), "fit": frozenset({"--quality"})})
+        doc = {
+            "tools": [
+                None,
+                {
+                    "id": "ffmpeg-skill/cut",
+                    "input_schema": {
+                        "properties": {
+                            "start": {"cli": ["--start"]},
+                            "input": {"cli": "positional"},
+                            "x": "junk",
+                        }
+                    },
+                },
+                {"id": "ffmpeg-skill/join"},
+                {
+                    "name": "fit",
+                    "input_schema": {"properties": {"q": {"cli": ["--quality", "-q"]}}},
+                },
+            ]
+        }
+        self.assertEqual(
+            _flags_from_contract(doc),
+            {"cut": frozenset({"--start"}), "fit": frozenset({"--quality"})},
+        )
         self.assertEqual(_flags_from_contract({"ok": True}), {})
         self.assertEqual(_flags_from_contract(None), {})
 
     def test_hdr_key(self):
-        self.assertTrue(_hdr_of({"hdr": True}))                                   # 0.x / 1.x
-        self.assertTrue(_hdr_of({"hdr": False, "bt2020_or_hdr": True}))           # 2.x BT.2020 SDR
+        self.assertTrue(_hdr_of({"hdr": True}))  # 0.x / 1.x
+        self.assertTrue(
+            _hdr_of({"hdr": False, "bt2020_or_hdr": True})
+        )  # 2.x BT.2020 SDR
         self.assertFalse(_hdr_of({"hdr": False, "bt2020_or_hdr": False}))
         self.assertFalse(_hdr_of({}))
 

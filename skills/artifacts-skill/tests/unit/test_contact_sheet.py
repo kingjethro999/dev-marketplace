@@ -14,7 +14,10 @@ from pathlib import Path
 import pytest
 
 from artifact_skill.core.errors import ArtifactInputError
-from artifact_skill.rendering.contact_sheet import build_before_after, build_contact_sheet
+from artifact_skill.rendering.contact_sheet import (
+    build_before_after,
+    build_contact_sheet,
+)
 
 
 def _make_png(path: Path, color: str = "red", size: tuple[int, int] = (50, 60)) -> Path:
@@ -45,7 +48,10 @@ def test_build_contact_sheet_single_image_produces_a_real_png(tmp_path):
 
 
 def test_build_contact_sheet_lays_out_multiple_pages_in_a_grid(tmp_path):
-    pages = [_make_png(tmp_path / f"page-{i:03d}.png", color=c) for i, c in enumerate(["red", "green", "blue", "yellow", "purple"])]
+    pages = [
+        _make_png(tmp_path / f"page-{i:03d}.png", color=c)
+        for i, c in enumerate(["red", "green", "blue", "yellow", "purple"])
+    ]
     out = build_contact_sheet(pages, tmp_path / "sheet.png", columns=3)
 
     from PIL import Image
@@ -53,7 +59,9 @@ def test_build_contact_sheet_lays_out_multiple_pages_in_a_grid(tmp_path):
     with Image.open(out) as img:
         # 5 images at 3 columns -> 2 rows; the sheet must be wide enough for
         # 3 columns and tall enough for 2 rows, not just 1 of each.
-        assert img.size[0] > img.size[1] / 2  # sanity: wider layout than a single stacked column
+        assert (
+            img.size[0] > img.size[1] / 2
+        )  # sanity: wider layout than a single stacked column
     # Doesn't crash on an uneven last row (5 images, 3 columns -> row 2 has 2).
 
 
@@ -98,7 +106,9 @@ def test_build_before_after_pairs_pages_side_by_side(tmp_path):
         assert img.size[0] > 400
 
 
-def test_build_before_after_with_mismatched_page_counts_pairs_up_to_the_shorter_list(tmp_path):
+def test_build_before_after_with_mismatched_page_counts_pairs_up_to_the_shorter_list(
+    tmp_path,
+):
     """delete_pages can legitimately leave before/after with different page
     counts - zip(strict=False) pairs up to the shorter list rather than
     raising, which this test locks in as intended behavior, not an

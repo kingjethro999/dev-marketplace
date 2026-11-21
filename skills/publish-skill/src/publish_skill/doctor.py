@@ -7,6 +7,7 @@ status: ok (every platform implemented with complete credentials, the OS keychai
 supported) | degraded (a platform not implemented or without credentials, the keychain unavailable so credentials come
 from the environment only, or ffmpeg-skill not found or unsupported: the skill itself works, exit 0) | fail (Python too
 old, exit 1)."""
+
 from __future__ import annotations
 
 import os
@@ -33,8 +34,11 @@ def ffmpeg_skill_candidates(explicit: Optional[str] = None) -> List[str]:
     if explicit:
         return [explicit]
     out = [os.environ[k] for k in FFMPEG_SKILL_ENV if os.environ.get(k)]
-    out += [str(Path.home() / ".claude" / "skills" / "ffmpeg-skill"), os.path.join("vendor", "ffmpeg-skill"),
-            os.path.join("..", "ffmpeg-skill")]
+    out += [
+        str(Path.home() / ".claude" / "skills" / "ffmpeg-skill"),
+        os.path.join("vendor", "ffmpeg-skill"),
+        os.path.join("..", "ffmpeg-skill"),
+    ]
     return out
 
 
@@ -44,10 +48,20 @@ def locate_ffmpeg_skill(explicit: Optional[str] = None) -> Dict[str, Any]:
     tried = ffmpeg_skill_candidates(explicit)
     for c in tried:
         if (Path(c) / FFMPEG_SKILL_MARKER).is_file():
-            return {"status": "OK", "path": str(Path(c).resolve()), "needed_for": ["plan"], "needed_from_step": OP_STEP["plan"]}
-    return {"status": "MISSING", "tried": tried, "needed_for": ["plan"], "needed_from_step": OP_STEP["plan"],
-            "install": "git clone https://github.com/kajisho5/ffmpeg-skill ~/.claude/skills/ffmpeg-skill "
-                       "(or pass --ffmpeg-skill / set PUBLISH_FFMPEG_SKILL_DIR)"}
+            return {
+                "status": "OK",
+                "path": str(Path(c).resolve()),
+                "needed_for": ["plan"],
+                "needed_from_step": OP_STEP["plan"],
+            }
+    return {
+        "status": "MISSING",
+        "tried": tried,
+        "needed_for": ["plan"],
+        "needed_from_step": OP_STEP["plan"],
+        "install": "git clone https://github.com/kajisho5/ffmpeg-skill ~/.claude/skills/ffmpeg-skill "
+        "(or pass --ffmpeg-skill / set PUBLISH_FFMPEG_SKILL_DIR)",
+    }
 
 
 def platforms_report() -> Dict[str, Any]:
@@ -55,16 +69,24 @@ def platforms_report() -> Dict[str, Any]:
     for pid in platform_ids():
         p = get_platform(pid)
         c = creds.status(pid)
-        out[pid] = dict(p.spec(), credentials=c, ready=bool(p.implemented and c["complete"]))
+        out[pid] = dict(
+            p.spec(), credentials=c, ready=bool(p.implemented and c["complete"])
+        )
     return out
 
 
-def doctor(ffmpeg_skill_dir: Optional[str] = None, offline: bool = False) -> Dict[str, Any]:
+def doctor(
+    ffmpeg_skill_dir: Optional[str] = None, offline: bool = False
+) -> Dict[str, Any]:
     checks: Dict[str, Any] = {}
     problems: List[str] = []
     py_ok = sys.version_info >= (3, 9)
-    checks["python"] = {"status": "OK" if py_ok else "MISSING", "version": platform.python_version(), "platform": platform.system(),
-                        "install": None if py_ok else "Python >= 3.9"}
+    checks["python"] = {
+        "status": "OK" if py_ok else "MISSING",
+        "version": platform.python_version(),
+        "platform": platform.system(),
+        "install": None if py_ok else "Python >= 3.9",
+    }
     if not py_ok:
         problems.append("python: needs >= 3.9")
     checks["ffmpeg_skill"] = locate_ffmpeg_skill(ffmpeg_skill_dir)
@@ -76,26 +98,42 @@ def doctor(ffmpeg_skill_dir: Optional[str] = None, offline: bool = False) -> Dic
     checks["keychain"] = keychain.availability()
     plats = platforms_report()
     checks["platforms"] = plats
-    checks["operations"] = {op: {"implemented": IMPLEMENTED_OPS[op], "roadmap_step": OP_STEP[op]} for op in IMPLEMENTED_OPS}
+    checks["operations"] = {
+        op: {"implemented": IMPLEMENTED_OPS[op], "roadmap_step": OP_STEP[op]}
+        for op in IMPLEMENTED_OPS
+    }
     warnings: List[str] = []
     for pid, p in plats.items():
         if not p["implemented"]:
-            warnings.append(f"platform {pid}: uploader not implemented yet (roadmap step {p['roadmap_step']})")
+            warnings.append(
+                f"platform {pid}: uploader not implemented yet (roadmap step {p['roadmap_step']})"
+            )
         c = p["credentials"]
         absent = sorted(n for n, s in c["variables"].items() if s != "present")
         if absent and c["source"] is None:
-            warnings.append(f"platform {pid}: credentials absent from the environment and the keychain: {', '.join(absent)}")
+            warnings.append(
+                f"platform {pid}: credentials absent from the environment and the keychain: {', '.join(absent)}"
+            )
         elif absent:
-            warnings.append(f"platform {pid}: credentials incomplete in the {c['source']}: {', '.join(absent)} absent")
+            warnings.append(
+                f"platform {pid}: credentials incomplete in the {c['source']}: {', '.join(absent)} absent"
+            )
     kc = checks["keychain"]
     if kc["status"] != "OK":
-        warnings.append(f"keychain: unavailable ({kc['reason']}); credentials come from the environment only"
-                        + (f" (to use the OS keychain: {kc['install']})" if kc["install"] else ""))
+        warnings.append(
+            f"keychain: unavailable ({kc['reason']}); credentials come from the environment only"
+            + (f" (to use the OS keychain: {kc['install']})" if kc["install"] else "")
+        )
     if checks["ffmpeg_skill"]["status"] == "MISSING":
-        warnings.append("ffmpeg-skill: not found (`publish plan` reports its delivery spec rows as UNCHECKED)")
+        warnings.append(
+            "ffmpeg-skill: not found (`publish plan` reports its delivery spec rows as UNCHECKED)"
+        )
     elif checks["ffmpeg_skill"]["status"] != "OK":
-        warnings.append("ffmpeg-skill: unsupported (" + "; ".join(checks["ffmpeg_skill"]["capabilities"]["problems"])
-                        + "); `publish plan` reports its delivery spec rows as UNCHECKED")
+        warnings.append(
+            "ffmpeg-skill: unsupported ("
+            + "; ".join(checks["ffmpeg_skill"]["capabilities"]["problems"])
+            + "); `publish plan` reports its delivery spec rows as UNCHECKED"
+        )
     status = "fail" if problems else ("degraded" if warnings else "ok")
     return {
         "schema": DOCTOR_SCHEMA,

@@ -69,7 +69,11 @@ from artifact_skill.core.verification import Check, CheckStatus, VerificationRes
 from artifact_skill.leftover_text import find_leftover_markers
 from artifact_skill.rendering.chromium_render import render_local_files
 from artifact_skill.security.limits import DEFAULT_LIMITS, Limits
-from artifact_skill.security.paths import atomic_write_bytes, check_input_size, safe_extract_zip
+from artifact_skill.security.paths import (
+    atomic_write_bytes,
+    check_input_size,
+    safe_extract_zip,
+)
 from artifact_skill.security.xml_safety import reject_xml_entity_declaration
 
 _CONTAINER_PATH = "META-INF/container.xml"
@@ -126,17 +130,27 @@ def _guard_zip_bounds(zf: zipfile.ZipFile, archive_path: Path, limits: Limits) -
             code="ARTIFACT_ZIP_TOO_LARGE",
             message=f"Archive would expand to {total_uncompressed} bytes, exceeding limit.",
             remediation="Not read; increase Limits.max_zip_uncompressed_bytes if this is expected.",
-            evidence={"archive": str(archive_path), "total_uncompressed": total_uncompressed},
+            evidence={
+                "archive": str(archive_path),
+                "total_uncompressed": total_uncompressed,
+            },
         )
     for info in infos:
         if info.compress_size > 0:
             ratio = info.file_size / max(info.compress_size, 1)
-            if ratio > limits.max_zip_compression_ratio and info.file_size > 10 * 1024 * 1024:
+            if (
+                ratio > limits.max_zip_compression_ratio
+                and info.file_size > 10 * 1024 * 1024
+            ):
                 raise ArtifactSecurityError(
                     code="ARTIFACT_ZIP_BOMB_SUSPECTED",
                     message=f"Archive member '{info.filename}' has a suspicious compression ratio ({ratio:.0f}x).",
                     remediation="Not read; this looks like a zip bomb.",
-                    evidence={"archive": str(archive_path), "member": info.filename, "ratio": ratio},
+                    evidence={
+                        "archive": str(archive_path),
+                        "member": info.filename,
+                        "ratio": ratio,
+                    },
                 )
 
 
@@ -147,7 +161,9 @@ class _Package:
         self.opf_path = opf_path
         self.opf_dir = posixpath.dirname(opf_path)
         self.root = root
-        self.metadata_el = next((c for c in root if _local_name(c.tag) == "metadata"), None)
+        self.metadata_el = next(
+            (c for c in root if _local_name(c.tag) == "metadata"), None
+        )
         manifest_el = next((c for c in root if _local_name(c.tag) == "manifest"), None)
         spine_el = next((c for c in root if _local_name(c.tag) == "spine"), None)
         self.manifest: dict[str, tuple[str, str]] = {}
@@ -231,7 +247,8 @@ class EpubAdapter(ArtifactAdapter):
 
     def capabilities(self) -> list[Capability]:
         structural = Capability(
-            id="epub.structural", status=CapabilityStatus.AVAILABLE,
+            id="epub.structural",
+            status=CapabilityStatus.AVAILABLE,
             detail="Uses only the standard library (zipfile, xml.etree.ElementTree); always available.",
             detected_via="stdlib",
         )
@@ -248,15 +265,19 @@ class EpubAdapter(ArtifactAdapter):
             except im.PackageNotFoundError:
                 version = None
             render = Capability(
-                id="epub.render", status=CapabilityStatus.AVAILABLE,
+                id="epub.render",
+                status=CapabilityStatus.AVAILABLE,
                 detail="playwright importable. A matching Chromium build must also be installed "
                 "(`playwright install chromium`) — verified at render() time, not here.",
-                detected_via="import playwright", version=version,
+                detected_via="import playwright",
+                version=version,
             )
         else:
             render = Capability(
-                id="epub.render", status=CapabilityStatus.MISSING,
-                detail="playwright not importable.", detected_via="import playwright",
+                id="epub.render",
+                status=CapabilityStatus.MISSING,
+                detail="playwright not importable.",
+                detected_via="import playwright",
             )
         return [structural, render]
 
@@ -285,7 +306,9 @@ class EpubAdapter(ArtifactAdapter):
         ]
 
     def recognized_policy_keys(self) -> frozenset[str]:
-        return frozenset({"require_spine_count", "require_title", "forbid_placeholder_text"})
+        return frozenset(
+            {"require_spine_count", "require_title", "forbid_placeholder_text"}
+        )
 
     # ---- inspect ---------------------------------------------------
 
@@ -295,11 +318,15 @@ class EpubAdapter(ArtifactAdapter):
             names = set(zf.namelist())
             first_info = zf.infolist()[0] if zf.infolist() else None
             mimetype_first_and_stored = bool(
-                first_info and first_info.filename == "mimetype" and first_info.compress_type == zipfile.ZIP_STORED
+                first_info
+                and first_info.filename == "mimetype"
+                and first_info.compress_type == zipfile.ZIP_STORED
             )
 
             manifest_missing = [
-                href for _id, (href, _mt) in pkg.manifest.items() if pkg.resolve_href(href) not in names
+                href
+                for _id, (href, _mt) in pkg.manifest.items()
+                if pkg.resolve_href(href) not in names
             ]
             spine_missing = [idref for idref in pkg.spine if idref not in pkg.manifest]
 
@@ -343,7 +370,9 @@ class EpubAdapter(ArtifactAdapter):
 
     # ---- render ------------------------------------------------------
 
-    def render(self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS) -> RenderResult:
+    def render(
+        self, ref: ArtifactRef, out_dir: Path, *, limits: Limits = DEFAULT_LIMITS
+    ) -> RenderResult:
         """One PNG per spine (reading-order) document.
 
         Design that closes the gap this adapter used to report
@@ -374,7 +403,11 @@ class EpubAdapter(ArtifactAdapter):
                 f"limit of {limits.max_pages}.",
                 remediation="Not rendered; increase Limits.max_pages if this document is legitimately "
                 "expected, or render a subset instead.",
-                evidence={"path": str(ref.path), "spine_count": len(pkg.spine), "max_pages": limits.max_pages},
+                evidence={
+                    "path": str(ref.path),
+                    "spine_count": len(pkg.spine),
+                    "max_pages": limits.max_pages,
+                },
             )
 
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -416,8 +449,9 @@ class EpubAdapter(ArtifactAdapter):
                 # being skipped-with-a-warning the same as an ordinary
                 # missing file. Checked here so it fails closed at the
                 # cheaper, more specific layer instead.
-                if staged_path.resolve() != extract_root_resolved and not staged_path.resolve().is_relative_to(
-                    extract_root_resolved
+                if (
+                    staged_path.resolve() != extract_root_resolved
+                    and not staged_path.resolve().is_relative_to(extract_root_resolved)
                 ):
                     escaped.append(idref)
                     continue
@@ -432,16 +466,32 @@ class EpubAdapter(ArtifactAdapter):
                 for idref in escaped
             ]
             if not source_paths:
-                return RenderResult(kind="page_images", files=[], backend="playwright+chromium", warnings=warnings)
+                return RenderResult(
+                    kind="page_images",
+                    files=[],
+                    backend="playwright+chromium",
+                    warnings=warnings,
+                )
 
             files = render_local_files(
-                source_paths, out_paths, capability_id="epub.render", limits=limits, allowed_root=extract_root
+                source_paths,
+                out_paths,
+                capability_id="epub.render",
+                limits=limits,
+                allowed_root=extract_root,
             )
-            return RenderResult(kind="page_images", files=files, backend="playwright+chromium", warnings=warnings)
+            return RenderResult(
+                kind="page_images",
+                files=files,
+                backend="playwright+chromium",
+                warnings=warnings,
+            )
 
     # ---- plan / execute -----------------------------------------------
 
-    def plan(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> OperationPlan:
+    def plan(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> OperationPlan:
         if operation != "metadata_set":
             raise ArtifactInputError(
                 code="ARTIFACT_OPERATION_UNKNOWN",
@@ -452,13 +502,18 @@ class EpubAdapter(ArtifactAdapter):
         zf, _pkg = _load_package(ref, DEFAULT_LIMITS)
         zf.close()
         return OperationPlan(
-            operation=operation, adapter=self.id, input={"path": str(ref.path), "args": args},
-            output_path=str(output_path), required_capabilities=["epub.structural"],
+            operation=operation,
+            adapter=self.id,
+            input={"path": str(ref.path), "args": args},
+            output_path=str(output_path),
+            required_capabilities=["epub.structural"],
             files_created=[str(output_path)],
             verification_strategy={"structural_verification_required": True},
         )
 
-    def execute(self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path) -> ArtifactRef:
+    def execute(
+        self, ref: ArtifactRef, operation: str, args: dict[str, Any], output_path: Path
+    ) -> ArtifactRef:
         if operation != "metadata_set":
             raise ArtifactInputError(
                 code="ARTIFACT_OPERATION_UNKNOWN",
@@ -503,7 +558,9 @@ class EpubAdapter(ArtifactAdapter):
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as out:
             # EPUB requires "mimetype" to be the first entry, stored uncompressed.
-            out.writestr(zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED)
+            out.writestr(
+                zipfile.ZipInfo("mimetype"), b"application/epub+zip", zipfile.ZIP_STORED
+            )
             # Self-audit finding: ET.tostring() auto-generates an "ns0:"
             # prefix for any namespace with no registered mapping. Every
             # real-world OPF declares its own namespace as the *default*
@@ -519,7 +576,9 @@ class EpubAdapter(ArtifactAdapter):
             if pkg.root.tag.startswith("{"):
                 opf_ns = pkg.root.tag[1:].split("}", 1)[0]
                 ET.register_namespace("", opf_ns)
-            new_opf_bytes = ET.tostring(pkg.root, encoding="utf-8", xml_declaration=True)
+            new_opf_bytes = ET.tostring(
+                pkg.root, encoding="utf-8", xml_declaration=True
+            )
             for info in zf.infolist():
                 if info.filename in ("mimetype", pkg.opf_path):
                     continue
@@ -529,7 +588,9 @@ class EpubAdapter(ArtifactAdapter):
 
     # ---- verify ------------------------------------------------------
 
-    def verify_structural(self, ref: ArtifactRef, policy: dict[str, Any]) -> VerificationResult:
+    def verify_structural(
+        self, ref: ArtifactRef, policy: dict[str, Any]
+    ) -> VerificationResult:
         """`ArtifactSecurityError` (entity-bomb rejection, zip-bomb guard)
         is deliberately NOT caught here, matching the SVG/XLSX precedent
         for the same class of risk (see tests/benchmark/cases.py's module
@@ -540,20 +601,36 @@ class EpubAdapter(ArtifactAdapter):
         try:
             report = self.inspect(ref)
         except ArtifactInputError as exc:
-            checks.append(Check(id="epub_validity", name="EPUB is readable", status=CheckStatus.FAIL, message=str(exc)))
+            checks.append(
+                Check(
+                    id="epub_validity",
+                    name="EPUB is readable",
+                    status=CheckStatus.FAIL,
+                    message=str(exc),
+                )
+            )
             return VerificationResult(kind="structural", checks=checks)
 
-        checks.append(Check(id="epub_validity", name="EPUB is readable", status=CheckStatus.PASS))
+        checks.append(
+            Check(id="epub_validity", name="EPUB is readable", status=CheckStatus.PASS)
+        )
 
         details = report.details
         checks.append(
             Check(
                 id="mimetype_first_and_stored",
                 name="mimetype is the archive's first entry, stored uncompressed",
-                status=CheckStatus.PASS if details["mimetype_first_and_stored"] else CheckStatus.WARN,
-                message="Meets the EPUB OCF requirement." if details["mimetype_first_and_stored"]
-                else "Does not meet the EPUB OCF requirement; most real-world reading systems tolerate this, "
-                "but a strict validator (e.g. epubcheck) would flag it.",
+                status=(
+                    CheckStatus.PASS
+                    if details["mimetype_first_and_stored"]
+                    else CheckStatus.WARN
+                ),
+                message=(
+                    "Meets the EPUB OCF requirement."
+                    if details["mimetype_first_and_stored"]
+                    else "Does not meet the EPUB OCF requirement; most real-world reading systems tolerate this, "
+                    "but a strict validator (e.g. epubcheck) would flag it."
+                ),
             )
         )
 
@@ -563,8 +640,11 @@ class EpubAdapter(ArtifactAdapter):
                 id="manifest_references_resolve",
                 name="Manifest item references resolve to real archive members",
                 status=CheckStatus.FAIL if manifest_missing else CheckStatus.PASS,
-                message=f"{len(manifest_missing)} manifest item(s) reference a missing file." if manifest_missing
-                else f"All {details['manifest_item_count']} manifest item(s) resolve.",
+                message=(
+                    f"{len(manifest_missing)} manifest item(s) reference a missing file."
+                    if manifest_missing
+                    else f"All {details['manifest_item_count']} manifest item(s) resolve."
+                ),
                 evidence={"missing": manifest_missing[:20]},
             )
         )
@@ -575,8 +655,11 @@ class EpubAdapter(ArtifactAdapter):
                 id="spine_references_resolve",
                 name="Spine itemrefs resolve to a manifest entry",
                 status=CheckStatus.FAIL if spine_missing else CheckStatus.PASS,
-                message=f"{len(spine_missing)} spine itemref(s) reference an unknown manifest id." if spine_missing
-                else f"All {details['spine_count']} spine itemref(s) resolve.",
+                message=(
+                    f"{len(spine_missing)} spine itemref(s) reference an unknown manifest id."
+                    if spine_missing
+                    else f"All {details['spine_count']} spine itemref(s) resolve."
+                ),
                 evidence={"missing": spine_missing[:20]},
             )
         )
@@ -584,7 +667,11 @@ class EpubAdapter(ArtifactAdapter):
         if "require_spine_count" in policy:
             required = policy["require_spine_count"]
             actual = details["spine_count"]
-            ok = (actual == required) if isinstance(required, int) else (required[0] <= actual <= required[1])
+            ok = (
+                (actual == required)
+                if isinstance(required, int)
+                else (required[0] <= actual <= required[1])
+            )
             checks.append(
                 Check(
                     id="spine_count_requirement",
@@ -601,7 +688,11 @@ class EpubAdapter(ArtifactAdapter):
                     id="title_presence",
                     name="dc:title present",
                     status=CheckStatus.PASS if details["title"] else CheckStatus.FAIL,
-                    message=", ".join(details["title"]) if details["title"] else "No dc:title element (or it is empty).",
+                    message=(
+                        ", ".join(details["title"])
+                        if details["title"]
+                        else "No dc:title element (or it is empty)."
+                    ),
                 )
             )
 
@@ -611,14 +702,22 @@ class EpubAdapter(ArtifactAdapter):
                 Check(
                     id="leftover_placeholder_text",
                     name="No leftover generation placeholder text",
-                    status=CheckStatus.FAIL if policy.get("forbid_placeholder_text") else CheckStatus.WARN,
+                    status=(
+                        CheckStatus.FAIL
+                        if policy.get("forbid_placeholder_text")
+                        else CheckStatus.WARN
+                    ),
                     message=f"Found likely-unreviewed placeholder text: {leftover_markers}.",
                     evidence={"markers": leftover_markers},
                 )
             )
         else:
             checks.append(
-                Check(id="leftover_placeholder_text", name="No leftover generation placeholder text", status=CheckStatus.PASS)
+                Check(
+                    id="leftover_placeholder_text",
+                    name="No leftover generation placeholder text",
+                    status=CheckStatus.PASS,
+                )
             )
 
         return VerificationResult(kind="structural", checks=checks)

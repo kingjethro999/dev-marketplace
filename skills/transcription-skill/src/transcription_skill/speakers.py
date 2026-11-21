@@ -14,6 +14,7 @@ tests/test_speaker_conformance.py, pinned to a fixture version (ADR-046):
 What was done is recorded under the top-level key `speaker_assignment` (the same keys diarization-skill
 writes), and the result is re-validated before it is returned.
 """
+
 from __future__ import annotations
 
 import copy
@@ -31,10 +32,12 @@ from .validate import FINGERPRINT_RE, validate_transcript
 TURNS_SCHEMA = "diarization-skill/turns@1"
 SPEAKER_RE = re.compile(r"^SPEAKER_\d{2,}$")
 TIE_EPS = 1e-9
-ORDER_TOLERANCE = 0.01      # diarization-skill's OVERLAP_TOLERANCE: rounding between consecutive exclusive turns
+ORDER_TOLERANCE = 0.01  # diarization-skill's OVERLAP_TOLERANCE: rounding between consecutive exclusive turns
 METHOD = "max_overlap_with_exclusive_turns"
-RULE = ("per word (else per segment): speaker with the longest overlap with the exclusive turns; zero overlap "
-        "or a tie -> null. Segment with words: speaker with the largest assigned word duration; tie -> null.")
+RULE = (
+    "per word (else per segment): speaker with the longest overlap with the exclusive turns; zero overlap "
+    "or a tie -> null. Segment with words: speaker with the largest assigned word duration; tie -> null."
+)
 TOOL = "transcription/speakers"
 # The rule this merge follows, as stated in the contract (ADR-046): diarization-skill owns it and publishes conformance
 # fixtures for it; tests/test_speaker_conformance.py runs the vendored copy of the pinned fixture version.
@@ -62,12 +65,16 @@ def load_json_document(value: Any, what: str) -> Dict[str, Any]:
         return value
     if isinstance(value, str) and value:
         if not os.path.isfile(value):
-            raise TranscriptionError("FILE_NOT_FOUND", f"{what} not found: {os.path.basename(value)}")
+            raise TranscriptionError(
+                "FILE_NOT_FOUND", f"{what} not found: {os.path.basename(value)}"
+            )
         try:
             with open(value, encoding="utf-8") as fh:
                 doc = json.load(fh)
         except ValueError as exc:
-            raise TranscriptionError("INVALID_INPUT", f"{what} is not valid JSON: {exc}")
+            raise TranscriptionError(
+                "INVALID_INPUT", f"{what} is not valid JSON: {exc}"
+            )
         if not isinstance(doc, dict):
             raise TranscriptionError("INVALID_INPUT", f"{what} is not a JSON object")
         return doc
@@ -76,31 +83,65 @@ def load_json_document(value: Any, what: str) -> Dict[str, Any]:
 
 def check_turns(doc: Any) -> List[Tuple[float, float, str]]:
     """The parts of `diarization-skill/turns@1` the merge relies on, checked without importing diarization-skill
-    (its `diarization check` is the full validator). Returns the exclusive turns as (start, end, speaker)."""
+    (its `diarization check` is the full validator). Returns the exclusive turns as (start, end, speaker).
+    """
     if not isinstance(doc, dict):
-        raise _bad("'speaker_turns' must be a diarization-skill turns document (a JSON object) or a path to one")
+        raise _bad(
+            "'speaker_turns' must be a diarization-skill turns document (a JSON object) or a path to one"
+        )
     if doc.get("schema") != TURNS_SCHEMA:
-        raise _bad(f"speaker turns schema must be {TURNS_SCHEMA}, got {doc.get('schema')!r}", reason="TURNS_SCHEMA")
+        raise _bad(
+            f"speaker turns schema must be {TURNS_SCHEMA}, got {doc.get('schema')!r}",
+            reason="TURNS_SCHEMA",
+        )
     src = doc.get("source")
-    if not isinstance(src, dict) or not isinstance(src.get("fingerprint"), str) or not FINGERPRINT_RE.match(src["fingerprint"]):
-        raise _bad("speaker turns need source.fingerprint (sha256:<hex>)", reason="TURNS_INVALID")
+    if (
+        not isinstance(src, dict)
+        or not isinstance(src.get("fingerprint"), str)
+        or not FINGERPRINT_RE.match(src["fingerprint"])
+    ):
+        raise _bad(
+            "speaker turns need source.fingerprint (sha256:<hex>)",
+            reason="TURNS_INVALID",
+        )
     speakers = doc.get("speakers")
-    if not isinstance(speakers, list) or any(not isinstance(s, str) or not SPEAKER_RE.match(s) for s in speakers):
-        raise _bad("speaker turns need speakers: a list of anonymous SPEAKER_nn ids", reason="TURNS_INVALID")
+    if not isinstance(speakers, list) or any(
+        not isinstance(s, str) or not SPEAKER_RE.match(s) for s in speakers
+    ):
+        raise _bad(
+            "speaker turns need speakers: a list of anonymous SPEAKER_nn ids",
+            reason="TURNS_INVALID",
+        )
     turns = doc.get("turns")
     if not isinstance(turns, list) or len(turns) > MAX_TURNS:
-        raise _bad(f"speaker turns need turns: a list of at most {MAX_TURNS} {{start, end, speaker}}", reason="TURNS_INVALID")
+        raise _bad(
+            f"speaker turns need turns: a list of at most {MAX_TURNS} {{start, end, speaker}}",
+            reason="TURNS_INVALID",
+        )
     out: List[Tuple[float, float, str]] = []
     prev_end = -math.inf
     for i, t in enumerate(turns):
-        if not isinstance(t, dict) or not _num(t.get("start")) or not _num(t.get("end")) or t.get("speaker") not in speakers:
-            raise _bad(f"turns[{i}] needs finite start/end and a speaker listed in speakers", reason="TURNS_INVALID")
+        if (
+            not isinstance(t, dict)
+            or not _num(t.get("start"))
+            or not _num(t.get("end"))
+            or t.get("speaker") not in speakers
+        ):
+            raise _bad(
+                f"turns[{i}] needs finite start/end and a speaker listed in speakers",
+                reason="TURNS_INVALID",
+            )
         s, e = float(t["start"]), float(t["end"])
         if s < 0 or e <= s:
-            raise _bad(f"turns[{i}]: start must be >= 0 and end > start", reason="TURNS_INVALID")
+            raise _bad(
+                f"turns[{i}]: start must be >= 0 and end > start",
+                reason="TURNS_INVALID",
+            )
         if s < prev_end - ORDER_TOLERANCE:
-            raise _bad(f"turns[{i}] starts before the previous turn ends: exclusive turns must be ordered and non-overlapping",
-                       reason="TURNS_INVALID")
+            raise _bad(
+                f"turns[{i}] starts before the previous turn ends: exclusive turns must be ordered and non-overlapping",
+                reason="TURNS_INVALID",
+            )
         prev_end = e
         out.append((s, e, t["speaker"]))
     overlap = doc.get("overlap")
@@ -114,11 +155,16 @@ def _overlap_regions(doc: Dict[str, Any]) -> List[Tuple[float, float]]:
     if not ov.get("available"):
         return []
     regions = ov.get("regions") or []
-    return [(float(r["start"]), float(r["end"])) for r in regions
-            if isinstance(r, dict) and _num(r.get("start")) and _num(r.get("end"))]
+    return [
+        (float(r["start"]), float(r["end"]))
+        for r in regions
+        if isinstance(r, dict) and _num(r.get("start")) and _num(r.get("end"))
+    ]
 
 
-def overlap_by_speaker(start: float, end: float, turns: Sequence[Tuple[float, float, str]]) -> Dict[str, float]:
+def overlap_by_speaker(
+    start: float, end: float, turns: Sequence[Tuple[float, float, str]]
+) -> Dict[str, float]:
     out: Dict[str, float] = {}
     for s, e, spk in turns:
         if e <= start:
@@ -141,32 +187,55 @@ def pick(scores: Dict[str, float]) -> Optional[str]:
     return positive[0][1]
 
 
-def merge_speakers(transcript: Dict[str, Any], turns_doc: Any, *, allow_source_mismatch: bool = False,
-                   replace: bool = False) -> Dict[str, Any]:
+def merge_speakers(
+    transcript: Dict[str, Any],
+    turns_doc: Any,
+    *,
+    allow_source_mismatch: bool = False,
+    replace: bool = False,
+) -> Dict[str, Any]:
     """Return a new Transcript with `speaker_id` filled from `turns_doc`; the input is not modified."""
     if not isinstance(allow_source_mismatch, bool) or not isinstance(replace, bool):
         raise _bad("'allow_source_mismatch' and 'replace' must be booleans")
     rep = validate_transcript(transcript) if isinstance(transcript, dict) else None
     if rep is None or not rep.ok:
-        raise TranscriptionError("VERIFICATION_FAILED", "transcript fails validation; run `transcription check`",
-                                 {"errors": (rep.errors[:10] if rep else ["not a JSON object"])})
+        raise TranscriptionError(
+            "VERIFICATION_FAILED",
+            "transcript fails validation; run `transcription check`",
+            {"errors": (rep.errors[:10] if rep else ["not a JSON object"])},
+        )
     turns = check_turns(turns_doc)
     t_fp, d_fp = transcript["source"]["fingerprint"], turns_doc["source"]["fingerprint"]
     notes: List[str] = []
     if t_fp != d_fp:
         if not allow_source_mismatch:
-            raise _bad("transcript and speaker turns were made from different files (fingerprints differ); pass "
-                       "allow_source_mismatch only if both share one timeline", reason="SOURCE_MISMATCH")
-        notes.append("speaker_id: transcript and speaker turns come from different files (fingerprints differ); "
-                     "merged on the assumption that both share one timeline")
+            raise _bad(
+                "transcript and speaker turns were made from different files (fingerprints differ); pass "
+                "allow_source_mismatch only if both share one timeline",
+                reason="SOURCE_MISMATCH",
+            )
+        notes.append(
+            "speaker_id: transcript and speaker turns come from different files (fingerprints differ); "
+            "merged on the assumption that both share one timeline"
+        )
     out = copy.deepcopy(transcript)
     preset = [s["id"] for s in out["segments"] if s.get("speaker_id") is not None]
     if preset and not replace:
-        raise _bad(f"{len(preset)} segment(s) already have a speaker_id; pass replace to recompute", reason="SPEAKERS_ALREADY_SET")
+        raise _bad(
+            f"{len(preset)} segment(s) already have a speaker_id; pass replace to recompute",
+            reason="SPEAKERS_ALREADY_SET",
+        )
 
     regions = _overlap_regions(turns_doc)
-    stats = {"segments": len(out["segments"]), "assigned": 0, "unassigned": 0, "by_words": 0, "by_segment": 0,
-             "words": 0, "words_assigned": 0}
+    stats = {
+        "segments": len(out["segments"]),
+        "assigned": 0,
+        "unassigned": 0,
+        "by_words": 0,
+        "by_segment": 0,
+        "words": 0,
+        "words_assigned": 0,
+    }
     per_speaker: Dict[str, int] = {}
     touching_overlap: List[str] = []
     for seg in out["segments"]:
@@ -176,12 +245,16 @@ def merge_speakers(transcript: Dict[str, Any], turns_doc: Any, *, allow_source_m
             stats["by_words"] += 1
             votes: Dict[str, float] = {}
             for w in words:
-                spk = pick(overlap_by_speaker(float(w["start"]), float(w["end"]), turns))
+                spk = pick(
+                    overlap_by_speaker(float(w["start"]), float(w["end"]), turns)
+                )
                 w["speaker_id"] = spk
                 stats["words"] += 1
                 if spk is not None:
                     stats["words_assigned"] += 1
-                    votes[spk] = votes.get(spk, 0.0) + (float(w["end"]) - float(w["start"]))
+                    votes[spk] = votes.get(spk, 0.0) + (
+                        float(w["end"]) - float(w["start"])
+                    )
             speaker = pick(votes)
         else:
             stats["by_segment"] += 1
@@ -196,11 +269,15 @@ def merge_speakers(transcript: Dict[str, Any], turns_doc: Any, *, allow_source_m
             touching_overlap.append(str(seg["id"]))
 
     if stats["unassigned"]:
-        notes.append(f"speaker_id: {stats['unassigned']} of {stats['segments']} segment(s) left null "
-                     "(no overlap with a speaker turn, or a tie)")
+        notes.append(
+            f"speaker_id: {stats['unassigned']} of {stats['segments']} segment(s) left null "
+            "(no overlap with a speaker turn, or a tie)"
+        )
     if touching_overlap:
-        notes.append(f"speaker_id: {len(touching_overlap)} segment(s) touch overlapping speech; "
-                     "speaker_assignment.overlap_segment_ids lists them")
+        notes.append(
+            f"speaker_id: {len(touching_overlap)} segment(s) touch overlapping speech; "
+            "speaker_assignment.overlap_segment_ids lists them"
+        )
     if preset:
         notes.append(f"speaker_id: {len(preset)} previously set value(s) replaced")
     out["warnings"] = list(out.get("warnings") or []) + notes
@@ -217,7 +294,18 @@ def merge_speakers(transcript: Dict[str, Any], turns_doc: Any, *, allow_source_m
         "turns_created_at": turns_doc.get("created_at"),
         "source_fingerprint": d_fp,
         "source_match": t_fp == d_fp,
-        "engine": {k: eng.get(k) for k in ("id", "version", "model", "revision", "license", "attribution", "execution_mode")},
+        "engine": {
+            k: eng.get(k)
+            for k in (
+                "id",
+                "version",
+                "model",
+                "revision",
+                "license",
+                "attribution",
+                "execution_mode",
+            )
+        },
         "parameters": dict(turns_doc.get("parameters") or {}),
         "speakers": list(turns_doc["speakers"]),
         "segments_per_speaker": dict(sorted(per_speaker.items())),
@@ -227,5 +315,9 @@ def merge_speakers(transcript: Dict[str, Any], turns_doc: Any, *, allow_source_m
     }
     final = validate_transcript(out)
     if not final.ok:
-        raise TranscriptionError("INVALID_RESULT", "merged transcript failed validation", {"errors": final.errors[:10]})
+        raise TranscriptionError(
+            "INVALID_RESULT",
+            "merged transcript failed validation",
+            {"errors": final.errors[:10]},
+        )
     return out

@@ -42,7 +42,9 @@ Measured behaviour: this reliably changes what `ffprobe` reports only when the s
 HEVC SPS VUI) does not already carry an explicit, conflicting colour description -- a stream copy does not rewrite
 already-encoded VUI bits, only the container-level hint. sdr.mp4/hevc_sdr.mp4 are therefore encoded *without*
 explicit colour tags (as most untagged camera or screen-recording footage is), matching the case ffmpeg-skill's
-own `--retag` is documented for ("the colours are tagged wrong") and the case its own test suite exercises."""
+own `--retag` is documented for ("the colours are tagged wrong") and the case its own test suite exercises.
+"""
+
 from __future__ import annotations
 
 import shutil
@@ -55,7 +57,7 @@ TONE = "0.1*sin(2*PI*1000*t)"
 SOLID = "color=c=0x8040c0:s=160x90:rate=25"
 
 CAMERA_B_GAIN = (0.86, 0.97, 0.90)
-CAMERA_B_OFFSET = (0.0, 10.0, 6.0)          # 8-bit code values
+CAMERA_B_OFFSET = (0.0, 10.0, 6.0)  # 8-bit code values
 _TO_709 = "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p"
 
 INVERT_CUBE = """TITLE "invert"
@@ -77,55 +79,313 @@ def available() -> bool:
 
 def has_encoder(name: str) -> bool:
     try:
-        out = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True).stdout
+        out = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-encoders"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).stdout
     except (OSError, subprocess.CalledProcessError):
         return False
     return any(name in line for line in out.splitlines())
 
 
 def _run(args):
-    subprocess.run(FF + args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    subprocess.run(
+        FF + args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+    )
 
 
 def build_all(directory: Path) -> Dict[str, Path]:
     d = Path(directory)
     d.mkdir(parents=True, exist_ok=True)
-    f = {k: d / v for k, v in {"sdr": "sdr.mp4", "sdr_noaudio": "sdr_noaudio.mp4", "hevc_sdr": "hevc_sdr.mp4", "hdr": "hdr.mp4", "hlg": "hlg.mp4",
-                               "sdr_with_subs": "sdr_with_subs.mp4", "multi_audio": "multi_audio.mp4",
-                               "camera_a": "camera_a.mp4", "camera_b": "camera_b.mp4", "super_white": "super_white.mp4", "alpha": "alpha.mov", "alpha_rle": "alpha_rle.mov", "audio": "audio.wav", "text": "text.txt", "invert_cube": "invert.cube"}.items()}
-    _run(["-f", "lavfi", "-i", SOLID, "-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000", "-t", "3",
-          "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(f["sdr"])])
-    _run(["-f", "lavfi", "-i", SOLID, "-t", "2", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", str(f["sdr_noaudio"])])
+    f = {
+        k: d / v
+        for k, v in {
+            "sdr": "sdr.mp4",
+            "sdr_noaudio": "sdr_noaudio.mp4",
+            "hevc_sdr": "hevc_sdr.mp4",
+            "hdr": "hdr.mp4",
+            "hlg": "hlg.mp4",
+            "sdr_with_subs": "sdr_with_subs.mp4",
+            "multi_audio": "multi_audio.mp4",
+            "camera_a": "camera_a.mp4",
+            "camera_b": "camera_b.mp4",
+            "super_white": "super_white.mp4",
+            "alpha": "alpha.mov",
+            "alpha_rle": "alpha_rle.mov",
+            "audio": "audio.wav",
+            "text": "text.txt",
+            "invert_cube": "invert.cube",
+        }.items()
+    }
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            SOLID,
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}':s=48000",
+            "-t",
+            "3",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(f["sdr"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            SOLID,
+            "-t",
+            "2",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            str(f["sdr_noaudio"]),
+        ]
+    )
     srt_path = d / "_subs.srt"
-    srt_path.write_text("1\n00:00:00,000 --> 00:00:01,000\nsubtitle fixture\n\n", encoding="utf-8")
-    _run(["-i", str(f["sdr"]), "-i", str(srt_path), "-map", "0:v", "-map", "0:a", "-map", "1:s",
-          "-c:v", "copy", "-c:a", "copy", "-c:s", "mov_text", str(f["sdr_with_subs"])])
+    srt_path.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\nsubtitle fixture\n\n", encoding="utf-8"
+    )
+    _run(
+        [
+            "-i",
+            str(f["sdr"]),
+            "-i",
+            str(srt_path),
+            "-map",
+            "0:v",
+            "-map",
+            "0:a",
+            "-map",
+            "1:s",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "copy",
+            "-c:s",
+            "mov_text",
+            str(f["sdr_with_subs"]),
+        ]
+    )
     srt_path.unlink()
-    _run(["-f", "lavfi", "-i", SOLID, "-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000:c=mono",
-          "-f", "lavfi", "-i", "aevalsrc='0.1*sin(2*PI*1500*t)|0.1*sin(2*PI*1500*t)':s=48000:c=stereo",
-          "-t", "2", "-map", "0:v", "-map", "1:a", "-map", "2:a",
-          "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(f["multi_audio"])])
-    _run(["-f", "lavfi", "-i", SOLID, "-t", "2", "-c:v", "libx265", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-tag:v", "hvc1", str(f["hevc_sdr"])])
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            SOLID,
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}':s=48000:c=mono",
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='0.1*sin(2*PI*1500*t)|0.1*sin(2*PI*1500*t)':s=48000:c=stereo",
+            "-t",
+            "2",
+            "-map",
+            "0:v",
+            "-map",
+            "1:a",
+            "-map",
+            "2:a",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(f["multi_audio"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            SOLID,
+            "-t",
+            "2",
+            "-c:v",
+            "libx265",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            "-tag:v",
+            "hvc1",
+            str(f["hevc_sdr"]),
+        ]
+    )
     hdr_base = d / "_hdr_base.mp4"
-    _run(["-f", "lavfi", "-i", SOLID, "-t", "2", "-c:v", "libx265", "-preset", "veryfast", "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1", str(hdr_base)])
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            SOLID,
+            "-t",
+            "2",
+            "-c:v",
+            "libx265",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p10le",
+            "-tag:v",
+            "hvc1",
+            str(hdr_base),
+        ]
+    )
     # rewrite the VUI directly (colour_primaries=9 BT.2020, transfer_characteristics=16 PQ, matrix_coefficients=9
     # BT.2020 nc): reliable on every platform, unlike top-level -colorspace/-color_primaries/-color_trc encode flags
-    _run(["-i", str(hdr_base), "-c", "copy", "-bsf:v", "hevc_metadata=colour_primaries=9:transfer_characteristics=16:matrix_coefficients=9:video_full_range_flag=0",
-          "-tag:v", "hvc1", "-movflags", "+faststart", str(f["hdr"])])
-    _run(["-i", str(hdr_base), "-c", "copy", "-bsf:v", "hevc_metadata=colour_primaries=9:transfer_characteristics=18:matrix_coefficients=9:video_full_range_flag=0",
-          "-tag:v", "hvc1", "-movflags", "+faststart", str(f["hlg"])])
+    _run(
+        [
+            "-i",
+            str(hdr_base),
+            "-c",
+            "copy",
+            "-bsf:v",
+            "hevc_metadata=colour_primaries=9:transfer_characteristics=16:matrix_coefficients=9:video_full_range_flag=0",
+            "-tag:v",
+            "hvc1",
+            "-movflags",
+            "+faststart",
+            str(f["hdr"]),
+        ]
+    )
+    _run(
+        [
+            "-i",
+            str(hdr_base),
+            "-c",
+            "copy",
+            "-bsf:v",
+            "hevc_metadata=colour_primaries=9:transfer_characteristics=18:matrix_coefficients=9:video_full_range_flag=0",
+            "-tag:v",
+            "hvc1",
+            "-movflags",
+            "+faststart",
+            str(f["hlg"]),
+        ]
+    )
     hdr_base.unlink()
-    lut = ":".join(f"{c}='clip(val*{g}+{o},0,255)'" for c, g, o in zip("rgb", CAMERA_B_GAIN, CAMERA_B_OFFSET))
-    for key, chain in (("camera_a", f"format=rgb24,{_TO_709}"), ("camera_b", f"format=rgb24,lutrgb={lut},{_TO_709}")):
-        _run(["-f", "lavfi", "-i", "testsrc2=s=320x180:rate=25", "-t", "2", "-vf", chain, "-c:v", "libx264", "-preset", "veryfast", "-crf", "12",
-              str(f[key])])
-    _run(["-f", "lavfi", "-i", "nullsrc=s=320x180:rate=25,format=yuv420p,geq=lum='4+250*X/W':cb='128+60*sin(2*PI*Y/H)':cr='128+60*cos(2*PI*X/W)'",
-          "-t", "2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "12", str(f["super_white"])])
-    _run(["-f", "lavfi", "-i", "testsrc2=s=160x90:rate=25", "-t", "2", "-vf", "format=yuva444p10le,geq=lum='lum(X,Y)':cb='cb(X,Y)':cr='cr(X,Y)':a='1023*X/W'",
-          "-c:v", "prores_ks", "-profile:v", "4", "-pix_fmt", "yuva444p10le", str(f["alpha"])])
-    _run(["-f", "lavfi", "-i", "color=c=0x8040c0:s=160x90:rate=25", "-t", "2", "-vf", "format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='255*X/(W-1)'",
-          "-c:v", "qtrle", "-pix_fmt", "argb", str(f["alpha_rle"])])
-    _run(["-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000:c=mono", "-t", "2", "-c:a", "pcm_s16le", str(f["audio"])])
+    lut = ":".join(
+        f"{c}='clip(val*{g}+{o},0,255)'"
+        for c, g, o in zip("rgb", CAMERA_B_GAIN, CAMERA_B_OFFSET)
+    )
+    for key, chain in (
+        ("camera_a", f"format=rgb24,{_TO_709}"),
+        ("camera_b", f"format=rgb24,lutrgb={lut},{_TO_709}"),
+    ):
+        _run(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=s=320x180:rate=25",
+                "-t",
+                "2",
+                "-vf",
+                chain,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "12",
+                str(f[key]),
+            ]
+        )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "nullsrc=s=320x180:rate=25,format=yuv420p,geq=lum='4+250*X/W':cb='128+60*sin(2*PI*Y/H)':cr='128+60*cos(2*PI*X/W)'",
+            "-t",
+            "2",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "12",
+            str(f["super_white"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=s=160x90:rate=25",
+            "-t",
+            "2",
+            "-vf",
+            "format=yuva444p10le,geq=lum='lum(X,Y)':cb='cb(X,Y)':cr='cr(X,Y)':a='1023*X/W'",
+            "-c:v",
+            "prores_ks",
+            "-profile:v",
+            "4",
+            "-pix_fmt",
+            "yuva444p10le",
+            str(f["alpha"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=0x8040c0:s=160x90:rate=25",
+            "-t",
+            "2",
+            "-vf",
+            "format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='255*X/(W-1)'",
+            "-c:v",
+            "qtrle",
+            "-pix_fmt",
+            "argb",
+            str(f["alpha_rle"]),
+        ]
+    )
+    _run(
+        [
+            "-f",
+            "lavfi",
+            "-i",
+            f"aevalsrc='{TONE}':s=48000:c=mono",
+            "-t",
+            "2",
+            "-c:a",
+            "pcm_s16le",
+            str(f["audio"]),
+        ]
+    )
     f["text"].write_text("not media\n", encoding="utf-8")
     f["invert_cube"].write_text(INVERT_CUBE, encoding="utf-8")
     return f

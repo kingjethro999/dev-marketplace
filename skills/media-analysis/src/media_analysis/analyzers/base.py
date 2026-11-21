@@ -10,7 +10,9 @@
     Analyzer.plan(ctx, kind, parameters)     structured description of the operations it would run (dry-run)
     Analyzer.analyze(ctx, kind, parameters)  measurement -> data dict (no Observation envelope, no interpretation)
 
-An analyzer never sees the request's asset_id, never writes files, never receives argv from outside."""
+An analyzer never sees the request's asset_id, never writes files, never receives argv from outside.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
@@ -30,7 +32,9 @@ class AnalysisContext:
         self.caps = caps
         self.timeout = timeout
         self._probe: Optional[Dict[str, Any]] = None
-        self.operations: List[Dict[str, Any]] = []   # what ran (executable + purpose), never argv
+        self.operations: List[Dict[str, Any]] = (
+            []
+        )  # what ran (executable + purpose), never argv
 
     def exe(self, name: str) -> str:
         cap = self.caps.get(name)
@@ -40,8 +44,12 @@ class AnalysisContext:
 
     def probe(self) -> Dict[str, Any]:
         if self._probe is None:
-            self.operations.append({"executable": "ffprobe", "purpose": "format and stream metadata"})
-            self._probe = parse_ffprobe(run_ffprobe(self.exe("ffprobe"), self.input_path, self.timeout))
+            self.operations.append(
+                {"executable": "ffprobe", "purpose": "format and stream metadata"}
+            )
+            self._probe = parse_ffprobe(
+                run_ffprobe(self.exe("ffprobe"), self.input_path, self.timeout)
+            )
         return self._probe
 
     def record(self, executable: str, purpose: str) -> None:
@@ -51,14 +59,20 @@ class AnalysisContext:
 class Analyzer:
     id: str = "abstract"
     version: str = VERSION
-    algorithm_version: str = "0"     # every concrete analyzer declares its own (a test enforces it)
+    algorithm_version: str = (
+        "0"  # every concrete analyzer declares its own (a test enforces it)
+    )
     supported_kinds: Tuple[str, ...] = ()
     required_capabilities: Tuple[str, ...] = ()
 
-    def plan(self, ctx: AnalysisContext, kind: str, parameters: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def plan(
+        self, ctx: AnalysisContext, kind: str, parameters: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
-    def analyze(self, ctx: AnalysisContext, kind: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze(
+        self, ctx: AnalysisContext, kind: str, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         raise NotImplementedError
 
     def cacheable(self, data: Dict[str, Any]) -> bool:
@@ -67,8 +81,14 @@ class Analyzer:
         return True
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"id": self.id, "tool_id": f"media-analysis/{self.id}", "version": self.version, "algorithm_version": self.algorithm_version,
-                "supported_kinds": list(self.supported_kinds), "required_capabilities": list(self.required_capabilities)}
+        return {
+            "id": self.id,
+            "tool_id": f"media-analysis/{self.id}",
+            "version": self.version,
+            "algorithm_version": self.algorithm_version,
+            "supported_kinds": list(self.supported_kinds),
+            "required_capabilities": list(self.required_capabilities),
+        }
 
 
 PROBE_OP = {"executable": "ffprobe", "purpose": "format and stream metadata"}

@@ -28,21 +28,85 @@ Examples:
 A VP9 --video layer stored with an alpha layer (a WebM from export.py --preset vp9-alpha) is decoded
 with libvpx-vp9, so its transparency reaches the composite (FFmpeg's own VP9 decoder drops it).
 """
+
 import argparse
 import ast
 import re
 import sys
 from typing import Any, Dict, List, Optional
 
-from _platforms import PLATFORMS, PLATFORM_CHOICES, safe_margins_px, resolve as resolve_platform
+from _platforms import (
+    PLATFORMS,
+    PLATFORM_CHOICES,
+    safe_margins_px,
+    resolve as resolve_platform,
+)
 from _common import still_input_args  # noqa: E402
-from _common import STATE, script_font_for_text, drawtext_clean, drawtext_line_metrics, drawtext_text_opts, drawtext_draws_newline_glyph, is_multiline, needs_shaping, LANGUAGE_NAMES, has_emoji, detect_script, emoji_clusters, load_brand, drawn_chain, label_chain, layer_base_chain, matrix_chain, overlay_format, range_chain, rgb_chain_to_bt709, video_args, add_common, apply_common, emit, aac_args, cfr_args, cfr_filter, cfr_at_input, with_cfr, default_output, die, escape_drawtext, ffmpeg_base, info, probe, run_keeping_subtitles, validate_color, X264_PRESETS, time_arg, fmt_secs
+from _common import (
+    STATE,
+    script_font_for_text,
+    drawtext_clean,
+    drawtext_line_metrics,
+    drawtext_text_opts,
+    drawtext_draws_newline_glyph,
+    is_multiline,
+    needs_shaping,
+    LANGUAGE_NAMES,
+    has_emoji,
+    detect_script,
+    emoji_clusters,
+    load_brand,
+    drawn_chain,
+    label_chain,
+    layer_base_chain,
+    matrix_chain,
+    overlay_format,
+    range_chain,
+    rgb_chain_to_bt709,
+    video_args,
+    add_common,
+    apply_common,
+    emit,
+    aac_args,
+    cfr_args,
+    cfr_filter,
+    cfr_at_input,
+    with_cfr,
+    default_output,
+    die,
+    escape_drawtext,
+    ffmpeg_base,
+    info,
+    probe,
+    run_keeping_subtitles,
+    validate_color,
+    X264_PRESETS,
+    time_arg,
+    fmt_secs,
+)
 from _common.emit import note, warn
 from _common.color import is_rgb
 from _common.decision import length_output_t, window_expr, windowed_overlay_x
-from _common.alpha import (add_alpha_args, audio_line, check_alpha_args, decoder_args_for, default_ext, finish_chain,
-                           has_alpha_plane, report as alpha_report, source_alpha, source_format, tag_args, video_line)
-from _common.probe import display_size, refuse_not_a_still, square_pixels, square_pixels_note
+from _common.alpha import (
+    add_alpha_args,
+    audio_line,
+    check_alpha_args,
+    decoder_args_for,
+    default_ext,
+    finish_chain,
+    has_alpha_plane,
+    report as alpha_report,
+    source_alpha,
+    source_format,
+    tag_args,
+    video_line,
+)
+from _common.probe import (
+    display_size,
+    refuse_not_a_still,
+    square_pixels,
+    square_pixels_note,
+)
 from _common.drawtext import shaping_refusal
 from _common.wrap import wrap_text
 from _common import text_width_em, refuse_output_is_input
@@ -65,9 +129,14 @@ POS = {
 }
 
 
-def position_exprs(pos: str, margin: int, text_mode: bool, margins: Optional[dict] = None):
+def position_exprs(
+    pos: str, margin: int, text_mode: bool, margins: Optional[dict] = None
+):
     edges = margins or {}
-    m = {edge: int(edges.get(edge, margin)) for edge in ("top", "bottom", "left", "right")}
+    m = {
+        edge: int(edges.get(edge, margin))
+        for edge in ("top", "bottom", "left", "right")
+    }
     if pos in POS:
         x, y = (e.format(**m) for e in POS[pos])
     else:
@@ -80,8 +149,18 @@ def position_exprs(pos: str, margin: int, text_mode: bool, margins: Optional[dic
         y = f"H-h{yv}" if yv < 0 else str(yv)
     if text_mode:
         # drawtext uses w/h for the text box but lower-case main dims differ: W/H -> w/h, w/h -> text_w/text_h
-        x = x.replace("W", "main_w").replace("w", "text_w").replace("H", "main_h").replace("h", "text_h")
-        y = y.replace("W", "main_w").replace("w", "text_w").replace("H", "main_h").replace("h", "text_h")
+        x = (
+            x.replace("W", "main_w")
+            .replace("w", "text_w")
+            .replace("H", "main_h")
+            .replace("h", "text_h")
+        )
+        y = (
+            y.replace("W", "main_w")
+            .replace("w", "text_w")
+            .replace("H", "main_h")
+            .replace("h", "text_h")
+        )
         x = x.replace("main_text_w", "main_w").replace("main_text_h", "main_h")
         y = y.replace("main_text_w", "main_w").replace("main_text_h", "main_h")
     return x, y
@@ -89,7 +168,8 @@ def position_exprs(pos: str, margin: int, text_mode: bool, margins: Optional[dic
 
 def _scaled_height(w: int, src_w: int, src_h: int, factor: int) -> int:
     """The height scale=W:-1 (factor 1) or scale=W:-2 (factor 2) gives a src_w x src_h picture:
-    av_rescale(w, ih, iw * factor) * factor, rounded half away from zero as FFmpeg rounds it."""
+    av_rescale(w, ih, iw * factor) * factor, rounded half away from zero as FFmpeg rounds it.
+    """
     den = src_w * factor
     return max(factor, (2 * w * src_h + den) // (2 * den) * factor)
 
@@ -104,7 +184,8 @@ def on_grid(x: str, y: str, main: "tuple", layer: "tuple") -> "Optional[tuple]":
     transparent column/row on the left/top where x/y is odd, and is overlaid at the even position
     before it: its luma lands where it was asked, and the chroma sample on that edge is shared
     with the pixel outside it. Returns (x_even, y_even, pad filter or ""), or None when a size is
-    unknown (a dry run's pending input): the overlay then gets the expressions, as before."""
+    unknown (a dry run's pending input): the overlay then gets the expressions, as before.
+    """
     (mw, mh), (lw, lh) = main, layer
     if not (mw and mh and lw and lh):
         return None
@@ -116,16 +197,26 @@ def on_grid(x: str, y: str, main: "tuple", layer: "tuple") -> "Optional[tuple]":
         if isinstance(node, ast.Constant) and isinstance(node.value, int):
             return float(node.value)
         if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
-            return -arith(node.operand) if isinstance(node.op, ast.USub) else arith(node.operand)
-        if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)):
+            return (
+                -arith(node.operand)
+                if isinstance(node.op, ast.USub)
+                else arith(node.operand)
+            )
+        if isinstance(node, ast.BinOp) and isinstance(
+            node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)
+        ):
             a, b = arith(node.left), arith(node.right)
-            return {ast.Add: a + b, ast.Sub: a - b, ast.Mult: a * b}.get(type(node.op), a / b if b else 0.0)
+            return {ast.Add: a + b, ast.Sub: a - b, ast.Mult: a * b}.get(
+                type(node.op), a / b if b else 0.0
+            )
         raise ValueError(f"not a position: {ast.dump(node)}")
 
     def value(expr: str, big: int, small: int, axis: str) -> Optional[int]:
         num = re.sub(axis.upper(), str(big), re.sub(axis, str(small), expr))
         try:
-            return int(arith(ast.parse(num, mode="eval")))  # the integer part, as overlay's (int) cast takes it
+            return int(
+                arith(ast.parse(num, mode="eval"))
+            )  # the integer part, as overlay's (int) cast takes it
         except (SyntaxError, ValueError):
             return None
 
@@ -137,15 +228,20 @@ def on_grid(x: str, y: str, main: "tuple", layer: "tuple") -> "Optional[tuple]":
     return px - ox, py - oy, pad
 
 
-def _wrap_to_frame(args, frame_w: int, margins: Optional[dict], frame_h: int = 0) -> str:
+def _wrap_to_frame(
+    args, frame_w: int, margins: Optional[dict], frame_h: int = 0
+) -> str:
     """--text broken into lines that fit between the frame's side margins at --font-size, by the
     same phrase rules graphics.py and caption.py wrap with; text that fits comes back unchanged.
     drawtext never wraps, so through 3.1.3 a long line ran off the frame with no word (#411). The
-    width is the averaged advance table's estimate, so a wrapped run says so in its notes."""
+    width is the averaged advance table's estimate, so a wrapped run says so in its notes.
+    """
     text = args.text or ""
     if not (frame_w and text and args.font_size > 0):
         return text
-    m = {edge: int((margins or {}).get(edge, args.margin)) for edge in ("left", "right")}
+    m = {
+        edge: int((margins or {}).get(edge, args.margin)) for edge in ("left", "right")
+    }
     left, right = m["left"], m["right"]
     if args.position not in POS:
         try:
@@ -153,35 +249,56 @@ def _wrap_to_frame(args, frame_w: int, margins: Optional[dict], frame_h: int = 0
             left, right = (xv, right) if xv >= 0 else (0, -xv)
         except ValueError:
             pass
-    inset = 2 * args.border + (24 if args.box else 0)  # the border on both sides, boxborderw=12
+    inset = 2 * args.border + (
+        24 if args.box else 0
+    )  # the border on both sides, boxborderw=12
     room = frame_w - left - right - inset
     if room <= args.font_size:
         # a position this close to the edge leaves no room to wrap in: say the text runs off
         # rather than draw it past the edge without a word (#416 review)
-        if max(text_width_em(ln) for ln in text.split("\n")) * args.font_size > max(room, 0):
-            note(f"--text does not fit: --position {args.position} leaves {max(room, 0)} px to the frame's edge "
-                 f"at --font-size {args.font_size}, so the text runs past it")
+        if max(text_width_em(ln) for ln in text.split("\n")) * args.font_size > max(
+            room, 0
+        ):
+            note(
+                f"--text does not fit: --position {args.position} leaves {max(room, 0)} px to the frame's edge "
+                f"at --font-size {args.font_size}, so the text runs past it"
+            )
         return text
     lines: List[str] = []
     for para in text.split("\n"):
-        lines.extend(wrap_text(para, room / float(args.font_size), lang=getattr(args, "lang", None),
-                               slice_overlong=True) if para.strip() else [para])
+        lines.extend(
+            wrap_text(
+                para,
+                room / float(args.font_size),
+                lang=getattr(args, "lang", None),
+                slice_overlong=True,
+            )
+            if para.strip()
+            else [para]
+        )
     wrapped = "\n".join(lines)
     if wrapped != text:
-        note(f"--text is wider than the frame at --font-size {args.font_size} "
-             f"({frame_w} px, {left}/{right} px margins): wrapped to {len(lines)} lines")
+        note(
+            f"--text is wider than the frame at --font-size {args.font_size} "
+            f"({frame_w} px, {left}/{right} px margins): wrapped to {len(lines)} lines"
+        )
         # the wrap only measures width: a block taller than the frame loses the lines past its
         # edge (at a bottom position, the first ones), so that is said too (#416 review)
         tall = args.font_size + (len(lines) - 1) * int(args.font_size * 1.2)
         if frame_h and tall > frame_h:
-            note(f"the {len(lines)} wrapped lines are about {tall} px tall, taller than the {frame_h} px frame: "
-                 f"the lines past its edge are not drawn -- lower --font-size or shorten --text")
+            note(
+                f"the {len(lines)} wrapped lines are about {tall} px tall, taller than the {frame_h} px frame: "
+                f"the lines past its edge are not drawn -- lower --font-size or shorten --text"
+            )
     return wrapped
 
 
-def enable_expr(start: Optional[float], end: Optional[float], meta: Optional[dict] = None) -> str:
+def enable_expr(
+    start: Optional[float], end: Optional[float], meta: Optional[dict] = None
+) -> str:
     """True on the main picture's frames from --start to --end, both inclusive (window_expr):
-    the bounds sit half a frame from the frames they select, not on a frame's own time."""
+    the bounds sit half a frame from the frames they select, not on a frame's own time.
+    """
     if start is None and end is None:
         return ""
     return window_expr(start, end, meta)
@@ -189,11 +306,14 @@ def enable_expr(start: Optional[float], end: Optional[float], meta: Optional[dic
 
 def fade_out_length(start: float, end: float, fade: float) -> float:
     """The fade-out of a layer shown from `start` to `end`: --fade, cut to the window when the window
-    is shorter, so the fade still ends at `end` (audio.py and cut.py cap theirs the same way)."""
+    is shorter, so the fade still ends at `end` (audio.py and cut.py cap theirs the same way).
+    """
     return min(fade, end - start)
 
 
-def alpha_expr(opacity: float, start: Optional[float], end: Optional[float], fade: float) -> str:
+def alpha_expr(
+    opacity: float, start: Optional[float], end: Optional[float], fade: float
+) -> str:
     """Time-varying alpha with linear fade in/out inside [start, end]."""
     if fade <= 0 or (start is None and end is None):
         return f"{opacity:g}"
@@ -211,8 +331,15 @@ def _num(v: float) -> str:
     return f"{v:.6f}".rstrip("0").rstrip(".")
 
 
-def per_line_drawtext(lines: List[str], x: str, y: str, font_opt: str, args: argparse.Namespace,
-                      box: List[str], timing: List[str]) -> str:
+def per_line_drawtext(
+    lines: List[str],
+    x: str,
+    y: str,
+    font_opt: str,
+    args: argparse.Namespace,
+    box: List[str],
+    timing: List[str],
+) -> str:
     """The drawtext chain for a multi-line --text on a release whose drawtext draws a box at each
     line break (drawtext_draws_newline_glyph): one drawtext per line, each line alone, placed
     where one multi-line drawtext puts it on a fixed release.
@@ -238,18 +365,40 @@ def per_line_drawtext(lines: List[str], x: str, y: str, font_opt: str, args: arg
     height = lh * (len(lines) - 1) + top + bottom
 
     def block(expr: str) -> str:
-        return re.sub(r"\btext_h\b", _num(height), re.sub(r"\btext_w\b", _num(width), expr))
+        return re.sub(
+            r"\btext_h\b", _num(height), re.sub(r"\btext_w\b", _num(width), expr)
+        )
 
     bx, by = block(x), block(y)
-    passes = ([[f"borderw={args.border}", f"bordercolor={args.border_color}", "fontcolor=black@0"],
-               ["fontcolor=" + args.font_color]] if args.border else [["fontcolor=" + args.font_color]])
+    passes = (
+        [
+            [
+                f"borderw={args.border}",
+                f"bordercolor={args.border_color}",
+                "fontcolor=black@0",
+            ],
+            ["fontcolor=" + args.font_color],
+        ]
+        if args.border
+        else [["fontcolor=" + args.font_color]]
+    )
     filters = []
     for n, paint in enumerate(passes):
         for i, line in enumerate(lines):
             if not line:
                 continue
-            opts = [drawtext_text_opts(line), f"fontsize={args.font_size}", f"x={bx}", f"y={by}+{_num(top + i * lh)}",
-                    "y_align=baseline", font_opt] + paint + timing[:1]
+            opts = (
+                [
+                    drawtext_text_opts(line),
+                    f"fontsize={args.font_size}",
+                    f"x={bx}",
+                    f"y={by}+{_num(top + i * lh)}",
+                    "y_align=baseline",
+                    font_opt,
+                ]
+                + paint
+                + timing[:1]
+            )
             if box and n == 0 and not filters:
                 opts += box + [f"boxw={_num(width)}", f"boxh={_num(height)}"]
             filters.append("drawtext=" + ":".join(opts + timing[1:]))
@@ -261,17 +410,27 @@ def per_line_drawtext(lines: List[str], x: str, y: str, font_opt: str, args: arg
 _PLACE_TIME = r"[^@\-]+(?:@[0-9.]+)?"
 
 
-def parse_placements(specs: List[str], main_fps: Optional[float], layer_fps: Optional[float],
-                     layer_meta: Optional[dict] = None, main_meta: Optional[dict] = None) -> List[tuple]:
+def parse_placements(
+    specs: List[str],
+    main_fps: Optional[float],
+    layer_fps: Optional[float],
+    layer_meta: Optional[dict] = None,
+    main_meta: Optional[dict] = None,
+) -> List[tuple]:
     """--place SRC_START-SRC_END@AT -> [(src_start, src_end, at)], refusing empty, negative or
     overlapping placements (two pieces on screen at once would stack in an order nobody asked for).
     SRC_START/SRC_END are positions in the layer, so an hh:mm:ss:ff timecode there counts the
-    layer's frames; AT is a position on the main timeline and counts the main video's."""
+    layer's frames; AT is a position on the main timeline and counts the main video's.
+    """
     out = []
     for spec in specs:
-        m = re.fullmatch(rf"\s*({_PLACE_TIME})-({_PLACE_TIME})@({_PLACE_TIME})\s*", spec)
+        m = re.fullmatch(
+            rf"\s*({_PLACE_TIME})-({_PLACE_TIME})@({_PLACE_TIME})\s*", spec
+        )
         if not m:
-            die(f"--place {spec!r}: use SRC_START-SRC_END@AT, e.g. 0-2.5@12 (times are not negative)")
+            die(
+                f"--place {spec!r}: use SRC_START-SRC_END@AT, e.g. 0-2.5@12 (times are not negative)"
+            )
         a = time_arg(m.group(1), "--place", layer_fps, source=layer_meta)
         b = time_arg(m.group(2), "--place", layer_fps, source=layer_meta)
         at = time_arg(m.group(3), "--place", main_fps, source=main_meta)
@@ -281,64 +440,147 @@ def parse_placements(specs: List[str], main_fps: Optional[float], layer_fps: Opt
     spans = sorted((at, at + (b - a)) for a, b, at in out)
     for (s1, e1), (s2, _e2) in zip(spans, spans[1:]):
         if s2 < e1 - 1e-6:
-            die(f"--place: pieces overlap on the main timeline ({s1:g}-{e1:g} s and from {s2:g} s)")
+            die(
+                f"--place: pieces overlap on the main timeline ({s1:g}-{e1:g} s and from {s2:g} s)"
+            )
     return out
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("input")
-    ap.add_argument("-o", "--output", help="output file (default: <name>_overlay.<ext>)")
-    ap.add_argument("--audio-stream", type=int, default=0,
-                     help="which audio stream of the input to keep, 0-based in file order (probe.py lists them under "
-                          "audio_streams) -- matters on a multi-track input (dubbed languages, M&E stems); default 0, "
-                          "the first track, same as leaving it unset always did")
+    ap.add_argument(
+        "-o", "--output", help="output file (default: <name>_overlay.<ext>)"
+    )
+    ap.add_argument(
+        "--audio-stream",
+        type=int,
+        default=0,
+        help="which audio stream of the input to keep, 0-based in file order (probe.py lists them under "
+        "audio_streams) -- matters on a multi-track input (dubbed languages, M&E stems); default 0, "
+        "the first track, same as leaving it unset always did",
+    )
     src = ap.add_mutually_exclusive_group()
     src.add_argument("--image", help="PNG/JPG (alpha respected) to composite")
     src.add_argument("--text", help="text to draw (drawtext)")
-    src.add_argument("--logo", action="store_true", help="composite the brand logo from --brand (position/scale/opacity from brand.json)")
-    src.add_argument("--video", help="a second video to composite as a picture-in-picture layer")
-    ap.add_argument("--place", action="append", default=[], metavar="SRC_START-SRC_END@AT",
-                    help="with --video, repeatable: show this range of the layer starting at AT on the main "
-                         "timeline (e.g. 0-2.5@12); the layer is hidden outside its placed ranges. Times in "
-                         "seconds or HH:MM:SS. Not with --start/--end/--fade")
+    src.add_argument(
+        "--logo",
+        action="store_true",
+        help="composite the brand logo from --brand (position/scale/opacity from brand.json)",
+    )
+    src.add_argument(
+        "--video", help="a second video to composite as a picture-in-picture layer"
+    )
+    ap.add_argument(
+        "--place",
+        action="append",
+        default=[],
+        metavar="SRC_START-SRC_END@AT",
+        help="with --video, repeatable: show this range of the layer starting at AT on the main "
+        "timeline (e.g. 0-2.5@12); the layer is hidden outside its placed ranges. Times in "
+        "seconds or HH:MM:SS. Not with --start/--end/--fade",
+    )
     ck = ap.add_argument_group("chroma key (with --video)")
-    ck.add_argument("--chromakey", help="colour to key out (green-screen removal), e.g. 0x00ff00 or green")
-    ck.add_argument("--chromakey-similarity", type=float, default=0.15, help="how close a pixel must be to --chromakey to become transparent, 0..1 (default 0.15)")
-    ck.add_argument("--chromakey-blend", type=float, default=0.05, help="soften the key edge, 0..1 (default 0.05)")
+    ck.add_argument(
+        "--chromakey",
+        help="colour to key out (green-screen removal), e.g. 0x00ff00 or green",
+    )
+    ck.add_argument(
+        "--chromakey-similarity",
+        type=float,
+        default=0.15,
+        help="how close a pixel must be to --chromakey to become transparent, 0..1 (default 0.15)",
+    )
+    ck.add_argument(
+        "--chromakey-blend",
+        type=float,
+        default=0.05,
+        help="soften the key edge, 0..1 (default 0.05)",
+    )
     ap.add_argument("--brand", help="brand.json (logo, font, colours, safe margin)")
-    ap.add_argument("--position", default="top-right", help="named position or X,Y (default top-right)")
-    ap.add_argument("--margin", type=int, default=24, help="margin from the edges in px (default 24)")
-    ap.add_argument("--platform", choices=PLATFORM_CHOICES, default=None,
-                    help="keep the overlay out of this destination's UI: each edge's margin becomes that "
-                         "platform's safe zone (scripts/_platforms.py), so a top-left logo clears TikTok's "
-                         "status bar and a right-hand one clears the like column. An explicit --margin wins")
+    ap.add_argument(
+        "--position",
+        default="top-right",
+        help="named position or X,Y (default top-right)",
+    )
+    ap.add_argument(
+        "--margin",
+        type=int,
+        default=24,
+        help="margin from the edges in px (default 24)",
+    )
+    ap.add_argument(
+        "--platform",
+        choices=PLATFORM_CHOICES,
+        default=None,
+        help="keep the overlay out of this destination's UI: each edge's margin becomes that "
+        "platform's safe zone (scripts/_platforms.py), so a top-left logo clears TikTok's "
+        "status bar and a right-hand one clears the like column. An explicit --margin wins",
+    )
     ap.add_argument("--start", help="show from this time (default: whole video)")
     ap.add_argument("--end", help="hide after this time")
-    ap.add_argument("--fade", type=float, default=0.0, help="fade-in duration in seconds (at --start or 0); the fade-out happens only at --end")
+    ap.add_argument(
+        "--fade",
+        type=float,
+        default=0.0,
+        help="fade-in duration in seconds (at --start or 0); the fade-out happens only at --end",
+    )
     ap.add_argument("--opacity", type=float, default=1.0, help="0..1 (default 1)")
     img = ap.add_argument_group("image options")
-    img.add_argument("--scale", type=int, help="width in px for an image, logo or video layer (keeps aspect); text size is --font-size")
-    img.add_argument("--scale-percent", type=float,
-                     help="width as a %% of the displayed frame for an image, logo or video layer (keeps aspect); "
-                          "a 90 or 270 degree rotation uses the stored height; text size is --font-size")
+    img.add_argument(
+        "--scale",
+        type=int,
+        help="width in px for an image, logo or video layer (keeps aspect); text size is --font-size",
+    )
+    img.add_argument(
+        "--scale-percent",
+        type=float,
+        help="width as a %% of the displayed frame for an image, logo or video layer (keeps aspect); "
+        "a 90 or 270 degree rotation uses the stored height; text size is --font-size",
+    )
     txt = ap.add_argument_group("text options")
     txt.add_argument("--font", default="DejaVu Sans", help="fontconfig font name")
-    txt.add_argument("--font-file", help="explicit .ttf/.otf/.ttc path (use this for CJK fonts)")
+    txt.add_argument(
+        "--font-file", help="explicit .ttf/.otf/.ttc path (use this for CJK fonts)"
+    )
     txt.add_argument("--font-size", type=int, default=42)
     txt.add_argument("--font-color", default="white")
-    txt.add_argument("--border", type=int, default=2, help="text outline width (default 2)")
+    txt.add_argument(
+        "--border", type=int, default=2, help="text outline width (default 2)"
+    )
     txt.add_argument("--border-color", default="black")
-    txt.add_argument("--box", action="store_true", help="draw a translucent box behind the text")
+    txt.add_argument(
+        "--box", action="store_true", help="draw a translucent box behind the text"
+    )
     emo = ap.add_argument_group("emoji (1.15)")
-    emo.add_argument("--emoji", choices=["auto", "color", "png", "mono", "none"], default="auto",
-                     help="how emoji in --text are drawn. overlay.py draws through drawtext, which cannot load "
-                          "a colour emoji font at all, so only 'mono'/'none' render here -- 'png'/'color' name "
-                          "caption.py/graphics.py instead")
-    emo.add_argument("--emoji-assets", metavar="DIR", help="directory of emoji PNGs named by code point "
-                                                           "(used by caption.py/graphics.py; overlay.py has no PNG route)")
-    emo.add_argument("--emoji-scale", type=float, default=1.0, help="emoji box as a multiple of the font size")
-    emo.add_argument("--emoji-max", type=int, default=60, help="most emoji overlays one run may build")
+    emo.add_argument(
+        "--emoji",
+        choices=["auto", "color", "png", "mono", "none"],
+        default="auto",
+        help="how emoji in --text are drawn. overlay.py draws through drawtext, which cannot load "
+        "a colour emoji font at all, so only 'mono'/'none' render here -- 'png'/'color' name "
+        "caption.py/graphics.py instead",
+    )
+    emo.add_argument(
+        "--emoji-assets",
+        metavar="DIR",
+        help="directory of emoji PNGs named by code point "
+        "(used by caption.py/graphics.py; overlay.py has no PNG route)",
+    )
+    emo.add_argument(
+        "--emoji-scale",
+        type=float,
+        default=1.0,
+        help="emoji box as a multiple of the font size",
+    )
+    emo.add_argument(
+        "--emoji-max",
+        type=int,
+        default=60,
+        help="most emoji overlays one run may build",
+    )
     txt.add_argument("--box-color", default="black@0.5")
     enc = ap.add_argument_group("encoding")
     enc.set_defaults(crf=18)  # --quality's default (the --crf alias was removed in 2.0)
@@ -355,7 +597,9 @@ def main() -> int:
         args.image = brand["logo"]
         if args.position == ap.get_default("position"):
             args.position = brand.get("logo_position", "top-right")
-        if args.scale is None and args.scale_percent is None:  # a given 0 is refused below, not replaced
+        if (
+            args.scale is None and args.scale_percent is None
+        ):  # a given 0 is refused below, not replaced
             args.scale = int(brand.get("logo_scale", 160))
         if args.opacity == 1.0:
             args.opacity = float(brand.get("logo_opacity", 1.0))
@@ -365,9 +609,18 @@ def main() -> int:
         die("give --image, --text, --logo or --video")
     # --scale is a layer width. On a text draw it used to be accepted and ignored (fontsize stayed
     # at --font-size), so a project that asked for 200 px text completed with the 42 px default.
-    if args.text and not (args.image or args.video) and (args.scale is not None or args.scale_percent is not None):
-        die("--scale and --scale-percent size an image, logo or video layer; text size is --font-size", kind="input")
-    font_file_from = "--font-file"  # what the refusal of a font file that is not one names
+    if (
+        args.text
+        and not (args.image or args.video)
+        and (args.scale is not None or args.scale_percent is not None)
+    ):
+        die(
+            "--scale and --scale-percent size an image, logo or video layer; text size is --font-size",
+            kind="input",
+        )
+    font_file_from = (
+        "--font-file"  # what the refusal of a font file that is not one names
+    )
     if args.brand:
         if args.margin == ap.get_default("margin"):
             args.margin = int(brand.get("safe_margin", args.margin))
@@ -382,25 +635,37 @@ def main() -> int:
         # refuse and name the two tools that render the script correctly through libass.
         _sc = detect_script(args.text, getattr(args, "lang", None))
         if needs_shaping(_sc):
-            die(f"{LANGUAGE_NAMES.get(_sc, _sc)} text {shaping_refusal(_sc)}: draw it with "
+            die(
+                f"{LANGUAGE_NAMES.get(_sc, _sc)} text {shaping_refusal(_sc)}: draw it with "
                 "caption.py (--text cues, burned through libass) or graphics.py (--template with "
-                "--text-render ass) instead", kind="input")
+                "--text-render ass) instead",
+                kind="input",
+            )
         if has_emoji(args.text):
             if args.emoji in ("png", "color"):
-                die(f"--emoji {args.emoji}: overlay.py draws text with drawtext, which cannot load a colour "
+                die(
+                    f"--emoji {args.emoji}: overlay.py draws text with drawtext, which cannot load a colour "
                     "emoji font and cannot place a PNG inside a line -- use caption.py (--emoji-assets) for "
-                    "cues or graphics.py (--template) for a title card", kind="input")
+                    "cues or graphics.py (--template) for a title card",
+                    kind="input",
+                )
             if args.emoji == "none":
                 for _i, _cl in list(reversed(emoji_clusters(args.text))):
-                    args.text = args.text[:_i] + args.text[_i + len(_cl):]
-                warn("emoji: stripped from the drawn text (--emoji none)", "emoji_stripped", mode="none")
+                    args.text = args.text[:_i] + args.text[_i + len(_cl) :]
+                warn(
+                    "emoji: stripped from the drawn text (--emoji none)",
+                    "emoji_stripped",
+                    mode="none",
+                )
             else:
                 # not "drawn by the text font": drawtext loads that one font and has no fallback, so
                 # a font without the glyph (DejaVu Sans, every script font) draws an empty box (#403)
-                warn("emoji are left to the text font here: drawtext loads that one font and has no fallback, so "
-                     "a font without the glyph draws an empty box (monochrome at best with one). --emoji none "
-                     "leaves them out; caption.py/graphics.py composite colour PNGs with --emoji-assets",
-                     "emoji_monochrome")
+                warn(
+                    "emoji are left to the text font here: drawtext loads that one font and has no fallback, so "
+                    "a font without the glyph draws an empty box (monochrome at best with one). --emoji none "
+                    "leaves them out; caption.py/graphics.py composite colour PNGs with --emoji-assets",
+                    "emoji_monochrome",
+                )
     if args.text and args.font_file:
         require_font_file(args.font_file, font_file_from)
     script_file = script_family = None
@@ -409,9 +674,18 @@ def main() -> int:
         # Arabic ... draws glyphs instead of boxes. drawtext does not shape or reorder RTL text --
         # see references/gotchas.md#fonts-by-script.
         _script, script_file, script_family = script_font_for_text(
-            args.text, font=args.font, font_explicit=args.font != ap.get_default("font"), font_file=args.font_file)
+            args.text,
+            font=args.font,
+            font_explicit=args.font != ap.get_default("font"),
+            font_file=args.font_file,
+        )
     # the font drawtext gets, reported as `font_used` and recorded when it is not the one asked for
-    font_used = font_choice(args.font, font_file=args.font_file, script_file=script_file, script_family=script_family)
+    font_used = font_choice(
+        args.font,
+        font_file=args.font_file,
+        script_file=script_file,
+        script_family=script_family,
+    )
     args.font_file = font_used["file"]
     if args.text:
         record_font_choice(font_used)
@@ -424,13 +698,21 @@ def main() -> int:
     src_alpha = source_alpha(args, meta, args.input)
     audio_streams = meta.get("audio_streams") or []
     if audio_streams and not (0 <= args.audio_stream < len(audio_streams)):
-        die(f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}")
+        die(
+            f"--audio-stream {args.audio_stream}: input has {len(audio_streams)} audio stream(s), 0..{len(audio_streams) - 1}"
+        )
     if args.audio_stream and not audio_streams:
         die("--audio-stream needs an input with audio streams")
     # the -t that ends a layer at the main input's length: to the sample of the kept track when the
     # millisecond would cut it (length_output_t); no sound, or a pending input, keeps the millisecond
-    kept_track = audio_streams[args.audio_stream] if audio_streams else (meta.get("audio") or {})
-    main_t = length_output_t(meta["duration"], kept_track.get("sample_rate")) if meta.get("duration") else None
+    kept_track = (
+        audio_streams[args.audio_stream] if audio_streams else (meta.get("audio") or {})
+    )
+    main_t = (
+        length_output_t(meta["duration"], kept_track.get("sample_rate"))
+        if meta.get("duration")
+        else None
+    )
     # ffmpeg applies display rotation before the filter graph, so the frame this overlay is
     # composited on is the displayed one. A 320x180 phone file tagged 90 degrees is 180 wide here.
     # A non-square-pixel source is made square at its display aspect first (#411), so a logo or
@@ -444,15 +726,21 @@ def main() -> int:
     # and wins; without either, the historical 24 px default is unchanged.
     safe_margins = None
     args.platform = resolve_platform(args.platform)
-    if args.platform and args.margin == ap.get_default("margin") and PLATFORMS[args.platform].get("frame"):
+    if (
+        args.platform
+        and args.margin == ap.get_default("margin")
+        and PLATFORMS[args.platform].get("frame")
+    ):
         # a dry run has no real frame to measure (the probe is stubbed rather than guessed), so
         # fall back to the destination's own delivery frame -- which is what the fitted
         # intermediate this stage runs on will be anyway
         frame = PLATFORMS[args.platform]["frame"]
         pw, ph = vw or frame["w"], vh or frame["h"]
         safe_margins = safe_margins_px(args.platform, pw, ph)
-        info(f"--platform {args.platform}: safe margins top {safe_margins['top']} / bottom {safe_margins['bottom']} / "
-             f"left {safe_margins['left']} / right {safe_margins['right']} px (clear of the app's own UI)")
+        info(
+            f"--platform {args.platform}: safe margins top {safe_margins['top']} / bottom {safe_margins['bottom']} / "
+            f"left {safe_margins['left']} / right {safe_margins['right']} px (clear of the app's own UI)"
+        )
     fps = meta["video"].get("fps")
     start = time_arg(args.start, "--start", fps) if args.start else None
     end = time_arg(args.end, "--end", fps) if args.end else None
@@ -462,8 +750,10 @@ def main() -> int:
     if start is not None and main_len and start >= main_len:
         # A172: an overlay that starts after the picture ends draws nothing, and the run said
         # verified: true; --place already refuses the same case
-        die(f"--start {start:g} is at or after the end of the video ({main_len:.3f} s): nothing would be drawn",
-            hint="give a --start inside the clip")
+        die(
+            f"--start {start:g} is at or after the end of the video ({main_len:.3f} s): nothing would be drawn",
+            hint="give a --start inside the clip",
+        )
     if not 0 <= args.opacity <= 1:
         die("--opacity must be within 0..1")
     # A190: a size of 0 or below drew nothing (--font-size -10 completed, verified: true, with no
@@ -496,20 +786,36 @@ def main() -> int:
     if args.video and args.fade:
         # A171: the fade is built for an image, logo or text layer; a video layer was composited
         # with a hard edge and the result said nothing
-        die(f"--fade {args.fade:g} fades an image, logo or text layer; a video layer (--video) is shown "
-            "from --start to --end without a fade", hint="drop --fade for the video layer")
+        die(
+            f"--fade {args.fade:g} fades an image, logo or text layer; a video layer (--video) is shown "
+            "from --start to --end without a fade",
+            hint="drop --fade for the video layer",
+        )
 
-    output = args.output or default_output(args.input, "overlay", default_ext(alpha_codec) if alpha_codec else None)
+    output = args.output or default_output(
+        args.input, "overlay", default_ext(alpha_codec) if alpha_codec else None
+    )
     # the brand file and a text layer's font file are read here and by drawtext's fontfile=, never
     # as an -i, so run()'s guard did not see them (#522's sweep)
-    refuse_output_is_input(output, *[q for q in (args.brand, args.font_file if args.text else None) if isinstance(q, str) and q])
+    refuse_output_is_input(
+        output,
+        *[
+            q
+            for q in (args.brand, args.font_file if args.text else None)
+            if isinstance(q, str) and q
+        ],
+    )
     enable = enable_expr(start, end, meta)
     cmd = ffmpeg_base() + ["-i", args.input]
 
     if args.image:
         image_meta = probe(args.image)
-        refuse_not_a_still(args.image, image_meta, "--image",
-                           "--video composites a moving layer; `look.py FILE --at T` writes one frame of it as a PNG")
+        refuse_not_a_still(
+            args.image,
+            image_meta,
+            "--image",
+            "--video composites a moving layer; `look.py FILE --at T` writes one frame of it as a PNG",
+        )
         chain: List[str] = ["format=rgba"]
         # a still that stores non-square pixels (a PNG's pHYs, a JPEG's density) is made square at
         # its display aspect first, as a --video layer is: its size and position are computed in
@@ -519,7 +825,11 @@ def main() -> int:
             chain.append(square_pixels(image_meta.get("video")))
             note(square_pixels_note(image_meta.get("video"), "the --image"))
         iw, ih = display_size(image_meta.get("video"))
-        lw = int(vw * args.scale_percent / 100) if args.scale_percent else args.scale or iw
+        lw = (
+            int(vw * args.scale_percent / 100)
+            if args.scale_percent
+            else args.scale or iw
+        )
         lh = _scaled_height(lw, iw, ih, 1) if lw != iw and iw and ih else ih
         if args.scale_percent:
             chain.append(f"scale={lw}:-1")
@@ -539,7 +849,9 @@ def main() -> int:
                 # layer vanished at full opacity); the text layer's alpha_expr() caps it the same way
                 out = fade_out_length(s, end, args.fade)
                 chain.append(f"fade=t=out:st={end - out:.3f}:d={out:g}:alpha=1")
-        x, y = position_exprs(args.position, args.margin, text_mode=False, margins=safe_margins)
+        x, y = position_exprs(
+            args.position, args.margin, text_mode=False, margins=safe_margins
+        )
         grid = on_grid(x, y, (vw, vh), (lw, lh))
         if grid:
             # padded in RGBA, where a one-pixel offset is exact, before the layer is made YUV
@@ -549,21 +861,41 @@ def main() -> int:
         # still took the whole picture through 8-bit RGB (overlay_format)
         # a --start/--end window is in the layer's position, which is evaluated on the main
         # picture's frames; overlay's enable is evaluated on the layer's frames too
-        ov = f"overlay={windowed_overlay_x(x, enable) if enable else x}:{y}" + (overlay_format(meta) or ":format=auto")
+        ov = f"overlay={windowed_overlay_x(x, enable) if enable else x}:{y}" + (
+            overlay_format(meta) or ":format=auto"
+        )
         if not meta.get("duration"):
             # nothing to bound by -t: the overlay ends with the main picture. -shortest alone never
             # ended a still main (one picture, no duration): overlay kept repeating it under the
             # looped layer and the run went on until its timeout (#510)
             ov += ":shortest=1"
         # -loop 1 turns the still into a timed stream so fade/enable expressions see real timestamps
-        cmd = ffmpeg_base() + ["-i", args.input, "-loop", "1", *still_input_args(args.image), "-i", args.image]
+        cmd = ffmpeg_base() + [
+            "-i",
+            args.input,
+            "-loop",
+            "1",
+            *still_input_args(args.image),
+            "-i",
+            args.image,
+        ]
         # the RGBA still is converted to the BT.709 the output is tagged with (overlay's own
         # RGB-to-YUV step used BT.601), and an untagged main is labelled BT.709 (tags only) so
         # 7.1+'s negotiation does not convert one picture to the other's "unknown" matrix
         base = layer_base_chain(meta)
-        fc = (f"[1:v]{','.join(chain)},setpts=PTS-STARTPTS{rgb_chain_to_bt709(meta)}[ov];"
-              + (f"[0:v]{base}null[base];[base]" if base else "[0:v]") + f"[ov]{ov}[out]")
-        cmd += ["-filter_complex", fc, "-map", "[out]", "-map", f"0:a:{args.audio_stream}?"]
+        fc = (
+            f"[1:v]{','.join(chain)},setpts=PTS-STARTPTS{rgb_chain_to_bt709(meta)}[ov];"
+            + (f"[0:v]{base}null[base];[base]" if base else "[0:v]")
+            + f"[ov]{ov}[out]"
+        )
+        cmd += [
+            "-filter_complex",
+            fc,
+            "-map",
+            "[out]",
+            "-map",
+            f"0:a:{args.audio_stream}?",
+        ]
         if meta.get("duration"):
             # An explicit -t is exact and, unlike -shortest, only bounds the *main* input's
             # streams -- a preserved subtitle/data stream that ends earlier (run_keeping_subtitles)
@@ -581,7 +913,11 @@ def main() -> int:
         if not pip_meta.get("video"):
             die(f"--video {args.video} has no video stream")
         layer_fps = pip_meta["video"].get("fps")
-        placements = parse_placements(args.place, fps, layer_fps, pip_meta, meta) if args.place else []
+        placements = (
+            parse_placements(args.place, fps, layer_fps, pip_meta, meta)
+            if args.place
+            else []
+        )
         # bounds from the video streams (a longer audio track would let a range run past the last
         # picture); the container duration only when a stream has none
         layer_dur = pip_meta["video"].get("duration") or pip_meta.get("duration")
@@ -593,22 +929,42 @@ def main() -> int:
             if layer_dur and a >= layer_dur:
                 # the slack below is for an end rounded past the last frame; a start there selects
                 # no picture at all and the "placed" piece would silently never show
-                die(f"--place {a:g}-{b:g}@{at:g}: starts at or after the layer's end ({layer_dur:.3f} s)")
+                die(
+                    f"--place {a:g}-{b:g}@{at:g}: starts at or after the layer's end ({layer_dur:.3f} s)"
+                )
             if layer_dur and b > layer_dur + slack:
-                die(f"--place {a:g}-{b:g}@{at:g}: the layer is only {layer_dur:.3f} s long")
+                die(
+                    f"--place {a:g}-{b:g}@{at:g}: the layer is only {layer_dur:.3f} s long"
+                )
             if main_dur and at >= main_dur:
-                die(f"--place {a:g}-{b:g}@{at:g}: starts after the main video ends ({main_dur:.3f} s)")
-        chain = [square_pixels(pip_meta["video"])] if square_pixels(pip_meta["video"]) else []
+                die(
+                    f"--place {a:g}-{b:g}@{at:g}: starts after the main video ends ({main_dur:.3f} s)"
+                )
+        chain = (
+            [square_pixels(pip_meta["video"])]
+            if square_pixels(pip_meta["video"])
+            else []
+        )
         iw, ih = display_size(pip_meta["video"])
-        lw = int(vw * args.scale_percent / 100) if args.scale_percent else args.scale or iw
-        lh = _scaled_height(lw, iw, ih, 2) if (args.scale_percent or args.scale) and iw and ih else ih
+        lw = (
+            int(vw * args.scale_percent / 100)
+            if args.scale_percent
+            else args.scale or iw
+        )
+        lh = (
+            _scaled_height(lw, iw, ih, 2)
+            if (args.scale_percent or args.scale) and iw and ih
+            else ih
+        )
         if args.scale_percent:
             chain.append(f"scale={lw}:-2")
         elif args.scale:
             chain.append(f"scale={args.scale}:-2")
         # an alpha line composites at 4:4:4: the layer is not taken through 4:2:0 on the way
         # a 10-bit layer over a main overlay_format() composites at 10 bits stays 10-bit
-        deep = bool(overlay_format(meta)) and (pip_meta["video"].get("bit_depth") or 8) > 8
+        deep = (
+            bool(overlay_format(meta)) and (pip_meta["video"].get("bit_depth") or 8) > 8
+        )
         keyed_601 = False
         if alpha_codec and is_rgb(pip_meta) and rgb_chain_to_bt709(meta):
             # an RGB layer (qtrle, PNG in .mov) on an alpha line that is BT.709 (a BT.709-tagged
@@ -620,37 +976,58 @@ def main() -> int:
                 # chromakey turns its RGB key into YUV with BT.601 whatever the frames say, so the
                 # layer is keyed as BT.601 YUV (what it was before #496, and what the key is
                 # computed in) and taken to the line's BT.709 after the key
-                chain.append(pal + "scale=out_color_matrix=bt601:out_range=tv,format=yuva444p")
+                chain.append(
+                    pal + "scale=out_color_matrix=bt601:out_range=tv,format=yuva444p"
+                )
                 keyed_601 = True
             else:
                 chain.append(pal + rgb_chain_to_bt709(meta).lstrip(","))
         else:
-            chain.append("format=yuva444p" if alpha_codec else "format=yuva420p10le" if deep else "format=yuva420p")
+            chain.append(
+                "format=yuva444p"
+                if alpha_codec
+                else "format=yuva420p10le" if deep else "format=yuva420p"
+            )
         if args.chromakey:
-            chain.append(f"chromakey={args.chromakey}:{args.chromakey_similarity:g}:{args.chromakey_blend:g}")
+            chain.append(
+                f"chromakey={args.chromakey}:{args.chromakey_similarity:g}:{args.chromakey_blend:g}"
+            )
             if keyed_601:
-                chain.append("scale=in_color_matrix=bt601:out_color_matrix=bt709:in_range=tv:out_range=tv,format=yuva444p")
+                chain.append(
+                    "scale=in_color_matrix=bt601:out_color_matrix=bt709:in_range=tv:out_range=tv,format=yuva444p"
+                )
         if args.opacity < 1:
             # the alpha is scaled in YUV: colorchannelmixer takes RGB only, so FFmpeg converted the
             # layer to RGB and overlay=format=auto then composited the whole main picture in RGB,
             # which came back BT.601 under the BT.709 tag (#333's defect, on this path)
             chain.append(f"lut=y=val:u=val:v=val:a=val*{args.opacity:g}")
-        x, y = position_exprs(args.position, args.margin, text_mode=False, margins=safe_margins)
+        x, y = position_exprs(
+            args.position, args.margin, text_mode=False, margins=safe_margins
+        )
         grid = on_grid(x, y, (vw, vh), (lw, lh))
         if grid:
             x, y = grid[0], grid[1]
             if grid[2]:
                 # padded at 4:4:4, where a one-pixel offset is exact; overlay takes the layer back
                 # to the main's 4:2:0 on its own grid, as the layer is now aligned with it
-                if not any(c.endswith("yuva444p") or c.endswith("yuva444p10le") for c in chain):
+                if not any(
+                    c.endswith("yuva444p") or c.endswith("yuva444p10le") for c in chain
+                ):
                     chain.append("format=yuva444p10le" if deep else "format=yuva444p")
                 chain.append(grid[2])
         # a --start/--end window is in the layer's position, which is evaluated on the main
         # picture's frames; overlay's enable is evaluated on the layer's frames too
-        ov = f"overlay={windowed_overlay_x(x, enable) if enable else x}:{y}" + (overlay_format(meta) or ":format=auto")
+        ov = f"overlay={windowed_overlay_x(x, enable) if enable else x}:{y}" + (
+            overlay_format(meta) or ":format=auto"
+        )
         # a VP9 layer stored with an alpha layer is decoded with libvpx-vp9: FFmpeg's own decoder
         # drops the alpha, and the layer covered the picture as an opaque rectangle
-        cmd = ffmpeg_base() + ["-i", args.input] + decoder_args_for(pip_meta, args.video) + ["-i", args.video]
+        cmd = (
+            ffmpeg_base()
+            + ["-i", args.input]
+            + decoder_args_for(pip_meta, args.video)
+            + ["-i", args.video]
+        )
         # both pictures converted by their own colour tags to the BT.709 the output is tagged with;
         # beside a converted one an untagged one gets its BT.709 label, tags only, so 7.1+'s
         # overlay does not convert one to the other's "unknown" (BT.601) matrix
@@ -660,14 +1037,21 @@ def main() -> int:
             # converted to BT.709 YUV with its alpha plane: the 4:4:4 the conversion ends in had none,
             # and the layer covered the picture as an opaque rectangle
             pip = pip.replace("format=yuv444p", "format=yuva444p")
+
         # an untagged picture is labelled beside a converted one, and beside a tagged one too: FFmpeg
         # 8.0's overlay negotiates one colorspace for both inputs, and a BT.709-tagged main under an
         # untagged PiP was converted to the PiP's "unknown" (BT.601) matrix, away from the PiP too
         # (C03028 at 80/110/192 came back 88/103/192 on 8.0.1). Two untagged pictures agree as they are.
         def tagged(m: Dict[str, Any]) -> bool:
-            return ((m.get("video") or {}).get("color_space") or "unknown") not in ("unknown", "unspecified")
+            return ((m.get("video") or {}).get("color_space") or "unknown") not in (
+                "unknown",
+                "unspecified",
+            )
+
         if base or pip or tagged(meta) != tagged(pip_meta):
-            base, pip = base or label_chain(meta, meta), pip or label_chain(pip_meta, meta)
+            base, pip = base or label_chain(meta, meta), pip or label_chain(
+                pip_meta, meta
+            )
         # overlay mixes samples: a full-range picture is taken to limited range (#410)
         base, pip = base + range_chain(meta, meta), pip + range_chain(pip_meta, meta)
         if placements:
@@ -676,7 +1060,11 @@ def main() -> int:
             pieces = len(placements)
             # trim selects by timestamp: start the layer's at 0 so SRC_START/SRC_END count from its
             # first picture even when its video stream starts later than the file (audio first)
-            fc = f"[1:v]setpts=PTS-STARTPTS,{pip}{','.join(chain)},split={pieces}" + "".join(f"[p{i}]" for i in range(pieces)) + ";"
+            fc = (
+                f"[1:v]setpts=PTS-STARTPTS,{pip}{','.join(chain)},split={pieces}"
+                + "".join(f"[p{i}]" for i in range(pieces))
+                + ";"
+            )
             for i, (a, b, at) in enumerate(placements):
                 fc += f"[p{i}]trim=start={a:.6f}:end={b:.6f},setpts=PTS-STARTPTS+{at:.6f}/TB[q{i}];"
             prev = f"[0:v]{base}null[m]" if base else None
@@ -685,12 +1073,24 @@ def main() -> int:
             cur = "[m]" if base else "[0:v]"
             for i in range(pieces):
                 nxt = "[out]" if i == pieces - 1 else f"[m{i}]"
-                fc += f"{cur}[q{i}]{ov}:eof_action=pass{nxt}" + ("" if i == pieces - 1 else ";")
+                fc += f"{cur}[q{i}]{ov}:eof_action=pass{nxt}" + (
+                    "" if i == pieces - 1 else ";"
+                )
                 cur = nxt
         else:
-            fc = (f"[1:v]{pip}{','.join(chain)}[ov];"
-                  + (f"[0:v]{base}null[base];[base]" if base else "[0:v]") + f"[ov]{ov}[out]")
-        cmd += ["-filter_complex", fc, "-map", "[out]", "-map", f"0:a:{args.audio_stream}?"]
+            fc = (
+                f"[1:v]{pip}{','.join(chain)}[ov];"
+                + (f"[0:v]{base}null[base];[base]" if base else "[0:v]")
+                + f"[ov]{ov}[out]"
+            )
+        cmd += [
+            "-filter_complex",
+            fc,
+            "-map",
+            "[out]",
+            "-map",
+            f"0:a:{args.audio_stream}?",
+        ]
         if meta.get("duration"):
             # See the --image branch above: -t (exact, bounds only the main input) instead of
             # -shortest (would also stop at a preserved subtitle/data stream that ends earlier).
@@ -699,26 +1099,63 @@ def main() -> int:
             cmd += ["-shortest"]
     else:
         args.text = _wrap_to_frame(args, vw, safe_margins, vh)
-        x, y = position_exprs(args.position, args.margin, text_mode=True, margins=safe_margins)
+        x, y = position_exprs(
+            args.position, args.margin, text_mode=True, margins=safe_margins
+        )
         # 1.15: the text goes in a FILE with expansion off, so `'` and `%` survive verbatim
         # (they used to be dropped by escape_drawtext) and no character can reach the graph parser.
-        font_opt = (drawtext_fontfile(args.font_file) if args.font_file
-                    else f"font='{escape_drawtext(args.font)}'")
-        alpha = alpha_expr(args.opacity, start if start is not None else (0.0 if args.fade > 0 else None), end, args.fade)
-        timing = ([f"alpha='{alpha}'"] if alpha != "1" else []) + ([f"enable='{enable}'"] if enable else [])
-        box = ["box=1", f"boxcolor={args.box_color}", "boxborderw=12"] if args.box else []
+        font_opt = (
+            drawtext_fontfile(args.font_file)
+            if args.font_file
+            else f"font='{escape_drawtext(args.font)}'"
+        )
+        alpha = alpha_expr(
+            args.opacity,
+            start if start is not None else (0.0 if args.fade > 0 else None),
+            end,
+            args.fade,
+        )
+        timing = ([f"alpha='{alpha}'"] if alpha != "1" else []) + (
+            [f"enable='{enable}'"] if enable else []
+        )
+        box = (
+            ["box=1", f"boxcolor={args.box_color}", "boxborderw=12"] if args.box else []
+        )
         if is_multiline(args.text) and drawtext_draws_newline_glyph():
             # this release's drawtext draws the font's missing-glyph box at every line break and
             # counts it in text_w: one drawtext per line, placed where one block would put it
-            drawing = per_line_drawtext(drawtext_clean(args.text).split("\n"), x, y, font_opt, args, box, timing)
+            drawing = per_line_drawtext(
+                drawtext_clean(args.text).split("\n"), x, y, font_opt, args, box, timing
+            )
         else:
-            opts = [drawtext_text_opts(args.text), f"fontsize={args.font_size}", f"x={x}", f"y={y}",
-                    f"borderw={args.border}", f"bordercolor={args.border_color}", font_opt,
-                    f"fontcolor={args.font_color}"] + timing[:1] + box + timing[1:]
+            opts = (
+                [
+                    drawtext_text_opts(args.text),
+                    f"fontsize={args.font_size}",
+                    f"x={x}",
+                    f"y={y}",
+                    f"borderw={args.border}",
+                    f"bordercolor={args.border_color}",
+                    font_opt,
+                    f"fontcolor={args.font_color}",
+                ]
+                + timing[:1]
+                + box
+                + timing[1:]
+            )
             drawing = "drawtext=" + ":".join(opts)
         # a font/border/box colour with chroma lands in the BT.709 the output is tagged with
-        colours = [args.font_color] + ([args.border_color] if args.border else []) + ([args.box_color] if args.box else [])
-        cmd += ["-vf", (square + "," if square else "") + drawn_chain(drawing, meta, colours), "-map", "0:v:0"]
+        colours = (
+            [args.font_color]
+            + ([args.border_color] if args.border else [])
+            + ([args.box_color] if args.box else [])
+        )
+        cmd += [
+            "-vf",
+            (square + "," if square else "") + drawn_chain(drawing, meta, colours),
+            "-map",
+            "0:v:0",
+        ]
         if meta.get("audio"):
             cmd += ["-map", f"0:a:{args.audio_stream}"]
 
@@ -734,8 +1171,13 @@ def main() -> int:
         cmd[first:first] = decoder_args_for(meta, args.input)
         if "-filter_complex" in cmd:
             i = cmd.index("-filter_complex") + 1
-            cmd[i] = (f"[0:v]{source_format(meta)}[ka0];" + cmd[i].replace("[0:v]", "[ka0]").replace(":format=auto", ":format=yuv444")
-                      + f";[out]{finish}[ka_v]")
+            cmd[i] = (
+                f"[0:v]{source_format(meta)}[ka0];"
+                + cmd[i]
+                .replace("[0:v]", "[ka0]")
+                .replace(":format=auto", ":format=yuv444")
+                + f";[out]{finish}[ka_v]"
+            )
             cmd[cmd.index("[out]")] = "[ka_v]"
         else:
             i = cmd.index("-vf") + 1
@@ -743,9 +1185,13 @@ def main() -> int:
         cmd += video_line(alpha_codec) + tag_args(meta) + cfr_args(meta)
         cmd += audio_line(alpha_codec) if meta.get("audio") else ["-an"]
         if STATE.hw:
-            note(f"--hw: --alpha-codec {alpha_codec} stays on the CPU (no VideoToolbox encoder writes it with its alpha)")
+            note(
+                f"--hw: --alpha-codec {alpha_codec} stays on the CPU (no VideoToolbox encoder writes it with its alpha)"
+            )
     else:
-        cmd += video_args(meta, args.crf, args.preset, convert_matrix=not args.video) + cfr_args(meta)
+        cmd += video_args(
+            meta, args.crf, args.preset, convert_matrix=not args.video
+        ) + cfr_args(meta)
         cmd += aac_args() if meta.get("audio") else ["-an"]
     if cfr_filter(meta):
         # the conform of a VFR source is the fps filter (in a graph, on the main picture as it is
@@ -760,7 +1206,10 @@ def main() -> int:
     if not STATE.dry_run:
         result = probe(output, role="output")
         info(f"wrote {output} ({fmt_secs(result['duration'])})")
-    extra = {"dropped_non_av_streams": dropped_streams, **({"font_used": font_used} if args.text else {})}
+    extra = {
+        "dropped_non_av_streams": dropped_streams,
+        **({"font_used": font_used} if args.text else {}),
+    }
     # a layer adds coverage: with --keep-alpha the written alpha is at or above the main input's in
     # every frame; without it, an output that lost the main input's used alpha fails the `alpha` step
     alpha_report(args, alpha_codec, src_alpha, output, extra, composite=True)
