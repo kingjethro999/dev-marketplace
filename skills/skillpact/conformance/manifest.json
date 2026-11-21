@@ -1,0 +1,673 @@
+{
+  "suite": "skillpact-conformance",
+  "spec_version": "0.8",
+  "test_public_key": "ed25519:h4z5ZqAU97RzV18w3J26PraX7BcDlTuQY+BUIXN99ag=",
+  "cases": [
+    {
+      "id": "valid-minimal",
+      "description": "最小の有効な契約",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "valid-old-0.1",
+      "description": "旧版 0.1 も有効",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "valid-old-0.2",
+      "description": "旧版 0.2 も有効",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "valid-old-0.3",
+      "description": "旧版 0.3 も有効",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "valid-old-0.4",
+      "description": "旧版 0.4 も有効",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "version-unknown-major",
+      "description": "知らない major 版は拒否",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "CONTRACT_VERSION_UNSUPPORTED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "version-unknown-0x",
+      "description": "知らない 0.x 版は拒否",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "CONTRACT_VERSION_UNSUPPORTED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "schema-unknown-top-key",
+      "description": "x 以外の未知キーは拒否",
+      "expect": {
+        "valid": false,
+        "warnings_include": [],
+        "errors_any": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "id": "x-extension-ignored",
+      "description": "x.<vendor> は無視して有効",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "x-bad-vendor-name",
+      "description": "vendor 名の形式違反",
+      "expect": {
+        "valid": false,
+        "warnings_include": [],
+        "errors_any": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "id": "scope-empty",
+      "description": "scoped で scope 空",
+      "expect": {
+        "valid": false,
+        "warnings_include": [],
+        "errors_any": [
+          "SCHEMA",
+          "SCOPE_EMPTY"
+        ]
+      }
+    },
+    {
+      "id": "unknown-variable",
+      "description": "未定義の $ 変数は警告",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [
+          "UNKNOWN_VARIABLE"
+        ]
+      }
+    },
+    {
+      "id": "undeclared-effect",
+      "description": "effects に none の区分",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "UNDECLARED_EFFECT"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "dup-capability",
+      "description": "capability id の重複",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "DUP_CAPABILITY"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "high-risk-send-any",
+      "description": "send:any は警告",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [
+          "HIGH_RISK"
+        ]
+      }
+    },
+    {
+      "id": "scope-widened",
+      "description": "capability ごとの範囲が上限を超える",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "SCOPE_WIDENED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "unknown-requirement",
+      "description": "存在しない requirement",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "UNKNOWN_REQUIREMENT"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "test-unknown-capability",
+      "description": "テストが未知の capability を参照",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "TEST_UNKNOWN_CAPABILITY"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "name-mismatch",
+      "description": "skill.name と SKILL.md の不一致",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "NAME_MISMATCH"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "signed-jcs-valid",
+      "description": "JCS 署名（テスト鍵）が有効",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "signed-jcs-tampered",
+      "description": "署名後に改ざん",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "SIGNATURE_INVALID"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "integrity-mismatch",
+      "description": "ハッシュ不一致",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_MISMATCH"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "json-duplicate-key",
+      "description": "重複キーを含む JSON は拒否",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "CONTRACT_JSON"
+        ]
+      }
+    },
+    {
+      "id": "v07-valid-minimal",
+      "description": "0.7 の最小の有効な契約（name とフォルダ名が一致）",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v07-name-dir-mismatch",
+      "description": "0.7 では name とフォルダ名の不一致はエラー",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "FM_NAME_DIR"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v06-name-dir-mismatch-warn",
+      "description": "0.6 以前は不一致は警告のみ",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [
+          "FM_NAME_DIR"
+        ]
+      }
+    },
+    {
+      "id": "v07-network-local",
+      "description": "network の @local（ループバックと社内網）",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v07-unknown-scope-token",
+      "description": "未定義の @ トークンは警告",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [
+          "UNKNOWN_SCOPE_TOKEN"
+        ]
+      }
+    },
+    {
+      "id": "v07-reviewer-signature",
+      "description": "reviewer の署名（役割つき）も検証できる",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v07-bad-role",
+      "description": "未定義の署名 role はスキーマ違反",
+      "expect": {
+        "valid": false,
+        "errors_any": [
+          "SCHEMA"
+        ]
+      }
+    },
+    {
+      "id": "v08-valid-signed",
+      "description": "0.8: every file listed, author signature over {contract, role}",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e1-unlisted-entry",
+      "description": "E1: a file in the skill directory is not in integrity.files",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_UNLISTED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e1b-empty-files",
+      "description": "E1b: empty integrity.files",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_EMPTY"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e1c-claude-md-excluded",
+      "description": "E1c: protected files cannot be excluded",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_UNLISTED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-exclude-cache-ok",
+      "description": "integrity.exclude may skip non-protected files",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e2-role-relabel",
+      "description": "E2: reviewer signature relabelled as author",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "SIGNATURE_INVALID"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e3-path-traversal",
+      "description": "E3: '..' and absolute paths in integrity.files",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_PATH"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e4-symlink",
+      "description": "E4: symbolic link inside the skill directory",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_PATH"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e6-scope-traversal",
+      "description": "E6: '..' in a path scope",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "SCOPE_TRAVERSAL"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-glob-star-one-segment",
+      "description": "H3: '*' stays in one segment, so '**' is wider",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "SCOPE_WIDENED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e7-dup-signature",
+      "description": "E7: same key signs twice, one entry invalid",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "DUP_SIGNATURE",
+          "SIGNATURE_INVALID"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-e9-undeclared-network",
+      "description": "E9: network:true test without a network permission",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "TEST_UNDECLARED_NETWORK"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-m7-unconfirmed-draft",
+      "description": "M7: init draft cannot pass L1",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "UNCONFIRMED_DRAFT"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-legacy-unlisted-warn",
+      "description": "0.7: unlisted file is a warning (L3 still refused by conformance)",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [
+          "INTEGRITY_UNLISTED"
+        ]
+      }
+    },
+    {
+      "id": "v08r-bytecode-unlisted",
+      "description": "N1: bytecode is not excluded by default (an unchecked .pyc can shadow a signed .py)",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_UNLISTED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08r-exclude-code",
+      "description": "N2: code files cannot be excluded",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_UNLISTED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08r-exclude-pth",
+      "description": "N4: start-up hooks (*.pth) cannot be excluded",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "INTEGRITY_UNLISTED"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08r-legacy-role-unsigned",
+      "description": "N3: before 0.8 the role is not signed; valid, but warned and never L3",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [
+          "SIGNATURE_ROLE_UNSIGNED"
+        ]
+      }
+    },
+    {
+      "id": "v08x-runtime-valid",
+      "description": "0.8.x: x.runtime declares progress events and error classes; the events emitted match",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [],
+        "test": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "id": "v08x-runtime-bad-class",
+      "description": "0.8.x: an error class outside input / environment / engine / policy / transient",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "RUNTIME_DECL"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08x-runtime-bad-stream",
+      "description": "0.8.x: progress stream must be stderr or stdout",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "RUNTIME_DECL"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08x-runtime-class-conflict",
+      "description": "0.8.x: one error code in two classes (contract and capability)",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "RUNTIME_DECL"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08x-progress-bad-event",
+      "description": "0.8.x runner: percent goes down, an undeclared step, percent over 100 and no eta_s",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [],
+        "test": {
+          "ok": false,
+          "failures_include": [
+            "PROGRESS_EVENT"
+          ]
+        }
+      }
+    },
+    {
+      "id": "v08x-progress-missing",
+      "description": "0.8.x runner: a case tagged progress emits no event",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [],
+        "test": {
+          "ok": false,
+          "failures_include": [
+            "PROGRESS_MISSING"
+          ]
+        }
+      }
+    },
+    {
+      "id": "v08x-error-unclassified",
+      "description": "0.8.x runner: the op returns an error code that has no class",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [],
+        "test": {
+          "ok": false,
+          "failures_include": [
+            "ERROR_UNCLASSIFIED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "v08x-error-classified",
+      "description": "0.8.x runner: the op returns a declared error code",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [],
+        "test": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "id": "v08x-idempotency-nondeterministic",
+      "description": "0.8.x runner: declares bit_exact, but its output changes from run to run",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [],
+        "test": {
+          "ok": false,
+          "failures_include": [
+            "IDEMPOTENCY_DIFFERS"
+          ]
+        }
+      }
+    },
+    {
+      "id": "v08x-idempotency-deterministic",
+      "description": "0.8.x runner: declares bit_exact, and a second run gives the same bytes",
+      "expect": {
+        "valid": true,
+        "errors": [],
+        "warnings_include": [],
+        "test": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "id": "v08x-idempotency-contradiction",
+      "description": "0.8.x: idempotency bit_exact with idempotent: false",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "RUNTIME_DECL"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08x-idempotency-bad-value",
+      "description": "0.8.x: idempotency must be bit_exact, content_equivalent or none",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "RUNTIME_DECL"
+        ],
+        "warnings_include": []
+      }
+    },
+    {
+      "id": "v08-json-bigint",
+      "description": "M2: integer outside +-(2^53-1) is not I-JSON",
+      "expect": {
+        "valid": false,
+        "errors": [
+          "CONTRACT_JSON"
+        ],
+        "warnings_include": []
+      }
+    }
+  ]
+}
