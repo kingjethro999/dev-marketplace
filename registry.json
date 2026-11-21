@@ -188,8 +188,8 @@
       "periderm",
       "code-review-quality"
     ],
-    "files": ["SKILL.md", "config", "scripts", "templates"],
-    "hash": "93f5811af677bbee60621780f970f7e9847bb3de4c8386bee936854d4808ea85"
+    "files": ["SKILL.md", "config", "scripts", "templates", "tests"],
+    "hash": "b17a79f7dbc3a11e6fab56136052ffcee81eee2d41729e09c552a4114007d467"
   },
   {
     "name": "break-ui",

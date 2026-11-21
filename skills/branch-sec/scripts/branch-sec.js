@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Branch Security - Configure GitHub/GitLab branch protection
- * Uses gh CLI to apply protection rules, requires Periderm status checks
+ * Branch Security - Configure GitHub branch protection
+ * Uses gh CLI to apply protection rules, requires Periderm status checks,
+ * and supports --dry-run and --json inspection.
  */
 
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-
-const SKILL_DIR = path.resolve(__dirname, "..");
-const TEMPLATES_DIR = path.join(SKILL_DIR, "templates");
 
 const COLORS = {
   reset: "\x1b[0m",
@@ -25,7 +23,10 @@ const COLORS = {
   gray: "\x1b[90m",
 };
 
+let JSON_MODE = false;
+
 function log(msg, color = "reset") {
+  if (JSON_MODE) return;
   console.log(`${COLORS[color]}${msg}${COLORS.reset}`);
 }
 
@@ -34,14 +35,17 @@ function error(msg) {
 }
 
 function success(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.green}✓ ${msg}${COLORS.reset}`);
 }
 
 function warn(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.yellow}⚠ ${msg}${COLORS.reset}`);
 }
 
 function info(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.blue}ℹ ${msg}${COLORS.reset}`);
 }
 
@@ -49,8 +53,8 @@ function section(title) {
   log(`\n${COLORS.bold}${COLORS.cyan}═══ ${title} ═══${COLORS.reset}\n`);
 }
 
-function loadConfig() {
-  const configPath = path.join(process.cwd(), "branch-sec.json");
+function loadConfig(cwd = process.cwd()) {
+  const configPath = path.join(cwd, "branch-sec.json");
   const defaults = {
     branchProtection: {
       enabled: true,
@@ -104,6 +108,10 @@ function deepMerge(target, source) {
   return result;
 }
 
+function isWildcardBranch(branch) {
+  return /[*?\[]/.test(String(branch || ""));
+}
+
 function checkGhCli() {
   const r = spawnSync("gh", ["--version"], { encoding: "utf8" });
   return r.status === 0;
@@ -114,78 +122,11 @@ function getRepo() {
     encoding: "utf8",
   });
   if (r.status !== 0) return null;
-  return JSON.parse(r.stdout).nameWithOwner;
-}
-
-function cmdAudit() {
-  section("Branch Security Audit");
-
-  if (!checkGhCli()) {
-    error("GitHub CLI (gh) not installed. Install: https://cli.github.com/");
-    process.exit(1);
+  try {
+    return JSON.parse(r.stdout).nameWithOwner;
+  } catch {
+    return null;
   }
-
-  const repo = getRepo();
-  if (!repo) {
-    error("Not in a GitHub repo or not authenticated. Run: gh auth login");
-    process.exit(1);
-  }
-
-  info(`Repository: ${repo}`);
-
-  const config = loadConfig();
-  let score = 0,
-    max = 0;
-
-  const checks = [
-    {
-      name: "Commit template configured",
-      check: () => checkGitConfig("commit.template"),
-    },
-    {
-      name: "Signed commits enforced",
-      check: () => checkGitConfig("commit.gpgsign"),
-    },
-    {
-      name: "Periderm workflow exists",
-      check: () => fs.existsSync(".github/workflows/periderm-pr.yml"),
-    },
-    {
-      name: "Periderm status check configured",
-      check: () => checkStatusCheck("periderm-scan"),
-    },
-  ];
-
-  for (const c of checks) {
-    max++;
-    if (c.check()) {
-      success(c.name);
-      score++;
-    } else warn(`${c.name} - MISSING`);
-  }
-
-  // Check branch protection via API
-  for (const branch of config.branchProtection.branches) {
-    max++;
-    const r = spawnSync(
-      "gh",
-      [
-        "api",
-        `repos/${repo}/branches/${branch.replace("**", "main")}/protection`,
-      ],
-      { encoding: "utf8" },
-    );
-    if (r.status === 0) {
-      success(`Branch protection: ${branch}`);
-      score++;
-    } else warn(`Branch protection: ${branch} - NOT CONFIGURED`);
-  }
-
-  log(
-    `\n${COLORS.bold}Score: ${score}/${max} (${Math.round((score / max) * 100)}%)${COLORS.reset}`,
-  );
-  if (score < max)
-    info("Run `node branch-sec.js apply` to configure missing items");
 }
 
 function checkGitConfig(key) {
@@ -194,15 +135,138 @@ function checkGitConfig(key) {
 }
 
 function checkStatusCheck(context) {
-  // Check if workflow exists with this job name
   const workflowPath = ".github/workflows/periderm-pr.yml";
   if (!fs.existsSync(workflowPath)) return false;
   const content = fs.readFileSync(workflowPath, "utf8");
   return content.includes(context);
 }
 
-function cmdApply() {
+function buildProtectionPayload(config) {
+  const bp = config.branchProtection;
+  return {
+    required_status_checks: {
+      strict: true,
+      contexts: bp.requireStatusChecks,
+    },
+    enforce_admins: bp.restrictPushes,
+    required_pull_request_reviews: {
+      required_approving_review_count: bp.requireReviews,
+      dismiss_stale_reviews: bp.dismissStaleReviews,
+      require_code_owner_reviews: false,
+    },
+    restrictions: null,
+    required_linear_history: bp.requireLinearHistory,
+    allow_force_pushes: false,
+    allow_deletions: false,
+    required_signatures: bp.requireSignedCommits,
+    required_conversation_resolution: bp.requireConversationResolution,
+  };
+}
+
+function cmdAudit(options) {
+  section("Branch Security Audit");
+
+  const config = loadConfig();
+  const report = {
+    repo: null,
+    checks: [],
+    branches: [],
+    wildcardBranches: [],
+    score: 0,
+    max: 0,
+  };
+
+  const localChecks = [
+    {
+      name: "Commit template configured",
+      passed: checkGitConfig("commit.template"),
+    },
+    {
+      name: "Signed commits enforced",
+      passed: checkGitConfig("commit.gpgsign"),
+    },
+    {
+      name: "Periderm workflow exists",
+      passed: fs.existsSync(".github/workflows/periderm-pr.yml"),
+    },
+    {
+      name: "Periderm status check configured",
+      passed: checkStatusCheck(
+        config.peridermCheck.contextName || "periderm-scan",
+      ),
+    },
+  ];
+
+  for (const c of localChecks) {
+    report.max++;
+    report.checks.push(c);
+    if (c.passed) {
+      success(c.name);
+      report.score++;
+    } else {
+      warn(`${c.name} - MISSING`);
+    }
+  }
+
+  if (checkGhCli()) {
+    const repo = getRepo();
+    report.repo = repo;
+    if (repo) {
+      info(`Repository: ${repo}`);
+      for (const branch of config.branchProtection.branches) {
+        if (isWildcardBranch(branch)) {
+          report.wildcardBranches.push(branch);
+          warn(
+            `Wildcard pattern "${branch}" requires GitHub Rulesets (classic branch protection API takes concrete branch names)`,
+          );
+          continue;
+        }
+        report.max++;
+        const r = spawnSync(
+          "gh",
+          [
+            "api",
+            `repos/${repo}/branches/${encodeURIComponent(branch)}/protection`,
+          ],
+          { encoding: "utf8" },
+        );
+        const protectedOk = r.status === 0;
+        report.branches.push({ branch, protected: protectedOk });
+        if (protectedOk) {
+          success(`Branch protection: ${branch}`);
+          report.score++;
+        } else {
+          warn(`Branch protection: ${branch} - NOT CONFIGURED`);
+        }
+      }
+    } else {
+      warn("Not authenticated with GitHub CLI; skipping remote branch checks");
+    }
+  } else {
+    warn("GitHub CLI (gh) not installed; skipping remote branch checks");
+  }
+
+  if (options.json) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+
+  log(
+    `\n${COLORS.bold}Score: ${report.score}/${report.max} (${Math.round((report.score / Math.max(report.max, 1)) * 100)}%)${COLORS.reset}`,
+  );
+  if (report.score < report.max) {
+    info("Run `node branch-sec.js apply` to configure missing items");
+  }
+}
+
+function cmdApply(options) {
   section("Applying Branch Security Configuration");
+
+  const config = loadConfig();
+
+  if (options.dryRun) {
+    return cmdProtectBranches(options);
+  }
 
   if (!checkGhCli()) {
     error("GitHub CLI (gh) not installed. Install: https://cli.github.com/");
@@ -214,8 +278,6 @@ function cmdApply() {
     error("Not authenticated. Run: gh auth login");
     process.exit(1);
   }
-
-  const config = loadConfig();
 
   // 1. Generate commit template
   if (config.commitTemplate.enabled) {
@@ -249,7 +311,11 @@ function cmdApply() {
   // 3. Apply branch protection via GitHub API
   if (config.branchProtection.enabled) {
     section("3/4 Branch Protection Rules");
-    for (const branch of config.branchProtection.branches) {
+    const targets =
+      options.branches.length > 0
+        ? options.branches
+        : config.branchProtection.branches;
+    for (const branch of targets) {
       applyBranchProtection(repo, branch, config);
     }
   }
@@ -336,14 +402,15 @@ jobs:
       - name: Run Periderm Scan
         id: scan
         run: |
-          periderm scan --json > periderm-results.json
+          periderm scan --json > periderm-results.json || true
+          periderm scan --sarif > periderm.sarif || true
           cat periderm-results.json
 
       - name: Check Thresholds
         run: |
           node -e "
             const fs = require('fs');
-            const data = JSON.parse(fs.readFileSync('periderm-results.json'));
+            const data = JSON.parse(fs.readFileSync('periderm-results.json', 'utf8'));
             const critical = (data.findings || []).filter(f => f.severity === 'critical').length;
             const high = (data.findings || []).filter(f => f.severity === 'high').length;
             console.log('Critical:', critical, 'High:', high);
@@ -353,9 +420,9 @@ jobs:
 
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('periderm.sarif') != ''
         with:
-          sarif_file: periderm-results.json
+          sarif_file: periderm.sarif
           category: periderm
 
       - name: Comment on PR
@@ -364,7 +431,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const data = JSON.parse(fs.readFileSync('periderm-results.json'));
+            const data = JSON.parse(fs.readFileSync('periderm-results.json', 'utf8'));
             const critical = (data.findings || []).filter(f => f.severity === 'critical').length;
             const high = (data.findings || []).filter(f => f.severity === 'high').length;
             const launch = data.launchConfidence || 0;
@@ -386,30 +453,15 @@ jobs:
 }
 
 function applyBranchProtection(repo, branchPattern, config) {
-  const bp = config.branchProtection;
-  const branch = branchPattern.replace("**", "main"); // Simplified for main branch
+  if (isWildcardBranch(branchPattern)) {
+    warn(
+      `Skipping wildcard pattern "${branchPattern}" — classic Branch Protection API only accepts concrete branch names. Configure a GitHub Ruleset for wildcard patterns.`,
+    );
+    return { skipped: true, reason: "wildcard", branch: branchPattern };
+  }
 
   log(`\nApplying protection to ${branchPattern}...`);
-
-  const rules = {
-    required_status_checks: {
-      strict: true,
-      contexts: bp.requireStatusChecks,
-    },
-    enforce_admins: bp.restrictPushes,
-    required_pull_request_reviews: {
-      required_approving_review_count: bp.requireReviews,
-      dismiss_stale_reviews: bp.dismissStaleReviews,
-      require_code_owner_reviews: false,
-    },
-    restrictions: null,
-    required_linear_history: bp.requireLinearHistory,
-    allow_force_pushes: false,
-    allow_deletions: false,
-    required_signatures: bp.requireSignedCommits,
-    required_conversation_resolution: bp.requireConversationResolution,
-  };
-
+  const rules = buildProtectionPayload(config);
   const rulesJson = JSON.stringify(rules);
   const result = spawnSync(
     "gh",
@@ -417,8 +469,8 @@ function applyBranchProtection(repo, branchPattern, config) {
       "api",
       "-X",
       "PUT",
-      `--input=-`,
-      `repos/${repo}/branches/${branch}/protection`,
+      "--input=-",
+      `repos/${repo}/branches/${encodeURIComponent(branchPattern)}/protection`,
     ],
     {
       encoding: "utf8",
@@ -428,8 +480,10 @@ function applyBranchProtection(repo, branchPattern, config) {
 
   if (result.status === 0) {
     success(`Branch protection applied to ${branchPattern}`);
+    return { applied: true, branch: branchPattern };
   } else {
     warn(`Failed for ${branchPattern}: ${result.stderr}`);
+    return { applied: false, branch: branchPattern, error: result.stderr };
   }
 }
 
@@ -452,8 +506,40 @@ function cmdGenTemplate() {
   success("Commit template created at .gitmessage");
 }
 
-function cmdProtectBranches() {
+function cmdProtectBranches(options) {
   section("Applying Branch Protection");
+  const config = loadConfig();
+  const targets =
+    options.branches.length > 0
+      ? options.branches
+      : config.branchProtection.branches;
+
+  const concrete = targets.filter((b) => !isWildcardBranch(b));
+  const wildcards = targets.filter((b) => isWildcardBranch(b));
+
+  if (options.dryRun) {
+    const payload = buildProtectionPayload(config);
+    const plan = {
+      dryRun: true,
+      branches: concrete.map((branch) => ({ branch, payload })),
+      wildcardBranches: wildcards,
+    };
+    if (options.json) {
+      console.log(JSON.stringify(plan, null, 2));
+    } else {
+      for (const b of concrete) {
+        info(`[dry-run] Would protect branch "${b}" with:`);
+        console.log(JSON.stringify(payload, null, 2));
+      }
+      for (const w of wildcards) {
+        warn(
+          `[dry-run] Wildcard "${w}" skipped — use GitHub Rulesets for branch patterns`,
+        );
+      }
+    }
+    return;
+  }
+
   if (!checkGhCli()) {
     error("gh CLI required");
     process.exit(1);
@@ -463,8 +549,7 @@ function cmdProtectBranches() {
     error("Not authenticated");
     process.exit(1);
   }
-  const config = loadConfig();
-  for (const branch of config.branchProtection.branches) {
+  for (const branch of targets) {
     applyBranchProtection(repo, branch, config);
   }
 }
@@ -478,10 +563,31 @@ function cmdAddPeridermCheck() {
   success("Periderm workflow created at .github/workflows/periderm-pr.yml");
 }
 
-function parseArgs() {
-  const args = process.argv.slice(2);
-  const cmd = args[0] || "help";
-  return cmd;
+function parseArgs(argv = process.argv.slice(2)) {
+  const opts = {
+    command: "help",
+    dryRun: false,
+    json: false,
+    branches: [],
+  };
+
+  let cmdSeen = false;
+  for (const arg of argv) {
+    if (arg === "--dry-run") opts.dryRun = true;
+    else if (arg === "--json") opts.json = true;
+    else if (arg === "--help" || arg === "-h") {
+      opts.command = "help";
+      cmdSeen = true;
+    } else if (!arg.startsWith("-")) {
+      if (!cmdSeen) {
+        opts.command = arg;
+        cmdSeen = true;
+      } else {
+        opts.branches.push(arg);
+      }
+    }
+  }
+  return opts;
 }
 
 function showHelp() {
@@ -489,15 +595,19 @@ function showHelp() {
 ${COLORS.bold}Branch Security${COLORS.reset}
 
 Usage:
-  node branch-sec.js <command>
+  node branch-sec.js <command> [branches...] [options]
 
 Commands:
-  audit                Check current branch protection status
-  apply                Apply all branch protections
-  gen-template         Generate commit template with security footer
-  protect-branches     Apply branch protection rules
-  add-periderm-check   Add Periderm required status check
-  help                 Show this help
+  audit                         Check current branch protection status
+  apply                         Apply all branch protections
+  gen-template                  Generate commit template with security footer
+  protect, protect-branches     Apply branch protection rules to configured or listed branches
+  add-periderm-check            Add Periderm required status check workflow
+  help                          Show this help
+
+Options:
+  --dry-run                     Preview API payloads without modifying GitHub/Git settings
+  --json                        Output machine-readable JSON
 
 Requires:
   - GitHub CLI (gh) authenticated: gh auth login
@@ -506,33 +616,45 @@ Requires:
 }
 
 function main() {
-  const cmd = parseArgs();
-  switch (cmd) {
+  const options = parseArgs();
+  JSON_MODE = options.json;
+
+  switch (options.command) {
     case "audit":
-      cmdAudit();
+      cmdAudit(options);
       break;
     case "apply":
-      cmdApply();
+      cmdApply(options);
       break;
     case "gen-template":
       cmdGenTemplate();
       break;
+    case "protect":
     case "protect-branches":
-      cmdProtectBranches();
+      cmdProtectBranches(options);
       break;
     case "add-periderm-check":
       cmdAddPeridermCheck();
       break;
     case "help":
-    case "--help":
-    case "-h":
       showHelp();
       break;
     default:
-      error(`Unknown: ${cmd}`);
+      error(`Unknown: ${options.command}`);
       showHelp();
       process.exit(1);
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  loadConfig,
+  parseArgs,
+  isWildcardBranch,
+  buildProtectionPayload,
+  generateCommitTemplate,
+  generatePeridermWorkflow,
+};
