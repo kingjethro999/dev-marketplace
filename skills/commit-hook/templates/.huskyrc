@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "pre-commit": "node .agents/skills/commit-hook/scripts/run-checks.js pre-commit",
+    "pre-push": "node .agents/skills/commit-hook/scripts/run-checks.js pre-push",
+    "commit-msg": "sh .agents/skills/commit-hook/templates/commit-msg"
+  }
+}
