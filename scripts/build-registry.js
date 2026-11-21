@@ -113,6 +113,53 @@ function serializeRegistry(entries) {
   return JSON.stringify(entries, null, 2) + "\n";
 }
 
+const CLAUDE_PLUGIN_NAME_OVERRIDES = {
+  "claude-md-management": "md-management",
+  "claude-security": "code-security",
+};
+
+function toClaudePluginName(skillName) {
+  if (CLAUDE_PLUGIN_NAME_OVERRIDES[skillName]) {
+    return CLAUDE_PLUGIN_NAME_OVERRIDES[skillName];
+  }
+  return skillName.replace(/^(claude-|anthropic-|anthropics-|cc-plugin-)/i, "");
+}
+
+function buildClaudeMarketplace(entries) {
+  const plugins = entries.map((entry) => {
+    const plugin = {
+      name: toClaudePluginName(entry.name),
+      source: `./skills/${entry.name}`,
+      description: entry.description || "AI agent skill",
+    };
+    if (entry.version) {
+      plugin.version = String(entry.version);
+    }
+    if (entry.category) {
+      plugin.category = entry.category;
+    }
+    if (Array.isArray(entry.tags) && entry.tags.length > 0) {
+      plugin.keywords = [...entry.tags];
+    }
+    return plugin;
+  });
+
+  return {
+    $schema: "https://anthropic.com/claude-code/marketplace.schema.json",
+    name: "dev-marketplace",
+    description:
+      "Curated marketplace of 133+ AI agent skills, security auditors, architecture blueprints, and automated engineering workflows for Claude Code and AI coding assistants.",
+    owner: {
+      name: "kingjethro999",
+    },
+    plugins,
+  };
+}
+
+function serializeClaudeMarketplace(manifest) {
+  return JSON.stringify(manifest, null, 2) + "\n";
+}
+
 function main() {
   const args = process.argv.slice(2);
   let checkOnly = false;
@@ -127,32 +174,62 @@ function main() {
   }
 
   const registryPath = path.join(rootDir, "registry.json");
+  const claudeMarketplacePath = path.join(
+    rootDir,
+    ".claude-plugin",
+    "marketplace.json",
+  );
   const entries = buildRegistry({ rootDir });
   const serialized = serializeRegistry(entries);
+  const claudeManifest = buildClaudeMarketplace(entries);
+  const serializedClaude = serializeClaudeMarketplace(claudeManifest);
 
   if (checkOnly) {
-    let matches = false;
+    let regMatches = false;
     if (fs.existsSync(registryPath)) {
       try {
         const parsedCurrent = JSON.parse(fs.readFileSync(registryPath, "utf8"));
-        matches = JSON.stringify(parsedCurrent) === JSON.stringify(entries);
+        regMatches = JSON.stringify(parsedCurrent) === JSON.stringify(entries);
       } catch {
-        matches = false;
+        regMatches = false;
       }
     }
-    if (!matches) {
-      console.error(
-        `✖ registry.json is out of sync with skills/ (${entries.length} skills discovered). Run: npm run build-registry`,
-      );
+    let claudeMatches = false;
+    if (fs.existsSync(claudeMarketplacePath)) {
+      try {
+        const parsedClaude = JSON.parse(
+          fs.readFileSync(claudeMarketplacePath, "utf8"),
+        );
+        claudeMatches =
+          JSON.stringify(parsedClaude) === JSON.stringify(claudeManifest);
+      } catch {
+        claudeMatches = false;
+      }
+    }
+    if (!regMatches || !claudeMatches) {
+      if (!regMatches) {
+        console.error(
+          `✖ registry.json is out of sync with skills/ (${entries.length} skills discovered). Run: npm run build-registry`,
+        );
+      }
+      if (!claudeMatches) {
+        console.error(
+          `✖ .claude-plugin/marketplace.json is out of sync with skills/ (${entries.length} skills discovered). Run: npm run build-registry`,
+        );
+      }
       process.exit(1);
     }
-    console.log(`✓ registry.json is up to date (${entries.length} skills).`);
+    console.log(
+      `✓ registry.json and .claude-plugin/marketplace.json are up to date (${entries.length} skills).`,
+    );
     return;
   }
 
   fs.writeFileSync(registryPath, serialized, "utf8");
+  fs.mkdirSync(path.dirname(claudeMarketplacePath), { recursive: true });
+  fs.writeFileSync(claudeMarketplacePath, serializedClaude, "utf8");
   console.log(
-    `✓ Built registry.json with ${entries.length} skills at ${registryPath}`,
+    `✓ Built registry.json and .claude-plugin/marketplace.json with ${entries.length} skills`,
   );
 }
 
@@ -163,4 +240,6 @@ if (require.main === module) {
 module.exports = {
   buildRegistry,
   serializeRegistry,
+  buildClaudeMarketplace,
+  serializeClaudeMarketplace,
 };

@@ -10,7 +10,10 @@ const {
   hashDirectory,
   isSafeSkillName,
 } = require("../lib/skill-utils");
-const { buildRegistry } = require("../scripts/build-registry");
+const {
+  buildRegistry,
+  buildClaudeMarketplace,
+} = require("../scripts/build-registry");
 
 function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -181,6 +184,21 @@ test("build-registry CLI --check detects drift and exits 0 once synced", () => {
     });
     assert.equal(writeRun.status, 0);
 
+    const claudeMarketplacePath = path.join(
+      root,
+      ".claude-plugin",
+      "marketplace.json",
+    );
+    assert.equal(fs.existsSync(claudeMarketplacePath), true);
+    const claudeMarketplace = JSON.parse(
+      fs.readFileSync(claudeMarketplacePath, "utf8"),
+    );
+    assert.equal(claudeMarketplace.name, "dev-marketplace");
+    assert.equal(claudeMarketplace.owner.name, "kingjethro999");
+    assert.equal(claudeMarketplace.plugins.length, 1);
+    assert.equal(claudeMarketplace.plugins[0].name, "demo");
+    assert.equal(claudeMarketplace.plugins[0].source, "./skills/demo");
+
     const checkSynced = spawnSync(
       process.execPath,
       [scriptPath, "--root", root, "--check"],
@@ -197,7 +215,40 @@ test("build-registry CLI --check detects drift and exits 0 once synced", () => {
       { encoding: "utf8" },
     );
     assert.equal(checkReformatted.status, 0);
+
+    // Removing .claude-plugin/marketplace.json must fail --check
+    fs.unlinkSync(claudeMarketplacePath);
+    const checkMissingClaude = spawnSync(
+      process.execPath,
+      [scriptPath, "--root", root, "--check"],
+      { encoding: "utf8" },
+    );
+    assert.equal(checkMissingClaude.status, 1);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("buildClaudeMarketplace builds valid Claude Code marketplace schema from entries", () => {
+  const manifest = buildClaudeMarketplace([
+    {
+      name: "alpha-skill",
+      description: "Alpha description",
+      category: "Design & UI",
+      tags: ["alpha-skill", "design-ui"],
+      version: "1.2.0",
+    },
+  ]);
+  assert.equal(manifest.name, "dev-marketplace");
+  assert.equal(manifest.owner.name, "kingjethro999");
+  assert.equal(Array.isArray(manifest.plugins), true);
+  assert.equal(manifest.plugins.length, 1);
+  assert.deepEqual(manifest.plugins[0], {
+    name: "alpha-skill",
+    source: "./skills/alpha-skill",
+    description: "Alpha description",
+    version: "1.2.0",
+    category: "Design & UI",
+    keywords: ["alpha-skill", "design-ui"],
+  });
 });

@@ -215,6 +215,91 @@ function validateMarketplace(options = {}) {
     }
   }
 
+  // 4. Validate .claude-plugin/marketplace.json exists and matches skills/ 1-to-1
+  const claudeMarketplacePath = path.join(
+    rootDir,
+    ".claude-plugin",
+    "marketplace.json",
+  );
+  if (!fs.existsSync(claudeMarketplacePath)) {
+    errors.push(
+      `Missing .claude-plugin/marketplace.json at ${claudeMarketplacePath}`,
+    );
+  } else {
+    try {
+      const manifest = JSON.parse(
+        fs.readFileSync(claudeMarketplacePath, "utf8"),
+      );
+      if (!manifest || typeof manifest !== "object") {
+        errors.push(".claude-plugin/marketplace.json must be a JSON object");
+      } else {
+        if (!manifest.name) {
+          errors.push('.claude-plugin/marketplace.json is missing "name"');
+        }
+        if (!manifest.owner || !manifest.owner.name) {
+          errors.push(
+            '.claude-plugin/marketplace.json is missing "owner.name"',
+          );
+        }
+        if (!Array.isArray(manifest.plugins)) {
+          errors.push(
+            '.claude-plugin/marketplace.json "plugins" must be an array',
+          );
+        } else {
+          const sourceMap = new Map();
+          const seenPluginNames = new Set();
+          for (const plugin of manifest.plugins) {
+            if (!plugin || !plugin.name) {
+              errors.push(
+                ".claude-plugin/marketplace.json contains plugin entry without a name",
+              );
+              continue;
+            }
+            if (seenPluginNames.has(plugin.name)) {
+              errors.push(
+                `.claude-plugin/marketplace.json contains duplicate plugin name: ${plugin.name}`,
+              );
+            }
+            seenPluginNames.add(plugin.name);
+            if (
+              /^(claude-|anthropic-|anthropics-|cc-plugin-)/i.test(plugin.name)
+            ) {
+              errors.push(
+                `.claude-plugin/marketplace.json contains reserved third-party plugin name: ${plugin.name}`,
+              );
+            }
+            if (plugin.source) {
+              sourceMap.set(plugin.source, plugin);
+            }
+          }
+
+          for (const name of skillDirs) {
+            const expectedSource = `./skills/${name}`;
+            const p = sourceMap.get(expectedSource);
+            if (!p) {
+              errors.push(
+                `.claude-plugin/marketplace.json is missing plugin for source: ${expectedSource}`,
+              );
+            }
+          }
+
+          const dirSet = new Set(skillDirs.map((n) => `./skills/${n}`));
+          for (const src of sourceMap.keys()) {
+            if (!dirSet.has(src)) {
+              errors.push(
+                `.claude-plugin/marketplace.json references nonexistent skill source: ${src}`,
+              );
+            }
+          }
+        }
+      }
+    } catch (err) {
+      errors.push(
+        `.claude-plugin/marketplace.json: Invalid JSON (${err.message})`,
+      );
+    }
+  }
+
   return {
     ok: errors.length === 0,
     skillCount: skillDirs.length,

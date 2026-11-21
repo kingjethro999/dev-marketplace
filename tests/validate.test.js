@@ -8,6 +8,7 @@ const { validateMarketplace } = require("../scripts/validate-skills");
 const {
   buildRegistry,
   serializeRegistry,
+  buildClaudeMarketplace,
 } = require("../scripts/build-registry");
 
 function makeTempDir(prefix) {
@@ -43,6 +44,11 @@ files:
   );
   const reg = buildRegistry({ rootDir: root });
   fs.writeFileSync(path.join(root, "registry.json"), serializeRegistry(reg));
+  fs.mkdirSync(path.join(root, ".claude-plugin"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, ".claude-plugin", "marketplace.json"),
+    JSON.stringify(buildClaudeMarketplace(reg), null, 2) + "\n",
+  );
   return root;
 }
 
@@ -94,6 +100,23 @@ test("validateMarketplace flags invalid JSON, JS syntax errors, and registry has
     assert.ok(res.errors.some((e) => e.includes("Invalid JSON")));
     assert.ok(res.errors.some((e) => e.includes("JS syntax error")));
     assert.ok(res.errors.some((e) => e.includes("hash mismatch")));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("validateMarketplace flags missing or out-of-sync .claude-plugin/marketplace.json", () => {
+  const root = createValidTempMarketplace();
+  try {
+    const claudePath = path.join(root, ".claude-plugin", "marketplace.json");
+    fs.unlinkSync(claudePath);
+    const resMissing = validateMarketplace({ rootDir: root });
+    assert.equal(resMissing.ok, false);
+    assert.ok(
+      resMissing.errors.some((e) =>
+        e.includes(".claude-plugin/marketplace.json"),
+      ),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

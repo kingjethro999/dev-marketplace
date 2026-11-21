@@ -1,0 +1,1028 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "dev-marketplace",
+  "description": "Curated marketplace of 133+ AI agent skills, security auditors, architecture blueprints, and automated engineering workflows for Claude Code and AI coding assistants.",
+  "owner": {
+    "name": "kingjethro999"
+  },
+  "plugins": [
+    {
+      "name": "animate",
+      "source": "./skills/animate",
+      "description": "Build an animation from scratch, making the decisions in the order that determines whether it feels right — should it animate at all, what purpose, which tool, which properties, which curve and duration, how it interrupts, how it exits. Writes the implementation. Use when asked to animate something, add motion, make a component feel alive, or build a transition. For critiquing existing motion use review-animations; for auditing a whole codebase use improve-animations.",
+      "category": "Video & Motion",
+      "keywords": ["animate", "video-motion"]
+    },
+    {
+      "name": "animate-expo",
+      "source": "./skills/animate-expo",
+      "description": "Build animations in React Native and Expo, making the decisions in the order that determines whether they feel right — should it animate, which thread it runs on, which properties, spring or timing, how the gesture hands off, how it degrades. Writes the implementation with Reanimated, Gesture Handler, Expo Router and expo-haptics. Use when animating anything in an Expo app, adding gestures, sheets, screen transitions, press feedback or haptics, or fixing motion that stutters on device. For web animation use `animate`.",
+      "category": "Video & Motion",
+      "keywords": ["animate-expo", "video-motion"]
+    },
+    {
+      "name": "animation-performance",
+      "source": "./skills/animation-performance",
+      "description": "Keep web animations inside the frame budget — animate composite-only properties, keep motion off the main thread when the page is busy, and find the cause when an animation drops frames. Use when an animation is janky, choppy, stutters, or drops frames; when choosing which property to animate; when deciding between CSS and JS animation on performance grounds; or when reaching for `will-change` or GPU layers. For choosing easing, duration, or whether to animate at all use animate; for reviewing motion as a whole use review-animations.",
+      "category": "Video & Motion",
+      "keywords": ["animation-performance", "video-motion"]
+    },
+    {
+      "name": "animation-vocabulary",
+      "source": "./skills/animation-vocabulary",
+      "description": "Reverse-lookup glossary that turns a vague description of a web animation or motion effect into its exact term (\"the bouncy thing when a popover opens\" → Pop in; \"the iOS rubber-band scroll\" → Rubber-banding). Use when the user asks \"what's it called when…\", or describes a motion effect without knowing its name and wants the right word to prompt an AI or designer with. For naming an effect, not designing or building one.",
+      "category": "Video & Motion",
+      "keywords": ["animation-vocabulary", "video-motion"]
+    },
+    {
+      "name": "apple-design",
+      "source": "./skills/apple-design",
+      "description": "Apple's approach to interface design and fluid, physical motion, translated for the web. Use when building or reviewing gesture-driven UI, spring animations, drag/swipe/sheet interactions, momentum and interruptible transitions, translucent materials and depth, typography (optical sizing, tracking, leading), reduced-motion, or the design foundations (feedback, spatial consistency, restraint) behind Apple-style interfaces.",
+      "category": "Design & UI",
+      "keywords": ["apple-design", "design-ui"]
+    },
+    {
+      "name": "artifacts-skill",
+      "source": "./skills/artifacts-skill",
+      "description": "Local-first execution and verification engine for real-world artifacts (PDF, PPTX, DOCX, XLSX, PNG/JPEG/WebP, HTML, SVG, CSV, Markdown, EPUB, video/audio media). Use it whenever you create or modify a document-like file and need to prove it is actually correct before calling the job done — inspect what a file really is, plan a mutation before touching it, execute it without overwriting the original, render it to images, run structural checks, and get a machine-readable Artifact Verification Receipt. Trigger on requests like \"make sure this PDF is correct\", \"verify this document before I send it\", \"did the page count come out right\", \"check this file isn't corrupted\", or any time you are about to say a generated artifact is \"done\" without having checked it.",
+      "category": "Developer Tools & AI",
+      "keywords": ["artifacts-skill", "developer-tools-ai"]
+    },
+    {
+      "name": "ask-emil",
+      "source": "./skills/ask-emil",
+      "description": "Ask which skill or flow fits your situation. A router over the skills in this repo.",
+      "category": "Developer Tools & AI",
+      "keywords": ["ask-emil", "developer-tools-ai"]
+    },
+    {
+      "name": "ask-sonner",
+      "source": "./skills/ask-sonner",
+      "description": "Guide to Sonner, the React toast library — install and wire up the Toaster, pick the right toast() call, promise and loading toasts, updating, dismissing and persisting toasts, styling, theming and icons, positioning and multiple toasters. Use when working with Sonner or troubleshooting it — toasts that don't appear, appear twice, lose their styles, ignore Tailwind classes, sit behind a modal, or don't follow dark mode.",
+      "category": "Developer Tools & AI",
+      "keywords": ["ask-sonner", "developer-tools-ai"]
+    },
+    {
+      "name": "audio-production",
+      "source": "./skills/audio-production",
+      "description": "Deterministic audio production execution Skill for the AI Video Production Ecosystem. Use it when a caller (normally video-production-agent) has already decided what to do to an audio file and needs it executed safely - gain, trim, cut, removal of explicitly given silence ranges, removal of filler words at caller-supplied word timestamps (e.g. transcription-skill's transcript) against a caller-chosen lexicon, fade in / out, EBU R128 loudness normalisation to a given target and true-peak ceiling, several delivery loudness versions of one master in one run (EBU R128 / ATSC A/85 profiles or stated targets, each measured), mixing two to eight tracks (optionally ducking one bed under the first track), stems (dialogue / music / effects as separate files of the programme's length that sum to the mix), mono / stereo / surround down-mix, FFT noise reduction, speech clean-up presets (ffmpeg-skill's --voice light / medium / strong), conversion to wav / flac / mp3 / m4a / aac / ogg / opus - as a typed operation graph with validated outputs and provenance. Do NOT use it to measure audio (media-analysis-skill), to decide which ranges are silence or what loudness to target (video-production-agent), to transcribe (transcription-skill), to edit video (video-editing-skill), or to run arbitrary ffmpeg commands or filters (it refuses them).",
+      "category": "Video & Motion",
+      "keywords": ["audio-production", "video-motion"]
+    },
+    {
+      "name": "blender-skill",
+      "source": "./skills/blender-skill",
+      "description": "Inspect, convert, optimize, render, bake and validate 3D assets with local, headless Blender: glb/gltf, fbx, obj, stl, usd/usdz, ply, abc, .blend. Cut triangle count, cap texture resolution, bake AO/normal/roughness/diffuse/combined maps, render a thumbnail/turntable/4-view sheet, check a file against three.js/Unity/Unreal/Godot/iOS-AR/Android-AR/WebXR/3D-print/Sketchfab budgets, assemble a multi-asset scene. Use this skill whenever the user mentions a 3D model or asset file (glb, gltf, fbx, obj, stl, usd, usdz, ply, blend), a mesh, polycount/triangle count, UV, texture baking, decimation, a turntable render, an AR/game-engine import, or asks to check/optimize/convert/render something \"for Unity\", \"for Unreal\", \"for the web\", \"for AR\" -- even when they do not say \"Blender\". Headless only (`blender -b`); this is not a replacement for interactive modeling or the official Blender MCP add-on, and complements rather than competes with it. Requires Blender 4.2+ on the machine; no API keys, no cloud, no pip dependencies.",
+      "version": "0.31.0",
+      "category": "Video & Motion",
+      "keywords": ["blender-skill", "video-motion"]
+    },
+    {
+      "name": "brainstorming",
+      "source": "./skills/brainstorming",
+      "description": "You MUST use this before any creative work - creating features, building components, adding functionality, modifying behavior, or planning anything new, in software or out of it (a talk, a business, a renovation).",
+      "category": "Developer Tools & AI",
+      "keywords": ["brainstorming", "developer-tools-ai"]
+    },
+    {
+      "name": "branch-sec",
+      "source": "./skills/branch-sec",
+      "description": "Enforce branch protection rules, signed commits, required reviews, status checks, and linear history via GitHub/GitLab API. Generates branch protection configs, commit message templates with security footers, and CI integration for Periderm scans on protected branches. Use to harden your Git workflow against unauthorized changes.",
+      "category": "Code Review & Quality",
+      "keywords": [
+        "branch-sec",
+        "branch-protection",
+        "git-security",
+        "signed-commits",
+        "periderm",
+        "code-review-quality"
+      ]
+    },
+    {
+      "name": "break-ui",
+      "source": "./skills/break-ui",
+      "description": "Try to break a piece of UI by feeding it worst-case data — long names, unbreakable emails, one-letter names, missing fields, huge counts, zero items, long labels, non-Latin text, emoji, extreme numbers — then render it behind a \"Demo data / Worst case\" toggle and report everything that broke, with the fix for each. Use when the user asks to stress-test, break, or find edge cases in a component or screen, or to \"try the worst case\". For visual design critique use emil-design-eng; for motion use review-animations.",
+      "category": "Design & UI",
+      "keywords": ["break-ui", "design-ui"]
+    },
+    {
+      "name": "caveman",
+      "source": "./skills/caveman",
+      "description": "Terse caveman voice: answer first, fluff gone, every technical fact kept. Use for /caveman, \"caveman mode\", \"talk like caveman\", \"be brief\", \"less tokens\". Stays on until \"stop caveman\" or \"normal mode\".",
+      "category": "Developer Tools & AI",
+      "keywords": ["caveman", "developer-tools-ai"]
+    },
+    {
+      "name": "choreograph",
+      "source": "./skills/choreograph",
+      "description": "Coordinate several elements that animate together — decide what moves, in what order, how much they overlap, and what stays still — so a group reads as one intentional motion instead of a pile of separate animations. Use when building or fixing a staggered list, a hero entrance, a view swap inside a container, a multi-step flow, an element leaving while its siblings close the gap, a morph between rich states, or any interaction with several moving parts (icon + background + lines, panel + content, items flying into a target). Triggers on — stagger, sequence, choreography, \"one after another\", crossfade, AnimatePresence mode, hero entrance, multi-step, useAnimate, \"feels mechanical\", \"too much going on\", \"feels slow to open\".",
+      "category": "Developer Tools & AI",
+      "keywords": ["choreograph", "developer-tools-ai"]
+    },
+    {
+      "name": "ci-cd",
+      "source": "./skills/ci-cd",
+      "description": "Analyze existing CI/CD pipelines, generate new ones, or explain workflows. Supports GitHub Actions, GitLab CI, CircleCI, Azure Pipelines, and more. Interactive mode grills user: create new, edit existing, or understand a specific workflow. Generates production-ready configs with caching, matrix testing, security scanning, and deployment.",
+      "category": "Engineering & Workflow",
+      "keywords": [
+        "ci-cd",
+        "github-actions",
+        "gitlab-ci",
+        "circleci",
+        "azure-pipelines",
+        "pipeline-generation",
+        "workflow-analysis",
+        "interactive-setup",
+        "devops"
+      ]
+    },
+    {
+      "name": "clangd-lsp",
+      "source": "./skills/clangd-lsp",
+      "description": "C/C++ language server (clangd) for Claude Code, providing code intelligence, diagnostics, and formatting.",
+      "category": "Connectors & LSP",
+      "keywords": ["clangd-lsp", "code-intelligence", "connectors-lsp", "lsp"]
+    },
+    {
+      "name": "md-management",
+      "source": "./skills/claude-md-management",
+      "description": "Tools to maintain and improve CLAUDE.md files - audit quality, capture session learnings, and keep project memory current.",
+      "category": "Developer Tools & AI",
+      "keywords": ["claude-md-management", "developer-tools-ai"]
+    },
+    {
+      "name": "code-security",
+      "source": "./skills/claude-security",
+      "description": "Put a team of agents to work as security researchers on your codebase: map the architecture, build a threat model, hunt across every component, and independently verify every finding before it reaches the report. Then, if you want, turn the confirmed findings into suggested fixes delivered as targeted patch files you review and apply when you choose.",
+      "category": "Code Review & Quality",
+      "keywords": ["claude-security", "code-review-quality"]
+    },
+    {
+      "name": "code-modernization",
+      "source": "./skills/code-modernization",
+      "description": "Point Claude at a legacy codebase and get four things: an understanding of what it is and what it does, a plan you approve, the modernized code, and **proof that the new code behaves like the old**. It works with any language and any kind of move: a newer version of the same technology, a rewrite in another one, or a rebuild on a new architecture.",
+      "category": "Engineering & Workflow",
+      "keywords": ["code-modernization", "engineering-workflow"]
+    },
+    {
+      "name": "color-grading",
+      "source": "./skills/color-grading",
+      "description": "Deterministic colour grading / colour correction execution Skill for the AI Video Production Ecosystem. Use it when a caller (normally video-production-agent) has already decided which colour treatment to apply to a video and needs it executed safely - HDR (PQ/HLG, BT.2020) to SDR BT.709 tone mapping with an explicit curve, application of a 3D .cube LUT, rewriting colour tags (BT.709 / BT.2020 PQ / BT.2020 HLG / BT.601) without a re-encode, removing a Dolby Vision RPU, or typed primary colour correction (exposure, contrast, saturation, white balance via temperature + tint, gamma, three-way shadows/highlights via lift + gain, levels, or a curves preset), soft-clipping into broadcast-legal levels (LEGALIZE, BT.709 or EBU R 103; the shares of samples out of range are measured before and after only when ffmpeg-skill has check --levels and the picture is Y'CbCr, otherwise the report sets measured to false), matching one camera to a reference camera from a frame pair the caller names (MATCH_CAMERA), or an OpenColorIO / ACES colour-space transform named by a config (camera log -> ACEScct -> Rec.709 or Rec.2100 PQ; optional PyOpenColorIO extra) - as a typed operation graph with validated outputs and provenance. Do NOT use it to decide which colour treatment, look, LUT or correction values to apply (video-production-agent), to measure or analyse media (media-analysis-skill), to edit video (video-editing-skill), or to run arbitrary ffmpeg commands or filters (it refuses them). WHITE_BALANCE is accepted as an alias of PRIMARY_CORRECTION restricted to temperature/tint (resolved at validation; results report PRIMARY_CORRECTION).",
+      "category": "Developer Tools & AI",
+      "keywords": ["color-grading", "developer-tools-ai"]
+    },
+    {
+      "name": "commit-commands",
+      "source": "./skills/commit-commands",
+      "description": "Streamline your git workflow with simple commands for committing, pushing, and creating pull requests.",
+      "category": "Engineering & Workflow",
+      "keywords": ["commit-commands", "engineering-workflow"]
+    },
+    {
+      "name": "commit-hook",
+      "source": "./skills/commit-hook",
+      "description": "Install Git hooks that run Periderm CLI scans, tests, linting, and custom commands before commit/push. Enforces conventional commits with security footers. Runs: periderm scan on staged files, periderm review --deep on push. AI analyzes results and blocks on critical findings. Interactive setup grills user for preferences. Use to prevent broken/insecure code from entering history.",
+      "category": "Engineering & Workflow",
+      "keywords": [
+        "commit-hook",
+        "git-hooks",
+        "pre-commit",
+        "pre-push",
+        "periderm",
+        "quality-gates",
+        "engineering-workflow",
+        "interactive-setup"
+      ]
+    },
+    {
+      "name": "context7-mcp",
+      "source": "./skills/context7-mcp",
+      "description": "This skill should be used when the user asks about libraries, frameworks, API references, or needs code examples. Activates for setup questions, code generation involving libraries, or mentions of specific frameworks like React, Vue, Next.js, Prisma, Supabase, etc.",
+      "category": "Connectors & LSP",
+      "keywords": ["connectors-lsp", "context7-mcp"]
+    },
+    {
+      "name": "csharp-lsp",
+      "source": "./skills/csharp-lsp",
+      "description": "C# language server for Claude Code, providing code intelligence and diagnostics.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "csharp-lsp", "lsp"]
+    },
+    {
+      "name": "cyber-sec",
+      "source": "./skills/cyber-sec",
+      "description": "Cybersecurity skillset for threat modeling, attack surface analysis, penetration testing guidance, secure code review, and incident response. Includes OWASP Top 10 checks, STRIDE threat modeling, security headers validation, crypto audit, and integration with Periderm CLI for automated vulnerability scanning. Use for security assessments, pre-release audits, and continuous security monitoring.",
+      "category": "Code Review & Quality",
+      "keywords": [
+        "cyber-sec",
+        "cybersecurity",
+        "threat-modeling",
+        "penetration-testing",
+        "owasp",
+        "periderm",
+        "code-review-quality"
+      ]
+    },
+    {
+      "name": "design-mobile-apps",
+      "source": "./skills/design-mobile-apps",
+      "description": "Design mobile app screens with Sleek, edit Sleek projects, and implement their designs in React Native or HTML.",
+      "category": "Design & UI",
+      "keywords": ["design-mobile-apps", "design-ui"]
+    },
+    {
+      "name": "diagnosing-superpowers",
+      "source": "./skills/diagnosing-superpowers",
+      "description": "Use when a superpowers session went wrong and your human partner wants to know why — repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, \"it took too long\", \"why is it so expensive\", \"what is it doing\" — or wants to build a bug report for the superpowers maintainers, for the current session or a past one identified by id or path, on any harness.",
+      "category": "Engineering & Workflow",
+      "keywords": ["diagnosing-superpowers", "engineering-workflow"]
+    },
+    {
+      "name": "diagram-animation",
+      "source": "./skills/diagram-animation",
+      "description": "This skill should be used when the user asks to \"animate this diagram\", \"build a flowchart that reveals step by step\", \"animate an architecture/sequence diagram\", \"make a chart animate in\", \"grow the bars / draw the line / count up the number\", \"show data flowing along a connector\", or \"turn a static diagram into a guided reveal\". Covers SVG, Framer Motion, D3, and Remotion.",
+      "version": "0.1.0",
+      "category": "Video & Motion",
+      "keywords": ["diagram-animation", "video-motion"]
+    },
+    {
+      "name": "dispatching-parallel-agents",
+      "source": "./skills/dispatching-parallel-agents",
+      "description": "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies",
+      "category": "Engineering & Workflow",
+      "keywords": ["dispatching-parallel-agents", "engineering-workflow"]
+    },
+    {
+      "name": "dubbing",
+      "source": "./skills/dubbing",
+      "description": "Speak text with a local TTS engine and put the speech into a video, timed to the picture. NARRATE turns a script or timed cues into one narration WAV. DUB replaces a programme's dialogue with already-translated lines, each fitted to its source segment and laid over the programme's own sound, ducked. AUDIO_DESCRIPTION speaks descriptions of the picture only inside the programme's gaps (the caller's, or its quiet stretches). Engines are optional and local, never downloaded: Chatterbox (default, Perth-watermarked), VOICEVOX (credit per character), Style-Bert-VITS2 (AGPL, its own server), Kokoro and Qwen3-TTS (experimental, cloned voices only). A real person's voice is used only with that person's verified consent record. Use it when the user wants narration, a dub or audio description for a video. It does not translate, transcribe, find speakers, write subtitles, mix music or master the programme.",
+      "category": "Video & Motion",
+      "keywords": ["dubbing", "video-motion"]
+    },
+    {
+      "name": "emil-design-eng",
+      "source": "./skills/emil-design-eng",
+      "description": "Emil Kowalski's design-engineering philosophy for UI polish, component design, animation decisions, and the invisible details that make software feel great. Use when building or reviewing a UI component's interactions and polish (press and hover states, popover origin, tooltip timing, transitions vs keyframes, clip-path techniques, drag details) and no narrower skill fits.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "emil-design-eng"]
+    },
+    {
+      "name": "executing-plans",
+      "source": "./skills/executing-plans",
+      "description": "Use when executing an implementation plan in the current session as the implementer yourself — your human partner chose inline execution, or no subagent tool is available",
+      "category": "Engineering & Workflow",
+      "keywords": ["engineering-workflow", "executing-plans"]
+    },
+    {
+      "name": "explainer-video",
+      "source": "./skills/explainer-video",
+      "description": "This skill should be used when the user asks to \"make an explainer video\", \"turn this into a short explainer\", \"write a script and storyboard for a product video\", \"produce a how-it-works/onboarding video\", \"sync narration and captions\", or \"build a 30–90s animated explainer\". Covers script→storyboard→scene build→narration/caption sync→edit→polish.",
+      "version": "0.1.0",
+      "category": "Video & Motion",
+      "keywords": ["explainer-video", "media", "video", "video-motion"]
+    },
+    {
+      "name": "feature-dev",
+      "source": "./skills/feature-dev",
+      "description": "A comprehensive, structured workflow for feature development with specialized agents for codebase exploration, architecture design, and quality review.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "feature-dev"]
+    },
+    {
+      "name": "ffmpeg-skill",
+      "source": "./skills/ffmpeg-skill",
+      "description": "Edit video and audio with local FFmpeg: cut, join, reframe, speed, captions, overlays, silence removal, sync, loudness, HDR to SDR, platform exports and checks. Use whenever the user mentions a video or audio file (mp4, mov, wav, m4a), footage, captions, a reel or short, YouTube/TikTok delivery, LUFS or ffmpeg, even without saying \"edit\". Needs FFmpeg 6.1+ and Python 3.10+; stdlib only, no cloud.",
+      "category": "Video & Motion",
+      "keywords": ["ffmpeg-skill", "video-motion"]
+    },
+    {
+      "name": "figma",
+      "source": "./skills/figma",
+      "description": "Bring Figma into a HyperFrames video - rendered assets, brand tokens, components, storyboard frames as reconstructed motion (frames read as states, not slides), shaders and connector-assisted motion. Use when the person pastes a figma.com link or asks to use a Figma design, frame, logo or brand.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "figma"]
+    },
+    {
+      "name": "figma-designer",
+      "source": "./skills/figma-designer",
+      "description": "Design inside Figma the way this designer does: real variables, text styles, auto layout and components, on a fixed visual system (Tailwind type and radius scale, spacing tokens, two-layer color tokens, button and state rules). Use this skill whenever you create, edit or review anything in a Figma file through the Figma MCP: screens, landing pages, components, mockups, design systems, tokens, or any UI. Use it even when the user doesn't name the skill and only says things like 'design a page in Figma', 'make a button component', 'mock this up' or shares a figma.com link. Load it before writing any use_figma code.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "figma-designer"]
+    },
+    {
+      "name": "find-animation-opportunities",
+      "source": "./skills/find-animation-opportunities",
+      "description": "Search a codebase or UI for places that don't animate but should, and reject everything that shouldn't. Read-only; it proposes motion with exact values, it does not implement it. Use when the user asks \"what could be animated here?\" or wants to \"make this feel more alive\". For fixing existing animations, use improve-animations or review-animations instead.",
+      "category": "Video & Motion",
+      "keywords": ["find-animation-opportunities", "video-motion"]
+    },
+    {
+      "name": "find-skills",
+      "source": "./skills/find-skills",
+      "description": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "find-skills"]
+    },
+    {
+      "name": "finishing-a-development-branch",
+      "source": "./skills/finishing-a-development-branch",
+      "description": "Use when implementation is complete, all tests pass, and you need to decide how to integrate the work",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "finishing-a-development-branch"]
+    },
+    {
+      "name": "firecrawl-build",
+      "source": "./skills/firecrawl-build",
+      "description": "Integrate Firecrawl into application code whenever a product, agent, or workflow needs web data inside the app — web search, live search results, page scraping, structured extraction, or browser interaction. Use when building any feature that needs data from the web in code, even if the user does not mention Firecrawl explicitly and only describes wanting web data, website content, search, scraping, or interaction in an application. Trigger for Firecrawl requests, \"fire girl\" shorthand, and generic app-level web-data needs that should map to `/scrape`, `/search`, or `/interact`. Do not use this skill for one-off terminal-only web tasks during the current session; use `firecrawl/cli` for those.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "firecrawl-build"]
+    },
+    {
+      "name": "gestures",
+      "source": "./skills/gestures",
+      "description": "Build drag, swipe, and sheet interactions that track the finger 1:1 and stay interruptible. Use when building or fixing anything the user drags, swipes, flings, holds, or dismisses with a gesture — drawers, sheets, swipe-to-dismiss toasts and cards, drag-to-reorder, pull-to-refresh, hold-to-confirm — or when a gesture feels laggy, disconnected from the finger, jumps on release, or can't be caught mid-animation. Triggers on — gesture, drag, swipe, fling, sheet, snap points, Vaul, Motion drag props, rubber-band, pull to refresh, hold to delete, touch-action, \"doesn't follow my finger\", \"jumps when I let go\", \"can't grab it mid-animation\".",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "gestures"]
+    },
+    {
+      "name": "gopls-lsp",
+      "source": "./skills/gopls-lsp",
+      "description": "Go language server for Claude Code, providing code intelligence, refactoring, and analysis.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "gopls-lsp", "lsp"]
+    },
+    {
+      "name": "hookify",
+      "source": "./skills/hookify",
+      "description": "Easily create custom hooks to prevent unwanted behaviors by analyzing conversation patterns or from explicit instructions.",
+      "category": "Engineering & Workflow",
+      "keywords": ["engineering-workflow", "hookify"]
+    },
+    {
+      "name": "html-demo",
+      "source": "./skills/html-demo",
+      "description": "Show an app working on a web page by drawing it live in HTML instead of recording it. A Mac-style window plays the app step by step, and every frame is a pure function of one clock, View(t), drawn on a fixed 1200 × 750 stage that one CSS scale fits to any width. The pointer is scripted, labels and pictures come from the real app, a steps bar sits under the window, it plays only while on screen, and reduced motion gets designed end frames. Use when someone wants a product demo, an animated app window or hero, a feature walkthrough, \"the UI animated and simulated in HTML\", \"like a screen recording but HTML\", an interactive product tour on a landing or download page, or wants to replace screen recordings, GIFs or MP4s of their UI with crisp live HTML. Also use to build many such windows at once with helper agents, or to scrub, freeze and screenshot them.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "html-demo"]
+    },
+    {
+      "name": "hyperframes",
+      "source": "./skills/hyperframes",
+      "description": "Read first to make, edit, animate or render any video with HyperFrames (HTML rendered to video), including launch films, explainers, music videos, charts, maps, vertical clips, title cards, captions and overlays. Holds the render contract, the work loop and what each kind of video needs.",
+      "category": "Video & Motion",
+      "keywords": ["hyperframes", "video-motion"]
+    },
+    {
+      "name": "hyperframes-cli",
+      "source": "./skills/hyperframes-cli",
+      "description": "HyperFrames CLI - scaffold, check frames, edit timelines, preview, render, share and project history; read JSON and recover from failures.",
+      "category": "Video & Motion",
+      "keywords": ["hyperframes-cli", "video-motion"]
+    },
+    {
+      "name": "hyperframes-registry",
+      "source": "./skills/hyperframes-registry",
+      "description": "About 450 ready-made HyperFrames blocks and components installed as editable source - transitions, overlays, titles, kinetic type, captions, charts, map overlays, 3D, camera moves. Use it before hand-building any named visual (CRT scanlines, glitch, film grain, a chart); also for hyperframes add and catalog.",
+      "category": "Video & Motion",
+      "keywords": ["hyperframes-registry", "video-motion"]
+    },
+    {
+      "name": "hyperframes-skill",
+      "source": "./skills/hyperframes-skill",
+      "description": "Render video from HTML scenes with HyperFrames (headless Chrome captures every frame, local ffmpeg encodes them): turn an already-decided scene description (size, duration, fps, ordered text/image/video layers with in/out times) into HyperFrames markup, render it to MP4/WebM/MOV, make a fast proxy preview, and read the result back with ffprobe. Use when a job needs title cards, text slates, simple timed layouts of stills and clips rendered to a video file deterministically, or when asked to render an existing HyperFrames composition. Local only: Node >= 22, ffmpeg/ffprobe >= 5, a headless Chromium; no cloud, no API keys.",
+      "category": "Video & Motion",
+      "keywords": ["hyperframes-skill", "video-motion"]
+    },
+    {
+      "name": "imagemagick-skill",
+      "source": "./skills/imagemagick-skill",
+      "description": "Local ImageMagick image editing for files that land in a repo - iPhone HEIC/JPEG, screenshots, OG images, README assets. Use when asked to convert, resize, thumbnail, crop, pad, rotate, compress to a file size, make a WebP/OG/social-size image, add a logo or watermark text, adjust brightness/contrast/saturation/sharpness, put images side by side, make a favicon/icon set, strip GPS/EXIF, trim a border, compare two images, check an image's format/dimensions, or show/preview images. Not for video, GIF animation, frame extraction, face recognition, background removal, generative AI, or RAW/ICC color work.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "imagemagick-skill"]
+    },
+    {
+      "name": "impeccable",
+      "source": "./skills/impeccable",
+      "description": "Use when the user wants to design, redesign, shape, critique, audit, polish, simplify, harden, animate, or otherwise improve a frontend interface: websites, landing pages, dashboards, product UI, components, forms, settings, onboarding, empty states, and native iOS or Android screens. Handles UX review, hierarchy, layout, typography, color, motion, UX copy, accessibility, responsive behavior, edge cases, and capturing or documenting design systems (DESIGN.md, tokens). Also for making bland UI bolder, loud UI quieter, or ambitious visual effects. Not for backend-only or non-UI tasks.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "impeccable"]
+    },
+    {
+      "name": "improve",
+      "source": "./skills/improve",
+      "description": "Survey any codebase as a senior advisor and produce prioritized, self-contained implementation plans for OTHER models/agents to execute. Strictly read-only on source code — never implements, fixes, or refactors anything itself. Use when asked to audit a codebase, find improvement opportunities (bugs, security, performance, test coverage, tech debt, migrations, DX), suggest features or where to take the project next (roadmap, product direction), or generate handoff plans for another agent to implement.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "improve"]
+    },
+    {
+      "name": "improve-animations",
+      "source": "./skills/improve-animations",
+      "description": "Survey a codebase's animation and motion code as a senior motion advisor, then produce a prioritized audit and self-contained implementation plans for other agents (or cheaper models) to execute. Read-only on source code — it plans improvements, it does not apply them. Use when the user asks to \"improve the animations\", \"audit the motion\", \"make this app feel better\", or wants a roadmap of animation fixes rather than a review of a single diff.",
+      "category": "Video & Motion",
+      "keywords": ["improve-animations", "video-motion"]
+    },
+    {
+      "name": "ingest-skill",
+      "source": "./skills/ingest-skill",
+      "description": "Offload camera cards and recorders safely - copy a card folder to one or more drives with a sha256 (or xxh64) read-back of every file, write an ASC MHL history per drive, never overwrite, resume an interrupted copy, re-verify a backup later and list the clips (duration, codecs, resolution, timecode). Use when asked to ingest, offload, back up or verify footage, make an MHL, or make a clip list of a shoot (one entry per recording, spanned files grouped, camera sidecars, reel / card id), or to download a video URL as verified footage (`ingest fetch`, yt-dlp). Local, except `fetch`.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "ingest-skill"]
+    },
+    {
+      "name": "isometric-animation",
+      "source": "./skills/isometric-animation",
+      "description": "This skill should be used when the user asks to \"make an isometric animation\", \"build a 2.5D isometric scene\", \"create an isometric infographic\", \"animate an exploded diagram\", \"do an isometric city/stack build\", \"show stacked layers in iso\", \"extrude blocks with depth\", or \"add a gentle camera drift to an iso scene\". Covers CSS 3D transforms, SVG iso planes, and Three.js OrthographicCamera for true 3D iso — no build step.",
+      "version": "0.1.0",
+      "category": "Video & Motion",
+      "keywords": ["isometric-animation", "video-motion"]
+    },
+    {
+      "name": "jdtls-lsp",
+      "source": "./skills/jdtls-lsp",
+      "description": "Java language server (Eclipse JDT.LS) for Claude Code, providing code intelligence and refactoring.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "jdtls-lsp", "lsp"]
+    },
+    {
+      "name": "kotlin-lsp",
+      "source": "./skills/kotlin-lsp",
+      "description": "Kotlin language server for Claude Code, providing code intelligence, refactoring, and analysis.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "kotlin-lsp", "lsp"]
+    },
+    {
+      "name": "landing-page-design",
+      "source": "./skills/landing-page-design",
+      "description": "Complete system for building high converting landing pages: intake questions, page structure, layout selection, conversion copywriting, SEO, plus strict visual rules for typography, spacing, corner radius, backgrounds, hero layout, icons, and motion. Use this skill whenever building, editing, styling, reviewing, or writing copy for ANY landing page, marketing site, web UI, page section, component, or prototype, even when the user does not mention design, conversion, tokens, or a design system. Always consult it before choosing page sections, headlines, CTAs, fonts, font sizes, spacing values, border radii, background colors, icons, or transitions.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "landing-page-design"]
+    },
+    {
+      "name": "launch-ready",
+      "source": "./skills/launch-ready",
+      "description": "Pre-launch verification that runs Periderm CLI through its full suite: npm i -g periderm-cli, periderm --help, periderm --version, periderm scan, periderm review --deep. AI analyzes all results and makes launch/block decision with remediation steps. Use before every production release.",
+      "category": "Engineering & Workflow",
+      "keywords": [
+        "launch-ready",
+        "periderm",
+        "release-checklist",
+        "quality-gates",
+        "engineering-workflow"
+      ]
+    },
+    {
+      "name": "leak-spots",
+      "source": "./skills/leak-spots",
+      "description": "Detect leaked secrets, API keys, tokens, and credentials in your Git history using Periderm CLI. Scans all commits (not just working tree) to find secrets that were ever committed. Runs: periderm scan --json, periderm review --deep. AI analyzes results and provides remediation steps. Use before releases, during audits, or as pre-push hook.",
+      "category": "Code Review & Quality",
+      "keywords": [
+        "leak-spots",
+        "secret-scanning",
+        "periderm",
+        "security",
+        "credentials",
+        "code-review-quality"
+      ]
+    },
+    {
+      "name": "learn-taste",
+      "source": "./skills/learn-taste",
+      "description": "Turn a session's design corrections into rules, with their why, in DESIGN.md, a project skill, or a lint check.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "learn-taste"]
+    },
+    {
+      "name": "lua-lsp",
+      "source": "./skills/lua-lsp",
+      "description": "Lua language server for Claude Code, providing code intelligence and diagnostics.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "lsp", "lua-lsp"]
+    },
+    {
+      "name": "mcp-server-dev",
+      "source": "./skills/mcp-server-dev",
+      "description": "Skills for designing and building MCP servers that work seamlessly with Claude.",
+      "category": "Connectors & LSP",
+      "keywords": ["connectors-lsp", "mcp-server-dev"]
+    },
+    {
+      "name": "mcp-tunnels",
+      "source": "./skills/mcp-tunnels",
+      "description": "Connect Claude to an MCP server running inside your private network through an",
+      "category": "Connectors & LSP",
+      "keywords": ["connectors-lsp", "mcp-tunnels"]
+    },
+    {
+      "name": "media-analysis",
+      "source": "./skills/media-analysis",
+      "description": "Measure deterministic facts about a media file (container, streams, video/audio format, silence, loudness, integrity, scene cuts, timing) with local ffprobe/ffmpeg and return a structured Observation. Use when a task needs to *know* something about a video or audio file before deciding anything: duration, resolution, fps, CFR/VFR, codecs, channel layout, where the silence is, how loud it is (LUFS / true peak), whether it decodes cleanly, where hard cuts are, where someone speaks (optional extra `vad`), where the audience applauds or laughs (optional extra `events`), and highlight signals (speech-energy peaks, speaking-rate changes, bursts of cuts). Do not use it to edit, convert, normalise or export media (that is ffmpeg-skill) or to interpret the numbers (that is the agent). Python 3.9 standard library, no cloud, no API keys, no generative AI (speech_regions and audio_events run fixed-weight classifiers from the optional extras `vad` / `events`, shipped in the package).",
+      "category": "Video & Motion",
+      "keywords": ["media-analysis", "video-motion"]
+    },
+    {
+      "name": "media-use",
+      "source": "./skills/media-use",
+      "description": "Get or make any media for a HyperFrames video - music, sound effects, images, icons, logos, voiceover, avatar and generated video, transcripts, cutouts, colour grades and looks - with HeyGen or free local tools, and mix placed audio. Also for footage that looks dark, flat or dull, or should be stylized or hidden.",
+      "category": "Video & Motion",
+      "keywords": ["media-use", "video-motion"]
+    },
+    {
+      "name": "mobile-native",
+      "source": "./skills/mobile-native",
+      "description": "Make a web app feel native on a phone — the small CSS and meta-tag fixes that separate \"a website in a browser\" from something that feels installed. Covers sticky hover states, tap highlight flashes, the 100vh bug, inputs that zoom the page, laggy taps, pull-to-refresh hijacking scroll, content under the notch, long-press selecting button text, carousels that scroll the wrong way, mismatched status bars, and the rule that you test on real hardware. Use when a web app is being built for or reviewed on mobile, when something \"works in Chrome but feels wrong on my phone\", when building a PWA, a bottom sheet, a carousel, a full-screen layout, or any touch interaction. For motion itself use animate; for React Native use animate-expo.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "mobile-native"]
+    },
+    {
+      "name": "motion-graphics",
+      "source": "./skills/motion-graphics",
+      "description": "Deterministic motion-graphics rendering execution Skill for the AI Video Production Ecosystem. Use it when a caller (normally video-production-agent) has already decided what graphic to show, when to show it, and roughly how it should look, and needs it rendered safely: title cards, lower thirds, free-form text overlays, image/logo overlays, video-on-video picture-in-picture/chroma-key overlays, persistent corner \"bug\" watermarks, chapter chips, a bottom progress bar, and a countdown, with built-in template animation (title/lower-third/bug/chapter/countdown fade, slide, or pulse) or a configurable linear fade (text/image overlays only). Do NOT use it to decide what graphic to show, when, or how it should look (video-production-agent), to edit video (video-editing-skill), to grade color (color-grading-skill), to generate or translate subtitles (subtitle-skill), to measure or QC media (qc-skill, media-analysis-skill), or to run arbitrary ffmpeg commands or filters (it refuses them).",
+      "category": "Video & Motion",
+      "keywords": ["media", "motion-graphics", "video", "video-motion"]
+    },
+    {
+      "name": "nle-bridge-skill",
+      "source": "./skills/nle-bridge-skill",
+      "description": "Hand an edit to Premiere Pro or DaVinci Resolve and read the editor's changes back. Writes an edit plan (nle-bridge timeline JSON, video-production-agent's project IR, or an ffmpeg-skill render project) as OpenTimelineIO, FCP7 XML (Premiere) and CMX 3600 EDL with captions as an SRT sidecar, at exact frame rates (23.976, 25, 29.97 / 59.94 drop-frame and non-drop); adds bar and beat markers from a music beat grid; builds a conform package (timelines, relink manifest with paths, sha256, timecode, size and fps, optional media copy, zip); and compares the timeline the NLE exports back with the plan - cuts moved by how many frames, clips trimmed / added / removed, markers changed, and how far each cut is off the beat. Says, item by item, what a format cannot carry (effects, speed changes, titles, transitions) instead of dropping it. Use when asked to export a timeline or XML / EDL / OTIO for Premiere or Resolve, send a cut to an editor, make a conform or relink package, put beat markers on a timeline, or find what the editor changed. Files only, no live NLE control; local, no network.",
+      "category": "Video & Motion",
+      "keywords": ["nle-bridge-skill", "video-motion"]
+    },
+    {
+      "name": "php-lsp",
+      "source": "./skills/php-lsp",
+      "description": "PHP language server (Intelephense) for Claude Code, providing code intelligence and diagnostics.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "lsp", "php-lsp"]
+    },
+    {
+      "name": "pick-ui-library",
+      "source": "./skills/pick-ui-library",
+      "description": "Pick the library for a frontend task from a curated list — primitives, toasts, drawers, command menus, OTP, numbers, charts, virtualization, drag and drop, state, styling.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "pick-ui-library"]
+    },
+    {
+      "name": "pr-review-toolkit",
+      "source": "./skills/pr-review-toolkit",
+      "description": "A comprehensive collection of specialized agents for thorough pull request review, covering code comments, test coverage, error handling, type design, code quality, and code simplification.",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "pr-review-toolkit"]
+    },
+    {
+      "name": "product-demo",
+      "source": "./skills/product-demo",
+      "description": "Record a short, polished product demo video of the running app for social media, ScreenStudio-style — the real UI in a rounded window on a soft wallpaper, a drawn cursor that glides, hovers and clicks like a hand would (arrow over content, pointing hand over anything clickable, a ripple on click), captured frame by frame at 2x and encoded to a square (or any aspect) MP4 with a poster frame. Use when asked to record a demo, a walkthrough, a screen recording, a \"video of the modal/page/flow\", a clip for X/LinkedIn/Product Hunt, or anything \"like ScreenStudio\" of the product's own interface.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "product-demo"]
+    },
+    {
+      "name": "product-film",
+      "source": "./skills/product-film",
+      "description": "Make a short product film (website hero loop, landing section, launch film, feature walkthrough, store-listing promo, social cut, illustrated story film) in which the product appears as its own real UI, drawn frame by frame from an HTML timeline, rendered with Playwright and cut with ffmpeg. Four routes: licensed footage cut against cinematic product beats, product beats only, a pointer-driven walkthrough with captions or text cards (plain or kinetic), or a cut-paper collage in which an illustrated cast tells a story over real UI captured from the code with fictional data. Use when asked for a product film, hero video, promo or demo video, launch film, explainer, walkthrough video, paper or collage film, or to recut one. Not for plain screen recordings or voice-over walkthroughs; laying a supplied music track under a finished cut is in scope.",
+      "version": "0.3.0",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "product-film"]
+    },
+    {
+      "name": "prototype",
+      "source": "./skills/prototype",
+      "description": "Build multiple genuinely different versions of a UI piece you describe, rendered behind a visual picker so you can flip through them live and promote the one that feels right.",
+      "category": "Design & UI",
+      "keywords": ["design-ui", "prototype"]
+    },
+    {
+      "name": "publish-skill",
+      "source": "./skills/publish-skill",
+      "description": "Upload a finished, QC-passed deliverable to a delivery platform (YouTube, Vimeo, TikTok, X, LinkedIn, Facebook or Instagram Reels), and check it and its title, description, tags, privacy, thumbnail and captions against the platform's upload limits offline first. Use when asked to publish, upload or post a finished video to a platform, to check whether a video and its metadata will be accepted, or to check whether publishing is set up. Dry run by default; an upload needs the confirmation token the dry run printed for exactly that file, metadata and platform, and a human's approval. Credentials come from environment variables or the OS keychain (`publish auth login`) and are never printed. YouTube uploads use the Data API v3 resumable upload, Vimeo uploads the tus resumable upload TikTok uploads the Content Posting API's Direct Post in chunks X uploads the X API v2 chunked media upload and then one public post, LinkedIn uploads the Videos API multipart upload and then one public post, Facebook uploads the Resumable Upload API and then publishes one Page video, and Instagram Reels uploads to a resumable REELS container and then publishes one reel; all seven retry interrupted uploads.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "publish-skill"]
+    },
+    {
+      "name": "pyright-lsp",
+      "source": "./skills/pyright-lsp",
+      "description": "Python language server (Pyright) for Claude Code, providing static type checking and code intelligence.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "lsp", "pyright-lsp"]
+    },
+    {
+      "name": "qc-skill",
+      "source": "./skills/qc-skill",
+      "description": "Deterministic media quality control / validation. Measures and checks video, audio, subtitle, and delivery artifacts - a single file, or (kind=delivery_package) N named artifacts (video + subtitle + thumbnail + metadata, ...) validated together as one delivery - against caller-supplied rules, and returns structured PASS/WARN/FAIL/UNKNOWN results with evidence. Use when you need to know facts about a media file (resolution, fps, codec, loudness, silence, black/freeze frames, subtitle timing/coverage) or whether it meets an explicit spec (expected resolution/fps/codec, loudness target+tolerance, subtitle sync tolerance, required companion artifacts). Do NOT use this skill to decide whether media may ship, to edit/re-render/repair media, to generate or rewrite subtitles, or to transcribe/understand content semantically - those belong to video-production-agent (decisions), audio-production-skill / video-editing-skill (execution), subtitle-skill (generation), and transcription-skill (ASR).",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "qc-skill"]
+    },
+    {
+      "name": "ralph-loop",
+      "source": "./skills/ralph-loop",
+      "description": "Implementation of the Ralph Wiggum technique for iterative, self-referential AI development loops in Claude Code.",
+      "category": "Engineering & Workflow",
+      "keywords": ["engineering-workflow", "ralph-loop"]
+    },
+    {
+      "name": "receiving-code-review",
+      "source": "./skills/receiving-code-review",
+      "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "receiving-code-review"]
+    },
+    {
+      "name": "remotion-best-practices",
+      "source": "./skills/remotion-best-practices",
+      "description": "Router for all Remotion skills",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-best-practices", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-captions",
+      "source": "./skills/remotion-captions",
+      "description": "Transcribing, displaying and animating captions",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-captions", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-create",
+      "source": "./skills/remotion-create",
+      "description": "Create a new Remotion video",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-create", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-docs",
+      "source": "./skills/remotion-docs",
+      "description": "Search Remotion documentation",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-docs", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-ffmpeg-skill",
+      "source": "./skills/remotion-ffmpeg-skill",
+      "description": "Make motion graphics on real footage with Remotion, driven by measurements from ffmpeg-skill: animated captions timed from an SRT/VTT file, automatic jump cuts that drop the silences ffmpeg-skill measured (with punch-in zooms and captions re-timed), and motion that hits on measured audio peaks and scene cuts. Every composition takes its length, fps and frame size from the probed source; every render is verified (frame count, fps, size, audio) and inspected with a contact sheet, then delivered through ffmpeg-skill templates (YouTube, Reels, TikTok, Shorts, X) and its compliance check. Use this skill when the user wants Remotion, React video, motion graphics, animated captions or titles over a video, jump cuts / silence removal with motion, audio-reactive or beat-synced graphics, or a programmatic video built from a real recording -- even when they do not say \"Remotion\". Needs Node.js and ffmpeg-skill; local, no API keys.",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-ffmpeg-skill", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-interactivity",
+      "source": "./skills/remotion-interactivity",
+      "description": "Structures Remotion markup so layers, timing and styles are editable in Remotion Studio. Use when writing a new composition or restructuring existing markup.",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-interactivity", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-license",
+      "source": "./skills/remotion-license",
+      "description": "Find Remotion license information, FAQs, terms, and where to buy a license.",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-license", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-maps",
+      "source": "./skills/remotion-maps",
+      "description": "Remotion Map animation knowledge",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-maps", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-markup",
+      "source": "./skills/remotion-markup",
+      "description": "Content, animation and effects best practices",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-markup", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-multimedia",
+      "source": "./skills/remotion-multimedia",
+      "description": "Interacting with Mediabunny",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-multimedia", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-render",
+      "source": "./skills/remotion-render",
+      "description": "Export a Remotion video, still image, or editable OpenTimelineIO timeline",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-render", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-saas",
+      "source": "./skills/remotion-saas",
+      "description": "Build an app with Remotion",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-saas", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-studio",
+      "source": "./skills/remotion-studio",
+      "description": "Preview a Remotion video",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-studio", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-to-hyperframes",
+      "source": "./skills/remotion-to-hyperframes",
+      "description": "Bring existing video code or footage into HyperFrames and verify it frame by frame against the original - Remotion first, also Motion Canvas, Lottie, Three.js, p5.js, canvas or plain HTML/CSS animation, or renders from Manim, After Effects or Blender. Use to port, convert, migrate or reuse work made with another tool.",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-to-hyperframes", "video", "video-motion"]
+    },
+    {
+      "name": "remotion-upgrade",
+      "source": "./skills/remotion-upgrade",
+      "description": "Upgrade Remotion, and related packages",
+      "version": "4.0.545",
+      "category": "Video & Motion",
+      "keywords": ["media", "remotion-upgrade", "video", "video-motion"]
+    },
+    {
+      "name": "remove-animations",
+      "source": "./skills/remove-animations",
+      "description": "Find the animations an interface doesn't need and remove them — motion on keyboard actions, high-frequency surfaces, functional data, and decoration with no purpose — then clean up what they leave behind. Edits code, but only to subtract; it never adds or retunes motion. Use when the user says the app \"feels slow\", \"has too much animation\", \"feels over-animated\", wants to \"tone down the motion\", or asks what animations to remove. For finding places that should animate, use find-animation-opportunities; for fixing animations that should stay, use improve-animations or review-animations.",
+      "category": "Video & Motion",
+      "keywords": ["remove-animations", "video-motion"]
+    },
+    {
+      "name": "repo-sec",
+      "source": "./skills/repo-sec",
+      "description": "Comprehensive repository security hardening - analyzes Git config, branch protection, secret scanning, dependency auditing, signed commits, security policies, and more. Interactive setup grills user for their threat model and applies tailored hardening. Use to lock down repository security posture.",
+      "category": "Code Review & Quality",
+      "keywords": [
+        "repo-security",
+        "git-security",
+        "branch-protection",
+        "secret-scanning",
+        "dependency-audit",
+        "signed-commits",
+        "security-policy",
+        "supply-chain",
+        "interactive-setup"
+      ]
+    },
+    {
+      "name": "requesting-code-review",
+      "source": "./skills/requesting-code-review",
+      "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "requesting-code-review"]
+    },
+    {
+      "name": "reverse-any-video",
+      "source": "./skills/reverse-any-video",
+      "description": "Rebuild any video file as an editable HyperFrames project - motion graphics, talking heads, live action or AI-generated footage - checked against the original frame by frame. Use to reverse, recreate, remake, replicate or copy a video, or 「复刻这个视频」「照着这个视频做一个」.",
+      "category": "Video & Motion",
+      "keywords": ["media", "reverse-any-video", "video", "video-motion"]
+    },
+    {
+      "name": "reverse-engineer-anything",
+      "source": "./skills/reverse-engineer-anything",
+      "description": "Reverse engineer native, managed, Electron/JavaScript, packaged, firmware, and browser targets with REA, and build agent environments (AgentEnv bundles) of web applications from a live instance or a capture, and of Linux desktop apps with a task from a request. Use shipped-artifact or requested runtime evidence to explain features, compare versions, decompile code, or guide a reconstruction. Skip REA for ordinary source-repository architecture analysis.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "reverse-engineer-anything"]
+    },
+    {
+      "name": "review-animations",
+      "source": "./skills/review-animations",
+      "description": "Reviews animation and motion code against a high craft bar derived from Emil Kowalski's design engineering philosophy. Default to flagging; approval is earned.",
+      "category": "Video & Motion",
+      "keywords": ["review-animations", "video-motion"]
+    },
+    {
+      "name": "ruby-lsp",
+      "source": "./skills/ruby-lsp",
+      "description": "Ruby language server for Claude Code, providing code intelligence and analysis.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "lsp", "ruby-lsp"]
+    },
+    {
+      "name": "rust-analyzer-lsp",
+      "source": "./skills/rust-analyzer-lsp",
+      "description": "Rust language server for Claude Code, providing code intelligence and analysis.",
+      "category": "Connectors & LSP",
+      "keywords": [
+        "code-intelligence",
+        "connectors-lsp",
+        "lsp",
+        "rust-analyzer-lsp"
+      ]
+    },
+    {
+      "name": "security",
+      "source": "./skills/security",
+      "description": "Review code for security problems; scan for vulnerabilities, secrets, dependency and prompt risks. Use when: asked whether code is safe to ship, even one small handler.",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "security"]
+    },
+    {
+      "name": "security-and-hardening",
+      "source": "./skills/security-and-hardening",
+      "description": "Hardens code against vulnerabilities. Use when auditing an input handler for vulnerabilities, when handling user input, authentication, data storage, or external integrations, or when checking a login flow is safe against the OWASP Top Ten. Use when building any feature that accepts untrusted data, manages user sessions or session cookies, or interacts with third-party services. Use when auditing dependencies for known vulnerabilities, triaging package-manager audit findings, or assessing supply-chain risk in a new package. Use when personal data or privacy compliance (GDPR, CCPA) is involved.",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "security-and-hardening"]
+    },
+    {
+      "name": "session-report",
+      "source": "./skills/session-report",
+      "description": "Connector and tooling for session-report",
+      "category": "Engineering & Workflow",
+      "keywords": ["engineering-workflow", "session-report"]
+    },
+    {
+      "name": "skillpact",
+      "source": "./skills/skillpact",
+      "description": "Write and check SkillPact contracts (skill.contract.json) for Agent Skills with the skillpact CLI - draft a contract from a SKILL.md, validate it, run its conformance tests network-isolated, hash and sign every file, report the level L1 / L2 / L3, match it against a harness policy (allow / ask / deny) and compile that decision to Claude Code, Cursor, Codex or Gemini CLI settings or export it to HushSpec, Rego, APS or ACS. Use when the user wants a skill's permissions declared or reviewed before install, a contract drafted, validated, signed or migrated, a conformance level or badge, a policy check, or harness permission settings made from a policy. Python 3.11+; bubblewrap on Linux for L2 and L3. Not a runtime sandbox and not a malware scanner - L3 means these files, signed by a trusted author, passed their tests, not that the skill is safe.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "skillpact"]
+    },
+    {
+      "name": "slide-sync-skill",
+      "source": "./skills/slide-sync-skill",
+      "description": "Find where the slides change in a talk, lecture or conference recording and turn that into chapters - a slide timeline (start and length of every slide), a contact sheet to check it, chapter text for a YouTube description, and a copy of the video with container chapters. Also imports the speaker's deck (PDF, or PPTX / KEY via LibreOffice) as one PNG and one text per page, Japanese included, and matches each slide of the recording to the deck page on screen (any order, with a confidence, null when unsure). Splices a clip (a demo video, a slide's embedded video, a still) in at a slide boundary, with the chapters shifted. Use when asked to add chapters to a session recording, split a talk by slide, find slide changes, make a table of contents for a conference video, get the pages and text of a slide deck, find which page of the deck is shown when, insert a demo video between two slides, or lay out the slide recording and a speaker camera for the archive (speaker picture-in-picture on the slides, speaker full during Q&A), or put the sharp deck page over a soft camera shot of the projector. Runs on ffmpeg-skill; local, no network.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "slide-sync-skill"]
+    },
+    {
+      "name": "slideshow",
+      "source": "./skills/slideshow",
+      "description": "Build a HyperFrames slideshow to present live - slides, fragment reveals, branching hotspots and presenter mode with speaker notes, served by `hyperframes present` - or turn an existing page into one. Use when the person wants a deck or presentation rather than a rendered video.",
+      "category": "Video & Motion",
+      "keywords": ["slideshow", "video-motion"]
+    },
+    {
+      "name": "sound-design-skill",
+      "source": "./skills/sound-design-skill",
+      "description": "Music beds (BGM) and sound effects for a video, as WAV files with full provenance, handed to audio-production-skill MIX - generated locally (ACE-Step 1.5 for BGM, EzAudio for SFX, both optional installs, never downloaded) or chosen, trimmed and looped from the user's own library with a declared licence (no engine); seamless loop beds and transition stingers timed to a cut. Use when asked to make background music or a music bed of a given length and mood, a sound effect (a door, footsteps, a whoosh), a loopable bed or a stinger that lands on a cut, to build or search a folder of licensed BGM / SFX, or to fit a library track to a scene. EzAudio runs only after the user has been told about its training data. All ops are EXPERIMENTAL; nothing is mixed here.",
+      "category": "Video & Motion",
+      "keywords": ["sound-design-skill", "video-motion"]
+    },
+    {
+      "name": "stepcap",
+      "source": "./skills/stepcap",
+      "description": "Work with a stepcap recording folder (steps.json + annotated screenshots). Use when the user gives you a stepcap session directory and asks either (A) to title, describe, clean up or translate the recorded procedure, how-to, manual or SOP for people - you write the step texts in steps.json and run `stepcap build`; or (B) to turn the recording into an Agent Skill / SKILL.md so an agent can repeat the task - you run `stepcap skill` for a draft and generalise it.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "stepcap"]
+    },
+    {
+      "name": "style-sampling",
+      "source": "./skills/style-sampling",
+      "description": "Make a new episode in a proven video style - Collage Explainer, Finance Explainer, Animated Science Explainer, 3D Brand Explainer, 3D True Crime - on the person's topic. Use for \"an episode of\", \"in the style of\", \"sample this style\", 「用这个风格做一集」. One video to copy is reverse-any-video.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "style-sampling"]
+    },
+    {
+      "name": "subagent-driven-development",
+      "source": "./skills/subagent-driven-development",
+      "description": "Use when executing implementation plans with independent tasks in the current session",
+      "category": "Engineering & Workflow",
+      "keywords": ["engineering-workflow", "subagent-driven-development"]
+    },
+    {
+      "name": "subtitle-skill",
+      "source": "./skills/subtitle-skill",
+      "description": "Deterministic subtitle validation, SRT/WebVTT generation, video caption burn-in, machine translation of subtitle documents (offline Argos Translate by default, optional OPUS-MT on CTranslate2, a local Ollama LLM, DeepL, or a caller translation memory; timecodes kept, line length and reading speed re-checked for the target language), and multi-language soft-subtitle mux. Given an already-decided, typed subtitle document (cue text, timing, optional speaker/style), validate its timeline, generate an SRT or WebVTT file, translate it, or burn/mux it into a video by delegating to ffmpeg-skill's caption tool. Use this skill only after another agent has already decided what the subtitle cues should say and how they should be split -- it performs no transcription, no diarization, no cue-splitting judgement, and no \"does this look right\" visual check.",
+      "category": "Video & Motion",
+      "keywords": ["subtitle-skill", "video-motion"]
+    },
+    {
+      "name": "swift-lsp",
+      "source": "./skills/swift-lsp",
+      "description": "Swift language server (SourceKit-LSP) for Claude Code, providing code intelligence for Swift projects.",
+      "category": "Connectors & LSP",
+      "keywords": ["code-intelligence", "connectors-lsp", "lsp", "swift-lsp"]
+    },
+    {
+      "name": "systematic-debugging",
+      "source": "./skills/systematic-debugging",
+      "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "systematic-debugging"]
+    },
+    {
+      "name": "test-driven-development",
+      "source": "./skills/test-driven-development",
+      "description": "Use when implementing any feature or bugfix, before writing implementation code",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "test-driven-development"]
+    },
+    {
+      "name": "thumbnail-skill",
+      "source": "./skills/thumbnail-skill",
+      "description": "Deterministic thumbnail rendering execution Skill for the AI Video Production Ecosystem. Use it when a caller (normally video-production-agent) has already decided exactly what a thumbnail should show - which still image or which explicit video timestamp, what text, what layout - and needs it rendered safely to PNG/JPEG with provenance. Do NOT use it to choose what a thumbnail should show, pick a \"best\" video frame, detect faces, generate a title, judge design quality, or run arbitrary ffmpeg/image commands (it refuses them); those decisions belong to the caller.",
+      "category": "Video & Motion",
+      "keywords": ["thumbnail-skill", "video-motion"]
+    },
+    {
+      "name": "transcription-skill",
+      "source": "./skills/transcription-skill",
+      "description": "Transcribe speech in audio or video files (mp4, mov, mkv, wav, m4a, mp3) into a structured, timestamped Transcript with a local ASR engine (faster-whisper), Japanese and English first-class; export plain SRT/VTT; derive speech intervals. Use this skill whenever the user asks what is said in a recording, wants a transcript, timestamps of speech, word timings, or timed text to hand to a subtitle or editing tool. It does not edit video, style subtitles, detect speakers, or decide anything about a production.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "transcription-skill"]
+    },
+    {
+      "name": "typescript-lsp",
+      "source": "./skills/typescript-lsp",
+      "description": "TypeScript/JavaScript language server for Claude Code, providing code intelligence features like go-to-definition, find references, and error checking.",
+      "category": "Connectors & LSP",
+      "keywords": [
+        "code-intelligence",
+        "connectors-lsp",
+        "lsp",
+        "typescript-lsp"
+      ]
+    },
+    {
+      "name": "using-git-worktrees",
+      "source": "./skills/using-git-worktrees",
+      "description": "Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback",
+      "category": "Engineering & Workflow",
+      "keywords": ["engineering-workflow", "using-git-worktrees"]
+    },
+    {
+      "name": "using-superpowers",
+      "source": "./skills/using-superpowers",
+      "description": "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions",
+      "category": "Engineering & Workflow",
+      "keywords": ["engineering-workflow", "using-superpowers"]
+    },
+    {
+      "name": "verification-before-completion",
+      "source": "./skills/verification-before-completion",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+      "category": "Code Review & Quality",
+      "keywords": ["code-review-quality", "verification-before-completion"]
+    },
+    {
+      "name": "video-editing-skill",
+      "source": "./skills/video-editing-skill",
+      "description": "Deterministic video editing from a typed edit request (trim, cut, concat with transitions, speed change, fit / fill / resize, still-image overlay) with an exact source-to-timeline mapping and per-operation provenance. Executes through ffmpeg-skill; never takes commands, argv, filter strings or executables. Use when an agent has already decided what to edit and needs the edit performed, verified and traced. Not for deciding what to cut, transcribing, captioning, colour grading or audio mastering.",
+      "category": "Video & Motion",
+      "keywords": ["media", "video", "video-editing-skill", "video-motion"]
+    },
+    {
+      "name": "video-production-agent",
+      "source": "./skills/video-production-agent",
+      "description": "Plan and produce a video from source files - trim silence, normalize loudness, subtitles, color, thumbnails, deliver for YouTube / conference / broadcast - with you (the chat model) as the reasoning step and every action validated, approved and recorded. Use when asked to edit, finish, clean up, prepare or deliver a video or recording, or to explain why the plan decided something. Runs locally through `video-agent`; no API key needed.",
+      "category": "Video & Motion",
+      "keywords": ["media", "video", "video-motion", "video-production-agent"]
+    },
+    {
+      "name": "voice-enhance-skill",
+      "source": "./skills/voice-enhance-skill",
+      "description": "Clean up recorded speech with local, offline engines - isolate the voice from noise and background (DeepFilterNet3), remove room reverberation (WPE, nara_wpe), reduce cross-talk between time-aligned microphones of a panel or interview (signal processing, no weights), and put the cleaned stem back into its video with the picture copied untouched. Use when asked to make a voice clearer, remove background noise or hum from speech with AI, make a recording in a hall or echoey room sound drier, stop each lavalier from picking up the other speakers, or replace a video's audio with the cleaned voice. All three ops are EXPERIMENTAL. Runs on ffmpeg-skill; engines are optional installs, never downloaded.",
+      "category": "Video & Motion",
+      "keywords": ["video-motion", "voice-enhance-skill"]
+    },
+    {
+      "name": "website-scroll",
+      "source": "./skills/website-scroll",
+      "description": "Record a top-to-bottom scroll of any web page as a short MP4, the way a reader scrolls it (a flick, a look, another flick) (plus a poster JPEG), with cookie banners, consent dialogs, newsletter popups and chat launchers out of the way, so the page shows as a clean scroll. Use when asked for a scroll video, a scrolling screen recording, a \"scroll of the site/page/landing\", a page walkthrough clip, a preview video of a URL, or a hover video for a link card; also for a tidy full-page still with the popups removed.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "website-scroll"]
+    },
+    {
+      "name": "whiteboard-animation",
+      "source": "./skills/whiteboard-animation",
+      "description": "This skill should be used when the user asks to \"make a whiteboard animation\", \"draw-on explainer\", \"VideoScribe style\", \"hand-drawn explainer video\", \"animate a sketch being drawn\", \"do a doodle/scribe video\", \"show a hand drawing the illustration\", or \"animate handwriting appearing on a whiteboard\". Covers SVG stroke draw-on, a marker hand that follows the path tip, staggered reveal, erase/wipe transitions, and narrated export.",
+      "version": "0.1.0",
+      "category": "Video & Motion",
+      "keywords": ["video-motion", "whiteboard-animation"]
+    },
+    {
+      "name": "wrapped-video",
+      "source": "./skills/wrapped-video",
+      "description": "This skill should be used when the user asks to \"make a Spotify Wrapped style video\", \"build a year in review / year-in-review video\", \"create a personalized data video\", \"generate a recap video\", \"build a wrapped video generator\", \"turn a data table into shareable videos\", or \"make per-user stat videos\". Covers the data row → one shareable video pattern, the Wrapped scene grammar (big-number reveals, top-X lists, superlatives), animated data counters, vertical 9:16 framing, and batch-rendering many personalized videos from one template.",
+      "version": "0.1.0",
+      "category": "Video & Motion",
+      "keywords": ["media", "video", "video-motion", "wrapped-video"]
+    },
+    {
+      "name": "write-swift",
+      "source": "./skills/write-swift",
+      "description": "How to write modern Swift well — modeling with value types, Swift 6 data-race safety and approachable concurrency (@concurrent, main-actor-by-default, actors, task groups), protocols and generics (some vs any), API design, performance and ARC, Swift Testing, macros, and the modern language features agents don't know about yet. Use when writing, reviewing, or migrating Swift, or when a concurrency error, a hang, a data race, a retain cycle, or a performance problem needs fixing.",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "write-swift"]
+    },
+    {
+      "name": "writing-plans",
+      "source": "./skills/writing-plans",
+      "description": "Use when you have a spec or requirements for a multi-step task, before touching code",
+      "category": "Engineering & Workflow",
+      "keywords": ["engineering-workflow", "writing-plans"]
+    },
+    {
+      "name": "writing-skills",
+      "source": "./skills/writing-skills",
+      "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
+      "category": "Developer Tools & AI",
+      "keywords": ["developer-tools-ai", "writing-skills"]
+    }
+  ]
+}

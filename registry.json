@@ -157,7 +157,7 @@
       "tests"
     ],
     "hash": "7262e845aac6a567a9fbfecdc465f3b7c2fda83eb1777c238244cf2021027d83",
-    "version": "0.31.0 # x-release-please-version"
+    "version": "0.31.0"
   },
   {
     "name": "brainstorming",
@@ -268,7 +268,7 @@
       "revise-claude-md-example.png",
       "skills"
     ],
-    "hash": "01c5dd5fa9d0be972ef2d5504bba84d82cd0c2701ebaf9548b1dc3e160b30e58"
+    "hash": "0c23948300b58e7e2fe2ec87687728bf9674f0bcc00b38706961deffd7b4938e"
   },
   {
     "name": "claude-security",
@@ -291,7 +291,7 @@
       "skills",
       "workflows"
     ],
-    "hash": "73230dd89bf143c927c29d73ac8fd6d9fce6a84562e69b9552130b40f6f42650"
+    "hash": "dd7cdf3ab0fc9d72b17c3001a5a118a1e81e824c084fa4d4332a973f723c4a9d"
   },
   {
     "name": "code-modernization",
@@ -910,7 +910,7 @@
     "path": "skills/mcp-server-dev",
     "tags": ["connectors-lsp", "mcp-server-dev"],
     "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md", "skills"],
-    "hash": "ef77b8a526c6c8d8220a29e01b912bdcbee9dc0bdb1af8d632c29277c545a704"
+    "hash": "84d7adc93aa03c42f8b904ef27b7f4975f750a0c0ff02a8c27951747093b7516"
   },
   {
     "name": "mcp-tunnels",
@@ -920,7 +920,7 @@
     "path": "skills/mcp-tunnels",
     "tags": ["connectors-lsp", "mcp-tunnels"],
     "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md", "commands"],
-    "hash": "8fee4ce5d45ad12a1319af42f8c35854a88184a610e3cf9e14f9c1f8fb8e16f6"
+    "hash": "92fe47e83d239ccb12244455b7ab22dd2baf06b5bf1743ad725a95135f7689cb"
   },
   {
     "name": "media-analysis",
@@ -1572,7 +1572,7 @@
     "path": "skills/session-report",
     "tags": ["engineering-workflow", "session-report"],
     "files": [".claude-plugin", "LICENSE", "SKILL.md", "skills"],
-    "hash": "af0ce7b8c5414322d11124f9d8e9227e86908cb1ef864c75b60efedfe9214239"
+    "hash": "93f079547047cd05b37468811bb475c295d537d95513fe7fb2683173c48216b3"
   },
   {
     "name": "skillpact",

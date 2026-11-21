@@ -18,6 +18,10 @@ Compatible across **Claude Code**, **Cursor**, **Antigravity (`agy`)**, **Codex*
 Install any skill directly into your project:
 
 ```bash
+# Add directly as a Claude Code Plugin Marketplace:
+/plugin marketplace add kingjethro999/dev-marketplace
+/plugin install <skill-name>@dev-marketplace
+
 # Using the built-in marketplace runner:
 npx dev-marketplace add <skill-name>
 
