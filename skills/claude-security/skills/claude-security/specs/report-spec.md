@@ -30,6 +30,7 @@ Say how many verification runs the panel took
 lost on the way to a further run (coverage.lostCandidates), or handed to a run
 that did not complete.
 If coverage.researchersReturned is below coverage.researchersDispatched:
+
 - say how many researchers did not return and that their reading is missing
   from this scan;
 - name each entry of coverage.lostResearchers by its reading, with its reason
@@ -39,101 +40,101 @@ If coverage.researchersReturned is below coverage.researchersDispatched:
 - describe why a researcher did not return only by its recorded reason;
 - wherever the report says what the research covered or read, including the
   "What was verified" section, credit only readings in coverage.returnedReadings.
-Name every area the scan deliberately did NOT examine, and WHY: each entry of
-coverage.skippedComponents carries the paths left out and the componentizer's
-one-line reason (vendored, generated, documentation, and the like); a
-directory skipped on purpose is disclosure, not failure, so state the reason
-rather than letting the area silently vanish.
-If coverage.prunedBuckets is non-empty, each entry is a group's (or
-component's) name, as coverage.components lists it, followed by
-":memory-and-unsafe", the research lens it went without. Write each name
-whole and say plainly that none of that group's researchers was asked about
-memory-safety bugs, whatever the tier. An entry for "change boundary" has no
-coverage.components row: it is the researcher working outward from the
-change, under the same rule over every changed file, not a second group. Give
-only the workflow's reason: it decided from the language alone -- the changed
-files' extensions on a changes or commit scan, the inventory's language on a
-codebase scan -- before the group's researchers were briefed, because it took
-the code to be all in managed languages. Do not add that the lens does not
-apply to such code, and never describe the prune as something the researchers
-or the panel did, or as a lens dropped because a finding was in hand. A group
-with no entry kept the lens.
-On a whole-repository scan the
-workflow requires the inventory to account for every top-level directory --
-scanned or explicitly skipped -- and coverage.completenessCheckOutcome says whether
-that check ran: "checked" (say the whole tree is accounted for),
-"partial" (the inventory left some top-level directories in neither ledger and
-the answer was used as it stood -- coverage.unaccountedTopLevelDirs names them;
-list every one and say plainly they were neither scanned nor skipped, because
-that is exactly the coverage a "no findings" would otherwise overstate),
-"not-checkable" (the tree's directory list was not supplied, was unreadable, or
-was empty while the inventory named subdirectories -- coverage.topLevelRejected
-says which; say plainly that completeness could NOT be checked, since that is
-what turns "no findings" into "clean" rather than "not examined"), or
-"not-applicable" (a diff, commit, or scoped scan, whose target
-is the change or the scope, or a low-effort run with no inventory). If
-coverage.inventoryFallback is set, the inventory's partition was not used and
-the whole tree was read as one component instead of the matrix -- complete,
-but coarser -- and the reason is: "incomplete-partition" (its answer would have
-credited coverage it never named -- a skip of the whole target, or nothing but
-paths climbing out of the tree; the rejections are listed in
-coverage.inventoryRejected),
-"inventory-failed" (it did not answer), or "empty-partition" (it answered with
-nothing). For a changes or commit scan, say that the change was reviewed
-rather than the repository: name the change in plain words (following
-`jobs/scan-changes.md`'s rules on the commit count and the branch) rather
-than by the commit ids in coverage.range, the changed files by group
-(coverage.components; coverage.diffFiles files of the coverage.changedFileCount
-the helper counted, coverage.diffLines lines), and
-how many researchers were dispatched and how many returned
-(coverage.researchersDispatched, coverage.researchersReturned), and the
-effort they were asked for (coverage.researchEffort -- asked, not measured:
-the model's runtime may apply its own); say that a flaw the change takes no part in is out
-of this review's scope and left to a scan of the codebase, and list every
-entry of coverage.preExisting as a candidate the panel judged real but
-predating the change. When the base is the branch's own pushed copy, so that
-the diff holds only the unpushed commits, say that the commits already pushed
-were not part of this review. If coverage.outsideScope is non-empty, say that those
-findings (it names them) sit outside the requested scope and are reported
-because the change reaches them. If coverage.changedFilesRejected is set, the changed-file
-list could not be read or loaded: quote the recorded value and say the change
-was reviewed as one group whose researchers listed it themselves; if
-coverage.changedFilesMiscounted is set, the list handed over disagreed with
-the count: give both, say which list was reviewed (its reviewed field) and
-how many files that was (coverage.diffFiles). If a scoped
-scan collapsed to the proportionate single-researcher shape rather than the
-full component matrix, say so: coverage.collapsed is "small-scope" for a small
-scope at medium (give coverage.scopeFiles) -- a fast targeted pass, still
-panel-verified, not an exhaustive read. If a supplied scope size could not be
-read (coverage.scopeSizeRejected), quote the recorded value and state its
-actual consequence for the tier that ran: at medium, the scope was not
-treated as small so the full pipeline ran instead of the fast path, and an
-empty scope could not have been short-circuited.
-Say how the run was sized when coverage.targetComponents is set: the target's
-coverage.targetFiles tracked files, about coverage.targetComponents components
-asked for (of roughly coverage.filesPerComponent files each, or larger when
-the target holds more than coverage.componentCap components of that size),
-at most coverage.componentCap kept. Then say what the researchers themselves report
-not having read, as their account rather than as fact: coverage.research.components
-lists, per component, the paths its researchers declared not reached and why --
-summarize by directory with the reason, one line for a background tree (vendored
-trees, and test and fixture trees under focus, left as background, are expected there
-and are background, not gaps), and name individual files only up to a handful
-per component. coverage.research.tree, when present, is that account checked
-against the tracked files inside the components: how many were read to a
-conclusion, how many lie under a declared not-reached path, and how many no
-researcher accounted for at all (when coverage.research.capped is true an
-account was truncated, so at least that many were read and at most that many
-are unaccounted) -- list coverage.research.tree.unaccountedPaths (the first of them; the count
-is the whole), because a component nobody finished reading would otherwise pass
-for a clean one; files outside every component
-(coverage.research.tree.outsideComponents) are the skipped and dropped areas
-this section already names plus root files no component claims, not a
-researcher's gap. When coverage.research is null or its tree absent, that
-check did not run; say nothing of it, though any declared paths still stand.
-This section is
-what makes the rest of the report trustworthy: a reader who knows what you did
-not look at can calibrate everything else.>
+  Name every area the scan deliberately did NOT examine, and WHY: each entry of
+  coverage.skippedComponents carries the paths left out and the componentizer's
+  one-line reason (vendored, generated, documentation, and the like); a
+  directory skipped on purpose is disclosure, not failure, so state the reason
+  rather than letting the area silently vanish.
+  If coverage.prunedBuckets is non-empty, each entry is a group's (or
+  component's) name, as coverage.components lists it, followed by
+  ":memory-and-unsafe", the research lens it went without. Write each name
+  whole and say plainly that none of that group's researchers was asked about
+  memory-safety bugs, whatever the tier. An entry for "change boundary" has no
+  coverage.components row: it is the researcher working outward from the
+  change, under the same rule over every changed file, not a second group. Give
+  only the workflow's reason: it decided from the language alone -- the changed
+  files' extensions on a changes or commit scan, the inventory's language on a
+  codebase scan -- before the group's researchers were briefed, because it took
+  the code to be all in managed languages. Do not add that the lens does not
+  apply to such code, and never describe the prune as something the researchers
+  or the panel did, or as a lens dropped because a finding was in hand. A group
+  with no entry kept the lens.
+  On a whole-repository scan the
+  workflow requires the inventory to account for every top-level directory --
+  scanned or explicitly skipped -- and coverage.completenessCheckOutcome says whether
+  that check ran: "checked" (say the whole tree is accounted for),
+  "partial" (the inventory left some top-level directories in neither ledger and
+  the answer was used as it stood -- coverage.unaccountedTopLevelDirs names them;
+  list every one and say plainly they were neither scanned nor skipped, because
+  that is exactly the coverage a "no findings" would otherwise overstate),
+  "not-checkable" (the tree's directory list was not supplied, was unreadable, or
+  was empty while the inventory named subdirectories -- coverage.topLevelRejected
+  says which; say plainly that completeness could NOT be checked, since that is
+  what turns "no findings" into "clean" rather than "not examined"), or
+  "not-applicable" (a diff, commit, or scoped scan, whose target
+  is the change or the scope, or a low-effort run with no inventory). If
+  coverage.inventoryFallback is set, the inventory's partition was not used and
+  the whole tree was read as one component instead of the matrix -- complete,
+  but coarser -- and the reason is: "incomplete-partition" (its answer would have
+  credited coverage it never named -- a skip of the whole target, or nothing but
+  paths climbing out of the tree; the rejections are listed in
+  coverage.inventoryRejected),
+  "inventory-failed" (it did not answer), or "empty-partition" (it answered with
+  nothing). For a changes or commit scan, say that the change was reviewed
+  rather than the repository: name the change in plain words (following
+  `jobs/scan-changes.md`'s rules on the commit count and the branch) rather
+  than by the commit ids in coverage.range, the changed files by group
+  (coverage.components; coverage.diffFiles files of the coverage.changedFileCount
+  the helper counted, coverage.diffLines lines), and
+  how many researchers were dispatched and how many returned
+  (coverage.researchersDispatched, coverage.researchersReturned), and the
+  effort they were asked for (coverage.researchEffort -- asked, not measured:
+  the model's runtime may apply its own); say that a flaw the change takes no part in is out
+  of this review's scope and left to a scan of the codebase, and list every
+  entry of coverage.preExisting as a candidate the panel judged real but
+  predating the change. When the base is the branch's own pushed copy, so that
+  the diff holds only the unpushed commits, say that the commits already pushed
+  were not part of this review. If coverage.outsideScope is non-empty, say that those
+  findings (it names them) sit outside the requested scope and are reported
+  because the change reaches them. If coverage.changedFilesRejected is set, the changed-file
+  list could not be read or loaded: quote the recorded value and say the change
+  was reviewed as one group whose researchers listed it themselves; if
+  coverage.changedFilesMiscounted is set, the list handed over disagreed with
+  the count: give both, say which list was reviewed (its reviewed field) and
+  how many files that was (coverage.diffFiles). If a scoped
+  scan collapsed to the proportionate single-researcher shape rather than the
+  full component matrix, say so: coverage.collapsed is "small-scope" for a small
+  scope at medium (give coverage.scopeFiles) -- a fast targeted pass, still
+  panel-verified, not an exhaustive read. If a supplied scope size could not be
+  read (coverage.scopeSizeRejected), quote the recorded value and state its
+  actual consequence for the tier that ran: at medium, the scope was not
+  treated as small so the full pipeline ran instead of the fast path, and an
+  empty scope could not have been short-circuited.
+  Say how the run was sized when coverage.targetComponents is set: the target's
+  coverage.targetFiles tracked files, about coverage.targetComponents components
+  asked for (of roughly coverage.filesPerComponent files each, or larger when
+  the target holds more than coverage.componentCap components of that size),
+  at most coverage.componentCap kept. Then say what the researchers themselves report
+  not having read, as their account rather than as fact: coverage.research.components
+  lists, per component, the paths its researchers declared not reached and why --
+  summarize by directory with the reason, one line for a background tree (vendored
+  trees, and test and fixture trees under focus, left as background, are expected there
+  and are background, not gaps), and name individual files only up to a handful
+  per component. coverage.research.tree, when present, is that account checked
+  against the tracked files inside the components: how many were read to a
+  conclusion, how many lie under a declared not-reached path, and how many no
+  researcher accounted for at all (when coverage.research.capped is true an
+  account was truncated, so at least that many were read and at most that many
+  are unaccounted) -- list coverage.research.tree.unaccountedPaths (the first of them; the count
+  is the whole), because a component nobody finished reading would otherwise pass
+  for a clean one; files outside every component
+  (coverage.research.tree.outsideComponents) are the skipped and dropped areas
+  this section already names plus root files no component claims, not a
+  researcher's gap. When coverage.research is null or its tree absent, that
+  check did not run; say nothing of it, though any declared paths still stand.
+  This section is
+  what makes the rest of the report trustworthy: a reader who knows what you did
+  not look at can calibrate everything else.>
 
 ## Findings
 

@@ -107,7 +107,7 @@ CSV/Markdown/EPUB from Phase 8 and Media from Phase 9 —
   until `playwright install chromium` fetched a matching one.
   `render()`'s error handling follows the same pattern established for
   LibreOffice (`ARTIFACT_RENDER_BACKEND_FAILED` with the real error
-  attached, never a crash). Also the first adapter to *actively enforce*
+  attached, never a crash). Also the first adapter to _actively enforce_
   the network-off-by-default policy rather than only reporting on it — see
   `docs/security.md`'s Network policy section for how and why.
 - **Phase 6 (SVG slice).** `adapters/svg/adapter.py`: inspect (stdlib
@@ -184,7 +184,7 @@ instead of `pypdf`-reported ones, and "rendered visual evidence" means
 one `ffmpeg`-extracted frame instead of one rendered page — the same
 verify/render split, different backend, not a different paradigm. And
 the duplication concern doesn't apply to what actually got built:
-`ffmpeg-skill` (or any tool) *generates or edits* media; this project
+`ffmpeg-skill` (or any tool) _generates or edits_ media; this project
 only verifies whatever it produced, exactly the same generation/
 verification split every other format already has (this project was
 never going to generate PDFs or slide decks either, just verify them).
@@ -214,7 +214,7 @@ as broken," just not via a `Check`.
 
 **Ecosystem integration.** `examples/standalone_contract_consumer.py` is
 the dogfood proof the issue asked for: a script that imports nothing from
-`artifact_skill` and *discovers* which tool to call from
+`artifact_skill` and _discovers_ which tool to call from
 `artifacts-skill contract --json`'s own declared semantics
 (`side_effects.mutates_input`/`writes_files`, `input_schema`) rather than
 hardcoding a tool name — proving an external, unfamiliar orchestrator
@@ -233,6 +233,7 @@ macOS/Windows" would have been a claim nothing actually checked — the
 honest version of that work was a direct code audit against known
 Windows/POSIX differences, documenting what was checked and what remained
 genuinely unverifiable without a real macOS/Windows run:
+
 - **Found and fixed a real bug**: `security/subprocess_exec.py`'s
   executable-allowlist check compared a resolved path's bare filename
   directly against adapters' platform-neutral allowlist names
@@ -336,7 +337,7 @@ just applied to a new domain rather than a new document format.
   both binaries the same way it probes `soffice`/Chromium. One
   `ArtifactType.MEDIA` covers MP4/MOV/M4A-family (ISO-BMFF `ftyp`),
   WebM/Matroska (EBML), and WAV (RIFF/WAVE) — type detection can only
-  recognize the *container* from magic bytes; telling audio-only from
+  recognize the _container_ from magic bytes; telling audio-only from
   video apart needs `inspect()`'s real stream probe. No mutating
   operations, by design: producing/editing media is the generation
   tool's job, not this one's — the same inspect/render/verify-only
@@ -348,7 +349,7 @@ just applied to a new domain rather than a new document format.
   `ffmpeg_probe.py` and the pre-existing `office_convert.py` passed a
   possibly-relative input path straight into a subprocess call that runs
   inside its own fresh temp cwd — silently failing to find a relative
-  path that resolved correctly from the *caller's* cwd. Every existing
+  path that resolved correctly from the _caller's_ cwd. Every existing
   test used pytest's `tmp_path` (always absolute), which is exactly why
   this went unnoticed until reproduced directly; see
   `docs/adapters.md`'s Media section for the full account.
@@ -406,7 +407,7 @@ next version number" step too:
 
 - On every CI success on `main`, `scripts/bump_version.py` reads the
   Conventional Commits type prefix (`feat:`, `fix:`, `feat!:`/`BREAKING
-  CHANGE:`, ...) off each commit subject since the last real git tag —
+CHANGE:`, ...) off each commit subject since the last real git tag —
   since every PR in this repo is squash-merged, that subject is exactly
   the PR title. `feat` bumps minor, `fix` bumps patch, a breaking-change
   marker bumps major; anything else (`chore`, `docs`, `ci`, `refactor`,

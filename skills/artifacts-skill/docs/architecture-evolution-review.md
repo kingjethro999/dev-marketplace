@@ -27,8 +27,8 @@ independently implemented six times, with an identical shape, across six of
 eleven adapters (PPTX, DOCX, HTML, SVG, Markdown, EPUB — §8, §12). What does
 **not** exist, anywhere in this codebase, is any concept spanning **two
 independently-tracked `ArtifactRef` instances**. Every existing reference
-check is strictly intra-artifact: does a reference resolve *inside this one
-zip*, or *relative to this one file's own directory*. Nothing in `core/`,
+check is strictly intra-artifact: does a reference resolve _inside this one
+zip_, or _relative to this one file's own directory_. Nothing in `core/`,
 `cli/`, or `mcp/` has ever taken, returned, or reasoned about more than one
 file per call (§4, §12).
 
@@ -42,7 +42,7 @@ surface area — which is a substantial new subsystem, not an extension of
 what exists.
 
 **Recommendation: NARROW. Confidence: High.** See §32 for the full
-reasoning and the concrete narrow scope that *is* justified by the evidence.
+reasoning and the concrete narrow scope that _is_ justified by the evidence.
 
 ---
 
@@ -108,7 +108,7 @@ directory, or a glob.
   itself a strong, already-established precedent: when this codebase
   needed "does a reference resolve" logic, it built it six separate times
   inside adapters, never once inside `core/`.
-- **`security/`** and **`rendering/`** are shared *utility* layers adapters
+- **`security/`** and **`rendering/`** are shared _utility_ layers adapters
   call into (subprocess execution, path safety, zip safety, XML-entity
   guards, LibreOffice/Chromium/ffmpeg invocation) — not orchestration.
 - **`cli/`** and **`mcp/`** are presentation-only, generated-schema-checked
@@ -126,29 +126,29 @@ survey: 11 formats, 0 format-specific imports found in `core/`.
 All fields below are quoted from source, not paraphrased (full detail in
 the research agents' reports; summarized here with file references).
 
-| Concept | Fields | Created by | Consumed by | Layer | Mutable? | JSON? | CLI/MCP-visible? | Adapter-specific or core? |
-|---|---|---|---|---|---|---|---|---|
-| `ArtifactRef` (`core/artifact.py:329`) | `path, type, sha256, size_bytes` — **exactly 4 fields, no relationship/parent/embeds field of any kind** | `ArtifactRef.from_path()` | every adapter method, `engine.py` | core | `frozen=True` (immutable) | via `to_dict()` | yes (`inspect`'s `artifact` key) | core |
-| `InspectionReport` (`core/artifact.py:395`) | `artifact: ArtifactRef`, `details: dict` (free-form, adapter-populated), `warnings: list[str]` | `adapter.inspect()` | CLI/MCP `inspect` output only — **never consumed by `run_lifecycle()`** (§5) | core envelope, adapter-owned payload | mutable dataclass | yes | yes | mixed — envelope is core, `details` schema is 100% adapter-defined and untyped |
-| `OperationPlan` (`core/operation.py:16`) | `operation, adapter, input, output_path, required_capabilities, files_touched, files_created, rendering_strategy, verification_strategy, risks, warnings` (11 fields) | `adapter.plan()` (or synthesized directly in `engine.py` for the verify-only branch) | `engine.py::build_plan()`, `plan`/`execute --dry-run` CLI/MCP output | core | mutable | yes | yes | core-defined, adapter-populated |
-| `Capability` / `CapabilityReport` (`core/capability.py`) | `Capability`: `id, status, detail, detected_via, version`. `CapabilityStatus`: `AVAILABLE, MISSING, UNKNOWN, NOT_REQUIRED, NOT_IMPLEMENTED` | `adapter.capabilities()`, `doctor/detect.py` | `engine.py` (gates execution), `doctor` CLI/MCP | core | `Capability` frozen; report mutable (dict-of-capability) | yes | yes | core |
-| `Check` / `CheckStatus` / `VerificationResult` (`core/verification.py`) | `CheckStatus`: **exactly** `PASS, WARN, FAIL, UNKNOWN, NOT_CHECKED, SKIPPED` (six, confirmed by direct source read, `verification.py:40-50`). `Check`: `id, name, status, message, evidence`. `VerificationResult`: `kind, checks, evidence_files, inspected_by`; `.status` is a computed `@property` = `aggregate()`, never stored | `adapter.verify_structural()`, engine's visual-evidence step | `receipt/model.py`, CLI/MCP `verify` output, `refine_structural_with_render()` | core (status enum + aggregation), adapter (which checks exist) | `Check`/`VerificationResult` mutable pre-aggregation | yes | yes | core structure, adapter content |
-| `RenderResult` (`adapters/base.py:41`) | `kind, files, backend, warnings` (4 fields) | `adapter.render()` | `engine.py`'s visual-evidence step, `refine_structural_with_render()`, `render`/`look` CLI/MCP | **adapter layer**, not `core/` | mutable | yes (`to_dict()`) | yes | adapter |
-| `ProductionReceipt` (`receipt/model.py:32`, schema `artifact-receipt/v1`) | `schema, status, input, operations, verification, artifacts, warnings, limitations, environment, capabilities, timestamp, tool_version, iterations` (13 fields) | `ReceiptBuilder.build()` inside `engine.py`'s two lifecycle functions | `receipt`/`execute` CLI/MCP output, `schemas/artifact-receipt-v1.schema.json`-validated in CI | core | built once, then written atomically | yes, published JSON Schema | yes | core |
-| `ToolContract` / `TOOLS` (`core/contract.py:54`) | 13 fields per tool (`name, description, input_schema, output_schema, artifact_types, capabilities, mutates_input, side_effects, dry_run_supported, verification_policy, visual_requirement, evidence, errors`) | hand-written literal list; `artifact_types`/`capabilities` fields computed from `adapters/registry.py` at call time | `mcp/server.py::build_tools_list()` (generated at runtime from `TOOLS`), `contract` CLI/MCP, the CLI/MCP-consistency test | core | effectively static (module-level list) | yes, published JSON Schema | yes | core, with adapter-registry-derived fields |
-| `Limits` (`security/limits.py:14`) | 9 fields — `max_input_bytes, max_zip_members, max_zip_uncompressed_bytes, max_zip_compression_ratio, max_pages, subprocess_timeout_seconds, render_timeout_seconds, max_fix_iterations, max_video_pixels` | `DEFAULT_LIMITS = Limits()` | threaded through `render()`, `subprocess_exec.run()`, `check_input_size()`, `safe_extract_zip()`, media's pixel guard | `security/` | `frozen=True` | no (Python object only) | no direct CLI/MCP flag to override; internal only | core/shared |
-| `ArtifactError` hierarchy (`core/errors.py`) | `ArtifactInputError, ArtifactCapabilityError, ArtifactExecutionError, ArtifactVerificationError, ArtifactSecurityError` → 5 of 6 `ErrorCategory` values have a matching subclass. **`ErrorCategory.INTERNAL` has an exit code (5) but no matching exception subclass defined in `errors.py`** — flagged as a real, minor asymmetry, not chased further in this review | raised throughout adapters/core | `cli/main.py`'s top-level handler, `mcp/server.py`'s dispatch boundary | core | n/a | `to_dict()` | yes (error JSON shape) | core |
+| Concept                                                                   | Fields                                                                                                                                                                                                                                                                                                                                                                | Created by                                                                                                          | Consumed by                                                                                                               | Layer                                                          | Mutable?                                                 | JSON?                      | CLI/MCP-visible?                                  | Adapter-specific or core?                                                      |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------- | -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `ArtifactRef` (`core/artifact.py:329`)                                    | `path, type, sha256, size_bytes` — **exactly 4 fields, no relationship/parent/embeds field of any kind**                                                                                                                                                                                                                                                              | `ArtifactRef.from_path()`                                                                                           | every adapter method, `engine.py`                                                                                         | core                                                           | `frozen=True` (immutable)                                | via `to_dict()`            | yes (`inspect`'s `artifact` key)                  | core                                                                           |
+| `InspectionReport` (`core/artifact.py:395`)                               | `artifact: ArtifactRef`, `details: dict` (free-form, adapter-populated), `warnings: list[str]`                                                                                                                                                                                                                                                                        | `adapter.inspect()`                                                                                                 | CLI/MCP `inspect` output only — **never consumed by `run_lifecycle()`** (§5)                                              | core envelope, adapter-owned payload                           | mutable dataclass                                        | yes                        | yes                                               | mixed — envelope is core, `details` schema is 100% adapter-defined and untyped |
+| `OperationPlan` (`core/operation.py:16`)                                  | `operation, adapter, input, output_path, required_capabilities, files_touched, files_created, rendering_strategy, verification_strategy, risks, warnings` (11 fields)                                                                                                                                                                                                 | `adapter.plan()` (or synthesized directly in `engine.py` for the verify-only branch)                                | `engine.py::build_plan()`, `plan`/`execute --dry-run` CLI/MCP output                                                      | core                                                           | mutable                                                  | yes                        | yes                                               | core-defined, adapter-populated                                                |
+| `Capability` / `CapabilityReport` (`core/capability.py`)                  | `Capability`: `id, status, detail, detected_via, version`. `CapabilityStatus`: `AVAILABLE, MISSING, UNKNOWN, NOT_REQUIRED, NOT_IMPLEMENTED`                                                                                                                                                                                                                           | `adapter.capabilities()`, `doctor/detect.py`                                                                        | `engine.py` (gates execution), `doctor` CLI/MCP                                                                           | core                                                           | `Capability` frozen; report mutable (dict-of-capability) | yes                        | yes                                               | core                                                                           |
+| `Check` / `CheckStatus` / `VerificationResult` (`core/verification.py`)   | `CheckStatus`: **exactly** `PASS, WARN, FAIL, UNKNOWN, NOT_CHECKED, SKIPPED` (six, confirmed by direct source read, `verification.py:40-50`). `Check`: `id, name, status, message, evidence`. `VerificationResult`: `kind, checks, evidence_files, inspected_by`; `.status` is a computed `@property` = `aggregate()`, never stored                                   | `adapter.verify_structural()`, engine's visual-evidence step                                                        | `receipt/model.py`, CLI/MCP `verify` output, `refine_structural_with_render()`                                            | core (status enum + aggregation), adapter (which checks exist) | `Check`/`VerificationResult` mutable pre-aggregation     | yes                        | yes                                               | core structure, adapter content                                                |
+| `RenderResult` (`adapters/base.py:41`)                                    | `kind, files, backend, warnings` (4 fields)                                                                                                                                                                                                                                                                                                                           | `adapter.render()`                                                                                                  | `engine.py`'s visual-evidence step, `refine_structural_with_render()`, `render`/`look` CLI/MCP                            | **adapter layer**, not `core/`                                 | mutable                                                  | yes (`to_dict()`)          | yes                                               | adapter                                                                        |
+| `ProductionReceipt` (`receipt/model.py:32`, schema `artifact-receipt/v1`) | `schema, status, input, operations, verification, artifacts, warnings, limitations, environment, capabilities, timestamp, tool_version, iterations` (13 fields)                                                                                                                                                                                                       | `ReceiptBuilder.build()` inside `engine.py`'s two lifecycle functions                                               | `receipt`/`execute` CLI/MCP output, `schemas/artifact-receipt-v1.schema.json`-validated in CI                             | core                                                           | built once, then written atomically                      | yes, published JSON Schema | yes                                               | core                                                                           |
+| `ToolContract` / `TOOLS` (`core/contract.py:54`)                          | 13 fields per tool (`name, description, input_schema, output_schema, artifact_types, capabilities, mutates_input, side_effects, dry_run_supported, verification_policy, visual_requirement, evidence, errors`)                                                                                                                                                        | hand-written literal list; `artifact_types`/`capabilities` fields computed from `adapters/registry.py` at call time | `mcp/server.py::build_tools_list()` (generated at runtime from `TOOLS`), `contract` CLI/MCP, the CLI/MCP-consistency test | core                                                           | effectively static (module-level list)                   | yes, published JSON Schema | yes                                               | core, with adapter-registry-derived fields                                     |
+| `Limits` (`security/limits.py:14`)                                        | 9 fields — `max_input_bytes, max_zip_members, max_zip_uncompressed_bytes, max_zip_compression_ratio, max_pages, subprocess_timeout_seconds, render_timeout_seconds, max_fix_iterations, max_video_pixels`                                                                                                                                                             | `DEFAULT_LIMITS = Limits()`                                                                                         | threaded through `render()`, `subprocess_exec.run()`, `check_input_size()`, `safe_extract_zip()`, media's pixel guard     | `security/`                                                    | `frozen=True`                                            | no (Python object only)    | no direct CLI/MCP flag to override; internal only | core/shared                                                                    |
+| `ArtifactError` hierarchy (`core/errors.py`)                              | `ArtifactInputError, ArtifactCapabilityError, ArtifactExecutionError, ArtifactVerificationError, ArtifactSecurityError` → 5 of 6 `ErrorCategory` values have a matching subclass. **`ErrorCategory.INTERNAL` has an exit code (5) but no matching exception subclass defined in `errors.py`** — flagged as a real, minor asymmetry, not chased further in this review | raised throughout adapters/core                                                                                     | `cli/main.py`'s top-level handler, `mcp/server.py`'s dispatch boundary                                                    | core                                                           | n/a                                                      | `to_dict()`                | yes (error JSON shape)                            | core                                                                           |
 
 **Verification Policy** is not a typed model at all — it is `dict[str,
 Any]`, read exclusively via `.get(key)`/`"key" in policy` by every adapter
 (`docs/architecture.md`: "This tool does not define 'correct' — policy
-does"). `Limits`, by contrast, *is* a typed, frozen dataclass but has no
+does"). `Limits`, by contrast, _is_ a typed, frozen dataclass but has no
 CLI/MCP-facing override surface today.
 
 **The load-bearing fact for the rest of this review:** nothing in this
 table has a field, method, or concept that spans two `ArtifactRef`
 instances. `InspectionReport.details` is the only place a second artifact
-*could* be referenced, and only as an untyped string inside adapter-defined
+_could_ be referenced, and only as an untyped string inside adapter-defined
 JSON (e.g. XLSX's `external_links: list[str]`, HTML's
 `local_resources_missing: list[str]`) — never as a second `ArtifactRef`,
 never resolved into a second `InspectionReport`.
@@ -170,7 +170,7 @@ core-facts research pass, independently cross-checked against the file):
   line, and `contract.py`'s tool description string, both advertise an
   `inspect` step the receipt-producing code path never performs.
 - The real per-iteration order (mutating branch) is: `build_plan()` (which
-  *does* call `adapter.plan()`, which typically calls `self.inspect(ref)`
+  _does_ call `adapter.plan()`, which typically calls `self.inspect(ref)`
   internally — so inspection happens, just inside `plan()`, not as an
   engine-level phase) → `adapter.execute()` → `adapter.verify_structural()`
   → (conditionally) `adapter.render()` inside `_visual_evidence_result()`
@@ -222,46 +222,47 @@ the narrower intra-artifact pattern already proven — is real for at most
 Direct, exhaustive per-adapter evidence (from the adapter research pass;
 file:line citations preserved):
 
-| Adapter | Reference concept exists? | Scope | Missing-target Check id | Status when missing | Ever follows/opens the target? |
-|---|---|---|---|---|---|
-| PDF | No (font embedding ≠ cross-file reference; `merge`'s `additional_inputs` are explicit new-content args, not discovered references) | — | — | — | — |
-| PPTX | Yes — `shape.image.blob` resolves the OOXML relationship id for picture shapes (`pptx/adapter.py:244-248`) | intra-zip | `broken_media` | **FAIL, unconditional** (not policy-gated) | N/A (intra-zip) |
-| DOCX | Yes — walks `document.part.related_parts` directly (`docx/adapter.py:218-227`) | intra-zip | `broken_media` | **FAIL, unconditional** | N/A (intra-zip) |
-| XLSX | Yes — `wb._external_links` (`xlsx/adapter.py:231`) | cross-file (external workbook) | `external_links` | policy-gated FAIL/WARN — **presence only** | **No — explicitly not fetched**, message cites network-off-by-default |
-| HTML | Yes — full resource-attr + CSS scan, resolves relative to file's own directory (`html/adapter.py:288-305`) | local filesystem, relative to this file | `local_resources` | **FAIL, unconditional** | Existence probe (`is_file()`) only, no content read |
-| SVG | Yes — `image`/`use`/`script` href scan, same local-resolution pattern | local filesystem | `local_resources` | **FAIL, unconditional** | Existence probe only |
-| CSV | **No — confirmed, exhaustively searched** | — | — | — | — |
-| Markdown | Yes — `[text](url)`/`![alt](url)` regex, same local-resolution pattern | local filesystem | `local_resources` | **FAIL, unconditional** | Existence probe only |
-| EPUB | Yes — manifest↔zip-member and spine↔manifest resolution (`epub/adapter.py:301-304`) | intra-zip | `manifest_references_resolve`, `spine_references_resolve` | **FAIL, unconditional**, both | N/A (intra-zip) |
-| Image | No (EXIF orientation only; no provenance/reference field read at all) | — | — | — | — |
-| Media | **No — confirmed** (container tags read only for placeholder-text scanning) | — | — | — | — |
+| Adapter  | Reference concept exists?                                                                                                          | Scope                                   | Missing-target Check id                                   | Status when missing                        | Ever follows/opens the target?                                        |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | --------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
+| PDF      | No (font embedding ≠ cross-file reference; `merge`'s `additional_inputs` are explicit new-content args, not discovered references) | —                                       | —                                                         | —                                          | —                                                                     |
+| PPTX     | Yes — `shape.image.blob` resolves the OOXML relationship id for picture shapes (`pptx/adapter.py:244-248`)                         | intra-zip                               | `broken_media`                                            | **FAIL, unconditional** (not policy-gated) | N/A (intra-zip)                                                       |
+| DOCX     | Yes — walks `document.part.related_parts` directly (`docx/adapter.py:218-227`)                                                     | intra-zip                               | `broken_media`                                            | **FAIL, unconditional**                    | N/A (intra-zip)                                                       |
+| XLSX     | Yes — `wb._external_links` (`xlsx/adapter.py:231`)                                                                                 | cross-file (external workbook)          | `external_links`                                          | policy-gated FAIL/WARN — **presence only** | **No — explicitly not fetched**, message cites network-off-by-default |
+| HTML     | Yes — full resource-attr + CSS scan, resolves relative to file's own directory (`html/adapter.py:288-305`)                         | local filesystem, relative to this file | `local_resources`                                         | **FAIL, unconditional**                    | Existence probe (`is_file()`) only, no content read                   |
+| SVG      | Yes — `image`/`use`/`script` href scan, same local-resolution pattern                                                              | local filesystem                        | `local_resources`                                         | **FAIL, unconditional**                    | Existence probe only                                                  |
+| CSV      | **No — confirmed, exhaustively searched**                                                                                          | —                                       | —                                                         | —                                          | —                                                                     |
+| Markdown | Yes — `[text](url)`/`![alt](url)` regex, same local-resolution pattern                                                             | local filesystem                        | `local_resources`                                         | **FAIL, unconditional**                    | Existence probe only                                                  |
+| EPUB     | Yes — manifest↔zip-member and spine↔manifest resolution (`epub/adapter.py:301-304`)                                                | intra-zip                               | `manifest_references_resolve`, `spine_references_resolve` | **FAIL, unconditional**, both              | N/A (intra-zip)                                                       |
+| Image    | No (EXIF orientation only; no provenance/reference field read at all)                                                              | —                                       | —                                                         | —                                          | —                                                                     |
+| Media    | **No — confirmed** (container tags read only for placeholder-text scanning)                                                        | —                                       | —                                                         | —                                          | —                                                                     |
 
 **The pattern, stated precisely:** every existing "is this reference
 broken" check in this codebase is **unconditional FAIL, never policy-gated**,
 and every existing "does an external/cross-boundary reference exist"
-check (XLSX external links, HTML/SVG/Markdown *external* — as opposed to
-*local* — resources) is **policy-gated WARN/FAIL on presence alone, and
+check (XLSX external links, HTML/SVG/Markdown _external_ — as opposed to
+_local_ — resources) is **policy-gated WARN/FAIL on presence alone, and
 explicitly never resolved**, citing the network-off-by-default policy.
-This is a clean, already-established two-tier precedent: *local/intra-
+This is a clean, already-established two-tier precedent: _local/intra-
 artifact → resolve and hard-fail if broken; anything crossing a trust
-boundary → report presence, never follow.*
+boundary → report presence, never follow._
 
 **What none of these six implementations do:** produce a second
 `ArtifactRef`, call a second adapter's `inspect()`, or persist anything
 beyond a single `Check`'s `evidence` dict (a list of strings). The
 "relationship" is discovered, used to answer one boolean ("does this
-resolve"), and discarded. There is no relationship *model* — no node, no
+resolve"), and discarded. There is no relationship _model_ — no node, no
 edge, no graph — anywhere in this codebase today.
 
 ### Terminology check (per the request's §6)
 
 Applying the request's own vocabulary to what actually exists:
+
 - `contains`/`embedded`: PPTX/DOCX/EPUB's intra-zip resolution is exactly
-  this — a manifest/relationship part naming a member of the *same*
+  this — a manifest/relationship part naming a member of the _same_
   container.
 - `linked`/`external-reference`: XLSX's external-workbook links, and
-  HTML/SVG/Markdown's *external* (http/https) resources.
-- `runtime-reference`: HTML/SVG/Markdown's *local* file references are
+  HTML/SVG/Markdown's _external_ (http/https) resources.
+- `runtime-reference`: HTML/SVG/Markdown's _local_ file references are
   closer to this — resolved against the referencing file's own directory
   at inspection time, not baked into a container format's own manifest.
 - `derived-from`/`generated-from`: **does not exist anywhere.** PDF's
@@ -282,13 +283,13 @@ Applying the request's own vocabulary to what actually exists:
 ## 9. Dependency Model
 
 No dependency model exists. The closest analog — XLSX's `external_links`
-— reports *presence* of a dependency-shaped reference (a link to another
+— reports _presence_ of a dependency-shaped reference (a link to another
 workbook) without ever validating it resolves, exists, or is itself valid.
 There is no "this artifact depends on that artifact, and here is whether
 that dependency is satisfied" concept anywhere.
 
 If built, a dependency model would need, at minimum, to answer: is a
-dependency *edge* symmetric with a *reference* edge, or a subtype of it?
+dependency _edge_ symmetric with a _reference_ edge, or a subtype of it?
 The evidence in §8 suggests **reference and dependency are the same
 concept in this codebase's existing precedent** — "PPTX shape references
 this image" and "PPTX depends on this image existing" are not
@@ -316,7 +317,7 @@ on, unlike the reference-resolution pattern in §8.
 ## 11. Impact Analysis Model
 
 **Does not exist.** No code path in this repository re-evaluates one
-artifact's verification status in response to a *different* artifact
+artifact's verification status in response to a _different_ artifact
 changing. This is a pure greenfield concept with respect to the current
 codebase — there is no existing partial implementation, no adjacent
 pattern, and no precedent for the request's own required distinction
@@ -342,14 +343,14 @@ Answering the request's own six questions (§13) directly, from evidence:
   relationship IDs, EPUB manifests, Markdown link syntax) and the
   project's own "core never imports a format-specific library" principle
   would be directly violated by moving this logic there. **A graph
-  *engine* (the generic node/edge/traversal machinery, format-agnostic)
+  _engine_ (the generic node/edge/traversal machinery, format-agnostic)
   could theoretically live in `core/` without violating this principle —
   but nothing in the current codebase needs one, since no existing
   capability spans more than one artifact (§4's conclusion).**
 - **Q2 (In adapter?)** Yes, for the intra-artifact pattern that already
   exists (§8) — this is where it already lives, correctly, six times over.
   A cross-artifact capability, if built, would need each adapter to expose
-  a *discovery* primitive (e.g., "list the reference strings I found, and
+  a _discovery_ primitive (e.g., "list the reference strings I found, and
   classify each as intra/local/external") while a **new, separate layer**
   (not existing `core/`, not any one adapter) resolves those strings into
   second `ArtifactRef`s and orchestrates recursive inspection. That
@@ -366,8 +367,8 @@ Answering the request's own six questions (§13) directly, from evidence:
   other" skill are different jobs with different risk profiles; conflating
   them risks exactly the "巨大Skill化" the request's own §34 forbids.
 - **Q5 (Does this break artifacts-skill's existing philosophy?)** The
-  *narrow* version (§32) does not — it's a policy-shaped extension of
-  `verify_structural(ref, policy)`, the existing contract. The *full*
+  _narrow_ version (§32) does not — it's a policy-shaped extension of
+  `verify_structural(ref, policy)`, the existing contract. The _full_
   graph/lineage/impact vision, as literally specified in the request's own
   §5/§40, would — it requires a new object model, a new I/O class
   (autonomous file-following the caller never named), and a materially
@@ -418,17 +419,18 @@ already a single opaque JSON object in every tool's `input_schema`.
 The request's own §19 poses four options (A: integrate into receipt, B:
 separate `artifact-graph.json`, C: receipt references graph, D:
 independent). Given §32's narrow recommendation, **none of these apply** —
-there is no new evidence artifact. If the *full* graph vision were ever
+there is no new evidence artifact. If the _full_ graph vision were ever
 built later, this review's reading of the evidence favors option B/D
 (separate, receipt-independent) over A/C, because:
+
 - `ProductionReceipt`'s own aggregation semantics (`_overall_status()`,
   worst-status-wins across operation/structural/visual) are already
-  precisely scoped to "what was checked about *this one* artifact in *this
-  one* run" — folding in a graph spanning other artifacts and other runs
+  precisely scoped to "what was checked about _this one_ artifact in _this
+  one_ run" — folding in a graph spanning other artifacts and other runs
   would break the receipt's own internal consistency story (its `input` is
   one `ArtifactRef`, singular, throughout).
 - The existing, unfixed Issue #47 (evidence-directory collision under
-  concurrency) already threatens the *current*, single-artifact
+  concurrency) already threatens the _current_, single-artifact
   `reports/receipt.json`/`reports/rendered/*.png` outputs. Any new
   `graph.json` sharing the same default `reports/` directory would inherit
   the identical, already-known bug on day one.
@@ -442,14 +444,14 @@ vision now, independent of API/architecture concerns.
 
 **The current threat model's core invariant:** the tool only ever touches
 files the caller explicitly named. Confirmed by direct code read: every
-CLI/MCP tool takes exactly one `input` path; the one place a *second* path
+CLI/MCP tool takes exactly one `input` path; the one place a _second_ path
 is ever opened is PDF's `merge` operation, and that second path is also
 supplied explicitly by the caller as an operation argument, not discovered
 by the tool itself.
 
 **A relationship-discovery/graph feature inverts this invariant** — it
-would, for the first time, have the tool decide *on its own, by reading
-data inside an untrusted file* which other files to open next. This is a
+would, for the first time, have the tool decide _on its own, by reading
+data inside an untrusted file_ which other files to open next. This is a
 qualitatively new attack surface, and several existing, real gaps make it
 materially riskier than it would first appear:
 
@@ -467,7 +469,7 @@ materially riskier than it would first appear:
   structure itself (rather than through the existing, safe
   library-mediated `shape.image.blob`/`document.part.related_parts`
   calls) to build a relationship graph. The existing `broken_media` checks
-  are safe *because* they never touch `zipfile` directly. A graph-building
+  are safe _because_ they never touch `zipfile` directly. A graph-building
   feature that does would need genuinely new security work, not reuse of
   what's there.
 - **No image decompression-bomb guard exists at all** — confirmed no
@@ -479,13 +481,13 @@ materially riskier than it would first appear:
   `safe_extract_zip()`) and is explicitly not a general-purpose path-safety
   helper (its own docstring says so, after Issue #30 corrected a prior
   overclaim). A discovery feature resolving caller-relative or
-  artifact-relative reference paths would need its *own* containment
+  artifact-relative reference paths would need its _own_ containment
   story — reusing the existing helper by name would repeat exactly the
   overclaim Issue #30 already had to fix once.
 - **Recursive/cyclic references** (`A → B → A`, the request's own §16
   concern) have zero precedent to build on — none of the six existing
   reference checks ever traverse more than one hop (they check "does the
-  reference resolve," never "and does *that* target's own references
+  reference resolve," never "and does _that_ target's own references
   resolve too"). Cycle detection, huge-graph limits, and recursion depth
   caps would all be new code with no existing analog to model against.
 
@@ -526,7 +528,7 @@ session): `reports/` is a fixed, cwd-relative default shared by every
 `execute`/`receipt`/`render` invocation, with no PID/timestamp/random
 uniqueness — reproduced with a measured 50% evidence-collision rate across
 50 concurrent `receipt` calls. This is the current system's own,
-already-known concurrency debt, on the *simpler* single-artifact model.
+already-known concurrency debt, on the _simpler_ single-artifact model.
 Any new shared-output artifact (a `graph.json`, a cache of discovered
 relationships) would inherit this exact, already-diagnosed problem on day
 one unless #47 is fixed first or the new artifact is designed with its own
@@ -559,19 +561,19 @@ performance claim could be made about it. This review makes none.
 Built entirely from the adapter survey's direct evidence (§8), not from
 "should be possible" reasoning:
 
-| Format | Explicit refs extractable today? | Embedded assets | External refs | Dependency definable? | Lineage definable? | Hash | Structure diff | Render diff | Deterministic | Security risk if extended | Impl. difficulty (extending existing pattern) | Confidence |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| PDF | No (no existing code) | No (font-embedding only, not cross-file) | No | Not today — would be new work, no precedent | No | Yes (sha256, existing) | Not implemented (no page-content-diff exists) | Not implemented | Yes, if built the way §8's pattern works | Low-medium (PDF has no zip-bomb-class risk; embedded-file streams could theoretically be huge) | High (no adapter code to build on at all) | Difficult — genuinely new |
-| PPTX | **Yes** — `broken_media` already resolves picture-shape relationships | Yes (images, via existing check) | No (no external-workbook-style concept in PPTX) | Extending `broken_media`'s pattern to a real graph node/edge: Medium difficulty | No | Yes | Not implemented | Not implemented | Yes | **High if graph-building bypasses python-pptx and touches `zipfile` directly (§16)**; Low if it stays inside python-pptx's own resolution the way `broken_media` already safely does | Low-medium (extend existing pattern) | High confidence this specific capability is real and low-risk *if scoped to intra-file* |
-| DOCX | **Yes** — `document.part.related_parts` walk already exists | Yes (images) | No | Same as PPTX | No | Yes | Not implemented | Not implemented | Yes | Same caveat as PPTX | Low-medium | High confidence, same caveat |
-| XLSX | **Yes, but presence-only** — `external_links` never resolves | No embedded-image check at all (confirmed absent) | **Yes** — the one format with a real cross-*file* reference concept already | Yes — this is the closest existing thing to a real dependency edge in the whole codebase | No | Yes | Not implemented | Not implemented | Yes | Medium — actually resolving `external_links` would be the *first* place this tool ever opens a second file the caller didn't name | Medium (resolving, not just detecting, is new) | Medium — real value, but resolving external workbooks crosses the trust-boundary line §16 flags |
-| HTML | **Yes** — full resource scan + local resolution already exists | Yes | Yes (detected, never fetched) | Yes, for local refs specifically | No | Yes | Not implemented | Not implemented | Yes | Low for local refs (already an existence-probe, no content read); the moment content is *read* (to recursively inspect the referenced file), Medium | Low (existing `local_resources_missing` list is already 90% of the discovery work) | High confidence, best-fit format alongside SVG/Markdown |
-| SVG | Same as HTML, narrower resource-tag set | Yes | Yes | Yes | No | Yes | Not implemented | Not implemented | Yes | Same as HTML | Low | High confidence |
-| CSV | **No — confirmed zero concept, no cell-as-reference logic exists** | No | No | Not applicable — no real precedent for what a CSV "reference" even means structurally | No | Yes | N/A | N/A | Yes | Low (nothing to extend) | High (fabricating a feature with no format basis) | **Low confidence any real feature exists here — do not force one** |
-| Markdown | **Yes** — link/image local resolution already exists, closest analog to the request's own worked example (`good.md`) | Yes | Yes | Yes | No | Yes | Not implemented | Not implemented | Yes | Same as HTML | Low | High confidence |
-| EPUB | **Yes** — the richest existing internal reference graph (manifest + spine) | Yes (intra-archive only) | No (EPUB spec has no external-file concept in scope here) | Yes, intra-archive only | No | Yes | Not implemented | Not implemented | Yes | Same zip-bomb caveat as PPTX/DOCX, but EPUB is the one format that *already* goes through `safe_extract_zip()` for render — so this format is actually the *safest* one to extend, not the riskiest | Low (already the most graph-shaped adapter in the codebase) | High confidence |
-| Image (PNG/JPEG/WebP) | No (EXIF has no reference field read) | No | No | Not applicable | No | Yes | N/A | N/A | Yes | Low, but recall no decompression-bomb guard exists (§16) — recursively opening referenced images is exactly where that gap bites | Medium-High (fabricating a feature; EXIF provenance chains are a real but different, unimplemented concept) | **Low confidence — do not force one; the "photo.png used by 3 decks" use case has zero implementation precedent** |
-| Media (video/audio) | **No — confirmed zero concept** | No | No | Not applicable (no HLS/DASH manifest-following exists) | No | Yes | N/A | N/A | Yes | Low (nothing to extend), but the existing `max_video_pixels` decompression-bomb finding (§16) is a direct warning about what happens when this format's declared-vs-actual size gap is *not* guarded — the same caution applies to any new capability here | High (fabricating a feature) | **Low confidence — do not force one, despite this being the format category the requesting user's own professional context (映像・音響・配信) would most want it for** |
+| Format                | Explicit refs extractable today?                                                                                     | Embedded assets                                   | External refs                                                               | Dependency definable?                                                                    | Lineage definable? | Hash                   | Structure diff                                | Render diff     | Deterministic                            | Security risk if extended                                                                                                                                                                                                                                  | Impl. difficulty (extending existing pattern)                                                               | Confidence                                                                                                                                                             |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------ | ---------------------- | --------------------------------------------- | --------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PDF                   | No (no existing code)                                                                                                | No (font-embedding only, not cross-file)          | No                                                                          | Not today — would be new work, no precedent                                              | No                 | Yes (sha256, existing) | Not implemented (no page-content-diff exists) | Not implemented | Yes, if built the way §8's pattern works | Low-medium (PDF has no zip-bomb-class risk; embedded-file streams could theoretically be huge)                                                                                                                                                             | High (no adapter code to build on at all)                                                                   | Difficult — genuinely new                                                                                                                                              |
+| PPTX                  | **Yes** — `broken_media` already resolves picture-shape relationships                                                | Yes (images, via existing check)                  | No (no external-workbook-style concept in PPTX)                             | Extending `broken_media`'s pattern to a real graph node/edge: Medium difficulty          | No                 | Yes                    | Not implemented                               | Not implemented | Yes                                      | **High if graph-building bypasses python-pptx and touches `zipfile` directly (§16)**; Low if it stays inside python-pptx's own resolution the way `broken_media` already safely does                                                                       | Low-medium (extend existing pattern)                                                                        | High confidence this specific capability is real and low-risk _if scoped to intra-file_                                                                                |
+| DOCX                  | **Yes** — `document.part.related_parts` walk already exists                                                          | Yes (images)                                      | No                                                                          | Same as PPTX                                                                             | No                 | Yes                    | Not implemented                               | Not implemented | Yes                                      | Same caveat as PPTX                                                                                                                                                                                                                                        | Low-medium                                                                                                  | High confidence, same caveat                                                                                                                                           |
+| XLSX                  | **Yes, but presence-only** — `external_links` never resolves                                                         | No embedded-image check at all (confirmed absent) | **Yes** — the one format with a real cross-_file_ reference concept already | Yes — this is the closest existing thing to a real dependency edge in the whole codebase | No                 | Yes                    | Not implemented                               | Not implemented | Yes                                      | Medium — actually resolving `external_links` would be the _first_ place this tool ever opens a second file the caller didn't name                                                                                                                          | Medium (resolving, not just detecting, is new)                                                              | Medium — real value, but resolving external workbooks crosses the trust-boundary line §16 flags                                                                        |
+| HTML                  | **Yes** — full resource scan + local resolution already exists                                                       | Yes                                               | Yes (detected, never fetched)                                               | Yes, for local refs specifically                                                         | No                 | Yes                    | Not implemented                               | Not implemented | Yes                                      | Low for local refs (already an existence-probe, no content read); the moment content is _read_ (to recursively inspect the referenced file), Medium                                                                                                        | Low (existing `local_resources_missing` list is already 90% of the discovery work)                          | High confidence, best-fit format alongside SVG/Markdown                                                                                                                |
+| SVG                   | Same as HTML, narrower resource-tag set                                                                              | Yes                                               | Yes                                                                         | Yes                                                                                      | No                 | Yes                    | Not implemented                               | Not implemented | Yes                                      | Same as HTML                                                                                                                                                                                                                                               | Low                                                                                                         | High confidence                                                                                                                                                        |
+| CSV                   | **No — confirmed zero concept, no cell-as-reference logic exists**                                                   | No                                                | No                                                                          | Not applicable — no real precedent for what a CSV "reference" even means structurally    | No                 | Yes                    | N/A                                           | N/A             | Yes                                      | Low (nothing to extend)                                                                                                                                                                                                                                    | High (fabricating a feature with no format basis)                                                           | **Low confidence any real feature exists here — do not force one**                                                                                                     |
+| Markdown              | **Yes** — link/image local resolution already exists, closest analog to the request's own worked example (`good.md`) | Yes                                               | Yes                                                                         | Yes                                                                                      | No                 | Yes                    | Not implemented                               | Not implemented | Yes                                      | Same as HTML                                                                                                                                                                                                                                               | Low                                                                                                         | High confidence                                                                                                                                                        |
+| EPUB                  | **Yes** — the richest existing internal reference graph (manifest + spine)                                           | Yes (intra-archive only)                          | No (EPUB spec has no external-file concept in scope here)                   | Yes, intra-archive only                                                                  | No                 | Yes                    | Not implemented                               | Not implemented | Yes                                      | Same zip-bomb caveat as PPTX/DOCX, but EPUB is the one format that _already_ goes through `safe_extract_zip()` for render — so this format is actually the _safest_ one to extend, not the riskiest                                                        | Low (already the most graph-shaped adapter in the codebase)                                                 | High confidence                                                                                                                                                        |
+| Image (PNG/JPEG/WebP) | No (EXIF has no reference field read)                                                                                | No                                                | No                                                                          | Not applicable                                                                           | No                 | Yes                    | N/A                                           | N/A             | Yes                                      | Low, but recall no decompression-bomb guard exists (§16) — recursively opening referenced images is exactly where that gap bites                                                                                                                           | Medium-High (fabricating a feature; EXIF provenance chains are a real but different, unimplemented concept) | **Low confidence — do not force one; the "photo.png used by 3 decks" use case has zero implementation precedent**                                                      |
+| Media (video/audio)   | **No — confirmed zero concept**                                                                                      | No                                                | No                                                                          | Not applicable (no HLS/DASH manifest-following exists)                                   | No                 | Yes                    | N/A                                           | N/A             | Yes                                      | Low (nothing to extend), but the existing `max_video_pixels` decompression-bomb finding (§16) is a direct warning about what happens when this format's declared-vs-actual size gap is _not_ guarded — the same caution applies to any new capability here | High (fabricating a feature)                                                                                | **Low confidence — do not force one, despite this being the format category the requesting user's own professional context (映像・音響・配信) would most want it for** |
 
 **Reading this matrix honestly:** real, low-risk, extend-what-exists
 feasibility clusters around exactly 6 formats (PPTX, DOCX, HTML, SVG,
@@ -589,7 +591,7 @@ container's own tags carry no reference semantics ffprobe surfaces).
 
 The request's own §22/§23 concern (don't let "relationship extraction
 unsupported" collapse into "no dependencies", i.e. a fake PASS) is already
-correctly modeled by the *existing* six implementations, and should be
+correctly modeled by the _existing_ six implementations, and should be
 followed exactly if any narrow extension is built: a reference that can't
 be classified stays `UNKNOWN`, never silently becomes "no reference found."
 Every one of the six existing checks in §8 already does this correctly —
@@ -697,7 +699,7 @@ phase-shaped work this review actually endorses:
 - **Phase 1 (only if real user demand materializes) — opt-in
   cross-artifact policy check.** A caller-supplied policy key (exact shape
   to be designed if/when pursued) letting `verify_structural()` check a
-  *caller-named* second artifact's hash/existence against the primary
+  _caller-named_ second artifact's hash/existence against the primary
   artifact's own reference to it — e.g., "this PPTX's embedded logo should
   match this exact file" — using the existing `additional_inputs`-style
   pattern PDF's `merge` already establishes for accepting extra,
@@ -716,6 +718,7 @@ review's own conclusion.
 Explicitly out of scope, regardless of future revisiting, unless a
 materially different capability class emerges than what was evaluated
 here:
+
 - A generic, `core/`-level relationship/dependency/lineage graph type.
 - Autonomous, caller-unaware following of references discovered inside an
   artifact (the tool deciding on its own which other files to open).
@@ -738,7 +741,7 @@ here:
   naive graph-building code.
 - **Sunk-cost risk in the other direction** — the six existing
   intra-artifact implementations are real, proven, and currently
-  undocumented as a *pattern* (each adapter's own section in
+  undocumented as a _pattern_ (each adapter's own section in
   `docs/adapters.md` describes its own `broken_media`/`local_resources`
   check individually; nothing currently states that this is the same
   pattern implemented six times). Leaving this undocumented risks a
@@ -753,6 +756,7 @@ here:
 Per the request's own §35, the full graph/lineage/impact vision meets
 multiple criteria that would justify treating it as a separate project if
 ever built at all:
+
 - ✅ Core responsibility is materially different (single-artifact
   verification vs. multi-artifact corpus mapping).
 - ✅ Would become a genuinely independent capability (a general dependency
@@ -761,15 +765,15 @@ ever built at all:
   a new threat class this project's current model doesn't contemplate).
 - ✅ Performance characteristics are qualitatively different (O(1)
   single-file operations today vs. O(N+M) corpus operations).
-- ⚠️ Format-adapter boundary: partially at risk — the *discovery*
+- ⚠️ Format-adapter boundary: partially at risk — the _discovery_
   primitive could stay adapter-scoped (§12, Q2) without breaking the
-  boundary, but the *graph orchestration* layer would be new and doesn't
+  boundary, but the _graph orchestration_ layer would be new and doesn't
   cleanly belong to either `core/` or any single adapter.
 
 This is direct evidence supporting **NARROW-to-REJECT-of-the-full-vision**,
 not evidence for building it as part of this project even in a separate
 package right now — the request asked this review to decide PROCEED /
-NARROW / DEFER / REJECT for *this* evolution question, not to greenlight a
+NARROW / DEFER / REJECT for _this_ evolution question, not to greenlight a
 future separate project speculatively.
 
 ---
@@ -851,8 +855,8 @@ innovative"):**
 
 No part of this recommendation was chosen to please the requester or to
 avoid disappointing an interesting-sounding proposal — the evidence
-(six real, working implementations of the *narrow* capability already in
+(six real, working implementations of the _narrow_ capability already in
 production; zero implementations, zero adjacent code, and zero
-deterministic mechanism for the *broad* capability in 4 of 11 formats) is
+deterministic mechanism for the _broad_ capability in 4 of 11 formats) is
 what drove the conclusion, and it points the same direction from every
 angle the request asked this review to check.

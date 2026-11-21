@@ -27,9 +27,7 @@
       "version": "1.3.2",
       "role": "execution",
       "description": "Execute a typed AudioProject (operation graph) and write validated audio artifacts with provenance",
-      "inputs": [
-        "request document (stdin)"
-      ],
+      "inputs": ["request document (stdin)"],
       "input_type": "audio-production/request@1",
       "produces_output": true,
       "writes_media": true,
@@ -288,10 +286,7 @@
                 "type": "number"
               }
             },
-            "required": [
-              "start",
-              "end"
-            ],
+            "required": ["start", "end"],
             "additionalProperties": false
           }
         }
@@ -328,10 +323,7 @@
                 "type": "number"
               }
             },
-            "required": [
-              "start",
-              "end"
-            ],
+            "required": ["start", "end"],
             "additionalProperties": false
           }
         },
@@ -477,16 +469,7 @@
           "type": "integer",
           "required": false,
           "enum": [
-            8000,
-            11025,
-            16000,
-            22050,
-            24000,
-            32000,
-            44100,
-            48000,
-            88200,
-            96000
+            8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000, 88200, 96000
           ],
           "description": "output sample rate (omit: keep the input's)"
         },
@@ -576,10 +559,7 @@
               "description": "ms the bed takes to come back (--duck-release; omit: ffmpeg-skill's default)"
             }
           },
-          "required_properties": [
-            "input",
-            "amount_db"
-          ],
+          "required_properties": ["input", "amount_db"],
           "additionalProperties": false
         }
       },
@@ -686,9 +666,7 @@
         "mode": {
           "type": "string",
           "required": true,
-          "enum": [
-            "fft"
-          ],
+          "enum": ["fft"],
           "description": "only 'fft' (afftdn) is implemented"
         },
         "strength_db": {
@@ -871,11 +849,7 @@
         "level": {
           "type": "string",
           "required": true,
-          "enum": [
-            "light",
-            "medium",
-            "strong"
-          ],
+          "enum": ["light", "medium", "strong"],
           "description": "light = highpass 80 Hz + gentle compression; medium = highpass, de-esser, FFT denoise (fixed -25 dB floor), compression; strong = medium + harder de-esser, second compressor, limiter at -1 dBFS. No default: the caller decides. light / strong need an ffmpeg-skill whose contract declares the --voice levels (older releases: medium only, anything else is refused with TOOL_ERROR before a tool runs)"
         },
         "audio_stream": {
@@ -934,11 +908,7 @@
                 "max": 1
               }
             },
-            "required": [
-              "start",
-              "end",
-              "text"
-            ],
+            "required": ["start", "end", "text"],
             "additionalProperties": false
           }
         },
@@ -964,10 +934,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "enum": [
-                  "en",
-                  "ja"
-                ]
+                "enum": ["en", "ja"]
               }
             },
             "words": {
@@ -1048,11 +1015,7 @@
               "profile": {
                 "type": "string",
                 "required": false,
-                "enum": [
-                  "arib_tr_b32",
-                  "atsc_a85",
-                  "ebu_r128"
-                ],
+                "enum": ["arib_tr_b32", "atsc_a85", "ebu_r128"],
                 "description": "a delivery profile (sets target_lufs and true_peak_db); exactly one of profile / target_lufs + true_peak_db"
               },
               "target_lufs": {
@@ -1080,32 +1043,14 @@
                 "type": "integer",
                 "required": false,
                 "enum": [
-                  8000,
-                  11025,
-                  16000,
-                  22050,
-                  24000,
-                  32000,
-                  44100,
-                  48000,
-                  88200,
+                  8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000, 88200,
                   96000
                 ],
                 "description": "output sample rate of this version (omit: keep the input's)"
               }
             },
-            "required": [
-              "version_id"
-            ],
-            "one_of": [
-              [
-                "profile"
-              ],
-              [
-                "target_lufs",
-                "true_peak_db"
-              ]
-            ],
+            "required": ["version_id"],
+            "one_of": [["profile"], ["target_lufs", "true_peak_db"]],
             "additionalProperties": false
           }
         },
@@ -1157,18 +1102,10 @@
               },
               "role": {
                 "type": "string",
-                "enum": [
-                  "dialogue",
-                  "music",
-                  "effects",
-                  "other"
-                ]
+                "enum": ["dialogue", "music", "effects", "other"]
               }
             },
-            "required": [
-              "stem_id",
-              "inputs"
-            ],
+            "required": ["stem_id", "inputs"],
             "additionalProperties": false,
             "rule": "every input index in exactly one stem"
           }
@@ -1224,28 +1161,14 @@
           "type": "integer",
           "required": false,
           "enum": [
-            8000,
-            11025,
-            16000,
-            22050,
-            24000,
-            32000,
-            44100,
-            48000,
-            88200,
-            96000
+            8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000, 88200, 96000
           ],
           "description": "output sample rate (omit: the first input's)"
         },
         "channels": {
           "type": "integer",
           "required": false,
-          "enum": [
-            1,
-            2,
-            6,
-            8
-          ],
+          "enum": [1, 2, 6, 8],
           "description": "output channel count (omit: the widest input)"
         }
       },
@@ -1263,18 +1186,7 @@
   ],
   "filler_lexicons": {
     "presets": {
-      "en": [
-        "um",
-        "umm",
-        "uh",
-        "uhh",
-        "uhm",
-        "erm",
-        "er",
-        "hmm",
-        "mm",
-        "ah"
-      ],
+      "en": ["um", "umm", "uh", "uhh", "uhm", "erm", "er", "hmm", "mm", "ah"],
       "ja": [
         "\u3048\u30fc",
         "\u3048\u30fc\u3068",
@@ -1367,23 +1279,9 @@
     "codec": "pcm_s16le",
     "work_dir": "<workspace>/.audio-production/<project_id>/"
   },
-  "channel_layouts": [
-    "5.1",
-    "7.1",
-    "mono",
-    "stereo"
-  ],
+  "channel_layouts": ["5.1", "7.1", "mono", "stereo"],
   "sample_rates": [
-    8000,
-    11025,
-    16000,
-    22050,
-    24000,
-    32000,
-    44100,
-    48000,
-    88200,
-    96000
+    8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000, 88200, 96000
   ],
   "max_mix_inputs": 8,
   "max_concat_inputs": 32,
@@ -1430,12 +1328,7 @@
   },
   "execution": {
     "mode": "local",
-    "canonical_invocation": [
-      "audio-production",
-      "run",
-      "-",
-      "--json"
-    ],
+    "canonical_invocation": ["audio-production", "run", "-", "--json"],
     "stdin": "audio-production/request@1",
     "stdout": "exactly one audio-production/response@1 document",
     "stderr": "diagnostics only",
@@ -1453,17 +1346,9 @@
   "ffmpeg_skill": {
     "contract_version": "1.0",
     "compatibility": "capability detection: every tools_used tool declared audio_only with every flags_used flag in its input_schema; no version window",
-    "tools_used": [
-      "probe",
-      "audio",
-      "cut",
-      "loudness",
-      "join"
-    ],
+    "tools_used": ["probe", "audio", "cut", "loudness", "join"],
     "flags_used": {
-      "probe": [
-        "inputs"
-      ],
+      "probe": ["inputs"],
       "audio": [
         "input",
         "output",
@@ -1537,12 +1422,8 @@
         "duck_release",
         "replace"
       ],
-      "cut": [
-        "declick_ms"
-      ],
-      "loudness": [
-        "measure_only"
-      ]
+      "cut": ["declick_ms"],
+      "loudness": ["measure_only"]
     }
   },
   "request": {
@@ -1594,9 +1475,7 @@
           {
             "op_id": "id",
             "type": "GAIN|...",
-            "inputs": [
-              "track:<id>|op:<id>"
-            ],
+            "inputs": ["track:<id>|op:<id>"],
             "parameters": {}
           }
         ],
@@ -1671,10 +1550,7 @@
   },
   "cleanup": {
     "cli_flag": "--cleanup",
-    "policies": [
-      "keep",
-      "intermediates"
-    ],
+    "policies": ["keep", "intermediates"],
     "default": "keep",
     "scope": "regular files directly inside <workspace>/.audio-production/<project_id>/ after a fully successful run; never on failure, never outputs",
     "response_key": "cleanup",

@@ -38,7 +38,7 @@ Not feature work. Run these when you have a spare moment, or when the app "feels
 - **It feels static** → **`/find-animation-opportunities`**. Read-only: it proposes motion with exact values, and rejects everything that shouldn't move. Build the ones you accept with `/animate`.
 - **It feels slow or over-animated** → **`/remove-animations`**. Edits code, but only to subtract: motion on keyboard actions, high-frequency surfaces, decoration with no purpose.
 
-These three cover different questions. If the user isn't sure which, ask whether the problem is *bad* motion, *missing* motion, or *too much* motion.
+These three cover different questions. If the user isn't sure which, ask whether the problem is _bad_ motion, _missing_ motion, or _too much_ motion.
 
 ## References underneath
 
@@ -54,19 +54,19 @@ Model-invoked skills the others lean on. Reach for them directly when the **know
 
 ## Common situations
 
-| You say | Reach for |
-| --- | --- |
-| "Animate this" | `/animate` |
-| "These should come in one after another" | `/choreograph` |
-| "It doesn't follow my finger" | `/gestures` |
-| "It stutters" / "it's janky" | `/animation-performance` |
-| "Does this animation feel right?" | `/review-animations` |
-| "Make the app feel better" | `/improve-animations` |
-| "What could animate here?" | `/find-animation-opportunities` |
-| "Too much is moving" | `/remove-animations` |
-| "Give me a few options" | `/prototype` |
-| "Which library should I use?" | `/pick-ui-library` |
-| "Works in Chrome, feels wrong on my phone" | `/mobile-native` |
-| "Try the worst case" | `/break-ui` |
-| "What's that bouncy thing called?" | `/animation-vocabulary` |
-| "Stop making that mistake" | `/learn-taste` |
+| You say                                    | Reach for                       |
+| ------------------------------------------ | ------------------------------- |
+| "Animate this"                             | `/animate`                      |
+| "These should come in one after another"   | `/choreograph`                  |
+| "It doesn't follow my finger"              | `/gestures`                     |
+| "It stutters" / "it's janky"               | `/animation-performance`        |
+| "Does this animation feel right?"          | `/review-animations`            |
+| "Make the app feel better"                 | `/improve-animations`           |
+| "What could animate here?"                 | `/find-animation-opportunities` |
+| "Too much is moving"                       | `/remove-animations`            |
+| "Give me a few options"                    | `/prototype`                    |
+| "Which library should I use?"              | `/pick-ui-library`              |
+| "Works in Chrome, feels wrong on my phone" | `/mobile-native`                |
+| "Try the worst case"                       | `/break-ui`                     |
+| "What's that bouncy thing called?"         | `/animation-vocabulary`         |
+| "Stop making that mistake"                 | `/learn-taste`                  |

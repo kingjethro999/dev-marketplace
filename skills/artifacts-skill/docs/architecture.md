@@ -19,7 +19,7 @@ policy)` always takes a plain `policy: dict` and every adapter reads it via
 `.get(key)`/`"key" in policy` — never an assumption that a key is present or
 meaningful (see `policies.py`'s module docstring). The engine's job is
 running whatever policy it's handed against the artifact's real structure;
-deciding *what that policy should require* is the caller's job, because
+deciding _what that policy should require_ is the caller's job, because
 "correct" is use-case-dependent in a way this project cannot know in
 advance — A4 with embedded fonts and no encryption is "correct" for a print
 submission and irrelevant for a web page; a required `<title>` matters for
@@ -27,7 +27,7 @@ an HTML deliverable and not for CSV data. Baking any of that into the
 engine itself would mean this tool silently deciding what's acceptable for
 every caller, for every format, forever — the opposite of the six-state
 verification model's whole point (`PASS`/`WARN`/`FAIL`/`UNKNOWN` come from
-checking a *stated* requirement against reality, not from this project's
+checking a _stated_ requirement against reality, not from this project's
 own opinion of what a document should look like).
 
 The practical consequence, stated plainly because it is easy to miss: the
@@ -95,15 +95,15 @@ match.
 
 ## Core abstractions (`src/artifact_skill/core/`)
 
-| Module | Owns |
-|---|---|
-| `artifact.py` | `ArtifactRef` (path + content-sniffed type + sha256 + size), `InspectionReport` |
-| `operation.py` | `OperationPlan` (what `execute` *would* do), `OperationRecord` (what it *did*), `default_output_path` (Original Protection) |
-| `capability.py` | `Capability`, `CapabilityStatus` (AVAILABLE/MISSING/UNKNOWN/NOT_REQUIRED/NOT_IMPLEMENTED), `CapabilityReport` |
-| `verification.py` | `Check`, `CheckStatus` (PASS/WARN/FAIL/UNKNOWN/NOT_CHECKED/SKIPPED), `VerificationResult`, worst-status-wins `aggregate()` |
-| `contract.py` | `ToolContract`, the `TOOLS` list — single source of truth for CLI + MCP |
-| `errors.py` | `ArtifactError` and subclasses, the category → exit-code map |
-| `engine.py` | `run_lifecycle()` — the inspect→plan→execute→render→verify→fix loop |
+| Module            | Owns                                                                                                                        |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `artifact.py`     | `ArtifactRef` (path + content-sniffed type + sha256 + size), `InspectionReport`                                             |
+| `operation.py`    | `OperationPlan` (what `execute` _would_ do), `OperationRecord` (what it _did_), `default_output_path` (Original Protection) |
+| `capability.py`   | `Capability`, `CapabilityStatus` (AVAILABLE/MISSING/UNKNOWN/NOT_REQUIRED/NOT_IMPLEMENTED), `CapabilityReport`               |
+| `verification.py` | `Check`, `CheckStatus` (PASS/WARN/FAIL/UNKNOWN/NOT_CHECKED/SKIPPED), `VerificationResult`, worst-status-wins `aggregate()`  |
+| `contract.py`     | `ToolContract`, the `TOOLS` list — single source of truth for CLI + MCP                                                     |
+| `errors.py`       | `ArtifactError` and subclasses, the category → exit-code map                                                                |
+| `engine.py`       | `run_lifecycle()` — the inspect→plan→execute→render→verify→fix loop                                                         |
 
 Core never imports a format-specific library (no `import pypdf` outside
 `adapters/pdf/`). This is still enforced by convention only, not by a
@@ -177,7 +177,7 @@ agent had to hand-assemble evidence from separate `inspect`/`render`/
 function rather than a branch threaded through the main loop, so the
 mutating path's structure (and its tests) are untouched by this addition.
 
-Two things are deliberately *not* automated:
+Two things are deliberately _not_ automated:
 
 1. **Visual judgment.** The engine renders pages and records that evidence
    exists (`VerificationResult(kind="visual", inspected_by=None, ...)`). It
@@ -216,11 +216,11 @@ they sort in creation order). `core/run_dir.py` reserves it with a single
 can never be handed the same directory; on a clash it simply draws a new
 name. Inside the run directory the layout is unchanged:
 
-| Command | Default before | Default now |
-|---|---|---|
-| `receipt`, `execute` | `reports/receipt.json`, `reports/rendered/` | `reports/<run-id>/receipt.json`, `reports/<run-id>/rendered/` |
-| `render` | `reports/rendered/` | `reports/<run-id>/rendered/` |
-| `look` | `reports/contact-sheet.png`, `reports/rendered/` | `reports/<run-id>/contact-sheet.png`, `reports/<run-id>/rendered/` |
+| Command              | Default before                                   | Default now                                                        |
+| -------------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
+| `receipt`, `execute` | `reports/receipt.json`, `reports/rendered/`      | `reports/<run-id>/receipt.json`, `reports/<run-id>/rendered/`      |
+| `render`             | `reports/rendered/`                              | `reports/<run-id>/rendered/`                                       |
+| `look`               | `reports/contact-sheet.png`, `reports/rendered/` | `reports/<run-id>/contact-sheet.png`, `reports/<run-id>/rendered/` |
 
 An explicit directory is used exactly as given, as before: a caller that
 needs a known or reusable location passes one. Dry runs report a fresh
@@ -260,7 +260,7 @@ counts, encryption, extractable text, rendered pixels) and evidence files.
 Whether a rendered page "looks right" is left to whoever is capable of
 seeing it — an agent inspecting the PNGs, or a human. The receipt's
 `verification.visual.inspected_by` field exists specifically to record
-*who* reached a visual verdict, so a receipt can never quietly imply the
+_who_ reached a visual verdict, so a receipt can never quietly imply the
 engine did.
 
 ## Receipt (`receipt/model.py`)
@@ -291,14 +291,14 @@ contract/MCP description, the JSON Schema `title`/`description`, and the
 type. Not renamed, because they are machine-readable and already emitted
 or referenced by consumers:
 
-| Identifier | Value (unchanged) |
-|---|---|
-| `schema` field in every receipt | `artifact-receipt/v1` |
-| JSON Schema file and `$id` | `schemas/artifact-receipt-v1.schema.json` |
-| Field names | `schema`, `status`, `input`, ... (all 13) |
-| CLI command / MCP tool | `receipt` |
-| Contract capability | `document.receipt` |
-| File name | `receipt.json` |
+| Identifier                      | Value (unchanged)                         |
+| ------------------------------- | ----------------------------------------- |
+| `schema` field in every receipt | `artifact-receipt/v1`                     |
+| JSON Schema file and `$id`      | `schemas/artifact-receipt-v1.schema.json` |
+| Field names                     | `schema`, `status`, `input`, ... (all 13) |
+| CLI command / MCP tool          | `receipt`                                 |
+| Contract capability             | `document.receipt`                        |
+| File name                       | `receipt.json`                            |
 
 The identifier `artifact-receipt/v1` never had the clash (it does not
 contain "production"), so a receipt written before this change and one
@@ -345,13 +345,13 @@ are not this skill's job.
 **Decision.** No caption adapter. Caption files are left to subtitle-skill
 and qc-skill. What this skill does and does not do with captions:
 
-| | This skill | Owner |
-|---|---|---|
-| A caption script delivered as a document (DOCX, PDF, Markdown, ...) | Verifies it like any other document: structure, leftover placeholder text, rendered pages | — |
-| A video file that carries captions | Media adapter verifies the container and its video/audio streams; subtitle streams are not read | — |
-| A standalone `.srt` / `.vtt` / `.ass` file | Not recognized: `inspect` returns `ARTIFACT_TYPE_UNSUPPORTED` | subtitle-skill |
-| Writing, rewriting, translating or burning in captions | No | subtitle-skill |
-| Cue timing, overlaps, reading speed, cues past the end of the video | No | subtitle-skill (document), qc-skill (against the delivered video) |
+|                                                                     | This skill                                                                                      | Owner                                                             |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| A caption script delivered as a document (DOCX, PDF, Markdown, ...) | Verifies it like any other document: structure, leftover placeholder text, rendered pages       | —                                                                 |
+| A video file that carries captions                                  | Media adapter verifies the container and its video/audio streams; subtitle streams are not read | —                                                                 |
+| A standalone `.srt` / `.vtt` / `.ass` file                          | Not recognized: `inspect` returns `ARTIFACT_TYPE_UNSUPPORTED`                                   | subtitle-skill                                                    |
+| Writing, rewriting, translating or burning in captions              | No                                                                                              | subtitle-skill                                                    |
+| Cue timing, overlaps, reading speed, cues past the end of the video | No                                                                                              | subtitle-skill (document), qc-skill (against the delivered video) |
 
 The contract states the same in a `not_provided` list, the OS registry's
 key for a skill's self-declared non-responsibilities

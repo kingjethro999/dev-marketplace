@@ -54,13 +54,13 @@ A test that pins the old version's behavior and fails on the new one is a differ
 the baseline show as new failures (say so in the suite `note`). A person decides each: fix the code, update the test, or approve it in a
 table headed "Approved differences", `| Test | Reason |`, in `BASELINE.md`. You never edit or approve.
 
-**Uplift: three more checks the pack makes by itself.** (1) *The baseline must be measured.* `BASELINE.md`'s numbers count only when a
+**Uplift: three more checks the pack makes by itself.** (1) _The baseline must be measured._ `BASELINE.md`'s numbers count only when a
 per-test result file (JUnit or `.trx` XML), a per-test JSON map (`{"<test id>": "PASS"}`) or a raw runner log with a summary line backs
 them, kept in `analysis/$system/baseline/` or named on a line of `BASELINE.md` that starts with `Recorded:` or `Machine-readable:`. A
 table typed by hand, or a file of bare counts, is only PARTLY PROVEN. If the old version's results were never saved, run its suite again
-from a scratch copy of `legacy/$system` and keep them now; never write them in by hand. (2) *Tests kept.* The pack walks the test files of
+from a scratch copy of `legacy/$system` and keep them now; never write them in by hand. (2) _Tests kept._ The pack walks the test files of
 `legacy/$system` and of the working copy and lists what was removed, added or changed: a removed file, or more than a quarter changed,
-is a gap for a person to review (weakened assertions cannot be detected, only that files changed). (3) *Deltas covered.* Every
+is a gap for a person to review (weakened assertions cannot be detected, only that files changed). (3) _Deltas covered._ Every
 Behavioral-silent delta in `DELTA_CATALOG.md` needs a test in the working copy that names its site's file; if none does, the pack lists
 it (add a characterization test at that site).
 
@@ -107,14 +107,36 @@ brief's unticked §7 questions and exit criteria; a person decides those, so nev
 `analysis/$system/equivalence/test-runs.json` once, from what you did in steps 3 and 4 (paths and words only):
 
 ```json
-{ "date": "YYYY-MM-DD",
-  "legacy": { "ran": true, "how": "one line: how the legacy runs here", "why": "" },
-  "leftOut": [ "F17: the legacy loader refused it (duplicate keys)" ],
-  "suites": [ { "module": "<module>", "name": "unit tests", "command": "<the exact command>",
-                "junit": ["<the result folder: modernized/$system/<module>/target/surefire-reports, or for an uplift modernized/$system-uplifted/<unit>/target/surefire-reports>"],
-                "log": ["analysis/$system/equivalence/unit.test-output.txt"], "skippedReason": "", "note": "" } ],
-  "canaries": [ { "module": "<module>", "change": "<what you broke>",
-                 "junit": ["analysis/$system/equivalence/canary/<module>"], "log": [] } ] }
+{
+  "date": "YYYY-MM-DD",
+  "legacy": {
+    "ran": true,
+    "how": "one line: how the legacy runs here",
+    "why": ""
+  },
+  "leftOut": ["F17: the legacy loader refused it (duplicate keys)"],
+  "suites": [
+    {
+      "module": "<module>",
+      "name": "unit tests",
+      "command": "<the exact command>",
+      "junit": [
+        "<the result folder: modernized/$system/<module>/target/surefire-reports, or for an uplift modernized/$system-uplifted/<unit>/target/surefire-reports>"
+      ],
+      "log": ["analysis/$system/equivalence/unit.test-output.txt"],
+      "skippedReason": "",
+      "note": ""
+    }
+  ],
+  "canaries": [
+    {
+      "module": "<module>",
+      "change": "<what you broke>",
+      "junit": ["analysis/$system/equivalence/canary/<module>"],
+      "log": []
+    }
+  ]
+}
 ```
 
 `module` is the folder name under `modernized/$system/` (an uplift's suites and canaries may name a unit). Give `junit` or `log` for

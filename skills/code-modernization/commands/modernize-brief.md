@@ -29,7 +29,7 @@ can wait. If a required file is missing, say so and stop: they come from `assess
   slice of a larger codebase, and what outside it depends on code inside it). Both constrain
   this plan more than anything derivable from the source. Never override a human's answer with
   a guess.
-- **`DELTA_CATALOG.md`**, **required** when the target is a newer version of the *same* stack.
+- **`DELTA_CATALOG.md`**, **required** when the target is a newer version of the _same_ stack.
   An uplift's phase order is decided by its version deltas, above all by whether the existing
   tests can even run on the target runtime; phasing without the catalog is planning blind. If it
   is missing, produce it first (`/code-modernization:modernize-uplift $system <source> $target_stack`
@@ -86,7 +86,7 @@ Exit criteria:
   ranks phases against each other and is **not** a duration: state no person-months, weeks, dates or
   delivery estimate (agentic work does not follow human-team productivity).
 - **Criteria are conditions, never states.** "All P0 rules in Phase 1 proven equivalent" is a
-  criterion; "P0 rules proven" is a claim. Make entry criteria *checkable preconditions* ("baseline
+  criterion; "P0 rules proven" is a claim. Make entry criteria _checkable preconditions_ ("baseline
   recorded in `analysis/$system/BASELINE.md`", "pilot playbook approved"). The build commands read the
   brief and treat them as binding, and they may tick a box or add a note but never reword a criterion:
   a proposed change goes on a `Proposed revision:` line for the approver. Tell the approver they steer
@@ -96,7 +96,7 @@ Exit criteria:
 - **Phase 1 is a pilot, and this brief is a hypothesis.** When a phase's units share one recipe (an
   uplift over many projects, a transform over many similar modules), name one representative unit as
   its first slice in the entry criteria. Say in §3 that what the pilot surfaces (a delta the analysis
-  missed, a prerequisite that reorders the phases, an environment fact nobody wrote down) is *expected*
+  missed, a prerequisite that reorders the phases, an environment fact nobody wrote down) is _expected_
   to revise the brief, and that regenerating it after the pilot is the normal path. Legacy systems hide
   their surprises in the build and the runtime, not the source.
 

@@ -18,23 +18,14 @@
       "title": "Track to follow",
       "description": "auto follows whichever way the plugin's commands are working on the system: a rewrite, a same-stack uplift or a greenfield reimagine, by the newest artifacts. Name one to pin it.",
       "default": "auto",
-      "options": [
-        "auto",
-        "transform",
-        "uplift",
-        "reimagine"
-      ]
+      "options": ["auto", "transform", "uplift", "reimagine"]
     },
     "panel": {
       "type": "string",
       "title": "Progress pane",
       "description": "auto opens the pane when a session starts in a workspace that has analysis/; command opens it only when you press its button or type /modernize-panel; off never opens it and never draws the button.",
       "default": "auto",
-      "options": [
-        "auto",
-        "command",
-        "off"
-      ]
+      "options": ["auto", "command", "off"]
     },
     "xray": {
       "type": "boolean",

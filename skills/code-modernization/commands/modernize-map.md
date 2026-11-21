@@ -6,7 +6,7 @@ arguments: system
 
 Build a **dependency and topology map** of the system and render it as an
 interactive page. The assessment found the domains; this goes one level down:
-how do the *pieces* connect? It is the map an engineer needs before touching anything.
+how do the _pieces_ connect? It is the map an engineer needs before touching anything.
 
 The code is `legacy/$system`, often a symlink to where it really lives: say where it points (`readlink legacy/$system`) in one line before you start. If `legacy/$system` does not exist, stop and say so: nothing can run without the code, so the fix is `/code-modernization:modernize $system --source <path to the code>`. Run every subagent in the foreground and wait for its result: never end your turn while one is still running.
 
@@ -21,7 +21,7 @@ Do not reinvent a dependency graph the customer or the ecosystem already has:
   against the source, say what the file did not cover, and still add what graphs
   omit: entry points from deployment config, data stores, business flows.
 - **The stack's own tooling** — if it is installed, run it on `legacy/$system` and read its
-  *machine-readable* output (JSON, DOT, XML), never pretty-printed text: `jdeps` or
+  _machine-readable_ output (JSON, DOT, XML), never pretty-printed text: `jdeps` or
   the Maven/Gradle dependency reports for Java, the project graph for .NET,
   `madge` or `dependency-cruiser` for JavaScript, `pydeps` for Python,
   `go list -deps`, `cargo metadata`. Use it for the module and import graph; your
@@ -40,7 +40,7 @@ unresolved one becomes an observation. Say which chunks ran and which are missin
 Write a one-off script (Python or shell) that parses `legacy/$system` and extracts the
 datasets below. Three principles matter across stacks:
 
-1. **Edges live in two places**: direct calls in source, *and* dispatcher calls
+1. **Edges live in two places**: direct calls in source, _and_ dispatcher calls
    whose targets are variables (config tables, route maps, dependency injection,
    dynamic dispatch). Resolve variables against config before calling an edge
    unresolvable.
@@ -75,25 +75,48 @@ rerun and audited. It writes `analysis/$system/topology.json` and prints a summa
 {
   "system": "<display name>",
   "root": {
-    "id": "sys", "name": "<system>", "kind": "system",
+    "id": "sys",
+    "name": "<system>",
+    "kind": "system",
     "children": [
-      { "id": "dom:<domain>", "name": "<Domain>", "kind": "domain",
+      {
+        "id": "dom:<domain>",
+        "name": "<Domain>",
+        "kind": "domain",
         "children": [
-          { "id": "<MODULE>", "name": "<MODULE>", "kind": "module",
-            "language": "cobol", "loc": 1234, "file": "src/MODULE.cbl" }
-        ] },
-      { "id": "dom:data", "name": "Data stores", "kind": "domain",
-        "children": [ { "id": "ds:<NAME>", "name": "<NAME>", "kind": "datastore" } ] }
+          {
+            "id": "<MODULE>",
+            "name": "<MODULE>",
+            "kind": "module",
+            "language": "cobol",
+            "loc": 1234,
+            "file": "src/MODULE.cbl"
+          }
+        ]
+      },
+      {
+        "id": "dom:data",
+        "name": "Data stores",
+        "kind": "domain",
+        "children": [
+          { "id": "ds:<NAME>", "name": "<NAME>", "kind": "datastore" }
+        ]
+      }
     ]
   },
-  "edges": [ { "source": "<id>", "target": "<id>", "kind": "call" } ],
+  "edges": [{ "source": "<id>", "target": "<id>", "kind": "call" }],
   "entryPoints": ["<id>"],
   "deadEnds": ["<id>"],
   "observations": ["<architect observation>"],
   "flows": [
-    { "name": "<business flow>", "persona": "<who experiences it>",
+    {
+      "name": "<business flow>",
+      "persona": "<who experiences it>",
       "description": "<one sentence, plain language>",
-      "steps": [ { "label": "<business-language step>", "nodes": ["<id>", "<id>"] } ] }
+      "steps": [
+        { "label": "<business-language step>", "nodes": ["<id>", "<id>"] }
+      ]
+    }
   ]
 }
 ```
@@ -117,7 +140,7 @@ rerun and audited. It writes `analysis/$system/topology.json` and prints a summa
 
 ## Persona flows
 
-Trace **2–4 end-to-end business flows**, each anchored to a persona who *experiences*
+Trace **2–4 end-to-end business flows**, each anchored to a persona who _experiences_
 the system, not one who maintains it (for benefits: the claimant, the caseworker,
 the auditor). Each has a `name` and one-sentence `description` a steering-committee
 member relates to ("a claimant files a weekly claim"), and 3–8 `steps`, each with a
@@ -134,7 +157,7 @@ calls, reads, writes or is called by. The viewer shows it in the sidebar.
    largest by `loc` (the default), or none. With no pop-up available (a headless
    run) do the 40 largest. Say how many agents will run.
 2. Spawn one **legacy-analyst** subagent per chosen node, in parallel batches of
-   about 8. Give each only that node's *packet*: about 150 lines of its source (none
+   about 8. Give each only that node's _packet_: about 150 lines of its source (none
    for a datastore), its header comment, and its connections from the map. Tell it:
    every name and number in the paragraph must appear in the packet; invent nothing;
    if the packet is too thin, write what it supports and say so in one sentence; the

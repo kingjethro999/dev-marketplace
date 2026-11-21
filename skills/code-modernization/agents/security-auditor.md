@@ -67,14 +67,15 @@ string, or private key:
 ## Reporting standard
 
 For each finding:
-| Field | Content |
-|---|---|
-| **ID** | SEC-NNN |
-| **CWE** | CWE-XXX with name |
-| **Severity** | Critical / High / Medium / Low (CVSS-ish reasoning) |
-| **Location** | `file:line` |
-| **Exploit scenario** | One sentence: how an attacker uses this |
-| **Fix** | Concrete code-level remediation |
+
+| Field                | Content                                             |
+| -------------------- | --------------------------------------------------- |
+| **ID**               | SEC-NNN                                             |
+| **CWE**              | CWE-XXX with name                                   |
+| **Severity**         | Critical / High / Medium / Low (CVSS-ish reasoning) |
+| **Location**         | `file:line`                                         |
+| **Exploit scenario** | One sentence: how an attacker uses this             |
+| **Fix**              | Concrete code-level remediation                     |
 
 No hand-waving. If you can't write the exploit scenario, downgrade severity.
 

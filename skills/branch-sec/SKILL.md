@@ -57,15 +57,15 @@ node .agents/skills/branch-sec/scripts/branch-sec.js add-periderm-check
 
 ### What It Configures
 
-| Protection | Description |
-|------------|-------------|
-| **Required Reviews** | Minimum approvals before merge |
-| **Status Checks** | Periderm scan, build, tests must pass |
-| **Signed Commits** | GPG/SSH signatures required |
-| **Linear History** | No merge commits, rebase only |
-| **Stale Review Dismissal** | New pushes dismiss old approvals |
-| **Push Restrictions** | Only admins can force push |
-| **Periderm Required** | Scan must pass on every PR |
+| Protection                 | Description                           |
+| -------------------------- | ------------------------------------- |
+| **Required Reviews**       | Minimum approvals before merge        |
+| **Status Checks**          | Periderm scan, build, tests must pass |
+| **Signed Commits**         | GPG/SSH signatures required           |
+| **Linear History**         | No merge commits, rebase only         |
+| **Stale Review Dismissal** | New pushes dismiss old approvals      |
+| **Push Restrictions**      | Only admins can force push            |
+| **Periderm Required**      | Scan must pass on every PR            |
 
 ### Configuration
 
@@ -114,6 +114,7 @@ node .agents/skills/branch-sec/scripts/branch-sec.js apply
 ```
 
 This calls GitHub API to set:
+
 - Required PR reviews (configurable count)
 - Required status checks (including periderm-scan)
 - Signed commits required
@@ -124,6 +125,7 @@ This calls GitHub API to set:
 ### Periderm Status Check
 
 The skill adds a GitHub Actions workflow that:
+
 1. Runs on every PR to protected branches
 2. Executes `periderm scan --json`
 3. Reports as required status check `periderm-scan`
@@ -137,10 +139,10 @@ Generates `.gitmessage`:
 ```
 # <type>(<scope>): <subject>
 # Types: feat, fix, docs, style, refactor, perf, test, chore, build, ci, revert
-# 
+#
 # Security Footer (required for security changes):
 # Security: CVE-XXXX-XXXX / GHSA-XXXX / Periderm: scan-id
-# 
+#
 # ------------------------ >8 ------------------------
 ```
 

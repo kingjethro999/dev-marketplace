@@ -4,7 +4,7 @@ argument-hint: <system> [flagged|p0|all]
 arguments: system scope
 ---
 
-Ask a person to decide the business rules in `analysis/$system/BUSINESS_RULES.md` that depend on judgement, and record each answer so the plan and the build honor it. Agents mined the rules and a second agent checked every citation, but only someone who knows the business can say whether a rule is *right*: whether a truncation is intended or a defect, whether a threshold is still the policy. This command asks in a pop-up and never edits `BUSINESS_RULES.md`.
+Ask a person to decide the business rules in `analysis/$system/BUSINESS_RULES.md` that depend on judgement, and record each answer so the plan and the build honor it. Agents mined the rules and a second agent checked every citation, but only someone who knows the business can say whether a rule is _right_: whether a truncation is intended or a defect, whether a threshold is still the policy. This command asks in a pop-up and never edits `BUSINESS_RULES.md`.
 
 ## 1 — Choose the rules
 
@@ -24,8 +24,18 @@ Use the AskUserQuestion tool, never chat text, up to four rules per call. One qu
 Merge the answers into `analysis/$system/RULE_REVIEWS.json`, the same file the live progress pane's review deck (`/modernize-review-pane`) writes:
 
 ```json
-{ "system": "<name>", "version": 1, "reviews": {
-    "RULE-004": { "verdict": "confirmed", "at": "<ISO time>", "title": "<the rule's title>", "note": "<their words, optional>" } } }
+{
+  "system": "<name>",
+  "version": 1,
+  "reviews": {
+    "RULE-004": {
+      "verdict": "confirmed",
+      "at": "<ISO time>",
+      "title": "<the rule's title>",
+      "note": "<their words, optional>"
+    }
+  }
+}
 ```
 
 `verdict` is `confirmed` (Right), `wrong` (Wrong, or not wanted) or `discuss` (Not sure). Change an earlier entry only when a new answer replaces it. Write `analysis/$system/RULE_REVIEWS.md` from it: a short paragraph, then a table `Rule | Verdict | When | Title | Note`, sorted by rule number. Refresh the report (`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/build_report.py" $system`, a convenience: if it fails or `python3` is missing, say so in one line and carry on).

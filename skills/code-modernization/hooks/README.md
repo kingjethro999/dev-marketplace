@@ -10,7 +10,7 @@ CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude
 
 ![About twelve seconds of the pane while the verify command runs on a COBOL system: agents read the code and the tiles they touch light up, then the module's verdict appears and the next step changes](../assets/media/pane-live.gif)
 
-*The agent activity in this recording is scripted for the illustration, so its timing is illustrative. The workspace is a finished run of the plugin on AWS CardDemo, and the verdict it ends on is the one the plugin's proof script wrote for that run.*
+_The agent activity in this recording is scripted for the illustration, so its timing is illustrative. The workspace is a finished run of the plugin on AWS CardDemo, and the verdict it ends on is the one the plugin's proof script wrote for that run._
 
 Without the flag nothing changes: the commands, agents and workflows behave the same and the pane never loads. Everything
 the pane shows is read from the files the commands write under `analysis/<system>/` and `modernized/<system>/`, and from the
@@ -51,9 +51,10 @@ attention, and what Claude is doing right now (**Session**).
     <img alt="The pane for a Java 8 to 17 uplift at the pilot stage: the first module matches its baseline and is green, the others are not migrated" src="../assets/media/pane-uplift.png">
   </picture>
 
-  In an uplift a module is set against the baseline (what the tests did on the old runtime): *matches baseline* means every
-  test that passed there still passes and none is missing; *worse than baseline* means more failures than it had. Failures
+  In an uplift a module is set against the baseline (what the tests did on the old runtime): _matches baseline_ means every
+  test that passed there still passes and none is missing; _worse than baseline_ means more failures than it had. Failures
   the baseline already had are not called worse.
+
 - **Any test runner.** A module's tests come from the reports it left (JUnit XML in the usual places, Visual Studio `.trx`, or
   `.modernize/test-report.json`) and, where a runner leaves none, from a test command run in the module's directory during
   the session (Maven, Gradle, pytest, Jest, dotnet, go, cargo, rspec, phpunit and more).
@@ -80,7 +81,7 @@ because the terminal is narrower than 144 columns), one row above the prompt say
 
 ![The one-row bar that stands where a hidden pane was: a summary of where the workspace stands and a show pane button, above the prompt](../assets/media/pane-hidden-bar.png)
 
-*The rules and the prompt mark around the bar are drawn for the picture; the bar is the pane's.*
+_The rules and the prompt mark around the bar are drawn for the picture; the bar is the pane's._
 
 `/modernize-panel` does the same from the keyboard, and shows the pane for a legacy tree nothing has analysed yet. In a
 workspace with nothing to show the pane says so and names the one command to type, `/code-modernization:modernize`. Set
@@ -90,7 +91,7 @@ workspace with nothing to show the pane says so and names the one command to typ
 
 ![The session block after Claude read a legacy file: the read is listed with the number of rules that cite the file, and a count of reads that carried notes from the analysis](../assets/media/pane-xray.png)
 
-*The session activity in this picture is scripted for the illustration.*
+_The session activity in this picture is scripted for the illustration._
 
 When Claude reads a file in the system's code (`legacy/<system>/`, followed through a symlink), what the analysis already
 established about that file rides along as context only the model sees: the map's callers, callees and data stores, the
@@ -105,7 +106,7 @@ the workspace root is told where the file is under the legacy root. The pane lis
 
 ![A rule card in the review deck: the rule, its citation, Given / When / Then, the suspected defect, the reviewer's verdict and note, and the keys](../assets/media/pane-review-deck.png)
 
-*The reviewer's note and the verdicts on this card are samples typed for the picture.*
+_The reviewer's note and the verdicts on this card are samples typed for the picture._
 
 `/modernize-review-pane [flagged|p0|all] [filter]` pages through rule cards in the band above the prompt: the rule, its citation,
 Given / When / Then, the suspected defect, the question for an SME, and, once a rule has a verdict, the verdict and the
@@ -124,7 +125,7 @@ until it is settled; the pane lists both under **Attention**, and later x-ray no
 
 ![The sign-off dialog: who approves, whether the approval covers Phase 1 only or the full plan, and the sign and cancel buttons](../assets/media/pane-sign.png)
 
-*The approver's name is a sample typed for the picture.*
+_The approver's name is a sample typed for the picture._
 
 `/modernize-sign [name, role]`, or the **sign the brief** button, fills in the brief's approval block: who, when, and whether
 it covers Phase 1 or the full plan. It changes nothing else in the file.
@@ -133,7 +134,7 @@ it covers Phase 1 or the full plan. It changes nothing else in the file.
 
 ![A fan-out in progress: the map lit where agents are reading, and under Attention the shared failure four agents hit](../assets/media/pane-fleet.png)
 
-*The agent activity in this picture is scripted for the illustration.*
+_The agent activity in this picture is scripted for the illustration._
 
 Every agent loop that makes a tool call is counted, including a workflow's agents, which the engine does not list by name.
 The pane shows how many are active and done, and what the most recent are doing. When agents fail the same way (paths, numbers
@@ -144,38 +145,38 @@ in each agent. A bare exit code or a malformed call is not a cause and is not co
 
 ## Buttons
 
-| Button | What it does |
-|---|---|
-| **put in prompt** | Puts the step under **Next** in the prompt box. It never runs it: a person presses Enter. |
-| **sign the brief** | Shown while the brief is unsigned: opens the sign-off dialog. |
-| **review rules** | Opens the rule review deck. |
-| **stop the run** | Shown while agents are working: interrupts the turn. |
-| **hide** / **show pane** | Closes the pane / brings it back. |
-| **system 1/2** | Shown when the workspace holds more than one system: follows the next one. |
+| Button                   | What it does                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| **put in prompt**        | Puts the step under **Next** in the prompt box. It never runs it: a person presses Enter. |
+| **sign the brief**       | Shown while the brief is unsigned: opens the sign-off dialog.                             |
+| **review rules**         | Opens the rule review deck.                                                               |
+| **stop the run**         | Shown while agents are working: interrupts the turn.                                      |
+| **hide** / **show pane** | Closes the pane / brings it back.                                                         |
+| **system 1/2**           | Shown when the workspace holds more than one system: follows the next one.                |
 
 There is no refresh button: the pane reads the files again by itself after a command writes, when a turn ends, and every 20
 seconds while idle.
 
 ## Pane commands
 
-| | |
-|---|---|
-| `/modernize-panel [open\|close\|json]` | Show or hide the pane (the same switch as its **hide** and **show pane** buttons); `json` prints the reading it draws from. |
+|                                                      |                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/modernize-panel [open\|close\|json]`               | Show or hide the pane (the same switch as its **hide** and **show pane** buttons); `json` prints the reading it draws from.                                                                                                                                                                            |
 | `/modernize-review-pane [flagged\|p0\|all] [filter]` | The review deck. `flagged` (default) is the P0 rules with a defect, an SME note or less than High confidence. The filter matches an id, a domain, a title or a cited file. Not the same as `/code-modernization:modernize-review`, the plugin command that asks in pop-ups and works without the pane. |
-| `/modernize-sign [name, role]` | Sign the brief's approval block. |
+| `/modernize-sign [name, role]`                       | Sign the brief's approval block.                                                                                                                                                                                                                                                                       |
 
 ## Pane options
 
 Set in `/config`, or under `pluginConfigs` in settings.
 
-| Option | Default | |
-|---|---|---|
-| `system` | first under `analysis/`, else under `legacy/` | The system to follow (a name of letters, digits, `-` and `_`). |
-| `track` | `auto` | `auto` follows whichever way the commands are working on the system; `transform`, `uplift` or `reimagine` pins one. |
-| `panel` | `auto` | `auto` opens the pane by itself and draws the show bar while it is hidden; `command` opens it only when the button or `/modernize-panel` asks; `off` neither opens it nor draws the bar. |
-| `xray` | on | Attach analysis context to legacy reads. |
-| `commandPrefix` | `/code-modernization:modernize-` | How the pane writes the plugin's commands. |
-| `legacyDir` | `legacy` | The read-only tree. |
+| Option          | Default                                       |                                                                                                                                                                                          |
+| --------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `system`        | first under `analysis/`, else under `legacy/` | The system to follow (a name of letters, digits, `-` and `_`).                                                                                                                           |
+| `track`         | `auto`                                        | `auto` follows whichever way the commands are working on the system; `transform`, `uplift` or `reimagine` pins one.                                                                      |
+| `panel`         | `auto`                                        | `auto` opens the pane by itself and draws the show bar while it is hidden; `command` opens it only when the button or `/modernize-panel` asks; `off` neither opens it nor draws the bar. |
+| `xray`          | on                                            | Attach analysis context to legacy reads.                                                                                                                                                 |
+| `commandPrefix` | `/code-modernization:modernize-`              | How the pane writes the plugin's commands.                                                                                                                                               |
+| `legacyDir`     | `legacy`                                      | The read-only tree.                                                                                                                                                                      |
 
 ## Pane keys
 

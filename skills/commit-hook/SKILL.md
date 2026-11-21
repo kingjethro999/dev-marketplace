@@ -67,6 +67,7 @@ node .agents/skills/commit-hook/scripts/commit-hook.js status
 Run `setup` and answer questions about:
 
 **Pre-commit (runs on every git commit)**
+
 - Enable pre-commit hook?
 - Run Periderm scan on staged files?
 - Fail on which severity levels? (critical, high, medium, low)
@@ -75,6 +76,7 @@ Run `setup` and answer questions about:
 - Which tests? (unit, integration, all - detected from package.json)
 
 **Pre-push (runs on every git push)**
+
 - Enable pre-push hook?
 - Run full Periderm scan?
 - Run Periderm deep review (--deep)?
@@ -83,6 +85,7 @@ Run `setup` and answer questions about:
 - Which tests? (unit, integration, all)
 
 **Commit Message (validates every commit message)**
+
 - Enable commit-msg validation?
 - Enforce conventional commit format?
 - Require security footer for security-related commits?
@@ -93,11 +96,11 @@ Configuration saved to `commit-hook.json` in project root.
 
 ### What It Installs
 
-| Hook | Runs | Purpose |
-|------|------|---------|
-| `pre-commit` | `periderm scan --staged`, lint, typecheck, unit tests | Catch issues before commit |
-| `pre-push` | `periderm scan`, `periderm review --deep`, full test suite, build | Gate pushes to remote |
-| `commit-msg` | Conventional format + security footer | Enforce commit standards |
+| Hook         | Runs                                                              | Purpose                    |
+| ------------ | ----------------------------------------------------------------- | -------------------------- |
+| `pre-commit` | `periderm scan --staged`, lint, typecheck, unit tests             | Catch issues before commit |
+| `pre-push`   | `periderm scan`, `periderm review --deep`, full test suite, build | Gate pushes to remote      |
+| `commit-msg` | Conventional format + security footer                             | Enforce commit standards   |
 
 ### Periderm Integration
 
@@ -105,6 +108,7 @@ Configuration saved to `commit-hook.json` in project root.
 **pre-push** runs full `periderm scan --json` + `periderm review --deep --json`.
 
 Both hooks:
+
 - Parse JSON output
 - Block on critical/high findings (configurable)
 - Show colored summary

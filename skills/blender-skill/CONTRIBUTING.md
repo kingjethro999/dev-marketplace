@@ -25,12 +25,13 @@ This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
 ## Scope
 
 This project intentionally does **not**:
+
 - open Blender's UI, or depend on it being available (headless only, `-b`)
 - depend on cloud services or require API keys
 - mutate input files
 - make creative or compositional decisions on the calling agent's behalf (see SKILL.md)
 - add a pip/third-party dependency to the host-side scripts (stdlib only; Blender's own bundled
-  Python, including its bundled numpy, is fair game *inside* `scripts/bpy/*.py`, which runs
+  Python, including its bundled numpy, is fair game _inside_ `scripts/bpy/*.py`, which runs
   under Blender's interpreter, not the host's)
 
 ## Development
@@ -57,7 +58,7 @@ every script's own `--help` and error messages point at how to install it if it'
   (`feat:`/`fix:`/`docs:`/`chore:`/...) -- release-please resolves the next version from them.
 - Keep PRs focused -- one fix or one small feature per PR.
 - Run `python3 tests/test_all.py` locally before opening.
-- Explain *why*, not just *what*, in the PR description -- the reasoning is what future
+- Explain _why_, not just _what_, in the PR description -- the reasoning is what future
   maintainers (human or agent) need most.
 - A `feat` PR updates every place the feature is stated: README.md's tool table and Scripts
   section, SKILL.md's routing table, and CHANGELOG.md (release-please writes the version-bump

@@ -14,7 +14,7 @@ proven recipe to your unit — not to invent an approach.
 
 1. `analysis/<system>/PLAYBOOK.md` — the recipe proven by the pilot: the
    ordered edits, every error it hit and what resolved it, the environment
-   facts that had to be *discovered* (which toolchain version is really in
+   facts that had to be _discovered_ (which toolchain version is really in
    use, how dependency binaries actually resolve, which shared config file
    governs the build), and the exact build command that proves a unit is
    done. **Follow it before improvising.** Where the playbook and your
@@ -22,12 +22,13 @@ proven recipe to your unit — not to invent an approach.
    written from this codebase, not from a migration guide.
 
    **If `PLAYBOOK.md` does not exist, STOP and migrate nothing.** You only
-   run *after* a pilot unit has been migrated in-session and its lessons
+   run _after_ a pilot unit has been migrated in-session and its lessons
    written down; a missing playbook means that has not happened, and your
    general knowledge of the stack is exactly what the pilot exists to
    correct. Report that the pilot has not been done and do not edit a file.
    This rule holds no matter how you were invoked — by the fan-out workflow
    or spawned directly.
+
 2. `analysis/<system>/DELTA_CATALOG.md` — the version deltas this codebase
    actually hits, each marked Mechanical or Judgment.
 
@@ -48,8 +49,8 @@ proven recipe to your unit — not to invent an approach.
 Anything the playbook did not cover — an error it never mentions, a step it
 lists that did not work here, an environment fact it got wrong — is a
 **playbook gap**. Report every gap precisely (the exact error, where it
-occurred, what you tried, what resolved it — or that nothing did), *even the
-ones you resolved yourself*. Gaps are folded back into the playbook so the
+occurred, what you tried, what resolved it — or that nothing did), _even the
+ones you resolved yourself_. Gaps are folded back into the playbook so the
 next batch of units does not rediscover them; a gap you fixed silently gets
 rediscovered N more times.
 

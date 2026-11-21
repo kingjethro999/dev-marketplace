@@ -19,16 +19,16 @@ targets, any semantic judgement ("this is speech"), production planning, approva
 
 ## Typed Audio Project Model (`model.py`)
 
-| concept | fields | notes |
-|---|---|---|
-| `AudioProject` | `project_id`, `sources[]`, `tracks[]`, `operations[]`, `outputs[]` | one request = one project |
-| `AudioSource` | `source_id`, `path` | fingerprinted (sha256) at execution |
-| `AudioTrack` | `track_id`, `source_id`, `label?`, `channel_layout?`, `range?`, `gain_db?` | generic; the expected `channel_layout` is verified against the probe; `range` / `gain_db` become implicit TRIM / GAIN nodes `op:<track>.range` / `op:<track>.gain` |
-| `AudioOperation` | `op_id`, `type`, `inputs[]` (refs), `parameters` | parameters validated per type (`OPERATION_TYPES`) |
-| `AudioOutput` | `output_id`, `operation` (ref), `path`, `format`, `overwrite?`, `expect?` | terminal artifact |
-| `AudioSegment` (`timeline.py`) | `timeline {start,end}`, `source_id`, `source {start,end}`, `input_index` | half-open ranges in seconds |
-| `OperationDependency` (`graph.py`) | node `inputs[]`, `consumers[]` | topological order = Kahn with smallest ready id first |
-| `OperationResult` (`executor.NodeState`) | `operation_id`, `type`, `tool`, `status`, `segments`, `artifact`, `input_hashes`, `measurements`, `tool_commands_observed`, `error?` | one per node in the response |
+| concept                                  | fields                                                                                                                               | notes                                                                                                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `AudioProject`                           | `project_id`, `sources[]`, `tracks[]`, `operations[]`, `outputs[]`                                                                   | one request = one project                                                                                                                                          |
+| `AudioSource`                            | `source_id`, `path`                                                                                                                  | fingerprinted (sha256) at execution                                                                                                                                |
+| `AudioTrack`                             | `track_id`, `source_id`, `label?`, `channel_layout?`, `range?`, `gain_db?`                                                           | generic; the expected `channel_layout` is verified against the probe; `range` / `gain_db` become implicit TRIM / GAIN nodes `op:<track>.range` / `op:<track>.gain` |
+| `AudioOperation`                         | `op_id`, `type`, `inputs[]` (refs), `parameters`                                                                                     | parameters validated per type (`OPERATION_TYPES`)                                                                                                                  |
+| `AudioOutput`                            | `output_id`, `operation` (ref), `path`, `format`, `overwrite?`, `expect?`                                                            | terminal artifact                                                                                                                                                  |
+| `AudioSegment` (`timeline.py`)           | `timeline {start,end}`, `source_id`, `source {start,end}`, `input_index`                                                             | half-open ranges in seconds                                                                                                                                        |
+| `OperationDependency` (`graph.py`)       | node `inputs[]`, `consumers[]`                                                                                                       | topological order = Kahn with smallest ready id first                                                                                                              |
+| `OperationResult` (`executor.NodeState`) | `operation_id`, `type`, `tool`, `status`, `segments`, `artifact`, `input_hashes`, `measurements`, `tool_commands_observed`, `error?` | one per node in the response                                                                                                                                       |
 
 ## Timeline
 

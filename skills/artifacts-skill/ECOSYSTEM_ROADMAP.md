@@ -11,8 +11,8 @@ v0.3.0, Python 3.10+ (+ npm wrapper, MCP server). 11 format adapters (pdf, pptx,
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
+| Owned job      | Status  | Note                                                                            |
+| -------------- | ------- | ------------------------------------------------------------------------------- |
 | 生成文書の検証 | partial | captions (SRT/VTT/ASS) left to subtitle-skill and qc-skill by decision (step 4) |
 
 ## Wiring
@@ -46,4 +46,5 @@ Wired: the agent's `document.verify` runs `artifacts-skill/verify` and a leftove
 Media facts duplicate qc / media-analysis.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

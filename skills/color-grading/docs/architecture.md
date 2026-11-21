@@ -22,14 +22,14 @@ approvals; transcription; subtitles; QC; container/format conversion (that is ff
 
 ## Typed Colour Project Model (`model.py`)
 
-| concept | fields | notes |
-|---|---|---|
-| `ColorProject` | `project_id`, `source`, `operations[]`, `outputs[]` | one request = one project, one source video |
-| `ColorSource` | `source_id`, `path`, `alpha_mode?` (`straight` \| `premultiplied`), `drop_alpha?` | fingerprinted (sha256) at execution; must have a video stream; the alpha fields matter only for a source with an alpha plane (ADR-33) |
-| `ColorOperation` | `op_id`, `type`, `input` (ref `"source"` or `"op:<id>"`), `parameters` | every implemented type takes exactly one input; parameters validated per type (`OPERATION_TYPES`) |
-| `ColorOutput` | `output_id`, `operation` (ref), `path`, `format`, `overwrite?`, `expect?` | terminal artifact; `format`'s extension must match the source's |
-| `OperationDependency` (`graph.py`) | node `inputs` (0 or 1), `consumers[]` | topological order = Kahn with smallest ready id first |
-| `OperationResult` (`executor.NodeState`) | `operation_id`, `type`, `tool`, `status`, `artifact`, `input_hash`, `lut?`, `measurements`, `tool_commands_observed`, `error?` | one per node in the response |
+| concept                                  | fields                                                                                                                         | notes                                                                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `ColorProject`                           | `project_id`, `source`, `operations[]`, `outputs[]`                                                                            | one request = one project, one source video                                                                                           |
+| `ColorSource`                            | `source_id`, `path`, `alpha_mode?` (`straight` \| `premultiplied`), `drop_alpha?`                                              | fingerprinted (sha256) at execution; must have a video stream; the alpha fields matter only for a source with an alpha plane (ADR-33) |
+| `ColorOperation`                         | `op_id`, `type`, `input` (ref `"source"` or `"op:<id>"`), `parameters`                                                         | every implemented type takes exactly one input; parameters validated per type (`OPERATION_TYPES`)                                     |
+| `ColorOutput`                            | `output_id`, `operation` (ref), `path`, `format`, `overwrite?`, `expect?`                                                      | terminal artifact; `format`'s extension must match the source's                                                                       |
+| `OperationDependency` (`graph.py`)       | node `inputs` (0 or 1), `consumers[]`                                                                                          | topological order = Kahn with smallest ready id first                                                                                 |
+| `OperationResult` (`executor.NodeState`) | `operation_id`, `type`, `tool`, `status`, `artifact`, `input_hash`, `lut?`, `measurements`, `tool_commands_observed`, `error?` | one per node in the response                                                                                                          |
 
 Every operation maps 1:1 onto one mode of ffmpeg-skill/color (`--to-sdr`, `--lut`, `--retag`, `--strip-dovi`,
 `--correct`): this skill is a typed front end for that tool's public contract, not a colour-correction engine of its
@@ -74,8 +74,8 @@ edited at the same path does not. `plan_id` hashes every node identity plus the 
    when the destination's tags are not the BT.709 `--lut` writes, `--retag <output_tags>` (ADR-22: PyOpenColorIO only
    evaluates the transform on the cube's nodes, before execution, also under dry-run; nothing it does touches media);
    `PRIMARY_CORRECTION` → `--correct --exposure … --contrast … --saturation …
-   --temperature … --tint … --gamma … --lift … --gain … --levels-in-black … --levels-in-white …
-   --levels-out-black … --levels-out-white … [--curves <preset>] --crf … --preset …` (`--curves` is only added when
+--temperature … --tint … --gamma … --lift … --gain … --levels-in-black … --levels-in-white …
+--levels-out-black … --levels-out-white … [--curves <preset>] --crf … --preset …` (`--curves` is only added when
    the caller set it; every other flag is always emitted, matching ffmpeg-skill's own always-present chain). For
    `PRIMARY_CORRECTION`, ffmpeg-skill's own before/after
    `measurements` (from its existing `analyze_levels`/signalstats primitive) come back in the tool's JSON document

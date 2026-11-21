@@ -22,7 +22,10 @@ function findPython() {
 }
 
 const py = findPython();
-console.log("\nartifacts-skill: Python engine detected at install time as:", py || "NOT FOUND");
+console.log(
+  "\nartifacts-skill: Python engine detected at install time as:",
+  py || "NOT FOUND",
+);
 console.log(`To enable every adapter (PDF/PPTX/DOCX/XLSX/Image/HTML/SVG):`);
 console.log(`  pip install -e "${pkgRoot}[all]"`);
 console.log(`Only need a subset? Install just what you use instead, e.g.:`);
@@ -31,7 +34,12 @@ console.log("Then check status with: npx artifacts-skill doctor\n");
 
 if (py) {
   const env = Object.assign({}, process.env, {
-    PYTHONPATH: [path.join(pkgRoot, "src"), process.env.PYTHONPATH].filter(Boolean).join(path.delimiter),
+    PYTHONPATH: [path.join(pkgRoot, "src"), process.env.PYTHONPATH]
+      .filter(Boolean)
+      .join(path.delimiter),
   });
-  spawnSync(py, ["-m", "artifact_skill.cli.main", "doctor"], { stdio: "inherit", env });
+  spawnSync(py, ["-m", "artifact_skill.cli.main", "doctor"], {
+    stdio: "inherit",
+    env,
+  });
 }

@@ -65,17 +65,20 @@ node .agents/skills/ci-cd/scripts/ci-cd.js validate .github/workflows/ci.yml
 Run `setup` and answer questions about:
 
 **Mode Selection**
+
 - What do you want to do?
   - **Create New**: Generate a complete pipeline from scratch
   - **Edit Existing**: Modify an existing workflow file
   - **Understand**: Explain what a workflow does in plain English
 
 **Project Detection**
+
 - Auto-detects: Node.js, Python, Go, Rust, Java, .NET, Docker, etc.
 - Reads package.json, requirements.txt, Cargo.toml, go.mod, pom.xml, etc.
 - Detects existing CI configs
 
 **Create New Pipeline**
+
 - CI Provider: GitHub Actions, GitLab CI, CircleCI, Azure Pipelines
 - Pipeline Type: CI only, CI + CD, Monorepo, Multi-environment
 - Triggers: push, PR, schedule, manual, tags, releases
@@ -87,17 +90,20 @@ Run `setup` and answer questions about:
 - Notifications: Slack, Discord, email, webhook
 
 **Edit Existing Pipeline**
+
 - Select workflow file to edit
 - What to change: add job, modify steps, change triggers, update versions, fix bug
 - Shows diff before applying
 
 **Understand Workflow**
+
 - Select workflow file
 - Outputs: plain English explanation, Mermaid diagram, key insights, potential issues
 
 ### What It Generates
 
 **GitHub Actions** (`.github/workflows/*.yml`):
+
 - Optimized caching with `actions/cache`
 - Matrix strategies for parallel testing
 - Conditional job execution
@@ -107,6 +113,7 @@ Run `setup` and answer questions about:
 - SARIF upload for code scanning
 
 **GitLab CI** (`.gitlab-ci.yml`):
+
 - Cache and artifacts configuration
 - Rules for conditional execution
 - Child pipelines for monorepos
@@ -114,6 +121,7 @@ Run `setup` and answer questions about:
 - Protected environments
 
 **CircleCI** (`.circleci/config.yml`):
+
 - Orbs for common tasks
 - Workspaces for data persistence
 - Resource classes

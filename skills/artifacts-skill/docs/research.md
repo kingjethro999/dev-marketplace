@@ -21,7 +21,7 @@ skills at `skills/docx`, `skills/pdf`, `skills/pptx`, `skills/xlsx`.
 - No evidence of bundled MCP support inside these skill folders. **UNKNOWN**.
 
 **Implication:** Anthropic's skills are file-generation reference implementations, not
-verification engines. Artifact Skill does not compete with them — it can *wrap* them (or
+verification engines. Artifact Skill does not compete with them — it can _wrap_ them (or
 similar generators) and add the inspect/verify/receipt layer they don't claim to provide.
 
 ## 2. Agent Skills spec (SKILL.md)
@@ -33,6 +33,7 @@ similar generators) and add the inspect/verify/receipt layer they don't claim to
   `github.com/agentskills/agentskills`.
 
 Spec requirements (`agentskills.io/specification`):
+
 - Required frontmatter: `name` (≤64 chars, slug rules), `description` (1–1024 chars).
 - Optional: `license`, `compatibility`, `metadata`, `allowed-tools` (experimental).
 - Recommended dirs: `scripts/`, `references/`, `assets/`.
@@ -49,11 +50,11 @@ No project was found matching the full concept (structural + visual verification
 production receipt/provenance, across PDF/DOCX/PPTX/XLSX/HTML/SVG, as a local-first Agent
 Skill). Adjacent, non-matching projects found via search:
 
-| Name | Repo | What it does | Fit |
-|---|---|---|---|
-| Reverify | `2akouwu/reverify` | MCP+CLI; checks claims against ground truth, SHA-256 receipts | General claim verification, not document artifacts |
-| ArtifactGuard | Glama MCP directory | Agents attest documents with on-chain (Hedera) receipts | Blockchain attestation, not render/structural QA |
-| Provena | `rajfirke/provena` | Context governance / tamper-evident audit trail, EU AI Act | Compliance/governance tool, not document verification |
+| Name          | Repo                | What it does                                                  | Fit                                                   |
+| ------------- | ------------------- | ------------------------------------------------------------- | ----------------------------------------------------- |
+| Reverify      | `2akouwu/reverify`  | MCP+CLI; checks claims against ground truth, SHA-256 receipts | General claim verification, not document artifacts    |
+| ArtifactGuard | Glama MCP directory | Agents attest documents with on-chain (Hedera) receipts       | Blockchain attestation, not render/structural QA      |
+| Provena       | `rajfirke/provena`  | Context governance / tamper-evident audit trail, EU AI Act    | Compliance/governance tool, not document verification |
 
 Stars/maintenance for these three: **UNKNOWN** — not confirmed from a direct repo fetch,
 search-engine summaries only. None advertise local-first + no-API-key + dual
@@ -82,18 +83,18 @@ figures come from rendered pages, not the API):
 
 ## 5. Backend libraries (spot-verified)
 
-| Tool | Capability | License | Local, no API key |
-|---|---|---|---|
-| LibreOffice headless | DOCX/PPTX/XLSX → PDF/image render | MPL-2.0 | Yes |
-| Poppler (pdftoppm/pdftotext) | PDF render / text extract | GPLv2/v3 | Yes |
-| qpdf | PDF structural transform/repair | Apache-2.0 | Yes |
-| ImageMagick | Raster convert/compare | "ImageMagick License" (Apache-2.0-derivative, distinct SPDX id) | Yes |
-| python-pptx / python-docx / openpyxl | Structural parse/edit | MIT | Yes |
-| pypdf | PDF structural parse/edit/merge | BSD-3-Clause | Yes |
-| pypdfium2 | PDF render (PDFium/Chromium engine bindings) | Apache-2.0 / BSD-3-Clause (dual) | Yes |
-| PyMuPDF (fitz) | Fast PDF render/parse | **AGPL-3.0**, commercial license sold separately | Yes, but copyleft risk |
-| pdfplumber | PDF structural/table extract | MIT | Yes |
-| Playwright/Chromium | HTML/SVG render (screenshot) | Apache-2.0 | Yes (needs a browser binary, no API key) |
+| Tool                                 | Capability                                   | License                                                         | Local, no API key                        |
+| ------------------------------------ | -------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------- |
+| LibreOffice headless                 | DOCX/PPTX/XLSX → PDF/image render            | MPL-2.0                                                         | Yes                                      |
+| Poppler (pdftoppm/pdftotext)         | PDF render / text extract                    | GPLv2/v3                                                        | Yes                                      |
+| qpdf                                 | PDF structural transform/repair              | Apache-2.0                                                      | Yes                                      |
+| ImageMagick                          | Raster convert/compare                       | "ImageMagick License" (Apache-2.0-derivative, distinct SPDX id) | Yes                                      |
+| python-pptx / python-docx / openpyxl | Structural parse/edit                        | MIT                                                             | Yes                                      |
+| pypdf                                | PDF structural parse/edit/merge              | BSD-3-Clause                                                    | Yes                                      |
+| pypdfium2                            | PDF render (PDFium/Chromium engine bindings) | Apache-2.0 / BSD-3-Clause (dual)                                | Yes                                      |
+| PyMuPDF (fitz)                       | Fast PDF render/parse                        | **AGPL-3.0**, commercial license sold separately                | Yes, but copyleft risk                   |
+| pdfplumber                           | PDF structural/table extract                 | MIT                                                             | Yes                                      |
+| Playwright/Chromium                  | HTML/SVG render (screenshot)                 | Apache-2.0                                                      | Yes (needs a browser binary, no API key) |
 
 **Decision:** the PDF adapter uses **pypdf** (structural read/write/merge) +
 **pypdfium2** (rendering) instead of PyMuPDF, specifically to avoid AGPL-3.0 obligations
@@ -121,7 +122,7 @@ better than shelling out to Poppler.
 ## Conclusion
 
 No existing tool combines: (a) a universal artifact abstraction across document formats,
-(b) inspect-before-mutate + plan-before-mutate, (c) structural *and* visual verification
+(b) inspect-before-mutate + plan-before-mutate, (c) structural _and_ visual verification
 as first-class, separately-tracked results, (d) a machine-readable production receipt with
 provenance, and (e) a contract that drives both a CLI and an MCP server with zero drift —
 all local-first, with no account/API key. Anthropic's own document skills are generators,

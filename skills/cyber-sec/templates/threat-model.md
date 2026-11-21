@@ -13,12 +13,14 @@ Use this template for STRIDE threat modeling of new features.
 ## System Context
 
 ### Data Flow Diagram
+
 ```
 [User] --> [Frontend] --> [API Gateway] --> [Services] --> [Database]
                     \-> [Auth Service] --/
 ```
 
 ### Trust Boundaries
+
 - **Internet** → DMZ (Frontend)
 - **DMZ** → Internal Network (API Gateway)
 - **Internal** → Data Layer (Services, Database)
@@ -28,60 +30,66 @@ Use this template for STRIDE threat modeling of new features.
 ## STRIDE Analysis
 
 ### Spoofing Threats
-| Threat | Impact | Likelihood | Mitigation |
-|--------|--------|------------|------------|
-| Token theft | High | Medium | Short expiry, rotation, MFA |
-| Session hijacking | High | Low | Secure cookies, HTTPS only |
-| Credential stuffing | Medium | High | Rate limiting, CAPTCHA, MFA |
+
+| Threat              | Impact | Likelihood | Mitigation                  |
+| ------------------- | ------ | ---------- | --------------------------- |
+| Token theft         | High   | Medium     | Short expiry, rotation, MFA |
+| Session hijacking   | High   | Low        | Secure cookies, HTTPS only  |
+| Credential stuffing | Medium | High       | Rate limiting, CAPTCHA, MFA |
 
 ### Tampering Threats
-| Threat | Impact | Likelihood | Mitigation |
-|--------|--------|------------|------------|
-| Parameter manipulation | High | Medium | Input validation, allowlists |
-| Data integrity violation | High | Low | HMAC, checksums, signatures |
-| API request forgery | Medium | Medium | CSRF tokens, SameSite cookies |
+
+| Threat                   | Impact | Likelihood | Mitigation                    |
+| ------------------------ | ------ | ---------- | ----------------------------- |
+| Parameter manipulation   | High   | Medium     | Input validation, allowlists  |
+| Data integrity violation | High   | Low        | HMAC, checksums, signatures   |
+| API request forgery      | Medium | Medium     | CSRF tokens, SameSite cookies |
 
 ### Repudiation Threats
-| Threat | Impact | Likelihood | Mitigation |
-|--------|--------|------------|------------|
-| Action denial | Medium | Low | Immutable audit logs |
-| Log tampering | High | Low | WORM storage, digital signatures |
-| Non-repudiation bypass | Medium | Low | Blockchain anchoring |
+
+| Threat                 | Impact | Likelihood | Mitigation                       |
+| ---------------------- | ------ | ---------- | -------------------------------- |
+| Action denial          | Medium | Low        | Immutable audit logs             |
+| Log tampering          | High   | Low        | WORM storage, digital signatures |
+| Non-repudiation bypass | Medium | Low        | Blockchain anchoring             |
 
 ### Information Disclosure Threats
-| Threat | Impact | Likelihood | Mitigation |
-|--------|--------|------------|------------|
-| Sensitive data in logs | High | Medium | Log sanitization, structured logging |
-| Error message leakage | Medium | High | Generic error messages |
-| Directory traversal | High | Low | Path validation, chroot |
-| Excessive API responses | Medium | Medium | Field-level permissions, GraphQL depth limiting |
+
+| Threat                  | Impact | Likelihood | Mitigation                                      |
+| ----------------------- | ------ | ---------- | ----------------------------------------------- |
+| Sensitive data in logs  | High   | Medium     | Log sanitization, structured logging            |
+| Error message leakage   | Medium | High       | Generic error messages                          |
+| Directory traversal     | High   | Low        | Path validation, chroot                         |
+| Excessive API responses | Medium | Medium     | Field-level permissions, GraphQL depth limiting |
 
 ### Denial of Service Threats
-| Threat | Impact | Likelihood | Mitigation |
-|--------|--------|------------|------------|
-| Resource exhaustion | High | Medium | Rate limiting, circuit breakers |
-| Algorithmic complexity | Medium | Low | Input size limits, timeouts |
-| Quota bypass | Medium | Low | Distributed rate limiting |
+
+| Threat                 | Impact | Likelihood | Mitigation                      |
+| ---------------------- | ------ | ---------- | ------------------------------- |
+| Resource exhaustion    | High   | Medium     | Rate limiting, circuit breakers |
+| Algorithmic complexity | Medium | Low        | Input size limits, timeouts     |
+| Quota bypass           | Medium | Low        | Distributed rate limiting       |
 
 ### Elevation of Privilege Threats
-| Threat | Impact | Likelihood | Mitigation |
-|--------|--------|------------|------------|
-| Privilege escalation | Critical | Low | Least privilege, RBAC |
-| Role confusion | High | Medium | Clear role definitions, testing |
-| Admin bypass | Critical | Low | Privilege separation, regular audits |
+
+| Threat               | Impact   | Likelihood | Mitigation                           |
+| -------------------- | -------- | ---------- | ------------------------------------ |
+| Privilege escalation | Critical | Low        | Least privilege, RBAC                |
+| Role confusion       | High     | Medium     | Clear role definitions, testing      |
+| Admin bypass         | Critical | Low        | Privilege separation, regular audits |
 
 ---
 
 ## Risk Summary
 
-| Category | Critical | High | Medium | Low |
-|----------|----------|------|--------|-----|
-| Spoofing | 0 | 1 | 2 | 0 |
-| Tampering | 0 | 1 | 1 | 0 |
-| Repudiation | 0 | 1 | 1 | 0 |
-| Info Disclosure | 0 | 1 | 2 | 1 |
-| DoS | 0 | 1 | 1 | 0 |
-| Elevation | 1 | 1 | 1 | 0 |
+| Category        | Critical | High | Medium | Low |
+| --------------- | -------- | ---- | ------ | --- |
+| Spoofing        | 0        | 1    | 2      | 0   |
+| Tampering       | 0        | 1    | 1      | 0   |
+| Repudiation     | 0        | 1    | 1      | 0   |
+| Info Disclosure | 0        | 1    | 2      | 1   |
+| DoS             | 0        | 1    | 1      | 0   |
+| Elevation       | 1        | 1    | 1      | 0   |
 
 **Overall Risk:** {{HIGH/MEDIUM/LOW}}
 
@@ -89,23 +97,23 @@ Use this template for STRIDE threat modeling of new features.
 
 ## Mitigation Tracking
 
-| Mitigation | Status | Owner | Due Date |
-|------------|--------|-------|----------|
-| Implement MFA | ☐ Planned | | |
-| Add rate limiting | ☐ In Progress | | |
-| Audit log integrity | ☐ Planned | | |
-| Field-level encryption | ☐ Planned | | |
+| Mitigation             | Status        | Owner | Due Date |
+| ---------------------- | ------------- | ----- | -------- |
+| Implement MFA          | ☐ Planned     |       |          |
+| Add rate limiting      | ☐ In Progress |       |          |
+| Audit log integrity    | ☐ Planned     |       |          |
+| Field-level encryption | ☐ Planned     |       |          |
 
 ---
 
 ## Sign-Off
 
-| Role | Name | Approved | Date |
-|------|------|----------|------|
-| Security Architect | | ☐ | |
-| Lead Developer | | ☐ | |
-| Product Owner | | ☐ | |
+| Role               | Name | Approved | Date |
+| ------------------ | ---- | -------- | ---- |
+| Security Architect |      | ☐        |      |
+| Lead Developer     |      | ☐        |      |
+| Product Owner      |      | ☐        |      |
 
 ---
 
-*Generated by cyber-sec skill • STRIDE methodology*
+_Generated by cyber-sec skill • STRIDE methodology_

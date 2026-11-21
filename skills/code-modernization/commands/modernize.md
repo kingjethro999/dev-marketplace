@@ -29,15 +29,15 @@ items. A pop-up allows at most four options per question, and the person can alw
 
 **Pop-up 1, two questions:**
 
-1. **What do you want to do with it?** *Move to a newer version of the same technology* (for example .NET Framework to
-   .NET 8, Java 8 to 17, Python 2 to 3), *Rewrite it in a different technology, one piece at a time, while the old system
-   keeps running*, *Rebuild it from scratch on a new architecture*, *Understand it first: map it and list what it does*
+1. **What do you want to do with it?** _Move to a newer version of the same technology_ (for example .NET Framework to
+   .NET 8, Java 8 to 17, Python 2 to 3), _Rewrite it in a different technology, one piece at a time, while the old system
+   keeps running_, _Rebuild it from scratch on a new architecture_, _Understand it first: map it and list what it does_
    (also the right choice when they are not sure: the assessment then recommends one of the other three).
-2. **What must stay true?** Pick any: *The old system keeps running during the move*, *Behavior must match exactly,
-   including known quirks*, *Fix known bugs as we go*, *A security review comes first*. Choosing none means nothing
+2. **What must stay true?** Pick any: _The old system keeps running during the move_, _Behavior must match exactly,
+   including known quirks_, _Fix known bugs as we go_, _A security review comes first_. Choosing none means nothing
    special.
 
-**Pop-up 2, one question, only after the first answer and never for "understand it first":** *What should it become?*
+**Pop-up 2, one question, only after the first answer and never for "understand it first":** _What should it become?_
 Tailor it to what you found in step 2: for a version move, the newest supported versions of the code's stack ("Java
 21", "Java 17"); for a rewrite, two or three common target technologies for this kind of code; for a rebuild, the
 architecture options that fit (a REST API with a separate front end, a few services, a modular monolith). The person
@@ -54,7 +54,7 @@ is asked twice: `brief` takes its target stack from it and never overrides it wi
 In at most eight lines, tailored to their goal, list the commands they will run in order (`preflight`, `assess`, `map`,
 `extract-rules`, `review` when rules are flagged for a person, `brief`, then `uplift`, `transform` or `reimagine`, then `verify` and `harden`), one line each on what they get
 and where a person decides. For "understand it first" stop after `brief`. For "not sure", run `preflight` and `assess`
-first and let the assessment's recommended pattern pick the road. Name the places a person decides (the preflight answers, the rules that look wrong, approving the brief, accepting each difference the proof finds, signing the proof, applying the security patch) so nothing surprises them. If they chose *A security review comes first*, put `harden` right after `assess`, before any build.
+first and let the assessment's recommended pattern pick the road. Name the places a person decides (the preflight answers, the rules that look wrong, approving the brief, accepting each difference the proof finds, signing the proof, applying the security patch) so nothing surprises them. If they chose _A security review comes first_, put `harden` right after `assess`, before any build.
 
 ## 6 — First step
 

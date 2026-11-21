@@ -3,7 +3,7 @@
 Self-audit finding (a critical review from a "how would this hold up in
 real agent usage" angle, distinct from the correctness-focused audits
 `docs/benchmark.md` covers): every prior round of testing measured
-whether an operation produced the *right* result, never how long it took
+whether an operation produced the _right_ result, never how long it took
 or what it cost to run. An agent calling `execute`/`render` per document,
 possibly at volume, has no documented basis for estimating that cost. This
 document exists to close that gap — not with a permanent number (this
@@ -63,7 +63,7 @@ Three real patterns, not just numbers to memorize:
 1. **Structural work (`inspect`/`verify`) is fast across every format** —
    sub-millisecond for the pure-stdlib adapters (image/html/svg/csv/
    markdown/epub), tens of milliseconds for the `python-pptx`/`python-
-   docx`/`openpyxl` adapters (parsing a real OOXML zip has real, if
+docx`/`openpyxl` adapters (parsing a real OOXML zip has real, if
    modest, cost). None of this is the bottleneck.
 2. **Chromium-backed `render()` (html/svg/csv/markdown) costs ~500ms per
    call, dominated by browser launch** — Playwright starts a fresh
@@ -92,10 +92,10 @@ Three real patterns, not just numbers to memorize:
    caller estimating real-world cost needs to know this failure mode
    exists and is not rare.
 
-## What this does *not* establish
+## What this does _not_ establish
 
 - **Not a load/throughput test in the concurrency sense.** Every call
-  here is sequential, on one machine. No conclusion about *concurrent*
+  here is sequential, on one machine. No conclusion about _concurrent_
   calls or behavior under the resource limits `security/limits.py`
   enforces (those are tested for correctness in
   `tests/unit/test_pdf_pages.py` etc., not for cost here).
@@ -150,7 +150,7 @@ these adapters scale linearly and uniformly:
    expect structural checks alone to cost low-single-digit seconds, not
    milliseconds.
 3. **Chromium's `full_page=True` screenshot cost is driven by rendered
-   page *height*, not input file size, and it doesn't just get slow — at
+   page _height_, not input file size, and it doesn't just get slow — at
    some height it fails outright.** A 5,000-paragraph HTML file (plain
    text, ~260KB) rendered to a page ~170,000px tall, and capturing that
    full-page screenshot alone took ~23 seconds (isolated directly:
@@ -159,7 +159,7 @@ these adapters scale linearly and uniformly:
    through `markdown-it-py` first) rendered to a page ~395,000px tall —
    and at that height, `page.screenshot(full_page=True)` didn't just get
    slower, it failed outright with `Protocol error (Page.captureScreenshot):
-   Unable to capture screenshot`, surfaced as
+Unable to capture screenshot`, surfaced as
    `ARTIFACT_RENDER_BACKEND_FAILED`. This is a genuine, previously
    undocumented limitation for any HTML/SVG/CSV/Markdown source that
    renders to an unusually tall single page — tracked as
@@ -185,7 +185,7 @@ these adapters scale linearly and uniformly:
    surfaced it, which is itself useful evidence that this failure mode
    is a real, recurring environment characteristic, not a one-off fluke.
 
-## What this second script does *not* establish either
+## What this second script does _not_ establish either
 
 - **Fixture size still isn't infinitely representative.** The synthetic
   "large" fixtures above are one deliberate size per format, not a

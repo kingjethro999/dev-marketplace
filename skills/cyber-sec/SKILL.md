@@ -63,27 +63,27 @@ node .agents/skills/cyber-sec/scripts/cyber-sec.js incident-plan
 
 ### What It Runs
 
-| Check | Tool | Description |
-|-------|------|-------------|
-| **Periderm Scan** | `periderm scan` | Secrets, vulnerabilities, quality |
-| **Periderm Review** | `periderm review --deep` | Deep AI security analysis |
-| **OWASP Top 10** | Custom rules | A01-A10 validation |
-| **Security Headers** | Header analysis | CSP, HSTS, X-Frame-Options, etc. |
-| **Crypto Audit** | Pattern matching | Weak algorithms, hardcoded keys |
-| **Dependency Audit** | `npm audit` / `pip audit` | Known vulnerabilities |
+| Check                | Tool                      | Description                       |
+| -------------------- | ------------------------- | --------------------------------- |
+| **Periderm Scan**    | `periderm scan`           | Secrets, vulnerabilities, quality |
+| **Periderm Review**  | `periderm review --deep`  | Deep AI security analysis         |
+| **OWASP Top 10**     | Custom rules              | A01-A10 validation                |
+| **Security Headers** | Header analysis           | CSP, HSTS, X-Frame-Options, etc.  |
+| **Crypto Audit**     | Pattern matching          | Weak algorithms, hardcoded keys   |
+| **Dependency Audit** | `npm audit` / `pip audit` | Known vulnerabilities             |
 
 ### STRIDE Threat Modeling
 
 Generates threat model for each feature:
 
-| Threat | Description | Mitigation |
-|--------|-------------|------------|
-| **Spoofing** | Fake identity | AuthN, MFA, cert pinning |
-| **Tampering** | Data modification | Integrity checks, signatures |
-| **Repudiation** | Deny actions | Audit logs, non-repudiation |
-| **Info Disclosure** | Data leakage | Encryption, access control |
-| **DoS** | Service disruption | Rate limiting, circuit breakers |
-| **Elevation** | Privilege escalation | Least privilege, RBAC |
+| Threat              | Description          | Mitigation                      |
+| ------------------- | -------------------- | ------------------------------- |
+| **Spoofing**        | Fake identity        | AuthN, MFA, cert pinning        |
+| **Tampering**       | Data modification    | Integrity checks, signatures    |
+| **Repudiation**     | Deny actions         | Audit logs, non-repudiation     |
+| **Info Disclosure** | Data leakage         | Encryption, access control      |
+| **DoS**             | Service disruption   | Rate limiting, circuit breakers |
+| **Elevation**       | Privilege escalation | Least privilege, RBAC           |
 
 ### Configuration
 
@@ -98,7 +98,18 @@ Create `cyber-sec.json` in project root:
   },
   "owasp": {
     "enabled": true,
-    "categories": ["A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10"]
+    "categories": [
+      "A01",
+      "A02",
+      "A03",
+      "A04",
+      "A05",
+      "A06",
+      "A07",
+      "A08",
+      "A09",
+      "A10"
+    ]
   },
   "headers": {
     "enabled": true,

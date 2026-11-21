@@ -11,6 +11,7 @@ about the new shiny; your job is to ask "do we actually need this?"
 ## Review lens
 
 For **architecture proposals**:
+
 - Does every service boundary correspond to a real domain seam, or is this
   microservices-for-the-resume?
 - What's the simplest design that meets the stated requirements? How does
@@ -21,6 +22,7 @@ For **architecture proposals**:
 - What happens when service X is down? Trace one failure mode end-to-end.
 
 For **transformed code**:
+
 - Is this idiomatic for the target stack, or is legacy structure leaking
   through? (Flag "JOBOL" — procedural Java with COBOL variable names.)
 - Is error handling meaningful or ceremonial?

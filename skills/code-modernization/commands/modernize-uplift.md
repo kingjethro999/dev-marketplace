@@ -9,7 +9,7 @@ The code is `legacy/$system`, often a symlink to where it really lives: say wher
 
 This is **not** `transform`, which extracts intent and rewrites idiomatically. Here the code is good
 and only needs to run on a newer runtime. **Preserve structure and make the smallest diffs that compile
-and behave identically on the target**, driven by the *known* breaking changes between the two
+and behave identically on the target**, driven by the _known_ breaking changes between the two
 versions, not by re-deriving business logic. The optional fourth argument `$project_pattern` scopes the
 work to matching projects.
 
@@ -29,7 +29,7 @@ recorded outputs on the target only. That is fine, but label it honestly (Step 0
    name the order in the plan, and treat each hop as its own pilot.
 2. **Target runtime, required.** Verify it builds and tests (`dotnet --version` and a `dotnet test`
    smoke; `mvn` or `gradle`; `python3 -V` and `pytest`).
-3. **Source runtime, the baseline oracle.** Verify the *old* version also runs here. If it does not
+3. **Source runtime, the baseline oracle.** Verify the _old_ version also runs here. If it does not
    (common in CI and sandboxes: no .NET Framework on Linux), say so: dual run degrades to target-only
    and equivalence falls back to recorded outputs. Note it in the plan and in UPLIFT_NOTES.
 4. **Can the existing test suite run on $target_version as-is?** This reshapes the plan. A test
@@ -37,7 +37,7 @@ recorded outputs on the target only. That is fine, but label it honestly (Step 0
    without the vintage engine, `nose` on Python 3) makes the test migration a **prerequisite, not a
    leaf**: nothing migrated can be validated until the tests that validate it run. Read the framework
    and version from the test manifests and check them against the target. If the answer is no, it is an
-   explicit *early* phase in Step 2 and in the brief.
+   explicit _early_ phase in Step 2 and in the brief.
 5. **Detect the ecosystem migration tool**, and distinguish **present**, **runnable here** and
    **actually ran**: most need a working restore and build (often network), so installed is not the
    same as produced findings. Never fold a tool's findings into the catalog unless it ran; say
@@ -61,7 +61,7 @@ one of its phases: find the phase whose `Command:` is this one and whose scope m
 as binding on the plan in Step 2. An unmet entry criterion ("baseline recorded", "pilot playbook
 approved") is the next step: meet it, never re-plan around it. If no phase matches, stop and ask.
 
-**Working copy first.** An uplift edits a whole solution *in place* (target frameworks, API fixes,
+**Working copy first.** An uplift edits a whole solution _in place_ (target frameworks, API fixes,
 the `.sln` and relative project references intact, a reviewable `git diff`). So copy it once, whole:
 `rsync -a --exclude .git legacy/$system/ modernized/$system-uplifted/` (the recommended deny rule refuses a `cp` out of the
 source directory), and do all editing there, git-tracked in its own new local history (`git init` and a first
@@ -141,7 +141,7 @@ Either way rank by blast radius and mark each delta **Mechanical** (a codemod ca
    mark it target-only.
 2. **Baseline is the oracle, and it goes in a file.** Run the existing suite on **a scratch copy of `legacy/$system`** (the $source_version code; a build writes output, and nothing is ever built inside the source) and
    write the per-test table to **`analysis/$system/BASELINE.md`**, including the tests legacy fails: you
-   are proving *no behavior changed*, not *all tests pass*. **Measure it, do not type it:** keep the runner's
+   are proving _no behavior changed_, not _all tests pass_. **Measure it, do not type it:** keep the runner's
    own result files or raw log of that run (Maven `target/surefire-reports`, `pytest --junitxml`, a `dotnet test`
    log) under `analysis/$system/baseline/` and name them in a `Recorded:` line of `BASELINE.md`; the proof step
    counts a baseline it can read from those files, and a typed table alone caps the verdict at PARTLY PROVEN.
@@ -156,7 +156,7 @@ Either way rank by blast radius and mark each delta **Mechanical** (a codemod ca
 **Gate: `analysis/$system/BASELINE.md` must exist** (the table or the `target-only:` line). Without a
 baseline, "the tests pass on $target_version" means nothing.
 
-**Never migrate everything at once.** The catalog is a hypothesis built by *reading*; the build system is
+**Never migrate everything at once.** The catalog is a hypothesis built by _reading_; the build system is
 where a legacy codebase hides its surprises (a bespoke dependency scheme, a pinned toolchain, a shared
 props file, code generation), and none of it enters the catalog until a real migration hits it. The
 cheapest place to hit it is one unit, not N.
@@ -166,7 +166,7 @@ tools such as `upgrade-assistant` and `ng update` mutate that copy, which is fin
 project, module or package: one node of the Step 1 graph) the recipe is always: (1) run the ecosystem
 codemod for the Mechanical deltas; (2) apply the Judgment deltas by hand; (3) **smallest diff that builds**:
 keep structure, names and layout, adopt a new idiom only where the old one was removed, defer every
-"while we're here" cleanup. The `architecture-critic` reviews for *gratuitous divergence*: any change
+"while we're here" cleanup. The `architecture-critic` reviews for _gratuitous divergence_: any change
 beyond the minimal uplift is a finding. Repeat until the unit builds on $target_version.
 
 ### 5a — Pilot (mandatory, in-session, never in a workflow), then stop for approval
@@ -179,7 +179,7 @@ outputs are mandatory before any other unit is touched:
   wrong, an environment fact) is a missed delta: add it now, while you know why.
 - **Write `analysis/$system/PLAYBOOK.md`**, the proven recipe and the most valuable artifact of the
   migration: the ordered edits for one unit; every error and its fix; every environment fact you had to
-  *discover* (the toolchain version really in use, how dependency binaries resolve, which shared config
+  _discover_ (the toolchain version really in use, how dependency binaries resolve, which shared config
   governs the build); the exact build command that proves a unit done. Write it for an engineer who has
   not read this conversation: the fan-out agents are exactly that. Never a credential value.
 
@@ -218,7 +218,7 @@ response to a failing batch is a better playbook, not more agents.
 
 Operational note before launching: the agents change files and run builds largely unattended. The README's
 recommended settings guard only the **file tools**; a shell command that writes a file goes through **Bash
-permissions**, the control that keeps a prompt-injected agent in scope. Keep Bash on a *prompted* mode for
+permissions**, the control that keeps a prompt-injected agent in scope. Keep Bash on a _prompted_ mode for
 this step, and if the session auto-approves Bash, say so and treat the resulting diff as untrusted until
 reviewed.
 
@@ -230,7 +230,7 @@ When it returns:
   `failedUnits` (build failed), `blockedUnits` (a dependency did not build). Units in `failedUnits` or
   `blockedUnits` are **not migrated**; an empty `remainingUnits` alone does not mean done.
 - **Aborted early** means the circuit breaker worked: revise the playbook from the gaps and errors,
-  re-verify the revision on one *failed* unit in-session, then re-invoke with
+  re-verify the revision on one _failed_ unit in-session, then re-invoke with
   `units: <failedUnits + blockedUnits + remainingUnits>`.
 - Repeat until all three lists are empty, then **re-run the full build across the working copy yourself**
   (each agent's `built` flag is self-reported) before Step 6.

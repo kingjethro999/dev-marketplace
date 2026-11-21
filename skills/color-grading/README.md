@@ -56,13 +56,13 @@ and reports what it observed.
 
 ## What it is, and what it is not
 
-| | |
-|---|---|
-| **Does** | execute `HDR_TO_SDR`, `LUT_APPLY`, `RETAG`, `STRIP_DOVI`, `PRIMARY_CORRECTION`, `OCIO_TRANSFORM`, `MATCH_CAMERA`, `LEGALIZE` as a dependency graph; validate every artifact by re-probing it (measured colour tags, never assumed); reuse intermediates by content-addressed identity; record full provenance |
-| **Does not** | decide *which* colour treatment, LUT, tonemap curve or correction values to apply; look at a frame and judge it "cinematic"; pick white-balance values (`WHITE_BALANCE` is an alias of `PRIMARY_CORRECTION`'s explicit `temperature`/`tint`); convert containers; run `ffmpeg` directly; accept a command, argv or filter string from the caller |
+|              |                                                                                                                                                                                                                                                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Does**     | execute `HDR_TO_SDR`, `LUT_APPLY`, `RETAG`, `STRIP_DOVI`, `PRIMARY_CORRECTION`, `OCIO_TRANSFORM`, `MATCH_CAMERA`, `LEGALIZE` as a dependency graph; validate every artifact by re-probing it (measured colour tags, never assumed); reuse intermediates by content-addressed identity; record full provenance                                    |
+| **Does not** | decide _which_ colour treatment, LUT, tonemap curve or correction values to apply; look at a frame and judge it "cinematic"; pick white-balance values (`WHITE_BALANCE` is an alias of `PRIMARY_CORRECTION`'s explicit `temperature`/`tint`); convert containers; run `ffmpeg` directly; accept a command, argv or filter string from the caller |
 
 That split is the whole design: **[video-production-agent](https://github.com/kajisho5/video-production-agent)**
-decides *what* to do and builds the request; **color-grading-skill** decides *how* to execute it safely and
+decides _what_ to do and builds the request; **color-grading-skill** decides _how_ to execute it safely and
 deterministically; **[ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill)** is the media execution engine that
 actually runs FFmpeg. Full boundary, including how this differs from `media-analysis-skill`'s pure measurement role:
 [docs/architecture.md](docs/architecture.md).
@@ -92,12 +92,29 @@ Write a request naming the operation graph — here, HDR tone mapping followed b
   "schema": "color-grading/request@1",
   "project": {
     "project_id": "grade-42",
-    "source": {"source_id": "raw", "path": "footage/iphone_hdr.mov"},
+    "source": { "source_id": "raw", "path": "footage/iphone_hdr.mov" },
     "operations": [
-      {"op_id": "sdr", "type": "HDR_TO_SDR", "input": "source", "parameters": {"tonemap": "hable"}},
-      {"op_id": "grade", "type": "LUT_APPLY", "input": "op:sdr", "parameters": {"lut_path": "luts/look_a.cube"}}
+      {
+        "op_id": "sdr",
+        "type": "HDR_TO_SDR",
+        "input": "source",
+        "parameters": { "tonemap": "hable" }
+      },
+      {
+        "op_id": "grade",
+        "type": "LUT_APPLY",
+        "input": "op:sdr",
+        "parameters": { "lut_path": "luts/look_a.cube" }
+      }
     ],
-    "outputs": [{"output_id": "graded", "operation": "op:grade", "path": "deliver/grade-42.mov", "format": "mov"}]
+    "outputs": [
+      {
+        "output_id": "graded",
+        "operation": "op:grade",
+        "path": "deliver/grade-42.mov",
+        "format": "mov"
+      }
+    ]
   }
 }
 ```
@@ -141,17 +158,17 @@ Nothing in this pipeline reasons about the image. Every box is a typed, mechanic
 
 ## Supported operations
 
-| Operation | Purpose |
-|---|---|
-| `HDR_TO_SDR` | HDR (PQ/HLG, BT.2020) → SDR BT.709 tone mapping with an explicit curve |
-| `LUT_APPLY` | Apply a 3D `.cube` LUT |
-| `RETAG` | Rewrite colour tags (BT.709 / BT.2020 PQ / BT.2020 HLG / BT.601) without a re-encode where possible |
-| `STRIP_DOVI` | Remove a Dolby Vision RPU (HEVC only) |
-| `PRIMARY_CORRECTION` | Typed primary colour correction: exposure, contrast, saturation, white balance (temperature + tint), gamma, three-way shadows/highlights (lift/gain), levels and a curves preset — each an explicit, independently optional, range-checked parameter |
-| `OCIO_TRANSFORM` | OpenColorIO / ACES colour-space conversion (built-in ACES studio / CG configs or a `.ocio` file): source space → destination space, or → display / view, with an optional look. Baked to a 3D LUT by the optional PyOpenColorIO (`pip install 'color-grading-skill[ocio]'`), applied by ffmpeg-skill `--lut`, tagged by `--retag` ([ADR-22](docs/decisions.md)) |
-| `MATCH_CAMERA` | Match this camera to a reference camera from a frame pair the caller names (whole frame or stated patches): per-channel curves or a 3×3 matrix fitted, written as a LUT and applied by ffmpeg-skill `--lut`; residual CIEDE2000 measured before and on the written file ([ADR-23](docs/decisions.md)) |
-| `LEGALIZE` | Soft-clip into BT.709 legal levels (8-bit luma 16–235, chroma 16–240) or the EBU R 103 tolerance, as a LUT over ffmpeg-skill's float RGB (super-whites included); with ffmpeg-skill 3.2.3 on, the same encode also clamps after the 4:2:0 conversion (`color --legalize`) and the shares of samples out of range are measured before and after (`check --levels`); older checkouts: the soft clip alone, shares `measured: false` ([ADR-24](docs/decisions.md), [ADR-29](docs/decisions.md)) |
-| `WHITE_BALANCE` *(alias)* | `PRIMARY_CORRECTION` restricted to `temperature` + `tint` (plus `crf`/`preset`/`audio_stream`); resolved to `PRIMARY_CORRECTION` at validation, so plan, identity and provenance name `PRIMARY_CORRECTION` ([ADR-20](docs/decisions.md)) |
+| Operation                 | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HDR_TO_SDR`              | HDR (PQ/HLG, BT.2020) → SDR BT.709 tone mapping with an explicit curve                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `LUT_APPLY`               | Apply a 3D `.cube` LUT                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `RETAG`                   | Rewrite colour tags (BT.709 / BT.2020 PQ / BT.2020 HLG / BT.601) without a re-encode where possible                                                                                                                                                                                                                                                                                                                                                                                          |
+| `STRIP_DOVI`              | Remove a Dolby Vision RPU (HEVC only)                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `PRIMARY_CORRECTION`      | Typed primary colour correction: exposure, contrast, saturation, white balance (temperature + tint), gamma, three-way shadows/highlights (lift/gain), levels and a curves preset — each an explicit, independently optional, range-checked parameter                                                                                                                                                                                                                                         |
+| `OCIO_TRANSFORM`          | OpenColorIO / ACES colour-space conversion (built-in ACES studio / CG configs or a `.ocio` file): source space → destination space, or → display / view, with an optional look. Baked to a 3D LUT by the optional PyOpenColorIO (`pip install 'color-grading-skill[ocio]'`), applied by ffmpeg-skill `--lut`, tagged by `--retag` ([ADR-22](docs/decisions.md))                                                                                                                              |
+| `MATCH_CAMERA`            | Match this camera to a reference camera from a frame pair the caller names (whole frame or stated patches): per-channel curves or a 3×3 matrix fitted, written as a LUT and applied by ffmpeg-skill `--lut`; residual CIEDE2000 measured before and on the written file ([ADR-23](docs/decisions.md))                                                                                                                                                                                        |
+| `LEGALIZE`                | Soft-clip into BT.709 legal levels (8-bit luma 16–235, chroma 16–240) or the EBU R 103 tolerance, as a LUT over ffmpeg-skill's float RGB (super-whites included); with ffmpeg-skill 3.2.3 on, the same encode also clamps after the 4:2:0 conversion (`color --legalize`) and the shares of samples out of range are measured before and after (`check --levels`); older checkouts: the soft clip alone, shares `measured: false` ([ADR-24](docs/decisions.md), [ADR-29](docs/decisions.md)) |
+| `WHITE_BALANCE` _(alias)_ | `PRIMARY_CORRECTION` restricted to `temperature` + `tint` (plus `crf`/`preset`/`audio_stream`); resolved to `PRIMARY_CORRECTION` at validation, so plan, identity and provenance name `PRIMARY_CORRECTION` ([ADR-20](docs/decisions.md))                                                                                                                                                                                                                                                     |
 
 Each maps 1:1 onto one mode of `ffmpeg-skill/color`; every operation takes exactly one input and none of them
 change duration or frame geometry (verified against the source within a documented tolerance). Full parameter
@@ -182,17 +199,17 @@ This skill does not trust a `0` exit code from ffmpeg-skill as proof that an ope
 re-probed and checked: exists, size > 0, readable, has a video stream, duration and resolution unchanged from the
 source — plus the operation's own measurable effect:
 
-| Operation | What is verified on the output |
-|---|---|
-| `HDR_TO_SDR` | no longer reports `hdr: true` |
-| `LUT_APPLY` | `pix_fmt == yuv420p` (on an alpha source: an alpha plane, see below) |
-| `RETAG` | the exact `(color_space, color_primaries, color_transfer)` triple requested |
-| `STRIP_DOVI` | no Dolby Vision side data present |
-| `OCIO_TRANSFORM` | `pix_fmt == yuv420p` and the destination's exact colour-tag triple; the baked LUT's error against OpenColorIO's own processor on a test chart is recorded in provenance (`accuracy`) |
-| `MATCH_CAMERA` | `pix_fmt == yuv420p`; `measurements.delta_e2000` before / fit / after (after measured on a frame of the written file), reported, not judged |
-| `LEGALIZE` | `pix_fmt == yuv420p`; with `color --legalize`, its `legal_levels` step on the written file must pass (`legal_levels_failed` otherwise); with `check --levels`, the shares out of range on the input and the output are in provenance (`legalize.out_of_range_share.before` / `.after`), reported, not judged |
-| *alpha sources* | with ffmpeg-skill/color `--keep-alpha` (3.2.3 on), `LUT_APPLY` / `PRIMARY_CORRECTION` write an alpha line chosen from the input's codec (ProRes 4444, qtrle, PNG, VP9) and color's `alpha` step must pass (`alpha_lost` / `alpha_mismatch` / `alpha_unverified` otherwise); every other re-encoding operation, and all of them on an older ffmpeg-skill, is refused (`alpha_not_preserved`), as is an `expect.pix_fmt` without an alpha plane on an output that keeps it. `project.source.alpha_mode` (`straight` / `premultiplied`) says how the colour is stored: unsaid, PNG is straight and anything else is taken as straight with a warning; a premultiplied source is refused for a grade that keeps the alpha (`alpha_premultiplied`, ffmpeg-skill cannot un-premultiply). `project.source.drop_alpha: true` asks for opaque re-encodes instead (ADR-33); a stream copy must keep it (`alpha_lost` otherwise), [ADR-25](docs/decisions.md), [ADR-30](docs/decisions.md) |
-| `PRIMARY_CORRECTION` | no fixed target state (a continuous correction, not a discrete tag); the generic checks above plus ffmpeg-skill's own before/after `measurements` (real signalstats numbers — luminance and saturation averages — never a subjective judgement) |
+| Operation            | What is verified on the output                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HDR_TO_SDR`         | no longer reports `hdr: true`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `LUT_APPLY`          | `pix_fmt == yuv420p` (on an alpha source: an alpha plane, see below)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `RETAG`              | the exact `(color_space, color_primaries, color_transfer)` triple requested                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `STRIP_DOVI`         | no Dolby Vision side data present                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `OCIO_TRANSFORM`     | `pix_fmt == yuv420p` and the destination's exact colour-tag triple; the baked LUT's error against OpenColorIO's own processor on a test chart is recorded in provenance (`accuracy`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `MATCH_CAMERA`       | `pix_fmt == yuv420p`; `measurements.delta_e2000` before / fit / after (after measured on a frame of the written file), reported, not judged                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `LEGALIZE`           | `pix_fmt == yuv420p`; with `color --legalize`, its `legal_levels` step on the written file must pass (`legal_levels_failed` otherwise); with `check --levels`, the shares out of range on the input and the output are in provenance (`legalize.out_of_range_share.before` / `.after`), reported, not judged                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| _alpha sources_      | with ffmpeg-skill/color `--keep-alpha` (3.2.3 on), `LUT_APPLY` / `PRIMARY_CORRECTION` write an alpha line chosen from the input's codec (ProRes 4444, qtrle, PNG, VP9) and color's `alpha` step must pass (`alpha_lost` / `alpha_mismatch` / `alpha_unverified` otherwise); every other re-encoding operation, and all of them on an older ffmpeg-skill, is refused (`alpha_not_preserved`), as is an `expect.pix_fmt` without an alpha plane on an output that keeps it. `project.source.alpha_mode` (`straight` / `premultiplied`) says how the colour is stored: unsaid, PNG is straight and anything else is taken as straight with a warning; a premultiplied source is refused for a grade that keeps the alpha (`alpha_premultiplied`, ffmpeg-skill cannot un-premultiply). `project.source.drop_alpha: true` asks for opaque re-encodes instead (ADR-33); a stream copy must keep it (`alpha_lost` otherwise), [ADR-25](docs/decisions.md), [ADR-30](docs/decisions.md) |
+| `PRIMARY_CORRECTION` | no fixed target state (a continuous correction, not a discrete tag); the generic checks above plus ffmpeg-skill's own before/after `measurements` (real signalstats numbers — luminance and saturation averages — never a subjective judgement)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 This caught a real ffmpeg-skill/FFmpeg limitation during development: a stream-copy retag can exit `0` without
 actually rewriting colour tags already baked into a source's bitstream. This skill reports that as
@@ -204,7 +221,7 @@ Every result carries what it did, not just that it succeeded: `operation_id`, `t
 `input_hash`, `output_hash`, the LUT's own hash (for `LUT_APPLY`), `measurements`, and `tool_commands_observed` (the
 commands ffmpeg-skill itself reports having run, not a description this skill reconstructs afterwards). Every
 output carries the full operation chain back to the source, each link with its own hash and status. Measured colour
-metadata is always *observed* (read back from `ffmpeg-skill/probe`), never inferred from the request.
+metadata is always _observed_ (read back from `ffmpeg-skill/probe`), never inferred from the request.
 
 ## Security
 
@@ -221,7 +238,7 @@ metadata is always *observed* (read back from `ffmpeg-skill/probe`), never infer
 - Only `ffmpeg-skill/probe` and `ffmpeg-skill/color` can ever be started, from a checkout named by the caller, never
   by the request document, with a minimal child environment.
 
-Full enforcement table, including what is deliberately *not* enforced (e.g. no root restriction by default, matching
+Full enforcement table, including what is deliberately _not_ enforced (e.g. no root restriction by default, matching
 the rest of the ecosystem): [docs/security.md](docs/security.md).
 
 ## Built for agents
@@ -253,13 +270,13 @@ derived from `model.OPERATION_TYPES`; see `docs/decisions.md` ADR-15.
 
 ### CLI
 
-| command | reads media | writes media |
-|---|---|---|
-| `skill --json` / `contract --json` | no | no |
-| `doctor --json [--ffmpeg-skill DIR]` | no | no |
-| `validate REQUEST\|- --json` | no | no |
-| `plan REQUEST\|- --json` | probes source + hashes LUTs (read-only) | no |
-| `run REQUEST\|- --json [--dry-run] [--workspace DIR] [--allowed-input ROOT] [--allowed-lut ROOT]` | yes | yes |
+| command                                                                                           | reads media                             | writes media |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------ |
+| `skill --json` / `contract --json`                                                                | no                                      | no           |
+| `doctor --json [--ffmpeg-skill DIR]`                                                              | no                                      | no           |
+| `validate REQUEST\|- --json`                                                                      | no                                      | no           |
+| `plan REQUEST\|- --json`                                                                          | probes source + hashes LUTs (read-only) | no           |
+| `run REQUEST\|- --json [--dry-run] [--workspace DIR] [--allowed-input ROOT] [--allowed-lut ROOT]` | yes                                     | yes          |
 
 `stdout` under `--json` is always exactly one document, on success and failure alike; `stderr` carries diagnostics.
 Exit codes are stable per error code (see [Error handling](#error-handling) below); every command supports `--help`
@@ -277,20 +294,20 @@ Exact tools, flags and every measured compatibility gap: [docs/ffmpeg-skill.md](
 
 ## Error handling
 
-| code | when |
-|---|---|
-| `INVALID_REQUEST` | document shape, unknown/forbidden field, bad type, enum or range |
-| `INVALID_INPUT` | source missing, not a regular file, unreadable, no video stream, LUT missing/empty/oversized |
-| `PATH_NOT_ALLOWED` | outside allowed roots/workspace, traversal, symlink escape, unsafe name |
-| `UNSUPPORTED_OPERATION` | not implemented (declared or unknown type) |
-| `UNSUPPORTED_FORMAT` | output format unknown, extension mismatch, container ≠ source, LUT not `.cube` |
-| `DEPENDENCY_ERROR` | duplicate id, cycle, self-reference, unreachable node |
-| `MISSING_INPUT` | reference to an undeclared operation |
-| `OUTPUT_ERROR` | output exists, collides with the input, empty, could not be written |
-| `VALIDATION_ERROR` | artifact failed post-validation (stream, duration, resolution, colour tags, pix_fmt) |
-| `TOOL_ERROR` | ffmpeg-skill missing/incompatible, tool failure, timeout (retryable) |
-| `CANCELLED` | SIGINT/SIGTERM (retryable) |
-| `INTERNAL_ERROR` | a bug in this skill — still exactly one JSON document |
+| code                    | when                                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| `INVALID_REQUEST`       | document shape, unknown/forbidden field, bad type, enum or range                             |
+| `INVALID_INPUT`         | source missing, not a regular file, unreadable, no video stream, LUT missing/empty/oversized |
+| `PATH_NOT_ALLOWED`      | outside allowed roots/workspace, traversal, symlink escape, unsafe name                      |
+| `UNSUPPORTED_OPERATION` | not implemented (declared or unknown type)                                                   |
+| `UNSUPPORTED_FORMAT`    | output format unknown, extension mismatch, container ≠ source, LUT not `.cube`               |
+| `DEPENDENCY_ERROR`      | duplicate id, cycle, self-reference, unreachable node                                        |
+| `MISSING_INPUT`         | reference to an undeclared operation                                                         |
+| `OUTPUT_ERROR`          | output exists, collides with the input, empty, could not be written                          |
+| `VALIDATION_ERROR`      | artifact failed post-validation (stream, duration, resolution, colour tags, pix_fmt)         |
+| `TOOL_ERROR`            | ffmpeg-skill missing/incompatible, tool failure, timeout (retryable)                         |
+| `CANCELLED`             | SIGINT/SIGTERM (retryable)                                                                   |
+| `INTERNAL_ERROR`        | a bug in this skill — still exactly one JSON document                                        |
 
 Every code has a stable exit code (`errors.exit_codes` in the contract); `ok` mirrors the process exit code.
 
@@ -342,21 +359,21 @@ real-media verification does and does not prove: [docs/testing.md](docs/testing.
 
 ## Docs
 
-| | |
-|---|---|
-| [SKILL.md](SKILL.md) | what the calling agent reads: contract, rules, and how to read the response |
+|                                              |                                                                             |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| [SKILL.md](SKILL.md)                         | what the calling agent reads: contract, rules, and how to read the response |
 | [docs/architecture.md](docs/architecture.md) | full request/response schema, operation graph, identity, execution pipeline |
-| [docs/decisions.md](docs/decisions.md) | design decisions (ADRs) and the reasoning behind them |
-| [docs/ffmpeg-skill.md](docs/ffmpeg-skill.md) | exact tools/flags used, version compatibility, every measured gap |
-| [docs/security.md](docs/security.md) | full enforcement table: what is and is not defended against |
-| [docs/testing.md](docs/testing.md) | file-by-file test coverage, fixture construction |
+| [docs/decisions.md](docs/decisions.md)       | design decisions (ADRs) and the reasoning behind them                       |
+| [docs/ffmpeg-skill.md](docs/ffmpeg-skill.md) | exact tools/flags used, version compatibility, every measured gap           |
+| [docs/security.md](docs/security.md)         | full enforcement table: what is and is not defended against                 |
+| [docs/testing.md](docs/testing.md)           | file-by-file test coverage, fixture construction                            |
 
 ## Relationship to the other skills
 
-| | [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) | [media-analysis-skill](https://github.com/kajisho5/media-analysis-skill) | **color-grading-skill** | [video-production-agent](https://github.com/kajisho5/video-production-agent) |
-|---|---|---|---|---|
-| Role | media execution engine (hands) | measurement / observation (meters) | **colour grading execution** | reasoning / decision / orchestration (brain) |
-| Never | holds a project model | edits or writes media | decides which LUT/curve/correction values, computes any colour-correction filter itself (always delegates to ffmpeg-skill), converts containers, runs ffmpeg directly | runs ffmpeg |
+|       | [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) | [media-analysis-skill](https://github.com/kajisho5/media-analysis-skill) | **color-grading-skill**                                                                                                                                               | [video-production-agent](https://github.com/kajisho5/video-production-agent) |
+| ----- | -------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Role  | media execution engine (hands)                           | measurement / observation (meters)                                       | **colour grading execution**                                                                                                                                          | reasoning / decision / orchestration (brain)                                 |
+| Never | holds a project model                                    | edits or writes media                                                    | decides which LUT/curve/correction values, computes any colour-correction filter itself (always delegates to ffmpeg-skill), converts containers, runs ffmpeg directly | runs ffmpeg                                                                  |
 
 `audio-production-skill`, `video-editing-skill`, `transcription-skill`, `subtitle-skill` and QC are not touched by
 this skill — it has no audio, cut/trim, speech or final-QC role.

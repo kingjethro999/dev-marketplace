@@ -22,7 +22,7 @@ put). Nothing is ever copied for you.
 - If `$ARGUMENTS` contains `--source <path>` (a directory, absolute or relative), check that it exists and is
   not the filesystem root or the user's home directory, then, only if `legacy/$system` does not exist yet, create
   the link: `mkdir -p legacy && ln -s <absolute path> legacy/$system` (on Windows a junction: `cmd /c mklink /J
-  legacy\$system <absolute path>`). If `legacy/$system` already exists and points elsewhere, say so and change
+legacy\$system <absolute path>`). If `legacy/$system` already exists and points elsewhere, say so and change
   nothing.
 - Say where `legacy/$system` points (`readlink legacy/$system`, or "a directory in this workspace") in one line
   before you start.
@@ -44,9 +44,9 @@ answer them yourself. While the pop-up is open, run the other checks — none of
 them needs the answers.
 
 1. **Scope** — Is this code the complete system, or one slice of a larger
-   codebase? If a slice: what *outside* it depends on code *inside* it, and is
+   codebase? If a slice: what _outside_ it depends on code _inside_ it, and is
    breaking those consumers acceptable? (Check 6 verifies the crossing from the
-   source; the answer says whether it *matters*.)
+   source; the answer says whether it _matters_.)
 2. **Build & test locally** — Can this environment restore, build, and run the
    tests? Roughly how long does the full CI pipeline take?
 3. **Bespoke build infrastructure** — Is there organization-specific build or
@@ -73,11 +73,11 @@ file split.
 
 Check availability (`command -v`), version and what degrades without it:
 
-| Tool | Used by | Without it |
-|---|---|---|
-| `scc` (or `cloc`) | assess | LOC and complexity fall back to `find` + `wc`; the COCOMO index gets coarser |
+| Tool                                                                                                                              | Used by                            | Without it                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| `scc` (or `cloc`)                                                                                                                 | assess                             | LOC and complexity fall back to `find` + `wc`; the COCOMO index gets coarser               |
 | `python3` (3.8 or newer; on Windows it may be `python` or `py -3`: use whichever runs Python 3 wherever a command says `python3`) | map, extract-rules, verify, report | the dependency scripts, the shard builder, the proof scripts and the HTML report can't run |
-| `lizard` | assess --portfolio | complexity is estimated from decision-keyword counts |
+| `lizard`                                                                                                                          | assess --portfolio                 | complexity is estimated from decision-keyword counts                                       |
 
 Give the platform's install one-liner for anything missing.
 
@@ -108,7 +108,7 @@ detected stack (GnuCOBOL `cobc`, a JDK with Maven or Gradle, `cc`/`make`,
 
 A failed smoke test is the most valuable output of this command: report the
 actual error and diagnose it (missing copybook or include path, missing dialect
-flag, a dependency the standard feed cannot resolve). Level 2 being *impossible*
+flag, a dependency the standard feed cannot resolve). Level 2 being _impossible_
 (no build system, a mainframe stack with no local runtime) is a fact, not a
 failure: equivalence then falls back to recorded traces.
 
@@ -139,7 +139,7 @@ The map is only as good as what is in the tree. Look for the stack's equivalents
 
 ## Check 6 — Scope boundary (is `$system` the whole world, or a slice?)
 
-Every downstream command assumes `legacy/$system` *is* the system. When it is one
+Every downstream command assumes `legacy/$system` _is_ the system. When it is one
 directory inside a larger repository — a monorepo module, one solution folder, a
 subsystem sharing includes with siblings — that assumption is the most dangerous
 in the run, and nothing else checks it. Resolve any symlink, then look for a
@@ -153,7 +153,7 @@ includes inside it that reach outside. If either is true, report both directions
 - **Inbound** — things outside that depend on things inside: the **blast
   radius**. An in-place migration of a node with outside consumers breaks each of
   them. Grep the sibling manifests for references into `legacy/$system`, list the nodes
-  they use, and say plainly that each needs an explicit decision *before* any
+  they use, and say plainly that each needs an explicit decision _before_ any
   in-place change: keep it buildable for old and new consumers during the
   transition, widen the scope to include the consumers, or schedule the break.
 

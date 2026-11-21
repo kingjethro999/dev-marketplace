@@ -14,21 +14,21 @@ exists yet, the answer is `/code-modernization:modernize $system --source <path 
 Check `analysis/$system/` and `modernized/$system*/` and build a table, one row per stage, with each artifact's
 presence and modification time:
 
-| Stage | Artifacts |
-|---|---|
-| intent | `INTENT.md` (what the person wants; written by `/code-modernization:modernize`) |
-| preflight | `PREFLIGHT.md` (are the Check 0 human answers and the Check 6 scope-boundary finding there?), where `legacy/$system` points (does that directory exist?) |
-| assess | `ASSESSMENT.md`, `ARCHITECTURE.mmd` |
-| map | `topology.json`, `TOPOLOGY.html`, `*.mmd`, `extract_topology.*` |
-| extract-rules | `BUSINESS_RULES.md`, `DATA_OBJECTS.md` |
-| review | `RULE_REVIEWS.json`: how many flagged rules a person has decided (confirmed, wrong, needs discussion), and how many are still open |
-| brief | `MODERNIZATION_BRIEF.md` (is the approval block signed?) |
-| harden | `SECURITY_FINDINGS.md`, `security_remediation.patch` |
-| uplift | `DELTA_CATALOG.md`, `BASELINE.md`, `PLAYBOOK.md` (no playbook means the pilot has not happened, so the fan-out must not), `modernized/$system-uplifted/UPLIFT_NOTES.md` (per unit: builds on target? baseline reproduced?) |
-| transform | each `modernized/$system/<module>/`: tests present? `TRANSFORMATION_NOTES.md` present (its completion marker)? |
-| reimagine | `modernized/$system-reimagined/`: per-service acceptance tests, and the `CLAUDE.md` handoff (its completion marker; it does not write `TRANSFORMATION_NOTES.md`) |
-| equivalence | `EQUIVALENCE.json`: cases executed, same, differs (any differing or missing case, or zero executed, is a failure) |
-| verify | `VERIFICATION.md` (written by `/code-modernization:modernize-verify`): the verdict per built module (PROVEN, PARTLY PROVEN or NOT PROVEN) and whether a person has signed it. A built module with no `VERIFICATION.md`, or one older than the module's code or tests, is **not proven yet** |
+| Stage         | Artifacts                                                                                                                                                                                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| intent        | `INTENT.md` (what the person wants; written by `/code-modernization:modernize`)                                                                                                                                                                                                             |
+| preflight     | `PREFLIGHT.md` (are the Check 0 human answers and the Check 6 scope-boundary finding there?), where `legacy/$system` points (does that directory exist?)                                                                                                                                    |
+| assess        | `ASSESSMENT.md`, `ARCHITECTURE.mmd`                                                                                                                                                                                                                                                         |
+| map           | `topology.json`, `TOPOLOGY.html`, `*.mmd`, `extract_topology.*`                                                                                                                                                                                                                             |
+| extract-rules | `BUSINESS_RULES.md`, `DATA_OBJECTS.md`                                                                                                                                                                                                                                                      |
+| review        | `RULE_REVIEWS.json`: how many flagged rules a person has decided (confirmed, wrong, needs discussion), and how many are still open                                                                                                                                                          |
+| brief         | `MODERNIZATION_BRIEF.md` (is the approval block signed?)                                                                                                                                                                                                                                    |
+| harden        | `SECURITY_FINDINGS.md`, `security_remediation.patch`                                                                                                                                                                                                                                        |
+| uplift        | `DELTA_CATALOG.md`, `BASELINE.md`, `PLAYBOOK.md` (no playbook means the pilot has not happened, so the fan-out must not), `modernized/$system-uplifted/UPLIFT_NOTES.md` (per unit: builds on target? baseline reproduced?)                                                                  |
+| transform     | each `modernized/$system/<module>/`: tests present? `TRANSFORMATION_NOTES.md` present (its completion marker)?                                                                                                                                                                              |
+| reimagine     | `modernized/$system-reimagined/`: per-service acceptance tests, and the `CLAUDE.md` handoff (its completion marker; it does not write `TRANSFORMATION_NOTES.md`)                                                                                                                            |
+| equivalence   | `EQUIVALENCE.json`: cases executed, same, differs (any differing or missing case, or zero executed, is a failure)                                                                                                                                                                           |
+| verify        | `VERIFICATION.md` (written by `/code-modernization:modernize-verify`): the verdict per built module (PROVEN, PARTLY PROVEN or NOT PROVEN) and whether a person has signed it. A built module with no `VERIFICATION.md`, or one older than the module's code or tests, is **not proven yet** |
 
 ## 2 — Stale
 

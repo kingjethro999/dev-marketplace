@@ -8,7 +8,7 @@
 - **WARN** — met, but with something worth flagging (e.g. mixed page sizes
   when the caller didn't explicitly forbid them).
 - **FAIL** — checked and not met.
-- **UNKNOWN** — it was checked *for*, but the engine could not reach a
+- **UNKNOWN** — it was checked _for_, but the engine could not reach a
   verdict (missing capability, renderer unavailable, adapter doesn't
   implement this particular check yet — e.g. PDF font-embedding
   completeness today).
@@ -21,10 +21,10 @@
 `aggregate()` combines many checks into one status by precedence (worst
 first): `FAIL > UNKNOWN > NOT_CHECKED > WARN > PASS > SKIPPED`. An empty
 check list aggregates to `NOT_CHECKED`, never to `PASS` — silence is not
-success. `SKIPPED` is ranked *after* `PASS`, deliberately: a policy saying
+success. `SKIPPED` is ranked _after_ `PASS`, deliberately: a policy saying
 "this check doesn't apply here" is an intentional, benign absence, not a
 process gap — it must not drag a clean result down the way an
-*unintentional* gap (`NOT_CHECKED`) does. `NOT_CHECKED` ranks worse than
+_unintentional_ gap (`NOT_CHECKED`) does. `NOT_CHECKED` ranks worse than
 `WARN` for the opposite reason: "nothing ran this" is a bigger concern than
 "it ran and passed with a caveat."
 
@@ -47,6 +47,7 @@ plain, standard-font PDF genuinely rolls up to `PASS` now.
 
 The pattern that check demonstrated is still very much alive elsewhere,
 because it's a real, recurring shape, not a one-off gap:
+
 - PPTX's `chart_validity` is `UNKNOWN` on any deck containing a chart
   (presence is detected, internal chart data correctness is not) and
   `SKIPPED` — not `PASS` — on a chart-free deck, so a chart-free deck's
@@ -81,11 +82,11 @@ rounding UNKNOWN up to PASS.
 
 `cli/main.py`'s `_exit_for_status()`:
 
-| Status | Exit code | Rationale |
-|---|---|---|
-| PASS, WARN, SKIPPED, NOT_CHECKED | 0 | Nothing is actionably wrong |
-| FAIL | 1 | An actual, checked failure |
-| UNKNOWN | 3 (same bucket as `ARTIFACT_CAPABILITY_MISSING`) | Distinct from both success and failure — something couldn't be verified |
+| Status                           | Exit code                                        | Rationale                                                               |
+| -------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------- |
+| PASS, WARN, SKIPPED, NOT_CHECKED | 0                                                | Nothing is actionably wrong                                             |
+| FAIL                             | 1                                                | An actual, checked failure                                              |
+| UNKNOWN                          | 3 (same bucket as `ARTIFACT_CAPABILITY_MISSING`) | Distinct from both success and failure — something couldn't be verified |
 
 This lets a CI script distinguish "verification genuinely failed" (1) from
 "verification was incomplete" (3) without parsing JSON.
@@ -101,7 +102,7 @@ This lets a CI script distinguish "verification genuinely failed" (1) from
   1. The engine renders pages and reports a `visual_evidence` check —
      `PASS` if images were produced, `WARN` if rendering produced zero
      pages, `UNKNOWN`/`SKIPPED` if the render capability is
-     missing/not required. This is a claim about *evidence existing*, not
+     missing/not required. This is a claim about _evidence existing_, not
      about the artifact looking correct.
   2. `inspected_by` stays `None` until an agent (or human) that actually
      looked at the rendered images records a verdict. Nothing in this
@@ -129,9 +130,9 @@ Pass a `policy` object to `verify`/`receipt`:
 Unset keys simply don't add their corresponding check — they don't default
 to strict or lenient in a way that changes other checks' behavior.
 
-A key that's real for *some* format but not this one (see the named-preset
+A key that's real for _some_ format but not this one (see the named-preset
 cross-adapter-reuse note below) is likewise silently inert — but a key no
-adapter recognizes *at all* (e.g. `min_pagess`, misspelled from `min_pages`)
+adapter recognizes _at all_ (e.g. `min_pagess`, misspelled from `min_pages`)
 is rejected with a clear error before verification runs, instead of being
 silently treated as "not specified" and producing a false PASS (Issue #24).
 This applies to `verify`/`execute`/`receipt` on both the CLI and MCP.
@@ -267,7 +268,7 @@ fields, is read as well.
 
 ## Blank pages (PDF, Issue #14)
 
-`page_count` catches zero pages; it doesn't catch *N* pages where one is
+`page_count` catches zero pages; it doesn't catch _N_ pages where one is
 genuinely empty in the middle of an otherwise-normal document. PDF's
 `blank_pages` check flags any page with neither extractable text nor an
 embedded image (`WARN` by default, `FAIL` under

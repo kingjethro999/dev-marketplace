@@ -12,10 +12,10 @@ v0.4.0, Python. HDR_TO_SDR, LUT_APPLY, RETAG, STRIP_DOVI, PRIMARY_CORRECTION (ex
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
 | Owned job | Status | Note |
-|---|---|---|
-| 色補正 | done |  |
-| LUT | done |  |
-| HDR→SDR | done |  |
+| --------- | ------ | ---- |
+| 色補正    | done   |      |
+| LUT       | done   |      |
+| HDR→SDR   | done   |      |
 
 ## Wiring
 
@@ -52,4 +52,5 @@ Agent wires 5 color_* skills through color-grading/run, every PRIMARY_CORRECTION
   - Partly done (ADR-33), left unchecked: the request says how the colour is stored, `project.source.alpha_mode: straight | premultiplied` (default from a format that fixes it, PNG = straight; otherwise taken as straight with a warning, never silently), and `project.source.drop_alpha: true` asks for an opaque result (the only way an alpha is given up; an output setting that would drop it is refused otherwise). Measured on lavfi sources with alpha 0 / partial / 1 bands: a straight qtrle alpha is bit-identical after LUT_APPLY / PRIMARY_CORRECTION, ProRes 4444's within one 8-bit code, no fringe, and opaque pixels match the non-alpha path within 3 codes (qtrle LUT_APPLY: ADR-30's known RGB-line shift, warned). **Not met: a premultiplied source is still not un-premultiplied**: ffmpeg-skill/color has no step that divides by the alpha, so such a source is now refused for a grade that keeps the alpha (`alpha_premultiplied`) instead of being graded as straight; stream copies keep it and `drop_alpha` flattens it over black. Needs an input-side alpha mode in ffmpeg-skill/color (proposal in ADR-33)
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

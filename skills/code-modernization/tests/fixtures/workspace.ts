@@ -4,41 +4,68 @@
  */
 
 export const TOPOLOGY = JSON.stringify({
-  system: 'Billing',
+  system: "Billing",
   root: {
-    id: 'sys',
-    name: 'Billing',
-    kind: 'system',
+    id: "sys",
+    name: "Billing",
+    kind: "system",
     children: [
       {
-        id: 'dom:interest',
-        name: 'D1 Interest',
-        kind: 'domain',
+        id: "dom:interest",
+        name: "D1 Interest",
+        kind: "domain",
         children: [
-          { id: 'INTCALC', name: 'INTCALC', kind: 'module', language: 'cobol', loc: 600, file: 'app/cbl/INTCALC.cbl' },
-          { id: 'ds:RATES', name: 'RATES', kind: 'datastore', store: 'vsam' },
+          {
+            id: "INTCALC",
+            name: "INTCALC",
+            kind: "module",
+            language: "cobol",
+            loc: 600,
+            file: "app/cbl/INTCALC.cbl",
+          },
+          { id: "ds:RATES", name: "RATES", kind: "datastore", store: "vsam" },
         ],
       },
       {
-        id: 'dom:accounts',
-        name: 'D2 Accounts',
-        kind: 'domain',
+        id: "dom:accounts",
+        name: "D2 Accounts",
+        kind: "domain",
         children: [
-          { id: 'ACCTUPD', name: 'ACCTUPD', kind: 'module', language: 'cobol', loc: 900, file: 'app/cbl/ACCTUPD.cbl' },
-          { id: 'ACCTVIEW', name: 'ACCTVIEW', kind: 'module', language: 'cobol', loc: 300, file: 'app/cbl/ACCTVIEW.cbl' },
+          {
+            id: "ACCTUPD",
+            name: "ACCTUPD",
+            kind: "module",
+            language: "cobol",
+            loc: 900,
+            file: "app/cbl/ACCTUPD.cbl",
+          },
+          {
+            id: "ACCTVIEW",
+            name: "ACCTVIEW",
+            kind: "module",
+            language: "cobol",
+            loc: 300,
+            file: "app/cbl/ACCTVIEW.cbl",
+          },
         ],
       },
     ],
   },
   edges: [
-    { source: 'ACCTUPD', target: 'INTCALC', kind: 'call' },
-    { source: 'INTCALC', target: 'ds:RATES', kind: 'read' },
-    { source: 'INTCALC', target: 'ds:ACCOUNTS', kind: 'write' },
+    { source: "ACCTUPD", target: "INTCALC", kind: "call" },
+    { source: "INTCALC", target: "ds:RATES", kind: "read" },
+    { source: "INTCALC", target: "ds:ACCOUNTS", kind: "write" },
   ],
-  entryPoints: ['ACCTUPD'],
-  deadEnds: ['ACCTVIEW'],
-  flows: [{ name: 'Month-end interest', persona: 'Cardholder', steps: [{ label: 'Interest runs', nodes: ['INTCALC'] }] }],
-})
+  entryPoints: ["ACCTUPD"],
+  deadEnds: ["ACCTVIEW"],
+  flows: [
+    {
+      name: "Month-end interest",
+      persona: "Cardholder",
+      steps: [{ label: "Interest runs", nodes: ["INTCALC"] }],
+    },
+  ],
+});
 
 /**
  * The layout the plugin's own command wrote in practice: ids that carry a domain (`BR-D7-09`),
@@ -89,7 +116,7 @@ The statement prints the interest line.
 ## Appendix A — Suspected defects
 
 | **BR-D7-09** | truncation | \`app/cbl/CBACT04C.cbl:462\` |
-`
+`;
 
 /**
  * The labelled-fields layout a later model wrote: `### RULE-007: title`, `**Category:**`, `**Priority:**`,
@@ -162,7 +189,7 @@ Then  It reads page 2 of 2
 
 ### RULE-999: Not a rule
 **Priority:** P0
-`
+`;
 
 export const RULES = `# Business Rules — Billing
 
@@ -223,7 +250,7 @@ An update is refused when the record changed since it was read.
 | Rule | Why |
 |---|---|
 | **Not a rule** | rejected |
-`
+`;
 
 export const BRIEF_UNSIGNED = `# Modernization Brief — Billing → Java / Spring
 
@@ -258,11 +285,14 @@ Date:        __________
 
 Approval covers:   [ ] Phase 1 only      [ ] Full plan
 \`\`\`
-`
+`;
 
-export const BRIEF_SIGNED = BRIEF_UNSIGNED.replace('Approved by: ________________', 'Approved by: VP Engineering')
-  .replace('Date:        __________', 'Date:        2026-09-15')
-  .replace('[ ] Phase 1 only', '[X] Phase 1 only')
+export const BRIEF_SIGNED = BRIEF_UNSIGNED.replace(
+  "Approved by: ________________",
+  "Approved by: VP Engineering",
+)
+  .replace("Date:        __________", "Date:        2026-09-15")
+  .replace("[ ] Phase 1 only", "[X] Phase 1 only");
 
 export const NOTES_REVIEWED = `# Transformation Notes — INTCALC
 
@@ -277,30 +307,36 @@ export const NOTES_REVIEWED = `# Transformation Notes — INTCALC
 ## Architecture review
 
 Reviewed 2026-09-15. HIGH-1 applied.
-`
+`;
 
 export const surefire = (tests: number, failures = 0, skipped = 0) =>
-  `<?xml version="1.0"?>\n<testsuite name="x" tests="${tests}" errors="0" skipped="${skipped}" failures="${failures}"></testsuite>`
+  `<?xml version="1.0"?>\n<testsuite name="x" tests="${tests}" errors="0" skipped="${skipped}" failures="${failures}"></testsuite>`;
 
 /** Discovery done, brief signed, INTCALC transformed and reviewed. */
 export const FULL: Record<string, string> = {
-  'analysis/billing/PREFLIGHT.md': '# Preflight',
-  'analysis/billing/ASSESSMENT.md': '# Assessment',
-  'analysis/billing/topology.json': TOPOLOGY,
-  'analysis/billing/BUSINESS_RULES.md': RULES,
-  'analysis/billing/MODERNIZATION_BRIEF.md': BRIEF_SIGNED,
-  'legacy/billing/app/cbl/INTCALC.cbl': Array.from({ length: 600 }, (_, i) => `       LINE ${i + 1}.`).join('\n'),
-  'legacy/billing/app/cbl/ACCTUPD.cbl': '       IDENTIFICATION DIVISION.',
-  'legacy/billing/app/cbl/ACCTVIEW.cbl': '       IDENTIFICATION DIVISION.',
-  'modernized/billing/INTCALC/src/main/java/Interest.java': 'class Interest {}',
-  'modernized/billing/INTCALC/src/test/java/InterestTest.java': 'class InterestTest {}',
-  'modernized/billing/INTCALC/TRANSFORMATION_NOTES.md': NOTES_REVIEWED,
-  'modernized/billing/INTCALC/target/surefire-reports/TEST-InterestTest.xml': surefire(12),
-}
+  "analysis/billing/PREFLIGHT.md": "# Preflight",
+  "analysis/billing/ASSESSMENT.md": "# Assessment",
+  "analysis/billing/topology.json": TOPOLOGY,
+  "analysis/billing/BUSINESS_RULES.md": RULES,
+  "analysis/billing/MODERNIZATION_BRIEF.md": BRIEF_SIGNED,
+  "legacy/billing/app/cbl/INTCALC.cbl": Array.from(
+    { length: 600 },
+    (_, i) => `       LINE ${i + 1}.`,
+  ).join("\n"),
+  "legacy/billing/app/cbl/ACCTUPD.cbl": "       IDENTIFICATION DIVISION.",
+  "legacy/billing/app/cbl/ACCTVIEW.cbl": "       IDENTIFICATION DIVISION.",
+  "modernized/billing/INTCALC/src/main/java/Interest.java": "class Interest {}",
+  "modernized/billing/INTCALC/src/test/java/InterestTest.java":
+    "class InterestTest {}",
+  "modernized/billing/INTCALC/TRANSFORMATION_NOTES.md": NOTES_REVIEWED,
+  "modernized/billing/INTCALC/target/surefire-reports/TEST-InterestTest.xml":
+    surefire(12),
+};
 
 /** Discovery done and a brief written, not yet signed; nothing transformed. */
 export const UNSIGNED: Record<string, string> = Object.fromEntries(
-  Object.entries({ ...FULL, 'analysis/billing/MODERNIZATION_BRIEF.md': BRIEF_UNSIGNED }).filter(
-    ([path]) => !path.startsWith('modernized/'),
-  ),
-)
+  Object.entries({
+    ...FULL,
+    "analysis/billing/MODERNIZATION_BRIEF.md": BRIEF_UNSIGNED,
+  }).filter(([path]) => !path.startsWith("modernized/")),
+);

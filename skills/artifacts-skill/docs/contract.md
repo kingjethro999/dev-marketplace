@@ -25,15 +25,32 @@ actually emits.
   "skill_id": "artifacts-skill",
   "version": "0.3.0",
   "contract_version": "1.0",
-  "provides": [ { "id": "document.verify", "lifecycle": "EXPERIMENTAL", "tool_id": "artifacts-skill/verify" }, /* ... */ ],
-  "not_provided": [ "caption/subtitle file verification (SRT, WebVTT, ASS): subtitle-skill", /* ... */ ],
+  "provides": [
+    {
+      "id": "document.verify",
+      "lifecycle": "EXPERIMENTAL",
+      "tool_id": "artifacts-skill/verify"
+    } /* ... */
+  ],
+  "not_provided": [
+    "caption/subtitle file verification (SRT, WebVTT, ASS): subtitle-skill" /* ... */
+  ],
   "schema": "artifact-contract/v1",
   "tool_name": "artifacts-skill",
   "tool_version": "0.2.0",
   "description": "...",
   "capability_id_prefix": "artifacts-skill",
-  "tools": [ /* ToolContract[] */ ],
-  "exit_codes": { "ok": 0, "fail": 1, "input": 2, "capability": 3, "security": 4, "execution": 1, "verification": 1, "internal": 5 },
+  "tools": [/* ToolContract[] */],
+  "exit_codes": {
+    "ok": 0,
+    "fail": 1,
+    "input": 2,
+    "capability": 3,
+    "security": 4,
+    "execution": 1,
+    "verification": 1,
+    "internal": 5
+  },
   "network_policy": "off_by_default",
   "input_mutation_policy": "never"
 }
@@ -68,10 +85,18 @@ additive key, so the schema does not require it.
     "writes_files": true,
     "dry_run_supported": true
   },
-  "verification_policy": { "structural_required": "operation-dependent", "visual_required": "operation-dependent" },
+  "verification_policy": {
+    "structural_required": "operation-dependent",
+    "visual_required": "operation-dependent"
+  },
   "visual_requirement": "operation-dependent (see per-operation OperationSpec in contract output)",
   "evidence": "operation record (JSON) + new output artifact",
-  "errors": ["ARTIFACT_OPERATION_UNKNOWN", "ARTIFACT_PDF_ENCRYPTED", "ARTIFACT_CAPABILITY_MISSING", "ARTIFACT_PATH_ESCAPE"]
+  "errors": [
+    "ARTIFACT_OPERATION_UNKNOWN",
+    "ARTIFACT_PDF_ENCRYPTED",
+    "ARTIFACT_CAPABILITY_MISSING",
+    "ARTIFACT_PATH_ESCAPE"
+  ]
 }
 ```
 
@@ -89,7 +114,7 @@ overwrite each other's evidence; `execute`'s result names it in an
 `evidence_dir` key. See `docs/architecture.md`'s "Evidence directory per
 run".
 
-For `execute` and `receipt`, the *actual* per-operation verification policy
+For `execute` and `receipt`, the _actual_ per-operation verification policy
 (whether structural/visual verification is required, whether rendering is
 required, and known limitations) comes from the adapter's own
 `OperationSpec` — see `adapters/base.py` — not from the tool-level contract,
@@ -99,17 +124,17 @@ requires structural verification but not visual; `pdf.merge` requires both).
 
 ## The nine tools
 
-| Tool | Mutates input | Writes files | Dry-run |
-|---|---|---|---|
-| `doctor` | no | no | n/a (always read-only) |
-| `contract` | no | no | n/a |
-| `inspect` | no | no | n/a |
-| `plan` | no | no | n/a (plan is always a dry run) |
-| `execute` | no | yes | yes — zero I/O, zero subprocess calls |
-| `render` | no | yes | yes — reports intended output, writes nothing |
-| `verify` | no | no | n/a |
-| `look` | no | yes | yes — reports intended output, writes nothing |
-| `receipt` | no | yes | yes — returns the plan only |
+| Tool       | Mutates input | Writes files | Dry-run                                       |
+| ---------- | ------------- | ------------ | --------------------------------------------- |
+| `doctor`   | no            | no           | n/a (always read-only)                        |
+| `contract` | no            | no           | n/a                                           |
+| `inspect`  | no            | no           | n/a                                           |
+| `plan`     | no            | no           | n/a (plan is always a dry run)                |
+| `execute`  | no            | yes          | yes — zero I/O, zero subprocess calls         |
+| `render`   | no            | yes          | yes — reports intended output, writes nothing |
+| `verify`   | no            | no           | n/a                                           |
+| `look`     | no            | yes          | yes — reports intended output, writes nothing |
+| `receipt`  | no            | yes          | yes — returns the plan only                   |
 
 ## Capability IDs
 
@@ -175,7 +200,7 @@ assumed:
 - **The CLI is not, and structurally can't fully be**, because
   `cli/main.py`'s tools take a generic `--operation`/`--args {json}` shape
   rather than ffmpeg-skill's one-`argparse`-parser-per-tool design — there
-  is no live per-operation parser to capture a schema *from* the way SPEC
+  is no live per-operation parser to capture a schema _from_ the way SPEC
   does. What this project has instead: `input_schema` and `OperationSpec.args_schema`
   are both hand-authored (as they always were), but now both are
   **enforced** — `core/engine.py::build_plan()` validates operation `args`

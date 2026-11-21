@@ -53,7 +53,7 @@ chromium`); Media renders one representative frame via `ffmpeg`/`ffprobe`
   adapter does not read subtitle streams. Generating, validating, timing,
   translating or burning in captions is subtitle-skill's job; checking
   caption timing against the delivered video is qc-skill's. A caption
-  *script* delivered as a document (DOCX, PDF, Markdown) is verified here
+  _script_ delivered as a document (DOCX, PDF, Markdown) is verified here
   like any other document. See `docs/architecture.md`, "Captions".
 - **Not decryption.** An encrypted PDF is detected and reported (`is_encrypted`
   in `inspect`, an `encryption` structural check) but there is no operation
@@ -65,7 +65,7 @@ chromium`); Media renders one representative frame via `ffmpeg`/`ffprobe`
 
 If Anthropic's own `docx`/`pdf`/`pptx`/`xlsx` skills
 (`github.com/anthropics/skills`) are also installed in your environment,
-they are the ones that *generate* those files from a prompt or template.
+they are the ones that _generate_ those files from a prompt or template.
 This skill does not compete with them — **generation is theirs,
 verification is this skill's.** A typical flow: generate the document with
 those skills (or any other generator), then run it through this skill's
@@ -130,7 +130,7 @@ inspected, and do not report success without having verified.
    present, by design) couldn't be answered. That's `UNKNOWN` doing its
    job, not the preset being broken.
 6. **Look at the rendered images yourself.** Rendering produces evidence;
-   *you* are the one who judges whether the layout is actually right. This
+   _you_ are the one who judges whether the layout is actually right. This
    skill will never claim it visually verified something for you — that
    would be a fabricated judgment (see `docs/architecture.md` "Brain vs
    Hands").

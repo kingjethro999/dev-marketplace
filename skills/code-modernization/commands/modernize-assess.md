@@ -109,7 +109,7 @@ so in the assessment and move on.
 
 ## Step 5 — Documentation gaps
 
-Compare what the code *does* with what README, docs and comments *say*: list the
+Compare what the code _does_ with what README, docs and comments _say_: list the
 top 5 behaviors or subsystems a new engineer would need explained.
 
 ## Step 6 — Write the assessment

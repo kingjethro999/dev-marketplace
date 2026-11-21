@@ -9,9 +9,5 @@
   "homepage": "https://github.com/kajisho5/blender-skill",
   "repository": "https://github.com/kajisho5/blender-skill",
   "license": "MIT",
-  "keywords": [
-    "blender",
-    "3d",
-    "skill"
-  ]
+  "keywords": ["blender", "3d", "skill"]
 }

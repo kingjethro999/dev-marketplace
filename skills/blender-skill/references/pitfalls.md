@@ -30,7 +30,7 @@ hardcoding either string.
 glTF/FBX/OBJ all split a vertex per unique normal/UV at a hard edge or UV seam, so a perfectly
 closed cube imports with 24 unshared vertices (6 faces x 4 verts) instead of 8. Checking
 `edge.is_manifold` on that raw topology says every edge is a boundary -- true of almost every
-real, correctly-modeled asset, not a defect. `info.py` welds a *scratch copy* (`bmesh.ops.
+real, correctly-modeled asset, not a defect. `info.py` welds a _scratch copy_ (`bmesh.ops.
 remove_doubles`, not the real mesh) before counting non-manifold edges, so the check means "there
 is an actual hole/gap", not "this mesh has hard edges". The raw duplicate-vertex count from that
 same weld is reported as data, never turned into a warning, for the same reason.
@@ -38,9 +38,9 @@ same weld is reported as data, never turned into a warning, for the same reason.
 ## An image's `has_data` is False until you touch `.pixels`, even for a packed/embedded texture
 
 `bpy.data.images` entries from a glTF/FBX import report `has_data = False` and `size = (0, 0)`
-lazily -- `img.size` alone *does* report the real dimensions without forcing a load, but reading
+lazily -- `img.size` alone _does_ report the real dimensions without forcing a load, but reading
 `img.pixels` is what actually decodes the packed data, and only then does `has_data` flip to
-`True`. `look.py --textures` and `bake.py` both filter on `has_data` *after* touching `.pixels`
+`True`. `look.py --textures` and `bake.py` both filter on `has_data` _after_ touching `.pixels`
 once; filtering first (the "obvious" way to write it) silently finds nothing.
 
 ## Round-tripping a format is not guaranteed byte-identical, even to itself
@@ -79,7 +79,7 @@ checks for this up front and raises a clearer message pointing at `look.py --uv`
 in CI on a Blender 5.2.1 that had rendered a PNG thumbnail successfully moments before. The
 first fix attempt checked `bpy.types.ImageFormatSettings.bl_rna.properties["file_format"]
 .enum_items` ahead of time and trusted its answer -- wrong: that static, structural enum
-definition lists every value the *property type* can ever hold, not what a specific build with
+definition lists every value the _property type_ can ever hold, not what a specific build with
 or without ffmpeg support compiled in can actually assign right now, so it said "yes" even on
 the build that then failed. The reliable check is the assignment itself: `render.py --turntable`
 now wraps `scene.render.image_settings.file_format = "FFMPEG"` in `try/except TypeError` and
@@ -129,10 +129,10 @@ assume KTX2 support is available; check for `ktx` separately (`_delegate.ktx_ava
 boxes touch, which includes every ordinary adjacent-face pair sharing an edge -- the obvious
 filter is "skip pairs that share a vertex", but on a real glTF/FBX import a vertex is split per
 unique normal/UV at every hard edge (same root cause as the non-manifold note above), so two
-genuinely-adjacent triangles almost never share a vertex *index* even though they share a
+genuinely-adjacent triangles almost never share a vertex _index_ even though they share a
 position. Filtering by index alone produced 4 false "self-intersections" on
 `tests/fixtures/box.glb` (a plain watertight cube) and 115 on `tests/fixtures/fox.glb` -- filtering
-by rounded vertex *position* instead correctly reads 0 for both while still catching a real case
+by rounded vertex _position_ instead correctly reads 0 for both while still catching a real case
 (two overlapping cubes joined into one object: 8 genuinely-intersecting triangle pairs, agreed on
 by both filtering methods). `info.py`'s `self_intersecting_faces_approx` uses position filtering;
 treat the count as "worth a manual look" regardless -- it's still bounding-box overlap, not exact
@@ -151,8 +151,8 @@ non-manifold junctions rather than shared manifold edges, which is common in rea
 character meshes: confirmed on `tests/fixtures/fox.glb` (1150 non-manifold edges) -- both
 recalculation methods flip roughly half the mesh's faces (299 of 576), and actually applying the
 "fix" and re-rendering turns a cleanly, correctly-shaded fox into a black/white patchwork (i.e.
-the *original* normals were already correct; recalculation broke them). General lesson: only
-trust a normal-recalculation *comparison* (info.py's `flipped_normal_faces`) -- and only apply
+the _original_ normals were already correct; recalculation broke them). General lesson: only
+trust a normal-recalculation _comparison_ (info.py's `flipped_normal_faces`) -- and only apply
 `--recalc-normals` as an actual fix -- when the mesh has zero non-manifold edges; `info.py`
 reports `flipped_normal_faces: null` and `optimize.py --recalc-normals` prints an explicit warning
 instead of guessing when that's not the case. Fill real holes first (`--fill-holes`) and re-check.
@@ -161,7 +161,7 @@ instead of guessing when that's not the case. Fill real holes first (`--fill-hol
 
 `bmesh.ops.holes_fill()` finds boundary loops via `edge.is_boundary`, which has the identical
 split-vertex problem as the non-manifold check above: on a raw glTF import, a single missing quad
-face reads as *16* boundary edges (one per unrelated triangle corner) instead of the real 4-edge
+face reads as _16_ boundary edges (one per unrelated triangle corner) instead of the real 4-edge
 loop, because no two of those edges' vertices are the same BMVert object -- `holes_fill` finds no
 closed loop and silently fills nothing (confirmed: 0 faces added, hole still open). Welding
 coincident-position vertices first (same `remove_doubles(dist=1e-6)` info.py's diagnostic already
@@ -173,7 +173,7 @@ welds before scanning for holes, whether or not one is actually present.
 
 ## "Units not set" can't actually happen in this skill's own pipeline
 
-RM-002 asked for detecting both an unapplied cm/m scale *and* a scene with no unit system set
+RM-002 asked for detecting both an unapplied cm/m scale _and_ a scene with no unit system set
 (`scene.unit_settings.system == 'NONE'`). The first is real and common (see the next entry) --
 the second is not reachable here: `_compat.reset_scene()` calls
 `bpy.ops.wm.read_factory_settings(use_empty=True)` before every import, and confirmed on a real
@@ -212,13 +212,13 @@ own initiative.
 
 The same bounding-box-overlap shortcut that works acceptably for the 3D self-intersection check
 (see above) is far too imprecise for UV space: a real, efficiently-packed UV layout has many
-faces whose UV *bounding boxes* touch or overlap without the *triangles* actually overlapping.
+faces whose UV _bounding boxes_ touch or overlap without the _triangles_ actually overlapping.
 Confirmed: a naive bbox-only count reported 273 of 576 false "overlapping" faces on
 `tests/fixtures/fox.glb` (a clean, real character UV map) and 33/80 on its eye mesh -- close to
 half the mesh, useless as a signal. Exact 2D triangle-triangle overlap (edge-crossing tests plus
 point-in-triangle containment) on the bbox-prefiltered candidates reads the correct 0/0.
 Also: the "skip pairs that share a UV vertex, they're just adjacent" filter must only exclude a
-shared *edge* (1-2 shared vertices) -- excluding on *any* shared vertex incorrectly waves through
+shared _edge_ (1-2 shared vertices) -- excluding on _any_ shared vertex incorrectly waves through
 a fully duplicated/stacked UV island (all 3 vertices coincide, the most severe overlap there is)
 as "adjacent" and misses it completely; confirmed both ways on a synthetic stacked-UV fixture (0
 detected with the bug, the correct 12 once fixed).
@@ -232,14 +232,14 @@ built-ins: `position` (every mesh has this), `sharp_face`, `UVMap` (one per UV l
 reported via `uv_maps`), and, confirmed by actually adding them via ordinary edit-mode operators,
 `material_index` (second material slot used), `bevel_weight_edge`/`crease_edge` (edge bevel
 weight/crease set on any edge). `info.py`'s `custom_attributes` excludes `is_internal` attributes
-*and* a known-name set of these non-internal built-ins, confirmed against a real cube with two
+_and_ a known-name set of these non-internal built-ins, confirmed against a real cube with two
 materials, a bevel weight, a crease, one vertex color layer and two real custom attributes: only
 the two real ones are reported, matching zero for `tests/fixtures/box.glb`/`fox.glb` (neither has
 any).
 
 ## glTF round-trips vertex colors but drops generic custom mesh attributes entirely
 
-Exporting a cube with a vertex color layer *and* two arbitrary custom attributes (a per-vertex
+Exporting a cube with a vertex color layer _and_ two arbitrary custom attributes (a per-vertex
 float, a per-face int) to glb and re-importing keeps the vertex color (renamed `Col` -> `Color`,
 following glTF's own `COLOR_0` convention) but the two custom attributes are simply gone --
 glTF has no generic concept of an arbitrary named custom mesh attribute without a vendor
@@ -250,7 +250,7 @@ be one that actually preserves them.
 ## Root motion means the root bone's own location channel moves, not "any bone is animated"
 
 `bpy.data.actions[].fcurves[].data_path` for a pose-bone channel matches
-`pose.bones["<name>"].<prop>`; the bone's *name* alone doesn't say whether it's a root -- that
+`pose.bones["<name>"].<prop>`; the bone's _name_ alone doesn't say whether it's a root -- that
 needs cross-referencing against the armature's own `bone.parent is None`. And a bone being
 animated at all is not root motion: fox.glb's 3 actions each animate 20 of 24 bones (confirmed
 real numbers) and correctly read `root_motion: False` for all three, because none of them ever
@@ -265,14 +265,14 @@ despite being just as "animated").
 Building that fixture surfaced a separate, unrelated gotcha: an action assigned to
 `armature.animation_data.action = None` after creation has zero users and no fake user, so
 `bpy.data.actions` silently drops it by the time the file is saved and reloaded -- it must have
-`action.use_fake_user = True` set *before* unlinking it, or a test fixture meant to hold multiple
+`action.use_fake_user = True` set _before_ unlinking it, or a test fixture meant to hold multiple
 actions on one armature will silently end up with only the most recently active one.
 
 ## An "unweighted vertex" check needs gating on having an armature modifier at all
 
-`vertex.groups` sums to 0 for *any* vertex with no bone weight -- but a mesh that was never
+`vertex.groups` sums to 0 for _any_ vertex with no bone weight -- but a mesh that was never
 meant to be skinned (a static prop, an eye mesh moved by its own object transform rather than
-vertex weights) has *zero* vertex groups and no Armature modifier, so every one of its vertices
+vertex weights) has _zero_ vertex groups and no Armature modifier, so every one of its vertices
 reads "unweighted" too. Confirmed on fox.glb: the rigged "fox" mesh correctly reads 0/1728
 unweighted; its unrigged "Icosphere" eye mesh has 42/42 vertices with no group at all -- gating
 the check on `any(m.type == "ARMATURE" for m in obj.modifiers)` and reporting `None` (not 0, not
@@ -280,9 +280,9 @@ every vertex) for a non-skinned mesh is what makes this a real defect signal ins
 every asset that mixes rigged and static parts.
 
 Building the positive-case test fixture surfaced a separate gotcha:
-`bpy.ops.object.parent_set(type='ARMATURE_AUTO')` bone-heat-weights *every* vertex of the mesh
+`bpy.ops.object.parent_set(type='ARMATURE_AUTO')` bone-heat-weights _every_ vertex of the mesh
 into the new vertex group as part of parenting -- so `vertex_group.add([target_indices], 1.0,
-'REPLACE')` on a *subset* of vertices does not leave the others unweighted, it just re-adds them
+'REPLACE')` on a _subset_ of vertices does not leave the others unweighted, it just re-adds them
 at the same weight they already had. Getting a genuinely unweighted vertex requires explicitly
 `vertex_group.remove([index])` after auto-parenting, not merely omitting that index from a
 weight-assignment call.
@@ -302,7 +302,7 @@ with no modification at all round-trips perfectly, so this is specific to the de
 step for at least this object, not a general glTF round-trip issue -- and counter-intuitively,
 `fox` (whose added Decimate modifier isn't first in the stack, behind the pre-existing Armature
 modifier, triggering Blender's own "Applied modifier was not first" warning) is the one that
-exports *correctly*; the "clean" object with no other modifiers is the one that silently loses
+exports _correctly_; the "clean" object with no other modifiers is the one that silently loses
 its decimation. Root cause not yet isolated -- tracked as
 [#111](https://github.com/kajisho5/blender-skill/issues/111), not blocking `info.py`'s LOD
 suggestions (RM-010), which only compute ratios from the current triangle count and never call
@@ -311,7 +311,7 @@ suggestions (RM-010), which only compute ratios from the current triangle count 
 ## `polygon.material_index` reads 0 even on a mesh with zero material slots
 
 Confirmed on fox.glb's "Icosphere" eye mesh (0 material slots): every one of its faces still
-reads `material_index == 0`, the same index a *real* first material slot would use. Naively
+reads `material_index == 0`, the same index a _real_ first material slot would use. Naively
 treating "no material slots" as "not rendered" would be wrong -- Blender (and every real-time
 engine) still draws it, just with a default/fallback material, so it's still one real draw call.
 `_draw_call_estimate` relies on this: `len({p.material_index for p in obj.data.polygons})` reads
@@ -341,15 +341,15 @@ is_internal`), not a new kind of surprise.
 `_alpha_is_binary_mask` (RM-013) hit the same lazy-load gotcha this file already documents for
 `look.py`/`bake.py`: on a freshly-loaded `.blend`, a packed/embedded image's `has_data` reads
 `False` and `size` reads `(0, 0)` until `.pixels` is actually touched once. Checking `has_data`
-*before* reading `.pixels` silently skipped every material's alpha texture (`transparency_
+_before_ reading `.pixels` silently skipped every material's alpha texture (`transparency_
 issues` read `[]` even on `misconfigured_transparency.blend`'s deliberately-broken fixture) --
 fixed by reading `image.pixels[:]` first (forcing the decode) and only then checking `has_data`/
 `size`.
 
-## Blender's glTF importer doesn't expose which KHR_*/EXT_* extensions a file declared
+## Blender's glTF importer doesn't expose which KHR__/EXT__ extensions a file declared
 
 `extensionsUsed`/`extensionsRequired` are top-level fields in a glTF file's own JSON -- Blender's
-importer reads and *applies* them (Draco-compressed meshes decode transparently, `KHR_materials_
+importer reads and _applies_ them (Draco-compressed meshes decode transparently, `KHR_materials_
 unlit` becomes a shadeless material node setup, etc.) but there is no `bpy` property anywhere
 that lists which extensions the source file actually declared; by the time the scene is built,
 that information is gone. RM-014's `gltf_extensions` is read directly from the file's own JSON
@@ -366,13 +366,13 @@ Apple's USDZ spec requires every entry in the package to be stored uncompressed 
 and to start at a 64-byte-aligned file offset (so a viewer can mmap the archive directly).
 Confirmed this isn't just an Apple-only nicety: Blender's own USD importer refuses to even open a
 usdz re-zipped with ordinary Deflate compression ("Error: Could not open USD archive for
-reading"), on a file whose USD content is otherwise byte-identical. Confirmed the *positive*
+reading"), on a file whose USD content is otherwise byte-identical. Confirmed the _positive_
 side too: real `convert.py` USDZ output (both a plain cube and a textured, multi-entry export of
 fox.glb) is already fully compliant -- every entry stored, every entry's data starting at a
 64-byte-aligned offset -- Blender's own exporter gets this right without any extra work from
 this skill. `check.py`'s new USDZ-package row (RM-016) reads this directly from the file's own
 zip structure (`zipfile`/`struct`, stdlib only, no Blender) rather than assuming compliance;
-because a broken package fails to even *import* into Blender, the negative case can only be
+because a broken package fails to even _import_ into Blender, the negative case can only be
 exercised by testing `scripts/_usdz_validate.py` directly, not through `check.py`'s CLI
 end-to-end (info.py, which check.py always runs first, fails before this row would run).
 
@@ -435,10 +435,10 @@ cause, found in stages -- object identity corrected below, but the underlying me
 
 1. Blender's own glTF importer places any node not reachable from the file's default scene roots
    into an auto-created **"glTF_not_exported"** collection, with `Collection.hide_viewport =
-   True` (confirmed: `Icosphere.users_collection == ["glTF_not_exported"]` after import).
+True` (confirmed: `Icosphere.users_collection == ["glTF_not_exported"]` after import).
 2. An object inside a viewport-hidden collection can't be selected at all --
    `obj.select_set(True)` silently no-ops and `obj.select_get()` stays `False`. Unhiding the
-   collection (`coll.hide_viewport = False`) fixes *this* symptom in isolation.
+   collection (`coll.hide_viewport = False`) fixes _this_ symptom in isolation.
 3. But fixing only the selection state wasn't enough: even after unhiding the collection and
    confirming `obj.visible_get() == True` and `obj.select_get() == True` right before the export
    call, `bpy.ops.export_scene.gltf(..., use_selection=True)` still logged "Finished glTF 2.0
@@ -477,12 +477,12 @@ discovered while building anim.py (RM-028) and confirmed directly against the fi
   content re-exported as .fbx and reimported: no extra object), only glTF import does.
 
 Consequence: `split.py` (before this was found) treated this synthetic widget as its own
-independent hierarchy and exported it as a spurious, meaningless output file for *any* skinned
+independent hierarchy and exported it as a spurious, meaningless output file for _any_ skinned
 glTF character, not just fox.glb -- a real defect, not just a documentation error, now fixed by
 detecting and discarding it (`_compat.strip_import_helper_objects`, matched by "referenced as
 some armature's pose-bone `custom_shape`", the one property that's actually true of it) before
 grouping objects into hierarchies. `anim.py --combine` (RM-028) has the same exposure -- the
-*base* file's own import synthesizes this widget too, and would otherwise leak it into an
+_base_ file's own import synthesizes this widget too, and would otherwise leak it into an
 otherwise-clean combined character file as a spurious extra mesh -- fixed the same way,
 immediately after importing the base.
 
@@ -498,7 +498,7 @@ original authored content. Only split.py and anim.py, whose whole point is reaso
 Not stdlib in the usual sense, but it ships with Blender itself (confirmed: `numpy 1.24.3` in
 4.2.23's bundled interpreter) -- `scripts/bpy/*.py` (running inside Blender, not the host
 Python) uses it for pixel-array work (`look.py`'s texture grid/compare, `render.py`'s sheet
-mode, `bake.py`'s pixel-stat verification). The stdlib-only guarantee is about the *host*
+mode, `bake.py`'s pixel-stat verification). The stdlib-only guarantee is about the _host_
 scripts and about not requiring `pip install` anything; Blender's own bundled capabilities are
 part of "depends on Blender", not an extra dependency.
 
@@ -534,13 +534,13 @@ step to introduce this kind of ambiguity) to get a clean, unconfounded result.
 
 RM-030's `optimize.py --texture-colorspace`/`--fix-colorspace` was scoped down after checking
 what "ACES" actually means in real Blender 4.2.23: its `scene.view_settings.view_transform` --
-the tone-mapping/display transform applied when *rendering* -- only accepts `Standard`, `Khronos
+the tone-mapping/display transform applied when _rendering_ -- only accepts `Standard`, `Khronos
 PBR Neutral`, `AgX`, `Filmic`, `Filmic Log`, `False Color`, `Raw` (confirmed by trying to assign
 `'ACES'` and reading Blender's own error, which lists every real option). There is no ACES view
-transform at all in Blender's bundled/default OCIO config -- a full ACES *rendering* pipeline
+transform at all in Blender's bundled/default OCIO config -- a full ACES _rendering_ pipeline
 needs a separate, non-bundled OCIO config this skill's no-extra-install constraint rules out.
 
-Texture colorspace *tagging* is a different, separate thing (what raw pixel data in an Image
+Texture colorspace _tagging_ is a different, separate thing (what raw pixel data in an Image
 datablock means, for correct interpretation during shading -- not a render output transform),
 and Blender's bundled config genuinely does include real ACES color spaces there: `image.
 colorspace_settings.name` accepts `ACES2065-1` and `ACEScg` alongside `sRGB`/`Non-Color`/etc.
@@ -556,10 +556,10 @@ counted as real triangles on any skinned-armature input, since `lod.py`'s import
 call `_compat.strip_import_helper_objects()`. On fox.glb the reported "original" triangle count
 was 656 (576 real + the widget's own 80) instead of 576, and every LOD level's Decimate modifier
 ran against it too -- wasted work, since it's a tiny object either way. Checked directly (by
-temporarily disabling the strip and reading each output's raw glTF JSON): the *exported files*
+temporarily disabling the strip and reading each output's raw glTF JSON): the _exported files_
 were not actually contaminated even without the strip -- Blender's own whole-scene export
 already excludes anything in the "glTF_not_exported" collection the widget lives in, unlike the
-*selection*-based export `split.py` uses, which is what made RM-027's version a real deliverable
+_selection_-based export `split.py` uses, which is what made RM-027's version a real deliverable
 bug rather than just a reporting one. `optimize.py`'s existing `--decimate-ratio` had this same
 lighter version too (`triangles_before`/`triangles_after` for fox.glb inflated by the same 80,
 output file unaffected) -- fixed in RM-033's PR once back in that file for other reasons, since
@@ -570,7 +570,7 @@ the fix is the same one-line strip and by then two separately-shipped scripts ha
 `optimize.py --texture-auto-resolution` (RM-033) needed a "how much of the screen would this
 texture's object occupy" signal with no actual camera, FOV, or viewport this skill has any way
 to know (headless Blender here never renders through a specific shot). The proxy used: each
-object's own world-space bounding-box diagonal, divided by the *whole file's combined* bounding
+object's own world-space bounding-box diagonal, divided by the _whole file's combined_ bounding
 box diagonal across every mesh object -- i.e., how big this object is relative to everything
 else in the same file, which is a real, data-driven number straight from the geometry, not a
 guess. That fraction times an assumed `--viewport-width` (default 1920), rounded up to the next
@@ -587,7 +587,7 @@ hero asset with no other objects to be smaller than.
 `optimize.py --remove-unused-bones` (RM-034) only ever removes a bone with no children (a leaf)
 and zero skin-weight influence and no fcurve animation -- a bone with a still-present child is
 never touched, even if that bone itself carries no weight, since a structural ancestor might
-still be needed to position a used descendant. That means a *chain* of two or more genuinely dead
+still be needed to position a used descendant. That means a _chain_ of two or more genuinely dead
 bones (e.g. `Used -> Dead1 -> Dead2`, both unweighted and unanimated) can't be fully pruned in a
 single pass: on pass one only `Dead2` is a leaf and qualifies; only after it's gone does `Dead1`
 become a leaf itself. `_remove_unused_bones()` re-scans the influence map and re-collects the
@@ -596,9 +596,9 @@ front, so a chain of any depth is fully cleared in one call. `sparse_rig.blend`'
 (`Head -> HeadTip`, `Arm1 -> Arm1Tip`, each dead bone one level deep and already a leaf on pass
 one) doesn't exercise the multi-level case -- it just confirms the base leaf+zero-influence+
 unanimated check. `--max-bones N`'s `_cap_bone_count()` needs the same per-removal re-scan of the
-*structural* candidate set (which bones are currently childless), since capping to a hard count
+_structural_ candidate set (which bones are currently childless), since capping to a hard count
 means every subsequent victim has to be picked from whatever the tree currently looks like, not a
-stale leaf list computed before earlier removals changed its shape -- but not of the *influence*
+stale leaf list computed before earlier removals changed its shape -- but not of the _influence_
 values themselves (see the next entry: those are cached and updated in place instead).
 
 ## Root-vs-leaf bugs found by review: a weighted root bone loses its weight silently, and rescanning vertex data per removed bone doesn't scale
@@ -612,7 +612,7 @@ exercised, because the sparse_rig.blend fixture happened not to hit any of these
   parent to receive it (documented as intentional -- there's nothing to reattach to). But
   `_cap_bone_count()`'s candidate list only checked "is this bone a leaf and unanimated", not
   "does this bone have a parent to transfer to" -- so a rig with an isolated, weighted root bone
-  (no parent, no children: a root *and* a leaf at once) could have that bone picked as the
+  (no parent, no children: a root _and_ a leaf at once) could have that bone picked as the
   lowest-influence victim and its vertex-group weight dropped with no warning, reporting
   `reassigned_to: null` as if that were a normal outcome rather than data loss. Fixed by excluding
   a weighted (`influence > 1e-6`) parentless bone from the candidate list entirely, the same way an
@@ -624,19 +624,19 @@ exercised, because the sparse_rig.blend fixture happened not to hit any of these
   bug exactly -- `RootA` gets demoted with `reassigned_to: null`, its weight gone.
 
 - **`_bone_influence()` matched a mesh's Armature modifier target by object identity
-  (`m.object == armature_obj`)**, which misses a mesh skinned to a *different* object that happens
-  to share the same armature *datablock* (Blender allows several ARMATURE objects to point at one
+  (`m.object == armature_obj`)**, which misses a mesh skinned to a _different_ object that happens
+  to share the same armature _datablock_ (Blender allows several ARMATURE objects to point at one
   `bpy.types.Armature`, e.g. linked-duplicate rigs). `run()`'s own per-armature-object loop could
   also visit the same shared datablock twice, editing already-removed bones on the second pass.
   Fixed by matching on `m.object.data == armature_obj.data` instead of object identity throughout
   (`_bone_influence`, `_transfer_bone_weight_to_parent`), and by deduping `run()`'s loop on
-  `arm.data` so each shared datablock is processed exactly once, with every mesh skinned to *any*
+  `arm.data` so each shared datablock is processed exactly once, with every mesh skinned to _any_
   object sharing that data considered together.
 
 - **`_bone_influence()` re-scanned every mesh's full vertex/vertex-group data on every single
   pruning round or capped-bone removal**, since both `_remove_unused_bones()`'s fixpoint loop and
   `_cap_bone_count()`'s per-victim loop called it fresh each time. Neither function's own weight
-  *changes* actually require a fresh scan: `_remove_unused_bones` never transfers weight at all
+  _changes_ actually require a fresh scan: `_remove_unused_bones` never transfers weight at all
   (a bone it removes is dead by definition), and `_cap_bone_count`'s only weight change per
   iteration -- moving a victim's cached influence onto its parent -- is a single dict update, not
   a reason to re-read mesh data. Both functions now compute `_bone_influence` once up front and
@@ -671,13 +671,13 @@ from scratch and isn't confused with a `--keyframe-decimate` correctness bug.
 ## Measuring keyframe-removal error against a straight line is only exact for LINEAR interpolation
 
 `--keyframe-decimate`'s first version (RM-035) measured every candidate keyframe's removal error
-against the *straight line* between its two surviving neighbors, regardless of which
+against the _straight line_ between its two surviving neighbors, regardless of which
 interpolation mode actually governs that segment in Blender. That's exact for `LINEAR`, but
-wrong for `CONSTANT`: a CONSTANT-governed segment holds its *starting* keyframe's value flat
+wrong for `CONSTANT`: a CONSTANT-governed segment holds its _starting_ keyframe's value flat
 right up to the next keyframe, not a ramp. Caught by review with this exact counterexample: a
 CONSTANT curve `(0, 0.0)`, `(5, 1.0)`, `(10, 1.0)` and `--keyframe-decimate 0.75`. The
 straight-line estimate at frame 5 is `|1.0 - 0.5| = 0.5` (under the 0.75 tolerance, so the old
-code removed it) -- but the *real* post-removal curve holds `0.0` from frame 0 to frame 10 under
+code removed it) -- but the _real_ post-removal curve holds `0.0` from frame 0 to frame 10 under
 CONSTANT interpolation, so the actual error at frame 5 is `|1.0 - 0.0| = 1.0`, nearly double what
 was promised. Fixed by computing the exact value for `LINEAR` and `CONSTANT` segments (a
 straight line and a flat step, respectively -- both cheap, closed-form) and, for every other
@@ -697,15 +697,15 @@ exact rather than an approximation over curved segments.
 A shape key can be defined relative to another shape key instead of Basis (`key_block.
 relative_key`), so `--remove-unused-shape-keys` (RM-036) needed to know what happens to a shape
 key B that's relative to a shape key A, once A is removed for being geometrically dead (zero
-displacement from *its own* relative_key). Verified directly: `obj.shape_key_remove(A)` does not
+displacement from _its own_ relative_key). Verified directly: `obj.shape_key_remove(A)` does not
 leave B's `relative_key` dangling or null -- Blender automatically re-points B onto A's own
 `relative_key` (in the simple case, Basis). This is exactly the "splice out a dead link and land
 its dependents on the next one up" behavior a hand-rolled implementation would otherwise need to
 build itself (compare `_remove_unused_bones`'s and `_cap_bone_count`'s own weight-transfer code
-for bones, which have no such built-in operator support). Because a *dead* key is by definition
+for bones, which have no such built-in operator support). Because a _dead_ key is by definition
 geometrically identical to whatever it's relative to, this re-pointing is always lossless here --
 B's absolute shape (its displacement from Basis, following the whole chain) is unchanged, only
-which key it's *directly* relative to moves up one link. `_remove_unused_shape_keys` still runs
+which key it's _directly_ relative to moves up one link. `_remove_unused_shape_keys` still runs
 as a fixpoint loop (removing one link at a time and re-measuring), the same pattern as
 `_remove_unused_bones`, so a multi-level dead chain (A dead relative to Basis, B dead relative to
 A, C real relative to B) fully resolves in one call rather than leaving inner links behind.
@@ -715,7 +715,7 @@ A, C real relative to B) fully resolves in one call rather than leaving inner li
 `Key.use_relative` (default `True` for anything made via `shape_key_add()`, so never an issue on
 a glTF import or normally-authored file) can be set `False` to make a mesh's shape keys play as
 an Absolute, timed sequence instead of a relative blend -- each key is a state at its own
-`eval_time`, interpolated against its *neighbors in the key stack* (LINEAR/CARDINAL/
+`eval_time`, interpolated against its _neighbors in the key stack_ (LINEAR/CARDINAL/
 CATMULL_ROM/BSPLINE), not blended from `relative_key` at all. `_remove_unused_shape_keys`'s
 first version measured every key's displacement from `relative_key` regardless of this flag --
 in Absolute mode that number doesn't describe how the key actually functions: a key that happens
@@ -731,16 +731,16 @@ just the guard reproduces the bug exactly, removing `StateA`.
 
 `--instance-duplicate-meshes` (RM-037) merges mesh objects onto one shared datablock when
 proven fully identical -- but "fully identical geometry" isn't the same question as "safe to
-share data". Two real Blender data-model facts made this feature need to *exclude* certain
+share data". Two real Blender data-model facts made this feature need to _exclude_ certain
 objects outright, not just check them for equality:
 
-- A shape key's *value* (the blend-weight slider) is a property of the `ShapeKey`, which lives
+- A shape key's _value_ (the blend-weight slider) is a property of the `ShapeKey`, which lives
   in the mesh's shared `Key` datablock -- not the object. Two objects that share one mesh
-  therefore share one Key datablock, and so share the *same current shape-key values* too. Two
+  therefore share one Key datablock, and so share the _same current shape-key values_ too. Two
   geometrically-identical props that happen to have their shape keys posed differently right now
   would have that difference silently erased if merged.
 - A vertex's bone-weight assignments (`MeshVertex.groups`) live on the mesh's own vertex data,
-  not the object -- only the *definitions* (`Object.vertex_groups`, the named groups themselves)
+  not the object -- only the _definitions_ (`Object.vertex_groups`, the named groups themselves)
   are per-object. Two skinned objects sharing one mesh would be forced to carry identical weight
   assignments even if their `vertex_groups` lists differ.
 
@@ -750,7 +750,7 @@ particular merge actually change anything" case by case.
 
 Separately: info.py's own `duplicate_mesh_candidates` (RM-015) uses a deliberately loose,
 rotation/translation-invariant fingerprint (vertex/triangle count, area, volume, sorted bbox
-dims) appropriate for a human-reviewed *suggestion* -- it's not safe grounds for an *automatic*
+dims) appropriate for a human-reviewed _suggestion_ -- it's not safe grounds for an _automatic_
 merge, since two meshes can match all five of those numbers while differing in UVs, vertex
 colors, or which Material datablocks they reference. `_mesh_fully_identical` checks real
 equality within a tight 1e-6 floating-point tolerance -- not a lossy geometric fingerprint, but
@@ -765,27 +765,27 @@ them as a merge candidate.
 
 ## A shared mesh datablock can have one animatable user and one that isn't -- filter datablocks, not just objects
 
-`_instance_duplicate_meshes`'s first version filtered *objects* by `_mesh_is_animatable()` before
+`_instance_duplicate_meshes`'s first version filtered _objects_ by `_mesh_is_animatable()` before
 grouping by `obj.data`: `[o for o in mesh_objs if not _mesh_is_animatable(o)]`, then
-`by_data.setdefault(o.data, []).append(o)`. That's wrong when a datablock already has *more than
-one* user, which is a real, normal Blender scenario (a linked duplicate, or a shape-keyed/
+`by_data.setdefault(o.data, []).append(o)`. That's wrong when a datablock already has _more than
+one_ user, which is a real, normal Blender scenario (a linked duplicate, or a shape-keyed/
 Armature-modified copy added to only one of two objects that started out sharing data): the
 excluded animatable object's own reference to that datablock never showed up in `by_data` at
-all, so if the datablock got picked as a *non-canonical* duplicate in some other identical-mesh
+all, so if the datablock got picked as a _non-canonical_ duplicate in some other identical-mesh
 group, `bpy.data.meshes.remove()` would free a datablock the excluded object was still silently
-pointing at. Caught by review. Fixed by grouping *every* mesh object by its datablock first, then
-dropping a datablock from candidacy entirely if *any* of its users fails `_mesh_is_animatable` --
+pointing at. Caught by review. Fixed by grouping _every_ mesh object by its datablock first, then
+dropping a datablock from candidacy entirely if _any_ of its users fails `_mesh_is_animatable` --
 one animatable user is enough to make the whole shared datablock unsafe to touch, even if its
 other users would have been individually eligible.
 
 ## A shared Material's node tree can look up a UV layer or color attribute by name, not just position
 
-`_mesh_fully_identical` originally compared UV layers and color attributes by matching *position*
+`_mesh_fully_identical` originally compared UV layers and color attributes by matching _position_
 in each mesh's list and comparing only their coordinate/color values -- not their names, active-
 render flags, or (for color attributes) the mesh's own render-fallback selection
 (`color_attributes.default_color_name`/`render_color_index`). That's not enough: a material's own
 node tree can reference a specific layer by name (`ShaderNodeUVMap.uv_map`,
-`ShaderNodeVertexColor.layer_name`), and an empty name falls back to whichever layer the *mesh*
+`ShaderNodeVertexColor.layer_name`), and an empty name falls back to whichever layer the _mesh_
 currently marks as its active-render UV layer or default color attribute. Two meshes could have
 identical UV/color values under different layer names, or the same names but a different
 render-fallback selection, and still match every check that only looked at values -- yet the
@@ -802,24 +802,24 @@ properties generically instead of hand-listing one comparison per node type. The
 skipped any property Blender reports `is_readonly` on the assumption that "read-only" means "not
 worth comparing, since it can't meaningfully differ between two otherwise-identical nodes" --
 true for a computed value like a node's `dimensions`, but not for `ShaderNodeValToRGB.color_ramp`
-or `ShaderNodeTexImage.image_user`: Blender marks the *property* read-only because you can't
+or `ShaderNodeTexImage.image_user`: Blender marks the _property_ read-only because you can't
 reassign which `ColorRamp`/`ImageUser` struct it points to, not because the struct's own fields
 (a Color Ramp's stops, an Image User's frame settings) are fixed -- those are freely mutable
 through the struct itself. Naively skipping every read-only property meant two Color Ramp nodes
 with completely different ramps compared as identical. Reproduced directly: two `ShaderNodeValToRGB`
 nodes, one with its first stop moved and recolored, still returned `True` from
 `_node_fully_identical` before the fix, and `False` after it -- confirmed both directions. Fixed
-by only skipping a read-only property when its *value* is a plain scalar/array, and walking a
+by only skipping a read-only property when its _value_ is a plain scalar/array, and walking a
 read-only pointer to a struct (recursively, since that struct's own properties can nest the same
 way) or a collection the same as any other nested value instead of skipping it.
 
 ## Two separate nodes' own struct-typed properties are never `==`, even with identical field values
 
 A closely related trap in the same equality check: comparing `node_a.image_user == node_b.image_user`
-directly (rather than walking their fields) would *always* return `False` for two different
+directly (rather than walking their fields) would _always_ return `False` for two different
 nodes, even when every field inside matches -- Blender's `bpy_struct.__eq__` for a non-ID struct
 is a pointer/identity compare, and two separate nodes always own two separate struct instances.
-Handled by the same recursive walk as above: a nested non-ID struct's own value is its *fields'*
+Handled by the same recursive walk as above: a nested non-ID struct's own value is its _fields'_
 values, not the Python object's identity -- unlike an ID datablock such as an `Image` or a
 `NodeTree`, where identity genuinely is the right comparison (two texture nodes pointing at
 separately-created but pixel-identical images are correctly left unmerged, since editing one
@@ -829,7 +829,7 @@ would never reach the other).
 
 `_reassign_material_users`'s first version walked `bpy.data.meshes` (each mesh's own
 `.materials` slot list) plus `bpy.data.objects`' OBJECT-linked `material_slots` overrides, then
-called `bpy.data.materials.remove(dup)`. That misses any *other* real material user Blender's
+called `bpy.data.materials.remove(dup)`. That misses any _other_ real material user Blender's
 own data model has: a `Curve`/`Text`/`MetaBall`/`GreasePencil`/`Volume` datablock has its own
 separate `.materials` slot list too, exactly like `Mesh.materials`, just never enumerated.
 Reproduced directly: a Curve object's material, structurally identical to a Mesh object's,
@@ -846,12 +846,12 @@ special-cased, leaving `dup.users == 0` afterward either way.
 RM-039's `--target-roblox` preset's first version reused the same "sum every mesh object's
 triangles, then derive one shared decimate ratio from that total" logic `--target-vrchat`/
 `--target-quicklook` use -- correct for those two (VRChat's own Performance Rank system evaluates
-an avatar's *total* triangle count across every one of its mesh renderers combined, and Apple's
+an avatar's _total_ triangle count across every one of its mesh renderers combined, and Apple's
 AR Quick Look guidance is a whole-scene/object budget for the thing actually being previewed), but
 wrong for Roblox: its real published limit ("individual meshes cannot exceed 20,000 triangles",
-create.roblox.com/docs/art/modeling/specifications) is explicitly *per mesh*, not a scene total.
+create.roblox.com/docs/art/modeling/specifications) is explicitly _per mesh_, not a scene total.
 Applying it as an aggregate could needlessly decimate two already-individually-compliant meshes
-just because their *combined* total crossed 20,000 -- a case Roblox's real limit never actually
+just because their _combined_ total crossed 20,000 -- a case Roblox's real limit never actually
 restricts. Caught by review. Fixed by giving each `triangle_budget` preset an explicit
 `triangle_budget_scope` ("aggregate", the default, or "per_mesh"), and clamping each mesh object
 independently against the same absolute number when it's "per_mesh" -- never assume every
@@ -892,10 +892,10 @@ Confirmed two distinct real failure modes on a real Blender 4.2.23, not just the
 literal NaN pixel survives Blender's own OPEN_EXR writer/reader round trip unchanged (a fixture
 loaded back this way, `tests/fixtures/nan_pixel.exr`, still has `isnan().any() == True`), making
 `_psnr`/`_ssim` return NaN, which `json.dump` serializes as the bare token `NaN` -- invalid JSON
-per RFC 8259; (2) a literal `inf` pixel does *not* survive that same EXR round trip (Blender's own
+per RFC 8259; (2) a literal `inf` pixel does _not_ survive that same EXR round trip (Blender's own
 writer clamps it to a large finite value on save), but an in-memory array can still hold one
 (confirmed via direct `.pixels.foreach_set()`, no file involved) -- and if it ever reaches `_psnr`
-with an infinite MSE, `math.log10(1.0 / mse)` becomes `math.log10(0.0)`, which *raises*
+with an infinite MSE, `math.log10(1.0 / mse)` becomes `math.log10(0.0)`, which _raises_
 `ValueError: math domain error` rather than returning `inf` (Python's `math.log10` only special-
 cases NaN input, not the zero-argument case that an infinite MSE produces). Caught by review;
 fixed by short-circuiting `_psnr` on a non-finite MSE (returns NaN instead of calling `log10`),
@@ -908,7 +908,7 @@ because it loaded without an error.
 `optimize.py --clean-mesh`'s first version ran one orphan-vertex pass, then one
 `dissolve_degenerate` call, and reported done. Confirmed directly (a cube plus one zero-area
 triangle made of three well-separated collinear points, not near-duplicates): `dissolve_degenerate`
-correctly removes the degenerate *face* itself (polygon count drops), but its three vertices
+correctly removes the degenerate _face_ itself (polygon count drops), but its three vertices
 survive in the output mesh as newly-orphaned loose geometry (touching no face, some still joined
 by a loose edge) -- a single before/after pass reports the defect fixed while the dead vertices
 stay in the exported file. Fixed by running the same "vertex touching no face" removal pass a
@@ -918,7 +918,7 @@ second time, after `dissolve_degenerate`, not just before it.
 
 `_clean_mesh`'s "remove any vertex touching zero faces" logic is correct for a normal mesh's
 orphan/loose vertices, but a point cloud (a vertices-only mesh, e.g. from PLY scan data -- see
-`_thin_point_cloud`) has *no faces at all*, so every single one of its vertices matches that same
+`_thin_point_cloud`) has _no faces at all_, so every single one of its vertices matches that same
 condition. Caught before shipping, not by review: without an explicit
 `len(obj.data.polygons) == 0` guard (the same check `_thin_point_cloud` already uses for the
 inverse case), `--clean-mesh` on a real 1000-point `.ply` file would have deleted the entire point
@@ -944,7 +944,7 @@ controls), and (2) a separate, dist-independent "degenerate ear" check that clip
 zero-area triangular face regardless of its edges' length. Confirmed directly: `dist=1e-4`
 collapses away a real, non-degenerate micro-scale triangle (edges of 5e-5 units, a real positive
 ~1.25e-9 area -- plausible fine detail on a jewelry/PCB/scientific-scale asset) down to a single
-point, while `dist=0.0` leaves that same real triangle untouched *and* still correctly removes a
+point, while `dist=0.0` leaves that same real triangle untouched _and_ still correctly removes a
 genuinely zero-area face (three well-separated, merely collinear points -- mechanism (2), never
 gated by `dist` at all) exactly as before. Fixed by using `dist=0.0`, disabling only the
 short-edge-collapse mechanism this feature never needed. Caught by review.
@@ -957,7 +957,7 @@ it, doing no deduplication/welding of its own (an earlier version of this note c
 which overstates it: two literal duplicate-position vertices Blender's own mesh never merged stay
 two separate cache entries here). A real glTF/FBX export does not use that same vertex buffer
 either way: it duplicates a vertex at every hard-edge/UV-seam discontinuity (split normals, a UV
-seam, a per-face-corner color), so the *actual* GPU-submitted index buffer for the exported file
+seam, a per-face-corner color), so the _actual_ GPU-submitted index buffer for the exported file
 has more distinct vertex entries -- and therefore a real ACMR this report does not measure. Treat
 this metric as a relative signal for the topology changes this tool itself performed (did
 `--clean-mesh`/`--weld-doubles`/decimation -- which can change vertex sharing, vertex count, and
@@ -969,13 +969,13 @@ actually optimizes for that.
 ## ACMR's "0.5" is a common target for a large closed mesh, not a universal lower bound
 
 This report's own first version documented (and a test asserted) 0.5 as ACMR's theoretical best
-case. That's only the *asymptotic* value for a large closed/manifold mesh at the typical average
+case. That's only the _asymptotic_ value for a large closed/manifold mesh at the typical average
 vertex valence of 6 (Euler's formula: triangles = 2*vertices - 4 for a closed genus-0 mesh, so
 vertices/triangles -> 0.5 as vertex count grows) -- not a hard floor every mesh must sit at or
 above. Confirmed directly: a small, valid, deliberately non-manifold mesh (6 vertices, all 20
 possible triangular faces among them -- every triangle formed from that same small vertex pool)
 scores ACMR 0.3 on a real Blender 4.2.23, genuinely below 0.5. The one real, provable bound is the
-*worst* case, 3.0 -- a triangle only ever touches 3 vertices, so it can contribute at most 3
+_worst_ case, 3.0 -- a triangle only ever touches 3 vertices, so it can contribute at most 3
 misses, regardless of topology. Caught by review; don't assert or document 0.5 as a floor.
 
 ## bpy.types.Image.copy() does not inherit a prior in-place Image.scale() call
@@ -983,7 +983,7 @@ misses, regardless of topology. Caught by review; don't assert or document 0.5 a
 `--generate-mipmaps` builds each texture's mip chain on a throwaway `img.copy()`, scaled down
 level by level, so the real texture still referenced by this run's own export is never mutated.
 The very first version of this feature assumed the copy would start out at whatever size `img`
-currently reported -- including a size an *earlier* `img.scale(w, h)` call (e.g. from
+currently reported -- including a size an _earlier_ `img.scale(w, h)` call (e.g. from
 `--texture-max`) had already produced in place -- and only called `.scale()` on the copy from
 level 1 onward, treating level 0 as already correct.
 
@@ -992,7 +992,7 @@ place to 16x16 via `img.scale(16, 16)`, then copied via `img.copy()`, comes back
 copy -- `Image.copy()` re-derives the new datablock's pixel data from the image's own original
 backing buffer, not from whatever a prior runtime `.scale()` mutated it to. A dedicated regression
 test (mip chain on a texture already resized by `--texture-max` in the same run) caught this
-immediately: level 0's own PNG file on disk came out at the texture's *original* pre-resize
+immediately: level 0's own PNG file on disk came out at the texture's _original_ pre-resize
 resolution, silently mismatched against the JSON summary's own (correctly-computed) reported
 size. Fixed by always calling `copy.scale(w, h)` explicitly, even for level 0 -- never assume a
 freshly `.copy()`-ed image inherits any runtime state (including size) a prior `.scale()` call
@@ -1024,7 +1024,7 @@ img.pixels.foreach_set([0.8, 0.9, 0.6, 1.0] * 16)
 img.pack()
 ```
 
-This is narrower than it first looks: changing `colorspace_settings.name` on an *already-loaded*
+This is narrower than it first looks: changing `colorspace_settings.name` on an _already-loaded_
 image (e.g. one this skill just imported from a real glTF/FBX file, via `_compat.import_file`)
 does **not** wipe its pixels -- confirmed directly, and consistent with `_fix_colorspace`/
 `_set_all_colorspace` (both already-shipped, both change colorspace on already-imported images)

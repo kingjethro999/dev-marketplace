@@ -56,7 +56,7 @@
   unsafe/insufficient, not kept as a permanent workaround). `adapter.measure_loudness` and the `measure_only` flag
   in `FLAGS_USED` are removed as dead code. Breaking for the pinned `ffmpeg_skill` contract block; `VERSION` bumps
   to `0.2.0` and `tests/contract/contract.json` is regenerated (video-production-agent must re-pin).
-  *Superseded in part by ADR-15:* the `SUPPORTED_MIN` floor is gone; a release without `result` is verified with
+  _Superseded in part by ADR-15:_ the `SUPPORTED_MIN` floor is gone; a release without `result` is verified with
   `--measure-only` when its contract declares that flag, and refused with `TOOL_ERROR` only when it declares neither.
 - **ADR-14 GitHub release automation is one workflow, triggered on push to `main`, not push+tag split.**
   A commit or tag pushed by a workflow using the default `GITHUB_TOKEN` does not itself trigger another
@@ -138,7 +138,7 @@
 - **ADR-18 FILLER_REMOVE cuts at caller-supplied word timings against a caller-chosen lexicon; it never transcribes.**
   Filler removal belongs to this skill (`ecosystem.json`: "filler and silence removal"), speech recognition to
   transcription-skill, so the operation takes the words with their times in the request: `words: [{start, end, text,
-  confidence?}]`, or a `transcription-skill/transcript/0.1` document as `transcript` (exactly one of the two; times on
+confidence?}]`, or a `transcription-skill/transcript/0.1` document as `transcript` (exactly one of the two; times on
   the operation's input timeline). Missing timestamps are refused, never estimated: a word without `start` / `end`, no
   words at all, or a transcript segment whose `words` is null (transcribed without word timestamps) is `INVALID_REQUEST`
   with `details.reason: word_timestamps_missing` (the transcript case names the segments); a caller that accepts partial
@@ -156,12 +156,12 @@
   apart (default 0: only touching ranges merge); a real word in the gap never merges. This is arithmetic on the
   caller's data (`fillers.py`, pure), recorded in `measurements.filler_remove` (matched words, ranges, removed
   seconds, effective lexicon) and `measurements.effective_ranges`. Lowering reuses the CUT path: `ffmpeg-skill/cut
-  --segments <kept ranges> --accurate`, sample-accurate (the integration fixture checks the exact sample count).
+--segments <kept ranges> --accurate`, sample-accurate (the integration fixture checks the exact sample count).
   `declick_ms` maps to `cut --declick-ms` (fades at each join, no duration change: a fade-out / fade-in, not an
   overlapping crossfade, so the kept audio stays sample-aligned); omitted, nothing is passed and ffmpeg-skill's own
   behaviour applies (20 ms on releases with the flag, none on 0.12.2); `0` needs nothing; a value above 0 on an
   ffmpeg-skill whose contract lacks `declick_ms` is refused at planning (`TOOL_ERROR`, `reason:
-  ffmpeg_skill_flag_missing`, `retryable: false`) instead of silently running butt joins. Rejected: running
+ffmpeg_skill_flag_missing`, `retryable: false`) instead of silently running butt joins. Rejected: running
   ffmpeg-skill's own `silence --filler` (it also removes silences, decides with its own heuristics, and reads a file
   rather than the request), and doing ASR here. Capability id `audio.filler_remove`; `keeps_timeline: false`.
 - **ADR-19 MIX ducks one bed under input 0 through `ffmpeg-skill/audio --duck`, detected from the contract.** The
@@ -197,116 +197,116 @@
   ffmpeg-skill 3.0.0 (`1dc2f52`) declares `contract_version` 2.0 where every earlier release declared 1.0. The
   registry range `>=1.0 <2.0` excluded it, and `doctor` warned that the number differed. 3.0 also drops Python 3.9
   and FFmpeg 5.x and changes `cut.py`'s defaults.
-  - *What changed for `cut.py`, the one tool here it touches.* The edit list is now kept on a stream copy,
+  - _What changed for `cut.py`, the one tool here it touches._ The edit list is now kept on a stream copy,
     `--vfr-guard` defaults to `sampled`, SDR HEVC is kept as HEVC, and `precision` is the least exact segment's.
     That last change differs from 2.x only for an audio-only `--segments` join of copied and re-encoded parts.
     This skill always passes `--accurate`, so every part is re-encoded: no stream copy, no edit list, no HEVC
     video, and `precision` (copied into `measurements.cut`) means the same on both. No flag in `FLAGS_USED` was
     removed. The full suite (135 tests, real media included) passes against 3.0.0 on Python 3.11 with ffmpeg 6.1.1.
-  - *Decision.* `adapter.KNOWN_CONTRACT_VERSIONS = ("1.0", "2.0")`. `dependencies[].version_range` becomes
+  - _Decision._ `adapter.KNOWN_CONTRACT_VERSIONS = ("1.0", "2.0")`. `dependencies[].version_range` becomes
     `>=1.0 <3.0`, and only a `contract_version` outside the known majors is warned about.
     `ffmpeg_skill.contract_version` stays the oldest (1.0), where the range starts. Still reported, never gated on
     (ADR-15).
-  - *Python 3.9* stays supported by this skill (`requires-python >=3.9`). ffmpeg-skill 3.x does not support it, so
+  - _Python 3.9_ stays supported by this skill (`requires-python >=3.9`). ffmpeg-skill 3.x does not support it, so
     the CI job on Python 3.9 runs the last 2.x, 2.24.1 (`a2c8433`), pinned, instead of main. A new job runs 3.0.0
     (`1dc2f52`, pinned) on Python 3.11.
-  - *Re-pin.* `dependencies` changes, so video-production-agent sees the new range when it re-pins (agent side).
+  - _Re-pin._ `dependencies` changes, so video-production-agent sees the new range when it re-pins (agent side).
 - **ADR-22 Releases: a Dependabot pull request cannot raise the release level; v1.0.0 stays.** #30 (a
   Dependabot bump of release-drafter from 6.4.0 to 7.10.0) was merged carrying the label `major`. Dependabot puts
-  that label on a pull request whose *dependency* moved a major version, as soon as a label named `major` exists
+  that label on a pull request whose _dependency_ moved a major version, as soon as a label named `major` exists
   in the repository; `.github/release-drafter.yml` maps the same label to a major bump of this product, so the
   release workflow resolved 1.0.0 from 0.4.10 and tagged it, although the only change was a CI pin.
-  - *Decision.* Before release-drafter resolves the version, `release.yml` runs
+  - _Decision._ Before release-drafter resolves the version, `release.yml` runs
     `.github/scripts/dependabot_release_labels.py`: on every pull request authored by `dependabot[bot]` it removes
     `major`, `breaking`, `minor`, `feature` and `enhancement` unless the newest `labeled` event for that label was
     made by a person. Pull requests by anyone else are not touched, so the rule in `release-drafter.yml` stands: a
     major release happens only when a person applies the label, on a Dependabot pull request too. The job's token
     has `pull-requests: write` for this; a failed API call fails the release instead of resolving from labels that
     were not checked.
-  - *Rejected.* A `labels:` list in `dependabot.yml`: it sets Dependabot's default labels, it is not documented to
+  - _Rejected._ A `labels:` list in `dependabot.yml`: it sets Dependabot's default labels, it is not documented to
     stop the semver label added on top, and a later edit of that file would reopen the hole unnoticed. Removing the
     label when it is applied (in `autolabel.yml`): a missed or failed run would go unnoticed until the next
     accidental release.
-  - *v1.0.0 stays.* It was not meant as a major release (no breaking change went into it), but its tag and GitHub
+  - _v1.0.0 stays._ It was not meant as a major release (no breaking change went into it), but its tag and GitHub
     Release are public, so it is kept and the 1.x line continues from it; the version files and the v1.0.0
     CHANGELOG entry are unchanged. From here on a major release happens only when a person applies the label.
-  - *Tests.* `tests/test_release_labels.py`.
-  - *Release.* A patch release (1.0.1).
+  - _Tests._ `tests/test_release_labels.py`.
+  - _Release._ A patch release (1.0.1).
 - **ADR-23 LOUDNESS_SET: several delivery loudness versions of one master in one run (roadmap step 9).**
-  - *Shape.* One operation, one input, `versions` (1..8) and a required `tolerance_lufs`. Each version names a
+  - _Shape._ One operation, one input, `versions` (1..8) and a required `tolerance_lufs`. Each version names a
     profile (`ebu_r128` −23 LUFS / −1 dBTP, `atsc_a85` −24 LKFS / −2 dBTP, regional `arib_tr_b32` −24 LKFS / −1 dBTP)
     or states `target_lufs` + `true_peak_db` (a streaming platform's own value, e.g. −14 / −1). No profile and no
     target is a default; a regional profile is only used when a version names it.
-  - *Graph.* The set expands into one implicit node per version, `op:<op_id>.<version_id>` of type
+  - _Graph._ The set expands into one implicit node per version, `op:<op_id>.<version_id>` of type
     `LOUDNESS_VERSION`, each a two-pass loudnorm of the same input through `ffmpeg-skill/loudness` (identical argv to
     NORMALIZE). The set itself has no artifact: referencing `op:<op_id>` is refused with the list of its versions, so
     a streaming and a broadcast version cannot be swapped by referencing "the" loudness output. Every version must be
     delivered (an unreferenced version is an unconnected operation, as for any op), and only outputs may reference a
     version (`loudness_version_not_terminal`): an operation after it would change what its measurement vouches for.
-  - *Verification.* Each version is measured (the call's own `result`) and refused unless within `tolerance_lufs` of
+  - _Verification._ Each version is measured (the call's own `result`) and refused unless within `tolerance_lufs` of
     its target and at or under its ceiling with no slack (NORMALIZE allows +0.5 dB). Each delivered output of a
     version is measured again with `loudness --measure-only` (a lossy encoder can raise the true peak) against the
     same rules (`loudness --measure-only` is required at planning for a set). The response carries `loudness_sets` (per version: target, ceiling,
     profile, the intermediate's measurement, every output's measurement).
-  - *Outputs are committed together (all outputs, not only a set's).* Every output is written to a staging file next
+  - _Outputs are committed together (all outputs, not only a set's)._ Every output is written to a staging file next
     to its target (`.<name>.staged<ext>`), validated (and measured), and the targets are replaced only once every
     output passed. A failing output therefore leaves no output of the run behind and never replaces a pre-existing
     target set to `overwrite: true`; before, outputs exported ahead of the failing one stayed in place.
-  - *Rejected.* A limiter stage before loudnorm through `audio.py --limit`: ffmpeg-skill's alimiter is not
+  - _Rejected._ A limiter stage before loudnorm through `audio.py --limit`: ffmpeg-skill's alimiter is not
     latency-compensated and shifts the audio by its look-ahead (measured: 239 samples at 48 kHz), which would put a
     delivery version out of sync with picture. A master whose crest factor keeps a target out of reach under the
     ceiling is refused, naming the version; the gap is handed to ffmpeg-skill (docs/ffmpeg-skill.md).
-  - *Contract.* An operation added (`LOUDNESS_SET`, capability `audio.loudness_set`), the tools' `verification`
+  - _Contract._ An operation added (`LOUDNESS_SET`, capability `audio.loudness_set`), the tools' `verification`
     text, and additive `loudness.profiles`; the agent must re-pin before it can plan it. Measured (FFmpeg 6.1, the
     `programme.wav` fixture, −20.5 LUFS / −8.0 dBTP): −14 / −1 → −14.02 LUFS, −1.45 dBTP; EBU R128 → −23.02, −10.45;
     ATSC A/85 → −24.02, −11.45, the same on the delivered files.
 - **ADR-24 STEMS: the inputs of a mix written as stem files that sum to it (roadmap step 8).**
-  - *Shape.* The inputs and `levels` of a MIX (2..8 inputs) plus `stems`: 1..8 stems, each `{stem_id, inputs, role?}`
+  - _Shape._ The inputs and `levels` of a MIX (2..8 inputs) plus `stems`: 1..8 stems, each `{stem_id, inputs, role?}`
     (`dialogue` / `music` / `effects` / `other`, recorded only), with every input in exactly one stem. So the stems
     always sum to the whole mix. `mute` is refused (an input that is not heard is left out of the inputs), and so is
     `duck`: a ducked bed alone cannot be written through ffmpeg-skill (its sidechain output is already summed with
     the key).
-  - *Graph.* One implicit `STEM` node per stem, `op:<op_id>.<stem_id>`, reading every input of the operation: input 0
+  - _Graph._ One implicit `STEM` node per stem, `op:<op_id>.<stem_id>`, reading every input of the operation: input 0
     is the programme and sets the length, as MIX does (amix `duration=first`). The operation itself has no artifact.
     A reference to `op:<op_id>` is refused and the error lists the stems.
-  - *Execution.* A stem with input 0 folds its members onto input 0 with `audio --music --music-volume`, exactly as
+  - _Execution._ A stem with input 0 folds its members onto input 0 with `audio --music --music-volume`, exactly as
     MIX does. A stem without input 0 runs `audio <input 0> --replace <first member> [--gain]` on its own:
     ffmpeg-skill pads or trims the member to input 0's duration. The other members are folded on top of that sidecar
     through `--music`. In one call, amix `duration=first` would end them where the replacement ends.
-  - *Checks.* Each stem's sample count must equal input 0's, on the intermediate and on the delivered file
+  - _Checks._ Each stem's sample count must equal input 0's, on the intermediate and on the delivered file
     (`VALIDATION_ERROR` `stem_length_mismatch`). A stem is delivered as wav / flac only (`UNSUPPORTED_FORMAT`
     `stem_needs_lossless`): a lossy encoder changes the sample count and the sum. Every fold writes 16-bit PCM, so a
     stem that reaches full scale is clipped, and where it clips depends on the grouping. A stem whose true peak
     (`loudness --measure-only`, required at planning) reaches 0 dBTP is therefore refused (`stem_clipped`). A MIX
     that clips is the MIX's own concern.
-  - *Not provided.* One multitrack WAV / MOV with named tracks: ffmpeg-skill has no multitrack writer, so the gap
+  - _Not provided._ One multitrack WAV / MOV with named tracks: ffmpeg-skill has no multitrack writer, so the gap
     is handed over (docs/ffmpeg-skill.md). Separate files work without it.
-  - *Contract.* An operation added (`STEMS`, capability `audio.stems`) and the optional flag `audio.replace`; the
+  - _Contract._ An operation added (`STEMS`, capability `audio.stems`) and the optional flag `audio.replace`; the
     agent must re-pin. Measured (FFmpeg 6.1, `keyed.wav` 6 s dialogue at −2 dB, `longbed.wav` 8 s music at −6 dB,
     `sfx.wav` 4 s effects at −3 dB): three stems of 288000 samples each, like the mix, whose sum differs from the
     MIX output by at most 1 LSB of 16-bit PCM (−90.3 dBFS), against a limit of −60 dB.
 
 - **ADR-25 Words that are also ordinary words stay out of the filler presets; they are an opt-in list (roadmap step 13).**
-  - *The difference.* ffmpeg-skill `silence --filler`'s built-in Japanese list has あの / その / まあ / なんか, which
+  - _The difference._ ffmpeg-skill `silence --filler`'s built-in Japanese list has あの / その / まあ / なんか, which
     the `ja` preset leaves out because each is also a content word (ADR-18, `fillers.py`). That tool marks the same
     four as ambiguous and warns when it removes one. The `ja` preset has あー / うーん / んー, which that list lacks.
     The agent does not call `silence --filler`, so the two lists never meet in one run.
-  - *Choice.* Keep both lists as they are and say why; do not ask ffmpeg-skill to change its list (it is treated
+  - _Choice._ Keep both lists as they are and say why; do not ask ffmpeg-skill to change its list (it is treated
     as complete, and its tool also decides silences on its own, which this skill does not use). The four words are
     added here as an opt-in list, `ja-ambiguous` (`fillers.OPT_IN_LISTS`). It is not a preset and has no default.
     The contract publishes it in `filler_lexicons.opt_in` and a caller copies it into `lexicon.words`, so the
     request text itself names the ordinary words it lets the run cut.
-  - *Why not a preset name.* A new `lexicon.presets` value would change FILLER_REMOVE's pinned `parameters` (the
+  - _Why not a preset name._ A new `lexicon.presets` value would change FILLER_REMOVE's pinned `parameters` (the
     preset enum), and video-production-agent would have to re-pin. `filler_lexicons` sits outside the pinned blocks,
     so this change is additive. A later preset can still be added if a consumer asks for one.
-  - *Reporting.* Every matched filler whose text is in an opt-in list, however the caller chose it, is a warning
+  - _Reporting._ Every matched filler whose text is in an opt-in list, however the caller chose it, is a warning
     (`removed 'あの、' at 0.0s; it is also an ordinary word`) and an entry of `measurements.filler_remove.ambiguous`
     (`text`, `start`, `end`, `list`).
-  - *What is cut.* Matching is on tokens, not meaning. A token, or a run of touching tokens, equal to one of the
+  - _What is cut._ Matching is on tokens, not meaning. A token, or a run of touching tokens, equal to one of the
     words is cut wherever it occurs: as a filler, and as a content word that arrives as its own token
     (`あの` + `人`). A content word inside a longer token (`あの人`, `その日`, `まあまあ`) is kept. The fixture
     `ambiguous.wav` has each word used both ways. With the list, the nine tokens equal to one of the words go, and
     192000 samples (4.0 s) remain at the quiet words' −20 dBFS, with nine warnings. With the `ja` preset alone,
     nothing is cut.
-  - *Default.* No lexicon is a default; `en` is now listed first in `filler_lexicons.presets`. Japanese-specific
+  - _Default._ No lexicon is a default; `en` is now listed first in `filler_lexicons.presets`. Japanese-specific
     words are reachable only by naming them.

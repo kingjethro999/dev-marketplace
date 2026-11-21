@@ -54,18 +54,18 @@ FFmpeg (`ffmpeg` + `ffprobe`) on PATH for ffmpeg-skill. Install: `pip install -e
 
 ## What it is, and what it is not
 
-| | [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) | [media-analysis-skill](https://github.com/kajisho5/media-analysis-skill) | **audio-production-skill** | [video-production-agent](https://github.com/kajisho5/video-production-agent) |
-|---|---|---|---|---|
-| Role | low-level media execution engine (hands) | measurement / observation (meters) | **audio production execution** (typed audio operations) | reasoning / decision / planning / orchestration (brain) |
-| Does | runs ffmpeg for cut, audio post, loudness, join, export, … | measures loudness, silence, streams, integrity | executes GAIN / TRIM / CUT / SILENCE_REMOVE / FILLER_REMOVE / FADE / NORMALIZE / LOUDNESS_SET / MIX (with ducking) / STEMS / CONCAT / MONO / STEREO / DOWNMIX / NOISE_REDUCTION / DYNAMICS / VOICE_CLEANUP as a dependency graph, validates every artifact, records provenance | decides *whether* and *what* to process, builds the request |
-| Never | holds a project model | edits or writes media | measures for decisions, decides which ranges are silence, recognises speech, invents parameters, runs ffmpeg directly, accepts commands / filters | runs ffmpeg |
+|       | [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill)   | [media-analysis-skill](https://github.com/kajisho5/media-analysis-skill) | **audio-production-skill**                                                                                                                                                                                                                                                     | [video-production-agent](https://github.com/kajisho5/video-production-agent) |
+| ----- | ---------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Role  | low-level media execution engine (hands)                   | measurement / observation (meters)                                       | **audio production execution** (typed audio operations)                                                                                                                                                                                                                        | reasoning / decision / planning / orchestration (brain)                      |
+| Does  | runs ffmpeg for cut, audio post, loudness, join, export, … | measures loudness, silence, streams, integrity                           | executes GAIN / TRIM / CUT / SILENCE_REMOVE / FILLER_REMOVE / FADE / NORMALIZE / LOUDNESS_SET / MIX (with ducking) / STEMS / CONCAT / MONO / STEREO / DOWNMIX / NOISE_REDUCTION / DYNAMICS / VOICE_CLEANUP as a dependency graph, validates every artifact, records provenance | decides _whether_ and _what_ to process, builds the request                  |
+| Never | holds a project model                                      | edits or writes media                                                    | measures for decisions, decides which ranges are silence, recognises speech, invents parameters, runs ffmpeg directly, accepts commands / filters                                                                                                                              | runs ffmpeg                                                                  |
 
 - **audio-production-skill ≠ media-analysis-skill.** media-analysis-skill says "silence from 0.0 to 2.0 s, −23.1 LUFS".
   audio-production-skill only executes "remove [0.0, 2.0)", "normalise to −16 LUFS / −1.5 dBTP". The one measurement
   this skill performs is the verification of its own NORMALIZE and LOUDNESS_SET output (re-measured through ffmpeg-skill/loudness);
-  it never reports a measurement of an *input* for a decision.
+  it never reports a measurement of an _input_ for a decision.
 - **audio-production-skill ≠ ffmpeg-skill.** ffmpeg-skill runs FFmpeg per script call. audio-production-skill owns the
-  *audio project model*: sources, tracks, operation graph with deterministic identities, source ↔ timeline mapping,
+  _audio project model_: sources, tracks, operation graph with deterministic identities, source ↔ timeline mapping,
   intermediate management, output validation and provenance. It never calls `ffmpeg` itself: every process it starts
   is `python3 <ffmpeg-skill>/scripts/{probe,audio,cut,loudness,join}.py` with a typed argv.
 - **Loudness: owner and engine.** This repository owns 音量・ラウドネス; ffmpeg-skill is the engine. `NORMALIZE` and
@@ -152,28 +152,84 @@ used. It is a declaration for the registry; compatibility is still decided flag 
   "schema": "audio-production/request@1",
   "project": {
     "project_id": "talk-42",
-    "sources": [{"source_id": "mic", "path": "rec/mic.wav"}, {"source_id": "room", "path": "rec/room.wav"}],
+    "sources": [
+      { "source_id": "mic", "path": "rec/mic.wav" },
+      { "source_id": "room", "path": "rec/room.wav" }
+    ],
     "tracks": [
-      {"track_id": "voice", "source_id": "mic", "channel_layout": "mono"},
-      {"track_id": "ambience", "source_id": "room", "range": {"start": 0.5, "end": 3600.0}, "gain_db": -12}
+      { "track_id": "voice", "source_id": "mic", "channel_layout": "mono" },
+      {
+        "track_id": "ambience",
+        "source_id": "room",
+        "range": { "start": 0.5, "end": 3600.0 },
+        "gain_db": -12
+      }
     ],
     "operations": [
-      {"op_id": "trim", "type": "TRIM", "inputs": ["track:voice"], "parameters": {"start": 12.0, "end": 3612.0}},
-      {"op_id": "cleanup", "type": "SILENCE_REMOVE", "inputs": ["op:trim"],
-       "parameters": {"ranges": [{"start": 0.0, "end": 2.1}], "margin": 0.15, "min_duration": 0.6, "threshold_db": -40}},
-      {"op_id": "nr", "type": "NOISE_REDUCTION", "inputs": ["op:cleanup"], "parameters": {"mode": "fft", "strength_db": 20}},
-      {"op_id": "mix", "type": "MIX", "inputs": ["op:nr", "track:ambience"], "parameters": {"levels": [{"gain_db": 0}, {"gain_db": -6}]}},
-      {"op_id": "fade", "type": "FADE_OUT", "inputs": ["op:mix"], "parameters": {"duration": 1.5}},
-      {"op_id": "master", "type": "NORMALIZE", "inputs": ["op:fade"],
-       "parameters": {"target_lufs": -16.0, "true_peak_db": -1.5, "tolerance_lufs": 1.0, "profile": "podcast"}}
+      {
+        "op_id": "trim",
+        "type": "TRIM",
+        "inputs": ["track:voice"],
+        "parameters": { "start": 12.0, "end": 3612.0 }
+      },
+      {
+        "op_id": "cleanup",
+        "type": "SILENCE_REMOVE",
+        "inputs": ["op:trim"],
+        "parameters": {
+          "ranges": [{ "start": 0.0, "end": 2.1 }],
+          "margin": 0.15,
+          "min_duration": 0.6,
+          "threshold_db": -40
+        }
+      },
+      {
+        "op_id": "nr",
+        "type": "NOISE_REDUCTION",
+        "inputs": ["op:cleanup"],
+        "parameters": { "mode": "fft", "strength_db": 20 }
+      },
+      {
+        "op_id": "mix",
+        "type": "MIX",
+        "inputs": ["op:nr", "track:ambience"],
+        "parameters": { "levels": [{ "gain_db": 0 }, { "gain_db": -6 }] }
+      },
+      {
+        "op_id": "fade",
+        "type": "FADE_OUT",
+        "inputs": ["op:mix"],
+        "parameters": { "duration": 1.5 }
+      },
+      {
+        "op_id": "master",
+        "type": "NORMALIZE",
+        "inputs": ["op:fade"],
+        "parameters": {
+          "target_lufs": -16.0,
+          "true_peak_db": -1.5,
+          "tolerance_lufs": 1.0,
+          "profile": "podcast"
+        }
+      }
     ],
     "outputs": [
-      {"output_id": "master", "operation": "op:master", "path": "deliver/talk-42.wav", "format": "wav",
-       "expect": {"channels": 1, "sample_rate": 48000}},
-      {"output_id": "preview", "operation": "op:master", "path": "deliver/talk-42.m4a", "format": "m4a"}
+      {
+        "output_id": "master",
+        "operation": "op:master",
+        "path": "deliver/talk-42.wav",
+        "format": "wav",
+        "expect": { "channels": 1, "sample_rate": 48000 }
+      },
+      {
+        "output_id": "preview",
+        "operation": "op:master",
+        "path": "deliver/talk-42.m4a",
+        "format": "m4a"
+      }
     ]
   },
-  "options": {"reuse_intermediates": true, "timeout": 900}
+  "options": { "reuse_intermediates": true, "timeout": 900 }
 }
 ```
 
@@ -199,22 +255,93 @@ used. It is a declaration for the registry; compatibility is still decided flag 
 
 ```json
 {
-  "schema": "audio-production/response@1", "skill": {"id": "audio-production", "version": "0.2.0"},
-  "ok": true, "status": "ok", "dry_run": false,
-  "plan": {"plan_id": "<sha256>", "graph": {"order": ["track:voice", "op:trim", "..."]}, "steps": ["..."], "required_capabilities": ["..."], "tool_versions": {"ffmpeg-skill": "0.12.2", "ffmpeg": "6.1.1"}},
-  "results": [{
-    "node_id": "op:master", "operation_id": "<sha256>", "type": "NORMALIZE", "tool": "ffmpeg-skill/loudness", "status": "completed",
-    "parameters": {"target_lufs": -16.0, "true_peak_db": -1.5, "tolerance_lufs": 1.0, "profile": "podcast"},
-    "inputs": ["op:fade"], "input_hashes": ["<sha256>"],
-    "segments": [{"timeline": {"start": 0.0, "end": 3597.9}, "source_id": "mic", "source": {"start": 14.1, "end": 3612.0}, "input_index": 0}, "..."],
-    "artifact": {"path": ".../.audio-production/talk-42/<id16>.wav", "duration": 3597.9, "channels": 1, "sample_rate": 48000, "codec": "pcm_s16le", "size": 0, "sha256": "<sha256>"},
-    "measurements": {"loudness": {"measured_by": "ffmpeg-skill/loudness (NORMALIZE result)", "integrated_lufs": -16.0, "true_peak_dbtp": -1.6, "loudness_range_lu": 6.2}},
-    "tool_commands_observed": ["ffmpeg ..."], "seconds": 12.3
-  }],
-  "outputs": [{"output_id": "master", "status": "completed", "path": ".../deliver/talk-42.wav", "format": "wav", "artifact": {"sha256": "<sha256>"}, "segments": ["..."],
-               "provenance": {"skill": "audio-production", "skill_version": "0.2.0", "tool": "ffmpeg-skill/audio", "tool_versions": {}, "output_hash": "<sha256>",
-                              "operation_id": "<sha256>", "operations": ["output -> operation -> ... -> source, with hashes and status"], "sources": {"mic": {"sha256": "<sha256>"}}}}],
-  "tool_runs": [{"tool": "ffmpeg-skill/probe", "exit_code": 0, "seconds": 0.1, "commands_observed": []}],
+  "schema": "audio-production/response@1",
+  "skill": { "id": "audio-production", "version": "0.2.0" },
+  "ok": true,
+  "status": "ok",
+  "dry_run": false,
+  "plan": {
+    "plan_id": "<sha256>",
+    "graph": { "order": ["track:voice", "op:trim", "..."] },
+    "steps": ["..."],
+    "required_capabilities": ["..."],
+    "tool_versions": { "ffmpeg-skill": "0.12.2", "ffmpeg": "6.1.1" }
+  },
+  "results": [
+    {
+      "node_id": "op:master",
+      "operation_id": "<sha256>",
+      "type": "NORMALIZE",
+      "tool": "ffmpeg-skill/loudness",
+      "status": "completed",
+      "parameters": {
+        "target_lufs": -16.0,
+        "true_peak_db": -1.5,
+        "tolerance_lufs": 1.0,
+        "profile": "podcast"
+      },
+      "inputs": ["op:fade"],
+      "input_hashes": ["<sha256>"],
+      "segments": [
+        {
+          "timeline": { "start": 0.0, "end": 3597.9 },
+          "source_id": "mic",
+          "source": { "start": 14.1, "end": 3612.0 },
+          "input_index": 0
+        },
+        "..."
+      ],
+      "artifact": {
+        "path": ".../.audio-production/talk-42/<id16>.wav",
+        "duration": 3597.9,
+        "channels": 1,
+        "sample_rate": 48000,
+        "codec": "pcm_s16le",
+        "size": 0,
+        "sha256": "<sha256>"
+      },
+      "measurements": {
+        "loudness": {
+          "measured_by": "ffmpeg-skill/loudness (NORMALIZE result)",
+          "integrated_lufs": -16.0,
+          "true_peak_dbtp": -1.6,
+          "loudness_range_lu": 6.2
+        }
+      },
+      "tool_commands_observed": ["ffmpeg ..."],
+      "seconds": 12.3
+    }
+  ],
+  "outputs": [
+    {
+      "output_id": "master",
+      "status": "completed",
+      "path": ".../deliver/talk-42.wav",
+      "format": "wav",
+      "artifact": { "sha256": "<sha256>" },
+      "segments": ["..."],
+      "provenance": {
+        "skill": "audio-production",
+        "skill_version": "0.2.0",
+        "tool": "ffmpeg-skill/audio",
+        "tool_versions": {},
+        "output_hash": "<sha256>",
+        "operation_id": "<sha256>",
+        "operations": [
+          "output -> operation -> ... -> source, with hashes and status"
+        ],
+        "sources": { "mic": { "sha256": "<sha256>" } }
+      }
+    }
+  ],
+  "tool_runs": [
+    {
+      "tool": "ffmpeg-skill/probe",
+      "exit_code": 0,
+      "seconds": 0.1,
+      "commands_observed": []
+    }
+  ],
   "warnings": []
 }
 ```
@@ -228,25 +355,25 @@ Repository guide for future sessions: [CLAUDE.md](CLAUDE.md); current / experime
 
 ## Supported operations
 
-| type | inputs | parameters | ffmpeg-skill tool | notes |
-|---|---|---|---|---|
-| `GAIN` | 1 | `gain_db` [−60, 60] | `audio --gain` | |
-| `TRIM` | 1 | `start`, `end` (source time) | `cut --start/--end --accurate` | keeps [start, end); sample-accurate, `measurements.cut.precision` |
-| `CUT` | 1 | `remove: [{start,end}]` sorted, non-overlapping | `cut --segments --accurate` (kept ranges) | sample-accurate |
-| `SILENCE_REMOVE` | 1 | `ranges`, `margin`, `min_duration`, `threshold_db` (recorded) | `cut --segments --accurate` | ranges come from the caller |
-| `FILLER_REMOVE` | 1 | `words: [{start, end, text}]` or `transcript` (one of), `lexicon {presets?, words?, keep?}` (required), `pad` [0, 0.5], `merge_gap` [0, 2], `declick_ms` [0, 200] | `cut --segments --accurate [--declick-ms]` | sample-accurate; matched words, ranges and removed seconds in `measurements.filler_remove`; `declick_ms` > 0 needs an ffmpeg-skill declaring `--declick-ms` (else `TOOL_ERROR` `ffmpeg_skill_flag_missing` at planning, ADR-18) |
-| `FADE_IN` / `FADE_OUT` | 1 | `duration` | `audio --fade-in/--fade-out` | |
-| `NORMALIZE` | 1 | `target_lufs`, `true_peak_db` (required), `loudness_range_lu`, `tolerance_lufs`, `sample_rate`, `profile` | `loudness -I/--tp/--lra/--sample-rate` | two-pass loudnorm, re-measured after |
-| `LOUDNESS_SET` | 1 | `versions: [{version_id, profile \| target_lufs + true_peak_db, loudness_range_lu?, sample_rate?}]` (1..8), `tolerance_lufs` (required) | `loudness -I/--tp/--lra/--sample-rate` per version, `loudness --measure-only` per delivered output | several delivery versions of one master in one run; a version is referenced as `op:<op_id>.<version_id>` (graph node type `LOUDNESS_VERSION`), the set itself is not an artifact. Profiles: `ebu_r128` (−23 LUFS / −1 dBTP), `atsc_a85` (−24 LKFS / −2 dBTP), regional `arib_tr_b32` (−24 LKFS / −1 dBTP, Japan); none is a default, a streaming platform's value is a stated target (e.g. −14 / −1). Each version and each delivered file must measure within `tolerance_lufs` and at or under the ceiling (no slack), else `VALIDATION_ERROR` naming the version and nothing is delivered; only outputs may reference a version; response key `loudness_sets` (ADR-23) |
-| `MIX` | 2..8 | `levels: [{gain_db, mute}]`, `duck {input, amount_db, threshold_db?, attack_ms?, release_ms?}` | `audio --music/--music-volume` (pairwise fold), `--duck --duck-amount [--duck-threshold/--duck-attack/--duck-release]` | duration = first input (amix `duration=first`); `duck` lowers one bed under input 0 (sidechaincompress), other inputs are mixed un-ducked; undeclared duck flags → `TOOL_ERROR` `ffmpeg_skill_flag_missing` at planning (ADR-19) |
-| `STEMS` | 2..8 | `stems: [{stem_id, inputs: [input index], role?: dialogue\|music\|effects\|other}]` (1..8, every input in exactly one stem), `levels: [{gain_db}]` (as the MIX they sum to; no mute, no duck) | `audio --music/--music-volume` (a stem with input 0), `audio --replace [--music]` (a stem without input 0: padded / trimmed to input 0's duration) | one file per stem, referenced as `op:<op_id>.<stem_id>` (graph node type `STEM`); every stem has the programme's sample count (input 0's, as MIX), on the intermediate and the delivered file, else `VALIDATION_ERROR` `stem_length_mismatch`; stems are delivered as wav / flac only; a stem reaching 0 dBTP is refused (`stem_clipped`: a clipped stem does not sum to the mix); the stems summed equal a MIX of the same inputs and levels; response key `stems`. One multitrack WAV / MOV is not provided (no multitrack writer in ffmpeg-skill) (ADR-24) |
-| `MONO` | 1 | – | `audio --mono` | requires a 2-channel input |
-| `STEREO` | 1 | – | `audio --stereo` | requires a 1- or 2-channel input |
-| `DOWNMIX` | 1 | – | `audio --downmix` | requires 5.1 / 7.1 |
-| `NOISE_REDUCTION` | 1 | `mode: "fft"`, `strength_db` [20, 60] | `audio --denoise` (afftdn) | the only implemented mode; `strength_db` becomes afftdn `nf=-strength_db`, valid only in [−80, −20], so values below 20 are refused at validation (ADR-17) |
-| `DYNAMICS` | 1 | `gate {threshold_db, ratio, attack_ms, release_ms, range_db, knee_db}`, `compressor {threshold_db, ratio, attack_ms, release_ms, makeup_db, knee_db}`, `limiter {ceiling_db, attack_ms, release_ms}` (≥ 1 stage) | `audio --gate/--compress/--limit` (agate, acompressor, alimiter) | fixed order gate → compressor → limiter; omitted fields keep ffmpeg's defaults |
-| `VOICE_CLEANUP` | 1 | `level: "light" \| "medium" \| "strong"` (required, no default) | `audio --voice <level>` (bare `--voice` = medium on ffmpeg-skill < 1.13) | ffmpeg-skill's fixed speech chains: light = highpass 80 Hz + compressor; medium = highpass, de-esser, afftdn (fixed −25 dB floor), compressor; strong = medium + harder de-esser, second compressor, limiter at −1 dBFS. Nothing in a chain is tunable. A level the located ffmpeg-skill does not declare is refused at planning with `TOOL_ERROR` `voice_level_unsupported` (ADR-16) |
-| `CONCAT` | 2..32 | `crossfade` (s, default 0), `sample_rate`, `channels` (1/2/6/8) | `join --transition none\|fade --duration` (concat / acrossfade) | output layout = widest input unless `channels`; total = Σ − (n−1)·crossfade |
+| type                   | inputs | parameters                                                                                                                                                                                                       | ffmpeg-skill tool                                                                                                                                  | notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GAIN`                 | 1      | `gain_db` [−60, 60]                                                                                                                                                                                              | `audio --gain`                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `TRIM`                 | 1      | `start`, `end` (source time)                                                                                                                                                                                     | `cut --start/--end --accurate`                                                                                                                     | keeps [start, end); sample-accurate, `measurements.cut.precision`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `CUT`                  | 1      | `remove: [{start,end}]` sorted, non-overlapping                                                                                                                                                                  | `cut --segments --accurate` (kept ranges)                                                                                                          | sample-accurate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `SILENCE_REMOVE`       | 1      | `ranges`, `margin`, `min_duration`, `threshold_db` (recorded)                                                                                                                                                    | `cut --segments --accurate`                                                                                                                        | ranges come from the caller                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `FILLER_REMOVE`        | 1      | `words: [{start, end, text}]` or `transcript` (one of), `lexicon {presets?, words?, keep?}` (required), `pad` [0, 0.5], `merge_gap` [0, 2], `declick_ms` [0, 200]                                                | `cut --segments --accurate [--declick-ms]`                                                                                                         | sample-accurate; matched words, ranges and removed seconds in `measurements.filler_remove`; `declick_ms` > 0 needs an ffmpeg-skill declaring `--declick-ms` (else `TOOL_ERROR` `ffmpeg_skill_flag_missing` at planning, ADR-18)                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `FADE_IN` / `FADE_OUT` | 1      | `duration`                                                                                                                                                                                                       | `audio --fade-in/--fade-out`                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `NORMALIZE`            | 1      | `target_lufs`, `true_peak_db` (required), `loudness_range_lu`, `tolerance_lufs`, `sample_rate`, `profile`                                                                                                        | `loudness -I/--tp/--lra/--sample-rate`                                                                                                             | two-pass loudnorm, re-measured after                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `LOUDNESS_SET`         | 1      | `versions: [{version_id, profile \| target_lufs + true_peak_db, loudness_range_lu?, sample_rate?}]` (1..8), `tolerance_lufs` (required)                                                                          | `loudness -I/--tp/--lra/--sample-rate` per version, `loudness --measure-only` per delivered output                                                 | several delivery versions of one master in one run; a version is referenced as `op:<op_id>.<version_id>` (graph node type `LOUDNESS_VERSION`), the set itself is not an artifact. Profiles: `ebu_r128` (−23 LUFS / −1 dBTP), `atsc_a85` (−24 LKFS / −2 dBTP), regional `arib_tr_b32` (−24 LKFS / −1 dBTP, Japan); none is a default, a streaming platform's value is a stated target (e.g. −14 / −1). Each version and each delivered file must measure within `tolerance_lufs` and at or under the ceiling (no slack), else `VALIDATION_ERROR` naming the version and nothing is delivered; only outputs may reference a version; response key `loudness_sets` (ADR-23) |
+| `MIX`                  | 2..8   | `levels: [{gain_db, mute}]`, `duck {input, amount_db, threshold_db?, attack_ms?, release_ms?}`                                                                                                                   | `audio --music/--music-volume` (pairwise fold), `--duck --duck-amount [--duck-threshold/--duck-attack/--duck-release]`                             | duration = first input (amix `duration=first`); `duck` lowers one bed under input 0 (sidechaincompress), other inputs are mixed un-ducked; undeclared duck flags → `TOOL_ERROR` `ffmpeg_skill_flag_missing` at planning (ADR-19)                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `STEMS`                | 2..8   | `stems: [{stem_id, inputs: [input index], role?: dialogue\|music\|effects\|other}]` (1..8, every input in exactly one stem), `levels: [{gain_db}]` (as the MIX they sum to; no mute, no duck)                    | `audio --music/--music-volume` (a stem with input 0), `audio --replace [--music]` (a stem without input 0: padded / trimmed to input 0's duration) | one file per stem, referenced as `op:<op_id>.<stem_id>` (graph node type `STEM`); every stem has the programme's sample count (input 0's, as MIX), on the intermediate and the delivered file, else `VALIDATION_ERROR` `stem_length_mismatch`; stems are delivered as wav / flac only; a stem reaching 0 dBTP is refused (`stem_clipped`: a clipped stem does not sum to the mix); the stems summed equal a MIX of the same inputs and levels; response key `stems`. One multitrack WAV / MOV is not provided (no multitrack writer in ffmpeg-skill) (ADR-24)                                                                                                            |
+| `MONO`                 | 1      | –                                                                                                                                                                                                                | `audio --mono`                                                                                                                                     | requires a 2-channel input                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `STEREO`               | 1      | –                                                                                                                                                                                                                | `audio --stereo`                                                                                                                                   | requires a 1- or 2-channel input                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `DOWNMIX`              | 1      | –                                                                                                                                                                                                                | `audio --downmix`                                                                                                                                  | requires 5.1 / 7.1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `NOISE_REDUCTION`      | 1      | `mode: "fft"`, `strength_db` [20, 60]                                                                                                                                                                            | `audio --denoise` (afftdn)                                                                                                                         | the only implemented mode; `strength_db` becomes afftdn `nf=-strength_db`, valid only in [−80, −20], so values below 20 are refused at validation (ADR-17)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `DYNAMICS`             | 1      | `gate {threshold_db, ratio, attack_ms, release_ms, range_db, knee_db}`, `compressor {threshold_db, ratio, attack_ms, release_ms, makeup_db, knee_db}`, `limiter {ceiling_db, attack_ms, release_ms}` (≥ 1 stage) | `audio --gate/--compress/--limit` (agate, acompressor, alimiter)                                                                                   | fixed order gate → compressor → limiter; omitted fields keep ffmpeg's defaults                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `VOICE_CLEANUP`        | 1      | `level: "light" \| "medium" \| "strong"` (required, no default)                                                                                                                                                  | `audio --voice <level>` (bare `--voice` = medium on ffmpeg-skill < 1.13)                                                                           | ffmpeg-skill's fixed speech chains: light = highpass 80 Hz + compressor; medium = highpass, de-esser, afftdn (fixed −25 dB floor), compressor; strong = medium + harder de-esser, second compressor, limiter at −1 dBFS. Nothing in a chain is tunable. A level the located ffmpeg-skill does not declare is refused at planning with `TOOL_ERROR` `voice_level_unsupported` (ADR-16)                                                                                                                                                                                                                                                                                    |
+| `CONCAT`               | 2..32  | `crossfade` (s, default 0), `sample_rate`, `channels` (1/2/6/8)                                                                                                                                                  | `join --transition none\|fade --duration` (concat / acrossfade)                                                                                    | output layout = widest input unless `channels`; total = Σ − (n−1)·crossfade                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Output formats (`outputs[].format`): `wav` (pcm_s16le), `flac`, `mp3`, `m4a`, `aac`, `ogg`, `opus`; encoder
 availability is reported by `doctor`. Every intermediate is PCM WAV (no generation loss between operations).
@@ -260,14 +387,14 @@ and `CONCAT.sample_rate`), `FORMAT_CONVERT` (an output property). Details and th
 
 ## CLI
 
-| command | reads media | writes media | exit |
-|---|---|---|---|
-| `skill --json` / `contract --json` | no | no | 0 |
-| `contract --check [FILE\|-] [--json]` | no | no | 0 ok / additive, 1 problems / breaking |
-| `doctor --json [--ffmpeg-skill DIR] [--workspace DIR] [--allowed-input ROOT]` | no (runs ffmpeg-skill doctor) | no | 0, 1 on `fail` |
-| `validate REQUEST\|- --json` | no | no | 0 / error exit code |
-| `plan REQUEST\|- --json` | probe only (read-only) | no | 0 / error exit code |
-| `run REQUEST\|- --json [--dry-run] [--workspace DIR] [--allowed-input ROOT] [--ffmpeg-skill DIR] [--timeout S] [--no-reuse] [--cleanup keep\|intermediates]` | yes | yes | 0 / error exit code |
+| command                                                                                                                                                      | reads media                   | writes media | exit                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | ------------ | -------------------------------------- |
+| `skill --json` / `contract --json`                                                                                                                           | no                            | no           | 0                                      |
+| `contract --check [FILE\|-] [--json]`                                                                                                                        | no                            | no           | 0 ok / additive, 1 problems / breaking |
+| `doctor --json [--ffmpeg-skill DIR] [--workspace DIR] [--allowed-input ROOT]`                                                                                | no (runs ffmpeg-skill doctor) | no           | 0, 1 on `fail`                         |
+| `validate REQUEST\|- --json`                                                                                                                                 | no                            | no           | 0 / error exit code                    |
+| `plan REQUEST\|- --json`                                                                                                                                     | probe only (read-only)        | no           | 0 / error exit code                    |
+| `run REQUEST\|- --json [--dry-run] [--workspace DIR] [--allowed-input ROOT] [--ffmpeg-skill DIR] [--timeout S] [--no-reuse] [--cleanup keep\|intermediates]` | yes                           | yes          | 0 / error exit code                    |
 
 The ffmpeg-skill checkout is found from `--ffmpeg-skill`, else `AUDIO_PRODUCTION_FFMPEG_SKILL_DIR`,
 `VIDEO_AGENT_FFMPEG_SKILL_DIR`, `~/.claude/skills/ffmpeg-skill`, `./vendor/ffmpeg-skill`, `../ffmpeg-skill`. It is
@@ -298,7 +425,7 @@ alike; stderr carries diagnostics (including ffmpeg-skill's own log lines). Exit
   no symlinked escape, no reserved Windows names / invalid characters / option-like names, never an input, never an
   existing file unless `overwrite: true`. Inputs are never modified.
 - Failed or cancelled runs leave no partial output and no intermediate without a manifest.
-Details: [docs/security.md](docs/security.md).
+  Details: [docs/security.md](docs/security.md).
 
 ## Determinism
 
@@ -313,28 +440,28 @@ between encoder builds for lossy formats; WAV / FLAC are reproducible in practic
 Per operation: `operation_id`, `type`, `tool`, `tool_versions`, `parameters`, `input_hashes`, `output_hash`,
 `segments` (timeline ↔ source), `status`, `measurements`, `tool_commands_observed`. Per output: `skill`,
 `skill_version`, `tool`, `tool_versions`, `output_hash`, the whole operation chain back to the sources with their
-sha256. The caller's *instruction* (the request) and the skill's *observation* (`results`, `measurements`,
+sha256. The caller's _instruction_ (the request) and the skill's _observation_ (`results`, `measurements`,
 `tool_runs`) are separate parts of the response.
 
 ## Error handling
 
-| code | exit | retryable | when |
-|---|---|---|---|
-| `INVALID_REQUEST` | 2 | no | document shape, unknown / forbidden field, bad type or range |
-| `INVALID_INPUT` | 3 | no | input missing, not a regular file, unreadable, no audio stream, video container |
-| `PATH_NOT_ALLOWED` | 4 | no | outside allowed roots / workspace, traversal, symlink escape, unsafe name |
-| `UNSUPPORTED_OPERATION` | 5 | no | not implemented (declared or unknown type, unsupported mode) |
-| `UNSUPPORTED_FORMAT` | 6 | no | output format unknown, extension mismatch, encoder missing |
-| `MISSING_INPUT` | 7 | no | reference to an undeclared source / track / operation |
-| `INVALID_TIME_RANGE` | 8 | no | end ≤ start, overlap, outside the media, nothing would remain, fade too long |
-| `INVALID_CHANNEL_LAYOUT` | 9 | no | unsupported layout, expectation mismatch, MONO / STEREO / DOWNMIX on the wrong input |
-| `INVALID_SAMPLE_RATE` | 10 | no | sample rate not in the accepted list |
-| `DEPENDENCY_ERROR` | 11 | no | duplicate id, cycle, self-reference, unreachable node |
-| `TOOL_ERROR` | 12 | yes | ffmpeg-skill missing / incompatible (not retryable), tool failure, timeout |
-| `OUTPUT_ERROR` | 13 | no | output exists, collides with an input, empty, could not be written |
-| `VALIDATION_ERROR` | 14 | no | artifact failed post-validation (stream, duration, channels, rate, codec, loudness) |
-| `CANCELLED` | 15 | yes | SIGINT / SIGTERM |
-| `INTERNAL_ERROR` | 16 | no | a bug in this skill (still one JSON document) |
+| code                     | exit | retryable | when                                                                                 |
+| ------------------------ | ---- | --------- | ------------------------------------------------------------------------------------ |
+| `INVALID_REQUEST`        | 2    | no        | document shape, unknown / forbidden field, bad type or range                         |
+| `INVALID_INPUT`          | 3    | no        | input missing, not a regular file, unreadable, no audio stream, video container      |
+| `PATH_NOT_ALLOWED`       | 4    | no        | outside allowed roots / workspace, traversal, symlink escape, unsafe name            |
+| `UNSUPPORTED_OPERATION`  | 5    | no        | not implemented (declared or unknown type, unsupported mode)                         |
+| `UNSUPPORTED_FORMAT`     | 6    | no        | output format unknown, extension mismatch, encoder missing                           |
+| `MISSING_INPUT`          | 7    | no        | reference to an undeclared source / track / operation                                |
+| `INVALID_TIME_RANGE`     | 8    | no        | end ≤ start, overlap, outside the media, nothing would remain, fade too long         |
+| `INVALID_CHANNEL_LAYOUT` | 9    | no        | unsupported layout, expectation mismatch, MONO / STEREO / DOWNMIX on the wrong input |
+| `INVALID_SAMPLE_RATE`    | 10   | no        | sample rate not in the accepted list                                                 |
+| `DEPENDENCY_ERROR`       | 11   | no        | duplicate id, cycle, self-reference, unreachable node                                |
+| `TOOL_ERROR`             | 12   | yes       | ffmpeg-skill missing / incompatible (not retryable), tool failure, timeout           |
+| `OUTPUT_ERROR`           | 13   | no        | output exists, collides with an input, empty, could not be written                   |
+| `VALIDATION_ERROR`       | 14   | no        | artifact failed post-validation (stream, duration, channels, rate, codec, loudness)  |
+| `CANCELLED`              | 15   | yes       | SIGINT / SIGTERM                                                                     |
+| `INTERNAL_ERROR`         | 16   | no        | a bug in this skill (still one JSON document)                                        |
 
 ## Testing
 
@@ -367,7 +494,7 @@ does). Measured on ffmpeg 6.1.1 / ffmpeg-skill 0.9.1, re-verified against ffmpeg
 ## Relationship to the other skills
 
 - **ffmpeg-skill** – the execution engine; see [docs/ffmpeg-skill.md](docs/ffmpeg-skill.md) for the exact tools,
-  flags and the compatibility gaps that define what is *not* offered here.
+  flags and the compatibility gaps that define what is _not_ offered here.
 - **media-analysis-skill** – measures; its `silence` and `loudness` observations are the natural inputs for
   `SILENCE_REMOVE.ranges` and `NORMALIZE` targets, chosen by the agent.
 - **video-production-agent** – the only intended caller: builds the request from its Decision / ProductionPlan,
@@ -396,7 +523,7 @@ does). Measured on ffmpeg 6.1.1 / ffmpeg-skill 0.9.1, re-verified against ffmpeg
 - `doctor` reports core ffmpeg filters (`volume`, `afade`, `amix`, `pan`, `aformat`) as `unknown` because
   ffmpeg-skill's doctor does not probe them; they are verified by output validation at run time. On FFmpeg ≥ 8.0
   ffmpeg-skill 0.9's doctor parses no filters at all (`-filters` prints two flag characters, its pattern expects
-  three), so *every* filter capability is `unknown` there (`checks.filter_detection`), never falsely `unsupported`.
+  three), so _every_ filter capability is `unknown` there (`checks.filter_detection`), never falsely `unsupported`.
 - Intermediates are kept by default so identical re-runs reuse them; `run --cleanup intermediates` removes the
   project's work directory after a fully successful run (never on failure, never outputs; reported under `cleanup`
   in the response). There is no age- or size-based eviction across projects.

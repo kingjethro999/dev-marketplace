@@ -16,7 +16,11 @@
         { "type": "test", "hidden": true }
       ],
       "extra-files": [
-        { "type": "json", "path": ".claude-plugin/plugin.json", "jsonpath": "$.version" },
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
         { "type": "generic", "path": "SKILL.md" },
         { "type": "generic", "path": "scripts/_version.py" }
       ]

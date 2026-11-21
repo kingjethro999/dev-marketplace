@@ -11,13 +11,13 @@ v1.2.0, Python 3.9+ stdlib. Operations: GAIN, TRIM, CUT, SILENCE_REMOVE, FADE_IN
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 音量・ラウドネス | done | owned here; ffmpeg-skill `loudness` is the engine underneath ([Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md)) |
-| ミックス | partial | MIX ducks one bed under input 0 (ffmpeg-skill/audio --duck, #25); no per-input pan |
-| ダイナミクス | done |  |
-| 従来型ノイズ低減 | done | afftdn (NOISE_REDUCTION); ffmpeg-skill/audio --voice presets as VOICE_CLEANUP |
-| 無音・フィラー除去 | done | silence removal for caller-given ranges; FILLER_REMOVE at caller-supplied word timestamps (#25) |
+| Owned job          | Status  | Note                                                                                                                                                                                |
+| ------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 音量・ラウドネス   | done    | owned here; ffmpeg-skill `loudness` is the engine underneath ([Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md)) |
+| ミックス           | partial | MIX ducks one bed under input 0 (ffmpeg-skill/audio --duck, #25); no per-input pan                                                                                                  |
+| ダイナミクス       | done    |                                                                                                                                                                                     |
+| 従来型ノイズ低減   | done    | afftdn (NOISE_REDUCTION); ffmpeg-skill/audio --voice presets as VOICE_CLEANUP                                                                                                       |
+| 無音・フィラー除去 | done    | silence removal for caller-given ranges; FILLER_REMOVE at caller-supplied word timestamps (#25)                                                                                     |
 
 ## Wiring
 
@@ -63,4 +63,5 @@ Agent plans MIX (and duck), NOISE_REDUCTION, DYNAMICS, VOICE_CLEANUP and FILLER_
 Classic noise reduction here vs AI voice isolation in voice-enhance-skill: clean split. sound-design and dubbing outputs are placed through MIX here.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

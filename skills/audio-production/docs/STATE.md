@@ -131,8 +131,8 @@ reported `unknown` by doctor; no eviction.
   (presets `ja` / `en` + `words` - `keep`), computes padded / merged removal ranges in the new pure module `fillers.py`,
   and runs `cut --segments --accurate` (sample-accurate fixture `fillers.wav`); missing word timestamps are refused
   (`INVALID_REQUEST`, `word_timestamps_missing`); `declick_ms` → `cut --declick-ms`. MIX `duck {input, amount_db,
-  threshold_db?, attack_ms?, release_ms?}` folds the ducked bed first under input 0 with `audio --duck --duck-amount
-  [...]` (integration: the bed's 440 Hz band drops by more than 6 dB under the key, unchanged before it). New optional
+threshold_db?, attack_ms?, release_ms?}` folds the ducked bed first under input 0 with `audio --duck --duck-amount
+[...]` (integration: the bed's 440 Hz band drops by more than 6 dB under the key, unchanged before it). New optional
   flags `audio.duck*`, `cut.declick_ms`; capability id `audio.filler_remove`; top-level `filler_lexicons` (additive).
   `tests/contract/contract.json` regenerated; additive for video-production-agent's fatal drift set (new operation, new
   optional MIX parameter, `tools` / `ffmpeg_skill` changed); shipped as 0.4.x.

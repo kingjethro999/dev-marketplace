@@ -47,7 +47,7 @@
 
 ## v0.4.0 - 2026-09-11
 
-- Fix pyproject.toml/__init__.py version desync; harden release.yml (#15) (054b54e)
+- Fix pyproject.toml/**init**.py version desync; harden release.yml (#15) (054b54e)
 
 # Changelog
 

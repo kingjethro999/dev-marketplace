@@ -42,7 +42,7 @@ of the technology, skip it.
 
 ## Secret handling (mandatory)
 
-Rule parameters sometimes *are* credentials — hardcoded passwords in auth
+Rule parameters sometimes _are_ credentials — hardcoded passwords in auth
 checks, API keys in partner-service calls, connection strings in batch
 routines. Record the **rule**, never the **value**: write the parameter as
 `<credential — masked, see file:line>` with at most a 2–4 character

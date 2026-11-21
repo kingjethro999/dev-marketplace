@@ -8,18 +8,21 @@ the announcement text is that section, verbatim or lightly trimmed.
 ## v0.4.0
 
 ### Documentation
+
 - add app icon and wordmark (made with fresnel) (#61)
 - tick roadmap step 5 (agent side, video-production-agent#110) (#68)
 - bring wiring up to date (2026-11-05 review) (#69)
 - field review steps 6-8 (2026-11-05) (#70)
 
 ### Fixed
+
 - contract in the OS registry shape (#62)
 - unique evidence directory per run when none is passed (#47) (#63)
 - rename the receipt to Artifact Verification Receipt (#64)
 - only release from CI runs of pushes to this repository's main (#66)
 
 ### Added
+
 - declare not_provided and leave captions to subtitle-skill and qc-skill (roadmap step 4) (#65)
 - check numbers, dates, names and terms in generated text against the source (roadmap step 7) (#71)
 - check credits and licence lines against the assets' licence records (roadmap step 8) (#72)
@@ -27,9 +30,11 @@ the announcement text is that section, verbatim or lightly trimmed.
 ## v0.3.0
 
 ### Added
+
 - automate version bumps from Conventional Commits PR titles (#56)
 
 ### Fixed
+
 - require BREAKING CHANGE to be a footer trailer, not any substring (#57)
 
 ## v0.2.0

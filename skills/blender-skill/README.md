@@ -108,7 +108,7 @@ budgets), and a live Blender connection for anything that needs a human's eye on
   short description per known `KHR_*`/`EXT_*` extension -- since Blender's importer translates
   those into its own representation and doesn't expose which ones the source file declared, and
   duplicate-mesh/instancing detection (objects already sharing one mesh datablock, reported as
-  data; objects on *separate* datablocks with identical geometry, flagged as a real "could share
+  data; objects on _separate_ datablocks with identical geometry, flagged as a real "could share
   one datablock" memory-saving opportunity), and (`.obj` only) the referenced `.mtl`'s per-
   material Phong parameters (Ka/Kd/Ks/Ns/d/illum) alongside the same Ns-to-roughness heuristic
   Blender's own OBJ importer applies -- confirmed to match its real output exactly -- since
@@ -160,7 +160,7 @@ budgets), and a live Blender connection for anything that needs a human's eye on
   (`--point-thin-voxel SIZE` -- a no-op on any mesh that has faces, since that's what
   `--decimate-ratio` is for), convert every texture to WebP (`--webp`, glb/gltf output only,
   adds `EXT_texture_webp`) -- reports the file's own real before/after texture bytes rather than
-  assuming a reduction, because WebP at Blender's own default quality can end up *larger* than a
+  assuming a reduction, because WebP at Blender's own default quality can end up _larger_ than a
   well-compressed PNG for some textures (confirmed, not hypothetical -- see
   `references/pitfalls.md`; `--webp-quality` gives a lever to actually shrink when that happens);
   `--texture-auto-resolution` computes a per-texture cap instead of one flat `--texture-max`,
@@ -172,13 +172,13 @@ budgets), and a live Blender connection for anything that needs a human's eye on
   platform's own published numbers where one exists (VRChat's official PC "Good" Performance Rank
   triangle threshold, Roblox's official per-mesh triangle/texture caps, Apple's own AR Quick Look
   guidance), cited in `PRESETS`' own comment in `scripts/bpy/optimize.py`, not invented; a preset
-  with a real *absolute* platform triangle cap (`vrchat`/`roblox`/`quicklook`) converts it into an
+  with a real _absolute_ platform triangle cap (`vrchat`/`roblox`/`quicklook`) converts it into an
   actual decimate ratio at run time, so the output is really at or under that cap regardless of
   how big the input was to start -- not a fixed fraction that couldn't guarantee compliance for an
   arbitrary input size, a no-op when already within budget. `vrchat`/`quicklook` compute one
-  shared ratio from the *whole file's combined* triangle count, matching how those platforms
+  shared ratio from the _whole file's combined_ triangle count, matching how those platforms
   actually evaluate a budget (one avatar/one scene as a whole); `roblox` instead clamps each mesh
-  object *independently* against the same absolute number, since Roblox's own real limit is
+  object _independently_ against the same absolute number, since Roblox's own real limit is
   explicitly per individual mesh, not a scene total -- an aggregate ratio there would needlessly
   decimate two already-individually-compliant meshes just because their combined total crossed
   the cap, a case Roblox's real limit never actually restricts (caught by review; see
@@ -202,12 +202,12 @@ budgets), and a live Blender connection for anything that needs a human's eye on
   Roughness/Alpha/a normal map's own texture need `Non-Color` -- info.py flags the mismatch,
   this fixes it); `--texture-colorspace NAME` is the blunt override, forcing every texture to one
   named colorspace (e.g. `ACEScg`/`ACES2065-1` for an ACES-aware pipeline -- Blender's own
-  bundled OCIO config has no ACES *view transform* for rendering at all, only these texture-
+  bundled OCIO config has no ACES _view transform_ for rendering at all, only these texture-
   tagging colorspaces, confirmed via its real enum). `--flip-normal-map-green` inverts the green
   (Y) channel of every texture genuinely wired as a tangent-space normal map (an Image Texture
   feeding a Normal Map node feeding a material's Normal input) -- the complete, sole pixel
   operation to convert between OpenGL (+Y) and DirectX (-Y) normal map convention; R/X and B/Z
-  are shared between both conventions and left untouched. Deliberately does *not* attempt to
+  are shared between both conventions and left untouched. Deliberately does _not_ attempt to
   auto-detect which convention a normal map is currently in -- no reliable general-case,
   pixel-data-only method for that exists (confirmed via research: even Adobe Substance 3D
   Painter can't do it without an explicit tag, and Unity holds a patent, US12102923B2, for a
@@ -221,7 +221,7 @@ budgets), and a live Blender connection for anything that needs a human's eye on
   mobile-engine-style bone budget, not just a report -- removing the lowest-influence unanimated
   leaf bones first and reassigning their skin weight to the parent bone, never removing an
   animated bone even if the target can't otherwise be reached (warns instead). `--keyframe-
-  decimate TOLERANCE` thins every action's keyframes with Ramer-Douglas-Peucker curve
+decimate TOLERANCE` thins every action's keyframes with Ramer-Douglas-Peucker curve
   simplification, exact only for LINEAR/CONSTANT-interpolated segments (the two modes where the
   real post-removal value is cheaply computable -- a straight line or a flat step): a keyframe is
   dropped only if that real value would deviate by at most TOLERANCE (in that fcurve's own
@@ -235,7 +235,7 @@ budgets), and a live Blender connection for anything that needs a human's eye on
   epsilon -- geometrically a no-op no matter its value slider, mute state, or any driver pointed
   at it. A multi-level dead chain resolves correctly on its own: Blender's own
   `obj.shape_key_remove()` automatically re-points every shape key that referenced the removed
-  one onto *its* relative_key (verified directly against real Blender), so removing a chain of
+  one onto _its_ relative_key (verified directly against real Blender), so removing a chain of
   dead keys one at a time still lands every surviving key on the right base.
   `--instance-duplicate-meshes` merges every group of mesh objects on separate datablocks that
   are fully identical within a tight floating-point tolerance -- vertex positions, face topology
@@ -244,12 +244,12 @@ budgets), and a live Blender connection for anything that needs a human's eye on
   render-fallback selection, and the exact same Material datablocks (not just similarly shaped;
   stricter than `info.py`'s own loose `duplicate_mesh_candidates` suggestion) -- onto one shared
   datablock, freeing the now-orphaned duplicates. A material's node tree can look up a UV layer
-  or color attribute by *name*, so two meshes with identical values under different layer names
+  or color attribute by _name_, so two meshes with identical values under different layer names
   or a different render fallback are correctly left unmerged, not just ones with different raw
   values (see `references/pitfalls.md`). Never merges a mesh with custom split normals (exact
   comparison is out of scope) or touches a mesh with shape keys or an Armature modifier -- or any
-  datablock shared with such a mesh, even one of its *other* users would individually have
-  qualified: shared mesh data means shared shape-key/vertex-weight *state* in Blender's own data
+  datablock shared with such a mesh, even one of its _other_ users would individually have
+  qualified: shared mesh data means shared shape-key/vertex-weight _state_ in Blender's own data
   model, not just shared shape, so merging those could silently change animated behavior.
   `--merge-materials` merges every group of separate Material datablocks that are fully identical
   onto one canonical datablock, redirecting every real reference to a duplicate (Blender's own
@@ -260,10 +260,10 @@ budgets), and a live Blender connection for anything that needs a human's eye on
   links between them, matched by node name, not just a similar node count). An `Image`/`NodeTree`/
   other ID reference inside the graph
   (an Image Texture node's `.image`, a Group node's `.node_tree`, ...) is compared by datablock
-  *identity*, not by name or pixel content -- two texture nodes pointing at separately-created but
+  _identity_, not by name or pixel content -- two texture nodes pointing at separately-created but
   pixel-identical images are correctly left unmerged, since a real edit to one wouldn't reach the
   other. A node property Blender marks read-only can still need comparing: a Color Ramp/Mapping/
-  Image-User-style nested settings struct is read-only only in the sense that the *pointer* can't
+  Image-User-style nested settings struct is read-only only in the sense that the _pointer_ can't
   be reassigned, not that its own fields are fixed -- naively skipping every read-only property
   would treat two Color Ramp nodes with completely different ramps as identical (see
   `references/pitfalls.md`).
@@ -318,22 +318,22 @@ budgets), and a live Blender connection for anything that needs a human's eye on
 
 ## Scripts
 
-| Script | Purpose |
-|---|---|
-| `info.py` | Inspect: counts, scale, bounding box, manifold/UV checks |
-| `convert.py` | Cross-format conversion, with round-trip `--verify` |
-| `split.py` | Split a multi-object file into one file per independent object hierarchy |
-| `anim.py` | Extract animation-only data, or combine several files' actions (Mixamo workflow) |
-| `lod.py` | Batch-generate LOD0-3 files at decreasing triangle counts |
-| `optimize.py` | Decimate, weld, triangulate, cap texture size, purge unused, Draco/Meshopt/KTX2 (delegated) |
-| `render.py` | Thumbnail, turntable, 4-view sheet |
-| `look.py` | Wireframe, texture grid, before/after compare, UV layout |
-| `check.py` | Delivery-target PASS/WARN/FAIL with fix commands |
-| `fit.py` | Automatically re-optimize in escalating stages until it fits a check.py target's real budget |
-| `bake.py` | Material-to-texture baking, with UV-atlas repacking |
-| `scene.py` | Declarative multi-asset scene assembly |
-| `batch.py` | Recipe chains over a folder, with a content-hash cache |
-| `verify.py` | The whole toolchain over real files |
+| Script        | Purpose                                                                                      |
+| ------------- | -------------------------------------------------------------------------------------------- |
+| `info.py`     | Inspect: counts, scale, bounding box, manifold/UV checks                                     |
+| `convert.py`  | Cross-format conversion, with round-trip `--verify`                                          |
+| `split.py`    | Split a multi-object file into one file per independent object hierarchy                     |
+| `anim.py`     | Extract animation-only data, or combine several files' actions (Mixamo workflow)             |
+| `lod.py`      | Batch-generate LOD0-3 files at decreasing triangle counts                                    |
+| `optimize.py` | Decimate, weld, triangulate, cap texture size, purge unused, Draco/Meshopt/KTX2 (delegated)  |
+| `render.py`   | Thumbnail, turntable, 4-view sheet                                                           |
+| `look.py`     | Wireframe, texture grid, before/after compare, UV layout                                     |
+| `check.py`    | Delivery-target PASS/WARN/FAIL with fix commands                                             |
+| `fit.py`      | Automatically re-optimize in escalating stages until it fits a check.py target's real budget |
+| `bake.py`     | Material-to-texture baking, with UV-atlas repacking                                          |
+| `scene.py`    | Declarative multi-asset scene assembly                                                       |
+| `batch.py`    | Recipe chains over a folder, with a content-hash cache                                       |
+| `verify.py`   | The whole toolchain over real files                                                          |
 
 `python3 scripts/_contract.py --json` prints the machine-readable contract (skill_id, version,
 provides[] in the AI Video Production OS registry shape, one entry per script above), and

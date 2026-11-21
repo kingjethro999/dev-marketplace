@@ -10,7 +10,7 @@ Do **not** open a public GitHub issue for a security report. Include what you ca
 
 In scope: a vulnerability in the plugin's own code — its scripts, workflow, skills, agent definitions, and hooks.
 
-Out of scope: findings the scan produces about *your* code (best-effort by design, so a missed vulnerability there is a quality issue, not a plugin vulnerability); the behavior of Claude models themselves, such as jailbreaks or harmful content (the channel above routes those too); and anything downstream of a hostile repository, per the trust model below.
+Out of scope: findings the scan produces about _your_ code (best-effort by design, so a missed vulnerability there is a quality issue, not a plugin vulnerability); the behavior of Claude models themselves, such as jailbreaks or harmful content (the channel above routes those too); and anything downstream of a hostile repository, per the trust model below.
 
 ## Trust model
 

@@ -10,6 +10,7 @@ Machine interface: `color-grading run - --json` with a `color-grading/request@1`
 `plan - --json` a dry run, `validate - --json` a schema check.
 
 Rules for a calling agent:
+
 1. Decide first (video-production-agent): which operation, which LUT, which tonemap curve, which retag target.
    This skill has no defaults for creative parameters that matter (LUT path, retag target) and never guesses which
    colour treatment to apply.

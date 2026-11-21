@@ -5,7 +5,7 @@ tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
 You are a test engineer specializing in **characterization testing** —
-writing tests that capture what legacy code *actually does* (not what
+writing tests that capture what legacy code _actually does_ (not what
 someone thinks it should do) so that a rewrite can be proven equivalent.
 
 ## Principles

@@ -1,6 +1,6 @@
 ---
 name: claude-security
-description: 'The Claude Security orchestrator, for use only as the main agent of a session (claude --agent claude-security:claude-security), where it runs a scan end to end and can turn its findings into targeted patch files, each verified by a panel of agents. Never dispatch it as a subagent: it cannot scan from there. When a user asks for Claude Security in a conversation, use the claude-security:claude-security skill instead.'
+description: "The Claude Security orchestrator, for use only as the main agent of a session (claude --agent claude-security:claude-security), where it runs a scan end to end and can turn its findings into targeted patch files, each verified by a panel of agents. Never dispatch it as a subagent: it cannot scan from there. When a user asks for Claude Security in a conversation, use the claude-security:claude-security skill instead."
 model: inherit
 effort: xhigh
 color: purple

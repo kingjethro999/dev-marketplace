@@ -126,19 +126,19 @@ a receipt — all via `ffmpeg`/`ffprobe`:
 
 ## What's implemented today
 
-| Format | Inspect | Structural verify | Render (visual evidence) | Mutating operations |
-|---|---|---|---|---|
-| PDF | ✅ | ✅ | ✅ (`pypdfium2`) | `metadata_set`, `merge`, `fit_page_size`, `extract_pages`, `delete_pages`, `rotate_pages` |
-| PPTX | ✅ | ✅ | ✅ (LibreOffice + `pypdfium2`) | `metadata_set`, `strip_placeholders` |
-| DOCX | ✅ | ✅ | ✅ (LibreOffice + `pypdfium2`) | `metadata_set` |
-| XLSX | ✅ | ✅ | ✅ (LibreOffice + `pypdfium2`) | `metadata_set` |
-| Image (PNG/JPEG/WebP) | ✅ | ✅ | ✅ (Pillow) | `resize`, `convert_format` |
-| HTML | ✅ | ✅ | ✅ (Playwright + Chromium) | — (inspect/render/verify only, by design) |
-| SVG | ✅ | ✅ | ✅ (Playwright + Chromium) | — (inspect/render/verify only, by design) |
-| CSV | ✅ | ✅ | ✅ (Playwright + Chromium) | — (inspect/render/verify only, by design) |
-| Markdown | ✅ | ✅ | ✅ (`markdown-it-py` + Playwright + Chromium) | — (inspect/render/verify only, by design) |
-| EPUB | ✅ | ✅ | ✅ (Playwright + Chromium) | `metadata_set` |
-| Media (MP4/MOV/WebM/WAV, video or audio) | ✅ | ✅ | ✅ (`ffmpeg`/`ffprobe`, one representative frame) | — (inspect/render/verify only, by design — see below) |
+| Format                                   | Inspect | Structural verify | Render (visual evidence)                          | Mutating operations                                                                       |
+| ---------------------------------------- | ------- | ----------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| PDF                                      | ✅      | ✅                | ✅ (`pypdfium2`)                                  | `metadata_set`, `merge`, `fit_page_size`, `extract_pages`, `delete_pages`, `rotate_pages` |
+| PPTX                                     | ✅      | ✅                | ✅ (LibreOffice + `pypdfium2`)                    | `metadata_set`, `strip_placeholders`                                                      |
+| DOCX                                     | ✅      | ✅                | ✅ (LibreOffice + `pypdfium2`)                    | `metadata_set`                                                                            |
+| XLSX                                     | ✅      | ✅                | ✅ (LibreOffice + `pypdfium2`)                    | `metadata_set`                                                                            |
+| Image (PNG/JPEG/WebP)                    | ✅      | ✅                | ✅ (Pillow)                                       | `resize`, `convert_format`                                                                |
+| HTML                                     | ✅      | ✅                | ✅ (Playwright + Chromium)                        | — (inspect/render/verify only, by design)                                                 |
+| SVG                                      | ✅      | ✅                | ✅ (Playwright + Chromium)                        | — (inspect/render/verify only, by design)                                                 |
+| CSV                                      | ✅      | ✅                | ✅ (Playwright + Chromium)                        | — (inspect/render/verify only, by design)                                                 |
+| Markdown                                 | ✅      | ✅                | ✅ (`markdown-it-py` + Playwright + Chromium)     | — (inspect/render/verify only, by design)                                                 |
+| EPUB                                     | ✅      | ✅                | ✅ (Playwright + Chromium)                        | `metadata_set`                                                                            |
+| Media (MP4/MOV/WebM/WAV, video or audio) | ✅      | ✅                | ✅ (`ffmpeg`/`ffprobe`, one representative frame) | — (inspect/render/verify only, by design — see below)                                     |
 
 All formats from the original design brief's Tier 1 and Tier 2, plus CSV/
 Markdown/EPUB/Media added beyond it, are now implemented. A genuinely
@@ -218,8 +218,8 @@ rather than claiming it does:
   asserts every `input_schema` property has a matching CLI flag and every
   CLI flag is either a schema property or on an explicit, small CLI-only
   allowlist (`--json`, `--dry-run`, ...). It runs on every CI run. This
-  doesn't make drift *impossible* the way `ffmpeg-skill`'s runtime
-  derivation does — it makes drift *caught*, immediately, by CI, rather
+  doesn't make drift _impossible_ the way `ffmpeg-skill`'s runtime
+  derivation does — it makes drift _caught_, immediately, by CI, rather
   than merely possible to catch by someone noticing.
 
 See `core/contract.py`'s module docstring for the exact mechanism and the

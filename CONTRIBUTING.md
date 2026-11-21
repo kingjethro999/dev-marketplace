@@ -194,9 +194,11 @@ chore(ci-cd): refactor matrix generation logic
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] New skill
 - [ ] Bug fix
 - [ ] Documentation update
@@ -204,11 +206,13 @@ Brief description of changes
 - [ ] Translation
 
 ## Testing
+
 - [ ] Tested locally
 - [ ] All existing tests pass
 - [ ] New tests added (if applicable)
 
 ## Checklist
+
 - [ ] SKILL.md frontmatter is complete
 - [ ] Installation commands work
 - [ ] Documentation is clear
@@ -222,6 +226,7 @@ Brief description of changes
 ### Automated Checks
 
 All PRs must pass:
+
 - Linting (ESLint, Prettier)
 - Type checking (TypeScript)
 - Unit tests
@@ -230,6 +235,7 @@ All PRs must pass:
 ### Manual Review
 
 Maintainers will review:
+
 - Skill quality and completeness
 - Documentation clarity
 - Code style and best practices
@@ -255,6 +261,7 @@ Maintainers will review:
 ### Recognition
 
 Contributors are recognized in:
+
 - README.md contributors section
 - Release notes
 - Annual contributor highlights
@@ -262,6 +269,7 @@ Contributors are recognized in:
 ### Maintainer Guidelines
 
 Maintainers should:
+
 - Respond to PRs within 48 hours
 - Provide constructive feedback
 - Merge approved PRs promptly

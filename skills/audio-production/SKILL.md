@@ -10,6 +10,7 @@ Machine interface: `audio-production run - --json` with a `audio-production/requ
 `plan - --json` a dry run, `validate - --json` a schema check.
 
 Rules for a calling agent:
+
 1. Measure first with media-analysis-skill (or ffmpeg-skill probe / loudness --measure-only); decide; then build a request.
 2. Give explicit, typed parameters: `NORMALIZE` needs `target_lufs` and `true_peak_db`; each `LOUDNESS_SET` version names a profile or states both, and the set needs `tolerance_lufs`; `SILENCE_REMOVE` needs the
    ranges you decided to remove; `FILLER_REMOVE` needs word timestamps and a `lexicon`. This skill has no defaults for production values and never guesses.

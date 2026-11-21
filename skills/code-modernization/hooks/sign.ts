@@ -4,7 +4,7 @@
  * words); each is filled in where it stands, and nothing else is touched.
  */
 
-const COVER_WORDS = { 'phase-1': 'Phase 1 only', full: 'Full plan' } as const
+const COVER_WORDS = { "phase-1": "Phase 1 only", full: "Full plan" } as const;
 
 /**
  * The brief with its approval block signed; null when it has no `Approved by:` line.
@@ -18,60 +18,76 @@ export function signBrief(
   text: string,
   name: string,
   date: string,
-  covers: 'phase-1' | 'full',
+  covers: "phase-1" | "full",
 ): string | null {
-  const lines = text.split('\n')
-  const at = lines.findIndex(line => /^\s*Approved by\s*:/i.test(line))
+  const lines = text.split("\n");
+  const at = lines.findIndex((line) => /^\s*Approved by\s*:/i.test(line));
 
   if (at < 0) {
-    return null
+    return null;
   }
 
-  const who = name.replace(/\s+/g, ' ').trim()
-  const line = lines[at] ?? ''
-  const indent = /^\s*/.exec(line)?.[0] ?? ''
-  const hasInlineDate = /\bDate\s*:/i.test(line)
+  const who = name.replace(/\s+/g, " ").trim();
+  const line = lines[at] ?? "";
+  const indent = /^\s*/.exec(line)?.[0] ?? "";
+  const hasInlineDate = /\bDate\s*:/i.test(line);
 
-  lines[at] = hasInlineDate ? `${indent}Approved by: ${who}  Date: ${date}` : `${indent}Approved by: ${who}`
+  lines[at] = hasInlineDate
+    ? `${indent}Approved by: ${who}  Date: ${date}`
+    : `${indent}Approved by: ${who}`;
 
   // The block ends at a blank-line-separated heading or code fence; look a short way down.
-  const end = Math.min(lines.length, at + 12)
+  const end = Math.min(lines.length, at + 12);
 
   if (!hasInlineDate) {
-    const dateAt = lines.findIndex((candidate, index) => index > at && index < end && /^\s*Date\s*:/i.test(candidate))
+    const dateAt = lines.findIndex(
+      (candidate, index) =>
+        index > at && index < end && /^\s*Date\s*:/i.test(candidate),
+    );
 
     if (dateAt >= 0) {
-      const head = /^(\s*Date\s*:\s*)/i.exec(lines[dateAt] ?? '')?.[1] ?? 'Date: '
+      const head =
+        /^(\s*Date\s*:\s*)/i.exec(lines[dateAt] ?? "")?.[1] ?? "Date: ";
 
-      lines[dateAt] = `${head}${date}`
+      lines[dateAt] = `${head}${date}`;
     } else {
-      lines.splice(at + 1, 0, `${indent}Date:        ${date}`)
+      lines.splice(at + 1, 0, `${indent}Date:        ${date}`);
     }
   }
 
   const coversAt = lines.findIndex(
-    (candidate, index) => index >= at && index < end + 1 && /Approval covers\s*:/i.test(candidate),
-  )
+    (candidate, index) =>
+      index >= at && index < end + 1 && /Approval covers\s*:/i.test(candidate),
+  );
 
   if (coversAt >= 0) {
-    const current = lines[coversAt] ?? ''
+    const current = lines[coversAt] ?? "";
 
     if (/\[[ xX]?\]/.test(current)) {
-      lines[coversAt] = current.replace(/\[[ xX]?\](\s*)([^[\]|]+)/g, (_match, gap: string, label: string) => {
-        const isFull = /full/i.test(label)
-        const isPhase = /phase\s*1/i.test(label)
-        const isChosen = covers === 'full' ? isFull : isPhase
+      lines[coversAt] = current.replace(
+        /\[[ xX]?\](\s*)([^[\]|]+)/g,
+        (_match, gap: string, label: string) => {
+          const isFull = /full/i.test(label);
+          const isPhase = /phase\s*1/i.test(label);
+          const isChosen = covers === "full" ? isFull : isPhase;
 
-        return `[${isChosen ? 'X' : ' '}]${gap}${label}`
-      })
+          return `[${isChosen ? "X" : " "}]${gap}${label}`;
+        },
+      );
     } else {
-      const head = /^(.*Approval covers\s*:\s*)/i.exec(current)?.[1] ?? 'Approval covers: '
+      const head =
+        /^(.*Approval covers\s*:\s*)/i.exec(current)?.[1] ??
+        "Approval covers: ";
 
-      lines[coversAt] = `${head}${COVER_WORDS[covers]}`
+      lines[coversAt] = `${head}${COVER_WORDS[covers]}`;
     }
   } else {
-    lines.splice(at + (hasInlineDate ? 1 : 2), 0, `${indent}Approval covers: ${COVER_WORDS[covers]}`)
+    lines.splice(
+      at + (hasInlineDate ? 1 : 2),
+      0,
+      `${indent}Approval covers: ${COVER_WORDS[covers]}`,
+    );
   }
 
-  return lines.join('\n')
+  return lines.join("\n");
 }

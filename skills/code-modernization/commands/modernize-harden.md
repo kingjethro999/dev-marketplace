@@ -88,7 +88,7 @@ because a diff that removes a secret contains the raw value on its `-` and conte
 
 - `analysis/$system/security_remediation.patch` (shareable): every non-credential hunk, plus for each
   credential finding a comment-only placeholder (`# SEC-NNN: credential remediation — hunk in
-  security_remediation.local.patch (gitignored; not for sharing)`).
+security_remediation.local.patch (gitignored; not for sharing)`).
 - `analysis/$system/security_remediation.local.patch` (gitignored): the real, applicable credential hunks only.
 
 Add a **Remediation Log** to `SECURITY_FINDINGS.md`: each finding ID, a one-line summary of the fix, and which

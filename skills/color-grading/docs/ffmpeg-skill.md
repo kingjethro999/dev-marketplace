@@ -8,12 +8,12 @@ ADR-19, ADR-21). CI runs against ffmpeg-skill main, 3.0.0, 2.24.1 (the Python 3.
 
 ## Tools and flags used
 
-| ffmpeg-skill tool | used for | flags emitted |
-|---|---|---|
-| `ffmpeg-skill/probe` | source facts, every artifact's validation | positional `inputs` (one path) |
-| `ffmpeg-skill/look` *(optional)* | `MATCH_CAMERA`'s frames (ADR-23) | `input`, `--at`, `--width`, `--no-timecode`, `-o`, `--json` |
-| `ffmpeg-skill/check` *(optional)* | `LEGALIZE`'s out-of-range shares on its input and output (ADR-29) | `input`, `--platform custom`, `--no-loudness`, `--levels`, `--levels-window`, `--levels-tolerance 100`, `--json` |
-| `ffmpeg-skill/color` | `HDR_TO_SDR` (`--to-sdr`), `LUT_APPLY` (`--lut`), `RETAG` (`--retag`), `STRIP_DOVI` (`--strip-dovi`), `PRIMARY_CORRECTION` (`--correct`), `MATCH_CAMERA` (`--lut` with the LUT this skill fitted), `LEGALIZE` (`--lut` with the soft-clip LUT), `OCIO_TRANSFORM` (`--lut` with the LUT this skill baked, then `--retag` when the destination's tags are not BT.709, ADR-22) | `--to-sdr`, `--lut`, `--retag`, `--strip-dovi`, `--correct` (mutually exclusive, exactly one required — matches this skill's one-operation-per-node model exactly), `--tonemap`, `--peak`, `--desat`, `--force`, `--lut-strength`, `--exposure`, `--contrast`, `--saturation`, `--temperature`, `--tint`, `--gamma`, `--lift`, `--gain`, `--levels-in-black`, `--levels-in-white`, `--levels-out-black`, `--levels-out-white`, `--curves`, `--audio-stream`, `--quality` or `--crf` (whichever the checkout has), `--preset`, `-o`, `--json` |
+| ffmpeg-skill tool                 | used for                                                                                                                                                                                                                                                                                                                                                                    | flags emitted                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ffmpeg-skill/probe`              | source facts, every artifact's validation                                                                                                                                                                                                                                                                                                                                   | positional `inputs` (one path)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `ffmpeg-skill/look` _(optional)_  | `MATCH_CAMERA`'s frames (ADR-23)                                                                                                                                                                                                                                                                                                                                            | `input`, `--at`, `--width`, `--no-timecode`, `-o`, `--json`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `ffmpeg-skill/check` _(optional)_ | `LEGALIZE`'s out-of-range shares on its input and output (ADR-29)                                                                                                                                                                                                                                                                                                           | `input`, `--platform custom`, `--no-loudness`, `--levels`, `--levels-window`, `--levels-tolerance 100`, `--json`                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `ffmpeg-skill/color`              | `HDR_TO_SDR` (`--to-sdr`), `LUT_APPLY` (`--lut`), `RETAG` (`--retag`), `STRIP_DOVI` (`--strip-dovi`), `PRIMARY_CORRECTION` (`--correct`), `MATCH_CAMERA` (`--lut` with the LUT this skill fitted), `LEGALIZE` (`--lut` with the soft-clip LUT), `OCIO_TRANSFORM` (`--lut` with the LUT this skill baked, then `--retag` when the destination's tags are not BT.709, ADR-22) | `--to-sdr`, `--lut`, `--retag`, `--strip-dovi`, `--correct` (mutually exclusive, exactly one required — matches this skill's one-operation-per-node model exactly), `--tonemap`, `--peak`, `--desat`, `--force`, `--lut-strength`, `--exposure`, `--contrast`, `--saturation`, `--temperature`, `--tint`, `--gamma`, `--lift`, `--gain`, `--levels-in-black`, `--levels-in-white`, `--levels-out-black`, `--levels-out-white`, `--curves`, `--audio-stream`, `--quality` or `--crf` (whichever the checkout has), `--preset`, `-o`, `--json` |
 
 Optional `color` flags, used only where detected (capabilities `ffmpeg-skill/color:legalize`,
 `ffmpeg-skill/color:keep-alpha` and `ffmpeg-skill/color:drop-alpha`; doctor's `optional_capabilities`): `--legalize`
@@ -40,13 +40,13 @@ with `TOOL_ERROR` (`ffmpeg_skill_incompatible`). The version number is reported,
 --static`, `scripts/_contract.py --json`, `scripts/contract.py --json`, and finally each tool's own `--help`
 (`adapter.flags_from_help`). What it found is in `doctor --json`'s `checks.ffmpeg_skill.detected`:
 
-| difference between releases | detected by | what this skill does |
-|---|---|---|
-| `--crf` became `--quality` (added 1.10, `--crf` removed from `color.py` in 2.0; same CRF scale and default) | which of `quality` / `crf` the `color` input_schema has | emits `--quality` when present, else `--crf`, with the request's `crf` value (`encoder_quality_flag`) |
-| `scripts/_common.py` became a `scripts/_common/` package (2.0) | the files on disk | nothing: this skill only runs `probe.py`/`color.py`; reported as `common_layout` |
-| an existing output is refused unless `--overwrite` (1.10 opt-in, 2.0 default) | `overwrite` in the `color` input_schema | nothing: every intermediate path is deleted before its `color.py` call, so the tool never sees an existing output and no overwrite consent is given; reported as `overwrite_flag` |
-| probe's `hdr` narrowed to PQ/HLG/Dolby Vision; `bt2020_or_hdr` carries the 1.x meaning (2.0) | which key probe's `video` object has | `adapter.probe_hdr` reads `bt2020_or_hdr` when present, else `hdr`: BT.2020 primaries or a PQ/HLG transfer in every version |
-| no `_contract.py doctor` (a checkout without it) | the file on disk | ffmpeg/ffprobe/filter capabilities are `unknown`, not `unsupported`; the run and output validation decide |
+| difference between releases                                                                                 | detected by                                             | what this skill does                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--crf` became `--quality` (added 1.10, `--crf` removed from `color.py` in 2.0; same CRF scale and default) | which of `quality` / `crf` the `color` input_schema has | emits `--quality` when present, else `--crf`, with the request's `crf` value (`encoder_quality_flag`)                                                                             |
+| `scripts/_common.py` became a `scripts/_common/` package (2.0)                                              | the files on disk                                       | nothing: this skill only runs `probe.py`/`color.py`; reported as `common_layout`                                                                                                  |
+| an existing output is refused unless `--overwrite` (1.10 opt-in, 2.0 default)                               | `overwrite` in the `color` input_schema                 | nothing: every intermediate path is deleted before its `color.py` call, so the tool never sees an existing output and no overwrite consent is given; reported as `overwrite_flag` |
+| probe's `hdr` narrowed to PQ/HLG/Dolby Vision; `bt2020_or_hdr` carries the 1.x meaning (2.0)                | which key probe's `video` object has                    | `adapter.probe_hdr` reads `bt2020_or_hdr` when present, else `hdr`: BT.2020 primaries or a PQ/HLG transfer in every version                                                       |
+| no `_contract.py doctor` (a checkout without it)                                                            | the file on disk                                        | ffmpeg/ffprobe/filter capabilities are `unknown`, not `unsupported`; the run and output validation decide                                                                         |
 
 The guarantees the former window encoded are implied by the flags: `--gamma`/`--lift`/`--gain`/`--levels-*`/
 `--curves` first exist in 0.12.3, which is after both `--audio-stream` (0.12.0) and honest `dropped_non_av_streams`
@@ -75,7 +75,7 @@ promise covers argument names and JSON keys, and the one rename it made (`--crf`
   call.
 - `--to-sdr` refuses a source that is not tagged HDR (`color_transfer` / `color_primaries`) unless `--force` is
   given; it builds a `zscale → format=gbrpf32le → zscale → tonemap → zscale → format=yuv420p` chain from the
-  *measured* input tags (falls back to `smpte2084`/`bt2020`/`bt2020nc`/`tv` when a tag is missing) and always
+  _measured_ input tags (falls back to `smpte2084`/`bt2020`/`bt2020nc`/`tv` when a tag is missing) and always
   re-encodes with libx264 (`x264_args`), carrying audio through AAC when present. **Measured**: `--force` on a
   source that genuinely never was PQ/HLG-encoded (no HDR tags, ordinary SDR content) can make the zscale/tonemap
   filter chain itself fail ("Nothing was written into output file..."), since the chain assumes a PQ-range input.
@@ -87,7 +87,7 @@ promise covers argument names and JSON keys, and the one rename it made (`--crf`
   with explicit `-colorspace/-color_primaries/-color_trc` (baked into the SPS) leaves `ffprobe`'s reported tags
   unchanged after `--retag`, even though `color.py` reports `wrote ... (tags -> ...)` and exits 0 — the container-
   level override does not rewrite already-encoded VUI bits, and `color.py`'s fallback to a re-encode only triggers
-  on a non-zero ffmpeg exit code, which this case does not produce. Retagging a source with *no* explicit tags (the
+  on a non-zero ffmpeg exit code, which this case does not produce. Retagging a source with _no_ explicit tags (the
   common case `--retag` is documented for: "the colours are tagged wrong", i.e. missing or incorrect metadata on
   otherwise untagged footage) works as documented. This skill's own output validation (`executor._validate_artifact`,
   the `RETAG` branch) re-probes the output and compares the exact tag triple against `model.RETAG_TAGS[target]`, so
@@ -95,7 +95,7 @@ promise covers argument names and JSON keys, and the one rename it made (`--crf`
   false success — the gap is ffmpeg-skill's, the honesty about it is this skill's.
 - `--lut` applies `lut3d=file=<path>:interp=tetrahedral`; **`--lut-strength` blends the graded and original streams
   only for a value strictly between 0 and 1** (`0 < args.lut_strength < 1` in the source) — a strength of exactly
-  `0.0` is *not* "no LUT": ffmpeg-skill applies the LUT at full strength for both `0.0` and `1.0`. This skill
+  `0.0` is _not_ "no LUT": ffmpeg-skill applies the LUT at full strength for both `0.0` and `1.0`. This skill
   accepts the documented `[0.0, 1.0]` range unchanged (it is ffmpeg-skill's contract, not a bug this skill works
   around) and states the caveat in the parameter's own description (`model.OPERATION_TYPES["LUT_APPLY"]`).
   Always re-encodes with libx264; an HDR source keeps whatever tags the input had (the LUT path does not retag).
@@ -106,13 +106,13 @@ promise covers argument names and JSON keys, and the one rename it made (`--crf`
   defaults (18 / medium) apply on the rare fallback. `audio_stream` is different: `color.py` forwards it
   (`-map 0:a:{audio_stream}?`) into that same re-encode fallback, so `RETAG` does carry `audio_stream` even though
   it carries no `crf`/`preset` — on the common stream-copy path it has no effect (every audio track is kept, `-map
-  0`), same as `crf`/`preset`, but it is not simply irrelevant to `RETAG` the way they are. The four targets and
+0`), same as `crf`/`preset`, but it is not simply irrelevant to `RETAG` the way they are. The four targets and
   their exact tag triples (`color_space, color_primaries, color_transfer`) are ffmpeg-skill's own mapping, copied
   verbatim into `model.RETAG_TAGS` and used again to verify the output.
 - `--strip-dovi` only applies to HEVC video (`die` otherwise) and is always a stream copy
   (`-bsf:v filter_units=remove_types=62 -tag:v hvc1`), removing the Dolby Vision RPU NAL unit; it does not require
   the input to already carry detected Dolby Vision side data (it warns and proceeds), but this skill still verifies
-  the *output* no longer reports `dolby_vision` after the call.
+  the _output_ no longer reports `dolby_vision` after the call.
 - `--correct` builds a fixed filter chain from four always-present stages plus two stages appended only when asked
   for: `exposure=exposure=<value>` (the dedicated `exposure` filter, distinct from `eq`'s brightness — confirmed
   via `ffmpeg -h filter=exposure` vs. `-h filter=eq`), `colortemperature=temperature=<value>` (6500 = neutral),
@@ -128,11 +128,11 @@ promise covers argument names and JSON keys, and the one rename it made (`--crf`
   already gets the identity result without an extra filter term. The whole chain re-encodes with libx264
   (`--crf`/`--preset`). Every one of the thirteen typed flags is range-checked by `color.py` itself before ffmpeg
   runs (`die()` on an out-of-range value, or on `levels_in_black >= levels_in_white` / `levels_out_black >=
-  levels_out_white`, matching the same ranges and ordering this skill's `PRIMARY_CORRECTION` parameters declare and
+levels_out_white`, matching the same ranges and ordering this skill's `PRIMARY_CORRECTION` parameters declare and
   validate) — this skill's own range and ordering checks in `model.py` duplicate ffmpeg-skill's guarantee at the
   request boundary (fail fast, before a subprocess starts) rather than relying on it exclusively.
   `--correct` also reports a `measurements` field: `{"input": analyze_levels(source), "output":
-  analyze_levels(output)}`, reusing ffmpeg-skill's existing signalstats-based `analyze_levels` (the same primitive
+analyze_levels(output)}`, reusing ffmpeg-skill's existing signalstats-based `analyze_levels` (the same primitive
   `probe.py --analyze` uses for Log-footage detection) — real, technical numbers (`y_min`/`y_max`/`y_avg`/
   `saturation_avg`), never a subjective "looks better" judgement. This skill carries that field through unchanged
   into `NodeState.measurements`, the manifest and provenance.
@@ -162,11 +162,11 @@ promise covers argument names and JSON keys, and the one rename it made (`--crf`
   re-probes the output's `subtitle_streams`/`data_streams` counts against the source's whenever the source has any,
   and raises `VALIDATION_ERROR` (`reason: stream_loss_unreported`) if a count fell without ffmpeg-skill having
   reported `dropped_non_av_streams: true` for that call — the honest-drop case is surfaced, never hidden, but is not
-  itself treated as this skill's own failure; only an *unreported* loss is.
+  itself treated as this skill's own failure; only an _unreported_ loss is.
 - **`--lut` and a Windows drive-letter path.** `color.py` builds `lut3d=file=<escape_filter_path(args.lut)>:interp=
-  tetrahedral` for the `-vf` filter graph. `escape_filter_path` backslash-escapes a colon (`C:\...` → `C\:/...`) so
+tetrahedral` for the `-vf` filter graph. `escape_filter_path` backslash-escapes a colon (`C:\...` → `C\:/...`) so
   the graph-level parser does not treat it as a filter separator. **Measured** on a Windows CI runner (gyan.dev
-  ffmpeg 9.0.1 essentials, Windows Server 2025): that escaping is rejected by this build's filter-*option* value
+  ffmpeg 9.0.1 essentials, Windows Server 2025): that escaping is rejected by this build's filter-_option_ value
   parser (`No option name near '...invert.cube:interp=tetrahedral'`, `Error parsing filterchain ...`), so an
   absolute Windows LUT path made `--lut` fail outright — not a corrupted result, a hard failure ffmpeg-skill itself
   reports (`kind: ffmpeg`), which this skill's adapter turns into `TOOL_ERROR`. Since only the drive letter's colon
@@ -182,14 +182,14 @@ promise covers argument names and JSON keys, and the one rename it made (`--crf`
 
 ## Compatibility gaps (required capability → not implemented here)
 
-| wanted operation | missing in ffmpeg-skill's public contract | consequence |
-|---|---|---|
-| Exposure / contrast / saturation / white balance (temperature + tint) | — implemented since ffmpeg-skill 0.9.2's `--correct` | `PRIMARY_CORRECTION` (this doc, above); no longer in `UNSUPPORTED_OPERATIONS` |
-| Gamma / three-way lift / gain / levels / curves | — implemented since ffmpeg-skill 0.12.3's `--correct` flags | `PRIMARY_CORRECTION`'s `gamma`/`lift`/`gain`/`levels_*`/`curves` parameters (this doc, above; docs/decisions.md ADR-18); no longer in `UNSUPPORTED_OPERATIONS` |
-| White balance as its own single operation type | no single "white balance" flag; only the two separate `temperature`/`tint` parameters that together achieve it | not a gap: `WHITE_BALANCE` is an alias resolved to `PRIMARY_CORRECTION` (`--correct --temperature --tint`) at validation (docs/decisions.md ADR-20); no longer in `UNSUPPORTED_OPERATIONS` |
-| Container / format conversion alongside grading | `color.py` writes to whatever extension `-o` names, no explicit "convert to X"; that is `export.py`'s job | outputs must keep the source's container (ADR-8); use ffmpeg-skill/export separately |
-| Multiple LUTs / multiple colour ops in one ffmpeg process | `color.py`'s mode flags are mutually exclusive | each operation is its own `ffmpeg-skill/color` call and its own intermediate; a chain of N operations costs N re-encodes (documented in README's Current limitations) |
-| Filter/encoder capability detection on FFmpeg ≥ 8.0 | ffmpeg-skill 0.9's `_ff_list` matches the pre-8.0 three-flag format; FFmpeg 8 prints two flags, so every filter is reported "missing" | when the doctor reports ffmpeg but zero filters, `filter:*` capabilities are `unknown`, not `unsupported`; execution proceeds and output validation decides (docs/decisions.md ADR-10) |
+| wanted operation                                                      | missing in ffmpeg-skill's public contract                                                                                             | consequence                                                                                                                                                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Exposure / contrast / saturation / white balance (temperature + tint) | — implemented since ffmpeg-skill 0.9.2's `--correct`                                                                                  | `PRIMARY_CORRECTION` (this doc, above); no longer in `UNSUPPORTED_OPERATIONS`                                                                                                              |
+| Gamma / three-way lift / gain / levels / curves                       | — implemented since ffmpeg-skill 0.12.3's `--correct` flags                                                                           | `PRIMARY_CORRECTION`'s `gamma`/`lift`/`gain`/`levels_*`/`curves` parameters (this doc, above; docs/decisions.md ADR-18); no longer in `UNSUPPORTED_OPERATIONS`                             |
+| White balance as its own single operation type                        | no single "white balance" flag; only the two separate `temperature`/`tint` parameters that together achieve it                        | not a gap: `WHITE_BALANCE` is an alias resolved to `PRIMARY_CORRECTION` (`--correct --temperature --tint`) at validation (docs/decisions.md ADR-20); no longer in `UNSUPPORTED_OPERATIONS` |
+| Container / format conversion alongside grading                       | `color.py` writes to whatever extension `-o` names, no explicit "convert to X"; that is `export.py`'s job                             | outputs must keep the source's container (ADR-8); use ffmpeg-skill/export separately                                                                                                       |
+| Multiple LUTs / multiple colour ops in one ffmpeg process             | `color.py`'s mode flags are mutually exclusive                                                                                        | each operation is its own `ffmpeg-skill/color` call and its own intermediate; a chain of N operations costs N re-encodes (documented in README's Current limitations)                      |
+| Filter/encoder capability detection on FFmpeg ≥ 8.0                   | ffmpeg-skill 0.9's `_ff_list` matches the pre-8.0 three-flag format; FFmpeg 8 prints two flags, so every filter is reported "missing" | when the doctor reports ffmpeg but zero filters, `filter:*` capabilities are `unknown`, not `unsupported`; execution proceeds and output validation decides (docs/decisions.md ADR-10)     |
 
 Each gap is a request to ffmpeg-skill (or a future second backend), not something this skill works around with its
 own ffmpeg invocation or a raw filter string.

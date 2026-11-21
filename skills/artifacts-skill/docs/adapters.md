@@ -11,7 +11,7 @@ Two rules matter most when writing a new adapter:
    authorizing it — if `plan()` has side effects, that guarantee is gone.
 2. **`execute()` writes only to the `output_path` it's given.** Never open
    the input path (`ref.path`) in write mode, ever, even if `output_path ==
-   ref.path` — the CLI layer already refuses to default to that, but an
+ref.path` — the CLI layer already refuses to default to that, but an
    adapter must not rely on the caller to enforce it.
 
 ## Registry (`adapters/registry.py`)
@@ -60,7 +60,7 @@ not just noting the string-level similarity) found this pattern actually
 splits into three genuinely different shapes, and only one of them was
 worth sharing code for:
 
-- **HTML, SVG, and Markdown's *local filesystem* resolution** — resolve an
+- **HTML, SVG, and Markdown's _local filesystem_ resolution** — resolve an
   already-classified local reference string against the referencing
   file's own directory, detect if it escapes that directory, and report
   present/missing — was byte-for-byte identical logic in all three
@@ -68,7 +68,7 @@ worth sharing code for:
   which only HTML did). Extracted into
   `reference_resolution.py::resolve_local_reference()`, used by all three
   adapters' `inspect()`. **What stayed adapter-specific, deliberately:**
-  each adapter's own URL *classification* (what counts as "local" versus
+  each adapter's own URL _classification_ (what counts as "local" versus
   "external" versus something else entirely) — Markdown treats
   `mailto:`/`data:`/a bare `#fragment` as one non-file "other" bucket;
   SVG treats `data:`/a bare `#fragment` as "data" for its own reason (an
@@ -77,7 +77,7 @@ worth sharing code for:
   These are real, format-specific correctness decisions, not accidental
   duplication, so each adapter keeps its own classifier.
 - **PPTX's and DOCX's `broken_media`** — reviewed and left alone. The
-  *discovery* step (`shape.image.blob` vs. `document.part.related_parts`
+  _discovery_ step (`shape.image.blob` vs. `document.part.related_parts`
   plus a content-type filter) is entirely different, library-mediated code
   with nothing in common; the only shared part left over is a four-line
   `Check`-construction tail with adapter-specific wording on either side —
@@ -127,7 +127,7 @@ check reports `UNKNOWN` for them.
   `extract_pages`/`delete_pages` (1-indexed page lists; `extract_pages`
   preserves the caller's order, so it can reorder or repeat pages too —
   both validate every page number against the real page count in `plan()`
-  *and* `execute()`, not just execute(), via the shared
+  _and_ `execute()`, not just execute(), via the shared
   `_resolve_page_indices()` helper), `rotate_pages` (a multiple of 90
   degrees, all pages by default or a specific 1-indexed subset).
 - **Structural checks**: PDF readability, page count (+ optional exact/
@@ -191,7 +191,7 @@ check reports `UNKNOWN` for them.
   marker list), optional slide aspect-ratio requirement
   (`require_slide_aspect_ratio` + `aspect_ratio_tolerance`), text presence,
   arbitrary metadata field matching, and `chart_validity: UNKNOWN` when the
-  deck contains a chart (`SKIPPED` when it doesn't) — chart *presence* is
+  deck contains a chart (`SKIPPED` when it doesn't) — chart _presence_ is
   detected, internal chart data correctness is not.
 - **Render**: converts to PDF via LibreOffice headless through the shared
   `rendering/office_convert.py::convert_to_pdf()` (argv-only subprocess via
@@ -202,7 +202,7 @@ check reports `UNKNOWN` for them.
 - **A real, load-bearing lesson from building this adapter**: `soffice`
   being found on `PATH` does not guarantee it can convert a given document
   — this project's own development sandbox has a LibreOffice install that
-  launches successfully but fails to load *any* input file
+  launches successfully but fails to load _any_ input file
   ("source file could not be loaded", exit 0, no output produced). Rather
   than let that surface as a crash or a silently-empty render,
   `PptxAdapter.render()` treats a missing output PDF as a hard failure and
@@ -251,7 +251,7 @@ check reports `UNKNOWN` for them.
   bare `verify` call still reports `UNKNOWN`, honestly.
 - **`refine_structural_with_render()` (Issue #14)**: `execute`/`receipt`'s
   lifecycle already renders for visual evidence in the common case, and
-  that render's page count *is* a real, measured fact (just not a
+  that render's page count _is_ a real, measured fact (just not a
   format-intrinsic one). This adapter overrides the
   `ArtifactAdapter.refine_structural_with_render()` hook to swap the
   `UNKNOWN` `page_count` check for a `PASS` reporting the actual measured
@@ -287,7 +287,7 @@ check reports `UNKNOWN` for them.
   own `xlsx` extra installs. `inspect()`/`execute()` both call
   `security/xml_safety.py::reject_xml_entities_in_zip()` before
   `openpyxl.load_workbook()` ever runs; see `docs/security.md` for the
-  full audit (including why PPTX/DOCX did *not* need the same guard).
+  full audit (including why PPTX/DOCX did _not_ need the same guard).
 - **The recalculation decision (Issue #5)**: `openpyxl` cannot evaluate
   formulas — it can only read whatever cached result (if any) the last
   application to save the file computed. This adapter deliberately does
@@ -304,7 +304,7 @@ check reports `UNKNOWN` for them.
     wrote, confirmed against this adapter's own `good.xlsx` fixture).
   - `formula_recalculation` — `SKIPPED` if no formulas, otherwise
     `UNKNOWN` unconditionally, because no cached value (even a
-    non-error one) proves the formula is *currently* correct relative to
+    non-error one) proves the formula is _currently_ correct relative to
     its inputs. This is why a workbook with real, non-error cached results
     still rolls up to overall `UNKNOWN`, not `PASS` — see
     `tests/unit/test_xlsx_adapter.py`'s test for this exact case.
@@ -339,8 +339,8 @@ check reports `UNKNOWN` for them.
   `exif_orientation`.
 - **Why `exif_orientation` is a real check, not decoration**: a JPEG can
   carry an EXIF orientation tag telling viewers to rotate/flip the stored
-  pixel grid before display. `Image.size` reports the *stored* grid, not
-  the *displayed* one — so a `200x300` image with orientation 6 actually
+  pixel grid before display. `Image.size` reports the _stored_ grid, not
+  the _displayed_ one — so a `200x300` image with orientation 6 actually
   displays as `300x200`. This adapter reports the tag as `WARN` (not
   `FAIL` — the file isn't broken, just a trap for any downstream code that
   reads `width`/`height` and assumes it's the display size) and `render()`
@@ -367,7 +367,7 @@ check reports `UNKNOWN` for them.
   natural "edit" is changing markup, which is source-code editing, not a
   property-set operation this Skill should own. `operations()` returns
   `{}`, and `plan()`/`execute()` both raise a clear `ARTIFACT_OPERATION_
-  UNKNOWN` for any operation name — `inspect`/`render`/`verify`/`look`
+UNKNOWN` for any operation name — `inspect`/`render`/`verify`/`look`
   still work normally, and so does `receipt` with no `--operation`
   (Issue #18's verify-only lifecycle path) — this is the one adapter type
   that path was specifically built for.
@@ -387,11 +387,11 @@ check reports `UNKNOWN` for them.
   documented exception (Playwright manages its own browser process
   through its own API) — see that doc for the reasoning.
 - **The same LibreOffice lesson applied to Chromium**: a `playwright`
-  package being pip-installed doesn't guarantee a *matching* Chromium
+  package being pip-installed doesn't guarantee a _matching_ Chromium
   build is present — this project hit that directly (a pre-fetched
   Chromium build in its own dev sandbox didn't match the pip-installed
   `playwright` client's expected protocol version, and `playwright
-  install chromium` was needed to fix it). `render()` treats any
+install chromium` was needed to fix it). `render()` treats any
   Playwright launch/navigation failure as `ARTIFACT_RENDER_BACKEND_FAILED`
   with the underlying error attached, never a crash; the render-happy-path
   test self-skips via a real probe, same pattern as the LibreOffice-backed
@@ -458,7 +458,7 @@ check reports `UNKNOWN` for them.
   `_looks_like_csv()` is a genuine heuristic: `csv.Sniffer()` (retried
   against just the header + first row if the whole sample fails to sniff,
   since one ragged row is enough to make `Sniffer` give up entirely) plus
-  a *majority*-consistency check across sampled rows (not "every row" —
+  a _majority_-consistency check across sampled rows (not "every row" —
   a real CSV can still have the odd ragged row, which is exactly what
   `column_count_consistency` below exists to catch; requiring 100%
   consistency at the type-detection layer would make that check
@@ -493,7 +493,7 @@ check reports `UNKNOWN` for them.
 - **Type detection**: also heuristic (`core/artifact.py`'s
   `_looks_like_markdown()`), since plain text has no signature either.
   One strong signal (a fenced code block, or a table separator row —
-  checked *before* CSV specifically so a Markdown table's `| a | b |`
+  checked _before_ CSV specifically so a Markdown table's `| a | b |`
   rows aren't mistaken for pipe-delimited CSV) or two weaker ones
   (heading/link-or-image/list-item/setext-heading/blockquote) are
   required — a single ATX-heading-shaped line alone is indistinguishable
@@ -506,7 +506,7 @@ check reports `UNKNOWN` for them.
   as code — a real correctness signal, not decoration), local link/image
   resolution, external link/image references (`WARN` by default, `FAIL`
   under `forbid_external_resources`), and leftover generation-artifact
-  text — with fenced-code-block *bodies* excluded first, the same "code is
+  text — with fenced-code-block _bodies_ excluded first, the same "code is
   not document text" reasoning as HTML's `<script>`/`<style>` exclusion (a
   "TODO" inside a demonstrated code sample isn't an unreviewed artifact).
 - **Render**: `markdown-it-py` (CommonMark preset) converts to HTML,
@@ -573,7 +573,7 @@ check reports `UNKNOWN` for them.
   path-escape/symlink/zip-bomb-guarded utility FIX_PROMPT P1-1 found
   declared but never actually wired into a production code path; this is
   that wiring) into a private temp directory, and every spine document is
-  rendered from its staged copy with the *entire staged tree* as the
+  rendered from its staged copy with the _entire staged tree_ as the
   Chromium `file://` allowed root, not just each document's own immediate
   directory — a chapter under `OEBPS/text/` pulling an image from a
   sibling `OEBPS/images/` is an entirely ordinary EPUB layout, and the
@@ -596,7 +596,7 @@ check reports `UNKNOWN` for them.
 - **Self-audit finding, fixed before any external review saw it**:
   `metadata_set`'s OPF re-serialization was rewriting every element's
   namespace prefix from the original (virtually every real-world OPF
-  declares its own namespace as the *default*, unprefixed one) to an
+  declares its own namespace as the _default_, unprefixed one) to an
   auto-generated `ns0:` — `ET.tostring()`'s behavior for any namespace
   URI it has no registered prefix mapping for. Namespace-URI-aware XML
   parsers (this adapter's own `ET.fromstring()` included) don't care
@@ -616,7 +616,7 @@ check reports `UNKNOWN` for them.
   LibreOffice.
 - **`ArtifactType.MEDIA` covers both audio and video** rather than
   splitting into separate types: type detection can only recognize the
-  *container* from magic bytes (MP4/MOV/M4A-family via the ISO-BMFF
+  _container_ from magic bytes (MP4/MOV/M4A-family via the ISO-BMFF
   `ftyp` box, WebM/Matroska via the EBML header, WAV via RIFF/WAVE) —
   telling audio-only from video apart needs an actual stream probe,
   which is exactly what `inspect()` does (`details["has_video"]`/
@@ -643,7 +643,7 @@ check reports `UNKNOWN` for them.
   `require_min_resolution` (video only — `FAIL` with no video stream at
   all), optional `require_video_codec`/`require_audio_codec` (a string or
   a list of acceptable codec names), and leftover generation-artifact
-  text scanned across `ffprobe`'s own container metadata tag *values*
+  text scanned across `ffprobe`'s own container metadata tag _values_
   (title/comment/artist/etc. under `format.tags`) — not anything burned
   into the video frames themselves, which no OCR step here reads.
 - **Render: one extracted frame, not a full playback check** — the same
@@ -664,7 +664,7 @@ check reports `UNKNOWN` for them.
 - **Self-audit finding, fixed before any external review saw it**: both
   `office_convert.py::convert_to_pdf()` (pre-existing, affecting PPTX/
   DOCX/XLSX render()) and this adapter's own `ffmpeg_probe.py` passed a
-  possibly-*relative* input path straight into the subprocess call —
+  possibly-_relative_ input path straight into the subprocess call —
   `security/subprocess_exec.py::run()` executes every call inside a
   fresh temporary working directory unrelated to the caller's own cwd,
   so a relative path (exactly what `ArtifactRef.from_path()` produces
@@ -691,7 +691,7 @@ check reports `UNKNOWN` for them.
 - **Independent adversarial review, round 2 (security)**: a second
   fresh-context pass found a real decompression-bomb-shaped resource-
   exhaustion issue, confirmed by direct reproduction: a container can
-  declare an enormous *decoded* frame size while compressing to almost
+  declare an enormous _decoded_ frame size while compressing to almost
   nothing on disk (a solid-color frame is trivially compressible) — a
   real 12000x12000 H.264 MP4 built this way is ~28KB on disk but made
   `ffprobe` alone peak at ~396MB RSS, and the adapter's full `render()`
@@ -718,7 +718,7 @@ check reports `UNKNOWN` for them.
   `has_video` check. The same pass also flagged a real but pre-existing,
   Media-independent issue: the generic "unknown policy key" error's
   remediation text pointed callers at `docs/verification.md` and `contract
-  --json` for the list of valid per-format policy keys, but neither
+--json` for the list of valid per-format policy keys, but neither
   actually contains it (that list lives here, in this file). Fixed by
   pointing the remediation at `docs/adapters.md` instead
   (`core/engine.py`, `policies.py`). Everything else checked — `doctor`

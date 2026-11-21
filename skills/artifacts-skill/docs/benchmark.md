@@ -13,7 +13,7 @@ python3 tests/benchmark/run_benchmark.py   # human-readable scored report
 python -m pytest tests/benchmark/ -q       # the same cases, as CI runs them
 ```
 
-Whatever those commands print *right now* is the real number — this
+Whatever those commands print _right now_ is the real number — this
 document deliberately doesn't restate a specific percentage as a
 permanent claim, since the corpus and adapters both keep changing. As of
 the commit that added `xlsx/entity_bomb.xlsx` (Issue #21's XML
@@ -41,10 +41,10 @@ two-category plan ("known-broken" vs. "known-good") didn't anticipate:
    is never reached. This is still "correctly detected as broken," one
    layer earlier than a structural check.
 2. **Structural defects** — PDF/SVG/PNG's corrupted fixtures (and every
-   format's other deliberately-broken fixtures) *do* survive type
+   format's other deliberately-broken fixtures) _do_ survive type
    detection and reach `verify_structural()`, which reports a
    `<fmt>_validity` (or more specific) `WARN`/`FAIL` check.
-3. **Exceptions** — `svg/entity_bomb.svg`'s defect *is* a security
+3. **Exceptions** — `svg/entity_bomb.svg`'s defect _is_ a security
    control (`ARTIFACT_XML_ENTITY_DECLARATION_REJECTED`): it raises
    `ArtifactSecurityError` straight out of `verify_structural()` instead
    of returning a `Check`, because that adapter's `verify_structural()`
@@ -52,7 +52,7 @@ two-category plan ("known-broken" vs. "known-good") didn't anticipate:
    `docs/security.md`.
 4. **Known-good** — proves verification doesn't cry wolf on valid input.
    Two entries (`docx/good.docx`, `xlsx/good.xlsx`) are known-good files
-   whose *correct* overall status is `UNKNOWN`, not `PASS` — DOCX has no
+   whose _correct_ overall status is `UNKNOWN`, not `PASS` — DOCX has no
    structurally-determinable page count, and XLSX never recalculates
    cached formula values, both by explicit, documented design (see
    `docs/verification.md`). Scoring those as a miss would score an

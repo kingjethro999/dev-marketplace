@@ -25,16 +25,15 @@ Install from the official Anthropic marketplace, then reload plugins in the same
 
 If Claude Code reports that the marketplace is not found, run `/plugin marketplace add anthropics/claude-plugins-official` first, then retry.
 
-
 ## Getting started
 
 Run `/claude-security` for the menu. It offers the three jobs the plugin does:
 
-| Job | What it scans |
-| --- | --- |
-| **Scan codebase** | The whole repository, or a scoped part of it |
-| **Scan changes** | This branch's diff, a pull request's diff (with its branch checked out), or one commit |
-| **Suggest patches** | A report's findings, turned into patch files |
+| Job                 | What it scans                                                                          |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| **Scan codebase**   | The whole repository, or a scoped part of it                                           |
+| **Scan changes**    | This branch's diff, a pull request's diff (with its branch checked out), or one commit |
+| **Suggest patches** | A report's findings, turned into patch files                                           |
 
 You can skip the menu. Type the job after the command (`/claude-security scan my branch at high`) or ask in plain words ("run a Claude Security scan on the whole repo at medium"). A scan asks you once to confirm its time and token cost, unless your request already accepts it.
 

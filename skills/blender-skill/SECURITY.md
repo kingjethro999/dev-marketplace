@@ -7,6 +7,7 @@ flow (Security tab → Advisories → "Report a vulnerability") rather than a pu
 That opens a private advisory only maintainers can see until a fix is ready.
 
 Include, where you can:
+
 - The affected file/tool and version
 - A minimal reproduction (input that triggers it, and what happens)
 - The impact you'd expect (e.g. arbitrary file write, path traversal, unsafe code execution

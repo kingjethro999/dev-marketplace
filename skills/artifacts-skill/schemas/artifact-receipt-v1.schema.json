@@ -39,9 +39,17 @@
           "error": { "type": ["object", "null"] }
         },
         "required": [
-          "operation", "adapter", "args", "started_at", "finished_at",
-          "input_sha256", "output_sha256", "output_path", "succeeded",
-          "warnings", "error"
+          "operation",
+          "adapter",
+          "args",
+          "started_at",
+          "finished_at",
+          "input_sha256",
+          "output_sha256",
+          "output_path",
+          "succeeded",
+          "warnings",
+          "error"
         ],
         "additionalProperties": false
       }
@@ -55,7 +63,14 @@
             "kind": { "type": "string", "enum": ["structural"] },
             "status": {
               "type": "string",
-              "enum": ["pass", "warn", "fail", "unknown", "not_checked", "skipped"]
+              "enum": [
+                "pass",
+                "warn",
+                "fail",
+                "unknown",
+                "not_checked",
+                "skipped"
+              ]
             },
             "checks": {
               "type": "array",
@@ -66,7 +81,14 @@
                   "name": { "type": "string" },
                   "status": {
                     "type": "string",
-                    "enum": ["pass", "warn", "fail", "unknown", "not_checked", "skipped"]
+                    "enum": [
+                      "pass",
+                      "warn",
+                      "fail",
+                      "unknown",
+                      "not_checked",
+                      "skipped"
+                    ]
                   },
                   "message": { "type": "string" },
                   "evidence": { "type": "object" }
@@ -75,10 +97,19 @@
                 "additionalProperties": false
               }
             },
-            "evidence_files": { "type": "array", "items": { "type": "string" } },
+            "evidence_files": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
             "inspected_by": { "type": ["string", "null"] }
           },
-          "required": ["kind", "status", "checks", "evidence_files", "inspected_by"],
+          "required": [
+            "kind",
+            "status",
+            "checks",
+            "evidence_files",
+            "inspected_by"
+          ],
           "additionalProperties": false
         },
         "visual": {
@@ -87,7 +118,14 @@
             "kind": { "type": "string", "enum": ["visual"] },
             "status": {
               "type": "string",
-              "enum": ["pass", "warn", "fail", "unknown", "not_checked", "skipped"]
+              "enum": [
+                "pass",
+                "warn",
+                "fail",
+                "unknown",
+                "not_checked",
+                "skipped"
+              ]
             },
             "checks": {
               "type": "array",
@@ -98,7 +136,14 @@
                   "name": { "type": "string" },
                   "status": {
                     "type": "string",
-                    "enum": ["pass", "warn", "fail", "unknown", "not_checked", "skipped"]
+                    "enum": [
+                      "pass",
+                      "warn",
+                      "fail",
+                      "unknown",
+                      "not_checked",
+                      "skipped"
+                    ]
                   },
                   "message": { "type": "string" },
                   "evidence": { "type": "object" }
@@ -107,13 +152,22 @@
                 "additionalProperties": false
               }
             },
-            "evidence_files": { "type": "array", "items": { "type": "string" } },
+            "evidence_files": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
             "inspected_by": {
               "type": ["string", "null"],
               "description": "null until an Agent/human has actually looked at the rendered evidence and recorded a verdict; this engine never sets it itself (Brain/Hands split, docs/architecture.md)."
             }
           },
-          "required": ["kind", "status", "checks", "evidence_files", "inspected_by"],
+          "required": [
+            "kind",
+            "status",
+            "checks",
+            "evidence_files",
+            "inspected_by"
+          ],
           "additionalProperties": false
         }
       },
@@ -142,7 +196,12 @@
         "python_version": { "type": "string" },
         "architecture": { "type": "string" }
       },
-      "required": ["platform", "platform_release", "python_version", "architecture"],
+      "required": [
+        "platform",
+        "platform_release",
+        "python_version",
+        "architecture"
+      ],
       "additionalProperties": false
     },
     "capabilities": {
@@ -154,7 +213,13 @@
           "id": { "type": "string" },
           "status": {
             "type": "string",
-            "enum": ["available", "missing", "unknown", "not_required", "not_implemented"]
+            "enum": [
+              "available",
+              "missing",
+              "unknown",
+              "not_required",
+              "not_implemented"
+            ]
           },
           "detail": { "type": "string" },
           "detected_via": { "type": ["string", "null"] },
@@ -169,9 +234,19 @@
     "iterations": { "type": "integer", "minimum": 1 }
   },
   "required": [
-    "schema", "status", "input", "operations", "verification", "artifacts",
-    "warnings", "limitations", "environment", "capabilities", "timestamp",
-    "tool_version", "iterations"
+    "schema",
+    "status",
+    "input",
+    "operations",
+    "verification",
+    "artifacts",
+    "warnings",
+    "limitations",
+    "environment",
+    "capabilities",
+    "timestamp",
+    "tool_version",
+    "iterations"
   ],
   "additionalProperties": false
 }

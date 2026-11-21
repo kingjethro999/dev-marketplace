@@ -13,7 +13,10 @@ const pkgRoot = path.resolve(__dirname, "..");
 const args = process.argv.slice(2);
 
 function run(cmd, cmdArgs, env) {
-  const result = spawnSync(cmd, cmdArgs, { stdio: "inherit", env: env || process.env });
+  const result = spawnSync(cmd, cmdArgs, {
+    stdio: "inherit",
+    env: env || process.env,
+  });
   if (result.error) return null;
   return result.status;
 }
@@ -31,7 +34,9 @@ function run(cmd, cmdArgs, env) {
 // lets a recursive invocation of this same script detect that it's already
 // inside this wrapper and skip straight to step 2.
 if (!process.env.__ARTIFACTS_SKILL_JS_REENTRY) {
-  const childEnv = Object.assign({}, process.env, { __ARTIFACTS_SKILL_JS_REENTRY: "1" });
+  const childEnv = Object.assign({}, process.env, {
+    __ARTIFACTS_SKILL_JS_REENTRY: "1",
+  });
   let status = run("artifacts-skill", args, childEnv);
   if (status !== null) process.exit(status);
 }
@@ -41,15 +46,20 @@ if (!process.env.__ARTIFACTS_SKILL_JS_REENTRY) {
 //    without requiring a separate `pip install -e .` first.
 for (const py of ["python3", "python"]) {
   const env = Object.assign({}, process.env, {
-    PYTHONPATH: [path.join(pkgRoot, "src"), process.env.PYTHONPATH].filter(Boolean).join(path.delimiter),
+    PYTHONPATH: [path.join(pkgRoot, "src"), process.env.PYTHONPATH]
+      .filter(Boolean)
+      .join(path.delimiter),
   });
-  const result = spawnSync(py, ["-m", "artifact_skill.cli.main", ...args], { stdio: "inherit", env });
+  const result = spawnSync(py, ["-m", "artifact_skill.cli.main", ...args], {
+    stdio: "inherit",
+    env,
+  });
   if (!result.error) process.exit(result.status ?? 1);
 }
 
 console.error(
   "artifacts-skill: no working Python 3 interpreter found on PATH.\n" +
     "Install Python 3.10+ and its extras, then re-run:\n" +
-    `  pip install -e "${pkgRoot}[all]"`
+    `  pip install -e "${pkgRoot}[all]"`,
 );
 process.exit(1);

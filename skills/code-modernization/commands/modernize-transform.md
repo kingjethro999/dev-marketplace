@@ -57,7 +57,7 @@ from environment variables." Show the user the test file and get a yes before go
 ## Step 2 — Idiomatic transformation
 
 Write the implementation in `modernized/$system/$module/src/main/`. **Write what a senior
-$target_stack engineer would write from the *specification*, not from the legacy structure:** do not
+$target_stack engineer would write from the _specification_, not from the legacy structure:** do not
 mirror COBOL paragraphs as methods or keep names like `WS-TEMP-AMT-X`; use the target's idioms
 (records, streams, injection, proper error types). Include the domain model, service logic, API
 surface and configuration, and link each class to the rule IDs it implements in a short comment.

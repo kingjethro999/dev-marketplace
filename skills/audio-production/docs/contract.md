@@ -13,11 +13,11 @@ request, response, provenance, schema_versions, errors`, plus per operation `typ
 required_capabilities, keeps_timeline, deterministic`. Any difference makes the agent mark `audio-production` MISSING
 until it re-pins. `contract_check.PINNED_BLOCKS` is that list plus `operations` and `provides`.
 
-| change | classification | what it means |
-|---|---|---|
-| a value inside a pinned block, an operation's pinned field, a removed operation, a removed key anywhere, the schema id | **breaking** | agents must re-verify and re-pin; bump `version` |
-| an operation added | **breaking** (for pinning agents) | they cannot use it before re-pinning; bump `version` |
-| a new top-level key outside the pinned blocks, or a change inside such a key | **additive** | allowed within a version (this is how `provides` arrived in 0.1.0) |
+| change                                                                                                                 | classification                    | what it means                                                      |
+| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------ |
+| a value inside a pinned block, an operation's pinned field, a removed operation, a removed key anywhere, the schema id | **breaking**                      | agents must re-verify and re-pin; bump `version`                   |
+| an operation added                                                                                                     | **breaking** (for pinning agents) | they cannot use it before re-pinning; bump `version`               |
+| a new top-level key outside the pinned blocks, or a change inside such a key                                           | **additive**                      | allowed within a version (this is how `provides` arrived in 0.1.0) |
 
 `version` itself is a pinned block: bumping it is a breaking event for the agent's pin. Coordinate a bump with a
 re-pin in video-production-agent (its `contract_0.1.0.json` and `SUPPORTED_SKILL_VERSIONS`).
