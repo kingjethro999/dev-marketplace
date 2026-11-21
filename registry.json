@@ -1481,8 +1481,8 @@
       "supply-chain",
       "interactive-setup"
     ],
-    "files": ["SKILL.md", "config", "scripts", "templates"],
-    "hash": "87f4f1912ee4636ffe6dd1fbdccfa9428811f5115b543a760441df2ef4a35b40"
+    "files": ["SKILL.md", "config", "scripts", "templates", "tests"],
+    "hash": "16d31dcd799c488ab45c271a613740112886c235aac6d5dacafdce77e2309d8d"
   },
   {
     "name": "requesting-code-review",

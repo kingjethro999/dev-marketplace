@@ -14,20 +14,12 @@ updates:
       timezone: "UTC"
     allow:
       - dependency-type: "direct"
-        update-type: "version-update:semver-patch"
-      - dependency-type: "direct"
-        update-type: "version-update:semver-minor"
-      - dependency-type: "indirect"
-        update-type: "version-update:semver-patch"
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
       include: "scope"
     labels:
       - "dependencies"
-      - "automerge"
-    assignees: []
-    reviewers: []
     open-pull-requests-limit: 10
     target-branch: "main"
     versioning-strategy: "increase"
@@ -40,11 +32,6 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "UTC"
-    allow:
-      - dependency-type: "direct"
-        update-type: "version-update:semver-patch"
-      - dependency-type: "direct"
-        update-type: "version-update:semver-minor"
     commit-message:
       prefix: "ci"
     labels:
@@ -62,9 +49,6 @@ updates:
       timezone: "UTC"
     allow:
       - dependency-type: "direct"
-        update-type: "version-update:semver-patch"
-      - dependency-type: "direct"
-        update-type: "version-update:semver-minor"
     commit-message:
       prefix: "deps"
     labels:
@@ -80,9 +64,6 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "UTC"
-    allow:
-      - dependency-type: "direct"
-        update-type: "version-update:semver-patch"
     commit-message:
       prefix: "deps"
     labels:
@@ -100,9 +81,6 @@ updates:
       timezone: "UTC"
     allow:
       - dependency-type: "direct"
-        update-type: "version-update:semver-patch"
-      - dependency-type: "direct"
-        update-type: "version-update:semver-minor"
     commit-message:
       prefix: "deps"
     labels:
@@ -120,9 +98,6 @@ updates:
       timezone: "UTC"
     allow:
       - dependency-type: "direct"
-        update-type: "version-update:semver-patch"
-      - dependency-type: "direct"
-        update-type: "version-update:semver-minor"
     commit-message:
       prefix: "deps"
     labels:

@@ -26,7 +26,10 @@ const COLORS = {
   gray: "\x1b[90m",
 };
 
+let JSON_MODE = false;
+
 function log(msg, color = "reset") {
+  if (JSON_MODE) return;
   console.log(`${COLORS[color]}${msg}${COLORS.reset}`);
 }
 
@@ -35,14 +38,17 @@ function error(msg) {
 }
 
 function success(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.green}✓ ${msg}${COLORS.reset}`);
 }
 
 function warn(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.yellow}⚠ ${msg}${COLORS.reset}`);
 }
 
 function info(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.blue}ℹ ${msg}${COLORS.reset}`);
 }
 
@@ -141,8 +147,8 @@ function askSelect(question, options, defaultValue) {
   });
 }
 
-function loadConfig() {
-  const configPath = path.join(process.cwd(), "repo-sec.json");
+function loadConfig(cwd = process.cwd()) {
+  const configPath = path.join(cwd, "repo-sec.json");
   const defaults = {
     threatModel: {
       projectType: "private",
@@ -613,10 +619,89 @@ async function cmdSetup() {
   }
 }
 
-async function cmdAudit(configOverride = null) {
+function findCodeowners(cwd = process.cwd()) {
+  const candidates = ["CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS"];
+  for (const rel of candidates) {
+    if (fs.existsSync(path.join(cwd, rel))) return rel;
+  }
+  return null;
+}
+
+function parseNpmAudit(auditResult) {
+  if (!auditResult || !auditResult.stdout) return null;
+  try {
+    const data = JSON.parse(auditResult.stdout);
+    const vulns = data.metadata?.vulnerabilities || {};
+    const critical = vulns.critical || 0;
+    const high = vulns.high || 0;
+    const moderate = vulns.moderate || 0;
+    const low = vulns.low || 0;
+    const infoCount = vulns.info || 0;
+    return {
+      critical,
+      high,
+      moderate,
+      low,
+      info: infoCount,
+      total: critical + high + moderate + low + infoCount,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isWildcardBranch(branch) {
+  return /[*?\[]/.test(String(branch || ""));
+}
+
+function buildDependabotConfig(config, cwd = process.cwd()) {
+  const schedule = { interval: config.dependencies?.schedule || "weekly" };
+  const updates = [];
+
+  const addEcosystem = (ecosystem, labels) => {
+    updates.push({
+      "package-ecosystem": ecosystem,
+      directory: "/",
+      schedule,
+      allow: [{ "dependency-type": "direct" }],
+      "commit-message": {
+        prefix: ecosystem === "github-actions" ? "ci" : "deps",
+      },
+      labels,
+      "open-pull-requests-limit": 5,
+    });
+  };
+
+  if (fs.existsSync(path.join(cwd, "package.json"))) {
+    addEcosystem("npm", ["dependencies", "javascript"]);
+  }
+  if (
+    fs.existsSync(path.join(cwd, "requirements.txt")) ||
+    fs.existsSync(path.join(cwd, "pyproject.toml"))
+  ) {
+    addEcosystem("pip", ["dependencies", "python"]);
+  }
+  if (fs.existsSync(path.join(cwd, "go.mod"))) {
+    addEcosystem("gomod", ["dependencies", "go"]);
+  }
+  if (fs.existsSync(path.join(cwd, "Cargo.toml"))) {
+    addEcosystem("cargo", ["dependencies", "rust"]);
+  }
+  if (fs.existsSync(path.join(cwd, ".github", "workflows"))) {
+    addEcosystem("github-actions", ["dependencies", "github-actions"]);
+  }
+  if (updates.length === 0) {
+    addEcosystem("npm", ["dependencies"]);
+  }
+
+  return { version: 2, updates };
+}
+
+async function cmdAudit(configOverride = null, options = {}) {
   section("Repository Security Audit");
 
-  const config = configOverride || loadConfig();
+  const cwd = process.cwd();
+  const config = configOverride || loadConfig(cwd);
   const findings = [];
 
   // Check git config
@@ -639,7 +724,7 @@ async function cmdAudit(configOverride = null) {
     const result = spawnSync("git", ["config", "--get", check.key], {
       encoding: "utf8",
     });
-    const value = result.stdout.trim();
+    const value = (result.stdout || "").trim();
     if (value === check.expected) {
       success(`${check.desc}: ${value}`);
     } else {
@@ -647,81 +732,94 @@ async function cmdAudit(configOverride = null) {
       findings.push({
         control: check.desc,
         status: "fail",
-        current: value,
+        current: value || "not set",
         expected: check.expected,
       });
     }
   }
 
-  // Check branch protection (requires GitHub CLI)
+  // Check branch protection (requires GitHub CLI, skipped in --offline)
   section("Branch Protection");
-  const gh = spawnSync("gh", ["--version"], { encoding: "utf8" });
-  if (gh.status === 0) {
-    try {
-      const repoInfo = spawnSync(
-        "gh",
-        ["repo", "view", "--json", "nameWithOwner"],
-        { encoding: "utf8" },
-      );
-      if (repoInfo.status === 0) {
-        const repo = JSON.parse(repoInfo.stdout).nameWithOwner;
-        for (const branch of config.branchProtection.protectedBranches) {
-          const bp = spawnSync(
-            "gh",
-            ["api", `repos/${repo}/branches/${branch}/protection`],
-            { encoding: "utf8" },
-          );
-          if (bp.status === 0) {
-            const protection = JSON.parse(bp.stdout);
-            success(`Branch ${branch}: protected`);
-            if (protection.required_pull_request_reviews) {
-              success(
-                `  Required reviews: ${protection.required_pull_request_reviews.required_approving_review_count || "not set"}`,
+  if (!options.offline) {
+    const gh = spawnSync("gh", ["--version"], { encoding: "utf8" });
+    if (gh.status === 0) {
+      try {
+        const repoInfo = spawnSync(
+          "gh",
+          ["repo", "view", "--json", "nameWithOwner"],
+          { encoding: "utf8" },
+        );
+        if (repoInfo.status === 0) {
+          const repo = JSON.parse(repoInfo.stdout).nameWithOwner;
+          for (const branch of config.branchProtection.protectedBranches) {
+            if (isWildcardBranch(branch)) {
+              info(
+                `Branch pattern ${branch}: wildcard patterns use GitHub Rulesets`,
               );
+              continue;
             }
-            if (protection.required_status_checks) {
-              success(
-                `  Required checks: ${protection.required_status_checks.contexts?.join(", ") || "none"}`,
-              );
+            const bp = spawnSync(
+              "gh",
+              [
+                "api",
+                `repos/${repo}/branches/${encodeURIComponent(branch)}/protection`,
+              ],
+              { encoding: "utf8" },
+            );
+            if (bp.status === 0) {
+              const protection = JSON.parse(bp.stdout);
+              success(`Branch ${branch}: protected`);
+              if (protection.required_pull_request_reviews) {
+                success(
+                  `  Required reviews: ${protection.required_pull_request_reviews.required_approving_review_count || "not set"}`,
+                );
+              }
+              if (protection.required_status_checks) {
+                success(
+                  `  Required checks: ${protection.required_status_checks.contexts?.join(", ") || "none"}`,
+                );
+              }
+            } else {
+              warn(`Branch ${branch}: NOT protected`);
+              findings.push({
+                control: `Branch protection: ${branch}`,
+                status: "fail",
+                current: "unprotected",
+                expected: "protected",
+              });
             }
-          } else {
-            warn(`Branch ${branch}: NOT protected`);
-            findings.push({
-              control: `Branch protection: ${branch}`,
-              status: "fail",
-              current: "unprotected",
-              expected: "protected",
-            });
           }
         }
+      } catch {
+        warn("Could not check branch protection via GitHub API");
       }
-    } catch (e) {
-      warn("Could not check branch protection via GitHub API");
+    } else {
+      info("GitHub CLI not found, skipping branch protection checks");
     }
   } else {
-    info("GitHub CLI not found, skipping branch protection checks");
+    info("Offline mode: skipping GitHub API branch protection checks");
   }
 
   // Check secret scanning
   section("Secret Scanning");
-  if (config.secretScanning.enabled) {
+  if (config.secretScanning.enabled && !options.offline) {
     if (config.secretScanning.usePeriderm) {
       const periderm = spawnSync("periderm", ["scan", "--json"], {
         encoding: "utf8",
         timeout: 60000,
       });
-      if (periderm.status === 0) {
+      if (periderm.status === 0 || periderm.status === 1) {
         try {
           const data = JSON.parse(periderm.stdout);
-          const findings_count = data.findings?.length || 0;
-          if (findings_count === 0) {
+          const findingsCount = data.findings?.length || 0;
+          if (findingsCount === 0) {
             success("Periderm scan: no findings");
           } else {
-            warn(`Periderm scan: ${findings_count} finding(s)`);
+            warn(`Periderm scan: ${findingsCount} finding(s)`);
             findings.push({
               control: "Periderm secret scan",
               status: "warn",
-              current: `${findings_count} findings`,
+              current: `${findingsCount} findings`,
               expected: "0 findings",
             });
           }
@@ -732,73 +830,74 @@ async function cmdAudit(configOverride = null) {
         warn("Periderm scan failed or not installed");
       }
     }
+  } else if (options.offline) {
+    info("Offline mode: skipping Periderm scan");
   } else {
     info("Secret scanning disabled in config");
   }
 
   // Check dependencies
   section("Dependencies");
-  const pkgPath = path.join(process.cwd(), "package.json");
-  if (fs.existsSync(pkgPath)) {
+  const pkgPath = path.join(cwd, "package.json");
+  if (fs.existsSync(pkgPath) && !options.offline) {
     const audit = spawnSync("npm", ["audit", "--json"], {
       encoding: "utf8",
       timeout: 120000,
     });
-    if (audit.status === 0) {
-      try {
-        const data = JSON.parse(audit.stdout);
-        const vulns = data.metadata?.vulnerabilities || {};
-        const total = Object.values(vulns).reduce((a, b) => a + b, 0);
-        if (total === 0) {
-          success("npm audit: no vulnerabilities");
-        } else {
-          warn(
-            `npm audit: ${total} vulnerabilities (${vulns.critical || 0} critical, ${vulns.high || 0} high, ${vulns.moderate || 0} moderate, ${vulns.low || 0} low)`,
-          );
-          findings.push({
-            control: "npm audit",
-            status: "warn",
-            current: `${total} vulns`,
-            expected: "0 vulns",
-          });
-        }
-      } catch {
-        warn("npm audit output not JSON");
+    const parsedAudit = parseNpmAudit(audit);
+    if (parsedAudit) {
+      if (parsedAudit.total === 0) {
+        success("npm audit: no vulnerabilities");
+      } else {
+        warn(
+          `npm audit: ${parsedAudit.total} vulnerabilities (${parsedAudit.critical} critical, ${parsedAudit.high} high, ${parsedAudit.moderate} moderate, ${parsedAudit.low} low)`,
+        );
+        findings.push({
+          control: "npm audit",
+          status:
+            parsedAudit.critical > 0 || parsedAudit.high > 0 ? "fail" : "warn",
+          current: `${parsedAudit.total} vulns`,
+          expected: "0 vulns",
+        });
       }
     } else {
-      warn("npm audit failed");
+      warn("npm audit failed or returned non-JSON output");
     }
   }
 
   // Check governance files
   section("Governance Files");
+  const codeownersPath = findCodeowners(cwd);
   const govFiles = [
     {
       file: "SECURITY.md",
+      exists: fs.existsSync(path.join(cwd, "SECURITY.md")),
       enabled: config.governance.securityPolicy,
       desc: "Security policy",
     },
     {
-      file: "CODEOWNERS",
+      file: codeownersPath || "CODEOWNERS",
+      exists: Boolean(codeownersPath),
       enabled: config.governance.codeowners,
       desc: "Code owners",
     },
     {
       file: "CONTRIBUTING.md",
+      exists: fs.existsSync(path.join(cwd, "CONTRIBUTING.md")),
       enabled: config.governance.contributingSecurity,
       desc: "Contributing guidelines",
     },
     {
       file: ".github/dependabot.yml",
+      exists: fs.existsSync(path.join(cwd, ".github/dependabot.yml")),
       enabled: config.dependencies.dependabotAutoFix,
       desc: "Dependabot config",
     },
   ];
 
   for (const gf of govFiles) {
-    const fullPath = path.join(process.cwd(), gf.file);
     if (gf.enabled) {
-      if (fs.existsSync(fullPath)) {
+      if (gf.exists) {
         success(`${gf.desc}: ${gf.file} exists`);
       } else {
         warn(`${gf.desc}: ${gf.file} MISSING`);
@@ -815,7 +914,7 @@ async function cmdAudit(configOverride = null) {
   }
 
   // Check .gitignore for secrets
-  const gitignorePath = path.join(process.cwd(), ".gitignore");
+  const gitignorePath = path.join(cwd, ".gitignore");
   if (config.governance.gitignoreSecrets && fs.existsSync(gitignorePath)) {
     const gitignore = fs.readFileSync(gitignorePath, "utf8");
     const secretPatterns = [
@@ -844,10 +943,26 @@ async function cmdAudit(configOverride = null) {
   }
 
   // Summary
-  section("Audit Summary");
   const fails = findings.filter((f) => f.status === "fail").length;
   const warns = findings.filter((f) => f.status === "warn").length;
 
+  if (options.json) {
+    console.log(
+      JSON.stringify(
+        {
+          timestamp: new Date().toISOString(),
+          offline: Boolean(options.offline),
+          summary: { fail: fails, warn: warns, total: findings.length },
+          findings,
+        },
+        null,
+        2,
+      ),
+    );
+    return findings;
+  }
+
+  section("Audit Summary");
   if (fails === 0 && warns === 0) {
     success("All checks passed!");
   } else {
@@ -863,10 +978,50 @@ async function cmdAudit(configOverride = null) {
   return findings;
 }
 
-async function cmdHarden(configOverride = null) {
+async function cmdHarden(configOverride = null, options = {}) {
   section("Applying Security Hardening");
 
-  const config = configOverride || loadConfig();
+  const cwd = process.cwd();
+  const config = configOverride || loadConfig(cwd);
+
+  if (options.dryRun) {
+    const plannedControls = [];
+    if (config.gitConfig.requireSignedCommits)
+      plannedControls.push("git config commit.gpgSign=true");
+    if (config.gitConfig.requireSignedTags)
+      plannedControls.push("git config tag.gpgSign=true");
+    if (config.gitConfig.enforceConventionalCommits)
+      plannedControls.push("create .gitmessage and configure commit.template");
+    if (config.gitConfig.disableForcePush)
+      plannedControls.push("git config receive.denyForcePush=true");
+    if (config.gitConfig.requireLinearHistory)
+      plannedControls.push("git config merge.ff=only");
+    if (config.gitConfig.followTags)
+      plannedControls.push("git config push.followTags=true");
+    if (config.dependencies.dependabotAutoFix)
+      plannedControls.push("create .github/dependabot.yml");
+    if (config.governance.securityPolicy)
+      plannedControls.push("create SECURITY.md");
+    if (config.governance.codeowners) plannedControls.push("create CODEOWNERS");
+    if (config.governance.contributingSecurity)
+      plannedControls.push("add security guidelines to CONTRIBUTING.md");
+    if (config.governance.gitignoreSecrets)
+      plannedControls.push("append secret patterns to .gitignore");
+
+    const plan = {
+      dryRun: true,
+      plannedControls,
+      dependabot: buildDependabotConfig(config, cwd),
+    };
+    if (options.json) {
+      console.log(JSON.stringify(plan, null, 2));
+    } else {
+      info("[dry-run] Planned security controls:");
+      for (const ctrl of plannedControls) console.log(`  • ${ctrl}`);
+    }
+    return;
+  }
+
   let applied = 0;
 
   // Git config
@@ -924,6 +1079,12 @@ async function cmdHarden(configOverride = null) {
       if (repoInfo.status === 0) {
         const repo = JSON.parse(repoInfo.stdout).nameWithOwner;
         for (const branch of config.branchProtection.protectedBranches) {
+          if (isWildcardBranch(branch)) {
+            warn(
+              `Skipping wildcard pattern "${branch}" — use GitHub Rulesets for branch patterns`,
+            );
+            continue;
+          }
           const protection = {
             required_pull_request_reviews: {
               required_approving_review_count:
@@ -951,7 +1112,7 @@ async function cmdHarden(configOverride = null) {
               "api",
               "--method",
               "PUT",
-              `repos/${repo}/branches/${branch}/protection`,
+              `repos/${repo}/branches/${encodeURIComponent(branch)}/protection`,
               "--input",
               "-",
             ],
@@ -992,14 +1153,14 @@ async function cmdHarden(configOverride = null) {
       if (repoInfo.status === 0) {
         const repo = JSON.parse(repoInfo.stdout).nameWithOwner;
 
-        // Enable secret scanning
+        // Enable secret scanning (GitHub Update Repository API uses PATCH)
         if (config.secretScanning.enabled) {
           const result = spawnSync(
             "gh",
             [
               "api",
               "--method",
-              "PUT",
+              "PATCH",
               `repos/${repo}`,
               "-f",
               "security_and_analysis[secret_scanning][status]=enabled",
@@ -1010,14 +1171,14 @@ async function cmdHarden(configOverride = null) {
           else warn("Failed to enable secret scanning");
         }
 
-        // Enable push protection
+        // Enable push protection (GitHub Update Repository API uses PATCH)
         if (config.secretScanning.pushProtection) {
           const result = spawnSync(
             "gh",
             [
               "api",
               "--method",
-              "PUT",
+              "PATCH",
               `repos/${repo}`,
               "-f",
               "security_and_analysis[secret_scanning_push_protection][status]=enabled",
@@ -1036,43 +1197,11 @@ async function cmdHarden(configOverride = null) {
   // Dependabot
   section("Dependabot Configuration");
   if (config.dependencies.dependabotAutoFix) {
-    const dependabotDir = path.join(process.cwd(), ".github");
+    const dependabotDir = path.join(cwd, ".github");
     if (!fs.existsSync(dependabotDir))
       fs.mkdirSync(dependabotDir, { recursive: true });
 
-    const dependabotConfig = {
-      version: 2,
-      updates: [
-        {
-          "package-ecosystem": "npm",
-          directory: "/",
-          schedule: { interval: config.dependencies.schedule },
-          allow: config.dependencies.autoMerge.map((v) => ({
-            "dependency-type": "direct",
-            "update-type": v,
-          })),
-          "commit-message": { prefix: "deps" },
-          labels: ["dependencies", "automerge"],
-        },
-      ],
-    };
-
-    // Add more ecosystems if detected
-    if (
-      fs.existsSync(path.join(process.cwd(), "requirements.txt")) ||
-      fs.existsSync(path.join(process.cwd(), "pyproject.toml"))
-    ) {
-      dependabotConfig.updates.push({
-        "package-ecosystem": "pip",
-        directory: "/",
-        schedule: { interval: config.dependencies.schedule },
-        allow: config.dependencies.autoMerge.map((v) => ({
-          "dependency-type": "direct",
-          "update-type": v,
-        })),
-        labels: ["dependencies", "automerge"],
-      });
-    }
+    const dependabotConfig = buildDependabotConfig(config, cwd);
 
     fs.writeFileSync(
       path.join(dependabotDir, "dependabot.yml"),
@@ -1156,11 +1285,17 @@ function yamlStringify(obj, indent = 0) {
     if (Array.isArray(value)) {
       if (value.length === 0) {
         result += `${spaces}${key}: []\n`;
-      } else if (typeof value[0] === "object") {
+      } else if (typeof value[0] === "object" && value[0] !== null) {
         result += `${spaces}${key}:\n`;
         for (const item of value) {
-          result += `${spaces}  -\n`;
-          result += yamlStringify(item, indent + 2);
+          const itemYaml = yamlStringify(item, indent + 2);
+          const itemLines = itemYaml.split("\n").filter((l) => l.length > 0);
+          if (itemLines.length > 0) {
+            result += `${spaces}  - ${itemLines[0].trimStart()}\n`;
+            for (const restLine of itemLines.slice(1)) {
+              result += `${restLine}\n`;
+            }
+          }
         }
       } else {
         result += `${spaces}${key}: [${value.map((v) => (typeof v === "string" ? `'${v}'` : v)).join(", ")}]\n`;
@@ -1177,10 +1312,10 @@ function yamlStringify(obj, indent = 0) {
   return result;
 }
 
-function cmdStatus() {
+function cmdStatus(options = {}) {
   section("Repository Security Status");
 
-  // Git config
+  const cwd = process.cwd();
   const gitConfigs = [
     "commit.gpgSign",
     "tag.gpgSign",
@@ -1189,32 +1324,43 @@ function cmdStatus() {
     "merge.ff",
     "push.followTags",
   ];
+  const gitState = {};
   for (const gc of gitConfigs) {
     const result = spawnSync("git", ["config", "--get", gc], {
       encoding: "utf8",
     });
-    const value = result.stdout.trim() || "not set";
-    console.log(`  git config ${gc}: ${value}`);
+    const value = (result.stdout || "").trim() || "not set";
+    gitState[gc] = value;
+    if (!options.json) console.log(`  git config ${gc}: ${value}`);
   }
 
-  // Check for governance files
+  const codeownersPath = findCodeowners(cwd);
   const files = [
-    "SECURITY.md",
-    "CODEOWNERS",
-    "CONTRIBUTING.md",
-    ".github/dependabot.yml",
+    {
+      name: "SECURITY.md",
+      exists: fs.existsSync(path.join(cwd, "SECURITY.md")),
+    },
+    { name: codeownersPath || "CODEOWNERS", exists: Boolean(codeownersPath) },
+    {
+      name: "CONTRIBUTING.md",
+      exists: fs.existsSync(path.join(cwd, "CONTRIBUTING.md")),
+    },
+    {
+      name: ".github/dependabot.yml",
+      exists: fs.existsSync(path.join(cwd, ".github/dependabot.yml")),
+    },
   ];
   for (const f of files) {
-    const fullPath = path.join(process.cwd(), f);
-    if (fs.existsSync(fullPath)) {
-      success(`${f}: exists`);
-    } else {
-      warn(`${f}: missing`);
-    }
+    if (f.exists) success(`${f.name}: exists`);
+    else warn(`${f.name}: missing`);
   }
 
-  // Config
-  const configPath = path.join(process.cwd(), "repo-sec.json");
+  if (options.json) {
+    console.log(JSON.stringify({ gitConfig: gitState, files }, null, 2));
+    return;
+  }
+
+  const configPath = path.join(cwd, "repo-sec.json");
   if (fs.existsSync(configPath)) {
     info(`\nConfig: ${configPath}`);
     const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
@@ -1230,9 +1376,27 @@ function cmdPolicy() {
   success(`Created ${outPath}`);
 }
 
-function parseArgs() {
-  const args = process.argv.slice(2);
-  return args[0] || "help";
+function parseArgs(argv = process.argv.slice(2)) {
+  const opts = {
+    command: "help",
+    dryRun: false,
+    json: false,
+    offline: false,
+  };
+  let cmdSeen = false;
+  for (const arg of argv) {
+    if (arg === "--dry-run") opts.dryRun = true;
+    else if (arg === "--json") opts.json = true;
+    else if (arg === "--offline") opts.offline = true;
+    else if (arg === "--help" || arg === "-h") {
+      opts.command = "help";
+      cmdSeen = true;
+    } else if (!arg.startsWith("-") && !cmdSeen) {
+      opts.command = arg;
+      cmdSeen = true;
+    }
+  }
+  return opts;
 }
 
 function showHelp() {
@@ -1240,7 +1404,7 @@ function showHelp() {
 ${COLORS.bold}Repository Security${COLORS.reset}
 
 Usage:
-  node repo-sec.js <command>
+  node repo-sec.js <command> [options]
 
 Commands:
   setup             Interactive setup - grills you for threat model
@@ -1250,42 +1414,59 @@ Commands:
   policy            Generate SECURITY.md template
   help              Show this help
 
+Options:
+  --dry-run         Preview hardening changes without writing files
+  --json            Output machine-readable JSON
+  --offline         Skip remote GitHub API / npm audit / Periderm network checks
+
 Examples:
-  node repo-sec.js setup        # Interactive configuration
-  node repo-sec.js audit        # Check current posture
-  node repo-sec.js harden       # Apply hardening
-  node repo-sec.js status       # Show status
+  node repo-sec.js setup
+  node repo-sec.js audit --json --offline
+  node repo-sec.js harden --dry-run
+  node repo-sec.js status --json
 `);
 }
 
 async function main() {
-  const cmd = parseArgs();
-  switch (cmd) {
+  const options = parseArgs();
+  JSON_MODE = options.json;
+
+  switch (options.command) {
     case "setup":
       await cmdSetup();
       break;
     case "audit":
-      await cmdAudit();
+      await cmdAudit(null, options);
       break;
     case "harden":
-      await cmdHarden();
+      await cmdHarden(null, options);
       break;
     case "status":
-      cmdStatus();
+      cmdStatus(options);
       break;
     case "policy":
       cmdPolicy();
       break;
     case "help":
-    case "--help":
-    case "-h":
       showHelp();
       break;
     default:
-      error(`Unknown: ${cmd}`);
+      error(`Unknown: ${options.command}`);
       showHelp();
       process.exit(1);
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  loadConfig,
+  parseArgs,
+  findCodeowners,
+  parseNpmAudit,
+  isWildcardBranch,
+  buildDependabotConfig,
+  yamlStringify,
+};
