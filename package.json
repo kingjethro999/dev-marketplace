@@ -1,0 +1,39 @@
+{
+  "name": "dev-marketplace",
+  "version": "1.0.0",
+  "description": "Open Developer Marketplace — 120+ curated AI agent skills, connectors, design systems, and workflow tools",
+  "main": "bin/cli.js",
+  "bin": {
+    "dev-marketplace": "./bin/cli.js",
+    "skills": "./bin/cli.js"
+  },
+  "scripts": {
+    "test": "node bin/cli.js list",
+    "build-registry": "node scripts/build-registry.js"
+  },
+  "keywords": [
+    "ai",
+    "agent-skills",
+    "skills",
+    "claude",
+    "cursor",
+    "antigravity",
+    "codex",
+    "mcp",
+    "lsp",
+    "design-system",
+    "code-review",
+    "remotion",
+    "video"
+  ],
+  "author": "kingjethro999",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kingjethro999/dev-marketplace.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kingjethro999/dev-marketplace/issues"
+  },
+  "homepage": "https://github.com/kingjethro999/dev-marketplace#readme"
+}
