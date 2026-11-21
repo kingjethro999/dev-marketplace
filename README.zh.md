@@ -31,7 +31,7 @@ npx skills add kingjethro999/dev-marketplace --skill <skill-name>
 npx dev-marketplace add apple-design
 
 # 安装代码审查和测试驱动开发工具包
-npx dev-marketplace add code-review test-driven-development systematic-debugging
+npx dev-marketplace add requesting-code-review test-driven-development systematic-debugging
 
 # 安装所有 Video & Motion 合成技能
 npx dev-marketplace add --category "Video & Motion"
@@ -63,7 +63,7 @@ npx dev-marketplace add --all --global
 
 ## Marketplace 目录 (133 技能和连接器)
 
-### 代码审查和质量 (16 技能)
+### 代码审查和质量 (14 技能)
 
 | 技能                             | 说明                                                 | 安装                                                     |
 | -------------------------------- | ---------------------------------------------------- | -------------------------------------------------------- |
@@ -78,10 +78,8 @@ npx dev-marketplace add --all --global
 | `test-driven-development`        | 实现任何功能或修复 bug 时使用                        | `npx dev-marketplace add test-driven-development`        |
 | `verification-before-completion` | 声称工作完成前使用                                   | `npx dev-marketplace add verification-before-completion` |
 | `leak-spots`                     | 使用 Periderm CLI 检测 Git 历史中的泄露密钥          | `npx dev-marketplace add leak-spots`                     |
-| `launch-ready`                   | 使用 Periderm CLI 扫描和审查进行发布前验证           | `npx dev-marketplace add launch-ready`                   |
 | `branch-sec`                     | 强制分支保护、签名提交、Periderm 检查                | `npx dev-marketplace add branch-sec`                     |
 | `cyber-sec`                      | 网络安全工具包：威胁建模、OWASP、加密审计            | `npx dev-marketplace add cyber-sec`                      |
-| `commit-hook`                    | 带有 Periderm CLI 集成的 Git hooks                   | `npx dev-marketplace add commit-hook`                    |
 | `repo-sec`                       | 仓库安全加固：签名提交、分支保护、密钥扫描、依赖审计 | `npx dev-marketplace add repo-sec`                       |
 
 ### 连接器和 LSP (15 技能)
@@ -155,7 +153,7 @@ npx dev-marketplace add --all --global
 | `write-swift`                    | 如何编写现代 Swift 的最佳实践          | `npx dev-marketplace add write-swift`                    |
 | `writing-skills`                 | 部署前创建、编辑、验证技能             | `npx dev-marketplace add writing-skills`                 |
 
-### 工程和工作流 (18 技能)
+### 工程和工作流 (15 技能)
 
 | 技能                          | 说明                                                                          | 安装                                                  |
 | ----------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -171,10 +169,7 @@ npx dev-marketplace add --all --global
 | `using-git-worktrees`         | 使用隔离开始特性工作                                                          | `npx dev-marketplace add using-git-worktrees`         |
 | `using-superpowers`           | 建立如何查找和使用技能                                                        | `npx dev-marketplace add using-superpowers`           |
 | `writing-plans`               | 在动手写代码前编写计划                                                        | `npx dev-marketplace add writing-plans`               |
-| `leak-spots`                  | 使用 Periderm CLI 检测 Git 历史中的泄露密钥                                   | `npx dev-marketplace add leak-spots`                  |
 | `launch-ready`                | 使用 Periderm CLI 扫描和审查进行发布前验证                                    | `npx dev-marketplace add launch-ready`                |
-| `branch-sec`                  | 强制分支保护、签名提交、Periderm 检查                                         | `npx dev-marketplace add branch-sec`                  |
-| `cyber-sec`                   | 网络安全工具包：威胁建模、OWASP、加密审计                                     | `npx dev-marketplace add cyber-sec`                   |
 | `commit-hook`                 | 带有 Periderm CLI 集成的 Git hooks                                            | `npx dev-marketplace add commit-hook`                 |
 | `ci-cd`                       | CI/CD 管道分析器/生成器：GitHub Actions, GitLab CI, CircleCI, Azure Pipelines | `npx dev-marketplace add ci-cd`                       |
 
@@ -242,7 +237,7 @@ dev-marketplace/
 ├── skills/               # 标准化技能包
 │   ├── apple-design/
 │   │   └── SKILL.md
-│   ├── code-review/
+│   ├── requesting-code-review/
 │   │   └── SKILL.md
 │   ├── remotion-*/
 │   │   └── SKILL.md

@@ -31,7 +31,7 @@ npx skills add kingjethro999/dev-marketplace --skill <skill-name>
 npx dev-marketplace add apple-design
 
 # 코드 리뷰 및 테스트 주도 개발 툴킷 설치
-npx dev-marketplace add code-review test-driven-development systematic-debugging
+npx dev-marketplace add requesting-code-review test-driven-development systematic-debugging
 
 # 모든 Video & Motion 합성 스킬 설치
 npx dev-marketplace add --category "Video & Motion"
@@ -63,7 +63,7 @@ npx dev-marketplace add --all --global
 
 ## 마켓플레이스 카탈로그 (133 스킬 & 커넥터)
 
-### 코드 리뷰 및 품질 (16 스킬)
+### 코드 리뷰 및 품질 (14 스킬)
 
 | 스킬                             | 설명                                                                 | 설치                                                     |
 | -------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------- |
@@ -78,10 +78,8 @@ npx dev-marketplace add --all --global
 | `test-driven-development`        | 기능 구현이나 버그 수정 시 사용                                      | `npx dev-marketplace add test-driven-development`        |
 | `verification-before-completion` | 작업 완료 주장 전 사용                                               | `npx dev-marketplace add verification-before-completion` |
 | `leak-spots`                     | Periderm CLI로 Git 히스토리의 유출 시크릿 탐지                       | `npx dev-marketplace add leak-spots`                     |
-| `launch-ready`                   | Periderm CLI 스캔 & 리뷰로 출시 전 검증                              | `npx dev-marketplace add launch-ready`                   |
 | `branch-sec`                     | 브랜치 보호, 서명된 커밋, Periderm 체크 강제                         | `npx dev-marketplace add branch-sec`                     |
 | `cyber-sec`                      | 사이버 보안 툴킷: 위협 모델링, OWASP, 암호화 감사                    | `npx dev-marketplace add cyber-sec`                      |
-| `commit-hook`                    | Periderm CLI 통합 Git 훅                                             | `npx dev-marketplace add commit-hook`                    |
 | `repo-sec`                       | 저장소 보안 강화: 서명된 커밋, 브랜치 보호, 시크릿 스캔, 의존성 감사 | `npx dev-marketplace add repo-sec`                       |
 
 ### 커넥터 및 LSP (15 스킬)
@@ -155,7 +153,7 @@ npx dev-marketplace add --all --global
 | `write-swift`                    | 모던 Swift 올바르게 작성하는 방법                           | `npx dev-marketplace add write-swift`                    |
 | `writing-skills`                 | 배포 전 스킬 생성, 편집, 검증                               | `npx dev-marketplace add writing-skills`                 |
 
-### 엔지니어링 및 워크플로 (18 스킬)
+### 엔지니어링 및 워크플로 (15 스킬)
 
 | 스킬                          | 설명                                                                                 | 설치                                                  |
 | ----------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------- |
@@ -171,10 +169,7 @@ npx dev-marketplace add --all --global
 | `using-git-worktrees`         | 격리로 기능 작업 시작                                                                | `npx dev-marketplace add using-git-worktrees`         |
 | `using-superpowers`           | 스킬 찾기 및 사용 방법 확립                                                          | `npx dev-marketplace add using-superpowers`           |
 | `writing-plans`               | 코드 작성 전 계획 수립                                                               | `npx dev-marketplace add writing-plans`               |
-| `leak-spots`                  | Periderm CLI로 Git 히스토리의 유출 시크릿 탐지                                       | `npx dev-marketplace add leak-spots`                  |
 | `launch-ready`                | Periderm CLI 스캔 & 리뷰로 출시 전 검증                                              | `npx dev-marketplace add launch-ready`                |
-| `branch-sec`                  | 브랜치 보호, 서명된 커밋, Periderm 체크 강제                                         | `npx dev-marketplace add branch-sec`                  |
-| `cyber-sec`                   | 사이버 보안 툴킷: 위협 모델링, OWASP, 암호화 감사                                    | `npx dev-marketplace add cyber-sec`                   |
 | `commit-hook`                 | Periderm CLI 통합 Git 훅                                                             | `npx dev-marketplace add commit-hook`                 |
 | `ci-cd`                       | CI/CD 파이프라인 분석기/생성기: GitHub Actions, GitLab CI, CircleCI, Azure Pipelines | `npx dev-marketplace add ci-cd`                       |
 
@@ -242,7 +237,7 @@ dev-marketplace/
 ├── skills/               # 표준화된 스킬 패키지
 │   ├── apple-design/
 │   │   └── SKILL.md
-│   ├── code-review/
+│   ├── requesting-code-review/
 │   │   └── SKILL.md
 │   ├── remotion-*/
 │   │   └── SKILL.md

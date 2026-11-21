@@ -31,7 +31,7 @@ npx skills add kingjethro999/dev-marketplace --skill <nombre-habilidad>
 npx dev-marketplace add apple-design
 
 # Instalar kit de revisión de código y desarrollo dirigido por pruebas
-npx dev-marketplace add code-review test-driven-development systematic-debugging
+npx dev-marketplace add requesting-code-review test-driven-development systematic-debugging
 
 # Instalar todas las habilidades de Video y Movimiento
 npx dev-marketplace add --category "Video & Motion"
@@ -63,7 +63,7 @@ npx dev-marketplace add --all --global
 
 ## Catálogo del Marketplace (133 Habilidades y Conectores)
 
-### Revisión de Código y Calidad (16 habilidades)
+### Revisión de Código y Calidad (14 habilidades)
 
 | Habilidad                        | Descripción                                                                                                                       | Instalación                                              |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
@@ -78,10 +78,8 @@ npx dev-marketplace add --all --global
 | `test-driven-development`        | Usar al implementar cualquier característica o corrección                                                                         | `npx dev-marketplace add test-driven-development`        |
 | `verification-before-completion` | Usar antes de reclamar que el trabajo está completo                                                                               | `npx dev-marketplace add verification-before-completion` |
 | `leak-spots`                     | Detectar secretos filtrados en historial Git usando Periderm CLI                                                                  | `npx dev-marketplace add leak-spots`                     |
-| `launch-ready`                   | Verificación pre-lanzamiento con escaneo y revisión Periderm CLI                                                                  | `npx dev-marketplace add launch-ready`                   |
 | `branch-sec`                     | Forzar protección de ramas, commits firmados, checks Periderm                                                                     | `npx dev-marketplace add branch-sec`                     |
 | `cyber-sec`                      | Kit de ciberseguridad: modelado de amenazas, OWASP, auditoría cripto                                                              | `npx dev-marketplace add cyber-sec`                      |
-| `commit-hook`                    | Git hooks con integración Periderm CLI                                                                                            | `npx dev-marketplace add commit-hook`                    |
 | `repo-sec`                       | Endurecimiento de seguridad de repositorio: commits firmados, protección de ramas, escaneo de secretos, auditoría de dependencias | `npx dev-marketplace add repo-sec`                       |
 
 ### Conectores y LSP (15 habilidades)
@@ -155,7 +153,7 @@ npx dev-marketplace add --all --global
 | `write-swift`                    | Cómo escribir Swift moderno bien                                  | `npx dev-marketplace add write-swift`                    |
 | `writing-skills`                 | Crear, editar, verificar habilidades antes de despliegue          | `npx dev-marketplace add writing-skills`                 |
 
-### Ingeniería y Flujo de Trabajo (18 habilidades)
+### Ingeniería y Flujo de Trabajo (15 habilidades)
 
 | Habilidad                     | Descripción                                                                                   | Instalación                                           |
 | ----------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -171,10 +169,7 @@ npx dev-marketplace add --all --global
 | `using-git-worktrees`         | Iniciar trabajo de característica con aislamiento                                             | `npx dev-marketplace add using-git-worktrees`         |
 | `using-superpowers`           | Establecer cómo encontrar y usar habilidades                                                  | `npx dev-marketplace add using-superpowers`           |
 | `writing-plans`               | Escribir planes antes de tocar código                                                         | `npx dev-marketplace add writing-plans`               |
-| `leak-spots`                  | Detectar secretos filtrados en historial Git usando Periderm CLI                              | `npx dev-marketplace add leak-spots`                  |
 | `launch-ready`                | Verificación pre-lanzamiento con escaneo y revisión Periderm CLI                              | `npx dev-marketplace add launch-ready`                |
-| `branch-sec`                  | Forzar protección de ramas, commits firmados, checks Periderm                                 | `npx dev-marketplace add branch-sec`                  |
-| `cyber-sec`                   | Kit de ciberseguridad: modelado de amenazas, OWASP, auditoría cripto                          | `npx dev-marketplace add cyber-sec`                   |
 | `commit-hook`                 | Git hooks con integración Periderm CLI                                                        | `npx dev-marketplace add commit-hook`                 |
 | `ci-cd`                       | Analizador/generador de pipelines CI/CD: GitHub Actions, GitLab CI, CircleCI, Azure Pipelines | `npx dev-marketplace add ci-cd`                       |
 
@@ -242,7 +237,7 @@ dev-marketplace/
 ├── skills/               # Paquetes de habilidades estandarizados
 │   ├── apple-design/
 │   │   └── SKILL.md
-│   ├── code-review/
+│   ├── requesting-code-review/
 │   │   └── SKILL.md
 │   ├── remotion-*/
 │   │   └── SKILL.md

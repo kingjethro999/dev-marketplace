@@ -31,7 +31,7 @@ npx skills add kingjethro999/dev-marketplace --skill <skill-name>
 npx dev-marketplace add apple-design
 
 # コードレビューとテスト駆動開発ツールキットをインストール
-npx dev-marketplace add code-review test-driven-development systematic-debugging
+npx dev-marketplace add requesting-code-review test-driven-development systematic-debugging
 
 # すべての Video & Motion 合成スキルをインストール
 npx dev-marketplace add --category "Video & Motion"
@@ -63,7 +63,7 @@ npx dev-marketplace add --all --global
 
 ## マーケットプレイスカタログ (133 スキル & コネクタ)
 
-### コードレビューと品質 (16 スキル)
+### コードレビューと品質 (14 スキル)
 
 | スキル                           | 説明                                                                                           | インストール                                             |
 | -------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
@@ -78,10 +78,8 @@ npx dev-marketplace add --all --global
 | `test-driven-development`        | あらゆる機能やバグ修正の実装時に使用                                                           | `npx dev-marketplace add test-driven-development`        |
 | `verification-before-completion` | 作業完了を主張する前に使用                                                                     | `npx dev-marketplace add verification-before-completion` |
 | `leak-spots`                     | Periderm CLI で Git 履歴の漏洩シークレットを検出                                               | `npx dev-marketplace add leak-spots`                     |
-| `launch-ready`                   | Periderm CLI スキャン & レビューによる事前検証                                                 | `npx dev-marketplace add launch-ready`                   |
 | `branch-sec`                     | ブランチ保護、署名付きコミット、Periderm チェックを強制                                        | `npx dev-marketplace add branch-sec`                     |
 | `cyber-sec`                      | サイバーセキュリティツールキット: 脅威モデリング, OWASP, 暗号監査                              | `npx dev-marketplace add cyber-sec`                      |
-| `commit-hook`                    | Periderm CLI 統合付き Git フック                                                               | `npx dev-marketplace add commit-hook`                    |
 | `repo-sec`                       | リポジトリセキュリティ強化: 署名付きコミット, ブランチ保護, シークレットスキャン, 依存関係監査 | `npx dev-marketplace add repo-sec`                       |
 
 ### コネクタと LSP (15 スキル)
@@ -155,7 +153,7 @@ npx dev-marketplace add --all --global
 | `write-swift`                    | モダン Swift を正しく書く方法                                                        | `npx dev-marketplace add write-swift`                    |
 | `writing-skills`                 | デプロイ前にスキルを作成、編集、検証                                                 | `npx dev-marketplace add writing-skills`                 |
 
-### エンジニアリングとワークフロー (18 スキル)
+### エンジニアリングとワークフロー (15 スキル)
 
 | スキル                        | 説明                                                                                                | インストール                                          |
 | ----------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -171,10 +169,7 @@ npx dev-marketplace add --all --global
 | `using-git-worktrees`         | 分離で機能作業を開始                                                                                | `npx dev-marketplace add using-git-worktrees`         |
 | `using-superpowers`           | スキルの見つけ方と使い方を確立                                                                      | `npx dev-marketplace add using-superpowers`           |
 | `writing-plans`               | コードに触れる前に計画を書く                                                                        | `npx dev-marketplace add writing-plans`               |
-| `leak-spots`                  | Periderm CLI で Git 履歴の漏洩シークレットを検出                                                    | `npx dev-marketplace add leak-spots`                  |
 | `launch-ready`                | Periderm CLI スキャン & レビューによる事前検証                                                      | `npx dev-marketplace add launch-ready`                |
-| `branch-sec`                  | ブランチ保護、署名付きコミット、Periderm チェックを強制                                             | `npx dev-marketplace add branch-sec`                  |
-| `cyber-sec`                   | サイバーセキュリティツールキット: 脅威モデリング, OWASP, 暗号監査                                   | `npx dev-marketplace add cyber-sec`                   |
 | `commit-hook`                 | Periderm CLI 統合付き Git フック                                                                    | `npx dev-marketplace add commit-hook`                 |
 | `ci-cd`                       | CI/CD パイプラインアナライザー/ジェネレーター: GitHub Actions, GitLab CI, CircleCI, Azure Pipelines | `npx dev-marketplace add ci-cd`                       |
 
@@ -242,7 +237,7 @@ dev-marketplace/
 ├── skills/               # 標準化されたスキルパッケージ
 │   ├── apple-design/
 │   │   └── SKILL.md
-│   ├── code-review/
+│   ├── requesting-code-review/
 │   │   └── SKILL.md
 │   ├── remotion-*/
 │   │   └── SKILL.md
