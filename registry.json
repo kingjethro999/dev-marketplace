@@ -879,8 +879,8 @@
       "credentials",
       "code-review-quality"
     ],
-    "files": ["SKILL.md", "config", "scripts"],
-    "hash": "a6baad92c10d3953e02b65cf06885b810070b9cb48b1d620743b35ea33490385"
+    "files": ["SKILL.md", "config", "scripts", "tests"],
+    "hash": "bacdb9c4d6a7d4691b10056100863105a232da4706db78a3d6d604d5a7c136cc"
   },
   {
     "name": "learn-taste",
