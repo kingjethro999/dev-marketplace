@@ -7,19 +7,19 @@ description: Find where the slides change in a talk, lecture or conference recor
 
 Run `slide-sync <command> ... --json` (installed by `pip install -e .`). Every command prints one JSON document. It needs ffmpeg-skill (found through `--ffmpeg-skill DIR`, `$FFMPEG_SKILL_DIR`, `~/.claude/skills/ffmpeg-skill` or `../ffmpeg-skill`); `slide-sync doctor --json` says whether it is ready.
 
-| Task | Command |
-|---|---|
-| Slide changes, with a sheet to check them | `slide-sync detect talk.mp4 --sheet sheet.png -o timeline.json --json` |
-| Slide changes while the recording is still being written | `slide-sync detect recording.ts --follow --json --chapters-out chapters.txt -o timeline.json` (JSON lines; done when the file has not changed for `--settle` s) |
-| Chapter text for a YouTube description | `slide-sync chapters talk.mp4 --timeline timeline.json --min-chapter 10 --chapters-out chapters.txt --json` |
-| Same, with titles from a list (one per slide) | add `--titles titles.txt` |
-| A copy of the video with chapters inside | add `-o talk_chapters.mp4` (streams copied, nothing re-encoded) |
-| Pages of the deck as images and text | `slide-sync import deck.pdf -o pages/ --json` (needs `pip install -e '.[pdf]'`; `.pptx` / `.key` / `.odp` also need LibreOffice) |
-| Which deck page is on screen when | `slide-sync match talk.mp4 --deck pages/ --timeline timeline.json -o match.json --json` (after `import` and `detect`) |
-| A demo video after slide 3 (chapters shifted) | `slide-sync insert talk.mp4 --timeline timeline.json --insert 3=demo.mp4 --insert-title Demo -o talk_demo.mp4 --timeline-out talk_demo.json --json` (an image is a still of `--still-duration` s) |
-| Slide + speaker camera layout for the archive | `slide-sync layout talk.mp4 --match match.json --camera speaker.mp4 --plan-out layout.json -o talk_layout.mp4 --json` (without `-o`: the plan only) |
-| Sharp deck pages over a soft projector shot | `slide-sync clean camera.mp4 --match match.json --plan-out clean.json -o camera_clean.mp4 --json` |
-| What this skill declares | `slide-sync contract --json`, `slide-sync doctor --json` |
+| Task                                                     | Command                                                                                                                                                                                           |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Slide changes, with a sheet to check them                | `slide-sync detect talk.mp4 --sheet sheet.png -o timeline.json --json`                                                                                                                            |
+| Slide changes while the recording is still being written | `slide-sync detect recording.ts --follow --json --chapters-out chapters.txt -o timeline.json` (JSON lines; done when the file has not changed for `--settle` s)                                   |
+| Chapter text for a YouTube description                   | `slide-sync chapters talk.mp4 --timeline timeline.json --min-chapter 10 --chapters-out chapters.txt --json`                                                                                       |
+| Same, with titles from a list (one per slide)            | add `--titles titles.txt`                                                                                                                                                                         |
+| A copy of the video with chapters inside                 | add `-o talk_chapters.mp4` (streams copied, nothing re-encoded)                                                                                                                                   |
+| Pages of the deck as images and text                     | `slide-sync import deck.pdf -o pages/ --json` (needs `pip install -e '.[pdf]'`; `.pptx` / `.key` / `.odp` also need LibreOffice)                                                                  |
+| Which deck page is on screen when                        | `slide-sync match talk.mp4 --deck pages/ --timeline timeline.json -o match.json --json` (after `import` and `detect`)                                                                             |
+| A demo video after slide 3 (chapters shifted)            | `slide-sync insert talk.mp4 --timeline timeline.json --insert 3=demo.mp4 --insert-title Demo -o talk_demo.mp4 --timeline-out talk_demo.json --json` (an image is a still of `--still-duration` s) |
+| Slide + speaker camera layout for the archive            | `slide-sync layout talk.mp4 --match match.json --camera speaker.mp4 --plan-out layout.json -o talk_layout.mp4 --json` (without `-o`: the plan only)                                               |
+| Sharp deck pages over a soft projector shot              | `slide-sync clean camera.mp4 --match match.json --plan-out clean.json -o camera_clean.mp4 --json`                                                                                                 |
+| What this skill declares                                 | `slide-sync contract --json`, `slide-sync doctor --json`                                                                                                                                          |
 
 ## How to use it well
 

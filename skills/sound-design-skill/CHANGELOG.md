@@ -108,6 +108,7 @@ SFX engine and GENERATE_SFX (roadmap step 3, ADR-005, ADR-006).
   - SoundCTM: it needs AudioLDM's non-commercial VAE at inference.
 
   Unverified: HunyuanVideo-Foley (licence text not read), and GenAU, AudioLCM, Make-An-Audio 2 and Kling-Foley (no public model found).
+
 - `sound-design generate-sfx --prompt/--tags --duration <whole s> -o out.wav [--seed] [--device auto|cuda|cpu] --json`. Result schema `sound-design/generate-sfx@1`; `audio.sfx_generate` is `EXPERIMENTAL`; default timeout 600 s.
 - EzAudio is called through its Python API as read from haidog-yaqub/EzAudio@86f18268: `EzAudio(model_name="s3_xl", ckpt_path=<checkout>/ckpts/s3/ezaudio_s3_xl.pt, vae_path=<checkout>/ckpts/vae/1m.pt, device)`, then `generate_audio(prompt, length=<s>, guidance_scale=5, guidance_rescale=0.75, ddim_steps=100, eta=1, random_seed=seed, randomize_seed=False)`. The result is written once as 16-bit PCM with soundfile. This runs in the worker only, under `SOUND_DESIGN_EZAUDIO_PYTHON`, from the checkout directory.
 - No download is possible:

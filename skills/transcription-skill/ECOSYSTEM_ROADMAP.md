@@ -11,10 +11,10 @@ Written from a read-only audit of this repository on 2026-10-30. Each step below
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 文字起こし | done | one engine; one language per transcript; speaker_id null from recognition, filled from diarization-skill turns by a speaker merge (step 4), a copy of diarization-skill's assignment rule, passing its conformance fixtures (step 17) |
-| 文字起こしの語句検索 | done | `transcription find` / `search` (step 16, ADR-045; [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md)) |
+| Owned job            | Status | Note                                                                                                                                                                                                                                  |
+| -------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 文字起こし           | done   | one engine; one language per transcript; speaker_id null from recognition, filled from diarization-skill turns by a speaker merge (step 4), a copy of diarization-skill's assignment rule, passing its conformance fixtures (step 17) |
+| 文字起こしの語句検索 | done   | `transcription find` / `search` (step 16, ADR-045; [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md))                                                              |
 
 ## Wiring
 
@@ -69,4 +69,5 @@ Agent wires transcribe (ADR-024), with diarization-skill's turns as `speaker_tur
 stepcap has its own faster-whisper voice notes.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

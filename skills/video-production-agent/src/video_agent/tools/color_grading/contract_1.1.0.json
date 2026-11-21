@@ -33,9 +33,7 @@
       "version": "1.1.0",
       "role": "execution",
       "description": "Execute a typed ColorProject (operation graph) and write validated video artifacts with provenance",
-      "inputs": [
-        "request document (stdin)"
-      ],
+      "inputs": ["request document (stdin)"],
       "input_type": "color-grading/request@1",
       "produces_output": true,
       "writes_media": true,
@@ -124,14 +122,8 @@
       "version_range": ">=1.0 <3.0",
       "range_of": "contract_version",
       "required": true,
-      "tools": [
-        "ffmpeg-skill/probe",
-        "ffmpeg-skill/color"
-      ],
-      "optional_tools": [
-        "ffmpeg-skill/look",
-        "ffmpeg-skill/check"
-      ]
+      "tools": ["ffmpeg-skill/probe", "ffmpeg-skill/color"],
+      "optional_tools": ["ffmpeg-skill/look", "ffmpeg-skill/check"]
     }
   ],
   "optional_dependencies": [
@@ -142,9 +134,7 @@
       "licence": "BSD-3-Clause",
       "capability": "python:PyOpenColorIO",
       "install": "pip install 'color-grading-skill[ocio]'  (PyOpenColorIO, BSD-3-Clause)",
-      "needed_by": [
-        "OCIO_TRANSFORM"
-      ]
+      "needed_by": ["OCIO_TRANSFORM"]
     }
   ],
   "operations": [
@@ -309,12 +299,7 @@
         "target": {
           "type": "string",
           "required": true,
-          "enum": [
-            "bt709",
-            "bt2020-pq",
-            "bt2020-hlg",
-            "bt601"
-          ],
+          "enum": ["bt709", "bt2020-pq", "bt2020-hlg", "bt601"],
           "description": "colour tag set to write"
         },
         "audio_stream": {
@@ -326,11 +311,7 @@
         }
       },
       "tool": "ffmpeg-skill/color",
-      "required_capabilities": [
-        "ffmpeg-skill",
-        "ffmpeg",
-        "ffprobe"
-      ],
+      "required_capabilities": ["ffmpeg-skill", "ffmpeg", "ffprobe"],
       "changes_duration": false,
       "changes_resolution": false,
       "deterministic": "content_equivalent"
@@ -564,24 +545,14 @@
         "lut_size": {
           "type": "integer",
           "required": false,
-          "enum": [
-            17,
-            33,
-            65,
-            129
-          ],
+          "enum": [17, 33, 65, 129],
           "default": 65,
           "description": "edge length of the baked 3D LUT; 129 is the size measured within 1/1023 of OpenColorIO's processor for the ACES display transforms on the test chart (ADR-22)"
         },
         "output_tags": {
           "type": "string",
           "required": false,
-          "enum": [
-            "bt709",
-            "bt2020-pq",
-            "bt2020-hlg",
-            "bt601"
-          ],
+          "enum": ["bt709", "bt2020-pq", "bt2020-hlg", "bt601"],
           "default": null,
           "description": "colour tags the output must carry; derived from a known destination (Rec.1886 Rec.709 -> bt709, Rec.2100-PQ -> bt2020-pq, Rec.2100-HLG -> bt2020-hlg), required for any other destination"
         },
@@ -641,10 +612,7 @@
         "profile": {
           "type": "string",
           "required": false,
-          "enum": [
-            "bt709",
-            "ebu-r103"
-          ],
+          "enum": ["bt709", "ebu-r103"],
           "default": "bt709",
           "description": "bt709: RGB 0..1 (luma 16-235, chroma 16-240); ebu-r103: EBU R 103 tolerance (RGB -5..105 %, luma -1..103 %)"
         },
@@ -659,10 +627,7 @@
         "lut_size": {
           "type": "integer",
           "required": false,
-          "enum": [
-            33,
-            65
-          ],
+          "enum": [33, 65],
           "default": 65,
           "description": "edge length of the written 3D LUT"
         },
@@ -742,10 +707,7 @@
         "model": {
           "type": "string",
           "required": false,
-          "enum": [
-            "curves",
-            "matrix"
-          ],
+          "enum": ["curves", "matrix"],
           "default": "curves",
           "description": "curves: one monotone curve per channel; matrix: 3x3 matrix + offset (corrects cross-channel differences too)"
         },
@@ -759,11 +721,7 @@
         "lut_size": {
           "type": "integer",
           "required": false,
-          "enum": [
-            17,
-            33,
-            65
-          ],
+          "enum": [17, 33, 65],
           "default": 33,
           "description": "edge length of the written 3D LUT"
         },
@@ -820,13 +778,7 @@
     {
       "type": "WHITE_BALANCE",
       "alias_of": "PRIMARY_CORRECTION",
-      "parameters": [
-        "temperature",
-        "tint",
-        "crf",
-        "preset",
-        "audio_stream"
-      ],
+      "parameters": ["temperature", "tint", "crf", "preset", "audio_stream"],
       "description": "white balance only: PRIMARY_CORRECTION's temperature (Kelvin) and tint, every other correction parameter left at its identity default (ffmpeg-skill/color --correct --temperature --tint)",
       "resolved_at": "validation; plan, identity, results and provenance name the target operation type"
     }
@@ -852,30 +804,18 @@
   },
   "lut": {
     "format": "cube",
-    "extensions": [
-      ".cube"
-    ],
+    "extensions": [".cube"],
     "max_bytes": 209715200,
     "hashed": "sha256, recorded in provenance",
-    "strength_range": [
-      0.0,
-      1.0
-    ],
+    "strength_range": [0.0, 1.0],
     "note": "a LUT is data read by ffmpeg's lut3d filter, never a filter string or executable; path policy applies (allowed_lut_roots)"
   },
   "ocio": {
     "operation": "OCIO_TRANSFORM",
     "builtin_prefix": "ocio://",
     "default_config": "ocio://studio-config-latest",
-    "config_extensions": [
-      ".ocio"
-    ],
-    "lut_sizes": [
-      17,
-      33,
-      65,
-      129
-    ],
+    "config_extensions": [".ocio"],
+    "lut_sizes": [17, 33, 65, 129],
     "default_lut_size": 65,
     "known_destination_tags": {
       "Rec.1886 Rec.709 - Display": "bt709",
@@ -906,33 +846,12 @@
       "dolby_vision"
     ],
     "source": "ffmpeg-skill/probe (ffprobe); OBSERVED, never inferred",
-    "retag_targets": [
-      "bt709",
-      "bt2020-pq",
-      "bt2020-hlg",
-      "bt601"
-    ],
+    "retag_targets": ["bt709", "bt2020-pq", "bt2020-hlg", "bt601"],
     "retag_tags": {
-      "bt709": [
-        "bt709",
-        "bt709",
-        "bt709"
-      ],
-      "bt2020-pq": [
-        "bt2020nc",
-        "bt2020",
-        "smpte2084"
-      ],
-      "bt2020-hlg": [
-        "bt2020nc",
-        "bt2020",
-        "arib-std-b67"
-      ],
-      "bt601": [
-        "smpte170m",
-        "smpte170m",
-        "smpte170m"
-      ]
+      "bt709": ["bt709", "bt709", "bt709"],
+      "bt2020-pq": ["bt2020nc", "bt2020", "smpte2084"],
+      "bt2020-hlg": ["bt2020nc", "bt2020", "arib-std-b67"],
+      "bt601": ["smpte170m", "smpte170m", "smpte170m"]
     },
     "note": "measurement of input/output colour information is kept separate from the RETAG / HDR_TO_SDR operations that change it (STEP 4 of the design brief)"
   },
@@ -946,14 +865,8 @@
       "linear",
       "gamma"
     ],
-    "peak_nits_range": [
-      1.0,
-      10000.0
-    ],
-    "desat_range": [
-      0.0,
-      5.0
-    ],
+    "peak_nits_range": [1.0, 10000.0],
+    "desat_range": [0.0, 5.0],
     "tone_mapping_selection": "an explicit typed parameter (tonemap curve, peak, desat) from the caller always wins; when the request gives no tonemap, a fixed rule on the input's measured transfer picks it (hdr_sdr_defaults): mobius for HLG (arib-std-b67), hable for PQ and any other or unknown transfer; never chosen from the picture",
     "hdr_detection": "measured via ffmpeg-skill/probe (bt2020_or_hdr, or hdr before 2.0: color_transfer/color_primaries); HDR_TO_SDR refuses a non-HDR source unless force is set"
   },
@@ -975,10 +888,7 @@
     }
   },
   "alpha": {
-    "preserved_by": [
-      "RETAG",
-      "STRIP_DOVI"
-    ],
+    "preserved_by": ["RETAG", "STRIP_DOVI"],
     "refused_for": [
       "HDR_TO_SDR",
       "LUT_APPLY",
@@ -990,10 +900,7 @@
     "pix_fmt_pattern": "^(yuva|gbrap|ya(8|16)|rgba|bgra|argb|abgr)",
     "policy": "a source with an alpha plane is refused (UNSUPPORTED_FORMAT, reason alpha_not_preserved) for every operation that re-encodes through ffmpeg-skill/color without keeping the alpha; a stream copy keeps it and an output without it fails validation (alpha_lost). Where ffmpeg-skill/color has --keep-alpha, LUT_APPLY and PRIMARY_CORRECTION grade with the alpha kept (keep_alpha; docs/decisions.md ADR-25, ADR-30). The request says how the colour is stored (alpha_mode) and whether an opaque result is wanted instead (drop_alpha); a premultiplied source is refused for a grade that keeps the alpha (ADR-33)",
     "keep_alpha": {
-      "operations": [
-        "LUT_APPLY",
-        "PRIMARY_CORRECTION"
-      ],
+      "operations": ["LUT_APPLY", "PRIMARY_CORRECTION"],
       "requires": "ffmpeg-skill/color:keep-alpha (--keep-alpha, --alpha-codec, --alpha-mode)",
       "refused_for_with_keep_alpha": [
         "HDR_TO_SDR",
@@ -1009,20 +916,10 @@
       },
       "alpha_codec_default": "prores4444",
       "containers": {
-        "prores4444": [
-          ".mov",
-          ".mkv"
-        ],
-        "qtrle": [
-          ".mov"
-        ],
-        "png": [
-          ".mov",
-          ".mkv"
-        ],
-        "vp9": [
-          ".mkv"
-        ]
+        "prores4444": [".mov", ".mkv"],
+        "qtrle": [".mov"],
+        "png": [".mov", ".mkv"],
+        "vp9": [".mkv"]
       },
       "alpha_mode": "straight",
       "encoders": {
@@ -1041,10 +938,7 @@
     },
     "alpha_mode": {
       "request_field": "project.source.alpha_mode",
-      "values": [
-        "straight",
-        "premultiplied"
-      ],
+      "values": ["straight", "premultiplied"],
       "default": null,
       "when_omitted": {
         "by_codec": {
@@ -1110,10 +1004,7 @@
     "ffmpeg-skill/color:drop-alpha"
   ],
   "x264": {
-    "crf_range": [
-      0,
-      51
-    ],
+    "crf_range": [0, 51],
     "presets": [
       "ultrafast",
       "superfast",
@@ -1134,12 +1025,7 @@
   },
   "execution": {
     "mode": "local",
-    "canonical_invocation": [
-      "color-grading",
-      "run",
-      "-",
-      "--json"
-    ],
+    "canonical_invocation": ["color-grading", "run", "-", "--json"],
     "stdin": "color-grading/request@1",
     "stdout": "exactly one color-grading/response@1 document",
     "stderr": "diagnostics only",
@@ -1156,22 +1042,12 @@
   },
   "ffmpeg_skill": {
     "contract_version": "1.0",
-    "contract_versions_known": [
-      "1.0",
-      "2.0"
-    ],
+    "contract_versions_known": ["1.0", "2.0"],
     "version_window": null,
     "compatibility": "capability detection, no version window: a checkout of any version is used when every required flag is present in its contract (or --help); doctor reports what was detected (docs/decisions.md ADR-19)",
-    "tools_used": [
-      "probe",
-      "color",
-      "look",
-      "check"
-    ],
+    "tools_used": ["probe", "color", "look", "check"],
     "flags_used": {
-      "probe": [
-        "inputs"
-      ],
+      "probe": ["inputs"],
       "color": [
         "input",
         "output",
@@ -1209,14 +1085,7 @@
         "alpha_mode",
         "drop_alpha"
       ],
-      "look": [
-        "input",
-        "output",
-        "at",
-        "width",
-        "no_timecode",
-        "json"
-      ],
+      "look": ["input", "output", "at", "width", "no_timecode", "json"],
       "check": [
         "input",
         "platform",
@@ -1228,9 +1097,7 @@
       ]
     },
     "required_flags": {
-      "probe": [
-        "inputs"
-      ],
+      "probe": ["inputs"],
       "color": [
         "input",
         "output",
@@ -1264,25 +1131,14 @@
     },
     "flag_alternatives": {
       "color": {
-        "encoder_quality": [
-          "quality",
-          "crf"
-        ]
+        "encoder_quality": ["quality", "crf"]
       }
     },
     "optional_flags": {
       "color": {
-        "color_legalize": [
-          "legalize"
-        ],
-        "color_keep_alpha": [
-          "keep_alpha",
-          "alpha_codec",
-          "alpha_mode"
-        ],
-        "color_drop_alpha": [
-          "drop_alpha"
-        ]
+        "color_legalize": ["legalize"],
+        "color_keep_alpha": ["keep_alpha", "alpha_codec", "alpha_mode"],
+        "color_drop_alpha": ["drop_alpha"]
       }
     },
     "probe_hdr_key": "bt2020_or_hdr when present (ffmpeg-skill >= 2.0), else hdr: BT.2020 primaries or a PQ/HLG transfer either way"
@@ -1428,9 +1284,7 @@
       "RETAG",
       "STRIP_DOVI"
     ],
-    "aliases": [
-      "WHITE_BALANCE"
-    ],
+    "aliases": ["WHITE_BALANCE"],
     "note": "request.shape lists the 0.4.0 types as an example; every type above is accepted"
   },
   "schema_versions": {

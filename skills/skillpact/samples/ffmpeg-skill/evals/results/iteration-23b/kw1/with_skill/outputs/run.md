@@ -17,10 +17,12 @@ caption text unchanged: the cues were burned exactly as given (line breaks, timi
 ```
 
 I checked the generated ASS to confirm the active word actually scales, not just recolours:
+
 ```
 Dialogue: 0,0:00:00.00,0:00:00.86,Default,,0,0,0,,{\c&H0000D2FF\fscx112\fscy112\bord5.60}Hello{\r} {\c&H00B4B4B4}world
 Dialogue: 0,0:00:00.86,0:00:03.00,Default,,0,0,0,,{\c&H00FFFFFF}Hello {\c&H0000D2FF\fscx112\fscy112\bord5.60}world{\r}
 ```
+
 `\fscx112\fscy112` on the active word is the size bump (--karaoke-scale default 112%); the past
 word switches to plain colour, the upcoming word is grey. That is genuinely bigger, not a
 colour-only change.

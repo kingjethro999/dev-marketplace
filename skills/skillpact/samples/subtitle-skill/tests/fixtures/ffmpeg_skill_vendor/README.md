@@ -37,7 +37,7 @@ through to `caption.py` (see README "ffmpeg-skill integration") --
 
 This is a test fixture, not a runtime dependency: `src/subtitle_skill` never
 imports anything from this directory. `subtitle_skill.engine` always locates
-a *real* ffmpeg-skill install (via `SUBTITLE_SKILL_FFMPEG_SKILL_DIR` or the
+a _real_ ffmpeg-skill install (via `SUBTITLE_SKILL_FFMPEG_SKILL_DIR` or the
 standard `~/.claude` / `~/.cursor` / `~/.codex` / `./.claude` skills
 directories) at run time; these tests simply point that environment variable
 at this vendored copy to exercise the same code path deterministically.

@@ -14,16 +14,15 @@
 
 <p align="center"><b>Speech enhancement for recordings</b></p>
 
-
 AI voice isolation, dereverberation and mic-bleed reduction for recorded speech, for the [AI Video Production OS](https://github.com/kajisho5/AI-video-production-OS) (department 音 / Audio). Local and offline: engines are optional, never downloaded by the skill, and every media step (probe, format conversion, putting the cleaned audio back into the video) goes through [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill).
 
 **Status: 0.1.0, unreleased.** `isolate` ([ADR-003](docs/decisions.md)), `dereverb` ([ADR-004](docs/decisions.md)) and `bleed-reduce` ([ADR-005](docs/decisions.md)) work (`EXPERIMENTAL`). `remux` puts a cleaned stem back into its video ([ADR-006](docs/decisions.md)). `contract`, `doctor` and `engines` work. [SKILL.md](SKILL.md) is the agent-facing summary, and CI runs the real engines on Linux ([ADR-007](docs/decisions.md)). Next on the [roadmap](ECOSYSTEM_ROADMAP.md): step 8, the agent adapter (video-production-agent).
 
-| Op | Capability | Engine ([ADR-001](docs/decisions.md)) | Licence (code / weights) | Step |
-|---|---|---|---|---|
-| ISOLATE | `voice.isolate` | DeepFilterNet3 via the standalone `deep-filter` binary (no PyTorch) | MIT OR Apache-2.0 / same | 3 (done) |
-| DEREVERB | `voice.dereverb` | nara_wpe (WPE, signal processing) | MIT / no weights | 4 (done) |
-| BLEED_REDUCE | `voice.bleed_reduce` | `crosstalk`: this repository's linear cross-talk demixing on NumPy, no AI model ([ADR-005](docs/decisions.md)) | MIT / no weights | 5 (done) |
+| Op           | Capability           | Engine ([ADR-001](docs/decisions.md))                                                                          | Licence (code / weights) | Step     |
+| ------------ | -------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------ | -------- |
+| ISOLATE      | `voice.isolate`      | DeepFilterNet3 via the standalone `deep-filter` binary (no PyTorch)                                            | MIT OR Apache-2.0 / same | 3 (done) |
+| DEREVERB     | `voice.dereverb`     | nara_wpe (WPE, signal processing)                                                                              | MIT / no weights         | 4 (done) |
+| BLEED_REDUCE | `voice.bleed_reduce` | `crosstalk`: this repository's linear cross-talk demixing on NumPy, no AI model ([ADR-005](docs/decisions.md)) | MIT / no weights         | 5 (done) |
 
 Traditional noise reduction, loudness and mixing belong to [audio-production-skill](https://github.com/kajisho5/audio-production-skill), not here.
 

@@ -7,7 +7,7 @@ and Python 3.11+ (ADR-033); and `speechcpp`, an optional engine that runs speech
 (Metal, Vulkan or the CPU; no Python ML stack, no CUDA; ADR-035); and `whisperx`, an optional engine that adds wav2vec2
 forced alignment of words to faster-whisper output (Python 3.10+, English and Japanese, no diarization; ADR-038); and `qwen3_asr`,
 an optional engine that runs Qwen3-ASR-1.7B with Qwen3-ForcedAligner-0.6B word timestamps through qwen-asr (Python 3.10+,
-11 languages, CUDA GPU or CPU; ADR-041). Cloud ASR (any vendor) and whisper.cpp are *future possible engines*: the
+11 languages, CUDA GPU or CPU; ADR-041). Cloud ASR (any vendor) and whisper.cpp are _future possible engines_: the
 contract can describe them, nothing in this repository implements them.
 
 ## Contract (`engines/base.py`)
@@ -100,14 +100,14 @@ states: `MODEL_UNAVAILABLE` stays the code and `details.availability` says why.
 
 ## LOCAL vs REMOTE
 
-| | `local` | `remote` |
-|--|--|--|
-| where recognition runs | this machine | another host (a cloud ASR service) |
-| `requires_network` | `false` | `true` |
-| network use | only a one-time model download, reported per model | every transcription |
-| audio leaves the machine | never | always |
-| offline (`--offline`) | allowed when the model is `MODEL_AVAILABLE` | refused (`ENGINE_UNAVAILABLE`, reason `network_required`) |
-| implemented | `faster_whisper` | none |
+|                          | `local`                                            | `remote`                                                  |
+| ------------------------ | -------------------------------------------------- | --------------------------------------------------------- |
+| where recognition runs   | this machine                                       | another host (a cloud ASR service)                        |
+| `requires_network`       | `false`                                            | `true`                                                    |
+| network use              | only a one-time model download, reported per model | every transcription                                       |
+| audio leaves the machine | never                                              | always                                                    |
+| offline (`--offline`)    | allowed when the model is `MODEL_AVAILABLE`        | refused (`ENGINE_UNAVAILABLE`, reason `network_required`) |
+| implemented              | `faster_whisper`                                   | none                                                      |
 
 "Runtime network" and "model-acquisition network" are kept apart on purpose: a local engine with a
 missing model is not "a networked engine", it is a local engine whose model must be fetched once.
@@ -121,15 +121,15 @@ engines. Registration is a class in this package; there is no dynamic loading, n
 plugin discovery. The test-only `FakeEngine` can be registered in a private `EngineRegistry()` for
 contract tests and is never in the default registry (`tests/test_security.py` asserts this).
 
-| id | execution_mode | implementation | status |
-|----|----------------|----------------|--------|
-| `faster_whisper` | local | `engines/faster_whisper.py` | Reference Local Engine, verified on the fixtures |
-| `haas_ja` | local | `engines/haas.py` | optional (Linux + NVIDIA GPU + Python 3.11+); unit-tested with a fake `haas_asr`, not yet run on a GPU |
-| `speechcpp` | local | `engines/speechcpp.py` | optional (speech.cpp's `speech` 0.10.0+ on PATH); unit-tested with a fake `speech`, real binary in the `engines` CI job |
-| `whisperx` | local | `engines/whisperx.py` | optional (Python 3.10+, `pip install whisperx`); en/ja with wav2vec2 alignment; unit-tested with a fake `whisperx`, not yet run for real |
-| `qwen3_asr` | local | `engines/qwen3_asr.py` | optional (Python 3.10+, the `[qwen3-asr]` extra); Qwen3-ASR-1.7B + Qwen3-ForcedAligner-0.6B word timestamps, 11 languages; unit-tested with a fake `qwen_asr`, real models in the manual `qwen3_asr` job (not yet run) |
-| cloud ASR | remote | none | future possible engine (contract only) |
-| whisper.cpp | local | none | future possible engine (contract only) |
+| id               | execution_mode | implementation              | status                                                                                                                                                                                                                 |
+| ---------------- | -------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `faster_whisper` | local          | `engines/faster_whisper.py` | Reference Local Engine, verified on the fixtures                                                                                                                                                                       |
+| `haas_ja`        | local          | `engines/haas.py`           | optional (Linux + NVIDIA GPU + Python 3.11+); unit-tested with a fake `haas_asr`, not yet run on a GPU                                                                                                                 |
+| `speechcpp`      | local          | `engines/speechcpp.py`      | optional (speech.cpp's `speech` 0.10.0+ on PATH); unit-tested with a fake `speech`, real binary in the `engines` CI job                                                                                                |
+| `whisperx`       | local          | `engines/whisperx.py`       | optional (Python 3.10+, `pip install whisperx`); en/ja with wav2vec2 alignment; unit-tested with a fake `whisperx`, not yet run for real                                                                               |
+| `qwen3_asr`      | local          | `engines/qwen3_asr.py`      | optional (Python 3.10+, the `[qwen3-asr]` extra); Qwen3-ASR-1.7B + Qwen3-ForcedAligner-0.6B word timestamps, 11 languages; unit-tested with a fake `qwen_asr`, real models in the manual `qwen3_asr` job (not yet run) |
+| cloud ASR        | remote         | none                        | future possible engine (contract only)                                                                                                                                                                                 |
+| whisper.cpp      | local          | none                        | future possible engine (contract only)                                                                                                                                                                                 |
 
 ## Selection (`engines/selector.py`)
 
@@ -171,7 +171,6 @@ An engine object injected into `TranscriptionService(engine=...)` (tests, embedd
 under a daemon-thread timeout instead.
 
 ## faster_whisper (Reference Local Engine)
-
 
 - Dependency: `faster-whisper>=1.0` (CTranslate2). Install with `pip install ".[faster-whisper]"`.
 - Audio: the engine reads the prepared mono 16 kHz 16-bit PCM WAV itself and gives faster-whisper float32 samples, so
@@ -292,7 +291,7 @@ fillers dropped by Haas, the `warnings` of each transcript (fallbacks to NeMo se
   `%LOCALAPPDATA%\speech.cpp\models`, or `SPEECH_MODEL_DIR`); those variables are passed to `speech`.
 - Recognition: `speech vad <silero-vad.gguf> --format json` with the region defaults of `speech asr --vad`
   (threshold 0.5, 300 ms pad, 500 ms silence, 10 s longest region), each region cut from the WAV, then `speech asr
-  <model.gguf> --format json --language <lang> [--timestamps] r00001.wav ...` (up to 200 regions per run). By regions
+<model.gguf> --format json --language <lang> [--timestamps] r00001.wav ...` (up to 200 regions per run). By regions
   because a FastConformer model loses whole sentences of a long stretch; `vad_filter` has no effect here.
 - Timing: ReazonSpeech, both parakeet models and Haas give segments (cut after `。？！.?!`) and tokens with times; segments are
   offset by their region's start and `words` are built from the tokens as speech.cpp's `words_of` does (each kana or
@@ -303,8 +302,8 @@ fillers dropped by Haas, the `warnings` of each transcript (fallbacks to NeMo se
 - Languages: `ja` for ReazonSpeech, parakeet-tdt_ctc-0.6b-ja and Haas; parakeet-tdt-0.6b-v3's 25 European languages
   (`bg cs da de el en es et fi fr hr hu it lt lv mt nl pl pt ro ru sk sl sv uk`, its model card's and speech.cpp's
   catalog's); Qwen3-ASR's 30 (`ar cs da de el en es fa fi fil fr hi hu id it ja ko mk ms nl pl pt ro ru sv th tr vi yue
-  zh`). The language is required (no detection); a language the model does not have is `INVALID_INPUT` (`reason:
-  language_unsupported`) before audio extraction. Only Qwen3-ASR is steered by it: the FastConformer models only check
+zh`). The language is required (no detection); a language the model does not have is `INVALID_INPUT` (`reason:
+language_unsupported`) before audio extraction. Only Qwen3-ASR is steered by it: the FastConformer models only check
   it, and parakeet-tdt-0.6b-v3 finds the language of the audio itself, so the transcript's `language` is the requested
   one (`language_source: requested`).
 - Long recordings: the parakeet models attend over the whole input, so memory grows with its square; the engine only
@@ -328,15 +327,15 @@ the converted GGUF repositories at the revisions speech.cpp 0.10.0's catalog pin
 commercial use are registered. Nothing in this table is unverified; the parakeet-tdt-0.6b-v3 row was read on 2026-11-12
 (ADR-040).
 
-| model | upstream weights | licence | commercial use | converted files (catalog revision) |
-|---|---|---|---|---|
-| `reazonspeech-v2` | [reazon-research/reazonspeech-nemo-v2](https://huggingface.co/reazon-research/reazonspeech-nemo-v2) | Apache-2.0 | yes | [sakasegawa/reazonspeech-nemo-v2-GGUF](https://huggingface.co/sakasegawa/reazonspeech-nemo-v2-GGUF) `ed04d9e`, Apache-2.0 |
-| `parakeet-tdt_ctc-0.6b-ja` | [nvidia/parakeet-tdt_ctc-0.6b-ja](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja) | CC-BY-4.0 | yes, with attribution | [sakasegawa/parakeet-tdt_ctc-0.6b-ja-GGUF](https://huggingface.co/sakasegawa/parakeet-tdt_ctc-0.6b-ja-GGUF) `f7cb538`, CC-BY-4.0 |
-| `parakeet-tdt-0.6b-v3` | [nvidia/parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) `541d1f9` | CC-BY-4.0 | yes, with attribution | [sakasegawa/parakeet-tdt-0.6b-v3-GGUF](https://huggingface.co/sakasegawa/parakeet-tdt-0.6b-v3-GGUF) `b7ed82d`, CC-BY-4.0 |
-| `haas-ja-v1.0` | [third-intelligence/Haas-ja-v1.0](https://huggingface.co/third-intelligence/Haas-ja-v1.0) | Apache-2.0 | yes | [sakasegawa/Haas-ja-v1.0-GGUF](https://huggingface.co/sakasegawa/Haas-ja-v1.0-GGUF) `6b965d5`, Apache-2.0 |
-| `qwen3-asr-0.6b` | [Qwen/Qwen3-ASR-0.6B](https://huggingface.co/Qwen/Qwen3-ASR-0.6B) | Apache-2.0 (front matter; no licence section) | yes | [sakasegawa/Qwen3-ASR-0.6B-GGUF](https://huggingface.co/sakasegawa/Qwen3-ASR-0.6B-GGUF) `ee78f87`, Apache-2.0 |
-| `qwen3-asr-1.7b` | [Qwen/Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B) | Apache-2.0 (the same) | yes | [sakasegawa/Qwen3-ASR-1.7B-GGUF](https://huggingface.co/sakasegawa/Qwen3-ASR-1.7B-GGUF) `81e2423`, Apache-2.0 |
-| `silero-vad` (region detector) | [snakers4/silero-vad](https://github.com/snakers4/silero-vad) | MIT | yes | [sakasegawa/silero-vad-GGUF](https://huggingface.co/sakasegawa/silero-vad-GGUF) `7fcb7aa`, MIT |
+| model                          | upstream weights                                                                                    | licence                                       | commercial use        | converted files (catalog revision)                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `reazonspeech-v2`              | [reazon-research/reazonspeech-nemo-v2](https://huggingface.co/reazon-research/reazonspeech-nemo-v2) | Apache-2.0                                    | yes                   | [sakasegawa/reazonspeech-nemo-v2-GGUF](https://huggingface.co/sakasegawa/reazonspeech-nemo-v2-GGUF) `ed04d9e`, Apache-2.0        |
+| `parakeet-tdt_ctc-0.6b-ja`     | [nvidia/parakeet-tdt_ctc-0.6b-ja](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)           | CC-BY-4.0                                     | yes, with attribution | [sakasegawa/parakeet-tdt_ctc-0.6b-ja-GGUF](https://huggingface.co/sakasegawa/parakeet-tdt_ctc-0.6b-ja-GGUF) `f7cb538`, CC-BY-4.0 |
+| `parakeet-tdt-0.6b-v3`         | [nvidia/parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) `541d1f9`         | CC-BY-4.0                                     | yes, with attribution | [sakasegawa/parakeet-tdt-0.6b-v3-GGUF](https://huggingface.co/sakasegawa/parakeet-tdt-0.6b-v3-GGUF) `b7ed82d`, CC-BY-4.0         |
+| `haas-ja-v1.0`                 | [third-intelligence/Haas-ja-v1.0](https://huggingface.co/third-intelligence/Haas-ja-v1.0)           | Apache-2.0                                    | yes                   | [sakasegawa/Haas-ja-v1.0-GGUF](https://huggingface.co/sakasegawa/Haas-ja-v1.0-GGUF) `6b965d5`, Apache-2.0                        |
+| `qwen3-asr-0.6b`               | [Qwen/Qwen3-ASR-0.6B](https://huggingface.co/Qwen/Qwen3-ASR-0.6B)                                   | Apache-2.0 (front matter; no licence section) | yes                   | [sakasegawa/Qwen3-ASR-0.6B-GGUF](https://huggingface.co/sakasegawa/Qwen3-ASR-0.6B-GGUF) `ee78f87`, Apache-2.0                    |
+| `qwen3-asr-1.7b`               | [Qwen/Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)                                   | Apache-2.0 (the same)                         | yes                   | [sakasegawa/Qwen3-ASR-1.7B-GGUF](https://huggingface.co/sakasegawa/Qwen3-ASR-1.7B-GGUF) `81e2423`, Apache-2.0                    |
+| `silero-vad` (region detector) | [snakers4/silero-vad](https://github.com/snakers4/silero-vad)                                       | MIT                                           | yes                   | [sakasegawa/silero-vad-GGUF](https://huggingface.co/sakasegawa/silero-vad-GGUF) `7fcb7aa`, MIT                                   |
 
 The licences of the training data were not assessed; they are not the model licences. speech.cpp's other models
 (Nemotron 3.5 Transcribe, the synthesis models) are not registered.
@@ -363,8 +362,8 @@ transcription transcribe talk.mp4 --engine speechcpp --model parakeet-tdt-0.6b-v
 - Program: [whisperX](https://github.com/m-bain/whisperX) (BSD-2-Clause; written against v3.8.6), `pip install whisperx`,
   Python 3.10–3.13, pulls PyTorch. `whisperx` is imported only after the Python check passes.
 - Pipeline: `whisperx.load_model(model, device, compute_type="int8", language=, asr_options={beam_size, temperatures:
-  [temperature], initial_prompt}, vad_method="pyannote", local_files_only=)`, `transcribe(audio, batch_size=8,
-  language=)`, then `load_align_model(language_code=, model_name=<explicit repo>, model_cache_only=)` and
+[temperature], initial_prompt}, vad_method="pyannote", local_files_only=)`, `transcribe(audio, batch_size=8,
+language=)`, then `load_align_model(language_code=, model_name=<explicit repo>, model_cache_only=)` and
   `align(..., return_char_alignments=False)`. The audio is the prepared WAV read with `wave` (never `whisperx.load_audio`,
   which starts ffmpeg).
 - Models: the Whisper names and Hugging Face cache of `faster_whisper` (default `large-v3`), with the same per-model
@@ -372,31 +371,33 @@ transcription transcribe talk.mp4 --engine speechcpp --model parakeet-tdt-0.6b-v
   downloads off, each missing piece is `MODEL_UNAVAILABLE` (`MODEL_MISSING`, `details.component`).
 - Languages and licences (read 2026-10-31; only commercially usable alignment weights are used):
 
-  | language | alignment model | licence | source |
-  |---|---|---|---|
-  | `en` | [facebook/wav2vec2-base-960h](https://huggingface.co/facebook/wav2vec2-base-960h) (`22aad52`) | Apache-2.0 (card); torchaudio's `WAV2VEC2_ASR_BASE_960H`, the same wav2vec 2.0 weights, is MIT ("published ... under MIT License and redistributed with the same license") | HF card front matter; torchaudio `pipelines/_wav2vec2/impl.py` |
-  | `ja` | [jonatasgrosman/wav2vec2-large-xlsr-53-japanese](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-japanese) (`cf031e0`) | Apache-2.0 | HF card front matter |
-  | (VAD) | pyannote segmentation bundled in the whisperX package | MIT ([pyannote/segmentation](https://huggingface.co/pyannote/segmentation)) | `whisperx/vads/pyannote.py` |
+  | language | alignment model                                                                                                                     | licence                                                                                                                                                                    | source                                                         |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+  | `en`     | [facebook/wav2vec2-base-960h](https://huggingface.co/facebook/wav2vec2-base-960h) (`22aad52`)                                       | Apache-2.0 (card); torchaudio's `WAV2VEC2_ASR_BASE_960H`, the same wav2vec 2.0 weights, is MIT ("published ... under MIT License and redistributed with the same license") | HF card front matter; torchaudio `pipelines/_wav2vec2/impl.py` |
+  | `ja`     | [jonatasgrosman/wav2vec2-large-xlsr-53-japanese](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-japanese) (`cf031e0`) | Apache-2.0                                                                                                                                                                 | HF card front matter                                           |
+  | (VAD)    | pyannote segmentation bundled in the whisperX package                                                                               | MIT ([pyannote/segmentation](https://huggingface.co/pyannote/segmentation))                                                                                                | `whisperx/vads/pyannote.py`                                    |
 
   NLTK `punkt_tab` (sentence splitting): no licence in the NLTK data index; not assessed. No language detection.
+
 - Output: aligned segment times; with `--word-timestamps`, aligned words (`confidence` = alignment score, clipped). An
   untimed word joins its neighbour (warning), nothing is interpolated; no timed word → `words: null`. Segment
   `confidence`: null. `model_version`: `<whisper snapshot>+align:<alignment snapshot>`.
 - Not done here: diarization. `whisperx.diarize` / `assign_word_speakers` are never called (static test); speakers come
   from diarization-skill's turns (ADR-037).
 - `vad_filter`: whisperX always decodes voice-activity regions, so `false` is reported as a warning. `deterministic:
-  false` until two real runs are shown identical.
+false` until two real runs are shown identical.
 
 ## qwen3_asr (optional Qwen3-ASR engine with forced-aligned words, ADR-041)
 
 - Models, both Apache-2.0 and pinned (verified 2026-11-12 on the cards; licences and every fact below are in ADR-041):
 
-  | role | model | revision | licence | files (bytes) |
-  |---|---|---|---|---|
-  | recognition | [Qwen/Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B) | `7278e1e70fe206f11671096ffdd38061171dd6e5` | Apache-2.0 | 4,703,055,333 (bfloat16) |
+  | role            | model                                                                                 | revision                                   | licence    | files (bytes)            |
+  | --------------- | ------------------------------------------------------------------------------------- | ------------------------------------------ | ---------- | ------------------------ |
+  | recognition     | [Qwen/Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)                     | `7278e1e70fe206f11671096ffdd38061171dd6e5` | Apache-2.0 | 4,703,055,333 (bfloat16) |
   | word timestamps | [Qwen/Qwen3-ForcedAligner-0.6B](https://huggingface.co/Qwen/Qwen3-ForcedAligner-0.6B) | `c7cbfc2048c462b0d63a45797104fc9db3ad62b7` | Apache-2.0 | 1,840,013,484 (bfloat16) |
 
   Model name `Qwen3-ASR-1.7B` (the only one, the default); the aligner always comes with it.
+
 - Runtime: [qwen-asr](https://pypi.org/project/qwen-asr/0.0.6/) 0.0.6 (Apache-2.0), transformers backend
   (`Qwen3ASRModel`, `Qwen3ForcedAligner`); the `[qwen3-asr]` extra (install line below; Python 3.10+; pulls PyTorch,
   transformers 4.57.6, nagisa, soynlp, gradio and more). Never the vLLM backend, never a server. `qwen_asr` is imported
@@ -407,7 +408,7 @@ transcription transcribe talk.mp4 --engine speechcpp --model parakeet-tdt-0.6b-v
 - Never downloads while transcribing: both models must be complete in the Hugging Face cache at the pinned revisions
   (`$HF_HUB_CACHE` / `$HF_HOME/hub` / `~/.cache/huggingface/hub`) and are loaded by folder path, never by name. A missing
   one is `MODEL_MISSING`, online or offline, with the command to run once: `transcription models pull Qwen3-ASR-1.7B
-  --engine qwen3_asr` (both repositories at the pinned revisions, about 6.5 GB). Without the skill:
+--engine qwen3_asr` (both repositories at the pinned revisions, about 6.5 GB). Without the skill:
   `hf download Qwen/Qwen3-ASR-1.7B --revision 7278e1e70fe206f11671096ffdd38061171dd6e5` and the same for
   `Qwen/Qwen3-ForcedAligner-0.6B --revision c7cbfc2048c462b0d63a45797104fc9db3ad62b7` (into the cache, not `--local-dir`).
 - Languages: the aligner's 11, `de en es fr it ja ko pt ru yue zh`. Qwen3-ASR's other 19 are refused here

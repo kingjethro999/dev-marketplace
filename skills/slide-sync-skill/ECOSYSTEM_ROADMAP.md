@@ -12,10 +12,10 @@ Since then: `import` (deck -> per-page PNG + text; pypdfium2 as the optional `pd
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| スライド取込 | done | `import`: PDF -> page PNGs + text through pypdfium2 (Apache-2.0 OR BSD-3-Clause; PyMuPDF AGPL and Poppler GPL rejected); PPTX / KEY / ODP via LibreOffice when installed ([#4](https://github.com/kajisho5/slide-sync-skill/pull/4)) |
-| スライド切替検出 | done | 0.1.0: ffmpeg-skill scenes + min-dwell; frame-hash refinement not needed on the fixtures, revisit with real recordings |
+| Owned job        | Status | Note                                                                                                                                                                                                                                 |
+| ---------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| スライド取込     | done   | `import`: PDF -> page PNGs + text through pypdfium2 (Apache-2.0 OR BSD-3-Clause; PyMuPDF AGPL and Poppler GPL rejected); PPTX / KEY / ODP via LibreOffice when installed ([#4](https://github.com/kajisho5/slide-sync-skill/pull/4)) |
+| スライド切替検出 | done   | 0.1.0: ffmpeg-skill scenes + min-dwell; frame-hash refinement not needed on the fixtures, revisit with real recordings                                                                                                               |
 
 ## Wiring
 
@@ -54,4 +54,5 @@ Slide text OCR comes from detection-skill, not a second OCR.
 Cut detection is layered ([Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md)): slide changes are this repository's layer (`detect`, on ffmpeg-skill `scenes` plus a minimum dwell); the fast list is ffmpeg-skill `scenes`, the observation media-analysis-skill, the frame-accurate shot table detection-skill `shots`, and judgement qc-skill.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

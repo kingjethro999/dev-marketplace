@@ -37,17 +37,10 @@
       "pattern": "^([a-z]{2,3}|unknown)$"
     },
     "language_source": {
-      "enum": [
-        "requested",
-        "detected",
-        "unknown"
-      ]
+      "enum": ["requested", "detected", "unknown"]
     },
     "language_confidence": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "minimum": 0,
       "maximum": 1
     },
@@ -89,12 +82,7 @@
   "$defs": {
     "word": {
       "type": "object",
-      "required": [
-        "start",
-        "end",
-        "text",
-        "confidence"
-      ],
+      "required": ["start", "end", "text", "confidence"],
       "properties": {
         "index": {
           "type": "integer",
@@ -113,26 +101,17 @@
           "type": "string"
         },
         "confidence": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "minimum": 0,
           "maximum": 1
         },
         "speaker_id": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "minLength": 1,
           "description": "optional; present after a speaker merge (ADR-037): the word's own speaker or null"
         },
         "timing": {
-          "enum": [
-            "measured",
-            "interpolated"
-          ],
+          "enum": ["measured", "interpolated"],
           "description": "dictionary words only (word_segmentation 'dictionary', ADR-039): 'measured' when both boundaries are engine word boundaries, 'interpolated' when a boundary was placed inside an engine word by character share. Absent on engine words, whose times are engine-reported"
         },
         "pos": {
@@ -189,27 +168,18 @@
           "description": "engine text verbatim"
         },
         "confidence": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "minimum": 0,
           "maximum": 1
         },
         "words": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/word"
           }
         },
         "speaker_id": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "minLength": 1,
           "description": "anonymous speaker id (SPEAKER_nn) from diarization-skill turns, or null: recognition never sets it; transcription/speakers fills it (ADR-037)"
         }
@@ -217,12 +187,7 @@
     },
     "source": {
       "type": "object",
-      "required": [
-        "filename",
-        "fingerprint",
-        "size_bytes",
-        "media_duration"
-      ],
+      "required": ["filename", "fingerprint", "size_bytes", "media_duration"],
       "properties": {
         "filename": {
           "type": "string",
@@ -241,22 +206,13 @@
           "exclusiveMinimum": 0
         },
         "audio_channels": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "sample_rate": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         },
         "container": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "has_video": {
           "type": "boolean"
@@ -288,20 +244,14 @@
           "type": "string"
         },
         "execution_mode": {
-          "enum": [
-            "local",
-            "remote"
-          ],
+          "enum": ["local", "remote"],
           "description": "where recognition ran"
         },
         "model": {
           "type": "string"
         },
         "model_version": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "parameters": {
           "type": "object"
@@ -325,57 +275,76 @@
           "type": "string"
         },
         "language_detection": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "type": ["object", "null"]
         },
         "audio_extraction": {
-          "type": [
-            "object",
-            "null"
-          ]
+          "type": ["object", "null"]
         },
         "follow": {
           "description": "Present only on a transcript of a followed recording (transcribe --follow, ADR-043): the window, idle and holdback seconds, how many recognition rounds ran, how many final segments were emitted, and the audio length read.",
           "type": "object",
-          "required": ["window_seconds", "idle_seconds", "holdback_seconds", "rounds", "finals", "audio_seconds"],
+          "required": [
+            "window_seconds",
+            "idle_seconds",
+            "holdback_seconds",
+            "rounds",
+            "finals",
+            "audio_seconds"
+          ],
           "properties": {
-            "window_seconds": {"type": "number", "exclusiveMinimum": 0},
-            "idle_seconds": {"type": "number", "exclusiveMinimum": 0},
-            "holdback_seconds": {"type": "number", "minimum": 0},
-            "rounds": {"type": "integer", "minimum": 0},
-            "finals": {"type": "integer", "minimum": 0},
-            "audio_seconds": {"type": "number", "minimum": 0}
+            "window_seconds": { "type": "number", "exclusiveMinimum": 0 },
+            "idle_seconds": { "type": "number", "exclusiveMinimum": 0 },
+            "holdback_seconds": { "type": "number", "minimum": 0 },
+            "rounds": { "type": "integer", "minimum": 0 },
+            "finals": { "type": "integer", "minimum": 0 },
+            "audio_seconds": { "type": "number", "minimum": 0 }
           }
         },
         "chunking": {
           "description": "Present only on a chunked transcription (request chunk_seconds, ADR-042): how the recording was cut, which chunks came from the per-chunk cache, the device and the realtime factor (wall seconds of this run / media seconds).",
           "type": "object",
-          "required": ["chunk_seconds", "parallel", "cuts_from", "chunk_count", "chunks_from_cache", "chunks_recognized", "device", "engine_seconds", "wall_seconds", "realtime_factor", "chunks"],
+          "required": [
+            "chunk_seconds",
+            "parallel",
+            "cuts_from",
+            "chunk_count",
+            "chunks_from_cache",
+            "chunks_recognized",
+            "device",
+            "engine_seconds",
+            "wall_seconds",
+            "realtime_factor",
+            "chunks"
+          ],
           "properties": {
-            "chunk_seconds": {"type": "number"},
-            "parallel": {"type": "integer", "minimum": 1},
-            "cuts_from": {"enum": ["speech_regions", "level"]},
-            "chunk_count": {"type": "integer", "minimum": 1},
-            "chunks_from_cache": {"type": "integer", "minimum": 0},
-            "chunks_recognized": {"type": "integer", "minimum": 0},
-            "device": {"type": "string"},
-            "engine_seconds": {"type": "number"},
-            "wall_seconds": {"type": "number"},
-            "realtime_factor": {"type": ["number", "null"]},
+            "chunk_seconds": { "type": "number" },
+            "parallel": { "type": "integer", "minimum": 1 },
+            "cuts_from": { "enum": ["speech_regions", "level"] },
+            "chunk_count": { "type": "integer", "minimum": 1 },
+            "chunks_from_cache": { "type": "integer", "minimum": 0 },
+            "chunks_recognized": { "type": "integer", "minimum": 0 },
+            "device": { "type": "string" },
+            "engine_seconds": { "type": "number" },
+            "wall_seconds": { "type": "number" },
+            "realtime_factor": { "type": ["number", "null"] },
             "chunks": {
               "type": "array",
               "items": {
                 "type": "object",
                 "required": ["index", "start", "end", "cut", "from_cache"],
                 "properties": {
-                  "index": {"type": "integer", "minimum": 0},
-                  "start": {"type": "number"},
-                  "end": {"type": "number"},
-                  "cut": {"type": "object", "required": ["source"], "properties": {"source": {"enum": ["speech_regions", "level", "end"]}}},
-                  "from_cache": {"type": "boolean"},
-                  "engine_seconds": {"type": ["number", "null"]}
+                  "index": { "type": "integer", "minimum": 0 },
+                  "start": { "type": "number" },
+                  "end": { "type": "number" },
+                  "cut": {
+                    "type": "object",
+                    "required": ["source"],
+                    "properties": {
+                      "source": { "enum": ["speech_regions", "level", "end"] }
+                    }
+                  },
+                  "from_cache": { "type": "boolean" },
+                  "engine_seconds": { "type": ["number", "null"] }
                 }
               }
             }
@@ -384,13 +353,19 @@
         "vocabulary": {
           "description": "Present only when the request had domain_vocabulary (ADR-047): the terms selected from the caller's programme, slide text, speakers and terms (every one a string of that material), how they reached the engine (initial_prompt, vocabulary, or null when the engine takes neither), which were passed, and the size of each source.",
           "type": "object",
-          "required": ["terms", "delivered_as", "terms_passed", "japanese", "sources"],
+          "required": [
+            "terms",
+            "delivered_as",
+            "terms_passed",
+            "japanese",
+            "sources"
+          ],
           "properties": {
-            "terms": {"type": "array", "items": {"type": "string"}},
-            "delivered_as": {"enum": ["initial_prompt", "vocabulary", null]},
-            "terms_passed": {"type": "array", "items": {"type": "string"}},
-            "japanese": {"type": "boolean"},
-            "sources": {"type": "object"}
+            "terms": { "type": "array", "items": { "type": "string" } },
+            "delivered_as": { "enum": ["initial_prompt", "vocabulary", null] },
+            "terms_passed": { "type": "array", "items": { "type": "string" } },
+            "japanese": { "type": "boolean" },
+            "sources": { "type": "object" }
           }
         },
         "corrections": {
@@ -398,13 +373,43 @@
           "type": "object",
           "required": ["rules", "count", "applied"],
           "properties": {
-            "rules": {"type": "array", "items": {"type": "object", "required": ["from", "to", "match"],
-                      "properties": {"from": {"type": "string"}, "to": {"type": "string"}, "match": {"enum": ["word", "substring"]}}}},
-            "count": {"type": "integer", "minimum": 0},
-            "applied": {"type": "array", "items": {"type": "object", "required": ["rule", "from", "to", "segment_id", "start", "end", "timing"],
-                        "properties": {"rule": {"type": "integer", "minimum": 0}, "from": {"type": "string"}, "to": {"type": "string"},
-                                       "segment_id": {"type": "string"}, "start": {"type": "number"}, "end": {"type": "number"},
-                                       "timing": {"enum": ["word", "segment"]}}}}
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["from", "to", "match"],
+                "properties": {
+                  "from": { "type": "string" },
+                  "to": { "type": "string" },
+                  "match": { "enum": ["word", "substring"] }
+                }
+              }
+            },
+            "count": { "type": "integer", "minimum": 0 },
+            "applied": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "rule",
+                  "from",
+                  "to",
+                  "segment_id",
+                  "start",
+                  "end",
+                  "timing"
+                ],
+                "properties": {
+                  "rule": { "type": "integer", "minimum": 0 },
+                  "from": { "type": "string" },
+                  "to": { "type": "string" },
+                  "segment_id": { "type": "string" },
+                  "start": { "type": "number" },
+                  "end": { "type": "number" },
+                  "timing": { "enum": ["word", "segment"] }
+                }
+              }
+            }
           }
         },
         "skill": {

@@ -131,7 +131,9 @@ Audible playback has one extra browser constraint: a `BroadcastChannel` message 
   if (typeof BroadcastChannel === "undefined") return;
 
   var sender =
-    new URLSearchParams(location.search).get("mode") === "audience" ? "audience" : "presenter";
+    new URLSearchParams(location.search).get("mode") === "audience"
+      ? "audience"
+      : "presenter";
   var channel = new BroadcastChannel("hf-slideshow:" + location.pathname);
   var applyingRemote = false;
   var lastTimeBroadcast = 0;
@@ -162,8 +164,10 @@ Audible playback has one extra browser constraint: a `BroadcastChannel` message 
     });
   }
   function syncMediaState(el, msg, allowTimeSync) {
-    if (typeof msg.playbackRate === "number") el.playbackRate = msg.playbackRate;
-    if (typeof msg.volume === "number") el.volume = Math.max(0, Math.min(1, msg.volume));
+    if (typeof msg.playbackRate === "number")
+      el.playbackRate = msg.playbackRate;
+    if (typeof msg.volume === "number")
+      el.volume = Math.max(0, Math.min(1, msg.volume));
     if (sender === "audience" && mutedPlaybackByKey[msg.key]) {
       el.muted = true;
     } else if (typeof msg.muted === "boolean") {
@@ -284,7 +288,11 @@ Audible playback has one extra browser constraint: a `BroadcastChannel` message 
   channel.addEventListener("message", function (event) {
     var msg = event.data;
     if (!msg || msg.type !== "media" || msg.sender === sender) return;
-    if (sender === "audience" && blockedPlayByKey[msg.key] && msg.action === "timeupdate") {
+    if (
+      sender === "audience" &&
+      blockedPlayByKey[msg.key] &&
+      msg.action === "timeupdate"
+    ) {
       pendingPlayByKey[msg.key] = msg;
       showAudienceUnlock();
       return;
@@ -295,7 +303,10 @@ Audible playback has one extra browser constraint: a `BroadcastChannel` message 
     try {
       if (
         msg.action === "play" ||
-        (sender === "audience" && msg.action === "timeupdate" && msg.paused === false && el.paused)
+        (sender === "audience" &&
+          msg.action === "timeupdate" &&
+          msg.paused === false &&
+          el.paused)
       ) {
         pendingPlayByKey[msg.key] = msg;
         tryPlay(el, msg);
@@ -383,7 +394,8 @@ function notesDeckKey(slideshowEl) {
   const explicit = slideshowEl.getAttribute("notes-storage-key");
   if (explicit && explicit.trim()) return explicit.trim();
 
-  const playerSrc = slideshowEl.querySelector("hyperframes-player")?.getAttribute("src") || "";
+  const playerSrc =
+    slideshowEl.querySelector("hyperframes-player")?.getAttribute("src") || "";
   let resolvedPlayerSrc = playerSrc;
   try {
     resolvedPlayerSrc = new URL(playerSrc, location.href).href;
@@ -485,7 +497,9 @@ function updateCameraForTime(t, opts) {
     nextSlideIndex !== currentSlideIndex &&
     Math.abs(t - lastTime) > 1.2;
   var animateCamera = Boolean(
-    window.__hfCameraTransitionsEnabled && jumpedBetweenSlides && !(opts && opts.staticCamera),
+    window.__hfCameraTransitionsEnabled &&
+    jumpedBetweenSlides &&
+    !(opts && opts.staticCamera),
   );
   var cam = cameraAtTime(t);
   setWorldCamera(world, cam, animateCamera);
@@ -748,7 +762,9 @@ Implementation detail: iframe media elements belong to the iframe's DOM realm. F
 Add the `sound` boolean attribute to `<hyperframes-slideshow>` in demo.html. The component renders a speaker/speaker-muted SVG button as the **leftmost item in the nav capsule**, styled identically to the prev/next ghost buttons. No separate mute button in the composition.
 
 ```html
-<hyperframes-slideshow tabindex="0" sound style="..."> ... </hyperframes-slideshow>
+<hyperframes-slideshow tabindex="0" sound style="...">
+  ...
+</hyperframes-slideshow>
 ```
 
 The component:
@@ -899,7 +915,11 @@ var renderer = null;
 var _err = console.error;
 console.error = function () {}; // silence THREE's multi-line GPU error during init
 try {
-  renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+  renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    alpha: true,
+    antialias: true,
+  });
 } catch (e) {
   // renderer stays null
 } finally {
@@ -925,12 +945,8 @@ if (!renderer) {
 
   // Mood config: map sceneId → visual state (colors, sub-object visibility, bg color)
   var MOODS = {
-    cover: {
-      /* particle color, opacity, bg ... */
-    },
-    problem: {
-      /* ... */
-    },
+    cover: {/* particle color, opacity, bg ... */},
+    problem: {/* ... */},
     // one entry per scene key
   };
 

@@ -14,18 +14,17 @@
 
 <p align="center"><b>Music beds and effects, placed in the mix</b></p>
 
-
 Music beds (BGM) and sound effects for the [AI Video Production OS](https://github.com/kajisho5/AI-video-production-OS) (department 音 / Audio). Local engines only. They are optional and never downloaded by the skill. Generated files are handed to [audio-production-skill](https://github.com/kajisho5/audio-production-skill) MIX, which places them in the programme; nothing is mixed here. Probing goes through [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill).
 
 **Status: 0.3.2, GENERATE_BGM, GENERATE_SFX and library mode experimental.** `contract`, `doctor`, `engines`, `generate-bgm` ([ADR-004](docs/decisions.md)), `generate-sfx` ([ADR-006](docs/decisions.md); EzAudio needs `--acknowledge-ezaudio-training-data`, [ADR-007](docs/decisions.md)) and library mode (`library-import`, `library-index`, `library-pick`, [ADR-008](docs/decisions.md): your own files with a declared licence, no engine) work.
 
-| Op | Capability | Engine | Step |
-|---|---|---|---|
-| GENERATE_BGM | `audio.bgm_generate` | ACE-Step 1.5 | 2 |
-| GENERATE_SFX | `audio.sfx_generate` | EzAudio ([ADR-005](docs/decisions.md)) | 3 |
-| Library mode | `audio.library_import` | none: your own files with a declared licence ([ADR-008](docs/decisions.md)) | 4 |
-| SFX cue sheet | (tool `sfx-cues`) | none: library effects or named WAVs ([ADR-013](docs/decisions.md); reuse spacing and character, [ADR-015](docs/decisions.md)) | 9 |
-| Loop beds, stingers, seam check | (tools `loop-bed`, `stinger`, `seam-check`) | none: a WAV you already have ([ADR-011](docs/decisions.md)) | 7 |
+| Op                              | Capability                                  | Engine                                                                                                                        | Step |
+| ------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---- |
+| GENERATE_BGM                    | `audio.bgm_generate`                        | ACE-Step 1.5                                                                                                                  | 2    |
+| GENERATE_SFX                    | `audio.sfx_generate`                        | EzAudio ([ADR-005](docs/decisions.md))                                                                                        | 3    |
+| Library mode                    | `audio.library_import`                      | none: your own files with a declared licence ([ADR-008](docs/decisions.md))                                                   | 4    |
+| SFX cue sheet                   | (tool `sfx-cues`)                           | none: library effects or named WAVs ([ADR-013](docs/decisions.md); reuse spacing and character, [ADR-015](docs/decisions.md)) | 9    |
+| Loop beds, stingers, seam check | (tools `loop-bed`, `stinger`, `seam-check`) | none: a WAV you already have ([ADR-011](docs/decisions.md))                                                                   | 7    |
 
 ```bash
 pip install -e .                     # stdlib only, Python >= 3.9
@@ -64,10 +63,10 @@ Seed determinism and duration accuracy of the real ACE-Step are not measured yet
 
 ### Choosing the BGM model (GPU memory)
 
-| Model | Size | Weights licence / output use | GPU memory as this skill runs it | Download |
-|---|---|---|---|---|
-| `acestep-v15-turbo` (default) | 2B DiT | MIT; commercial use stated by the model card | < 4 GB (model card); CPU documented; doctor only warns | ~10 GB, the main repository `ACE-Step/Ace-Step1.5` |
-| `acestep-v15-xl-turbo` | 4B DiT | MIT; commercial use stated by its own model card | **>= 20 GB**, else `INSUFFICIENT_VRAM` before anything runs | ~20 GB more, `ACE-Step/acestep-v15-xl-turbo`, into the same checkpoints directory |
+| Model                         | Size   | Weights licence / output use                     | GPU memory as this skill runs it                            | Download                                                                          |
+| ----------------------------- | ------ | ------------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `acestep-v15-turbo` (default) | 2B DiT | MIT; commercial use stated by the model card     | < 4 GB (model card); CPU documented; doctor only warns      | ~10 GB, the main repository `ACE-Step/Ace-Step1.5`                                |
+| `acestep-v15-xl-turbo`        | 4B DiT | MIT; commercial use stated by its own model card | **>= 20 GB**, else `INSUFFICIENT_VRAM` before anything runs | ~20 GB more, `ACE-Step/acestep-v15-xl-turbo`, into the same checkpoints directory |
 
 - **Why 20 GB.** The XL model card lists >= 12 GB with CPU offload and INT8 quantization, >= 16 GB with CPU offload, >= 20 GB without offload (recommended) and >= 24 GB with the 4B LM. This skill passes no offload or quantization to ACE-Step, so the no-offload figure applies. The XL DiT weights alone take about 9 GB of GPU memory (ACE-Step's `gpu_config`). GPUs report a little less than their nominal size, so the measured memory is compared with a 0.5 GB margin, as ACE-Step does for its 16 GB class.
 - **What is measured.** The largest NVIDIA GPU (`nvidia-smi`) or Apple Silicon's unified memory (`sysctl`; the CPU shares it, so the GPU budget is lower). With no GPU found, XL is refused. When a GPU's memory cannot be read (ROCm, Intel XPU through `xpu-smi`, an `nvidia-smi` that gives no rows), XL runs and the result warns that the memory was not checked. An Intel GPU is only noticed through `xpu-smi`; on one without it, pass `--device xpu` and the memory counts as not measured instead of "no GPU".
@@ -120,18 +119,20 @@ Two opt-in controls ([ADR-015](docs/decisions.md)); without them the sheet is as
 
 ## Engines (optional, [ADR-001](docs/decisions.md), [ADR-005](docs/decisions.md))
 
-| Engine | Code / weights licence | Output use | Hardware | How the skill reaches it |
-|---|---|---|---|---|
-| `acestep` ACE-Step 1.5 (BGM) | MIT / MIT (text encoder Qwen3-Embedding-0.6B Apache-2.0) | commercial use stated by the model card; training data is the vendor's claim (unverified) | < 4 GB VRAM for the 2B turbo model (default); >= 20 GB for the 4B XL turbo model (`--model`, [ADR-016](docs/decisions.md)); CUDA, MPS, ROCm, XPU, CPU documented | worker under its own environment: `SOUND_DESIGN_ACESTEP_PYTHON`; weights in `SOUND_DESIGN_ACESTEP_CHECKPOINTS` or the Hugging Face cache |
-| `ezaudio` EzAudio-XL (SFX) | MIT / MIT (text encoder flan-t5-xl Apache-2.0) | no statement on the output; the licences do not restrict it. Trained on YouTube audio (AudioSet, VGGSound, AudioCaps): recorded as a risk in every result | not documented (unverified); CUDA or CPU | worker under its own environment: `SOUND_DESIGN_EZAUDIO_PYTHON`; the checkout and its `ckpts/` in `SOUND_DESIGN_EZAUDIO_DIR`; Flan-T5-XL in the Hugging Face cache |
+| Engine                       | Code / weights licence                                   | Output use                                                                                                                                                | Hardware                                                                                                                                                         | How the skill reaches it                                                                                                                                           |
+| ---------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `acestep` ACE-Step 1.5 (BGM) | MIT / MIT (text encoder Qwen3-Embedding-0.6B Apache-2.0) | commercial use stated by the model card; training data is the vendor's claim (unverified)                                                                 | < 4 GB VRAM for the 2B turbo model (default); >= 20 GB for the 4B XL turbo model (`--model`, [ADR-016](docs/decisions.md)); CUDA, MPS, ROCm, XPU, CPU documented | worker under its own environment: `SOUND_DESIGN_ACESTEP_PYTHON`; weights in `SOUND_DESIGN_ACESTEP_CHECKPOINTS` or the Hugging Face cache                           |
+| `ezaudio` EzAudio-XL (SFX)   | MIT / MIT (text encoder flan-t5-xl Apache-2.0)           | no statement on the output; the licences do not restrict it. Trained on YouTube audio (AudioSet, VGGSound, AudioCaps): recorded as a risk in every result | not documented (unverified); CUDA or CPU                                                                                                                         | worker under its own environment: `SOUND_DESIGN_EZAUDIO_PYTHON`; the checkout and its `ckpts/` in `SOUND_DESIGN_EZAUDIO_DIR`; Flan-T5-XL in the Hugging Face cache |
 
 Rejected for SFX ([ADR-005](docs/decisions.md)):
+
 - Stable Audio Open 1.0 / Small: Stability AI Community License, whose commercial use ends above USD 1M annual revenue.
 - AudioLDM / AudioLDM2, AudioGen, Tango / Tango 2, TangoFlux, MMAudio, AudioX and Auffusion: non-commercial weights or code.
 - ThinkSound: the README forbids commercial use.
 - SoundCTM: it needs AudioLDM's non-commercial VAE at inference.
 
 ACE-Step needs Python 3.11-3.12 and pins its own torch, so it lives in its own checkout and `.venv` (`uv sync`); `doctor` prints the exact install line. Left alone, ACE-Step downloads its models on first run, from Hugging Face or ModelScope. The skill never lets it:
+
 - doctor reports `MISSING` until every component ACE-Step checks is on disk, including the 1.7B LM, which `acestep-download` fetches with the main model and this skill never loads;
 - in the worker, ACE-Step's download functions are replaced with ones that refuse;
 - the worker refuses every non-loopback connection and name lookup, so the Hugging Face offline variables are not the only guard.

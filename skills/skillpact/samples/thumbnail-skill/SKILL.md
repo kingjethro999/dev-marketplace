@@ -13,6 +13,7 @@ Tools: `thumbnail/validate` (structural check only), `thumbnail/render` (canvas 
 -> PNG/JPEG), `thumbnail/extract_frame` (one video timestamp -> one frame, nothing else).
 
 Rules for a calling agent:
+
 1. Decide everything about content before calling this skill: which still image, or which exact
    video timestamp (`asset.timestamp`, seconds); what the text says (with literal `\n` for line
    breaks — this skill never wraps or reflows text); where every element sits (`position`, `size`,

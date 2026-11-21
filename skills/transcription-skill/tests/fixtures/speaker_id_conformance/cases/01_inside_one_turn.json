@@ -3,10 +3,7 @@
   "fixture_version": "1",
   "id": "01_inside_one_turn",
   "description": "Words and a segment that lie inside one speaker's turn take that speaker.",
-  "covers": [
-    "word_inside_turn",
-    "segment_without_words"
-  ],
+  "covers": ["word_inside_turn", "segment_without_words"],
   "transcript": {
     "schema": "transcription-skill/transcript/0.1",
     "id": "tr_conformance01",
@@ -109,10 +106,7 @@
       "min_speakers": null,
       "max_speakers": null
     },
-    "speakers": [
-      "SPEAKER_00",
-      "SPEAKER_01"
-    ],
+    "speakers": ["SPEAKER_00", "SPEAKER_01"],
     "speaker_count": 2,
     "speech_seconds": 8.0,
     "turns": [
@@ -150,10 +144,7 @@
       {
         "id": "seg_0001",
         "speaker_id": "SPEAKER_00",
-        "words": [
-          "SPEAKER_00",
-          "SPEAKER_00"
-        ]
+        "words": ["SPEAKER_00", "SPEAKER_00"]
       },
       {
         "id": "seg_0002",

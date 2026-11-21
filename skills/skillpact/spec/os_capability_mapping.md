@@ -6,14 +6,14 @@ The AI video production OS ([kajisho5/Velisa](https://github.com/kajisho5/Velisa
 
 ## What each side says
 
-| | SkillPact contract | OS capability contract |
-|---|---|---|
-| question | what may this skill touch, does it work, who signed it | which capability ids does this skill provide, under which tool |
-| identity | `skill.name` (Agent Skills name, e.g. `qc-skill`) | `skill_id`, `id` or `skill.id` (OS id, e.g. `qc`) |
-| unit | capability = one entry point (CLI / MCP tool) with its effects | `provides[]` entry = one capability id (`<domain>.<verb>`, e.g. `measure.audio.loudness`) with `lifecycle` and `tool_id` |
-| effects, scopes, requirements, tests, integrity, signatures | yes | no |
-| lifecycle (`PROPOSED` ... `RETIRED`), registry collisions | no | yes |
-| dependencies on other skills | `requirements.skills[]` (`name`, `version`) | `dependencies[]` (`skill_id`, `version_range`) |
+|                                                             | SkillPact contract                                             | OS capability contract                                                                                                   |
+| ----------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| question                                                    | what may this skill touch, does it work, who signed it         | which capability ids does this skill provide, under which tool                                                           |
+| identity                                                    | `skill.name` (Agent Skills name, e.g. `qc-skill`)              | `skill_id`, `id` or `skill.id` (OS id, e.g. `qc`)                                                                        |
+| unit                                                        | capability = one entry point (CLI / MCP tool) with its effects | `provides[]` entry = one capability id (`<domain>.<verb>`, e.g. `measure.audio.loudness`) with `lifecycle` and `tool_id` |
+| effects, scopes, requirements, tests, integrity, signatures | yes                                                            | no                                                                                                                       |
+| lifecycle (`PROPOSED` ... `RETIRED`), registry collisions   | no                                                             | yes                                                                                                                      |
+| dependencies on other skills                                | `requirements.skills[]` (`name`, `version`)                    | `dependencies[]` (`skill_id`, `version_range`)                                                                           |
 
 The two axes differ: one SkillPact capability (one tool) can provide several OS capability ids. qc-skill has one CLI entry, OS tool `qc/run`, which provides 10 ids. So a SkillPact capability maps to an OS `tool_id`, and the OS ids hang under it.
 
@@ -23,14 +23,28 @@ Under the `x.os` vendor extension (§5), so no schema change is needed and a sig
 
 ```json
 {
-  "skill": {"name": "qc-skill", "version": "0.1.0"},
-  "capabilities": [{
-    "id": "cli.qc", "summary": "...", "entry": {"cli": ["python3", "-m", "qc_skill.cli"]}, "effects": ["read", "exec"],
-    "x": {"os": {"tool_id": "qc/run", "provides": [
-      {"id": "measure.audio.loudness", "lifecycle": "EXPERIMENTAL", "checks": ["audio.integrated_loudness_within_tolerance"]}
-    ]}}
-  }],
-  "x": {"os": {"document": {"skill_id": "qc"}}}
+  "skill": { "name": "qc-skill", "version": "0.1.0" },
+  "capabilities": [
+    {
+      "id": "cli.qc",
+      "summary": "...",
+      "entry": { "cli": ["python3", "-m", "qc_skill.cli"] },
+      "effects": ["read", "exec"],
+      "x": {
+        "os": {
+          "tool_id": "qc/run",
+          "provides": [
+            {
+              "id": "measure.audio.loudness",
+              "lifecycle": "EXPERIMENTAL",
+              "checks": ["audio.integrated_loudness_within_tolerance"]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "x": { "os": { "document": { "skill_id": "qc" } } }
 }
 ```
 

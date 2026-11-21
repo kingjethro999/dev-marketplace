@@ -3,11 +3,7 @@
   "fixture_version": "1",
   "id": "05_overlap",
   "description": "Only the exclusive turns vote; overlapping speech (overlap.turns) never adds a speaker. Segments that touch an overlap region are listed in overlap_segment_ids.",
-  "covers": [
-    "overlap",
-    "exclusive_turns_only",
-    "overlap_segment_ids"
-  ],
+  "covers": ["overlap", "exclusive_turns_only", "overlap_segment_ids"],
   "transcript": {
     "schema": "transcription-skill/transcript/0.1",
     "id": "tr_conformance01",
@@ -120,10 +116,7 @@
       "min_speakers": null,
       "max_speakers": null
     },
-    "speakers": [
-      "SPEAKER_00",
-      "SPEAKER_01"
-    ],
+    "speakers": ["SPEAKER_00", "SPEAKER_01"],
     "speaker_count": 2,
     "speech_seconds": 6.0,
     "turns": [
@@ -156,10 +149,7 @@
         {
           "start": 2.5,
           "end": 3.5,
-          "speakers": [
-            "SPEAKER_00",
-            "SPEAKER_01"
-          ]
+          "speakers": ["SPEAKER_00", "SPEAKER_01"]
         }
       ],
       "total_seconds": 1.0
@@ -181,10 +171,7 @@
       {
         "id": "seg_0001",
         "speaker_id": "SPEAKER_00",
-        "words": [
-          "SPEAKER_00",
-          "SPEAKER_00"
-        ]
+        "words": ["SPEAKER_00", "SPEAKER_00"]
       },
       {
         "id": "seg_0002",
@@ -197,8 +184,6 @@
         "words": null
       }
     ],
-    "overlap_segment_ids": [
-      "seg_0001"
-    ]
+    "overlap_segment_ids": ["seg_0001"]
   }
 }

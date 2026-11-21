@@ -10,10 +10,7 @@
       "id": "01_inside_one_turn",
       "file": "cases/01_inside_one_turn.json",
       "sha256": "91aa904594dfee960d4c41bc359a0780a45a7225817b15b26628ea3652a5077e",
-      "covers": [
-        "word_inside_turn",
-        "segment_without_words"
-      ]
+      "covers": ["word_inside_turn", "segment_without_words"]
     },
     {
       "id": "02_word_across_turn_boundary",
@@ -52,11 +49,7 @@
       "id": "05_overlap",
       "file": "cases/05_overlap.json",
       "sha256": "c8f05a975b9e03dd3056de454ee111b30c36b43cf686af64bb5643dbd53a4b14",
-      "covers": [
-        "overlap",
-        "exclusive_turns_only",
-        "overlap_segment_ids"
-      ]
+      "covers": ["overlap", "exclusive_turns_only", "overlap_segment_ids"]
     },
     {
       "id": "06_same_speaker_summed",

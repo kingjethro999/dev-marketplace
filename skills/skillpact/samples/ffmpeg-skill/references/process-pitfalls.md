@@ -1,7 +1,7 @@
 # Process pitfalls
 
 Mistakes made (or nearly made) while developing this repo that were not about FFmpeg
-or a platform's behaviour — about the *process* of making a change safely. Written down
+or a platform's behaviour — about the _process_ of making a change safely. Written down
 for the same reason `references/ci-platform-pitfalls.md` exists: a mistake that isn't
 recorded gets repeated the next time a session starts fresh with no memory of it.
 
@@ -16,7 +16,7 @@ add an entry below. Don't wait to be asked.
 answer (`_tool_usability()` in `_contract.py` only reads `required`, never `optional`).
 Moving a capability from `required` to `optional` — even when it's honestly true that a
 new flag makes it conditional — silently changes what `doctor` reports as `usable: no`
-on a machine missing that capability, for the tool's *default* invocation too.
+on a machine missing that capability, for the tool's _default_ invocation too.
 
 `tests/test_contract.py`'s `DoctorDetectionTests` pins specific `usable` outcomes against
 real captured `ffmpeg -filters`/`-encoders` fixtures (e.g. a plain Homebrew macOS build
@@ -26,7 +26,7 @@ break this fixture-based guarantee.
 
 Caught twice while adding capability metadata for new flags (`caption.py --mode mux` in
 #51, `doctor`'s `gpu_encoders` in #52) — in both cases the fix was to grep
-`tests/test_contract.py` for `usable` and `_doctor(` *before* editing `TOOL_META`, not
+`tests/test_contract.py` for `usable` and `_doctor(` _before_ editing `TOOL_META`, not
 after a test failure revealed it. Do that grep first, every time `required`/`optional`
 changes.
 
@@ -61,7 +61,7 @@ the tag from `origin` restored everything, but it was only noticed because `git 
 showed files the session had not edited.
 
 Rule: a probe that runs `git commit`, `git tag`, `rm -rf`, or writes into the tree goes
-in a directory created *and* verified in the same command (`cd "$DIR" && pwd && ...`),
+in a directory created _and_ verified in the same command (`cd "$DIR" && pwd && ...`),
 not one assumed from an earlier `cd`; prefer a fixture built from a few `printf` lines
 over a copy of the whole checkout (the copy carries the real `.git`, so a mistake there
 is a mistake in the real history); and run `git status` on the real repo before
@@ -72,14 +72,14 @@ same thing for the tools themselves — it applies to the person testing them to
 
 `test_stabilize_reduces_frame_to_frame_motion` (macOS CI, `stabilize.py`) failed with
 three independently redesigned shake fixtures in a row — each time the instinct was "the
-fixture's frequencies must be wrong," each time the retuned fixture failed a *different*
+fixture's frequencies must be wrong," each time the retuned fixture failed a _different_
 way on the next CI run. The actual cause (libvidstab behaving differently across the
 Linux and macOS ffmpeg builds) was diagnosable from the first failure: a synthetic
 fixture that reliably improves under one implementation and reliably gets worse under
 another is evidence the implementations disagree, not that the fixture is miscalibrated.
 
 If a quantitative assertion fails on one platform, survives a redesign, and fails again
-on the *same* platform in a different way: stop redesigning the fixture. Either restrict
+on the _same_ platform in a different way: stop redesigning the fixture. Either restrict
 the strict assertion to the platform where it's provably correct (keeping a weaker,
 platform-general check — output exists, has the right duration — everywhere), or escalate
 before spending a third CI cycle on it.
@@ -110,9 +110,9 @@ On 2026-09-11, three routine Dependabot merges (`actions/upload-artifact` 4→7,
 `actions/setup-node` 4→7, `dependabot/fetch-metadata` 2→3) were published to npm as
 **1.0.0, 1.0.1 and 1.0.2**. The release pipeline (`release.yml`, since #129) resolves the next
 version from PR labels; an autolabeler rule added the same day applied `major` to any PR whose
-*body* contained the literal breaking-change marker. Dependabot PR bodies quote the upstream
+_body_ contained the literal breaking-change marker. Dependabot PR bodies quote the upstream
 project's release notes verbatim, and upload-artifact's v5.0.0 notes contain exactly that
-phrase — about *their* Node runtime, nothing to do with this package. One label, three
+phrase — about _their_ Node runtime, nothing to do with this package. One label, three
 accidental majors, in nine minutes, with every job green.
 
 Two things made it worse than one bad rule: every chore merge released at all (so the first
@@ -129,7 +129,7 @@ major bump, a publish, a tag) from text it did not author — PR bodies, commit 
 release notes are quotations as often as they are statements. Match on labels a person
 applied, or on files changed, and make the irreversible step refuse anything surprising rather
 than assume the surprise was intended. And after wiring any such automation, watch the first
-few real runs' *results* (npm, tags) rather than their exit codes: the three runs here were
+few real runs' _results_ (npm, tags) rather than their exit codes: the three runs here were
 "success" by every check the job had.
 
 ## An action input that does not exist is a warning, not an error -- and "excluded from the notes" is not "no release"
@@ -139,16 +139,16 @@ workflow-only merge. Two assumptions in `release.yml` were wrong and nothing che
 
 - `release-drafter/release-drafter@v6` was called with `dry-run: true` to "compute the next
   version read-only". That action has no `dry-run` input. GitHub Actions logs
-  `Unexpected input(s) 'dry-run'` as a *warning* and runs the step anyway -- so every release
+  `Unexpected input(s) 'dry-run'` as a _warning_ and runs the step anyway -- so every release
   run had been rewriting the draft release live, and the "read-only" in the comment was fiction.
 - `exclude-labels` in `release-drafter.yml` was expected to make a chore-only merge resolve to
-  the same version as the last tag. It only removes those PRs from the draft *notes*; the
+  the same version as the last tag. It only removes those PRs from the draft _notes_; the
   version resolver still applies `default: patch` and reports last+patch. The workflow's "same
   version → no-op" guard therefore never fired.
 
 Both were visible in the first run's log and in the action's documented inputs, and both were
-missed because the PR's test plan verified the YAML *parsed* and the config *contained* the
-intended keys -- not that the action *did* what the comment claimed. Fixed by taking the
+missed because the PR's test plan verified the YAML _parsed_ and the config _contained_ the
+intended keys -- not that the action _did_ what the comment claimed. Fixed by taking the
 decision away from the action: `.github/scripts/resolve_version.py` reads the merged PRs'
 labels through `gh api`, returns nothing when nothing is releasable, refuses `major`, and has
 a unit test in `tests/test_contract.py` with fake label data for each rule.
@@ -157,7 +157,7 @@ The general rule, twice over now: when wiring a third-party action, read its `ac
 inputs (or `Unexpected input(s)` in the first log) before trusting a parameter, and treat
 any step whose output decides an irreversible action as something to unit-test with fixed
 inputs, not something to confirm by reading its YAML. And watch the first real run's
-*effect* (tags, npm), which is how both incidents were actually noticed.
+_effect_ (tags, npm), which is how both incidents were actually noticed.
 
 ### The release bump step required the literal `(nothing yet)` line under `## Unreleased`
 

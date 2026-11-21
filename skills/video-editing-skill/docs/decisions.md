@@ -5,25 +5,25 @@ Short records of the design decisions that shape this Skill. Newer entries refin
 ## ADR-001 — An execution Skill, never an editor with opinions
 
 **Decision.** video-editing-skill executes typed edit requests; it holds no editing judgement, no AI, no plan, no
-policy. The caller (video-production-agent or anything else) decides *what*; this Skill decides only *whether it is
-valid* and *how to run it deterministically* through ffmpeg-skill, the single FFmpeg boundary.
+policy. The caller (video-production-agent or anything else) decides _what_; this Skill decides only _whether it is
+valid_ and _how to run it deterministically_ through ffmpeg-skill, the single FFmpeg boundary.
 **Consequences.** Every input is an allowlisted, typed operation; every FFmpeg detail lives in ffmpeg-skill; gaps in
 the engine are reported as gaps (`UNSUPPORTED_OPERATION`, `TOOL_ERROR`), never bridged with a direct ffmpeg call.
 
 ## ADR-002 — Contract 0.2.0 candidates: what is worth adding, what is not
 
 **Context.** Five operation types are declared `NOT_IMPLEMENTED` in the 0.1.x contract: `CROP`, `FREEZE`, `REVERSE`,
-`IMAGE_INSERT`, `POSITION`. Each was evaluated against five questions: is it a *generic* editing operation, is it
+`IMAGE_INSERT`, `POSITION`. Each was evaluated against five questions: is it a _generic_ editing operation, is it
 safe at the ffmpeg-skill boundary (a typed tool exists or can exist), can it be a typed model, does it fit the
 operation graph, and is it disjoint from the eight existing operations.
 
-| Type | Generic? | Engine boundary (0.9.x) | Typed model | Graph | Disjoint? | Verdict |
-|---|---|---|---|---|---|---|
-| `CROP` (pixel rectangle) | yes: reframing, removing burnt-in UI, screen-recording regions | **no tool** (fit.py crops only to an aspect ratio) | yes: `{x, y, width, height}` in source pixels, even sizes, inside the frame | one video in, one out | yes (FILL crops to an *aspect*, CROP to a *rectangle*) | **candidate for 0.2.0**, blocked on a typed `crop` tool in ffmpeg-skill |
-| `IMAGE_INSERT` (still → timed clip) | yes: title cards, slides, holding frames | **no tool** (join.py needs video inputs; overlay.py composites only) | yes: `{image, duration, frame, fps, audio: silent}` | source image → video-producing operation, then CONCAT | yes | **candidate for 0.2.0**, blocked on a typed still-to-clip tool |
-| `FREEZE` (hold a frame) | sometimes: emphasis, end frames | no tool; expressible as a still extracted from a frame + IMAGE_INSERT | yes, but it is a composition of two future primitives | fine | overlaps IMAGE_INSERT | **not planned as a type**; compose it once IMAGE_INSERT exists |
-| `REVERSE` | rarely in production editing (effects, not conference / corporate delivery) | no tool | trivial | fine | yes | **not planned**: low value, engine gap |
-| `POSITION` (place a video layer, PiP) | yes for PiP / multicam layouts | no tool (overlay.py composites *images*); would need a typed video-on-video compositor | yes: `{layer, position, scale, opacity, start, end}` | two video inputs, one out | overlaps OVERLAY unless OVERLAY grows a video layer | **not planned in this Skill's scope** until ffmpeg-skill has a typed layer tool; then extend OVERLAY rather than add a type |
+| Type                                  | Generic?                                                                    | Engine boundary (0.9.x)                                                                | Typed model                                                                 | Graph                                                 | Disjoint?                                              | Verdict                                                                                                                     |
+| ------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `CROP` (pixel rectangle)              | yes: reframing, removing burnt-in UI, screen-recording regions              | **no tool** (fit.py crops only to an aspect ratio)                                     | yes: `{x, y, width, height}` in source pixels, even sizes, inside the frame | one video in, one out                                 | yes (FILL crops to an _aspect_, CROP to a _rectangle_) | **candidate for 0.2.0**, blocked on a typed `crop` tool in ffmpeg-skill                                                     |
+| `IMAGE_INSERT` (still → timed clip)   | yes: title cards, slides, holding frames                                    | **no tool** (join.py needs video inputs; overlay.py composites only)                   | yes: `{image, duration, frame, fps, audio: silent}`                         | source image → video-producing operation, then CONCAT | yes                                                    | **candidate for 0.2.0**, blocked on a typed still-to-clip tool                                                              |
+| `FREEZE` (hold a frame)               | sometimes: emphasis, end frames                                             | no tool; expressible as a still extracted from a frame + IMAGE_INSERT                  | yes, but it is a composition of two future primitives                       | fine                                                  | overlaps IMAGE_INSERT                                  | **not planned as a type**; compose it once IMAGE_INSERT exists                                                              |
+| `REVERSE`                             | rarely in production editing (effects, not conference / corporate delivery) | no tool                                                                                | trivial                                                                     | fine                                                  | yes                                                    | **not planned**: low value, engine gap                                                                                      |
+| `POSITION` (place a video layer, PiP) | yes for PiP / multicam layouts                                              | no tool (overlay.py composites _images_); would need a typed video-on-video compositor | yes: `{layer, position, scale, opacity, start, end}`                        | two video inputs, one out                             | overlaps OVERLAY unless OVERLAY grows a video layer    | **not planned in this Skill's scope** until ffmpeg-skill has a typed layer tool; then extend OVERLAY rather than add a type |
 
 **Decision.** No new operation type ships in 0.1.x: none can be implemented without building FFmpeg commands here,
 which ADR-001 forbids. `CROP` and `IMAGE_INSERT` are the two with clear generic value and clean typed models; they
@@ -37,6 +37,7 @@ re-pinning (docs/contract.md). The contract's `versioning.next` lists the candid
 whose frame computation was implicit. An execution Skill must promise the frame before it runs and verify it after.
 
 **Decision.**
+
 - `RESIZE` changes the **size** and keeps the **aspect**: `width = params.width`, `height = even(width * sh / sw)`.
   Nothing is padded, cropped or stretched.
 - `FIT` changes the **aspect** and keeps **every pixel**: scale to fit inside the target frame, letterbox /
@@ -130,7 +131,7 @@ what this Skill can do.
 
 `lifecycle: EXPERIMENTAL` is not a comment on the operations themselves — `TRIM`, `CUT`, `CONCAT`, and the rest are
 the same tested, already-in-production behavior `tool_specs()` has always described, exercised by
-`video-production-agent`'s real integration suite. It reflects that the *Capability id* concept this field
+`video-production-agent`'s real integration suite. It reflects that the _Capability id_ concept this field
 publishes is new: as of this ADR, no registry or Agent is known to consume `provides` yet. It should move to
 `STABLE` once one does.
 
@@ -148,8 +149,8 @@ alongside the existing `version` (the package's own release version, `"0.1.0"`).
 
 - `version` — this package's release version. Free to change on any release, including one that changes nothing a
   dependent needs to react to (an internal refactor, a bug fix, a new non-breaking operation). `contract_check.py`'s
-  `check_saved()` now reports a `version`-only change as *additive* drift, never *breaking*.
-- `contract_version` — the version of the *shape* the pinned blocks publish (`operations`, `capabilities`,
+  `check_saved()` now reports a `version`-only change as _additive_ drift, never _breaking_.
+- `contract_version` — the version of the _shape_ the pinned blocks publish (`operations`, `capabilities`,
   `errors`, `execution`, `schemas`, `unsupported`, `schema`, `skill_id`). Changes only when one of them changes in a
   way a dependent (an Agent, a registry) would need to react to; a dependent pins a range against
   `contract_version`, never `version`.
@@ -161,7 +162,7 @@ is exactly one contract shape to number, and `"1.0"` names it — the same conve
 
 **Why.** Before this ADR, `version` did double duty: it was both this package's release identity and the only
 signal a change to a pinned block had happened, forcing every future non-breaking release (a bug fix, a new
-`0.2.0` operation added additively) to either bump `version` and *look* like a contract-breaking event, or leave
+`0.2.0` operation added additively) to either bump `version` and _look_ like a contract-breaking event, or leave
 `version` frozen and give dependents no way to tell "the package moved" from "the contract shape moved". This is
 exactly the two-axis pattern `kajisho5/AI-video-production-OS` documents as already proven in `ffmpeg-skill`
 (`docs/VERSIONING.md` §1) and names as the one per-Skill gap most of the ecosystem still has
@@ -295,13 +296,13 @@ were once left open rather than decided speculatively.
 
 **The five questions, applied to rotate/flip.**
 
-| Question | Answer |
-|---|---|
-| Generic? | Yes: correcting a wrongly-tagged orientation, or mirroring a shot, is ordinary production editing, not a specialised effect. |
-| Safe at the ffmpeg-skill boundary? | Yes: `fit.py --rotate {90,180,270} --flip {h,v}` already exists (verified directly against `ffmpeg-skill/scripts/fit.py`) — no new engine tool, no raw filter string. `--rotate` compiles to `transpose=1`/`transpose=2`/`transpose=2,transpose=2`; `--flip` to `hflip`/`vflip`; rotate is applied before flip when both are given. |
-| Typed model? | Yes, and a small one: `{degrees?: 90 \| 180 \| 270, flip?: h \| v}`, at least one of the two required (the same "nothing to do" refusal `fit.py` itself raises when neither `--rotate` nor `--flip` nor any other flag is given). |
-| Fits the operation graph? | Yes: one video in, one out, like `SPEED`/`FIT`/`FILL`/`RESIZE` — all four already share `ffmpeg-skill/fit` as their engine tool without colliding, because each owns a disjoint parameter set. |
-| Disjoint from the eight existing operations? | Yes: `RESIZE`/`FIT`/`FILL` all change the frame's *aspect or size*; `ROTATE` changes only *orientation* (a turn and/or a mirror) and touches no pixel's colour or the frame's aspect ratio on its own terms. |
+| Question                                     | Answer                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generic?                                     | Yes: correcting a wrongly-tagged orientation, or mirroring a shot, is ordinary production editing, not a specialised effect.                                                                                                                                                                                                        |
+| Safe at the ffmpeg-skill boundary?           | Yes: `fit.py --rotate {90,180,270} --flip {h,v}` already exists (verified directly against `ffmpeg-skill/scripts/fit.py`) — no new engine tool, no raw filter string. `--rotate` compiles to `transpose=1`/`transpose=2`/`transpose=2,transpose=2`; `--flip` to `hflip`/`vflip`; rotate is applied before flip when both are given. |
+| Typed model?                                 | Yes, and a small one: `{degrees?: 90 \| 180 \| 270, flip?: h \| v}`, at least one of the two required (the same "nothing to do" refusal `fit.py` itself raises when neither `--rotate` nor `--flip` nor any other flag is given).                                                                                                   |
+| Fits the operation graph?                    | Yes: one video in, one out, like `SPEED`/`FIT`/`FILL`/`RESIZE` — all four already share `ffmpeg-skill/fit` as their engine tool without colliding, because each owns a disjoint parameter set.                                                                                                                                      |
+| Disjoint from the eight existing operations? | Yes: `RESIZE`/`FIT`/`FILL` all change the frame's _aspect or size_; `ROTATE` changes only _orientation_ (a turn and/or a mirror) and touches no pixel's colour or the frame's aspect ratio on its own terms.                                                                                                                        |
 
 **Decision — a new operation type, `ROTATE`, not new parameters on `FIT`.** Both were open per the issue text; a
 new type was chosen because:
@@ -327,7 +328,7 @@ refusal (`fit.py`'s rotate/flip path does not evenize an odd frame the way its a
 would only fail once inside the engine's encoder, which ADR-005 refuses up front instead). But unlike the other
 four frame-keeping operations, `ROTATE`'s **output frame is not always identical to the input's**: a 90 or 270
 degree turn swaps width and height (verified directly against `fit.py`: `if args.rotate in (90, 270): sw, sh =
-sh, sw`, computed from the *displayed* size — rotation metadata already swapped, same as every other operation in
+sh, sw`, computed from the _displayed_ size — rotation metadata already swapped, same as every other operation in
 this Skill). 180 degrees and a flip alone keep the frame exactly as it is. `operations.FRAME_SEMANTICS["ROTATE"]`
 and `executor.target_frame()` state and compute this explicitly; the output is verified against it exactly, the
 same "promise the frame, verify the frame" discipline ADR-003 established for `RESIZE`/`FIT`/`FILL`.
@@ -356,14 +357,14 @@ video filter chain, `fit.py` checks `factor < 1.0` (a slow-down — `factor` the
 same direction this Skill's own `SPEED.factor` already uses, verified against `compiler.py`'s existing `_compile`
 branch: `args["duration"] = input_duration.scale(1 / factor)`) before appending either
 `minterpolate=fps=<src_fps>:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1` (`interpolate`) or
-`fps=<src_fps>,tblend=all_mode=average` (`blend`) to `vf`. For a speed-*up* (`factor > 1`, or `factor == 1` with no
+`fps=<src_fps>,tblend=all_mode=average` (`blend`) to `vf`. For a speed-_up_ (`factor > 1`, or `factor == 1` with no
 retiming at all) `fit.py` accepts `--smooth` without complaint but the flag has zero effect — the branch that reads
 `args.smooth` is guarded by `factor < 1.0` and nothing else. `--smooth` has no argparse-level `requires=`/mutual
 exclusion with `--method`, `--max-speed`, or anything else `SPEED` already sends; `--method trim` simply never
 reaches the code path that reads it, the same "accepted, silently inert" shape as the speed-up case.
 
 **Decision — thread `smooth` straight onto `SPEED`, no new operation type, no cross-field refusal added here.**
-Unlike `ROTATE` (ADR-011), this is not a new orthogonal transform: `smooth` only changes *how* the existing
+Unlike `ROTATE` (ADR-011), this is not a new orthogonal transform: `smooth` only changes _how_ the existing
 `SPEED.factor` retime is filtered, never what frame or duration comes out, so it belongs on `SPEED` itself, the
 same way `FILL.anchor` (ADR-009) was added to `FILL` rather than becoming a new type. `operations.py` gains
 `SMOOTH_MODES = ("blend", "interpolate")` and validates `SPEED.params.smooth` with the same `_enum()` helper
@@ -489,7 +490,7 @@ type.
 without one (0.11.0 has no `freeze.py`) still runs every other operation. `doctor` marks only that type MISSING
 (`tool:ffmpeg-skill/freeze`) and lists it in a new `notes` array, not in `problems`, so `ok` stays true and the
 pinned-0.11.0 CI job's `doctor` step still passes; a request using it is refused before anything runs (`TOOL_ERROR`,
-not retryable). Flags are detected for them like for the required tools (`ENGINE_TOOLS`). A *missing flag* on a
+not retryable). Flags are detected for them like for the required tools (`ENGINE_TOOLS`). A _missing flag_ on a
 present tool (ROTATE on 0.10.0) is unchanged: still a problem.
 
 **Not done here (follow-ups, roadmap steps 4 and 5).** `IMAGE_INSERT` via `insert.py` is not the same size: an image
@@ -527,7 +528,7 @@ slot (an image source, never a video source or an operation, `kind_mismatch` oth
 accepts its result like any operation's. CONCAT keeps its video-only slots; an image source given to it directly is
 still refused, now with a hint naming IMAGE_INSERT. ADR-002's five questions: generic (title card, end slate,
 placeholder), safe (typed flags; the image is a positional path that went through the path policy), small model,
-one input / one output, disjoint from OVERLAY (a still *over* video) and from every other type.
+one input / one output, disjoint from OVERLAY (a still _over_ video) and from every other type.
 
 - `duration`: a time, 0.01..600 s (the FREEZE.hold bounds — both hold a picture). The clip lasts exactly that, and
   the timeline says so: one segment from the image source, `source_range` 0..0, speed `0/1`, over the duration. Every
@@ -567,6 +568,7 @@ the card then the footage. CI runs the same test against the pinned 0.11.0 check
 ownership). ADR-014 left `CROP` in `unsupported` because video-production-agent already calls `ffmpeg-skill/crop`
 itself (its `video_crop` SkillSpec, fed by the `cropdetect_analysis` measurement and a CONFIRM decision), so who owns
 pixel-rectangle crops had to be decided before a mapping was added. Two facts decide it:
+
 - `AI-video-production-OS`'s `ecosystem.json`, which gives each job to exactly one repository, gives **尺・画角合わせ**
   (duration and framing) to video-editing-skill. Its roadmap says "Work outside this list belongs to its owner and is
   handed over, not re-implemented". Cutting the frame down to a rectangle is framing, like `FILL`'s aspect crop and
@@ -583,10 +585,11 @@ agent can follow. Until then the agent's path keeps working: this change removes
 
 **Decision 2 — exactly the rectangle, or a refusal; never rounded.** This follows crop.py's own contract, read from
 the code of both checkouts (2.21.0 and the pinned 0.11.0 `b388035`): `x, y >= 0`, `width, height > 0` and even (4:2:0),
-and the rectangle inside the source frame *as displayed* (rotation ±90/270 swaps the measured width and height).
+and the rectangle inside the source frame _as displayed_ (rotation ±90/270 swaps the measured width and height).
+
 - Here: `x`, `y` are integers `0..8192`; `width`, `height` are even integers `2..8192` (`_even`, the same validator as
   every other frame size).
-- *Inside the frame* is checked in `Executor._check_media`, before anything runs, against the input's measured or
+- _Inside the frame_ is checked in `Executor._check_media`, before anything runs, against the input's measured or
   expected frame (an operation's output frame when the input is another operation). An outside rectangle is
   `INVALID_REQUEST`, `details.reason: crop_outside_frame`, with the frame and the rectangle. A request is malformed
   for its input, and nothing about the input is unusable, so it is not `INVALID_INPUT`.
@@ -613,6 +616,7 @@ aspect-ratio crop is `FILL`. `POSITION` remains the only `unsupported` entry.
 **Verified directly, not assumed:** crop.py's flags and checks from both checkouts' code (`--x --y --width --height`,
 `--crf` on 0.11.0, `--quality` on 2.21.0), and a real-media test (`tests/test_integration.py::OperationE2ETests::test_crop`)
 against both. On a 320x240 clip whose left half is white and right half black:
+
 - `{176, 40, 120x160}` gives a 120x160 black clip, with audio and the same duration.
 - `{0, 0, 160x240}` gives the white half.
 - `{200, 0, 160x240}` is refused before anything runs.
@@ -731,6 +735,7 @@ copy is exact.
 **What the engine offers, measured (ffmpeg 6.1.1; a 12 s, 30 fps clip with a closed 30-frame GOP).** `cut.py --tolerance T`
 without `--accurate` stream-copies, then measures how far the copy's length lands from the asked one. Past `T` it
 re-encodes that cut ("hybrid", `reencode_reason: tolerance`). It judges the length, not the keyframe positions:
+
 - On a keyframe, 2 to 5 s: 3.2.0 lands 0.067 s long (two B-frames past the out point) and 0.11.0 lands 0.147 s long. So
   `T` must be above about 0.15 s for a copy on a keyframe to stay a copy on every release.
 - Half a GOP off, 2.5 to 5 s: 0.11.0 / 2.x snap the start to 2.0 and re-encode. 3.x keeps the MP4 edit list (the
@@ -760,6 +765,7 @@ The bump is left to the release (ADR-014 to ADR-016), and video-production-agent
 gains `tolerance`.
 
 **Verified.** `tests/test_integration.py::KeyframeAwareCutTests`, against ffmpeg-skill 3.2.0 and 0.11.0:
+
 - 2 to 5 s with `auto`: every video packet of the output is the source's, in order, byte for byte (packet md5s), and
   `mode` is `copy` where the engine reports it.
 - 2.5 to 5 s: the report agrees with the packets (copy exactly when the packets are the source's, `reencoded` otherwise).
@@ -776,13 +782,14 @@ box and the range as typed values.
 moved only as far as needed to stay inside the frame, with even offsets where the box allows (`operations.punch_window`).
 A box outside the frame (`subject_outside_frame`) or larger than the window (`subject_larger_than_window`, since it could
 not stay in view) is refused before execution. The engine calls, each an ffmpeg-skill tool:
+
 1. `cut.py --accurate` cuts out the part before `start`, the range, and the part after `end`;
 2. `crop.py` crops the range to the window;
 3. `fit.py --aspect W:H --fit crop --width W` scales it back to the input frame (the window's aspect is the frame's to
    within one even step, so at most a pixel row is cropped and nothing is stretched);
 4. `join.py --transition none --width W --height H --fps <input fps>` joins the three parts.
-The intermediate files are removed. The frame size, frame rate and duration are the input's. The timeline mapping is
-unchanged (as for CROP). The record and the plan carry `punch_in: {window, frame, subject, scale, transition: cut,
+   The intermediate files are removed. The frame size, frame rate and duration are the input's. The timeline mapping is
+   unchanged (as for CROP). The record and the plan carry `punch_in: {window, frame, subject, scale, transition: cut,
 range}`.
 
 **Not done.** "Or a short ease" is not provided, because an ease is a crop window that moves over time. `crop.py` takes
@@ -825,6 +832,7 @@ within a shot needs a time-varying crop (Velisa proposal 2 to ffmpeg-skill).
 
 **Verified.** `tests/test_integration.py::MultiAspectTests`, against ffmpeg-skill 3.2.0 and 0.11.0. A 6 s 320x180 clip is
 cut into three shots (5 s in all) and rendered as 320x180, 180x320 (90x160 windows) and 180x180 (180x180 windows):
+
 - the three outputs are equal in duration to within one frame;
 - the three TRIMs run once;
 - every CROP window lies inside its measured source frame;
@@ -836,6 +844,7 @@ cut into three shots (5 s in all) and rendered as 320x180, 180x320 (90x160 windo
 to arrive without a format mismatch and without a missing AI label.
 
 **Decision.**
+
 - **The declaration.** A source takes an optional `ai_generated: {generator, licence}`, each 1 to 200 printable
   characters. It is the caller's statement and is never inferred from the media (ADR-001: no detection here). It is
   reported with `provenance: DECLARED`.
@@ -868,14 +877,15 @@ convention. The bump is left to the release, and video-production-agent re-pins.
 `ai_generated`.
 
 **Verified.** `tests/test_integration.py::GeneratedClipTests`, against ffmpeg-skill 3.2.0 and 0.11.0:
+
 - **Input.** A 3 s 480x360 clip at 24 fps with 4:3 pixels, no colour tags and no sound, joined between two 29.97 fps
   BT.709 clips with sound, with CONCAT `640x360 @ 30000/1001`.
 - **Format.** 640x360, square pixels, BT.709 tags, a sound track throughout.
 - **No drift.** Duration and frame count equal the sum of the measured inputs to within one frame, and the reported
   timeline places the third clip exactly there.
 - **Marks.** The output and the CONCAT record carry the mark with the declared generator and licence.
-`tests/test_engine_contract.py::GeneratedSourceMarkTests` checks that the mark reaches only results that contain the
-source, and that the declaration does not change operation ids.
+  `tests/test_engine_contract.py::GeneratedSourceMarkTests` checks that the mark reaches only results that contain the
+  source, and that the declaration does not change operation ids.
 
 ## ADR-023 — Stinger transition: butt join, the stinger composited over each join, the switch at its cut point
 
@@ -883,6 +893,7 @@ source, and that the declaration does not change operation ids.
 the edit cuts underneath it. It is an editing transition here, not live switching or playout. Velisa does neither.
 
 **Decision.** CONCAT gets `transition: {type: stinger, stinger: <video source id>, cut_point: time, cover: {start, end}}`.
+
 - **The stinger file.** A source file, not an operation: an encode would lose the alpha. It must have an alpha plane
   (refused otherwise: `stinger_no_alpha`), and the edit's aspect and frame rate. Its length is the file's. As OVERLAY's
   image is, the stinger is the operation's last input, so its bytes are part of the operation's identity and provenance.
@@ -902,12 +913,14 @@ the edit cuts underneath it. It is an editing transition here, not live switchin
 
   `broll` and `audio` join `OPTIONAL_TOOLS`, so their flags are detected. A checkout without overlay `--place` (0.11.0)
   or without broll is refused before execution.
+
 - **Report.** The record and the plan carry `stinger: {source, cut_point, cover, duration, audio, joins: [{cut_at,
-  stinger_start, stinger_end}]}`. The output timeline gets an overlay-track segment `{kind: stinger, cut_at,
-  timeline_range}` per join, so the timeline reports the cut at that frame.
+stinger_start, stinger_end}]}`. The output timeline gets an overlay-track segment `{kind: stinger, cut_at,
+timeline_range}` per join, so the timeline reports the cut at that frame.
 
 **Not done (left unchecked in the roadmap).** Superseded by ADR-032: the cover at the cut point is now measured on the stinger's
 own frame (ffmpeg-skill look.py writes it with its alpha), and the step is ticked.
+
 - **Full cover is declared, not measured.** No ffmpeg-skill tool reports a stinger's alpha at one frame. export.py's
   alpha statistics are internal to its own verification, and measuring here would mean running ffmpeg outside
   ffmpeg-skill. So "a stinger that does not cover the frame there is refused" holds only against the declared cover
@@ -921,6 +934,7 @@ broll and audio (agent-pinned): breaking by ADR-007's convention. The bump is le
 video-production-agent re-pins. There is a new additive block, `stinger`.
 
 **Verified.** `tests/test_integration.py::StingerTests`, against ffmpeg-skill 3.2.0 (0.11.0: refused, tested).
+
 - **Fixture.** A red and a blue 2 s clip at 30 fps, and a 1.2 s ProRes 4444 stinger with sound. The stinger covers the
   left half throughout and the whole frame only at its frame 15 (0.5 s). The cut point is 0.5 s and the cover is [0.5,
   16/30).
@@ -944,6 +958,7 @@ as CONDENSE segments (step 16). This repository never applies a proposal by itse
 `video-editing/proposals@1`, contract block `proposals`). With `retakes: {transcript, profile?, min_confidence?}`, it
 reads a transcript with word timings from an allowed input root (`{words: [{word | text, start, end}]}`, in time order,
 validated). It writes nothing; the response says `applied: false`. The rules:
+
 - **repeat:** the same 1 to 4 words twice in a row. The first saying is proposed, up to where the second starts.
 - **restart:** a phrase of 2+ words said again within 8 words and 4 s, with only hesitation words or broken-off words in
   between. A 3+ word opening said again after at most 3 words also counts. "in the morning and in the evening" is not a
@@ -966,6 +981,7 @@ internationalisation rule. There is no language detection: the caller names the 
 wrapper to use it.
 
 **Verified.** `tests/test_unit.py::RetakeProposalTests`:
+
 - **English.** A fixture with a filler, a one-word repeat, a four-word repeat, a cut-off word, a false start and a
   restart after "uh": all six are proposed, in order, with reasons.
 - **Clean speech.** A clean fixture, with "very very", "had had", "that that" and "in the morning and in the evening",
@@ -980,12 +996,14 @@ wrapper to use it.
 picture, and combine them with the sound.
 
 **Decision.** `propose` takes `source` (a video under an allowed root) together with:
+
 - `static: {}`: the shots that `ffmpeg-skill scenes --shots` labels `static`. That label comes from a measured
   optical-flow proxy, and the shot boundaries come from the engine's scene detection.
 - `silence: {threshold_db, min_seconds}`: `ffmpeg-skill silence --list` with `--threshold` and `--min-silence`.
 
 Both are measurements by ffmpeg-skill tools; this Skill runs no frame differencing of its own (ADR-001 / ADR-013). The
 edges are snapped to the source's frame grid. `combine: {mode, min_seconds}` joins them:
+
 - `and` keeps only the time where every asked measurement holds, labelled `silence+static`.
 - `or` keeps every span where any holds, labelled with each measurement that touches it.
 
@@ -1003,6 +1021,7 @@ not a change from here).
 gains silence and scenes. The agent pins that block, so the agent re-pins.
 
 **Verified.**
+
 - `tests/test_integration.py::MotionSpanTests`, against ffmpeg-skill 3.2.0 (0.11.0: refused, tested). The fixture has 2 s of
   motion, a 3 s still picture and 2 s of motion, with the sound silent from 2.5 to 4.5 s:
   - the still span is found at 2.0 to 5.0 s, to within one frame;
@@ -1018,6 +1037,7 @@ each kind of span needs its own treatment. Retakes are cut, silences may be kept
 
 **Decision.** A new operation type, `CONDENSE {segments: [{start, end, label}], rules: {label: cut | keep | {speed:
 factor}}, default}` (capability `video.condense`).
+
 - **The parameters.** `segments` are spans of the input; they may not overlap, and they are sorted. Labels are lower-case
   tokens (`retake`, `silence`, `silence+static`, ...). Every label used needs a rule (`missing_rule`). `default` (keep
   by default) is the rule for the time that no segment covers. A speed factor is SPEED's range [1/4, 4], and not 1. An
@@ -1032,7 +1052,7 @@ factor}}, default}` (capability `video.condense`).
     AAC.
 - **Timeline and report.** The timeline maps each kept piece at speed 1 and each sped piece at speed `factor`. Cut pieces
   leave the timeline. The record and the plan carry `condense: {pieces: [{start, end, label, action, factor,
-  output_seconds}], removed, input_duration}`.
+output_seconds}], removed, input_duration}`.
 
 The judgement stays outside, as ADR-001 requires: the caller decides which proposals are approved and which rule each
 label gets.
@@ -1041,6 +1061,7 @@ label gets.
 bump is left to the release, and the agent re-pins and needs a lowering.
 
 **Verified.**
+
 - `tests/test_integration.py::CondenseTests`, against ffmpeg-skill 3.2.0 and 0.11.0:
   - **Fixture.** A 6 s clip: a 440 Hz tone, then 2 s at -50 dBFS (an 880 Hz tone), then the tone again.
   - **Proposal.** `propose` finds the 2 s silence. The test approves it and runs CONDENSE with `silence: {speed: 2}`.
@@ -1064,6 +1085,7 @@ operations with the same segments and rules, so both are made from one approved 
 ADR-026, with the bump left to the release, and the agent re-pins.
 
 **Verified.**
+
 - `tests/test_integration.py::CondenseTests::test_review_file_lasts_the_removed_spans`, against 3.2.0 and 0.11.0: two
   retakes of 0.5 s and 1.2 s (and a silence kept at 2x) give a review file of 1.7 s (within 0.1 s). The review list
   places the second span at 0.5 s. The edit from the same request lasts 6 - 1.7 - 0.25 s, within the frame tolerance.
@@ -1076,8 +1098,9 @@ MB, the file should land at or just under it on the first request.
 
 **Decision.** An output takes `max_size: {mb: 25}`: exactly one of `bytes`, `kb`, `mb`, `gb` (10^3 steps) or `kib`,
 `mib`, `gib` (2^10 steps), from 100 kB to 50 GB.
+
 - **The encode.** The output is delivered through `ffmpeg-skill export <intermediate> --preset youtube --no-scale
-  --allow-long --max-mb <target MiB>`. That is a two-pass x264 encode at the video bitrate the running time leaves after
+--allow-long --max-mb <target MiB>`. That is a two-pass x264 encode at the video bitrate the running time leaves after
   the audio (AAC 192k), at the produced frame size and rate. The engine does the bitrate arithmetic; this Skill does not
   run ffmpeg.
 - **Measure and retry.** The written size is measured. Over the limit, the next target is `target x limit / size x 0.97`.
@@ -1099,6 +1122,7 @@ MB, the file should land at or just under it on the first request.
 `size_limit`. The bump is left to the release, and the agent re-pins.
 
 **Verified.** `tests/test_integration.py::SizeLimitTests`, against ffmpeg-skill 3.2.0. On 0.11.0 the refusal is tested.
+
 - **Three fixtures in range.** Each lands in [90 %, 100 %] of its limit:
   - 640x360, 20 s with sound, at 2 MB;
   - 1280x720, 8 s, no sound, at 3 MB;
@@ -1106,7 +1130,6 @@ MB, the file should land at or just under it on the first request.
 - **Too small a limit.** 60 s into 300 kB fails with the engine's "not watchable" reason, and no file is delivered.
 - **Too large a limit.** At 40 MB the 20 s clip stays under the limit; if it lands under 90 %, it says `under_floor`.
 - **Offline.** `tests/test_unit.py::SizeLimitParamTests` covers the units, the refusals and the retry arithmetic.
-
 
 ## ADR-029 — `contract_version` 5.0 for the shape 0.4.8 .. 0.4.18 shipped
 
@@ -1151,7 +1174,6 @@ join; the standard 2 s fixtures run with no cut. Real media: two clips stream-co
 the output is 30/1 fps, and the cut frame (A's length rounded down to frames) is the fully covered one with A before it and
 B after it.
 
-
 ## ADR-031 — Smart cut: `precision: smart`, only the partial GOPs at each cut point re-encoded
 
 **Context.** ECOSYSTEM_ROADMAP step 9's second condition, left open by ADR-019: a cut between keyframes should re-encode
@@ -1167,6 +1189,7 @@ reason_code}`, `diagnostics.fallbacks`). `--smart` with `--accurate` is refused.
 keyframes around a time.
 
 **Decision.** A fourth precision, `smart`, chosen by the caller; the default stays `frame`.
+
 - `smart` compiles to `cut.py --smart` (TRIM `--start` / `--end`, CUT `--segments`), never with `--accurate` or
   `--tolerance`. `--no-keep-hevc` is passed where offered, as for `frame` (ADR-017), so the engine's whole re-encode of
   an SDR HEVC source writes H.264. Validation is `frame`'s: duration within 0.35 s, the input frame, audio kept and the
@@ -1204,6 +1227,7 @@ and `version` 0.5.1 → 0.6.0, by hand in this change (ADR-029: the release work
 
 **Verified.** `tests/test_integration.py::SmartCutTests` against the real engine (CI: ffmpeg-skill 0.11.0, 2.24.1, 3.0.0
 and main), on an 8 s, 30 fps H.264 clip with a closed GOP of 30:
+
 - TRIM 2.5 to 6.5 s: 120 frames. With `--smart`: `mode: smart`, parts re-encode 2.5-3.0 and 6.0-6.5 and copy 3.0-6.0
   (the keyframes `probe.py --keyframes-near` reports), 30 frames re-encoded (at most two GOPs), and the 90 packets of
   the GOPs from 3 to 6 s are the source's in order (MD5 with the parameter-set and delimiter NAL units removed on both
@@ -1211,8 +1235,8 @@ and main), on an 8 s, 30 fps H.264 clip with a closed GOP of 30:
 - CUT of two ranges: each range re-encodes at most two GOPs; at least three GOPs copied.
 - An MPEG-4 Part 2 source: the engine falls back (`mode: accurate`, `reason_code: codec`, `smart_fallback` in
   `fallbacks`) and the output is H.264.
-Fake-engine tests (`tests/test_engine_compat.py`): argv, record, plan, the engine fallback, the degraded path on a
-checkout without `--smart`, and the refused encoding profile.
+  Fake-engine tests (`tests/test_engine_compat.py`): argv, record, plan, the engine fallback, the degraded path on a
+  checkout without `--smart`, and the refused encoding profile.
 
 ## ADR-032 — Stinger cover measured at the cut point: the stinger's own frame, every pixel's alpha
 
@@ -1223,8 +1247,9 @@ RGBA for a ProRes 4444 stinger. That holds for every release that has `overlay.p
 2.24.1, 3.0.0 and main; run against main). So a stinger.json that names the wrong frame, or a graphic with a hole at the cut, was joined as if covered.
 
 **Decision.** Before anything runs, for each stinger CONCAT that will run:
+
 - **The frame.** The cut point at the stinger's rate gives frame n. `look.py <stinger> --at <(n - 1/4) / rate> --width
-  <stinger width> --no-timecode -o <work>/<op>.cover.partial.<pid>.png` writes that frame. A seek shows the first frame at
+<stinger width> --no-timecode -o <work>/<op>.cover.partial.<pid>.png` writes that frame. A seek shows the first frame at
   or after the time, and look.py rounds the time to milliseconds. A quarter frame before frame n lands on n either way,
   up to 480 fps.
 - **The measurement.** `alpha.alpha_coverage` reads the PNG with the standard library (zlib, all five scanline filters).
@@ -1243,12 +1268,12 @@ RGBA for a ProRes 4444 stinger. That holds for every release that has `overlay.p
 - **Once per stinger and cut point** in a request. A CONCAT whose result is reused was measured when it was made. A
   reuse candidate that no longer validates is measured before its join.
 - **Report.** `stinger.cover_measured` in the record and the plan: `{tool, frame, at, measured, covered, pixels,
-  pixels_below, min_alpha, threshold, opaque_within, frame_size, provenance: OBSERVED, commands}`. A plan says
+pixels_below, min_alpha, threshold, opaque_within, frame_size, provenance: OBSERVED, commands}`. A plan says
   `measured: false` (a plan writes no media). `stinger.cover_check` (a description) now says "declared and measured". The
   PNG is removed in every case.
 - **Engine.** `look` joins `OPTIONAL_TOOLS` (`engine.tools_used` / `tools_optional`, non-pinned).
   `compiler.ALLOWED_FLAGS["look"] = (at, width, no_timecode)`. A stinger CONCAT on a checkout without `look.py --at /
-  --width / --no-timecode` is refused before execution (`TOOL_ERROR`), as one without `overlay.py --place` already was.
+--width / --no-timecode` is refused before execution (`TOOL_ERROR`), as one without `overlay.py --place` already was.
 
 **What is not measured.** Only the cut frame is measured, not the whole declared cover window. That frame is where the
 clips switch. A window that is generous at its edges does not change the cut.
@@ -1262,6 +1287,7 @@ values). `contract_version` stays "6.0". The release is a minor one, as a new re
 video-production-agent the request is the same, and the agent can map the new reasons.
 
 **Verified.**
+
 - `tests/test_integration.py::StingerTests` against ffmpeg-skill main (3.5.0, FFmpeg 6.1).
   - The fixture's frame 15 (the cut point 0.5 s) measures 57600 pixels, none below. The switch test also asserts
     `cover_measured`.
@@ -1303,12 +1329,13 @@ first input's rate when `fps` is not given, and that rate was not validated.
 **Decision.** A CONCAT without a transition joins every input at whole frames of its rate, exactly like a stinger
 CONCAT. Both now share one path (`Executor._whole_frame_inputs`). The rate is `params.fps`, else the first input's. The
 rules:
+
 - An input at that rate keeps ADR-030's rule. Its planned length is rounded down to whole frames. A length within 1 ms of
   the next frame keeps that frame: the allowance is 1 ms in seconds, the same as the measured-length check. ADR-030 had
   0.001 of a frame. It is cut to that length (`cut --start 0 --end <length> --accurate`) only when its measured length
   differs by more than 1 ms. Otherwise it is joined as it is.
 - **New:** an input at another rate, or one flagged variable-rate, is conformed first: `fit --fps <rate> --duration <length>
-  --method trim`. The length is rounded to the nearest frame, which is what the engine's fps conversion does itself, so no
+--method trim`. The length is rounded to the nearest frame, which is what the engine's fps conversion does itself, so no
   content is lost for it. fit.py cuts at `-t` to the millisecond, so the duration passed is the last whole millisecond at
   or before the length (a time rounded up would let one more frame in). A clip rounded up by under half a frame holds its
   last instant for the rest. The timeline shows that as a segment of speed 0, the way FREEZE reports a hold.
@@ -1331,7 +1358,7 @@ includes a frame-precision cut that kept a partial last frame: cut.py keeps ever
 matches the file. The stinger path already paid it.
 
 **Not fixed: the engine's millisecond lengths.** join.py writes each clip's length to the millisecond, and
-starts the next clip after the longer of picture and sound. A clip of whole frames whose length rounds *up* still starts
+starts the next clip after the longer of picture and sound. A clip of whole frames whose length rounds _up_ still starts
 the next clip that much late. At 30 fps that is a frame count 2 more than a multiple of 3, up by 1/3 ms. At 29.97 fps it is
 up to 0.5 ms. So some 35 to 50 such clips in one edit can still leave a one-frame hole. Measured: 60 clips of 5 frames at
 30 fps, every length rounding up from 0.166667 to 0.167 s, gave holes from 8.3 s on, with the timeline exact. This Skill
@@ -1343,6 +1370,7 @@ detail of one engine release.
 **Engines before 2.4.1.** join.py of 0.11.0 concatenates each clip's picture and sound as they are, with no trim to one
 length. An intermediate's AAC sound runs a few milliseconds past its picture (fit and cut encode whole AAC frames), and the
 concat filter starts the next clip after it. Measured on 0.11.0 with FFmpeg 6.1:
+
 - a 60 fps edit of [60, 30, 25, 29.97] switched to its fourth clip one frame late (6.0167 s against 6.000 s), with 481
   frames for a 480-frame timeline;
 - ten 23.976 fps clips in a 30 fps edit gave 2 frames more than the timeline;
@@ -1352,6 +1380,7 @@ The whole-frame inputs still remove the larger error, but the timeline is exact 
 runs there (2.24.1, 3.0.0 and main in CI) and is skipped on 0.11.0. The contract's `whole_frames.engine_note` says so.
 
 **Versioning.** Additive (`contract --check`):
+
 - a new `whole_frames` block;
 - the `media_compatibility` / `tools[].media` CONCAT output text;
 - the `stinger` and `validation` texts;
@@ -1360,6 +1389,7 @@ runs there (2.24.1, 3.0.0 and main in CI) and is skipped on 0.11.0. The contract
 `contract_version` stays "6.0". A bug fix, so the release is a patch.
 
 **Verified.**
+
 - `tests/test_integration.py::ConcatFrameRateTests` against ffmpeg-skill main (2.4.1+ only, see above). Every clip is a flat colour with a 0.1 s beep
   at its start, so each join is found in the picture and in the sound. Three tests:
   - 30 fps edit with ten 23.976 fps clips, with and without `fps: 30`;
@@ -1384,7 +1414,6 @@ runs there (2.24.1, 3.0.0 and main in CI) and is skipped on 0.11.0. The contract
 - `GeneratedClipTests` now expects the third clip on a frame of the 29.97 fps edit: its 3 s at 24 fps is joined as 90
   frames, not 3.0 s.
 
-
 ## ADR-034 — CONCAT with an xfade transition at whole frames: every input and the transition on the edit's frame grid
 
 **Context.** ADR-033 left a CONCAT with an xfade transition as it was ("its inputs overlap"). That case was reproduced
@@ -1407,16 +1436,16 @@ frames at 30).
 
 Measured before this change (the clips after the first: frames late against the timeline, and picture after sound):
 
-| Edit | Late joins | Frames late | Picture after sound | Frames in file / timeline |
-|---|---|---|---|---|
-| six 29.97 fps clips, dissolve 0.5 | 5 of 5 | 0.96 to 1.02 | 32 to 34 ms | 286 / 285.075 |
-| six 23.976 fps clips, fade 0.5 | 5 of 5 | 0.96 to 1.01 | 40 to 42 ms | 229 / 228.06 |
-| 30 fps edit: 30, four 23.976, 30, fade 0.5 | 4 of 5 | 0.76 to 0.94 | 25 to 31 ms | 286 / 285.24 |
-| 29.97, 25, 60, variable-rate, 23.976, 30 with `fps: 30`, wipeleft 0.5 | 5 of 5 | 0.88 to 0.94 | 29 to 31 ms | 286 / 285.12 |
-| 25, 29.97, 23.976, variable-rate, 60, 30 with `fps: 25`, wipeleft 0.5 | 5 of 5 | 0.4 to 0.95 | 16 to 38 ms | 238 / 237.6 |
-| six 30 fps clips, fade 0.25 | 3 of 5 | 0.5 | 17 ms | 323 / 322.5 |
-| 23.976 fps edit: 23.976, six 30, dissolve 0.5 | 1 of 6, then a drift | 1.01, then 0.05 to 0.19 | 42 ms, then 2 to 8 ms | 264 / 263.784 |
-| 60 fps edit: 60, 30, 25, 29.97, fade 0.5 | 0 of 3 | 0 | 0 | 390 / 390.12 |
+| Edit                                                                  | Late joins           | Frames late             | Picture after sound   | Frames in file / timeline |
+| --------------------------------------------------------------------- | -------------------- | ----------------------- | --------------------- | ------------------------- |
+| six 29.97 fps clips, dissolve 0.5                                     | 5 of 5               | 0.96 to 1.02            | 32 to 34 ms           | 286 / 285.075             |
+| six 23.976 fps clips, fade 0.5                                        | 5 of 5               | 0.96 to 1.01            | 40 to 42 ms           | 229 / 228.06              |
+| 30 fps edit: 30, four 23.976, 30, fade 0.5                            | 4 of 5               | 0.76 to 0.94            | 25 to 31 ms           | 286 / 285.24              |
+| 29.97, 25, 60, variable-rate, 23.976, 30 with `fps: 30`, wipeleft 0.5 | 5 of 5               | 0.88 to 0.94            | 29 to 31 ms           | 286 / 285.12              |
+| 25, 29.97, 23.976, variable-rate, 60, 30 with `fps: 25`, wipeleft 0.5 | 5 of 5               | 0.4 to 0.95             | 16 to 38 ms           | 238 / 237.6               |
+| six 30 fps clips, fade 0.25                                           | 3 of 5               | 0.5                     | 17 ms                 | 323 / 322.5               |
+| 23.976 fps edit: 23.976, six 30, dissolve 0.5                         | 1 of 6, then a drift | 1.01, then 0.05 to 0.19 | 42 ms, then 2 to 8 ms | 264 / 263.784             |
+| 60 fps edit: 60, 30, 25, 29.97, fade 0.5                              | 0 of 3               | 0                       | 0                     | 390 / 390.12              |
 
 The video stream outlasted the sound by up to a frame (9.543 s against 9.512 s for the six 29.97 fps clips), and the timeline
 placed clips between frames (1.502 s at 29.97 fps). There were no holes and no duplicated timestamps: xfade writes every frame
@@ -1425,6 +1454,7 @@ lands, against its sound and the timeline.
 
 **Decision.** A CONCAT with an xfade transition joins on the same whole-frame path as a plain or stinger CONCAT (ADR-030,
 ADR-033): `Executor.joins_whole_frames` is now every CONCAT. The rules:
+
 - **Inputs.** Unchanged from ADR-033. An input at the rate is rounded down to whole frames and cut only when its measured
   length differs. One at another rate, or variable-rate, is conformed (`fit --fps --duration --method trim`, nearest frame).
 - **Transition.** **New:** its duration is rounded to the nearest frame of the rate (a half rounds up, at least one frame).
@@ -1459,6 +1489,7 @@ starts that transition on frame 105. At 30, 24 and 60 fps one whole-frame time i
 clip's picture, against its sound and the timeline. The clip loses its last frame into the next transition, and the file is
 one frame longer when it is the last join. It is never more than a frame and never adds up, because every offset is counted
 from the start of the join. Measured after this change:
+
 - six 30 fps clips with a 0.25 s fade (8 frames): the 3rd and 6th clips are one frame late (33 ms), at offsets 3.467 and
   8.667; the file has 321 frames for a timeline of 320;
 - a 23.976 fps edit of six 30 fps clips with a 0.5 s dissolve (12 frames): the 4th and 6th clips are one frame late (43 ms),
@@ -1473,6 +1504,7 @@ to the microsecond, rounded down to the frame), as ADR-033 proposed for clip len
 `contract.whole_frames.engine_note`. ffmpeg-skill 2.21.0 and 3.6.0 write the offset the same way.
 
 **Versioning.** Additive (`contract --check`):
+
 - the `whole_frames` block (`applies_to`, `rule`, `why`, `report`, `refused`, `not_applied` now empty, `engine_note`);
 - the `media_compatibility` / `tools[].media` CONCAT texts;
 - `plan.steps[].whole_frames.transition` and `execution.operations[].whole_frames.transition`.
@@ -1480,6 +1512,7 @@ to the microsecond, rounded down to the frame), as ADR-033 proposed for clip len
 `contract_version` stays "6.0". A bug fix, so the release is a patch.
 
 **Verified.**
+
 - `tests/test_integration.py::ConcatXfadeFrameRateTests` against ffmpeg-skill main (2.4.1 and later, as
   `ConcatFrameRateTests`). It uses the flash-and-beep clips above, in four tests:
   - every rate and the variable-rate clip with `fps: 25` and a 0.5 s wipeleft (13 frames), exact;
@@ -1511,6 +1544,7 @@ with chroma key (`overlay.py --video` / `--chromakey`, issue #11 item 2), and AD
 `docs/ecosystem/DECISION_LOG.md` D21) settled who owns each kind of overlay.
 
 **Decision.**
+
 - This Skill keeps `静止画オーバーレイ`: plain still compositing as part of an edit. `OVERLAY` places one png / jpg at
   a named position (or `{x, y}`) for a time range, alpha respected. Its parameters stay as they are.
 - motion-graphics-skill owns `ロゴ・PiP・クロマキー合成` and `動くグラフィックの配置`. A video layer, picture-in-picture,
@@ -1533,9 +1567,10 @@ but not where the request belongs. `OVERLAY`'s documentation sits in the pinned 
 reason in the pinned `unsupported` block still said a video layer "would extend OVERLAY (ADR-002)", which ADR-035 retired.
 
 **Decision.**
+
 - A video in `OVERLAY.params.image` (a video source, or an operation's output, which is always a video) is refused before
   anything runs as `INVALID_INPUT`, `details.reason: overlay_video_layer`, `details.use: "motion-graphics-skill
-  video_overlay"`, with a message that names motion-graphics-skill's `video_overlay` element (and `rendered_layer` for an
+video_overlay"`, with a message that names motion-graphics-skill's `video_overlay` element (and `rendered_layer` for an
   animated graphic with alpha). `validate`, `plan` and `run` refuse it alike. `INVALID_INPUT` already exists; no error code is
   added. An image in a video slot stays `DEPENDENCY_ERROR kind_mismatch`, and so does an operation in `IMAGE_INSERT`.
 - The contract says the same in four places: `operations.OVERLAY.parameters.image` (pinned), the overlay tool's

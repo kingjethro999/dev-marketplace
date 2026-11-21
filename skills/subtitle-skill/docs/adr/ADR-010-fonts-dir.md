@@ -14,11 +14,11 @@ What `caption.py` accepts, read in its source at 1.0.0, 2.24.0 (the vendored tes
 
 Measured on a machine whose fontconfig knows one Latin font and no Japanese one, with a Japanese font file in the directory, against 2.24.0, 3.0.0 and 3.3.0:
 
-| flags | caption.py reports | picture |
-|---|---|---|
-| none | `failed`, "no installed font covers Japanese text" | no output |
-| `--fonts-dir DIR` | `completed` | empty boxes |
-| `--fonts-dir DIR --font <family in DIR>` | `completed` (warning `font_lacks_script`: fontconfig does not know the family) | the text |
+| flags                                    | caption.py reports                                                             | picture     |
+| ---------------------------------------- | ------------------------------------------------------------------------------ | ----------- |
+| none                                     | `failed`, "no installed font covers Japanese text"                             | no output   |
+| `--fonts-dir DIR`                        | `completed`                                                                    | empty boxes |
+| `--fonts-dir DIR --font <family in DIR>` | `completed` (warning `font_lacks_script`: fontconfig does not know the family) | the text    |
 
 libass draws from the directory's files when a style names their family. It does not fall back to them for a glyph the named family lacks. Passing the directory through and nothing else would turn a clear refusal into a silent wrong picture.
 

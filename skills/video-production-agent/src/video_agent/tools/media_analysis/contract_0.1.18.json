@@ -7,9 +7,7 @@
   "description": "Deterministic media observation / analysis. Measures facts about media files; never interprets, decides or edits.",
   "role": "observation / analysis",
   "repository": "kajisho5/media-analysis-skill",
-  "capabilities": [
-    "ffprobe"
-  ],
+  "capabilities": ["ffprobe"],
   "capability_names": [
     "ffmpeg",
     "ffprobe",
@@ -26,25 +24,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Audio format of one audio stream (sample rate, channels, layout, codec, sample format, bitrate)",
-      "required_capabilities": [
-        "ffprobe"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "audio_format"
-      ],
-      "output_observation_kinds": [
-        "audio_format"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["audio_format"],
+      "output_observation_kinds": ["audio_format"],
       "parameters": {
         "audio_format": {
           "stream": {
@@ -68,26 +56,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Applause and laughter spans of one audio stream from an audio-event classifier (optional extra 'events'; UNKNOWN without it): time ranges with a score",
-      "required_capabilities": [
-        "ffprobe",
-        "ffmpeg"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe", "ffmpeg"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "audio_events"
-      ],
-      "output_observation_kinds": [
-        "audio_events"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["audio_events"],
+      "output_observation_kinds": ["audio_events"],
       "parameters": {
         "audio_events": {
           "stream": {
@@ -147,26 +124,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Full decode with error counting, per-stream frame counts and timestamp monotonicity; PASS / WARN / FAIL",
-      "required_capabilities": [
-        "ffprobe",
-        "ffmpeg"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe", "ffmpeg"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "integrity"
-      ],
-      "output_observation_kinds": [
-        "integrity"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["integrity"],
+      "output_observation_kinds": ["integrity"],
       "parameters": {
         "integrity": {
           "max_error_lines": {
@@ -190,27 +156,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "EBU R128 integrated loudness, loudness range and true peak of one audio stream",
-      "required_capabilities": [
-        "ffprobe",
-        "ffmpeg",
-        "filter:ebur128"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe", "ffmpeg", "filter:ebur128"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "loudness"
-      ],
-      "output_observation_kinds": [
-        "loudness"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["loudness"],
+      "output_observation_kinds": ["loudness"],
       "parameters": {
         "loudness": {
           "stream": {
@@ -234,27 +188,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Noise floor, signal level and no-reference SNR estimate of one audio stream (or one channel) from short-window RMS",
-      "required_capabilities": [
-        "ffprobe",
-        "ffmpeg",
-        "filter:astats"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe", "ffmpeg", "filter:astats"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "noise_floor"
-      ],
-      "output_observation_kinds": [
-        "noise_floor"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["noise_floor"],
+      "output_observation_kinds": ["noise_floor"],
       "parameters": {
         "noise_floor": {
           "stream": {
@@ -302,25 +244,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Container and primary stream facts (format, duration, size, bitrate, video/audio summary)",
-      "required_capabilities": [
-        "ffprobe"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "media_probe"
-      ],
-      "output_observation_kinds": [
-        "media_probe"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["media_probe"],
+      "output_observation_kinds": ["media_probe"],
       "parameters": {
         "media_probe": {}
       },
@@ -337,27 +269,15 @@
       "version": "0.1.18",
       "algorithm_version": "2",
       "description": "Deterministic visual scene-cut detection (scdet score), not semantic scene understanding",
-      "required_capabilities": [
-        "ffprobe",
-        "ffmpeg",
-        "filter:scdet"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe", "ffmpeg", "filter:scdet"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "scene_detection"
-      ],
-      "output_observation_kinds": [
-        "scene_detection"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["scene_detection"],
+      "output_observation_kinds": ["scene_detection"],
       "parameters": {
         "scene_detection": {
           "stream": {
@@ -399,22 +319,14 @@
         "filter:astats",
         "filter:scdet"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "highlight_signals"
-      ],
-      "output_observation_kinds": [
-        "highlight_signals"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["highlight_signals"],
+      "output_observation_kinds": ["highlight_signals"],
       "parameters": {
         "highlight_signals": {
           "audio_stream": {
@@ -504,27 +416,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Silence segments of one audio stream with leading / internal / trailing classification",
-      "required_capabilities": [
-        "ffprobe",
-        "ffmpeg",
-        "filter:silencedetect"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe", "ffmpeg", "filter:silencedetect"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "silence"
-      ],
-      "output_observation_kinds": [
-        "silence"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["silence"],
+      "output_observation_kinds": ["silence"],
       "parameters": {
         "silence": {
           "stream": {
@@ -566,25 +466,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Every stream with index, type, codec, language, disposition, dimensions, rate, channels",
-      "required_capabilities": [
-        "ffprobe"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "stream_layout"
-      ],
-      "output_observation_kinds": [
-        "stream_layout"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["stream_layout"],
+      "output_observation_kinds": ["stream_layout"],
       "parameters": {
         "stream_layout": {}
       },
@@ -609,22 +499,14 @@
         "filter:silencedetect",
         "filter:edgedetect"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "edit_style"
-      ],
-      "output_observation_kinds": [
-        "edit_style"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["edit_style"],
+      "output_observation_kinds": ["edit_style"],
       "parameters": {
         "edit_style": {
           "video_stream": {
@@ -684,27 +566,15 @@
       "version": "0.1.18",
       "algorithm_version": "2",
       "description": "Duration and timing facts: start times, per-stream durations, A/V duration mismatch and start offset, timestamp discontinuities",
-      "required_capabilities": [
-        "ffprobe"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "duration",
-        "timing"
-      ],
-      "output_observation_kinds": [
-        "duration",
-        "timing"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["duration", "timing"],
+      "output_observation_kinds": ["duration", "timing"],
       "parameters": {
         "duration": {},
         "timing": {
@@ -741,26 +611,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Speech regions of one audio stream from a voice-activity model (optional extra 'vad'; UNKNOWN without it): time ranges with probability, speech share, longest pause",
-      "required_capabilities": [
-        "ffprobe",
-        "ffmpeg"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe", "ffmpeg"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "speech_regions"
-      ],
-      "output_observation_kinds": [
-        "speech_regions"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["speech_regions"],
+      "output_observation_kinds": ["speech_regions"],
       "parameters": {
         "speech_regions": {
           "stream": {
@@ -814,25 +673,15 @@
       "version": "0.1.18",
       "algorithm_version": "1",
       "description": "Video format of one video stream (resolution, fps, frame count, pixel format, colour, SAR/DAR, CFR/VFR)",
-      "required_capabilities": [
-        "ffprobe"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffprobe"],
+      "inputs": ["input"],
       "input_type": "media file path (one file per request)",
       "produces_output": false,
       "deterministic": true,
       "writes_media": false,
-      "result_keys": [
-        "observation"
-      ],
-      "kinds": [
-        "video_format"
-      ],
-      "output_observation_kinds": [
-        "video_format"
-      ],
+      "result_keys": ["observation"],
+      "kinds": ["video_format"],
+      "output_observation_kinds": ["video_format"],
       "parameters": {
         "video_format": {
           "stream": {
@@ -988,35 +837,22 @@
     "stdin": "AnalysisRequest JSON (UTF-8) when the request argument is '-'",
     "stdout": "exactly one response document (response schema) when --json is given; always UTF-8, independent of the console / pipe encoding",
     "stderr": "diagnostics only; never part of the contract",
-    "executables": [
-      "ffprobe",
-      "ffmpeg"
-    ],
+    "executables": ["ffprobe", "ffmpeg"],
     "executable_resolution": "PATH lookup only; not configurable through the request or the CLI",
     "media_processing": false,
     "network": false,
     "ai": false,
     "optional_extras": {
       "vad": {
-        "kinds": [
-          "speech_regions"
-        ],
-        "requires": [
-          "onnxruntime",
-          "numpy"
-        ],
+        "kinds": ["speech_regions"],
+        "requires": ["onnxruntime", "numpy"],
         "model": "silero-vad (MIT), shipped in the package",
         "download_at_run_time": false,
         "without": "status UNKNOWN, no regions"
       },
       "events": {
-        "kinds": [
-          "audio_events"
-        ],
-        "requires": [
-          "onnxruntime",
-          "numpy"
-        ],
+        "kinds": ["audio_events"],
+        "requires": ["onnxruntime", "numpy"],
         "model": "YAMNet (Apache-2.0), converted to ONNX and shipped in the package",
         "download_at_run_time": false,
         "without": "status UNKNOWN, no spans"
@@ -1038,17 +874,10 @@
       "version": "1",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "asset_id",
-        "input",
-        "kind"
-      ],
+      "required": ["asset_id", "input", "kind"],
       "properties": {
         "analysis_id": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "description": "caller's id; derived from the analysis identity when omitted"
         },
@@ -1087,21 +916,14 @@
           "description": "kind-specific parameters; unknown names, wrong types and out-of-range values are INVALID_INPUT"
         },
         "timeout": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "exclusiveMinimum": 0,
           "maximum": 86400,
           "description": "seconds per analyzer execution"
         },
         "cache_policy": {
           "type": "string",
-          "enum": [
-            "use",
-            "bypass",
-            "only"
-          ],
+          "enum": ["use", "bypass", "only"],
           "default": "use",
           "description": "use: read and write; bypass: never read or write; only: read, CACHE_MISS when absent"
         },
@@ -1469,9 +1291,7 @@
       "description": "Document accepted by `media-analysis run`: a single AnalysisRequest, a list of them, or this batch envelope.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "requests"
-      ],
+      "required": ["requests"],
       "properties": {
         "requests": {
           "type": "array",
@@ -1485,24 +1305,15 @@
           "additionalProperties": false,
           "properties": {
             "max_analysis_calls": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": ["integer", "null"],
               "minimum": 0
             },
             "timeout": {
-              "type": [
-                "number",
-                "null"
-              ],
+              "type": ["number", "null"],
               "minimum": 0
             },
             "max_total_seconds": {
-              "type": [
-                "number",
-                "null"
-              ],
+              "type": ["number", "null"],
               "minimum": 0
             }
           }
@@ -1522,29 +1333,17 @@
       ],
       "properties": {
         "analysis_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "asset_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "kind": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "status": {
           "type": "string",
-          "enum": [
-            "ok",
-            "error"
-          ]
+          "enum": ["ok", "error"]
         },
         "observation": {
           "$ref": "#/observation"
@@ -1556,11 +1355,7 @@
         "error": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "code",
-            "message",
-            "details"
-          ],
+          "required": ["code", "message", "details"],
           "properties": {
             "code": {
               "type": "string"
@@ -1573,11 +1368,7 @@
             },
             "class": {
               "type": "string",
-              "enum": [
-                "FATAL",
-                "RETRYABLE",
-                "BLOCKED"
-              ],
+              "enum": ["FATAL", "RETRYABLE", "BLOCKED"],
               "description": "retry guidance: FATAL never retry unchanged; RETRYABLE bounded retry may succeed; BLOCKED environment / budget must change"
             }
           }
@@ -1587,44 +1378,23 @@
         },
         "error_class": {
           "type": "string",
-          "enum": [
-            "FATAL",
-            "RETRYABLE",
-            "BLOCKED"
-          ]
+          "enum": ["FATAL", "RETRYABLE", "BLOCKED"]
         },
         "cache": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "status",
-            "policy",
-            "key"
-          ],
+          "required": ["status", "policy", "key"],
           "properties": {
             "status": {
               "type": "string",
-              "enum": [
-                "hit",
-                "miss",
-                "invalid",
-                "bypass",
-                "disabled"
-              ]
+              "enum": ["hit", "miss", "invalid", "bypass", "disabled"]
             },
             "policy": {
               "type": "string",
-              "enum": [
-                "use",
-                "bypass",
-                "only"
-              ]
+              "enum": ["use", "bypass", "only"]
             },
             "key": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "pattern": "^[0-9a-f]{64}$"
             }
           }
@@ -1632,11 +1402,7 @@
         "usage": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "analyzer_calls",
-            "seconds",
-            "operations"
-          ],
+          "required": ["analyzer_calls", "seconds", "operations"],
           "properties": {
             "analyzer_calls": {
               "type": "integer",
@@ -1652,17 +1418,11 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "executable",
-                  "purpose"
-                ],
+                "required": ["executable", "purpose"],
                 "properties": {
                   "executable": {
                     "type": "string",
-                    "enum": [
-                      "ffprobe",
-                      "ffmpeg"
-                    ]
+                    "enum": ["ffprobe", "ffmpeg"]
                   },
                   "purpose": {
                     "type": "string"
@@ -1699,10 +1459,7 @@
         "skill": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "id",
-            "version"
-          ],
+          "required": ["id", "version"],
           "properties": {
             "id": {
               "type": "string",
@@ -1715,11 +1472,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "ok",
-            "partial",
-            "error"
-          ],
+          "enum": ["ok", "partial", "error"],
           "description": "ok: every result ok; partial: some; error: none (or the batch itself was rejected)"
         },
         "dry_run": {
@@ -1741,11 +1494,7 @@
         "usage": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "analyzer_calls",
-            "cache_hits",
-            "seconds"
-          ],
+          "required": ["analyzer_calls", "cache_hits", "seconds"],
           "properties": {
             "analyzer_calls": {
               "type": "integer",
@@ -1764,11 +1513,7 @@
         "budget": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "calls",
-            "seconds",
-            "budget"
-          ],
+          "required": ["calls", "seconds", "budget"],
           "properties": {
             "calls": {
               "type": "integer"
@@ -1781,24 +1526,15 @@
               "additionalProperties": false,
               "properties": {
                 "max_analysis_calls": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": ["integer", "null"],
                   "minimum": 0
                 },
                 "timeout": {
-                  "type": [
-                    "number",
-                    "null"
-                  ],
+                  "type": ["number", "null"],
                   "minimum": 0
                 },
                 "max_total_seconds": {
-                  "type": [
-                    "number",
-                    "null"
-                  ],
+                  "type": ["number", "null"],
                   "minimum": 0
                 }
               }
@@ -1814,11 +1550,7 @@
         "error": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "code",
-            "message",
-            "details"
-          ],
+          "required": ["code", "message", "details"],
           "properties": {
             "code": {
               "type": "string"
@@ -1831,11 +1563,7 @@
             },
             "class": {
               "type": "string",
-              "enum": [
-                "FATAL",
-                "RETRYABLE",
-                "BLOCKED"
-              ],
+              "enum": ["FATAL", "RETRYABLE", "BLOCKED"],
               "description": "retry guidance: FATAL never retry unchanged; RETRYABLE bounded retry may succeed; BLOCKED environment / budget must change"
             }
           }
@@ -1845,11 +1573,7 @@
         },
         "error_class": {
           "type": "string",
-          "enum": [
-            "FATAL",
-            "RETRYABLE",
-            "BLOCKED"
-          ]
+          "enum": ["FATAL", "RETRYABLE", "BLOCKED"]
         }
       }
     },
@@ -1940,11 +1664,7 @@
         "asset": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "path",
-            "fingerprint",
-            "size"
-          ],
+          "required": ["path", "fingerprint", "size"],
           "properties": {
             "path": {
               "type": "string"
@@ -1963,18 +1683,8 @@
     }
   },
   "cache": {
-    "policies": [
-      "use",
-      "bypass",
-      "only"
-    ],
-    "statuses": [
-      "hit",
-      "miss",
-      "invalid",
-      "bypass",
-      "disabled"
-    ],
+    "policies": ["use", "bypass", "only"],
+    "statuses": ["hit", "miss", "invalid", "bypass", "disabled"],
     "key": [
       "asset_fingerprint(sha256 of content)",
       "analyzer",
@@ -1985,11 +1695,7 @@
     "hit_runs_analyzer": false
   },
   "budget": {
-    "supported": [
-      "max_analysis_calls",
-      "timeout",
-      "max_total_seconds"
-    ],
+    "supported": ["max_analysis_calls", "timeout", "max_total_seconds"],
     "unknown_fields": "INVALID_INPUT",
     "exceeded": "BUDGET_EXCEEDED, no observation, no analyzer process"
   },

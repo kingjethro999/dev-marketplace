@@ -1,31 +1,25 @@
 {
- "name": "ap_invalid_requirement_refused",
- "profile": "generic",
- "fake": {
-  "silences": [
-   [
-    0.0,
-    3.0
-   ],
-   [
-    13.7,
-    null
-   ]
-  ],
-  "lufs": -11.0
- },
- "audio_production": {
-  "inputs": [
-   {
-    "channels": 2
-   }
-  ]
- },
- "requirements": {
-  "audio.production": true,
-  "audio.gain": 99
- },
- "expect": {
-  "plan_error": "audio.gain must be within"
- }
+  "name": "ap_invalid_requirement_refused",
+  "profile": "generic",
+  "fake": {
+    "silences": [
+      [0.0, 3.0],
+      [13.7, null]
+    ],
+    "lufs": -11.0
+  },
+  "audio_production": {
+    "inputs": [
+      {
+        "channels": 2
+      }
+    ]
+  },
+  "requirements": {
+    "audio.production": true,
+    "audio.gain": 99
+  },
+  "expect": {
+    "plan_error": "audio.gain must be within"
+  }
 }

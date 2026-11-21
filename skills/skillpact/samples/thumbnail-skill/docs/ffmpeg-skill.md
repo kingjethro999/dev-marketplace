@@ -11,10 +11,10 @@ ffmpeg-skill's own typed CLI.
 
 ## Tools and flags used
 
-| ffmpeg-skill tool | used for | flags emitted (`adapter.FLAGS_USED`) |
-|---|---|---|
-| `ffmpeg-skill/probe` | source video duration and video-stream presence, before extracting a frame | positional input |
-| `ffmpeg-skill/look` | extract exactly the frame at one caller-given timestamp | `--at`, `--no-timecode`, `-o`, `--json`; `--overwrite` only when offered (`adapter.OPTIONAL_FLAGS`) |
+| ffmpeg-skill tool    | used for                                                                   | flags emitted (`adapter.FLAGS_USED`)                                                                |
+| -------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `ffmpeg-skill/probe` | source video duration and video-stream presence, before extracting a frame | positional input                                                                                    |
+| `ffmpeg-skill/look`  | extract exactly the frame at one caller-given timestamp                    | `--at`, `--no-timecode`, `-o`, `--json`; `--overwrite` only when offered (`adapter.OPTIONAL_FLAGS`) |
 
 `doctor` / `Executor._ffmpeg_skill()` (`adapter.FfmpegSkill.info()`) detects what the located
 checkout can do:
@@ -43,6 +43,7 @@ belongs to a caller (video-production-agent), not to this skill (see README's re
 boundary).
 
 ## Observed behaviour this skill relies on (measured against ffmpeg-skill 0.12.2 and 2.10.3 / real
+
 ffmpeg; contract first verified against 0.9.1 at commit `2abd89c`)
 
 - `look.py --at <timestamp> --no-timecode -o <stem>` writes exactly one file, named
@@ -55,8 +56,8 @@ ffmpeg; contract first verified against 0.9.1 at commit `2abd89c`)
   including) the reported 3.0s `duration` fall in this dead zone. As of ffmpeg-skill 0.11.0's "fail
   loudly" pass (see ffmpeg-skill/CHANGELOG.md), `look.py` verifies its own output before reporting
   success and now reports this dead zone as a hard, `--json` failure document: `{"status": "failed",
-  "exit_code": 1, "error": {"kind": "output", "code": "OUTPUT_INVALID", "message": "output
-  verification failed: <path>: not written", "retryable": false}}` (before 0.11.0, measured against
+"exit_code": 1, "error": {"kind": "output", "code": "OUTPUT_INVALID", "message": "output
+verification failed: <path>: not written", "retryable": false}}` (before 0.11.0, measured against
   0.9.1, `look.py` instead claimed `{"status": "completed"}` while writing nothing — the false-
   success/no-file outcome this skill's ADR-5 was originally written against). Either way this is a
   property of ffmpeg-skill/`ffmpeg -ss` seeking a timestamp with nothing there to decode, not of

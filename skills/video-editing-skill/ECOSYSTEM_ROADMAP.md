@@ -11,13 +11,13 @@ v0.7.2, Python 3.9+ stdlib. TRIM, CUT (frame / auto / smart precision), CONCAT (
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| カット・連結 | done |  |
-| 尺・画角合わせ | done | pixel-rectangle CROP included ([#25](https://github.com/kajisho5/video-editing-skill/pull/25), ADR-016) |
-| トランジション | done | CONCAT transition (xfade family, stinger); every input and the xfade duration at whole frames of the edit's rate ([#47](https://github.com/kajisho5/video-editing-skill/pull/47), ADR-034); join.py's millisecond xfade offsets (one frame late where one rounds up) proposed to ffmpeg-skill |
-| 静止画オーバーレイ | done | plain still compositing (png / jpg, named position, time range) as part of an edit only, confirmed by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O10). Logos and images as graphics, PiP, chroma key and moving graphics are motion-graphics-skill's `ロゴ・PiP・クロマキー合成` / `動くグラフィックの配置`; step 19 |
-| 言い直し・重複の候補計算 | done | added by the same decisions (O15): `propose` computes the candidates (step 14, ADR-024); the agent presents them and records the approval (its `言い直し・重複の候補の提示と承認`); step 20 |
+| Owned job                | Status | Note                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| カット・連結             | done   |                                                                                                                                                                                                                                                                                                                                                                     |
+| 尺・画角合わせ           | done   | pixel-rectangle CROP included ([#25](https://github.com/kajisho5/video-editing-skill/pull/25), ADR-016)                                                                                                                                                                                                                                                             |
+| トランジション           | done   | CONCAT transition (xfade family, stinger); every input and the xfade duration at whole frames of the edit's rate ([#47](https://github.com/kajisho5/video-editing-skill/pull/47), ADR-034); join.py's millisecond xfade offsets (one frame late where one rounds up) proposed to ffmpeg-skill                                                                       |
+| 静止画オーバーレイ       | done   | plain still compositing (png / jpg, named position, time range) as part of an edit only, confirmed by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O10). Logos and images as graphics, PiP, chroma key and moving graphics are motion-graphics-skill's `ロゴ・PiP・クロマキー合成` / `動くグラフィックの配置`; step 19 |
+| 言い直し・重複の候補計算 | done   | added by the same decisions (O15): `propose` computes the candidates (step 14, ADR-024); the agent presents them and records the approval (its `言い直し・重複の候補の提示と承認`); step 20                                                                                                                                                                         |
 
 ## Wiring
 
@@ -101,4 +101,5 @@ Agent wires cut (2nd candidate), concat, speed, resize, fit, fill, overlay, trim
 Under the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O10): plain still compositing in an edit is here (`静止画オーバーレイ`); motion-graphics-skill `image_overlay` / `logo` / `video_overlay` / `rendered_layer` cover graphics, PiP, chroma key and moving graphics. A stinger between two clips is cut here (CONCAT `transition: stinger`), from hyperframes-skill material and its `stinger.json` (O4). Retake / duplicate candidates are computed here; presenting them and taking the approval is the agent's (O15).
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

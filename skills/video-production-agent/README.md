@@ -36,11 +36,19 @@ AI（Claude）: `pip install -e '.[ai]'` の上で `VIDEO_AGENT_AI_PROVIDER=anth
 - Claude Desktop: `claude_desktop_config.json` に MCP server を追加（`video-agent-mcp` は `pip install -e .` で入る。パスは `which video-agent-mcp` の絶対パス）:
 
 ```json
-{"mcpServers": {"video-agent": {"command": "/abs/path/to/video-agent-mcp", "args": ["--workspace", "/abs/path/to/video-agent-work"],
-  "env": {"VIDEO_AGENT_FFMPEG_SKILL_DIR": "/abs/path/to/ffmpeg-skill"}}}}
+{
+  "mcpServers": {
+    "video-agent": {
+      "command": "/abs/path/to/video-agent-mcp",
+      "args": ["--workspace", "/abs/path/to/video-agent-work"],
+      "env": { "VIDEO_AGENT_FFMPEG_SKILL_DIR": "/abs/path/to/ffmpeg-skill" }
+    }
+  }
+}
 ```
 
-  tools: `doctor` `skills` `plan`（既定で ai_brief 付き）`revise`（`ai_recommendations` を直接渡す）`validate` `explain` `diff` `approve` `reject` `render` `check` `artifacts`。各 tool は `video-agent --json <command>` を子プロセスで実行するだけ。引数の値は option として読まれない（option は `--flag=value`、入力・project・出力・依頼文は `--` の後ろ。ADR-069）。AI と host brief に渡す計測結果の path は basename だけ。承認は `approve` を別に呼ぶ必要があり、`render` に一括承認は無い。
+tools: `doctor` `skills` `plan`（既定で ai_brief 付き）`revise`（`ai_recommendations` を直接渡す）`validate` `explain` `diff` `approve` `reject` `render` `check` `artifacts`。各 tool は `video-agent --json <command>` を子プロセスで実行するだけ。引数の値は option として読まれない（option は `--flag=value`、入力・project・出力・依頼文は `--` の後ろ。ADR-069）。AI と host brief に渡す計測結果の path は basename だけ。承認は `approve` を別に呼ぶ必要があり、`render` に一括承認は無い。
+
 - スマホ / Web の Claude アプリ: ローカルの MCP server（stdio）は動かせない。動画ファイルと ffmpeg があるマシンで Claude Code か Claude Desktop を使う。
 
 ## セットアップ

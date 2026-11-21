@@ -31,9 +31,7 @@
       "version": "0.4.0",
       "role": "execution",
       "description": "Render a typed Graphics Document (titles, lower thirds, text overlays, image/logo overlays, video-on-video picture-in-picture/chroma-key overlays, solid-colour rectangles, with fade animation) onto a video and write a validated artifact with provenance",
-      "inputs": [
-        "request document (stdin)"
-      ],
+      "inputs": ["request document (stdin)"],
       "input_type": "motion-graphics/request@1",
       "produces_output": true,
       "writes_media": true,
@@ -479,12 +477,7 @@
           "type": "string",
           "required": false,
           "default": "top-right",
-          "enum": [
-            "top-left",
-            "top-right",
-            "bottom-left",
-            "bottom-right"
-          ]
+          "enum": ["top-left", "top-right", "bottom-left", "bottom-right"]
         },
         "text_color": {
           "type": "color",
@@ -517,12 +510,7 @@
           "type": "string",
           "required": false,
           "default": "bottom-left",
-          "enum": [
-            "top-left",
-            "top-right",
-            "bottom-left",
-            "bottom-right"
-          ]
+          "enum": ["top-left", "top-right", "bottom-left", "bottom-right"]
         },
         "primary_color": {
           "type": "color",
@@ -608,12 +596,7 @@
           "type": "string",
           "required": false,
           "default": "top-right",
-          "enum": [
-            "top-left",
-            "top-right",
-            "bottom-left",
-            "bottom-right"
-          ]
+          "enum": ["top-left", "top-right", "bottom-left", "bottom-right"]
         },
         "primary_color": {
           "type": "color",
@@ -697,10 +680,7 @@
       "deterministic": "content_equivalent",
       "constraints": [
         {
-          "at_least_one_of": [
-            "top",
-            "bottom"
-          ]
+          "at_least_one_of": ["top", "bottom"]
         }
       ]
     },
@@ -903,10 +883,7 @@
           "max": 30.0
         }
       },
-      "applies_to": [
-        "text_overlay",
-        "image_overlay"
-      ]
+      "applies_to": ["text_overlay", "image_overlay"]
     }
   ],
   "unsupported_animations": [
@@ -1103,20 +1080,8 @@
     }
   },
   "style_presets": {
-    "names": [
-      "corporate",
-      "minimal",
-      "neon",
-      "news",
-      "swiss",
-      "wafu"
-    ],
-    "roles": [
-      "primary",
-      "secondary",
-      "background",
-      "text"
-    ],
+    "names": ["corporate", "minimal", "neon", "news", "swiss", "wafu"],
+    "roles": ["primary", "secondary", "background", "text"],
     "presets": [
       {
         "name": "corporate",
@@ -1287,10 +1252,7 @@
     "response": "each styled element carries style {preset, brand_kit, applied: {parameter: preset|brand_kit}, skipped?: [...]} in validate/plan output and in the run response's timeline"
   },
   "text_fit": {
-    "applies_to": [
-      "lower_third",
-      "title"
-    ],
+    "applies_to": ["lower_third", "title"],
     "request_field": "elements[].fit",
     "fields": {
       "width": {
@@ -1319,9 +1281,7 @@
       "profile": {
         "type": "string",
         "required": false,
-        "enum": [
-          "ja-kinsoku"
-        ],
+        "enum": ["ja-kinsoku"],
         "description": "an opt-in regional line-breaking profile"
       },
       "lang": {
@@ -1552,13 +1512,7 @@
       "segments.out": "out_duration",
       "segments.loop > 0": "loop (true; 0 gives false)"
     },
-    "reads": [
-      "segments",
-      "sha256",
-      "file",
-      "alpha",
-      "schema"
-    ],
+    "reads": ["segments", "sha256", "file", "alpha", "schema"],
     "checks": {
       "sha256": "when present, the clip's sha256 (else title_json_stale)",
       "file": "when present and sha256 is not, the clip's file name (else title_json_other_file)",
@@ -1589,25 +1543,10 @@
     "how": "ffmpeg-skill/background --transparent makes one canvas (the source's size, rate and length) and ffmpeg-skill/color --retag gives it the programme's colour tags; each element is the same graphics / overlay call that burns it into the programme, on that canvas, with --keep-alpha --alpha-codec --alpha-mode (no audio), so every layer carries the programme's matrix, primaries and transfer tags",
     "requires": {
       "ffmpeg_skill_flags": {
-        "background": [
-          "transparent",
-          "fps",
-          "alpha_codec",
-          "alpha_mode"
-        ],
-        "graphics": [
-          "keep_alpha",
-          "alpha_codec",
-          "alpha_mode"
-        ],
-        "overlay": [
-          "keep_alpha",
-          "alpha_codec",
-          "alpha_mode"
-        ],
-        "color": [
-          "retag"
-        ]
+        "background": ["transparent", "fps", "alpha_codec", "alpha_mode"],
+        "graphics": ["keep_alpha", "alpha_codec", "alpha_mode"],
+        "overlay": ["keep_alpha", "alpha_codec", "alpha_mode"],
+        "color": ["retag"]
       },
       "otherwise": "TOOL_ERROR before anything renders (details.reason ffmpeg_skill_lacks_flag, details.flags; or ffmpeg_skill_lacks_alpha_codec when the checkout does not offer the codec); doctor reports capability ffmpeg-skill-feature:layer_export"
     },
@@ -1637,11 +1576,7 @@
     },
     "default_font_id": "system:dejavu-sans",
     "custom_font_file": {
-      "allowed_extensions": [
-        ".ttf",
-        ".otf",
-        ".ttc"
-      ],
+      "allowed_extensions": [".ttf", ".otf", ".ttc"],
       "path_policy": true,
       "provenance": "font_file_hash (sha256)"
     },
@@ -1665,12 +1600,7 @@
   },
   "execution": {
     "mode": "local",
-    "canonical_invocation": [
-      "motion-graphics",
-      "run",
-      "-",
-      "--json"
-    ],
+    "canonical_invocation": ["motion-graphics", "run", "-", "--json"],
     "stdin": "motion-graphics/request@1",
     "stdout": "exactly one motion-graphics/response@1 document",
     "stderr": "diagnostics only",
@@ -1694,15 +1624,9 @@
       "max_exclusive": null
     },
     "compatibility": "capability detection, no version window: a checkout of any version is used when every required flag is present in its contract (or --help); doctor reports what was detected (docs/decisions.md ADR-18)",
-    "tools_used": [
-      "probe",
-      "graphics",
-      "overlay"
-    ],
+    "tools_used": ["probe", "graphics", "overlay"],
     "flags_used": {
-      "probe": [
-        "inputs"
-      ],
+      "probe": ["inputs"],
       "graphics": [
         "input",
         "output",
@@ -1773,9 +1697,7 @@
       ]
     },
     "required_flags": {
-      "probe": [
-        "inputs"
-      ],
+      "probe": ["inputs"],
       "graphics": [
         "input",
         "output",
@@ -1825,69 +1747,32 @@
     },
     "flag_alternatives": {
       "graphics": {
-        "encoder_quality": [
-          "quality",
-          "crf"
-        ]
+        "encoder_quality": ["quality", "crf"]
       },
       "overlay": {
-        "encoder_quality": [
-          "quality",
-          "crf"
-        ]
+        "encoder_quality": ["quality", "crf"]
       }
     },
     "optional_flags": {
-      "graphics": [
-        "overwrite",
-        "platform",
-        "scale",
-        "lang",
-        "wrap"
-      ],
-      "overlay": [
-        "overwrite",
-        "platform",
-        "place"
-      ]
+      "graphics": ["overwrite", "platform", "scale", "lang", "wrap"],
+      "overlay": ["overwrite", "platform", "place"]
     },
     "template_requirements": {
       "sticker": {
-        "graphics_flags": [
-          "text"
-        ]
+        "graphics_flags": ["text"]
       },
       "hook": {
-        "graphics_flags": [
-          "duration"
-        ]
+        "graphics_flags": ["duration"]
       },
       "meme": {
-        "graphics_flags": [
-          "top",
-          "bottom"
-        ]
+        "graphics_flags": ["top", "bottom"]
       }
     },
     "generator_tools": {
       "background": {
-        "flags": [
-          "output",
-          "duration",
-          "width",
-          "height",
-          "color",
-          "json"
-        ],
-        "optional_flags": [
-          "quality",
-          "crf",
-          "preset",
-          "overwrite"
-        ],
-        "for": [
-          "shape"
-        ]
+        "flags": ["output", "duration", "width", "height", "color", "json"],
+        "optional_flags": ["quality", "crf", "preset", "overwrite"],
+        "for": ["shape"]
       }
     }
   },
@@ -1989,18 +1874,12 @@
     "schema": "motion-graphics/response@1",
     "conditional": {
       "reserved_regions": {
-        "in": [
-          "run",
-          "plan"
-        ],
+        "in": ["run", "plan"],
         "when": "options.reserved_regions is given",
         "shape": "see reserved_regions.result"
       },
       "layer_export": {
-        "in": [
-          "run",
-          "plan"
-        ],
+        "in": ["run", "plan"],
         "when": "options.layer_export is given",
         "shape": "see layer_export.result"
       }
@@ -2072,11 +1951,7 @@
   },
   "work_dir": "<workspace>/.motion-graphics/<document_id>/ (non-final intermediates only; the requested output is always written directly and re-validated)",
   "image_formats": {
-    "allowed_extensions": [
-      ".png",
-      ".jpg",
-      ".jpeg"
-    ]
+    "allowed_extensions": [".png", ".jpg", ".jpeg"]
   },
   "schema_versions": {
     "contract": "1",

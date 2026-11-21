@@ -91,19 +91,19 @@ exists. When a decision changes, edit the entry in the same PR.
 - **`cut.py --segments --accurate` reads every segment with `-reinit_filter 0`, so a colour-tag change
   inside the source is a label, not a conversion.** The re-cut feeds one `-ss -t -i src` input per
   segment into one concat graph. By default FFmpeg rebuilds the graph at an input's buffer source when
-  its frames change colour tags; on 8.1.2 that rebuild at a *later* input deadlocked at 0% CPU (an
+  its frames change colour tags; on 8.1.2 that rebuild at a _later_ input deadlocked at 0% CPU (an
   in-band SPS going from untagged to bt470bg/tv, #316), so a 36-segment job sat until `--timeout`.
   With the option the graph keeps the format it was configured with and the retagged frames pass as
   decoded. That is acceptable because no colour conversion in a cut follows the frames' own tags: an
   SDR output is tagged BT.709 explicitly and tag-only (`bt709_tag_args`), and the one conversion a cut
-  can carry (a source whose *probed* matrix is BT.601, `bt709_matrix_filter`) takes the source's
+  can carry (a source whose _probed_ matrix is BT.601, `bt709_matrix_filter`) takes the source's
   matrix as an explicit input property, so every segment of one source goes through the same one. An
   untagged source (#316's starts untagged) is relabelled, as before, so the BT.601-tagged later
   segment is no different from an untagged one. The rebuild would have converted the retagged side toward the graph's first (unknown)
   tag (the issue's debug log: `csp:bt470bg -> csp:unknown`), not toward BT.709, so it was no closer to
   the output's label. A BT.2020/HDR source
   still takes the HDR path chosen from the first video stream's probe. The cost: a source whose
-  frame *size* or pixel format changes mid-stream is no longer refused by concat's own "parameters do
+  frame _size_ or pixel format changes mid-stream is no longer refused by concat's own "parameters do
   not match" error; on 6.1 the first-format graph then crashes or stalls the encoder (the stall is
   bounded by `--timeout`). No other tool builds this structure: `join.py`, `multicam.py` and
   `broll.py` open different files without `-ss`; `speedramp.py`, `freeze.py` and `loop.py` split one
@@ -174,7 +174,7 @@ exists. When a decision changes, edit the entry in the same PR.
   whose cells are compared with each other, and on 7.1+ `xstack` converted the cells to one
   another's matrix, so a BT.601 cell first took the BT.709 cell with it. FFmpeg 7.1+ negotiates one
   colourspace for all inputs of a mixing filter and converts the rest to it, taking "unknown" as
-  BT.601: with a converted logo the *untagged main* shifted (7.08 mean / 25 max on 7.1.1 and 8.1.3,
+  BT.601: with a converted logo the _untagged main_ shifted (7.08 mean / 25 max on 7.1.1 and 8.1.3,
   already 7.93 / 37.4 before this fix on 8.1), or the converted picture was converted back. So where
   a converted picture meets an untagged one, the untagged one is labelled BT.709 (`setparams`, tags
   only; `label_chain()`), which is what the output's tag says it is: no conversion is left to
@@ -184,7 +184,7 @@ exists. When a decision changes, edit the entry in the same PR.
   25.0 max with the BT.601 clip first, 9.12 / 40.1 with it second, on 7.1.1 and 8.1.3), so a
   one-input re-encode of an untagged source, and a grid or join of untagged/BT.709 clips, keep their
   commands. Known on FFmpeg 7.0.x only (not in CI): its `colorspace` filter does not declare the
-  converted link, so a BT.601 clip *first* in `grid`/`join` still takes the others with it; the fix
+  converted link, so a BT.601 clip _first_ in `grid`/`join` still takes the others with it; the fix
   would change #332's conversion filter for every tool, so it is left. Code: `_common/color.py`,
   `_common/decision.py`. Tests:
   `test_an_rgb_or_jpeg_source_is_converted_to_the_bt709_it_is_tagged_with`,
@@ -207,7 +207,7 @@ exists. When a decision changes, edit the entry in the same PR.
   8.1.3; on 7.1+ only a BT.709-tagged or converted source's pads were right). `drawn_chain()` picks
   the cheapest way that is exact on each build. 7.1+: the untagged picture is labelled BT.709
   (`label_chain()`, tags only) and the filters follow the label; generated ASS says `YCbCr Matrix:
-  None`, because 8.x's `ass`/`subtitles` read an absent header as BT.601 whatever the link says
+None`, because 8.x's `ass`/`subtitles` read an absent header as BT.601 whatever the link says
   (FFmpeg's own SRT header already says None). Before 7.1 nothing makes `ff_draw` use another matrix,
   so the drawing runs on an RGB copy (`rgb_island()`: in RGB a colour is written as it is, converted
   back with BT.709), and maskedmerge takes the drawn copy only where it differs from the same round
@@ -312,7 +312,7 @@ exists. When a decision changes, edit the entry in the same PR.
   implemented once in `emit()` (every tool gets it, nothing per tool), inputs are found from the
   `-i` arguments of the planned commands, and the fingerprint is size + sha256 of the first and
   last 8 MiB rather than the whole file, so planning a multi-GB master stays instant while a
-  re-export or re-trim is still caught. Execution re-runs the *tool* with the planned argv, not
+  re-export or re-trim is still caught. Execution re-runs the _tool_ with the planned argv, not
   the recorded command lines: the tool's own guards, staging and verification stay in force.
   Code: `_common.write_plan()`, `render.execute_plan()`.
 - **The flat success document is the 2.0 shape; `result_v2` was withdrawn, not promoted.**
@@ -485,9 +485,9 @@ Each item is recorded here so it is not re-proposed from scratch.
 ## 1.15.0 — text people can see
 
 - **Colour emoji is a PNG overlay, not a font.** Two measurements, both on ffmpeg 6.1.1 with
-  Noto Color Emoji installed. (1) `drawtext` cannot use a colour emoji font *at all*: at
+  Noto Color Emoji installed. (1) `drawtext` cannot use a colour emoji font _at all_: at
   `fontsize=48` it fails filter initialisation with `Could not set font size to 48 pixels:
-  invalid library handle` → `Error initializing filters`, and at the font's only strike
+invalid library handle` → `Error initializing filters`, and at the font's only strike
   (`fontsize=109`) with `Monocromatic (1bpp) fonts are not supported.` — no file is written
   either way. That is a hard failure, not a degraded render, so drawtext must never be handed an
   emoji font. (2) A colour emoji font being installed proves nothing about libass: the same
@@ -504,7 +504,7 @@ Each item is recorded here so it is not re-proposed from scratch.
   frame: 0.28 em, about 3 % of the line width**, which still lands the box inside the gap libass
   reserved rather than on a glyph. That measured number is the documented bound, not a tighter
   estimate. An RTL line is measured from its rendered end instead of its logical prefix: libass
-  lays Arabic and Hebrew out right-to-left, so the logical prefix is the *right* part of the
+  lays Arabic and Hebrew out right-to-left, so the logical prefix is the _right_ part of the
   picture and measuring it from the left put the PNG on top of the text.
   The overlay is clamped to the frame and the test asserts it stays inside the safe area.
   The gap itself is exact: U+2588 FULL BLOCK was **measured**, not assumed, at 0.83 em (FreeSans),
@@ -514,7 +514,7 @@ Each item is recorded here so it is not re-proposed from scratch.
   run.
 - **`graphics.py`'s ASS route is chosen per text, not globally.** The renderer switches only when
   the text contains a script drawtext cannot shape, an emoji overlay needs a reserved gap, or the
-  emoji would otherwise be drawn *by drawtext* — which loads exactly one font file and has no
+  emoji would otherwise be drawn _by drawtext_ — which loads exactly one font file and has no
   fallback chain, so `mode: mono` there is an empty box, not a glyph. libass does have a fallback
   chain, so `mono` means libass; a run pinned to `--text-render drawtext` strips the cluster and
   says so rather than reporting a mode it did not deliver.
@@ -523,14 +523,13 @@ Each item is recorded here so it is not re-proposed from scratch.
   string itself did change: the label moved from `text=` into `textfile=…:expansion=none`) —
   and the new route carries no risk for the 95 % of jobs that never needed it.
 
-
 ## 1.16.0 — long-form delivery
 
 **The audiogram extends `waveform.py`; there is no `audiogram.py`.** `waveform.py` already owns
 `showwaves`/`showspectrum`, `--width/--height/--fps/--color/--background`, `--split-channels`,
 `--audio-stream`, the one encoder line and the FFmpeg-5.x `-t` cap (#146). An `audiogram.py`
 would be that file plus a background image: a second spelling of one tool, which is exactly the
-mistake recorded for `audio.py --chapters`. The 1.x guarantee forbids *removing* a tool, so an
+mistake recorded for `audio.py --chapters`. The 1.x guarantee forbids _removing_ a tool, so an
 `audiogram.py` would be permanent surface; `--image` is one additive argument. The composite job
 (visualisation over a plate, a title, captions burnt in, platform size, `check.py`) is a chain,
 and this repo already has one answer for a chain: a `render.py` template, as 1.14 established and
@@ -572,14 +571,14 @@ still honours `--language`, so nothing that worked before changed.
 
 **The Japanese particle table is a preference, not grammar — and it is a "do not strand at the
 start of a line" table.** `は が を に で と の へ も や から まで より` come from the task brief
-plus the five a reader would add. A particle is enclitic: it attaches to the word *before* it and
+plus the five a reader would add. A particle is enclitic: it attaches to the word _before_ it and
 marks that word's role, so kinsoku practice keeps the two together. The rule is therefore "prefer
 the break after a particle, forbid the break before one", not the other way round. There is no
 upstream source for the list and no precedent in this repo; it is tunable data, applied among
 break positions that already fit, so it can never widen a line or change the line count.
 
 **R4 scores both directions, which is what makes it decide.** An article or preposition opens the
-noun phrase it governs, so the break *before* it is the good break (0.2) and the break *after* it
+noun phrase it governs, so the break _before_ it is the good break (0.2) and the break _after_ it
 the bad one (0.8). Penalising only the bad direction leaves the greedy width rule to choose among
 everything else, which is how the first cut of this release still split eval 16's `dl1` cue
 mid-phrase. With both directions scored, `"A third line the tool times for me"` comes out as
@@ -591,7 +590,7 @@ mid-phrase. With both directions scored, `"A third line the tool times for me"` 
 flag on the tool that already owns the vocabulary: a `beats.py` analyser → `scenes.py --beats`
 (scenes already decodes the same PCM through `audio_envelope()`, and "where are the interesting
 times" must not be split across two scripts); a `filler.py` → `silence.py --filler` (filler
-removal *is* time-range removal — it reuses `keep_ranges()` and the identical `aselect`/`concat`
+removal _is_ time-range removal — it reuses `keep_ranges()` and the identical `aselect`/`concat`
 graph, and a second tool would give the agent two ways to spell "tighten the talking"); a job
 runner → `batch.py --jobs` (batch already owns the item loop, the cache and the summary); a
 `cache.py` → `render.py --cache` (the cache key is a stage's own arguments, and only render knows
@@ -605,7 +604,7 @@ four.
 **The caption legibility floor is 4.5 % of the frame height, one number for every destination.**
 `ass_units(0.045) = 13` against the 288-line ASS script grid — 87 px of type on a 1920-tall
 frame. It was chosen as the smallest size that is still comfortably above the ~3.5 % where mobile
-legibility studies and the platforms' own caption UIs bottom out, *not* fitted to the eval cues;
+legibility studies and the platforms' own caption UIs bottom out, _not_ fitted to the eval cues;
 that every eval-17 cue happens to fit two lines at exactly 13 is stated in the code comment
 rather than hidden. There is no per-platform floor table, because nothing per-platform has been
 measured and a table of seven guesses reads as seven measurements. `_platforms.PLATFORMS[name]`
@@ -619,7 +618,7 @@ a ten-minute file, and it is opt-in and named in the result.
 
 **`--fit-size auto`, not `on` and not `off`.** With `off` as the default the feature would ship
 dark: no agent passes a flag it has no reason to know about, and the defect eval 17 measured is
-precisely that the *default* path produces four-line cues — eval 18 would measure 1.16.0 again.
+precisely that the _default_ path produces four-line cues — eval 18 would measure 1.16.0 again.
 With `on` as the default, a caller who deliberately set `--size 30` for a brand look would
 silently get 21, which breaks "the same behaviour for the same input and arguments" for a real,
 stated argument. `auto` changes only the path where the skill itself chose the number, and the
@@ -630,7 +629,7 @@ somebody wrote down.
 **`like`, `tipo`, `cioè` and `なんか` are not ordinary filler words.** They are discourse markers:
 grammatical in most sentences, so removing them cuts meaning rather than noise — a judgement
 about content, which this skill does not make. The first three are out of the default lists and
-reachable with `--filler-extra`, which says what adding one costs. `なんか` is *in* the `ja` list,
+reachable with `--filler-extra`, which says what adding one costs. `なんか` is _in_ the `ja` list,
 because it is the most common Japanese filler and leaving it out makes the flag useless for
 Japanese; it is orthographically identical to the pronoun use, so every run that removes one
 warns and `--filler-keep なんか` takes it back out. The asymmetry is deliberate: English has
@@ -644,11 +643,11 @@ speech engine measured a `start < end` pair for it; without timings the tool ref
 measurement that was not made.
 
 **The ffmpeg version is inside the render cache key.** A cached artifact is a file this skill did
-not produce in *this* run, and the only honest way to reuse one is to be certain the same code
+not produce in _this_ run, and the only honest way to reuse one is to be certain the same code
 would have produced it. The ffmpeg build banner (the whole `ffprobe -version` first line, not `major.minor`: two 7.1.x
 builds with different libx264 write different bytes), the skill version, the contract version and
 the flags render forwards to its children are
-therefore part of the key, so a different build simply *misses* rather than being asked to trust
+therefore part of the key, so a different build simply _misses_ rather than being asked to trust
 a file it did not write — no "is this close enough" comparison, no staleness heuristic, and no
 way for a filter default that changed between builds to leak into a delivery. The cache is also
 opt-in with no default directory: a cache appearing on someone's disk unasked contradicts the
@@ -656,7 +655,7 @@ opt-in with no default directory: a cache appearing on someone's disk unasked co
 
 **`batch.py --jobs` is capped at `min(N, cpu_count, 8)`.** Every item is itself an ffmpeg process
 that already threads across cores; beyond a few concurrent x264 encodes the jobs contend and
-wall-clock stops improving while memory does not. A number above the cap is *clamped with a note*
+wall-clock stops improving while memory does not. A number above the cap is _clamped with a note_
 rather than refused — refusing a number that is merely optimistic is unhelpful, and the result
 reports both `jobs` and `jobs_requested` so a report claiming "64 jobs" is checkable. The
 `--timeout` becomes the whole batch's budget rather than each item's, which is why the pool is
@@ -671,8 +670,8 @@ for a flag nobody passed.
 existing rows already route ("cut out the pauses" → `silence.py`, "do this to every file in the
 folder" → `batch.py`, "a 60 s highlight" → `scenes.py`), `references/scripts.md` carries the
 flags, and SKILL.md has single digits of headroom under its 30,000-byte budget. Only the caption
-size got a row, because that one is a *different answer to a request the table already claims to
-route*. If eval 18 shows agents missing `--filler` or `--snap beats`, 1.18.0 buys the rows.
+size got a row, because that one is a _different answer to a request the table already claims to
+route_. If eval 18 shows agents missing `--filler` or `--snap beats`, 1.18.0 buys the rows.
 
 **`--shots`' flow measurement is scoped to stay dependency-free and fast: 48x27 grayscale frames
 at 4 fps, a 4x4 grid of block matches, +/-3 px search.** A real optical-flow library was never on
@@ -697,7 +696,7 @@ given a different type" means an explicit request for dBFS-unit peaks needed its
 unit change to a key a caller has been reading since 1.0.
 
 **`--speech` reports a ratio, not a label.** A zero-crossing-rate proxy (this window's ZCR over
-the file's own median) says nothing about whether a stretch *is* speech or music — it says speech
+the file's own median) says nothing about whether a stretch _is_ speech or music — it says speech
 transients cross zero faster than sustained tones, which is true often enough to be a usable
 number and not true often enough to be a classifier. Naming the key `speech_music_ratio` rather
 than `is_speech` keeps the tool on its side of the "analysis tools report numbers, they never
@@ -711,7 +710,7 @@ independent cut lists disagreeing — a breath kept by `--speech-aware` getting 
 `--filler` found a word inside it, or the reverse. `speech_aware_silences()` returns two lists
 (sentence-boundary silences to remove, breaths to keep) instead of a single filtered list, so a
 breath is simply never added to the removal side: it is not "removed then added back", which
-would leave a seam. The one designed interaction is a filler word *inside* a kept breath: the
+would leave a seam. The one designed interaction is a filler word _inside_ a kept breath: the
 breath itself is not cut, but `merge_spans()` still unions the filler span into the removal list
 the same way it has always merged a filler word sitting inside a plain silencedetect gap (the
 1.17.0 regression fix), so a real disfluency is still removed even from air `--speech-aware`
@@ -747,7 +746,7 @@ because a second measurement method would be a second thing to keep honest and t
 audit from the `cuts` list alone. Folding a run shorter than `--min-shot` into its neighbour
 (rather than, say, discarding it or holding the previous camera) was chosen because it never
 invents a cut that was not there and never drops the fact that a switch was measured at that
-instant — it only refuses to *act* on a switch too brief to be a readable shot. The direction of
+instant — it only refuses to _act_ on a switch too brief to be a readable shot. The direction of
 the fold (into the next run, or the previous one if it is the last) is arbitrary in the sense that
 either choice is defensible; it is documented here rather than left to be rediscovered from the
 code, and pinned by `test_multicam_switch_energy_respects_min_shot`.
@@ -776,7 +775,7 @@ not a new file format this tool would have to maintain.
   clip lengths minus one transition per join -- what `join.py`'s xfade renders by design. Since
   the Unreleased fix after 2.2.2, `join.py` offsets each crossfade by the part's video-stream
   length (its audio's only when the sound runs more than a frame past the picture), no longer
-  the *container* duration with its audio priming, so a render matches this total to the frame.
+  the _container_ duration with its audio priming, so a render matches this total to the frame.
   Tests: `test_build_centres_each_dissolve_and_keeps_the_rendered_length`,
   `test_join_dissolve_of_short_parts_keeps_the_frame_count`,
   `test_join_transition_keeps_each_clips_sound_with_its_picture`.
@@ -878,7 +877,6 @@ not a new file format this tool would have to maintain.
   (the file's offsets are rational seconds). The editor round trip is on #143's real-hands
   checklist.
 
-
 ## Unreleased — captions that can be seen
 
 - **A burn that draws nothing is a refusal, not a warning.** `caption.py` counts the non-blank
@@ -892,7 +890,7 @@ not a new file format this tool would have to maintain.
 - **Whitespace-only text flags are missing, not text.** `graphics.py` maps a blank
   `--title`/`--name`/`--subtitle`/`--text`/`--top`/`--bottom` to unset before the template's own
   "needs --title" check; non-blank text is drawn exactly as given (not stripped). `overlay.py
-  --text "  "` is refused. Test: `test_graphics_and_overlay_refuse_blank_text`.
+--text "  "` is refused. Test: `test_graphics_and_overlay_refuse_blank_text`.
 
 ## 2.2.4 — the first bad input, named
 
@@ -907,7 +905,6 @@ not a new file format this tool would have to maintain.
   changed. Tests: `test_audio_beds_without_audio_are_refused_together`,
   `test_render_real_run_names_every_unreadable_clip_source`, `test_sync_too_short_names_the_file`,
   `test_multicam_too_short_names_the_file`.
-
 
 ## 2.2.6 — silence is reported, not verified
 
@@ -961,7 +958,7 @@ not a new file format this tool would have to maintain.
 ## 2.4.1 — a plain join keeps its picture
 
 - **A plain `join.py` cut gives each clip one length, as a crossfade does.** The concat filter
-  starts the next clip after the *longer* stream of this one, so the picture of a clip whose sound
+  starts the next clip after the _longer_ stream of this one, so the picture of a clip whose sound
   runs past it -- a music bed padded to the container, or only an AAC tail -- got a hole (measured:
   0.3 s, and one frame from a 20 ms tail). `clip_length` decides the length for both paths: the
   sound's when it runs more than a frame past the picture (the last frame is held; narration is never
@@ -995,7 +992,7 @@ not a new file format this tool would have to maintain.
   in it, and this machine passes `hw_platform_reason()` (Apple Silicon, the check `--hw` uses), every
   re-encoding tool and every fixed `export.py` preset (`reels`, `youtube`, `h265`, ...) takes the
   VideoToolbox line, built exactly as under `--hw`. The result says `hw: {requested: false, source:
-  "auto", used, ...}` with a note naming the encoder that was missing and the one that ran, and the
+"auto", used, ...}` with a note naming the encoder that was missing and the one that ran, and the
   usual `notes` line that the quality is not CRF-equivalent (without the `--no-hw` advice: it has no
   CPU encoder to go back to). What does not change: a build that has the CPU encoder takes exactly
   the line it did (the platform is asked before the encoder list, so Linux and Windows read no list
@@ -1202,7 +1199,7 @@ not a new file format this tool would have to maintain.
   ("behaviour may change to fix a defect, with a CHANGELOG line") allows, and because the net is
   better for every model measured; an opt-in would leave the loss with everyone who does not know to ask.
   It is given to the two whisper.cpp commands that write a transcript (the SRT of `caption.py
-  --transcribe` and the `--output-json-full` word timings of `silence.py --filler --transcribe`) and
+--transcribe` and the `--output-json-full` word timings of `silence.py --filler --transcribe`) and
   not to language detection (`-dl`: it reads the first 30 s and writes no transcript), nor to any other
   engine: faster-whisper, openai-whisper and Parakeet are not whisper.cpp and were not measured. No
   repetition detector was added: the flag removes the cause, a detector would be a second decoder to
@@ -1431,7 +1428,7 @@ not a new file format this tool would have to maintain.
   after `--start`. #306 made that the default. It is opt-in in 2.x because the default decides
   what a caller gets, measured against main: `nob.mp4 --start 1.13 --end 5.71 --tolerance 2`
   copied 172 frames (+1.153 s) and now 138 with the pre-roll hidden; `hevc_sdr --start 1.1 --end 4
-  --tolerance 0.3` re-encoded (`hybrid`) and now copies; a 25-minute source `--start 601 --end 661`
+--tolerance 0.3` re-encoded (`hybrid`) and now copies; a 25-minute source `--start 601 --end 661`
   wrote 74.7 s and now 1.95 s. A player or tool that ignores edit lists also shows the stored
   pre-roll, so an edit-listed copy is not what every 2.x caller expects. So the default stays
   `-avoid_negative_ts make_zero` and is judged by the container's length, as in every 2.x
@@ -1440,7 +1437,7 @@ not a new file format this tool would have to maintain.
   a copy that starts where asked but ends past `--tolerance` re-encodes without offering another
   `--start`. What a copy stored is read from the source, not the output: `stored_preroll_seconds`
   is the first presented frame minus the presentation time of the keyframe the copy's seek lands
-  on (measured: next entry), and a keyframe presented *after* the start (10.0, asked for 9.9 on
+  on (measured: next entry), and a keyframe presented _after_ the start (10.0, asked for 9.9 on
   the HEVC fixture) is a snap. Comparing the output's durations with and without the edit list
   was tried and does not work: a B-frame composition offset makes them differ even on a keyframe
   start. Code: `cut.seek_keyframe`, `cut.copy_presentation`. Tests:
@@ -1530,7 +1527,7 @@ not a new file format this tool would have to maintain.
   `test_a_chunked_hdr_join_keeps_the_hvc1_tag_by_default` (HLG, no flag),
   `test_more_segments_than_one_call_takes_are_joined_in_chunks` (`--keep-hevc`).
 - **The VFR guard stays the average check by default; the sampled measurement is `--vfr-guard
-  sampled`.** `r_frame_rate` against `avg_frame_rate` is a whole-file average: a phone clip at
+sampled`.** `r_frame_rate` against `avg_frame_rate` is a whole-file average: a phone clip at
   29.98 against a nominal 30 trips it, and one long last frame does too. #306 replaced it with
   `measure_frame_timing`, which reads packet timestamps (no decoding) in up to five 6 s windows
   and requires every interval within a tick (1 ms at least, half a frame at most) of its window's

@@ -42,6 +42,7 @@ file, written against `video-production-agent` commit `287b685`,
 recorded "does not call this skill yet" — that is now stale and was
 corrected here after re-reading the real source at commit `d8a6c83`).
 Verified against actual source, not assumed:
+
 - `src/video_agent/skills/registry.py` declares `subtitle_generation`
   and `subtitle_burn_in` `SkillSpec`s that target this skill.
 - `src/video_agent/tools/subtitle/locate.py` finds an installed
@@ -108,6 +109,7 @@ instead of hardcoding burn-only** (subtitle-skill#3 fix B, same session
 as the re-vendor above — the re-vendor is what made these reachable to
 test against in the first place). `engine.burn_in()` no longer builds a
 fixed 4-token argv:
+
 - `mode` (request field, default `"burn"`; validated against
   `engine.ALLOWED_RENDER_MODES` before ever reaching caption.py, since
   an invalid `--mode` choice there exits non-zero with a plain-text
@@ -143,6 +145,7 @@ was overly broad: `color`/`bold`/`size` genuinely DO have a real
 caption.py target (`--color`/`--bold`/`--size`); only `align`/`position`/
 `line`/`italic` don't. Verified against caption.py's real argparse
 definitions and force_style construction, not assumed:
+
 - `color` -> `--color` verbatim (caption.py's own `color_hex()` validates).
 - `bold` -> `--bold` when `True` (`action="store_true"`, no `--no-bold`).
 - `size` (0..100 percent) -> `--size <round(size/100*288)>`. caption.py's
@@ -162,7 +165,7 @@ definitions and force_style construction, not assumed:
   (though it already renders correctly per-cue via the pre-existing
   `<i>` SRT tag, unrelated to force_style).
 - The real complication: `formats.generate_srt` already rejected
-  `color`/`size` with `UNSUPPORTED_FORMAT` for *any* caller (it's meant
+  `color`/`size` with `UNSUPPORTED_FORMAT` for _any_ caller (it's meant
   for a bare .srt file, which truly can't encode them) -- `render`'s own
   SRT generation would have hit that same rejection before ever reaching
   caption.py, making the new wiring dead code. Fixed by giving
@@ -189,12 +192,12 @@ definitions and force_style construction, not assumed:
 Four operations, all real and tested — see `contract --json` as the
 authoritative source, never re-describe this from memory:
 
-| Operation | Formats | Depends on |
-|---|---|---|
-| `generate` | SRT, WebVTT, TTML (IMSC 1.1, EBU-TT-D) | nothing external |
-| `render` | SRT only | a reachable ffmpeg-skill install (`caption` + `probe` tools) |
-| `translate` | SRT, WebVTT, TTML | engine `memory`: nothing; `argos`: argostranslate + an installed package; `opus-mt`: ctranslate2 + sentencepiece + a converted model under `SUBTITLE_SKILL_OPUS_MT_DIR`; `ollama`: a local Ollama server with the model pulled; `deepl`: `DEEPL_AUTH_KEY` |
-| `mux` | SRT only | ffmpeg-skill (`caption` + `probe`); 1.16+ for more than one track |
+| Operation   | Formats                                | Depends on                                                                                                                                                                                                                                                |
+| ----------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `generate`  | SRT, WebVTT, TTML (IMSC 1.1, EBU-TT-D) | nothing external                                                                                                                                                                                                                                          |
+| `render`    | SRT only                               | a reachable ffmpeg-skill install (`caption` + `probe` tools)                                                                                                                                                                                              |
+| `translate` | SRT, WebVTT, TTML                      | engine `memory`: nothing; `argos`: argostranslate + an installed package; `opus-mt`: ctranslate2 + sentencepiece + a converted model under `SUBTITLE_SKILL_OPUS_MT_DIR`; `ollama`: a local Ollama server with the model pulled; `deepl`: `DEEPL_AUTH_KEY` |
+| `mux`       | SRT only                               | ffmpeg-skill (`caption` + `probe`); 1.16+ for more than one track                                                                                                                                                                                         |
 
 Capability/error/format lists live in code (`src/subtitle_skill/contract.py`,
 `src/subtitle_skill/errors.py`, `src/subtitle_skill/doctor.py`) and are
@@ -377,7 +380,7 @@ Ordered by value, not urgency:
   dropped or guessed at.
 - **`render` exposes ffmpeg-skill/caption's mux mode, audio-track
   selection, and language tagging** (subtitle-skill#3 fix B) — `mode:
-  "mux"` (soft/toggleable subtitle track, vs. the default `"burn"`),
+"mux"` (soft/toggleable subtitle track, vs. the default `"burn"`),
   `audio_stream` (0-based multi-track selection), and
   `SubtitleDocument.language` forwarded as the mux language tag (mux
   only; previously validated but never read anywhere). See the

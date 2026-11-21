@@ -11,10 +11,10 @@ Written from a read-only audit of this repository on 2026-10-30. Each step below
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| BGM生成 | experimental | GENERATE_BGM (ACE-Step 1.5), step 2; or the user's own file through library mode, step 4 |
-| 効果音 | experimental | GENERATE_SFX (EzAudio), step 3; or the user's own file through library mode, step 4 |
+| Owned job | Status       | Note                                                                                     |
+| --------- | ------------ | ---------------------------------------------------------------------------------------- |
+| BGM生成   | experimental | GENERATE_BGM (ACE-Step 1.5), step 2; or the user's own file through library mode, step 4 |
+| 効果音    | experimental | GENERATE_SFX (EzAudio), step 3; or the user's own file through library mode, step 4      |
 
 ## Wiring
 
@@ -62,4 +62,5 @@ The agent plans `bgm.library` / `bgm.prompt` as a CONFIRM bed that becomes the l
   - Partly done ([#26](https://github.com/kajisho5/sound-design-skill/pull/26), ADR-020): `schemas/licence-record.schema.json` (the stored `entry` and the resolved `record`), validated against `library-import` output by `tests/test_licence_schema.py`; README points to the Velisa spec. **Not met:** the Velisa spec (docs/specs/licence-record.md) does not link the schema file yet; that is a change in Velisa
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

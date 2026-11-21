@@ -1096,13 +1096,13 @@ REPORT
 ProductionPlan.outputs → Project IR → Execution → Artifact → QA → Delivery → Archive
 ```
 
-| Concept | Meaning | Implementation |
-|---|---|---|
-| File | bytes on a filesystem | the compiler decides where a job writes (`<workspace>/jobs/<job>/artifacts/…`); never an AI, never a plan step |
-| Artifact | a production result: identity, links, QA status, lifecycle | `models.Artifact` + `artifacts/store.py` manifests in `<workspace>/artifacts/registry/<id>.json` |
-| QA | is the result technically / semantically correct | `qa/` (PASS / WARN / FAIL; UNKNOWN when nothing was checked) |
-| Delivery | promotion to a deliverable, recorded state (no upload today) | `ArtifactStore.promote(… "final")`, `video-agent deliver` |
-| Archive | keep the production history: artifact ↔ plan ↔ job ↔ QA ↔ provenance | stage `archive` + per-project index `<workspace>/archive/<project>.json` (logical, no copies / ZIP) |
+| Concept  | Meaning                                                              | Implementation                                                                                                 |
+| -------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| File     | bytes on a filesystem                                                | the compiler decides where a job writes (`<workspace>/jobs/<job>/artifacts/…`); never an AI, never a plan step |
+| Artifact | a production result: identity, links, QA status, lifecycle           | `models.Artifact` + `artifacts/store.py` manifests in `<workspace>/artifacts/registry/<id>.json`               |
+| QA       | is the result technically / semantically correct                     | `qa/` (PASS / WARN / FAIL; UNKNOWN when nothing was checked)                                                   |
+| Delivery | promotion to a deliverable, recorded state (no upload today)         | `ArtifactStore.promote(… "final")`, `video-agent deliver`                                                      |
+| Archive  | keep the production history: artifact ↔ plan ↔ job ↔ QA ↔ provenance | stage `archive` + per-project index `<workspace>/archive/<project>.json` (logical, no copies / ZIP)            |
 
 - Identity: `art_` + hash(project id, plan id, logical name, sha256). Same plan + same bytes → same artifact (a resumed job
   is appended to `jobs`); a revised plan or different content → a different artifact. Never derived from the path, the
@@ -1448,15 +1448,15 @@ future skills            = independent specialised skills, added without rebuild
 
 Vocabulary and responsibilities (the contract lives in `src/video_agent/skills/contract.py`, details in `docs/skills.md`):
 
-| Concept | Responsibility | Implementation |
-|---|---|---|
-| Skill package | what a repository can do (a capability domain) | `SkillPackage`: skill_id, name, version, description, capabilities, tools, repository, role |
-| Tool | one concrete operation the package provides | `ToolSpec`: tool_id `<skill_id>/<name>`, skill_id, version, required capabilities, execution contract (inputs, produces_output, deterministic, result_keys) |
-| Capability | what the runtime environment supports | `CapabilityResolver` (AVAILABLE / MISSING / DEGRADED / UNKNOWN) |
-| Adapter | connects a package's tools to the runtime; executes the selected tool, decides nothing | `ToolAdapter` (`package()`, `supports`, `preview`, `run`, `measure`) |
-| Registry | discovers, records and lists production skills and packages; selects a tool per skill | `SkillRegistry` (`register`, `register_package`, `get`, `all`, `packages`, `tool`, `select_tool`, `resolve_tools`, `availability`, `package_availability`) |
-| Router | dispatches a selected tool id to the adapter that supports it | `ToolRouter` |
-| Agent | decides what the production as a whole should do | `agent/`, `service.py` |
+| Concept       | Responsibility                                                                         | Implementation                                                                                                                                              |
+| ------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill package | what a repository can do (a capability domain)                                         | `SkillPackage`: skill_id, name, version, description, capabilities, tools, repository, role                                                                 |
+| Tool          | one concrete operation the package provides                                            | `ToolSpec`: tool_id `<skill_id>/<name>`, skill_id, version, required capabilities, execution contract (inputs, produces_output, deterministic, result_keys) |
+| Capability    | what the runtime environment supports                                                  | `CapabilityResolver` (AVAILABLE / MISSING / DEGRADED / UNKNOWN)                                                                                             |
+| Adapter       | connects a package's tools to the runtime; executes the selected tool, decides nothing | `ToolAdapter` (`package()`, `supports`, `preview`, `run`, `measure`)                                                                                        |
+| Registry      | discovers, records and lists production skills and packages; selects a tool per skill  | `SkillRegistry` (`register`, `register_package`, `get`, `all`, `packages`, `tool`, `select_tool`, `resolve_tools`, `availability`, `package_availability`)  |
+| Router        | dispatches a selected tool id to the adapter that supports it                          | `ToolRouter`                                                                                                                                                |
+| Agent         | decides what the production as a whole should do                                       | `agent/`, `service.py`                                                                                                                                      |
 
 A production skill (`SkillSpec`, e.g. `silence_cleanup`) names the tools that can realise it as an ordered candidate
 list drawn from registered packages. Tool ids are conceptual (`<skill_id>/<name>`); which engine implements them is the
@@ -1477,12 +1477,12 @@ remote registry, arbitrary code loading. A package becomes known through its ada
 
 ### External observation Skill: media-analysis-skill (implemented, ADR-023)
 
-| Skill | Role | Status |
-|---|---|---|
-| ffmpeg-skill | deterministic media **execution** (hands) | Reference Skill, integrated (ADR-001 / ADR-016 / ADR-017) |
-| media-analysis-skill | deterministic **measurement / observation** (eyes / meters) | integrated: `tools/media_analysis/`, contract `media-analysis/contract@1`, 0.1.x |
-| transcription-skill | deterministic **speech recognition** (ears): audio → timestamped Transcript | integrated: `tools/transcription/`, contract `transcription skill --json` (transcript/0.1, engine-spec/0.1, speech-event/0.1), 0.2.x (ADR-024) |
-| video-production-agent | orchestration / inference / decision / planning | this repository |
+| Skill                  | Role                                                                        | Status                                                                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| ffmpeg-skill           | deterministic media **execution** (hands)                                   | Reference Skill, integrated (ADR-001 / ADR-016 / ADR-017)                                                                                      |
+| media-analysis-skill   | deterministic **measurement / observation** (eyes / meters)                 | integrated: `tools/media_analysis/`, contract `media-analysis/contract@1`, 0.1.x                                                               |
+| transcription-skill    | deterministic **speech recognition** (ears): audio → timestamped Transcript | integrated: `tools/transcription/`, contract `transcription skill --json` (transcript/0.1, engine-spec/0.1, speech-event/0.1), 0.2.x (ADR-024) |
+| video-production-agent | orchestration / inference / decision / planning                             | this repository                                                                                                                                |
 
 - Boundary: an external process. The adapter runs `media-analysis contract --json` / `doctor --json` once and
   `media-analysis run - --json` per measurement (AnalysisRequest JSON on stdin, exactly one response document on
@@ -1527,7 +1527,7 @@ Agent → SkillRegistry (speech_transcription) → TranscriptionAdapter → `tra
 ```
 
 - **Recognition only.** The Skill turns speech into timestamped text; the agent stores the Transcript as an Observation
-  (a recognition *fact*, provenance OBSERVED) and derives SpeechEvents from its segments. Nothing here interprets the
+  (a recognition _fact_, provenance OBSERVED) and derives SpeechEvents from its segments. Nothing here interprets the
   text, summarises it, identifies a speaker, chooses a camera, cuts, or renders a subtitle. **transcription result ≠ AI
   inference**: no AI provider is involved; the engine's output is evidence as recognised, homophone errors included.
 - **Boundary.** `transcription skill --json` (contract), `doctor --json [--offline] [--allowed-input …]`, and `run -`
@@ -1542,7 +1542,7 @@ Agent → SkillRegistry (speech_transcription) → TranscriptionAdapter → `tra
   Only `transcription/transcribe` is a measurement tool; `segments` / `export` / `check` are not called by the agent.
 - **Typed request only.** `input`, `asset_id`, `language`, `engine` (must be declared by the contract), `model` (a name,
   never a path), `word_timestamps`, `temperature`, `initial_prompt`, `beam_size`, `offline`, `budget{timeout,
-  max_audio_seconds}`, `cache`. `workspace` (`<workspace>/cache/transcription`) and `allowed_input_roots` (the agent's
+max_audio_seconds}`, `cache`. `workspace` (`<workspace>/cache/transcription`) and `allowed_input_roots` (the agent's
   allowed inputs + the workspace, the same boundary as the engine's `PathPolicy`) are pinned by the adapter and refused
   in a request. Command / argv / shell / env / credential keys are refused before any process starts.
 - **Input security.** raw path → traversal check → absolute → realpath → component-wise containment in a resolved
@@ -1583,7 +1583,7 @@ Agent → SkillRegistry (speech_transcription) → TranscriptionAdapter → `tra
   evidence: version, schemas, tools, capabilities, engines with models and availability, doctor rows; no secrets).
   Production skill `speech_transcription` (LOW / AUTO, requires `ffmpeg`, `ffprobe`, `transcription`) is the only
   candidate route to `transcription/transcribe`. `video-agent transcribe <media> [--language ja] [--engine …]
-  [--model …] [--offline] [--word-timestamps] [--allowed-input DIR] [--timeout s]`, `analyze / plan --kind transcript`,
+[--model …] [--offline] [--word-timestamps] [--allowed-input DIR] [--timeout s]`, `analyze / plan --kind transcript`,
   `explain <ir> --observation <id|transcript id>` (observation → skill → tool → engine → model → transcript → asset
   → analysis → events; the chain ends at facts).
 - **Not in scope (deliberately absent):** AI / LLM, speaker identification / diarization, speaker naming, camera
@@ -1769,8 +1769,8 @@ Inference (what is happening) + Policy / Preference / Constraint + Intent + Risk
 
 **Inference = what is happening. Decision = what production should do. Plan = how it is executed.** The generic engine
 (`agent/decision_engine.py`, tool- and domain-independent) does not know silence, speech, loudness or delivery; the
-domain layer (`agent/decision.py`) says *which* decision a situation calls for and constructs every one of them through
-the engine, which enforces *how* a decision may exist:
+domain layer (`agent/decision.py`) says _which_ decision a situation calls for and constructs every one of them through
+the engine, which enforces _how_ a decision may exist:
 
 - **Vocabulary (`type`, additive on the existing Decision model):** KEEP / REMOVE / TRANSFORM / DELIVER / SKIP / REVIEW /
   BLOCK. Only REMOVE / TRANSFORM / DELIVER are executable (may be cited by a step or an IR operation); the validator
@@ -1784,7 +1784,7 @@ the engine, which enforces *how* a decision may exist:
   credential are dropped, never interpreted). A missing measurement therefore yields no decision — e.g. when the
   loudness analysis failed, there is no "within tolerance" decision any more; the analysis warning records the failure.
 - **Approval from policy with a safe default and recorded provenance.** `resolve_approval(rules, key, DEFAULT, floor,
-  explicit)`: AUTO / CONFIRM as stated, `BLOCK*` → BLOCK (no implicit exception for a suffix), any other value → CONFIRM,
+explicit)`: AUTO / CONFIRM as stated, `BLOCK*` → BLOCK (no implicit exception for a suffix), any other value → CONFIRM,
   `floor` only raises, BLOCK is never lowered. The existing waiver (a USER requirement asking for exactly this edit turns
   a CONFIRM POLICY into AUTO, eval 03) stays, is recorded as a note, and never applies to a CONSTRAINT. RuleSet
   precedence (GLOBAL → … → PROFILE → REQUEST, constraints never overridden) is untouched; the engine only reports what
@@ -1865,8 +1865,8 @@ Requirement edit.* (explicit --set) → Decision (TRANSFORM / BLOCK, policy vide
     → compiler lower_video_edit (names only) → VideoEditingAdapter (ADR-028) → video-editing CLI → ffmpeg-skill → FFmpeg
 ```
 
-- **Four stages are kept apart:** *Skill supports* (contract), *agent adapter supports* (`Lowering.ARGS`, PR #18), *planner can
-  generate* (this section: the six operations above; TRIM / CUT stay `video.trim`), *E2E verified* (real-media integration
+- **Four stages are kept apart:** _Skill supports_ (contract), _agent adapter supports_ (`Lowering.ARGS`, PR #18), _planner can
+  generate_ (this section: the six operations above; TRIM / CUT stay `video.trim`), _E2E verified_ (real-media integration
   tests: A + B → concat (plain and with a fade transition) → speed → resize → fit / fill → overlay with a real PNG → QA).
 - **Vocabulary (`agent/editing.py`):** `OPERATIONS` maps each IR type to its production skill, its only tool and the parameter
   allowlist (concat: transition {type, duration}, width, height, fps, mode, pad_color; speed: factor; resize: width, fps; fit:

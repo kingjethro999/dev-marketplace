@@ -23,31 +23,31 @@ This is a **data → share-bait** pattern, not a hand-edited film. If there is n
 
 ## The Wrapped scene grammar
 
-A Wrapped is a fixed sequence of short scene *types*, each ~2.5–4s. Pick 5–7 and order them as a build. Same grammar every year; only the data and palette change.
+A Wrapped is a fixed sequence of short scene _types_, each ~2.5–4s. Pick 5–7 and order them as a build. Same grammar every year; only the data and palette change.
 
-| Scene type | Job | Data shape |
-|---|---|---|
-| Intro / "Your 2026, wrapped" | Brand the moment, set palette | name, year |
-| Big-number reveal | One hero stat, counts up huge | one number + unit + label |
-| Top-X list | Ranked 1→5, staggered in | array of `{rank, label, value}` |
-| Superlative / persona | "You're in the top 1%", an archetype | computed tier/label |
-| Comparison | "more than 92% of listeners" | percentile or ratio |
-| Time/heatmap | "your busiest month was March" | series or peak |
-| Outro / share card | Logo + handle + CTA, holds still | name, handle |
+| Scene type                   | Job                                  | Data shape                      |
+| ---------------------------- | ------------------------------------ | ------------------------------- |
+| Intro / "Your 2026, wrapped" | Brand the moment, set palette        | name, year                      |
+| Big-number reveal            | One hero stat, counts up huge        | one number + unit + label       |
+| Top-X list                   | Ranked 1→5, staggered in             | array of `{rank, label, value}` |
+| Superlative / persona        | "You're in the top 1%", an archetype | computed tier/label             |
+| Comparison                   | "more than 92% of listeners"         | percentile or ratio             |
+| Time/heatmap                 | "your busiest month was March"       | series or peak                  |
+| Outro / share card           | Logo + handle + CTA, holds still     | name, handle                    |
 
 Order as a crescendo: small context first, biggest/most personal stat as the climax, then the still share card. See `references/scene-grammar.md` for a full 7-scene storyboard with timings.
 
 ## The recap story arc
 
-The scene grammar is the skeleton; the *arc* is what makes a Wrapped feel like a gift instead of a dashboard. A recap is a tiny five-beat drama about one viewer — sequence it so each reveal feels bigger and more personal than the last.
+The scene grammar is the skeleton; the _arc_ is what makes a Wrapped feel like a gift instead of a dashboard. A recap is a tiny five-beat drama about one viewer — sequence it so each reveal feels bigger and more personal than the last.
 
-| Beat | Job | Maps to |
-|---|---|---|
-| Build-up | Brand the moment, promise it's theirs | Intro: "{name}, your {year}" |
-| Escalating reveals | Stack stats that rise in stakes | Top-X, genres, time patterns |
-| The "big number" | One hero stat, max scale, held longest | Big-number / count-up climax |
-| Personalized superlative | Name *who they are*, not just what they did | Persona/percentile tier |
-| Shareable payoff | A still poster they want to post | Outro share card |
+| Beat                     | Job                                         | Maps to                      |
+| ------------------------ | ------------------------------------------- | ---------------------------- |
+| Build-up                 | Brand the moment, promise it's theirs       | Intro: "{name}, your {year}" |
+| Escalating reveals       | Stack stats that rise in stakes             | Top-X, genres, time patterns |
+| The "big number"         | One hero stat, max scale, held longest      | Big-number / count-up climax |
+| Personalized superlative | Name _who they are_, not just what they did | Persona/percentile tier      |
+| Shareable payoff         | A still poster they want to post            | Outro share card             |
 
 **Sequence stats for rising impact — smallest first, biggest last.** Rank every stat by emotional payload (raw size, rarity, how flattering) and play them in ascending order. Never open on the hero number: there's nowhere to climb after it, and the rest of the film feels like a comedown. Hold the climax stat largest and longest; everything before it is set-up.
 
@@ -66,10 +66,12 @@ export const wrappedSchema = z.object({
   name: z.string(),
   year: z.number(),
   minutesListened: z.number(),
-  topArtists: z.array(z.object({ rank: z.number(), label: z.string(), value: z.number() })),
+  topArtists: z.array(
+    z.object({ rank: z.number(), label: z.string(), value: z.number() }),
+  ),
   topGenre: z.string(),
   percentile: z.number(), // 0–100, "top X%"
-  accent: z.string(),     // per-user palette, e.g. "#1DB954"
+  accent: z.string(), // per-user palette, e.g. "#1DB954"
 });
 export type Wrapped = z.infer<typeof wrappedSchema>;
 ```
@@ -87,12 +89,19 @@ export const Root = () => (
     id="Wrapped"
     component={Recap}
     schema={wrappedSchema}
-    durationInFrames={30 * 22}  // 22s @ 30fps
+    durationInFrames={30 * 22} // 22s @ 30fps
     fps={30}
-    width={1080} height={1920}  // 9:16 vertical — the share format
-    defaultProps={{ name: "Sam", year: 2026, minutesListened: 41203,
+    width={1080}
+    height={1920} // 9:16 vertical — the share format
+    defaultProps={{
+      name: "Sam",
+      year: 2026,
+      minutesListened: 41203,
       topArtists: [{ rank: 1, label: "Phoebe Bridgers", value: 312 }],
-      topGenre: "Indie", percentile: 3, accent: "#1DB954" }}
+      topGenre: "Indie",
+      percentile: 3,
+      accent: "#1DB954",
+    }}
   />
 );
 ```
@@ -104,19 +113,41 @@ The count-up is the heartbeat of every Wrapped. Drive it from `useCurrentFrame()
 ```tsx
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 
-export const BigNumber: React.FC<{ value: number; label: string; accent: string }> =
-({ value, label, accent }) => {
+export const BigNumber: React.FC<{
+  value: number;
+  label: string;
+  accent: string;
+}> = ({ value, label, accent }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const progress = spring({ frame, fps, config: { damping: 200 } }); // 0→1, settles
   const shown = Math.round(interpolate(progress, [0, 1], [0, value]));
   const pop = interpolate(progress, [0, 1], [0.6, 1]); // overshoot-free scale-in
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", height: "100%", transform: `scale(${pop})` }}>
-      <span style={{ fontSize: 220, fontWeight: 900, color: accent, lineHeight: 1,
-          fontVariantNumeric: "tabular-nums" }}>{shown.toLocaleString()}</span>
-      <span style={{ fontSize: 48, color: "#fff", marginTop: 24 }}>{label}</span>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        transform: `scale(${pop})`,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 220,
+          fontWeight: 900,
+          color: accent,
+          lineHeight: 1,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {shown.toLocaleString()}
+      </span>
+      <span style={{ fontSize: 48, color: "#fff", marginTop: 24 }}>
+        {label}
+      </span>
     </div>
   );
 };
@@ -141,10 +172,16 @@ import users from "./users.json"; // array of rows matching the schema
 
 const serveUrl = await bundle({ entryPoint: "./src/index.ts" });
 for (const user of users) {
-  const props = wrappedSchema.parse(user);            // validate the row
-  const comp = await selectComposition({ serveUrl, id: "Wrapped", inputProps: props });
+  const props = wrappedSchema.parse(user); // validate the row
+  const comp = await selectComposition({
+    serveUrl,
+    id: "Wrapped",
+    inputProps: props,
+  });
   await renderMedia({
-    composition: comp, serveUrl, codec: "h264",
+    composition: comp,
+    serveUrl,
+    codec: "h264",
     inputProps: props,
     outputLocation: `out/wrapped-${user.id}.mp4`,
   });
@@ -170,6 +207,7 @@ For thousands of rows, fan out across machines/Lambda and dedupe identical prop 
 A Wrapped is a Remotion composition rendered per data row — frame-deterministic, so any exact frame renders headlessly with no seek harness. The deliverable is an MP4 (often many) carrying each person's exact numbers; verify one representative row by stills before you batch.
 
 **Output contract:**
+
 - A Remotion project with the composition registered (`<Composition>` + zod `schema` + `defaultProps`), all motion frame-driven (no timers / `Date.now()` / `Math.random()` — count-ups via `useCurrentFrame` + spring).
 - Deliverable = the rendered `out/wrapped-*.mp4` per row (plus the project, so any row re-renders).
 - Per-user stats baked into props and validated by the schema before render; 9:16 1080×1920.
@@ -194,6 +232,7 @@ npx tsx render-all.ts
 - **README demo GIF for free**: `npx remotion render Wrapped out/demo.gif --codec=gif --props='{...}'`.
 
 **Before you finish:**
+
 1. `npx remotion still` renders cleanly at frame 0, mid, and last for the representative row — no errors, no missing assets/fonts.
 2. Big-number reveal lands on the EXACT prop value at its settle frame; top-X ranks/labels/values match the row.
 3. 9:16: key numbers/type inside center 80%, clear of top 12% / bottom 18%; each checked frame reads frozen.

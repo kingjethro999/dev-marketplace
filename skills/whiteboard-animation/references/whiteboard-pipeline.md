@@ -16,8 +16,8 @@ Quick check that a path is drawable:
 
 ```js
 const p = document.querySelector("#stroke");
-console.log(p.getTotalLength());          // finite, >0 → has a stroke to draw
-console.log(getComputedStyle(p).fill);    // should be "none" for a pure stroke
+console.log(p.getTotalLength()); // finite, >0 → has a stroke to draw
+console.log(getComputedStyle(p).fill); // should be "none" for a pure stroke
 ```
 
 ## 2. Author the draw order
@@ -92,4 +92,5 @@ Build rules:
 - [ ] Reduced-motion shows the finished board with no drawing animation.
 
 ---
+
 Order the strokes the way a hand would, glue the nib to the tip, and the board draws itself. Built by **[iart.ai](https://iart.ai/?utm_source=github&utm_medium=readme&utm_campaign=explainer-video-skills&utm_content=skill_footer&utm_term=whiteboard-animation)** — the AI motion agent for editable, on-brand motion graphics.

@@ -2,7 +2,7 @@
 
 - **ADR-1 Compositing is Pillow, in-process; ffmpeg-skill decodes exactly one frame and nothing
   else.** ffmpeg-skill's `overlay`/`graphics`/`caption` tools operate on a video input and always
-  write a new *video* artifact; forcing a still-image canvas through them would mean building a
+  write a new _video_ artifact; forcing a still-image canvas through them would mean building a
   filter graph neither skill's contract is meant to expose generically. Pillow keeps "no arbitrary
   ffmpeg filter" trivially true for the actual pixel work: no ffmpeg process is involved in
   compositing at all (see docs/architecture.md).
@@ -16,7 +16,7 @@
   typeface the caller meant.
 - **ADR-4 Path containment is resolved-path, never string-prefix; write-path resolution uses
   `os.path.realpath`, not walk-to-nearest-existing-ancestor.** String-prefix containment admits
-  `/w/media_evil` under an allowed root `/w/media`; walking to the nearest *existing* ancestor
+  `/w/media_evil` under an allowed root `/w/media`; walking to the nearest _existing_ ancestor
   before resolving admits a dangling symlink placed at a not-yet-existing path component. Both were
   found and closed during pre-release review (see git history around `security.py`); `PathPolicy`
   now resolves the full target (including a non-existent leaf) and checks containment on the
@@ -29,7 +29,7 @@
   Measured against ffmpeg-skill 0.9.1, `look` used to claim `{"status": "completed"}` regardless of
   this; as of ffmpeg-skill 0.11.0's "fail loudly" pass, `look` instead verifies its own output and
   reports a hard failure instead — `{"status": "failed", "error": {"kind": "output", "code":
-  "OUTPUT_INVALID", "message": "output verification failed: ...: not written"}}` (current behaviour,
+"OUTPUT_INVALID", "message": "output verification failed: ...: not written"}}` (current behaviour,
   measured against ffmpeg-skill 0.12.2). Either shape describes the same permanent fact about the
   timestamp — retrying the identical request fails identically forever — so classifying it as a
   retryable tool failure would be actively misleading to a calling agent. `adapter.extract_frame()`
@@ -61,7 +61,7 @@
   it). Superseded the exact `contract_version` "1.0" match, which could not see that 2.0 change:
   the contract shape was unchanged, yet a re-render with `reuse: false` failed because `look`
   refused to overwrite the deterministic frame file of the previous run. Caveat that still holds
-  (see ADR-5): a *behavioural* change to `look` (like 0.11.0's "fail loudly" pass) shows up in no
+  (see ADR-5): a _behavioural_ change to `look` (like 0.11.0's "fail loudly" pass) shows up in no
   contract, which is why CI runs the suite against ffmpeg-skill `main` daily as well as against the
   oldest tested commit (`336e0c4`, 0.12.2); `tests/test_ffmpeg_skill_compat.py` pins the detection
   against fake current, old, contract-less and unseen-version layouts.
@@ -69,13 +69,13 @@
   after the render; every figure cites the platform's own documentation or says "unverified".**
   `model.PLATFORM_PRESETS` is the one table: the request parser, the post-render check and the
   contract's top-level `platform_presets` (beside `output_formats`, declared the same way) all read it.
-  *Where the field lives:* on `output`, not `canvas`, because a preset is a delivery target (format
+  _Where the field lives:_ on `output`, not `canvas`, because a preset is a delivery target (format
   and byte-size limits as well as a shape), and because `output`'s fields are not part of the
-  contract's `document` section that consumers pin (see "Consumers" below). *Precedence:* the preset
+  contract's `document` section that consumers pin (see "Consumers" below). _Precedence:_ the preset
   supplies `canvas.width`/`height` when the document omits both; explicit `width` and `height` win;
   giving only one of the two with a preset is `INVALID_REQUEST` (`partial_canvas_size`) rather than
   a silent mix. Explicit sizes are still held to the preset's limits, so `youtube` accepts 1920x1080
-  but refuses 1000x1000. *The check:* after `_validate_output` (real image, declared format, exact
+  but refuses 1000x1000. _The check:_ after `_validate_output` (real image, declared format, exact
   canvas size), the file's real width/height (min/max per preset, aspect-ratio range by integer
   cross-multiplication, no float tolerance), format and byte size are compared with the preset;
   any violation is `VALIDATION_ERROR` with `details.reason: "preset_limit_exceeded"`, `preset`, and
@@ -127,12 +127,13 @@
     official page names 1600x900; X's ads specs (help.x.com, refused automated fetches) are reported
     to recommend 1920x1080 for 16:9. 1600x900 is the requested size and is 16:9.
 
-  *Consumers:* video-production-agent pins this contract (`contract_0.1.3.json`) and gates on
+  _Consumers:_ video-production-agent pins this contract (`contract_0.1.3.json`) and gates on
   `FATAL_DRIFT_KEYS` (`schema`, `skill_id`, `kind`, `execution`, `document`, `output_formats`, `fonts`,
   `rendering`, `schema_versions`, `errors`, `provenance`, `deterministic`, plus each tool's
   declaration). The only contract change is the new top-level `platform_presets`, which none of those
   covers, so the pinned contract reports no drift and no breaking drift. The response gains `preset`
   (and `provenance.preset`) only when a request names one, which the agent never does today.
+
 - **ADR-10 The Pillow floor depends on the Python version, because the release that clears every
   advisory does not install on all supported Pythons.** `Pillow>=10.0` allowed releases with 50+
   published advisories (OSV, 2026-10-30; several CRITICAL heap overflows in image decoders, which
@@ -146,7 +147,7 @@
   3.11+.
 - **ADR-11 The version lives only in `pyproject.toml`; `contract_version` and the ffmpeg-skill
   `dependencies` entry are derived from the constants they describe.** (`ECOSYSTEM_ROADMAP.md` step 1.)
-  *Version:* `_version()` already read this checkout's `pyproject.toml`, the only file
+  _Version:_ `_version()` already read this checkout's `pyproject.toml`, the only file
   `release.yml` bumps. The installed-copy fallback globbed `thumbnail_skill-*.dist-info/METADATA`
   over `sys.path`, which picks in lexicographic order, so `0.10.0` comes ahead of `0.9.0`. It now
   asks `importlib.metadata.version("thumbnail-skill")`. The full rule, the same as qc-skill's
@@ -163,7 +164,7 @@
   that the contract and the CLI follow `VERSION`, and it runs the script on a copy of the checkout.
   Not chosen: bumping a second constant as well, as audio-production-skill's
   `bump_version_files.sh` does. Two copies stay correct only while a second regex keeps matching.
-  *Contract:* two new top-level keys.
+  _Contract:_ two new top-level keys.
   - `contract_version` is `str(CONTRACT_SCHEMA_VERSION)`, i.e. `"1"`, the same value as
     `schema_versions.contract` and the `@1` in `schema`. It is a string because this contract's other
     version fields are strings; the OS schema accepts either type.
@@ -178,68 +179,69 @@
     - `for` lists the tool specs that delegate, and `tools` lists `TOOLS_USED`.
 
   Nothing else in the contract changed.
-  *Consumers:* video-production-agent's thumbnail adapter compares `DRIFT_KEYS` (`schema`,
+  _Consumers:_ video-production-agent's thumbnail adapter compares `DRIFT_KEYS` (`schema`,
   `skill_id`, `version`, `kind`, `execution`, `document`, `output_formats`, `fonts`, `rendering`,
   `ffmpeg_skill`, `schema_versions`, `errors`, `provenance`, `deterministic`). Neither new key is in
   that list, and `check_contract()` reads neither, so this is no drift and no breaking drift. Its
   version gate is `("0.1.",)`, so this ships as a patch release, never with a `feature` label.
+
 - **ADR-12 The optional AI background provider is its own tool, `thumbnail/generate_background`, behind a provider
   interface; without a configured provider nothing changes.** (`ECOSYSTEM_ROADMAP.md` step 3; the OS's ADR-012 names
   FLUX.2 [klein] 4B, Apache-2.0, as this skill's engine for generated backgrounds, and excludes the non-commercial 9B.)
-  *Shape:* a new tool, not a new asset kind. A `generated` asset inside the ThumbnailDocument would make `render`
+  _Shape:_ a new tool, not a new asset kind. A `generated` asset inside the ThumbnailDocument would make `render`
   non-deterministic and change the `document` section, which video-production-agent pins as fatal drift. As its own
   tool, the generator writes an ordinary image file that `render` takes as an `image` asset, so composition stays
   deterministic, the cache identity stays content-based, and the document model is unchanged.
-  *Provider interface:* `background.py` holds `BackgroundProvider` (id, engine, model, licence, licence URL, model card,
+  _Provider interface:_ `background.py` holds `BackgroundProvider` (id, engine, model, licence, licence URL, model card,
   the environment variable that turns it on, `status()`, `generate()`), and a registry `PROVIDERS` with one entry,
   `flux2-klein-4b`. A further provider is one class and one registry line; the request names the provider explicitly,
   so nothing is chosen for the caller.
-  *Sources (read 2026-10-31):* the model card <https://huggingface.co/black-forest-labs/FLUX.2-klein-4B> ("This model
+  _Sources (read 2026-10-31):_ the model card <https://huggingface.co/black-forest-labs/FLUX.2-klein-4B> ("This model
   is licensed under the ... Apache 2.0"; "fits in ~13GB VRAM"; the diffusers example `Flux2KleinPipeline.from_pretrained(...,
-  torch_dtype=torch.bfloat16)`, `guidance_scale=1.0`, `num_inference_steps=4`, `generator=torch.Generator(device).manual_seed(0)`;
+torch_dtype=torch.bfloat16)`, `guidance_scale=1.0`, `num_inference_steps=4`, `generator=torch.Generator(device).manual_seed(0)`;
   the 9B models are under "a non-commercial license"), and diffusers' Flux2 page
   <https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux2> (`Flux2KleinPipeline.__call__(prompt, height, width,
-  num_inference_steps, guidance_scale, generator, ...)`; the pipeline file first appears in diffusers v0.37.0, hence the
+num_inference_steps, guidance_scale, generator, ...)`; the pipeline file first appears in diffusers v0.37.0, hence the
   `flux2` extra's `diffusers>=0.37.0`; its text encoder is transformers' Qwen3, hence `transformers>=4.51.0`).
-  *Turning it on:* `THUMBNAIL_FLUX2_KLEIN_4B_DIR` names a local snapshot of `black-forest-labs/FLUX.2-klein-4B`, and the
+  _Turning it on:_ `THUMBNAIL_FLUX2_KLEIN_4B_DIR` names a local snapshot of `black-forest-labs/FLUX.2-klein-4B`, and the
   `flux2` extra installs torch, diffusers and transformers. Weights load with `local_files_only=True`: this skill never
   downloads a model and opens no connection, so `execution.network` stays false. Obtaining the snapshot is the
   operator's step, done once.
-  *Three states, as the roadmap's "absent model = doctor DEGRADED and a refusal, not a crash" asks, without changing
-  anything for a machine that never asked for the provider:*
+  _Three states, as the roadmap's "absent model = doctor DEGRADED and a refusal, not a crash" asks, without changing
+  anything for a machine that never asked for the provider:_
   - **not configured** (the variable unset): `doctor` reports `not_configured` and keeps its status;
     `generate_background` is refused.
   - **configured but unable to run** (no `model_index.json`, a missing package): `doctor` is `degraded`, with a warning
     naming what is missing; `generate_background` is refused.
   - **available**: it runs.
-  Detection only looks: `find_spec` and a file check, with no import of torch and no model load. A refusal is
-  `TOOL_ERROR`, `details.reason: provider_unavailable`, not retryable (the same family as an unavailable ffmpeg-skill,
-  and no new code, so the pinned `errors` section is unchanged). A model or runtime failure is `TOOL_ERROR`
-  `provider_failed`; an image of the wrong size from a provider is `VALIDATION_ERROR` `provider_output_invalid`. Each
-  of these leaves no output.
-  *Request:* `background {provider, prompt, width, height, seed, steps?, guidance_scale?}`, plus `output` and
-  `options`, as on the other tools; forbidden fields are rejected at any depth. The prompt is the caller's: 1..2000
-  characters, with no control characters but `\n`. Width and height are 256..2048 and multiples of 16 (the model works
-  on 16-pixel latents; a non-multiple is refused rather than resized). The seed is required (0..2^32-1). `steps`
-  (1..50) and `guidance_scale` (0..20) default to the model card's 4 and 1.0. `output.preset` is checked as on the
-  other tools (ADR-9).
-  *Not deterministic, not cached:* the same seed can give other pixels on another GPU, dtype or library version
-  (bfloat16 on CUDA, float32 on CPU), so the tool says `deterministic: false` and a result is never reused. Provenance
-  instead records everything needed to ask again: `generated: true`, provider, engine and its version (diffusers'), model,
-  licence and licence URL, model card, the prompt and its sha256, seed, steps, guidance scale, size and the output hash.
-  FLUX.2 [klein] 4B adds no watermark or credit obligation (Apache-2.0), so none is recorded.
-  *Contract:* the new tool (`ai: true`, `optional: true`, `deterministic: false`), its Capability id
-  `thumbnail.generate_background` (EXPERIMENTAL) in `provides`, and a new top-level `background_providers` section. The
-  core sections keep describing the deterministic render path exactly as before: `execution` (including `ai: false`),
-  `deterministic: true`, `document`, `errors`. Changing `execution.ai` would make video-production-agent refuse the
-  whole contract (its `check_contract` requires `ai` false), and it would misdescribe `render`/`extract_frame`, which
-  never use a model. `background_providers.core_tools_use_ai: false` says the same thing explicitly.
-  *Consumers:* in video-production-agent's thumbnail adapter, a new tool and a new top-level key are additive. None of
-  its `FATAL_DRIFT_KEYS` changes, so there is no breaking drift. `provides` gained an entry, so its pinned
-  `contract_0.1.6.json` should be re-pinned (on the agent side) before it uses the tool. Whether the agent's
-  `execution.ai` gate should also cover per-tool `ai` flags is the agent's decision.
-  *Tests:* `tests/test_background.py` runs the real provider code against fake `torch`/`diffusers`/`transformers`
-  modules, so no model, GPU or download is involved.
+    Detection only looks: `find_spec` and a file check, with no import of torch and no model load. A refusal is
+    `TOOL_ERROR`, `details.reason: provider_unavailable`, not retryable (the same family as an unavailable ffmpeg-skill,
+    and no new code, so the pinned `errors` section is unchanged). A model or runtime failure is `TOOL_ERROR`
+    `provider_failed`; an image of the wrong size from a provider is `VALIDATION_ERROR` `provider_output_invalid`. Each
+    of these leaves no output.
+    _Request:_ `background {provider, prompt, width, height, seed, steps?, guidance_scale?}`, plus `output` and
+    `options`, as on the other tools; forbidden fields are rejected at any depth. The prompt is the caller's: 1..2000
+    characters, with no control characters but `\n`. Width and height are 256..2048 and multiples of 16 (the model works
+    on 16-pixel latents; a non-multiple is refused rather than resized). The seed is required (0..2^32-1). `steps`
+    (1..50) and `guidance_scale` (0..20) default to the model card's 4 and 1.0. `output.preset` is checked as on the
+    other tools (ADR-9).
+    _Not deterministic, not cached:_ the same seed can give other pixels on another GPU, dtype or library version
+    (bfloat16 on CUDA, float32 on CPU), so the tool says `deterministic: false` and a result is never reused. Provenance
+    instead records everything needed to ask again: `generated: true`, provider, engine and its version (diffusers'), model,
+    licence and licence URL, model card, the prompt and its sha256, seed, steps, guidance scale, size and the output hash.
+    FLUX.2 [klein] 4B adds no watermark or credit obligation (Apache-2.0), so none is recorded.
+    _Contract:_ the new tool (`ai: true`, `optional: true`, `deterministic: false`), its Capability id
+    `thumbnail.generate_background` (EXPERIMENTAL) in `provides`, and a new top-level `background_providers` section. The
+    core sections keep describing the deterministic render path exactly as before: `execution` (including `ai: false`),
+    `deterministic: true`, `document`, `errors`. Changing `execution.ai` would make video-production-agent refuse the
+    whole contract (its `check_contract` requires `ai` false), and it would misdescribe `render`/`extract_frame`, which
+    never use a model. `background_providers.core_tools_use_ai: false` says the same thing explicitly.
+    _Consumers:_ in video-production-agent's thumbnail adapter, a new tool and a new top-level key are additive. None of
+    its `FATAL_DRIFT_KEYS` changes, so there is no breaking drift. `provides` gained an entry, so its pinned
+    `contract_0.1.6.json` should be re-pinned (on the agent side) before it uses the tool. Whether the agent's
+    `execution.ai` gate should also cover per-tool `ai` flags is the agent's decision.
+    _Tests:_ `tests/test_background.py` runs the real provider code against fake `torch`/`diffusers`/`transformers`
+    modules, so no model, GPU or download is involved.
 - **ADR-13 ffmpeg-skill 3.0.0 needs no code change; CI pins Python 3.9 to the last 2.x tag.**
   Checked 2026-10-31 against ffmpeg-skill v3.0.0 (CHANGELOG "3.0.0", `docs/contract.md` "What 3.0
   changed", `contract --json` `removed`). 3.0.0 changed `cut.py`'s defaults, added `probe`'s
@@ -249,32 +251,32 @@
   `dependencies` entry stays `>=1.0` of `contract_version` (3.0.0 reports `2.0`), a lower bound only.
   ffmpeg-skill's scripts run under this skill's interpreter, so on Python 3.9 a 3.x checkout is the
   environment's problem, reported by ffmpeg-skill's own doctor; this skill keeps `requires-python
-  >=3.9` for use with ffmpeg-skill 2.x. CI therefore runs Python 3.9 against `v2.24.1` (it ran
-  against `main`, which is 3.x now), adds `v3.0.0` on Python 3.10, and keeps `main` on 3.11
-  (Linux, macOS, Windows) and `336e0c4` on 3.9.
+  > =3.9`for use with ffmpeg-skill 2.x. CI therefore runs Python 3.9 against`v2.24.1`(it ran
+against`main`, which is 3.x now), adds `v3.0.0`on Python 3.10, and keeps`main`on 3.11
+(Linux, macOS, Windows) and`336e0c4` on 3.9.
 - **ADR-14 Batch thumbnails are their own tool, `thumbnail/render_batch`: one template per platform target, a
   table of rows, `{{column}}` placeholders, and shrink-to-fit text that is never cut.** (`ECOSYSTEM_ROADMAP.md`
   step 5: a conference's sessions or a series' episodes as one set of thumbnails.)
-  *Shape:* a new tool rather than a new field on `render`. `render`'s declared `input` is part of the per-tool keys
+  _Shape:_ a new tool rather than a new field on `render`. `render`'s declared `input` is part of the per-tool keys
   video-production-agent pins as fatal drift, and a batch is a different unit of work (one request, many files).
   Each row is still an ordinary `thumbnail/render`: the batch fills the template, then calls the same code path, so
   each file gets the same output validation (real format and size) and the same `output.preset` check (ADR-9), and
   is cached and reused the same way.
-  *Targets:* one ThumbnailDocument template per `output.preset`, so 16:9 and 9:16 are two targets (`youtube`,
+  _Targets:_ one ThumbnailDocument template per `output.preset`, so 16:9 and 9:16 are two targets (`youtube`,
   `youtube-shorts`), each with its own layout. A single template stretched to the other shape would put text and
   photos where nobody placed them, which is a layout decision this skill does not make. The template's canvas may omit
   `width`/`height`; the preset's size is used (ADR-9's precedence). At most 4 targets.
-  *Rows:* a CSV file (`csv.path`, header row, unique names, every line the header's field count, blank lines skipped,
+  _Rows:_ a CSV file (`csv.path`, header row, unique names, every line the header's field count, blank lines skipped,
   at most 4 MB and 1000 rows) or inline `rows` (objects of strings, for an agent that already has the table). The
   default encoding is UTF-8, and a leading byte-order mark is accepted (Excel writes one with "CSV UTF-8"). `cp932`
   is an opt-in choice for a CSV saved by Japanese Excel as plain "CSV", which is Shift_JIS. It is never guessed: a
   file that is not valid UTF-8 is refused (`INVALID_INPUT`, `csv_encoding`) with a hint to set the encoding. `;` and
   tab delimiters are accepted for locales whose spreadsheet export uses them.
-  *Placeholders:* `{{name}}` in `document_id`, every asset `path`, every text element's `text`, and `output.name`;
+  _Placeholders:_ `{{name}}` in `document_id`, every asset `path`, every text element's `text`, and `output.name`;
   `row` (1-based) and `preset` are built in, and a column may not use those names. Values are inserted literally and
   never scanned again. An unknown name is `INVALID_REQUEST` (`unknown_placeholder`). Relative asset paths resolve
   against the workspace, as they do in `render`.
-  *Text that does not fit:* `text_fit {element_id: {max_width, max_height?, min_font_size}}` per target. The font
+  _Text that does not fit:_ `text_fit {element_id: {max_width, max_height?, min_font_size}}` per target. The font
   size steps down by one point from the template's own size until the element's painted box fits. That box is
   `renderer.text_box`: the layout block, the background box, and every glyph's ink with stroke and shadow. It uses
   the same layout code that draws the text, so a measured box is the drawn box. The first size that fits is the
@@ -282,17 +284,17 @@
   fit, the row is refused with `VALIDATION_ERROR` (`text_does_not_fit`); a fitted box that lies partly outside the
   canvas is refused too (`text_outside_canvas`), because the canvas edge would cut it. Wrapping was not chosen: where
   a line breaks is a copy decision, and the ThumbnailDocument already takes explicit `\n`.
-  *Order:* every row and target is planned and checked first: structure, placeholders, fonts, text fit, every
+  _Order:_ every row and target is planned and checked first: structure, placeholders, fonts, text fit, every
   input file, and output names (`[A-Za-z0-9._-]`, at most 128 characters, no duplicates, no existing file without
   `overwrite`). Then files are written. A refused row therefore writes nothing. A failure while rendering (an
   unreadable image, for example) stops the batch, and `details.written` lists the files already written.
-  *Contract:* the new tool (deterministic, delegates video frames to ffmpeg-skill like `render`), its Capability id
+  _Contract:_ the new tool (deterministic, delegates video frames to ffmpeg-skill like `render`), its Capability id
   `thumbnail.render_batch` (EXPERIMENTAL), the tool in `dependencies[0].for`, and a new top-level `batch` section.
   `document`, `execution`, `errors`, `provenance` and the existing tools' declarations are unchanged.
-  *Consumers:* checked against video-production-agent's `check_contract` and `contract_breaking_drift` with its pinned
+  _Consumers:_ checked against video-production-agent's `check_contract` and `contract_breaking_drift` with its pinned
   `contract_0.1.11.json`: no error and no breaking drift. `contract_drift` reports `tools thumbnail/render_batch:
-  installed but not pinned`, which is informational. The agent does not call the tool until it re-pins.
-  *Tests:* `tests/test_batch.py`. A 10-row CSV with two targets writes 20 files at the platform sizes. Each file
+installed but not pinned`, which is informational. The agent does not call the tool until it re-pins.
+  _Tests:_ `tests/test_batch.py`. A 10-row CSV with two targets writes 20 files at the platform sizes. Each file
   passes the preset check in the response and again when the test opens it. The long title is shrunk to the largest
   size that fits, a minimum it cannot reach is refused before anything is written, and the tests also cover cp932,
   the UTF-8 BOM, the refusals and the CLI.
@@ -300,7 +302,7 @@
   `thumbnail/choose_frame` ranks, `thumbnail/place_text` moves one text element clear of the faces, and neither
   detects anything or reads a pixel.** (`ECOSYSTEM_ROADMAP.md` step 6: no thumbnails with closed eyes, no text over a
   face.)
-  *Who measures what (checked 2026-11-06, read-only):* detection-skill's `detection faces --attributes` writes
+  _Who measures what (checked 2026-11-06, read-only):_ detection-skill's `detection faces --attributes` writes
   `detection-skill/detections@1`, with per-face `box`, landmarks and `attributes` (`size`, `frontal`, `sharpness` as a
   Laplacian variance, and `eyes_open`, "about 0.8 open, 0.2 closed", its ADR-007). That document is the input here,
   in the published shape. media-analysis-skill does **not** publish frame sharpness or exposure: its ADR-029 lists
@@ -308,8 +310,8 @@
   from the caller, and a part nobody measured counts 0 and is named in `missing`. This skill does not measure them
   itself, because measurement belongs to the measuring skills. If media-analysis-skill adds them, the caller passes its
   values here; that is a proposal for media-analysis-skill, not a change made from here.
-  *Score:* per frame, its main face (the largest box) scores `0.30 eyes_open + 0.25 s/(s+100) + 0.15 exposure + 0.15
-  frontal + 0.15 min(1, size/0.4)`. The sharpness and size terms and the 100 / 0.4 constants are detection-skill
+  _Score:_ per frame, its main face (the largest box) scores `0.30 eyes_open + 0.25 s/(s+100) + 0.15 exposure + 0.15
+frontal + 0.15 min(1, size/0.4)`. The sharpness and size terms and the 100 / 0.4 constants are detection-skill
   face-rank@1's. Exposure is added as `1 - 2 |mean_luma - 0.5|` (a heuristic: mid-grey scores 1, black or white 0),
   and the other weights are scaled down to make room. Sharpness is the caller's frame measure when there is one,
   otherwise detection-skill's face sharpness; `sources` says which. A frame whose main face has `eyes_open` below
@@ -318,7 +320,7 @@
   order. Frames without a face come last with a null score. Weights may be given and are normalised. With `video`,
   its sha256 must equal the detections' `source.fingerprint`, and the chosen frame is returned as a ready
   `video_frame` asset.
-  *Placement:* the face boxes are mapped onto the canvas through the image element's crop, fit and position, with the
+  _Placement:_ the face boxes are mapped onto the canvas through the image element's crop, fit and position, with the
   renderer's own arithmetic (`cover` scale and centre-crop, `contain`, `fill`, `none`). They are scaled first when
   `frame_size` (the detections' pixel space) differs from the image's own size. Rotated elements are refused
   (`UNSUPPORTED_OPERATION`). The text element is then tried at each candidate position in order, either the caller's
@@ -327,27 +329,27 @@
   box grown by `margin` (16 px) is used. If none is clear, the request is refused (`VALIDATION_ERROR`,
   `no_position_clear_of_faces`, every try listed) rather than placing text over a face. The font size is not
   changed; that is ADR-14's `text_fit`.
-  *Shape:* two tools that write no file (`produces_output: false`, so no Capability id, the same rule as
+  _Shape:_ two tools that write no file (`produces_output: false`, so no Capability id, the same rule as
   `validate`). `place_text` returns the updated ThumbnailDocument, which the caller renders. Not chosen: a ranking
   step inside `render`. That would change `render`'s declared input (pinned as fatal drift by video-production-agent)
   and hide a heuristic inside a deterministic renderer.
-  *Contract:* the two tools, a new top-level `frame_choice` section (weights, formulas, defaults, `detects: false`,
+  _Contract:_ the two tools, a new top-level `frame_choice` section (weights, formulas, defaults, `detects: false`,
   `reads_pixels: false`), and honest wording: the description and `not_provided` now say this skill does no
   detection of its own ("searching a video for frames", "face/object detection", "free-form layout generation" stay
   not provided). `document`, `execution`, `errors`, `provenance` and the existing tools' declarations are unchanged.
   video-production-agent's `check_contract` and `contract_breaking_drift` against its pinned `contract_0.1.11.json`
   report nothing; `contract_drift` lists the two tools as installed but not pinned.
-  *Tests:* `tests/test_frames.py`. On a blinking-and-sharp fixture the sharp open frame ranks first, the blurred open
+  _Tests:_ `tests/test_frames.py`. On a blinking-and-sharp fixture the sharp open frame ranks first, the blurred open
   frame second, the blink third and the faceless frame last. A closed-eyes frame with the higher score still ranks
   after an open one. The caller's measures feed sharpness and exposure. On a 5x3 grid of face positions, the title box
   never overlaps the face box, geometrically and on rendered pixels: the face region is byte-identical with and
-  without the title. The mapping has a test for each fit mode. *Limits:* the detections fixture is synthetic, in
+  without the title. The mapping has a test for each fit mode. _Limits:_ the detections fixture is synthetic, in
   detection-skill's published shape; it is not a live detection-skill run, which needs its OpenCV/YuNet model.
 - **ADR-16 A/B variants are `thumbnail/render_variants` (`thumbnail render --variants N`): documented variants
   from round-robin axes, each checked at phone size. Contrast is measured by qc-skill, and a variant that fails is
   reported, never dropped.** (`ECOSYSTEM_ROADMAP.md` step 7: candidates for YouTube's thumbnail A/B test, without
   the ones whose text is too small to read.)
-  *Variants:* three axes: the text element's layout (position, alignment, optionally font size), its palette (text
+  _Variants:_ three axes: the text element's layout (position, alignment, optionally font size), its palette (text
   colour, background band, stroke), and the frame one image element shows. Variant k takes entry (k-1) mod n of
   each axis. Entry 0 of every axis is the document as given (`as-given`), so variant 1 is the original. The axes
   default to the eight edge and corner positions of ADR-15, three palettes (white on a dark band, black on a yellow
@@ -355,67 +357,67 @@
   response; each is an ordinary `thumbnail/render` written as `<stem>-v<k><ext>` and checked against
   `output.preset`. All N are planned and parsed, and their paths checked, before the first is written. This skill
   never picks a winner and never predicts click-through; running the test is the platform's job.
-  *Text height at phone size:* the tallest run of pixel rows containing the element's own glyph ink (fill only, alpha
-  >= 128), drawn alone with the renderer's layout, times `phone_width / canvas width`; `phone_width` is 320 (the
-  roadmap's figure). It is the same quantity as qc-skill's "ink height" (its ADR-018). It is measured here because
-  the element's own ink is known exactly, without separating it from the picture behind it, which a measurement
-  on the composed image has to do. `min_text_height_px` defaults to 12. That is this skill's heuristic, not a
-  platform figure: no platform documentation found gives a minimum text height for thumbnails (qc-skill gives no
-  default for the same reason). Callers can set it.
-  *Contrast:* qc-skill's text legibility. For each variant, one `qc run` (operation `check`, kind `video`, the still
-  decoded as one frame, `rules.video.text_regions` at each text element's painted box) returns `video.text_regions`
-  with the WCAG 2.x contrast ratio. `min_contrast_ratio` defaults to 4.5 (WCAG AA, qc-skill's default). This skill
-  computes no contrast itself. qc-skill is located like ffmpeg-skill (`variants.qc_skill` / `--qc-skill`,
-  `THUMBNAIL_SKILL_QC_SKILL_DIR`, `~/.claude/skills/qc-skill`, `./vendor/qc-skill`, `../qc-skill`, or an installed
-  `qc_skill`). It runs with `--no-cache`, the variant's directory as its only input root, a minimal environment and a
-  timeout. Without it, contrast is `contrast_unmeasured` (status `unknown`) with a warning, and the height check
-  still runs. `doctor` reports `checks.qc_skill` without changing its status.
-  *Reported, not dropped:* `small_size {status pass|fail|unknown, texts [{element_id, text_height_px_at_phone,
-  contrast_ratio, findings}]}` per variant and `flagged` (the failing variants). The file is still written, so the
-  caller sees the whole set. Layouts are never repaired; that is ADR-14's `text_fit`.
-  *Contract:* the new tool (`delegates_to` adds `qc-skill/run`), Capability id `thumbnail.render_variants`
-  (EXPERIMENTAL), a second `dependencies` entry (qc-skill, `>=1` of its `contract_version`, not required), and a
-  top-level `variants` section. `document`, `execution`, `errors`, `provenance` and the existing tools' declarations
-  are unchanged. video-production-agent's `check_contract` / `contract_breaking_drift` against its pinned
-  `contract_0.1.11.json` report nothing. CI also clones qc-skill `main` into `vendor/qc-skill`.
-  *Tests:* `tests/test_variants.py`. Three variants are written, and the one whose title is 10 px at 320 px wide
-  (the font size is found per OS, since font files differ) is flagged `text_too_small` while its file is kept. The
-  ink height equals the rendered glyph rows. With qc-skill, white on near-white is reported `low_contrast` and the
-  dark-band variant passes. Without qc-skill, contrast is unmeasured and a warning says so. The tests also cover the
-  frame axis, the refusals and the CLI.
+  _Text height at phone size:_ the tallest run of pixel rows containing the element's own glyph ink (fill only, alpha
+  > = 128), drawn alone with the renderer's layout, times `phone_width / canvas width`; `phone_width` is 320 (the
+  > roadmap's figure). It is the same quantity as qc-skill's "ink height" (its ADR-018). It is measured here because
+  > the element's own ink is known exactly, without separating it from the picture behind it, which a measurement
+  > on the composed image has to do. `min_text_height_px` defaults to 12. That is this skill's heuristic, not a
+  > platform figure: no platform documentation found gives a minimum text height for thumbnails (qc-skill gives no
+  > default for the same reason). Callers can set it.
+  > _Contrast:_ qc-skill's text legibility. For each variant, one `qc run` (operation `check`, kind `video`, the still
+  > decoded as one frame, `rules.video.text_regions` at each text element's painted box) returns `video.text_regions`
+  > with the WCAG 2.x contrast ratio. `min_contrast_ratio` defaults to 4.5 (WCAG AA, qc-skill's default). This skill
+  > computes no contrast itself. qc-skill is located like ffmpeg-skill (`variants.qc_skill` / `--qc-skill`,
+  > `THUMBNAIL_SKILL_QC_SKILL_DIR`, `~/.claude/skills/qc-skill`, `./vendor/qc-skill`, `../qc-skill`, or an installed
+  > `qc_skill`). It runs with `--no-cache`, the variant's directory as its only input root, a minimal environment and a
+  > timeout. Without it, contrast is `contrast_unmeasured` (status `unknown`) with a warning, and the height check
+  > still runs. `doctor` reports `checks.qc_skill` without changing its status.
+  > _Reported, not dropped:_ `small_size {status pass|fail|unknown, texts [{element_id, text_height_px_at_phone,
+contrast_ratio, findings}]}` per variant and `flagged` (the failing variants). The file is still written, so the
+  > caller sees the whole set. Layouts are never repaired; that is ADR-14's `text_fit`.
+  > _Contract:_ the new tool (`delegates_to` adds `qc-skill/run`), Capability id `thumbnail.render_variants`
+  > (EXPERIMENTAL), a second `dependencies` entry (qc-skill, `>=1` of its `contract_version`, not required), and a
+  > top-level `variants` section. `document`, `execution`, `errors`, `provenance` and the existing tools' declarations
+  > are unchanged. video-production-agent's `check_contract` / `contract_breaking_drift` against its pinned
+  > `contract_0.1.11.json` report nothing. CI also clones qc-skill `main` into `vendor/qc-skill`.
+  > _Tests:_ `tests/test_variants.py`. Three variants are written, and the one whose title is 10 px at 320 px wide
+  > (the font size is found per OS, since font files differ) is flagged `text_too_small` while its file is kept. The
+  > ink height equals the rendered glyph rows. With qc-skill, white on near-white is reported `low_contrast` and the
+  > dark-band variant passes. Without qc-skill, contrast is unmeasured and a warning says so. The tests also cover the
+  > frame axis, the refusals and the CLI.
 - **ADR-17 Layered output is the renderer's own composite operations, recorded: `thumbnail/render_layers`
   (`thumbnail render --layers DIR`) writes one PNG with alpha per layer and a manifest, then checks that the
   layers rebuild the thumbnail byte for byte.** (`ECOSYSTEM_ROADMAP.md` step 8: a designer can fix only the text
   without starting over.)
-  *Layers:* `renderer.LayerRecorder` records every `alpha_composite` the renderer makes, in order, with its source
+  _Layers:_ `renderer.LayerRecorder` records every `alpha_composite` the renderer makes, in order, with its source
   image and destination. Layer 0 is the canvas fill (the full canvas). Then, in stacking order: each image element
   as pasted (after crop, fit, rotation and opacity), and each text element's background band and its text (after
   opacity), as two layers. Each layer is cropped to the part of the canvas it covers and then to its non-transparent
   pixels. A composite with no visible pixel (an element placed off the canvas) is listed with `file: null`. Layer
   roles are what the renderer knows: `background`, `image`, `text_background`, `text`. Whether an image is a
   "photo" or a "logo" is the caller's naming, so it appears as the `element_id`.
-  *Why it is exact:* the rebuild rule is the renderer's own operation. Start from layer 0 and alpha-composite each
+  _Why it is exact:_ the rebuild rule is the renderer's own operation. Start from layer 0 and alpha-composite each
   further layer at its position, in order (Porter-Duff source-over on straight 8-bit RGBA, Pillow's
   `Image.alpha_composite`). Cropping removes only alpha-0 pixels, and source-over with alpha 0 leaves the
   destination unchanged. Pillow was checked on this before relying on it: cropped vs full-canvas compositing and
   an alpha-0 no-op are byte-identical, and so is a destination partly outside the canvas. The renderer's drawing is
   unchanged: the same composites run whether recording is on or not, and the render hash of a reference document is
   identical before and after the change.
-  *The check:* after writing, the tool reads the layer files back from disk, rebuilds the image by the manifest and
+  _The check:_ after writing, the tool reads the layer files back from disk, rebuilds the image by the manifest and
   compares it byte for byte with the written PNG (RGBA). For a JPEG thumbnail it compares with the lossless
   composite the JPEG was encoded from, because JPEG is lossy; the manifest says which. A mismatch is
   `VALIDATION_ERROR` (`layers_mismatch`). The recording render is also compared with the thumbnail that `render`
   wrote, so a reused cache entry is covered too.
-  *Shape:* a new tool. A `layers` field on `render` would change `render`'s declared input, which
+  _Shape:_ a new tool. A `layers` field on `render` would change `render`'s declared input, which
   video-production-agent pins as fatal drift. The thumbnail itself still comes from `thumbnail/render`, with its
   cache, output check and `output.preset` check. A non-empty layer directory needs `layers.overwrite`; that is
   checked before anything is written, and overwriting removes the old layer files first.
-  *Contract:* the new tool, Capability id `thumbnail.render_layers` (EXPERIMENTAL), the tool in
+  _Contract:_ the new tool, Capability id `thumbnail.render_layers` (EXPERIMENTAL), the tool in
   `dependencies[0].for`, and a top-level `layered_output` section (manifest schema `thumbnail-skill/layers@1`,
   fields, rule). `document`, `execution`, `errors`, `provenance` and the existing tools' declarations are unchanged.
   video-production-agent's `check_contract` / `contract_breaking_drift` against its pinned `contract_0.1.11.json`
   report nothing.
-  *Tests:* `tests/test_layers.py` rebuilds the image with its own code from the files on disk and compares it with
+  _Tests:_ `tests/test_layers.py` rebuilds the image with its own code from the files on disk and compares it with
   the thumbnail. The document exercises cover fit at a negative position with opacity, a rotated contain, an
   off-canvas element, a logo with opacity, a text with background band, stroke, shadow and opacity, and a plain
   text. Further cases: JPEG (against the lossless composite, which equals the PNG render), a reused render, a video
@@ -424,14 +426,14 @@
   colours, `font_id` and logo a document leaves out, by the spec's mapping table, and every key it does not use is
   reported.** (`ECOSYSTEM_ROADMAP.md` step 9: thumbnails in the same colours, font and logo as the programme's titles and
   lower thirds.)
-  *Request:* `options.kit` is the kit file's path, a field of RenderOptions, read by `render`, `render_layers`,
+  _Request:_ `options.kit` is the kit file's path, a field of RenderOptions, read by `render`, `render_layers`,
   `render_variants` and `render_batch` (each target's template). The file and its logo are inputs under the request's
   path policy; at most 256 KiB of UTF-8 JSON. Relative paths resolve against the kit file, as in ffmpeg-skill. The
   executor applies the kit to the raw documents before anything parses them and removes `kit` from the options, so every
   later step (batch planning and text fit, variants, layers, the reuse cache) sees an ordinary, fully stated document.
   `validate` touches no file, so it does not read the kit: the slots a kit could fill get placeholders for the structural
   check and are listed (`validation.kit.slots`). Any other tool refuses `options.kit` (`INVALID_REQUEST`).
-  *Mapping* (Velisa `docs/specs/kit.md`, the thumbnail-skill row): `#` is added to each `RRGGBB`. `colors.text` -> each
+  _Mapping_ (Velisa `docs/specs/kit.md`, the thumbnail-skill row): `#` is added to each `RRGGBB`. `colors.text` -> each
   text's `color`; `colors.background` -> `canvas.background`; `colors.outline` -> `stroke.color`. Two choices the spec
   leaves open are stated here. The band (`text.background.color`) takes `colors.background`, because ffmpeg-skill's lower
   third draws its bar in the background colour and its text in the text colour (`graphics.py`), so the thumbnail matches
@@ -441,16 +443,16 @@
   registered font has that family, `font` is reported unmapped with the families found. A kit fills a band or stroke
   colour only where the document gives the band (`background: {padding}`) or the stroke (`stroke: {width}`): whether
   there is a band, and its padding, are layout, which the document decides.
-  *Logo:* the spec's thumbnail row names no logo, but the roadmap step does. The kit's logo is placed as an image
+  _Logo:_ the spec's thumbnail row names no logo, but the roadmap step does. The kit's logo is placed as an image
   element `kit-logo` only when the kit states `logo`, `logo_position` (ffmpeg-skill's nine position names),
   `logo_scale` (width in px; the height follows the image) and `safe_margin` (from the named edges). `logo_opacity` is
   used when stated, otherwise the renderer's default 1.0. ffmpeg-skill's defaults (top-right, 160, 0.9, 48) are not the
   user's choice and are not filled in. A document with its own `kit-logo` element or asset keeps it.
-  *Precedence:* a value the document states wins and is listed in `kit.kept` with the kit's value. Nothing the kit
+  _Precedence:_ a value the document states wins and is listed in `kit.kept` with the kit's value. Nothing the kit
   lacks is filled: a text without `color` or `font_id` is still `INVALID_REQUEST` when the kit has no `colors.text` or
   no matching font.
-  *Reported, not dropped:* `response.kit {schema, read, file {path, sha256, size}, name, colors, applied [{target,
-  value, from}], kept, unmapped [{key, reason}], unused [{key, reason}], font?, logo?, palettes?}`, and
+  _Reported, not dropped:_ `response.kit {schema, read, file {path, sha256, size}, name, colors, applied [{target,
+value, from}], kept, unmapped [{key, reason}], unused [{key, reason}], font?, logo?, palettes?}`, and
   `provenance.kit`. `unmapped` holds the keys with no counterpart here: `font_file` (fonts only by font_id), `colors.accent`,
   `colors.secondary`, `colors.primary` outside `render_variants`, `lang`, `styles`, `caption`, `loudness`, `fonts`,
   `logo_variants`, `contrast`, `name` (recorded as `kit.name`), logo keys when no logo can be placed, an unmatched
@@ -459,20 +461,20 @@
   that is not `RRGGBB`, an unknown `logo_position`, `logo_scale` 0, an unknown `schema`, both `colors` and `colours`) is
   refused (`INVALID_INPUT`, `bad_kit`), not left out. `null` is "not stated", as ffmpeg-skill treats it, and `colours`
   (the remotion spelling) is read as `colors`.
-  *Variants:* with a kit and no `variants.palettes`, the palette axis is drawn from the kit's colours only:
+  _Variants:_ with a kit and no `variants.palettes`, the palette axis is drawn from the kit's colours only:
   text on a background band, background on a primary band (ffmpeg-skill's chapter look), text with an outline, primary
   with an outline, each only when the kit states both of its colours. A kit with one of these colours gives
   `kit-<role>` (the text in that colour alone); a kit with none is refused (`INVALID_REQUEST`, `kit_without_colors`),
   because this skill's default palettes are not the kit's colours. The band padding (16) and stroke width (4) are
   this skill's variant defaults (ADR-16), not kit values. Palettes the caller gives win.
-  *Consistency:* motion-graphics-skill's `options.kit` (its ADR-31) has the same shape: a path in `options`, the
+  _Consistency:_ motion-graphics-skill's `options.kit` (its ADR-31) has the same shape: a path in `options`, the
   spec's table applied exactly, only stated values passed on, and `response.kit.unmapped` with reasons.
-  *Contract:* additive. A new top-level `kit` block (mapping, precedence, logo, variants, the unmapped keys and
+  _Contract:_ additive. A new top-level `kit` block (mapping, precedence, logo, variants, the unmapped keys and
   reasons, the result shape). The tools' declared `input` and `output`, `document`, `variants`, `batch`, `execution`,
   `errors` and `provenance` are unchanged; `options.kit` is a RenderOptions field and `response.kit` an added key, both
   documented in the `kit` block. Without `options.kit` every request behaves as before. video-production-agent's
   `check_contract` and `contract_breaking_drift` against its pinned `contract_0.1.16.json` return nothing.
-  *Tests:* `tests/test_kit.py`. The `kit@1` fixture (`tests/fixtures/kit_brand.json`: every `brand.json` key and every
+  _Tests:_ `tests/test_kit.py`. The `kit@1` fixture (`tests/fixtures/kit_brand.json`: every `brand.json` key and every
   `kit@1` addition) renders a thumbnail in which the two most common colours inside the title's painted box are the
   kit's band and text colours, the logo is at the kit's position, width and opacity, and the reported font is the kit's
   family (the fixture's font is set to this machine's `sans` family, since font files differ per OS; a separate test

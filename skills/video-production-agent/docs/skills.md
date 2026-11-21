@@ -18,17 +18,17 @@ external Skills        = media-analysis-skill / transcription-skill / video-edit
 
 ## 責務
 
-| 概念 | 意味 | 実装 | 例 |
-|---|---|---|---|
-| **Skill package** | 何ができるか（独立した repository / capability domain） | `skills/contract.py` の `SkillPackage`（skill_id / name / version / description / capabilities / tools / repository / role） | `ffmpeg-skill` |
-| **Tool** | その Skill package が提供する具体的操作 | `ToolSpec`（tool_id `<skill_id>/<name>` / skill_id / version / required_capabilities / 実行契約: inputs, produces_output, deterministic, result_keys） | `ffmpeg-skill/probe`, `ffmpeg-skill/cut`, `ffmpeg-skill/loudness` |
-| **Production skill** | Agent が実現できること（環境に依存しない知識） | `skills/registry.py` の `SkillSpec`（required_capabilities / risk / approval / tools 候補 / phase） | `silence_cleanup` |
-| **Capability** | 実行環境が今何をサポートしているか | `capabilities/resolver.py`（AVAILABLE / MISSING / DEGRADED / UNKNOWN） | `ffmpeg`, `encoder:libx264`, `ffmpeg-skill` |
-| **Adapter** | Tool を実際の runtime に接続する | `tools/base.py` の `ToolAdapter`（`package()` / `supports` / `preview` / `run` / `measure`）。現在は `FfmpegSkillAdapter` のみ | `tools/ffmpeg_skill/` |
-| **Registry** | Skill package と production skill を登録・列挙し、環境ごとに tool を選ぶ | `SkillRegistry` | — |
-| **Router** | 選択された tool id を対応 adapter へ dispatch する | `tools/router.py` の `ToolRouter` | — |
-| **Agent** | Production 全体として何をすべきか判断する | `agent/`, `service.py` | — |
-| **AI Provider** | reasoning / model interface。production intent と evidence 付き inference を提供する。Skill / Tool 選択・command 生成・approval には関与しない | `providers/base.py`（`AIProvider` / `AIRequest` / `AIResponse` / `AIUsage`）、`agent/ai_reasoning.py` | `NullProvider`（既定）、テストの `FakeAIProvider` |
+| 概念                 | 意味                                                                                                                                           | 実装                                                                                                                                                   | 例                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| **Skill package**    | 何ができるか（独立した repository / capability domain）                                                                                        | `skills/contract.py` の `SkillPackage`（skill_id / name / version / description / capabilities / tools / repository / role）                           | `ffmpeg-skill`                                                    |
+| **Tool**             | その Skill package が提供する具体的操作                                                                                                        | `ToolSpec`（tool_id `<skill_id>/<name>` / skill_id / version / required_capabilities / 実行契約: inputs, produces_output, deterministic, result_keys） | `ffmpeg-skill/probe`, `ffmpeg-skill/cut`, `ffmpeg-skill/loudness` |
+| **Production skill** | Agent が実現できること（環境に依存しない知識）                                                                                                 | `skills/registry.py` の `SkillSpec`（required_capabilities / risk / approval / tools 候補 / phase）                                                    | `silence_cleanup`                                                 |
+| **Capability**       | 実行環境が今何をサポートしているか                                                                                                             | `capabilities/resolver.py`（AVAILABLE / MISSING / DEGRADED / UNKNOWN）                                                                                 | `ffmpeg`, `encoder:libx264`, `ffmpeg-skill`                       |
+| **Adapter**          | Tool を実際の runtime に接続する                                                                                                               | `tools/base.py` の `ToolAdapter`（`package()` / `supports` / `preview` / `run` / `measure`）。現在は `FfmpegSkillAdapter` のみ                         | `tools/ffmpeg_skill/`                                             |
+| **Registry**         | Skill package と production skill を登録・列挙し、環境ごとに tool を選ぶ                                                                       | `SkillRegistry`                                                                                                                                        | —                                                                 |
+| **Router**           | 選択された tool id を対応 adapter へ dispatch する                                                                                             | `tools/router.py` の `ToolRouter`                                                                                                                      | —                                                                 |
+| **Agent**            | Production 全体として何をすべきか判断する                                                                                                      | `agent/`, `service.py`                                                                                                                                 | —                                                                 |
+| **AI Provider**      | reasoning / model interface。production intent と evidence 付き inference を提供する。Skill / Tool 選択・command 生成・approval には関与しない | `providers/base.py`（`AIProvider` / `AIRequest` / `AIResponse` / `AIUsage`）、`agent/ai_reasoning.py`                                                  | `NullProvider`（既定）、テストの `FakeAIProvider`                 |
 
 Skill と Tool を混同しない: `ffmpeg-skill` は package、`ffmpeg-skill/cut` は tool。Tool id は概念名であり、実装 engine（ffmpeg / sox / …）は adapter の内側。
 
@@ -55,18 +55,23 @@ SkillSpec.tools（候補）          ──ToolRouter.supports──▶ 実行�
 ## Contract
 
 ### Skill Package Contract（`SkillPackage`）
+
 必須: `skill_id`（tool id の prefix、`/` を含まない）、`name`、`version`（検出時に adapter が埋める）、`description`、`capabilities`（package 全体が必要とする runtime capability）、`tools`（1 件以上）。任意: `repository`、`role`。`validate()` が契約違反を返し、`register_package` は違反を拒否する。
 
 ### Tool Contract（`ToolSpec`）
+
 `tool_id`（`<skill_id>/<name>`）、`skill_id`、`version`、`required_capabilities`（tool 固有の追加分）、実行契約 `inputs` / `produces_output`（transform か measure か）/ `deterministic` / `result_keys`（adapter が `ToolResult.data` に保証するキー）。
 
 ### Adapter Contract（`ToolAdapter`）
+
 `name` = package の skill_id（対応する tool id の prefix）。`package()` は実装する `SkillPackage`（検出 version 入り）を返す。`supports` / `preview` / `run` / `measure` は呼び出し側が選択した tool を実行するだけで、Skill 選択・IR 参照・production 判断をしない。シェルを経由せず、入力を上書きせず、出力は workspace 内（`PathPolicy`）。
 
 ### Registry Contract（`SkillRegistry`）
+
 `register` / `get` / `names` / `all`（production skill）、`register_package` / `packages` / `package` / `tool`（package）、`missing_capabilities` / `select_tool` / `resolve_tools` / `availability` / `package_availability`（環境ごとの解決）、`unknown_tool_candidates`（実装済み skill が未登録 package の tool を引用していないか）。Registry は production decision を行わない。
 
 ### Status
+
 `DECLARED`（= `NOT_IMPLEMENTED`: 後 phase 用に宣言のみ）/ `IMPLEMENTED`（`SkillSpec.implemented`、package は adapter が本コードに存在）/ `AVAILABLE`（この環境で tool が選択できた）。新しい status は作らない。
 
 ## 将来 Skill package を 1 つ追加するときに必要な変更

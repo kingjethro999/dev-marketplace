@@ -1,2 +1,5 @@
-{"id": "18_engine_model_identity_separation", "metric": "identity_separation",
- "note": "Transcript id, cache key, asset fingerprint and engine identity are distinct values with distinct roles."}
+{
+  "id": "18_engine_model_identity_separation",
+  "metric": "identity_separation",
+  "note": "Transcript id, cache key, asset fingerprint and engine identity are distinct values with distinct roles."
+}

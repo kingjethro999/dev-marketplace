@@ -121,4 +121,3 @@
 - Restructure README as an OSS landing page (6749bdd)
 - Implement subtitle-skill: typed validation, SRT/WebVTT generation, burn-in delegation (#1) (75b822c)
 - Initial commit (2c5a1fc)
-

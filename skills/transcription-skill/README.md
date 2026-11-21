@@ -146,13 +146,13 @@ skill exists to make recognition a **reusable, verifiable data step**:
 
 Each repository answers one question and stops there.
 
-| repository | verb | question it answers | output |
-|------------|------|--------------------|--------|
-| [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) | **PROCESS** | how is the media transformed? | cuts, encodes, captions burnt in, delivery files |
-| [media-analysis-skill](https://github.com/kajisho5/media-analysis-skill) | **MEASURE** | what exists in the media? | Observations: duration, streams, silence, loudness |
-| **transcription-skill** | **TRANSCRIBE** | what is being said, and when? | Transcript, SpeechEvent candidates |
-| [subtitle-skill](https://github.com/kajisho5/subtitle-skill) | **PRESENT** | how is it shown on screen? | subtitle files (SRT / WebVTT) from a typed request; burn-in delegated to ffmpeg-skill |
-| [video-production-agent](https://github.com/kajisho5/video-production-agent) | **DECIDE** | what should be done with it? | inference, decisions, production plans |
+| repository                                                                   | verb           | question it answers           | output                                                                                |
+| ---------------------------------------------------------------------------- | -------------- | ----------------------------- | ------------------------------------------------------------------------------------- |
+| [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill)                     | **PROCESS**    | how is the media transformed? | cuts, encodes, captions burnt in, delivery files                                      |
+| [media-analysis-skill](https://github.com/kajisho5/media-analysis-skill)     | **MEASURE**    | what exists in the media?     | Observations: duration, streams, silence, loudness                                    |
+| **transcription-skill**                                                      | **TRANSCRIBE** | what is being said, and when? | Transcript, SpeechEvent candidates                                                    |
+| [subtitle-skill](https://github.com/kajisho5/subtitle-skill)                 | **PRESENT**    | how is it shown on screen?    | subtitle files (SRT / WebVTT) from a typed request; burn-in delegated to ffmpeg-skill |
+| [video-production-agent](https://github.com/kajisho5/video-production-agent) | **DECIDE**     | what should be done with it?  | inference, decisions, production plans                                                |
 
 A Transcript is a recognition result. It is **not an Event** (the agent lifts it into its timeline), **not a
 Decision** (the agent makes those), and **not a Subtitle** (subtitle-skill renders those). The plain SRT/VTT
@@ -165,15 +165,15 @@ described by the same machine-readable contract (`EngineSpec`: id, version, `exe
 `requires_network`, capabilities, languages, models and their availability), lives in a registry, and
 is chosen by constraints, never by the skill's own judgement.
 
-| engine | execution_mode | status |
-|--------|----------------|--------|
-| `faster_whisper` | `local` | **implemented**, verified on the fixtures (Reference Local Engine) |
-| `haas_ja` | `local` | **implemented, optional**: [Haas-ja-v1.0](https://huggingface.co/third-intelligence/Haas-ja-v1.0) via `haas-asr`; Japanese only; Linux + NVIDIA GPU + Python 3.11+; custom vocabulary; unit-tested against a fake `haas_asr`, **not yet run on a GPU** ([ADR-033](docs/decisions.md#adr-033-haas-ja-v10-is-an-optional-second-local-engine-haas_ja-with-token-timed-segments-and-a-custom-vocabulary)) |
-| `speechcpp` | `local` | **implemented, optional**: [speech.cpp](https://github.com/nyosegawa/speech.cpp)'s `speech` command (0.10.0+ on PATH) on Metal, Vulkan or the CPU; ReazonSpeech v2 / parakeet-tdt_ctc-0.6b-ja / Haas-ja-v1.0 (Japanese, word timestamps), parakeet-tdt-0.6b-v3 (25 European languages, word timestamps; [ADR-040](docs/decisions.md#adr-040-parakeet-tdt-06b-v3-on-speechcpp-distil-large-v35-on-faster_whisper-and-per-model-language-limits)) and Qwen3-ASR (30 languages, words null); models fetched with `speech pull`, never by the skill; unit-tested against a fake `speech`, the real binary runs in the `engines` CI job ([ADR-035](docs/decisions.md#adr-035-speechcpp-is-an-optional-local-engine-speechcpp-run-as-its-speech-command-through-mediarun_program)) |
-| `whisperx` | `local` | **implemented, optional**: [whisperX](https://github.com/m-bain/whisperX) (Python 3.10+, `pip install whisperx`): faster-whisper batched over voice-activity regions plus wav2vec2 forced alignment for word timestamps; English and Japanese (alignment models Apache-2.0); no diarization (speakers come from diarization-skill, ADR-037); unit-tested against a fake `whisperx`, **not yet run for real** ([ADR-038](docs/decisions.md#adr-038-whisperx-is-an-optional-local-engine-whisperx-for-wav2vec2-aligned-word-timestamps-it-does-not-diarize)) |
-| `qwen3_asr` | `local` | **implemented, optional**: [Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B) with [Qwen3-ForcedAligner-0.6B](https://huggingface.co/Qwen/Qwen3-ForcedAligner-0.6B) word timestamps (both Apache-2.0, pinned revisions) via qwen-asr (Python 3.10+, the `[qwen3-asr]` extra), on a CUDA GPU or the CPU; 11 languages; never downloads while transcribing (`models pull` once); unit-tested against a fake `qwen_asr`, the real models in the manual `qwen3_asr` job, **not yet run** ([ADR-041](docs/decisions.md#adr-041-qwen3-asr-17b-with-qwen3-forcedaligner-06b-is-an-optional-local-engine-qwen3_asr-for-word-timestamps)) |
-| cloud ASR (any vendor) | `remote` | future possible engine: expressible by the contract, **not implemented** |
-| whisper.cpp | `local` | future possible engine: expressible by the contract, **not implemented** |
+| engine                 | execution_mode | status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `faster_whisper`       | `local`        | **implemented**, verified on the fixtures (Reference Local Engine)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `haas_ja`              | `local`        | **implemented, optional**: [Haas-ja-v1.0](https://huggingface.co/third-intelligence/Haas-ja-v1.0) via `haas-asr`; Japanese only; Linux + NVIDIA GPU + Python 3.11+; custom vocabulary; unit-tested against a fake `haas_asr`, **not yet run on a GPU** ([ADR-033](docs/decisions.md#adr-033-haas-ja-v10-is-an-optional-second-local-engine-haas_ja-with-token-timed-segments-and-a-custom-vocabulary))                                                                                                                                                                                                                                                                                                                                                                       |
+| `speechcpp`            | `local`        | **implemented, optional**: [speech.cpp](https://github.com/nyosegawa/speech.cpp)'s `speech` command (0.10.0+ on PATH) on Metal, Vulkan or the CPU; ReazonSpeech v2 / parakeet-tdt_ctc-0.6b-ja / Haas-ja-v1.0 (Japanese, word timestamps), parakeet-tdt-0.6b-v3 (25 European languages, word timestamps; [ADR-040](docs/decisions.md#adr-040-parakeet-tdt-06b-v3-on-speechcpp-distil-large-v35-on-faster_whisper-and-per-model-language-limits)) and Qwen3-ASR (30 languages, words null); models fetched with `speech pull`, never by the skill; unit-tested against a fake `speech`, the real binary runs in the `engines` CI job ([ADR-035](docs/decisions.md#adr-035-speechcpp-is-an-optional-local-engine-speechcpp-run-as-its-speech-command-through-mediarun_program)) |
+| `whisperx`             | `local`        | **implemented, optional**: [whisperX](https://github.com/m-bain/whisperX) (Python 3.10+, `pip install whisperx`): faster-whisper batched over voice-activity regions plus wav2vec2 forced alignment for word timestamps; English and Japanese (alignment models Apache-2.0); no diarization (speakers come from diarization-skill, ADR-037); unit-tested against a fake `whisperx`, **not yet run for real** ([ADR-038](docs/decisions.md#adr-038-whisperx-is-an-optional-local-engine-whisperx-for-wav2vec2-aligned-word-timestamps-it-does-not-diarize))                                                                                                                                                                                                                   |
+| `qwen3_asr`            | `local`        | **implemented, optional**: [Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B) with [Qwen3-ForcedAligner-0.6B](https://huggingface.co/Qwen/Qwen3-ForcedAligner-0.6B) word timestamps (both Apache-2.0, pinned revisions) via qwen-asr (Python 3.10+, the `[qwen3-asr]` extra), on a CUDA GPU or the CPU; 11 languages; never downloads while transcribing (`models pull` once); unit-tested against a fake `qwen_asr`, the real models in the manual `qwen3_asr` job, **not yet run** ([ADR-041](docs/decisions.md#adr-041-qwen3-asr-17b-with-qwen3-forcedaligner-06b-is-an-optional-local-engine-qwen3_asr-for-word-timestamps))                                                                                                                                   |
+| cloud ASR (any vendor) | `remote`       | future possible engine: expressible by the contract, **not implemented**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| whisper.cpp            | `local`        | future possible engine: expressible by the contract, **not implemented**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 **LOCAL vs REMOTE.** A `local` engine runs recognition on this machine; its only possible network use
 is a one-time model download, reported per model as `MODEL_DOWNLOAD_REQUIRED` (or `MODEL_MISSING`
@@ -195,12 +195,12 @@ the hard constraints and explains the rest; it never ranks. Picking among candid
 decision. Adding an engine means implementing `TranscriptionEngine` and registering the class; there
 is no plugin loader, and only implemented engines are registered.
 
-| layer | owns | does not do |
-|-------|------|-------------|
-| Skill (`transcription-skill`) | transcription: request → Transcript | interpret, plan, decide |
-| Engine (`faster_whisper`) | the recognition implementation | know about caches, budgets, other engines |
-| Selector | constraint filtering with reasons | rank, prefer, choose |
-| Agent (`video-production-agent`) | final policy: which candidate to adopt, whether remote is acceptable | import engine internals |
+| layer                            | owns                                                                 | does not do                               |
+| -------------------------------- | -------------------------------------------------------------------- | ----------------------------------------- |
+| Skill (`transcription-skill`)    | transcription: request → Transcript                                  | interpret, plan, decide                   |
+| Engine (`faster_whisper`)        | the recognition implementation                                       | know about caches, budgets, other engines |
+| Selector                         | constraint filtering with reasons                                    | rank, prefer, choose                      |
+| Agent (`video-production-agent`) | final policy: which candidate to adopt, whether remote is acceptable | import engine internals                   |
 
 ### Optional Japanese engine: `haas_ja` (Haas-ja-v1.0)
 
@@ -392,18 +392,59 @@ or non-JSON stdin still yields an error document (exit 2), never a traceback. Di
   "schema": "transcription-skill/transcript/0.1",
   "id": "tr_9fcee39be815",
   "asset_id": "asset_497b4b1eff55f6c0",
-  "language": "ja", "language_source": "requested", "language_confidence": null,
+  "language": "ja",
+  "language_source": "requested",
+  "language_confidence": null,
   "duration": 9.606,
   "segments": [
-    {"id": "seg_0001", "start": 0.0, "end": 8.36, "text": "本日の公園を始めます ...", "raw_text": "本日の公園を始めます ...",
-     "confidence": 0.728, "words": [{"index": 0, "start": 0.0, "end": 0.5, "text": "本", "confidence": 0.986}], "speaker_id": null}
+    {
+      "id": "seg_0001",
+      "start": 0.0,
+      "end": 8.36,
+      "text": "本日の公園を始めます ...",
+      "raw_text": "本日の公園を始めます ...",
+      "confidence": 0.728,
+      "words": [
+        {
+          "index": 0,
+          "start": 0.0,
+          "end": 0.5,
+          "text": "本",
+          "confidence": 0.986
+        }
+      ],
+      "speaker_id": null
+    }
   ],
-  "source": {"filename": "ja_short.wav", "fingerprint": "sha256:497b…", "size_bytes": 307470, "media_duration": 9.606, "has_video": false},
-  "engine": "faster_whisper", "engine_version": "1.2.1",
+  "source": {
+    "filename": "ja_short.wav",
+    "fingerprint": "sha256:497b…",
+    "size_bytes": 307470,
+    "media_duration": 9.606,
+    "has_video": false
+  },
+  "engine": "faster_whisper",
+  "engine_version": "1.2.1",
   "created_at": "2026-09-04T18:09:36Z",
-  "provenance": {"engine": "faster_whisper", "engine_version": "1.2.1", "execution_mode": "local", "model": "base", "model_version": "ebe41f70…",
-                 "parameters": {"language": "ja", "beam_size": 5, "temperature": 0.0, "word_timestamps": true, "initial_prompt": null, "audio_stream": 0},
-                 "parameters_hash": "6edc…", "cache_key": "301d…", "processing_seconds": 3.3, "skill_version": "0.2.0"},
+  "provenance": {
+    "engine": "faster_whisper",
+    "engine_version": "1.2.1",
+    "execution_mode": "local",
+    "model": "base",
+    "model_version": "ebe41f70…",
+    "parameters": {
+      "language": "ja",
+      "beam_size": 5,
+      "temperature": 0.0,
+      "word_timestamps": true,
+      "initial_prompt": null,
+      "audio_stream": 0
+    },
+    "parameters_hash": "6edc…",
+    "cache_key": "301d…",
+    "processing_seconds": 3.3,
+    "skill_version": "0.2.0"
+  },
   "warnings": []
 }
 ```
@@ -427,7 +468,7 @@ maps the engine timings onto them:
 - `timing: "measured"`: both boundaries are engine word boundaries. `"interpolated"`: a boundary fell inside an engine
   word and was placed by character share, an estimate.
 - `pos` is one of `noun, pronoun, verb, adjective, adverb, particle, auxiliary, conjunction, interjection, prefix,
-  suffix, symbol, other` (mapping table in [docs/transcript.md](docs/transcript.md#dictionary-words-adr-039)).
+suffix, symbol, other` (mapping table in [docs/transcript.md](docs/transcript.md#dictionary-words-adr-039)).
 - SudachiPy is an optional extra: `pip install "transcription-skill[ja]"`. Without it the request is refused with
   `INVALID_INPUT`, reason `dictionary_segmentation_unavailable`, and the install line. Other languages are refused
   (`dictionary_segmentation_language`): their engine words are already words.
@@ -502,30 +543,30 @@ directories, missing files, broken links and special files are refused. Violatio
 with `details.reason` in `traversal` / `outside_allowed_roots` / `symlink_escape` / `not_regular_file`
 (missing files stay `FILE_NOT_FOUND`), on the CLI and through `run -` alike.
 
-| term | meaning | where |
-|------|---------|-------|
-| input | the media the caller names (untrusted) | anywhere the policy allows |
+| term         | meaning                                                           | where                                                                                  |
+| ------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| input        | the media the caller names (untrusted)                            | anywhere the policy allows                                                             |
 | allowed root | security boundary for inputs and, separately, for written outputs | `--allowed-input` / `allowed_input_roots`, `--allowed-output` / `allowed_output_roots` |
-| workspace | operational directory: per-run `tmp/<id>/`, worker files | `--workspace` / `TRANSCRIPTION_WORKSPACE` |
-| cache | derived transcripts, addressed by content key only | `<workspace>/transcripts/<sha256>.json` |
-| model cache | the engine's models | `HF_HUB_CACHE` / `HF_HOME` only; never influenced by an input path |
+| workspace    | operational directory: per-run `tmp/<id>/`, worker files          | `--workspace` / `TRANSCRIPTION_WORKSPACE`                                              |
+| cache        | derived transcripts, addressed by content key only                | `<workspace>/transcripts/<sha256>.json`                                                |
+| model cache  | the engine's models                                               | `HF_HUB_CACHE` / `HF_HOME` only; never influenced by an input path                     |
 
 ## Security and offline guarantees
 
 These are enforced by code and tests, not by convention (details: [docs/security.md](docs/security.md)).
 
-| guarantee | how |
-|-----------|-----|
-| No shell, no command passthrough | every external call is a fixed argv list (`ffprobe`, `ffmpeg`, the engine worker, speech.cpp's `speech` for `speechcpp`); requests that carry `command`, `argv`, `shell` or a credential are refused; engine modules cannot import `subprocess` (a program-backed engine goes through `media.run_program`) |
-| No credentials anywhere | no cloud engine exists, so none is read; child processes get a minimal environment (`OPENAI_API_KEY`, `HF_TOKEN` and the like are not forwarded); transcripts, contract and doctor output are scanned for credential-shaped strings |
-| Offline is a hard constraint | `--offline`: remote engines → `ENGINE_UNAVAILABLE`, a model not on disk → `MODEL_UNAVAILABLE` (`MODEL_MISSING`), the engine loads with `local_files_only`; nothing is downloaded |
-| Network for recognition vs. network for a model download | separate facts: `EngineSpec.requires_network` (false for faster-whisper) and per-model `ModelStatus.availability` |
-| Untrusted input paths | with allowed roots: resolved path must sit inside a resolved root by path components, `..` refused, symlink/junction escapes refused, special files refused; default behaviour unchanged |
-| Input never steers other locations | model cache comes from `HF_HUB_CACHE`/`HF_HOME` only; temporary files live in an exclusive `<workspace>/tmp/<uuid>/` verified inside the workspace; cache entries are addressed by content key only |
-| Cache identity is explicit | key = content fingerprint + engine id/version/execution mode + model/model version + parameters; corrupt or tampered entries are recomputed, never served |
-| Provenance is complete | engine, engine version, execution mode, model, model revision, parameters and their hash, cache key, skill and tool, created_at |
-| Timeouts kill for real | the engine runs in its own process group; `budget.timeout` ends it; `max_audio_seconds` refuses long media before extraction |
-| One JSON document on stdout | every `--json` command and `run -` print exactly one document, on success and on error; malformed stdin yields an error document, never a traceback |
+| guarantee                                                | how                                                                                                                                                                                                                                                                                                        |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No shell, no command passthrough                         | every external call is a fixed argv list (`ffprobe`, `ffmpeg`, the engine worker, speech.cpp's `speech` for `speechcpp`); requests that carry `command`, `argv`, `shell` or a credential are refused; engine modules cannot import `subprocess` (a program-backed engine goes through `media.run_program`) |
+| No credentials anywhere                                  | no cloud engine exists, so none is read; child processes get a minimal environment (`OPENAI_API_KEY`, `HF_TOKEN` and the like are not forwarded); transcripts, contract and doctor output are scanned for credential-shaped strings                                                                        |
+| Offline is a hard constraint                             | `--offline`: remote engines → `ENGINE_UNAVAILABLE`, a model not on disk → `MODEL_UNAVAILABLE` (`MODEL_MISSING`), the engine loads with `local_files_only`; nothing is downloaded                                                                                                                           |
+| Network for recognition vs. network for a model download | separate facts: `EngineSpec.requires_network` (false for faster-whisper) and per-model `ModelStatus.availability`                                                                                                                                                                                          |
+| Untrusted input paths                                    | with allowed roots: resolved path must sit inside a resolved root by path components, `..` refused, symlink/junction escapes refused, special files refused; default behaviour unchanged                                                                                                                   |
+| Input never steers other locations                       | model cache comes from `HF_HUB_CACHE`/`HF_HOME` only; temporary files live in an exclusive `<workspace>/tmp/<uuid>/` verified inside the workspace; cache entries are addressed by content key only                                                                                                        |
+| Cache identity is explicit                               | key = content fingerprint + engine id/version/execution mode + model/model version + parameters; corrupt or tampered entries are recomputed, never served                                                                                                                                                  |
+| Provenance is complete                                   | engine, engine version, execution mode, model, model revision, parameters and their hash, cache key, skill and tool, created_at                                                                                                                                                                            |
+| Timeouts kill for real                                   | the engine runs in its own process group; `budget.timeout` ends it; `max_audio_seconds` refuses long media before extraction                                                                                                                                                                               |
+| One JSON document on stdout                              | every `--json` command and `run -` print exactly one document, on success and on error; malformed stdin yields an error document, never a traceback                                                                                                                                                        |
 
 ## Invariants
 
@@ -545,12 +586,12 @@ These are enforced by code and tests, not by convention (details: [docs/security
 
 ## Where this skill ends and others begin
 
-| Repository | Question it answers | Example |
-|------------|--------------------|---------|
-| **media-analysis-skill** | What exists in the media? (measurement) | `duration = 312.4`, `audio_channels = 2`, `silence = [...]` |
-| **transcription-skill** | What is being said, and when? (recognition) | `"本日の講演を始めます"  start 12.3  end 15.8` |
-| [**subtitle-skill**](https://github.com/kajisho5/subtitle-skill) | How is it shown on screen? (subtitle artifact) | typed subtitle request → validated SRT / WebVTT; burn-in delegated to ffmpeg-skill |
-| **video-production-agent** | What should be done with it? (inference, decisions, planning) | "cut the pause", "switch to camera B while speaker A talks", chapters |
+| Repository                                                       | Question it answers                                           | Example                                                                            |
+| ---------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **media-analysis-skill**                                         | What exists in the media? (measurement)                       | `duration = 312.4`, `audio_channels = 2`, `silence = [...]`                        |
+| **transcription-skill**                                          | What is being said, and when? (recognition)                   | `"本日の講演を始めます"  start 12.3  end 15.8`                                     |
+| [**subtitle-skill**](https://github.com/kajisho5/subtitle-skill) | How is it shown on screen? (subtitle artifact)                | typed subtitle request → validated SRT / WebVTT; burn-in delegated to ffmpeg-skill |
+| **video-production-agent**                                       | What should be done with it? (inference, decisions, planning) | "cut the pause", "switch to camera B while speaker A talks", chapters              |
 
 transcription-skill produces plain SRT/VTT views of a transcript because they are useful for
 inspection and hand-off. Reading-speed rules, line breaking, positioning, fonts and burn-in are

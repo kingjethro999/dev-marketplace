@@ -5,25 +5,25 @@ Short records of the design decisions that shape this Skill. Newer entries refin
 ## ADR-001 — An execution Skill, never an editor with opinions
 
 **Decision.** video-editing-skill executes typed edit requests; it holds no editing judgement, no AI, no plan, no
-policy. The caller (video-production-agent or anything else) decides *what*; this Skill decides only *whether it is
-valid* and *how to run it deterministically* through ffmpeg-skill, the single FFmpeg boundary.
+policy. The caller (video-production-agent or anything else) decides _what_; this Skill decides only _whether it is
+valid_ and _how to run it deterministically_ through ffmpeg-skill, the single FFmpeg boundary.
 **Consequences.** Every input is an allowlisted, typed operation; every FFmpeg detail lives in ffmpeg-skill; gaps in
 the engine are reported as gaps (`UNSUPPORTED_OPERATION`, `TOOL_ERROR`), never bridged with a direct ffmpeg call.
 
 ## ADR-002 — Contract 0.2.0 candidates: what is worth adding, what is not
 
 **Context.** Five operation types are declared `NOT_IMPLEMENTED` in the 0.1.x contract: `CROP`, `FREEZE`, `REVERSE`,
-`IMAGE_INSERT`, `POSITION`. Each was evaluated against five questions: is it a *generic* editing operation, is it
+`IMAGE_INSERT`, `POSITION`. Each was evaluated against five questions: is it a _generic_ editing operation, is it
 safe at the ffmpeg-skill boundary (a typed tool exists or can exist), can it be a typed model, does it fit the
 operation graph, and is it disjoint from the eight existing operations.
 
-| Type | Generic? | Engine boundary (0.9.x) | Typed model | Graph | Disjoint? | Verdict |
-|---|---|---|---|---|---|---|
-| `CROP` (pixel rectangle) | yes: reframing, removing burnt-in UI, screen-recording regions | **no tool** (fit.py crops only to an aspect ratio) | yes: `{x, y, width, height}` in source pixels, even sizes, inside the frame | one video in, one out | yes (FILL crops to an *aspect*, CROP to a *rectangle*) | **candidate for 0.2.0**, blocked on a typed `crop` tool in ffmpeg-skill |
-| `IMAGE_INSERT` (still → timed clip) | yes: title cards, slides, holding frames | **no tool** (join.py needs video inputs; overlay.py composites only) | yes: `{image, duration, frame, fps, audio: silent}` | source image → video-producing operation, then CONCAT | yes | **candidate for 0.2.0**, blocked on a typed still-to-clip tool |
-| `FREEZE` (hold a frame) | sometimes: emphasis, end frames | no tool; expressible as a still extracted from a frame + IMAGE_INSERT | yes, but it is a composition of two future primitives | fine | overlaps IMAGE_INSERT | **not planned as a type**; compose it once IMAGE_INSERT exists |
-| `REVERSE` | rarely in production editing (effects, not conference / corporate delivery) | no tool | trivial | fine | yes | **not planned**: low value, engine gap |
-| `POSITION` (place a video layer, PiP) | yes for PiP / multicam layouts | no tool (overlay.py composites *images*); would need a typed video-on-video compositor | yes: `{layer, position, scale, opacity, start, end}` | two video inputs, one out | overlaps OVERLAY unless OVERLAY grows a video layer | **not planned in this Skill's scope** until ffmpeg-skill has a typed layer tool; then extend OVERLAY rather than add a type |
+| Type                                  | Generic?                                                                    | Engine boundary (0.9.x)                                                                | Typed model                                                                 | Graph                                                 | Disjoint?                                              | Verdict                                                                                                                     |
+| ------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `CROP` (pixel rectangle)              | yes: reframing, removing burnt-in UI, screen-recording regions              | **no tool** (fit.py crops only to an aspect ratio)                                     | yes: `{x, y, width, height}` in source pixels, even sizes, inside the frame | one video in, one out                                 | yes (FILL crops to an _aspect_, CROP to a _rectangle_) | **candidate for 0.2.0**, blocked on a typed `crop` tool in ffmpeg-skill                                                     |
+| `IMAGE_INSERT` (still → timed clip)   | yes: title cards, slides, holding frames                                    | **no tool** (join.py needs video inputs; overlay.py composites only)                   | yes: `{image, duration, frame, fps, audio: silent}`                         | source image → video-producing operation, then CONCAT | yes                                                    | **candidate for 0.2.0**, blocked on a typed still-to-clip tool                                                              |
+| `FREEZE` (hold a frame)               | sometimes: emphasis, end frames                                             | no tool; expressible as a still extracted from a frame + IMAGE_INSERT                  | yes, but it is a composition of two future primitives                       | fine                                                  | overlaps IMAGE_INSERT                                  | **not planned as a type**; compose it once IMAGE_INSERT exists                                                              |
+| `REVERSE`                             | rarely in production editing (effects, not conference / corporate delivery) | no tool                                                                                | trivial                                                                     | fine                                                  | yes                                                    | **not planned**: low value, engine gap                                                                                      |
+| `POSITION` (place a video layer, PiP) | yes for PiP / multicam layouts                                              | no tool (overlay.py composites _images_); would need a typed video-on-video compositor | yes: `{layer, position, scale, opacity, start, end}`                        | two video inputs, one out                             | overlaps OVERLAY unless OVERLAY grows a video layer    | **not planned in this Skill's scope** until ffmpeg-skill has a typed layer tool; then extend OVERLAY rather than add a type |
 
 **Decision.** No new operation type ships in 0.1.x: none can be implemented without building FFmpeg commands here,
 which ADR-001 forbids. `CROP` and `IMAGE_INSERT` are the two with clear generic value and clean typed models; they
@@ -37,6 +37,7 @@ re-pinning (docs/contract.md). The contract's `versioning.next` lists the candid
 whose frame computation was implicit. An execution Skill must promise the frame before it runs and verify it after.
 
 **Decision.**
+
 - `RESIZE` changes the **size** and keeps the **aspect**: `width = params.width`, `height = even(width * sh / sw)`.
   Nothing is padded, cropped or stretched.
 - `FIT` changes the **aspect** and keeps **every pixel**: scale to fit inside the target frame, letterbox /
@@ -130,7 +131,7 @@ what this Skill can do.
 
 `lifecycle: EXPERIMENTAL` is not a comment on the operations themselves — `TRIM`, `CUT`, `CONCAT`, and the rest are
 the same tested, already-in-production behavior `tool_specs()` has always described, exercised by
-`video-production-agent`'s real integration suite. It reflects that the *Capability id* concept this field
+`video-production-agent`'s real integration suite. It reflects that the _Capability id_ concept this field
 publishes is new: as of this ADR, no registry or Agent is known to consume `provides` yet. It should move to
 `STABLE` once one does.
 
@@ -148,8 +149,8 @@ alongside the existing `version` (the package's own release version, `"0.1.0"`).
 
 - `version` — this package's release version. Free to change on any release, including one that changes nothing a
   dependent needs to react to (an internal refactor, a bug fix, a new non-breaking operation). `contract_check.py`'s
-  `check_saved()` now reports a `version`-only change as *additive* drift, never *breaking*.
-- `contract_version` — the version of the *shape* the pinned blocks publish (`operations`, `capabilities`,
+  `check_saved()` now reports a `version`-only change as _additive_ drift, never _breaking_.
+- `contract_version` — the version of the _shape_ the pinned blocks publish (`operations`, `capabilities`,
   `errors`, `execution`, `schemas`, `unsupported`, `schema`, `skill_id`). Changes only when one of them changes in a
   way a dependent (an Agent, a registry) would need to react to; a dependent pins a range against
   `contract_version`, never `version`.
@@ -161,7 +162,7 @@ is exactly one contract shape to number, and `"1.0"` names it — the same conve
 
 **Why.** Before this ADR, `version` did double duty: it was both this package's release identity and the only
 signal a change to a pinned block had happened, forcing every future non-breaking release (a bug fix, a new
-`0.2.0` operation added additively) to either bump `version` and *look* like a contract-breaking event, or leave
+`0.2.0` operation added additively) to either bump `version` and _look_ like a contract-breaking event, or leave
 `version` frozen and give dependents no way to tell "the package moved" from "the contract shape moved". This is
 exactly the two-axis pattern `kajisho5/AI-video-production-OS` documents as already proven in `ffmpeg-skill`
 (`docs/VERSIONING.md` §1) and names as the one per-Skill gap most of the ecosystem still has
@@ -295,13 +296,13 @@ were once left open rather than decided speculatively.
 
 **The five questions, applied to rotate/flip.**
 
-| Question | Answer |
-|---|---|
-| Generic? | Yes: correcting a wrongly-tagged orientation, or mirroring a shot, is ordinary production editing, not a specialised effect. |
-| Safe at the ffmpeg-skill boundary? | Yes: `fit.py --rotate {90,180,270} --flip {h,v}` already exists (verified directly against `ffmpeg-skill/scripts/fit.py`) — no new engine tool, no raw filter string. `--rotate` compiles to `transpose=1`/`transpose=2`/`transpose=2,transpose=2`; `--flip` to `hflip`/`vflip`; rotate is applied before flip when both are given. |
-| Typed model? | Yes, and a small one: `{degrees?: 90 \| 180 \| 270, flip?: h \| v}`, at least one of the two required (the same "nothing to do" refusal `fit.py` itself raises when neither `--rotate` nor `--flip` nor any other flag is given). |
-| Fits the operation graph? | Yes: one video in, one out, like `SPEED`/`FIT`/`FILL`/`RESIZE` — all four already share `ffmpeg-skill/fit` as their engine tool without colliding, because each owns a disjoint parameter set. |
-| Disjoint from the eight existing operations? | Yes: `RESIZE`/`FIT`/`FILL` all change the frame's *aspect or size*; `ROTATE` changes only *orientation* (a turn and/or a mirror) and touches no pixel's colour or the frame's aspect ratio on its own terms. |
+| Question                                     | Answer                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generic?                                     | Yes: correcting a wrongly-tagged orientation, or mirroring a shot, is ordinary production editing, not a specialised effect.                                                                                                                                                                                                        |
+| Safe at the ffmpeg-skill boundary?           | Yes: `fit.py --rotate {90,180,270} --flip {h,v}` already exists (verified directly against `ffmpeg-skill/scripts/fit.py`) — no new engine tool, no raw filter string. `--rotate` compiles to `transpose=1`/`transpose=2`/`transpose=2,transpose=2`; `--flip` to `hflip`/`vflip`; rotate is applied before flip when both are given. |
+| Typed model?                                 | Yes, and a small one: `{degrees?: 90 \| 180 \| 270, flip?: h \| v}`, at least one of the two required (the same "nothing to do" refusal `fit.py` itself raises when neither `--rotate` nor `--flip` nor any other flag is given).                                                                                                   |
+| Fits the operation graph?                    | Yes: one video in, one out, like `SPEED`/`FIT`/`FILL`/`RESIZE` — all four already share `ffmpeg-skill/fit` as their engine tool without colliding, because each owns a disjoint parameter set.                                                                                                                                      |
+| Disjoint from the eight existing operations? | Yes: `RESIZE`/`FIT`/`FILL` all change the frame's _aspect or size_; `ROTATE` changes only _orientation_ (a turn and/or a mirror) and touches no pixel's colour or the frame's aspect ratio on its own terms.                                                                                                                        |
 
 **Decision — a new operation type, `ROTATE`, not new parameters on `FIT`.** Both were open per the issue text; a
 new type was chosen because:
@@ -327,7 +328,7 @@ refusal (`fit.py`'s rotate/flip path does not evenize an odd frame the way its a
 would only fail once inside the engine's encoder, which ADR-005 refuses up front instead). But unlike the other
 four frame-keeping operations, `ROTATE`'s **output frame is not always identical to the input's**: a 90 or 270
 degree turn swaps width and height (verified directly against `fit.py`: `if args.rotate in (90, 270): sw, sh =
-sh, sw`, computed from the *displayed* size — rotation metadata already swapped, same as every other operation in
+sh, sw`, computed from the _displayed_ size — rotation metadata already swapped, same as every other operation in
 this Skill). 180 degrees and a flip alone keep the frame exactly as it is. `operations.FRAME_SEMANTICS["ROTATE"]`
 and `executor.target_frame()` state and compute this explicitly; the output is verified against it exactly, the
 same "promise the frame, verify the frame" discipline ADR-003 established for `RESIZE`/`FIT`/`FILL`.
@@ -356,14 +357,14 @@ video filter chain, `fit.py` checks `factor < 1.0` (a slow-down — `factor` the
 same direction this Skill's own `SPEED.factor` already uses, verified against `compiler.py`'s existing `_compile`
 branch: `args["duration"] = input_duration.scale(1 / factor)`) before appending either
 `minterpolate=fps=<src_fps>:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1` (`interpolate`) or
-`fps=<src_fps>,tblend=all_mode=average` (`blend`) to `vf`. For a speed-*up* (`factor > 1`, or `factor == 1` with no
+`fps=<src_fps>,tblend=all_mode=average` (`blend`) to `vf`. For a speed-_up_ (`factor > 1`, or `factor == 1` with no
 retiming at all) `fit.py` accepts `--smooth` without complaint but the flag has zero effect — the branch that reads
 `args.smooth` is guarded by `factor < 1.0` and nothing else. `--smooth` has no argparse-level `requires=`/mutual
 exclusion with `--method`, `--max-speed`, or anything else `SPEED` already sends; `--method trim` simply never
 reaches the code path that reads it, the same "accepted, silently inert" shape as the speed-up case.
 
 **Decision — thread `smooth` straight onto `SPEED`, no new operation type, no cross-field refusal added here.**
-Unlike `ROTATE` (ADR-011), this is not a new orthogonal transform: `smooth` only changes *how* the existing
+Unlike `ROTATE` (ADR-011), this is not a new orthogonal transform: `smooth` only changes _how_ the existing
 `SPEED.factor` retime is filtered, never what frame or duration comes out, so it belongs on `SPEED` itself, the
 same way `FILL.anchor` (ADR-009) was added to `FILL` rather than becoming a new type. `operations.py` gains
 `SMOOTH_MODES = ("blend", "interpolate")` and validates `SPEED.params.smooth` with the same `_enum()` helper

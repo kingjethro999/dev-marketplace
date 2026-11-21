@@ -15,7 +15,7 @@ schema, skill_id, contract_version, operations, unsupported, errors, execution, 
 ```
 
 `contract_version` (docs/decisions.md ADR-007), not `version`, is the pinned identity field: it is the version of
-this *shape*, separate from `version` (this package's own release version, free to change on any release — a
+this _shape_, separate from `version` (this package's own release version, free to change on any release — a
 dependent pins a range against `contract_version`, never `version`). `version` still appears at the top level and
 in every response's `skill` block (it names which release produced a given document), but a `version`-only change
 is additive drift, not breaking.

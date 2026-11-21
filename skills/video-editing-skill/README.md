@@ -36,7 +36,7 @@ A deterministic, verifiable **video editing Skill** for the video-production-age
 It takes a typed edit request (sources, operations, outputs), validates it, builds an operation graph with an
 exact source-to-timeline mapping, compiles every operation to a typed call of an
 [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) tool, runs it inside a workspace boundary, validates the
-result and reports provenance. It is the *hands* of an editing pipeline, not the head.
+result and reports provenance. It is the _hands_ of an editing pipeline, not the head.
 
 ```
 video-editing-skill ≠ video-production-agent   (no decisions, no plan, no LLM, no policy)
@@ -50,26 +50,26 @@ and ffmpeg / ffprobe on `PATH`.
 
 Provided (capabilities are declared only where an implementation exists):
 
-| Capability | Operation | Executed by |
-|---|---|---|
-| `video.trim` | `TRIM` keep `[start, end)` of one input | `ffmpeg-skill/cut` |
-| `video.cut` | `CUT` keep several ranges, joined in the order given | `ffmpeg-skill/cut` |
-| `video.concat` | `CONCAT` join ≥ 2 inputs in order, conform size / fps (every input at whole frames of the edit's rate, ADR-033 / ADR-034) | `ffmpeg-skill/join` |
-| `video.transition` | `CONCAT` with `params.transition` (xfade family; its duration rounded to the nearest frame of the edit's rate, ADR-034) | `ffmpeg-skill/join` |
-| `video.reorder` | order of `CONCAT.inputs` / `CUT.keep` | — |
-| `video.speed` | `SPEED` constant factor 1/4 … 4, pitch-preserved audio, optional slow-motion `smooth` (blend / interpolate) | `ffmpeg-skill/fit` |
-| `video.fit` | `FIT` change the aspect, keep every pixel (letterbox / pillarbox with `pad_color`) | `ffmpeg-skill/fit` |
-| `video.fill` | `FILL` change the aspect, keep the centre by default or a chosen `anchor` (scale to cover, crop) | `ffmpeg-skill/fit` |
-| `video.resize` | `RESIZE` change the size, keep the aspect (`width`, height follows; nothing padded / cropped / stretched) | `ffmpeg-skill/fit` |
-| `video.overlay` | `OVERLAY` still image at a position for a time range | `ffmpeg-skill/overlay` |
-| `video.rotate` | `ROTATE` turn 90/180/270 clockwise and/or mirror horizontal/vertical (no scaling, padding or cropping) | `ffmpeg-skill/fit` |
-| `video.freeze` | `FREEZE` hold one frame for `hold` seconds: at `at` (the rest plays on after the hold) or, without `at`, the last frame at the end | `ffmpeg-skill/freeze` |
-| `video.reverse` | `REVERSE` play the input backwards, picture and audio | `ffmpeg-skill/reverse` |
-| `video.image_insert` | `IMAGE_INSERT` turn one image source into a silent clip of `duration` seconds (`width` / `height` / `fps` optional) that `CONCAT` and every other type can take | `ffmpeg-skill/insert` |
-| `video.crop` | `CROP` keep exactly the pixel rectangle `{x, y, width, height}` the caller gives (even sizes, inside the frame as displayed; no scaling or padding) | `ffmpeg-skill/crop` |
-| `video.condense` | `CONDENSE` apply a rule per labelled span — `segments: [{start, end, label}]`, `rules: {label: cut \| keep \| {speed: f}}`, `default` for the rest (keep): approved proposals (retakes, silences, static spans) become segments here (ADR-026) | `ffmpeg-skill/cut` + `fit` + `join` |
-| (review) | `CONDENSE` with `output: "removed"`: a review file of only the spans the rules would cut, joined in order, with the list of where each came from (ADR-027) | `ffmpeg-skill/cut` + `join` |
-| `video.punch_in` | `PUNCH_IN` zoom by `scale` (1..4) on a `subject` box the caller gives (detection-skill's face box) from `start` to `end`: a hard cut in and out, the window centred on the box and kept inside the frame, the frame size unchanged (ADR-020) | `ffmpeg-skill/cut` + `crop` + `fit` + `join` |
+| Capability           | Operation                                                                                                                                                                                                                                      | Executed by                                  |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `video.trim`         | `TRIM` keep `[start, end)` of one input                                                                                                                                                                                                        | `ffmpeg-skill/cut`                           |
+| `video.cut`          | `CUT` keep several ranges, joined in the order given                                                                                                                                                                                           | `ffmpeg-skill/cut`                           |
+| `video.concat`       | `CONCAT` join ≥ 2 inputs in order, conform size / fps (every input at whole frames of the edit's rate, ADR-033 / ADR-034)                                                                                                                      | `ffmpeg-skill/join`                          |
+| `video.transition`   | `CONCAT` with `params.transition` (xfade family; its duration rounded to the nearest frame of the edit's rate, ADR-034)                                                                                                                        | `ffmpeg-skill/join`                          |
+| `video.reorder`      | order of `CONCAT.inputs` / `CUT.keep`                                                                                                                                                                                                          | —                                            |
+| `video.speed`        | `SPEED` constant factor 1/4 … 4, pitch-preserved audio, optional slow-motion `smooth` (blend / interpolate)                                                                                                                                    | `ffmpeg-skill/fit`                           |
+| `video.fit`          | `FIT` change the aspect, keep every pixel (letterbox / pillarbox with `pad_color`)                                                                                                                                                             | `ffmpeg-skill/fit`                           |
+| `video.fill`         | `FILL` change the aspect, keep the centre by default or a chosen `anchor` (scale to cover, crop)                                                                                                                                               | `ffmpeg-skill/fit`                           |
+| `video.resize`       | `RESIZE` change the size, keep the aspect (`width`, height follows; nothing padded / cropped / stretched)                                                                                                                                      | `ffmpeg-skill/fit`                           |
+| `video.overlay`      | `OVERLAY` still image at a position for a time range                                                                                                                                                                                           | `ffmpeg-skill/overlay`                       |
+| `video.rotate`       | `ROTATE` turn 90/180/270 clockwise and/or mirror horizontal/vertical (no scaling, padding or cropping)                                                                                                                                         | `ffmpeg-skill/fit`                           |
+| `video.freeze`       | `FREEZE` hold one frame for `hold` seconds: at `at` (the rest plays on after the hold) or, without `at`, the last frame at the end                                                                                                             | `ffmpeg-skill/freeze`                        |
+| `video.reverse`      | `REVERSE` play the input backwards, picture and audio                                                                                                                                                                                          | `ffmpeg-skill/reverse`                       |
+| `video.image_insert` | `IMAGE_INSERT` turn one image source into a silent clip of `duration` seconds (`width` / `height` / `fps` optional) that `CONCAT` and every other type can take                                                                                | `ffmpeg-skill/insert`                        |
+| `video.crop`         | `CROP` keep exactly the pixel rectangle `{x, y, width, height}` the caller gives (even sizes, inside the frame as displayed; no scaling or padding)                                                                                            | `ffmpeg-skill/crop`                          |
+| `video.condense`     | `CONDENSE` apply a rule per labelled span — `segments: [{start, end, label}]`, `rules: {label: cut \| keep \| {speed: f}}`, `default` for the rest (keep): approved proposals (retakes, silences, static spans) become segments here (ADR-026) | `ffmpeg-skill/cut` + `fit` + `join`          |
+| (review)             | `CONDENSE` with `output: "removed"`: a review file of only the spans the rules would cut, joined in order, with the list of where each came from (ADR-027)                                                                                     | `ffmpeg-skill/cut` + `join`                  |
+| `video.punch_in`     | `PUNCH_IN` zoom by `scale` (1..4) on a `subject` box the caller gives (detection-skill's face box) from `start` to `end`: a hard cut in and out, the window centred on the box and kept inside the frame, the frame size unchanged (ADR-020)   | `ffmpeg-skill/cut` + `crop` + `fit` + `join` |
 
 `FREEZE`, `REVERSE`, `IMAGE_INSERT` and `CROP` run on ffmpeg-skill tools older checkouts do not ship (`freeze.py` from 0.16.0,
 `reverse.py`, `insert.py` and `crop.py` from 0.11.0). Whether the installed checkout has them is detected: without one, `doctor`
@@ -158,22 +158,63 @@ the same `contract_version` — this is how 0.1.0 gained `media_compatibility`, 
   "project": {
     "id": "demo",
     "sources": [
-      {"id": "camA", "path": "in/a.mp4"},
-      {"id": "camB", "path": "in/b.mp4"},
-      {"id": "logo", "path": "in/logo.png", "kind": "image"}
+      { "id": "camA", "path": "in/a.mp4" },
+      { "id": "camB", "path": "in/b.mp4" },
+      { "id": "logo", "path": "in/logo.png", "kind": "image" }
     ],
     "operations": [
-      {"id": "trimA", "type": "TRIM",   "input": "camA",  "params": {"start": "0:01", "end": "0:03.5"}},
-      {"id": "fillA", "type": "FILL",   "input": "trimA", "params": {"aspect": "16:9", "width": 640}},
-      {"id": "trimB", "type": "TRIM",   "input": "camB",  "params": {"start": {"frames": 25, "fps": 25}, "end": 4}},
-      {"id": "fast",  "type": "SPEED",  "input": "trimB", "params": {"factor": 2}},
-      {"id": "cat",   "type": "CONCAT", "inputs": ["fillA", "fast"],
-                      "params": {"width": 640, "height": 360, "fps": 30, "transition": {"type": "fade", "duration": 0.5}}},
-      {"id": "branded", "type": "OVERLAY", "input": "cat", "params": {"image": "logo", "position": "top-right", "start": 0, "end": 2}}
+      {
+        "id": "trimA",
+        "type": "TRIM",
+        "input": "camA",
+        "params": { "start": "0:01", "end": "0:03.5" }
+      },
+      {
+        "id": "fillA",
+        "type": "FILL",
+        "input": "trimA",
+        "params": { "aspect": "16:9", "width": 640 }
+      },
+      {
+        "id": "trimB",
+        "type": "TRIM",
+        "input": "camB",
+        "params": { "start": { "frames": 25, "fps": 25 }, "end": 4 }
+      },
+      {
+        "id": "fast",
+        "type": "SPEED",
+        "input": "trimB",
+        "params": { "factor": 2 }
+      },
+      {
+        "id": "cat",
+        "type": "CONCAT",
+        "inputs": ["fillA", "fast"],
+        "params": {
+          "width": 640,
+          "height": 360,
+          "fps": 30,
+          "transition": { "type": "fade", "duration": 0.5 }
+        }
+      },
+      {
+        "id": "branded",
+        "type": "OVERLAY",
+        "input": "cat",
+        "params": {
+          "image": "logo",
+          "position": "top-right",
+          "start": 0,
+          "end": 2
+        }
+      }
     ],
-    "outputs": [{"id": "final", "operation": "branded", "path": "out/final.mp4"}]
+    "outputs": [
+      { "id": "final", "operation": "branded", "path": "out/final.mp4" }
+    ]
   },
-  "options": {"timeout_seconds": 600, "overwrite": false, "reuse": true}
+  "options": { "timeout_seconds": 600, "overwrite": false, "reuse": true }
 }
 ```
 
@@ -236,7 +277,15 @@ serialised as `{"seconds": "12.500000", "rational": "25/2"}`.
 Failure:
 
 ```json
-{"ok": false, "error": {"code": "INVALID_TIME_RANGE", "message": "...", "retryable": false, "details": {}}}
+{
+  "ok": false,
+  "error": {
+    "code": "INVALID_TIME_RANGE",
+    "message": "...",
+    "retryable": false,
+    "details": {}
+  }
+}
 ```
 
 `run` failures additionally carry `status`, `execution` (the failed record with its error, the operations after
@@ -274,21 +323,21 @@ video-editing run      <request.json | -> --json --workspace DIR [--allowed-inpu
 One request document on stdin (`-`) or a file, **exactly one** JSON document on stdout under `--json`
 (`validate`, `plan`, `run` imply it), diagnostics on stderr only, exit code from the error table:
 
-| code | exit | retryable | meaning |
-|---|---|---|---|
-| `INVALID_REQUEST` | 2 | no | malformed document, unknown / forbidden keys, bad parameter |
-| `INVALID_INPUT` | 3 | no | source unusable (no video stream, no duration, empty, unreadable) |
-| `PATH_NOT_ALLOWED` | 4 | no | traversal, symlink escape, outside roots, reserved name, overwrite |
-| `UNSUPPORTED_OPERATION` | 5 | no | type not in the allowlist / not implemented |
-| `UNSUPPORTED_FORMAT` | 6 | no | container / extension not supported |
-| `MISSING_INPUT` | 7 | no | referenced file does not exist |
-| `INVALID_TIME_RANGE` | 8 | no | start ≥ end, negative, beyond the input duration, transition too long |
-| `DEPENDENCY_ERROR` | 9 | no | unknown reference, cycle, orphan operation, conflicting outputs |
-| `TOOL_ERROR` | 10 | yes | the engine failed: ffmpeg error, ffmpeg-skill exit ≠ 0, could not start (missing ffmpeg is `retryable: false`) |
-| `OUTPUT_ERROR` | 11 | no | the engine reported success but no readable, non-empty file exists, or the output could not be written |
-| `VALIDATION_ERROR` | 12 | no | a file exists but is not what was requested (no video stream, no duration, wrong frame size, duration off) |
-| `CANCELLED` | 130 | yes | SIGINT / SIGTERM or `timeout_seconds` |
-| `INTERNAL_ERROR` | 1 | no | a bug; still one JSON document, never a traceback on stdout |
+| code                    | exit | retryable | meaning                                                                                                        |
+| ----------------------- | ---- | --------- | -------------------------------------------------------------------------------------------------------------- |
+| `INVALID_REQUEST`       | 2    | no        | malformed document, unknown / forbidden keys, bad parameter                                                    |
+| `INVALID_INPUT`         | 3    | no        | source unusable (no video stream, no duration, empty, unreadable)                                              |
+| `PATH_NOT_ALLOWED`      | 4    | no        | traversal, symlink escape, outside roots, reserved name, overwrite                                             |
+| `UNSUPPORTED_OPERATION` | 5    | no        | type not in the allowlist / not implemented                                                                    |
+| `UNSUPPORTED_FORMAT`    | 6    | no        | container / extension not supported                                                                            |
+| `MISSING_INPUT`         | 7    | no        | referenced file does not exist                                                                                 |
+| `INVALID_TIME_RANGE`    | 8    | no        | start ≥ end, negative, beyond the input duration, transition too long                                          |
+| `DEPENDENCY_ERROR`      | 9    | no        | unknown reference, cycle, orphan operation, conflicting outputs                                                |
+| `TOOL_ERROR`            | 10   | yes       | the engine failed: ffmpeg error, ffmpeg-skill exit ≠ 0, could not start (missing ffmpeg is `retryable: false`) |
+| `OUTPUT_ERROR`          | 11   | no        | the engine reported success but no readable, non-empty file exists, or the output could not be written         |
+| `VALIDATION_ERROR`      | 12   | no        | a file exists but is not what was requested (no video stream, no duration, wrong frame size, duration off)     |
+| `CANCELLED`             | 130  | yes       | SIGINT / SIGTERM or `timeout_seconds`                                                                          |
+| `INTERNAL_ERROR`        | 1    | no        | a bug; still one JSON document, never a traceback on stdout                                                    |
 
 ## RESIZE, FIT, FILL, ROTATE and the encoding profile
 
@@ -303,7 +352,7 @@ without `width` keep the source width when the target aspect is not wider than t
 two is required), mapped straight onto `fit.py --rotate`/`--flip` (0.3.0, ADR-011); a 90/270 turn swaps width and
 height (every source pixel kept losslessly, like `TRIM`/`CUT`/`SPEED`/`OVERLAY` — no scaling, padding or cropping,
 unlike `RESIZE`/`FIT`/`FILL`), 180 and a flip alone keep the frame as it is. The target frame is computed from the
-probed source *before* execution, reported as `normalized.target_frame` in plan steps and operation records, and
+probed source _before_ execution, reported as `normalized.target_frame` in plan steps and operation records, and
 the output must match it exactly. Rotation metadata (a display matrix) is honoured; nothing is ever stretched.
 
 `outputs[].encoding` is the whole encoding surface: `crf` (14..28) and `preset` (x264 vocabulary minus placebo),
@@ -362,16 +411,16 @@ values are reported under `project`, never as observations.
   `execution.reused: true`, `outputs[].reused`); a candidate that no longer validates is run again.
   `options.reuse: false` disables it.
 - **Target file size** (ADR-028): `outputs[].max_size: {"mb": 25}` delivers that output through ffmpeg-skill `export
-  --max-mb` (two-pass H.264 at the bitrate the duration allows), measures it and retries until it lands between 90 % and
+--max-mb` (two-pass H.264 at the bitrate the duration allows), measures it and retries until it lands between 90 % and
   100 % of the limit; a limit too small for a watchable picture fails with the reason. `.mp4` only; not with `encoding`.
 - **Retake proposals** (ADR-024): `video-editing propose - --json --workspace W` with
   `{"schema": "video-editing/propose@1", "retakes": {"transcript": "in/words.json", "profile": "en"}}` lists repeats,
   restarts, broken-off words and hesitation words as cut proposals with reasons (`applied: false`, nothing written).
   Approve them by id; only approved spans are cut (CONDENSE). With `"source"`, `"static": {}` (no motion: shots
   ffmpeg-skill `scenes --shots` labels static) and / or `"silence": {"threshold_db": -40}` and `"combine": {"mode":
-  "and"}`, it proposes labelled spans (`static`, `silence`, `silence+static`) the same way (ADR-025).
+"and"}`, it proposes labelled spans (`static`, `silence`, `silence+static`) the same way (ADR-025).
 - **Stinger transition** (ADR-023): `CONCAT` `params.transition: {"type": "stinger", "stinger": "<video source with
-  alpha>", "cut_point": 0.5, "cover": {"start": 0.5, "end": 0.5333}}` (cut point and cover from the stinger's
+alpha>", "cut_point": 0.5, "cover": {"start": 0.5, "end": 0.5333}}` (cut point and cover from the stinger's
   stinger.json). The clips are butt-joined, and the stinger is laid over each join so that its cut-point frame is the
   cut frame. Every clip is joined at whole frames of the edit's rate: a clip whose length is not (a stream-copied
   segment, as a rule) is first cut frame-accurately to it (ADR-030), and one at another rate is conformed to it
@@ -438,7 +487,7 @@ VIDEO_EDITING_FFMPEG_SKILL_DIR=/path/to/ffmpeg-skill python -m unittest -v test_
   `ffmpeg_skill_dir`, `api_key` …) at every level, environment references in paths, unknown keys and wrong types,
   traversal and absolute outputs, request-level workspace override, malformed JSON, oversized input.
 - `test_engine_contract.py`: the error contract at the engine boundary with a fake ffmpeg-skill (a test double for
-  the *boundary only*, never reported as integration): TOOL_ERROR vs OUTPUT_ERROR vs VALIDATION_ERROR vs
+  the _boundary only_, never reported as integration): TOOL_ERROR vs OUTPUT_ERROR vs VALIDATION_ERROR vs
   CANCELLED, no partial left behind, plan writes nothing, reuse / invalidation / tampered intermediate,
   unsupported engine version; media compatibility and engine gaps refused before any tool runs, doctor as
   capability discovery, a stale reuse candidate re-run, downstream operations recorded as skipped after a failure,

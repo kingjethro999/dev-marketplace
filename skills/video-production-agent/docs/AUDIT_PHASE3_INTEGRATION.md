@@ -5,10 +5,10 @@
 
 ## 0. 前提の確認結果
 
-| 前提 | 事実 |
-|---|---|
+| 前提                           | 事実                                                                                                                                                                                                                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Skill 5 種は main へマージ済み | subtitle-skill 75b822c / thumbnail-skill e61997e / color-grading-skill a1da243 / motion-graphics-skill b86a224 / qc-skill 11a1c2e：いずれも PR #1 が main にマージ済み（0.1.0）。ffmpeg-skill main は 0.9.1、video-editing-skill main は PR #1 マージ済み（CI の `--branch` pin は不要になった） |
-| Agent 側は PR #21 まで完了 | agent の **main は 287b685（PR #3 まで）**。PR #4–#21 は stacked Draft のまま未マージ。したがって本 Phase は PR #21 branch を base にした PR #22 として積む（既存方針どおり） |
+| Agent 側は PR #21 まで完了     | agent の **main は 287b685（PR #3 まで）**。PR #4–#21 は stacked Draft のまま未マージ。したがって本 Phase は PR #21 branch を base にした PR #22 として積む（既存方針どおり）                                                                                                                    |
 
 ## 1. 既に実装済み（再実装しない）
 
@@ -28,20 +28,20 @@
 
 ## 2. 不足（本 Phase で実装）
 
-| # | 不足 | 統合ポイント |
-|---|---|---|
-| A1 | subtitle / thumbnail / color-grading / motion-graphics / qc の adapter・locate・pinned contract・capability・registry・Service 登録が無い | `tools/<skill>/`、`capabilities/resolver.py`、`skills/registry.py`、`service.adapter()` |
-| A2 | registry の `caption_generation`（phase 3）は ffmpeg-skill/caption を直接参照（catalog に無い dangling tool） | subtitle-skill を canonical とし、`subtitle_generation` / `subtitle_burn_in` に置き換える |
-| C1 | `subtitle.*` / `thumbnail.*` / `color.*` / `motion.*` / `qc.*` requirement が無い（REQUIREMENT_PREFIXES 外） | `agent/subtitles.py`, `agent/finishing.py`, `agent/qc.py`, `service.REQUIREMENT_PREFIXES` |
-| C2 | 上記の Decision が無い（subject / APPROVAL_KEYS） | `agent/decision.py` |
-| C3 | planner に post-edit 段（color → graphics → captions.burn）、sidecar（captions.generate）、thumbnail、qc の step が無い | `agent/planner.py`, `production_plan.STEP_PARAMETERS` |
-| C4 | IR `captions` / `graphics` / `color` section の schema と validator、`qa.qc` | `schemas/project.schema.json`, `project/validator.py`, `project/hashing.PLAN_SECTIONS`, `project/diff.py`, `ir.rejected_cited` |
-| C5 | compiler の lowering / path / 順序 | `execution/compiler.py` |
-| D1 | transcript → cue の timeline 写像（trim の keep ranges、concat の timeline offset、speed factor）。subtitle-skill は transcription-skill の Transcript を直接受け取らない（実測: `INVALID_INPUT unknown field(s) confidence, raw_text, speaker_id, words`）ので caller（agent）が SubtitleCue に写す | `agent/subtitles.py` |
-| E1 | QC を最終 promotion の gate にする。qc report の admission（input fingerprint == agent の sha256、skill / schema 一致、measurement_source OBSERVED）を通ったものだけ QA item に取り込む。agent 自身の duration / loudness / stream 検査は残す | `qa/checks.py`, `agent/qc.py`, `service._register_artifacts`, `artifacts/store.py` |
-| E2 | CAPTIONS / THUMBNAIL artifact の登録（plan outputs の role から） | `service._register_artifacts` |
-| G1 | `explain --pipeline`（Request → … → Artifact の一貫した因果鎖）、`check --qc` | `service.py`, `cli.py` |
-| F1 | fake ×5、unit / integration（scenario 1–10）/ evals / CI | `tests/`, `evals/`, `.github/workflows/tests.yml` |
+| #   | 不足                                                                                                                                                                                                                                                                                                 | 統合ポイント                                                                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| A1  | subtitle / thumbnail / color-grading / motion-graphics / qc の adapter・locate・pinned contract・capability・registry・Service 登録が無い                                                                                                                                                            | `tools/<skill>/`、`capabilities/resolver.py`、`skills/registry.py`、`service.adapter()`                                        |
+| A2  | registry の `caption_generation`（phase 3）は ffmpeg-skill/caption を直接参照（catalog に無い dangling tool）                                                                                                                                                                                        | subtitle-skill を canonical とし、`subtitle_generation` / `subtitle_burn_in` に置き換える                                      |
+| C1  | `subtitle.*` / `thumbnail.*` / `color.*` / `motion.*` / `qc.*` requirement が無い（REQUIREMENT_PREFIXES 外）                                                                                                                                                                                         | `agent/subtitles.py`, `agent/finishing.py`, `agent/qc.py`, `service.REQUIREMENT_PREFIXES`                                      |
+| C2  | 上記の Decision が無い（subject / APPROVAL_KEYS）                                                                                                                                                                                                                                                    | `agent/decision.py`                                                                                                            |
+| C3  | planner に post-edit 段（color → graphics → captions.burn）、sidecar（captions.generate）、thumbnail、qc の step が無い                                                                                                                                                                              | `agent/planner.py`, `production_plan.STEP_PARAMETERS`                                                                          |
+| C4  | IR `captions` / `graphics` / `color` section の schema と validator、`qa.qc`                                                                                                                                                                                                                         | `schemas/project.schema.json`, `project/validator.py`, `project/hashing.PLAN_SECTIONS`, `project/diff.py`, `ir.rejected_cited` |
+| C5  | compiler の lowering / path / 順序                                                                                                                                                                                                                                                                   | `execution/compiler.py`                                                                                                        |
+| D1  | transcript → cue の timeline 写像（trim の keep ranges、concat の timeline offset、speed factor）。subtitle-skill は transcription-skill の Transcript を直接受け取らない（実測: `INVALID_INPUT unknown field(s) confidence, raw_text, speaker_id, words`）ので caller（agent）が SubtitleCue に写す | `agent/subtitles.py`                                                                                                           |
+| E1  | QC を最終 promotion の gate にする。qc report の admission（input fingerprint == agent の sha256、skill / schema 一致、measurement_source OBSERVED）を通ったものだけ QA item に取り込む。agent 自身の duration / loudness / stream 検査は残す                                                        | `qa/checks.py`, `agent/qc.py`, `service._register_artifacts`, `artifacts/store.py`                                             |
+| E2  | CAPTIONS / THUMBNAIL artifact の登録（plan outputs の role から）                                                                                                                                                                                                                                    | `service._register_artifacts`                                                                                                  |
+| G1  | `explain --pipeline`（Request → … → Artifact の一貫した因果鎖）、`check --qc`                                                                                                                                                                                                                        | `service.py`, `cli.py`                                                                                                         |
+| F1  | fake ×5、unit / integration（scenario 1–10）/ evals / CI                                                                                                                                                                                                                                             | `tests/`, `evals/`, `.github/workflows/tests.yml`                                                                              |
 
 ## 3. 重複（避ける）
 
@@ -54,23 +54,23 @@
 
 1. Skill ごとに transport が違う（下表）。adapter が吸収し、agent 本体には持ち込まない。
 
-| | subtitle | thumbnail | color-grading | motion-graphics | qc |
-|---|---|---|---|---|---|
-| contract cmd | `contract` | `skill` | `skill` | `skill` | `contract` |
-| tool id（contract） | 無し（operations generate/render） | thumbnail/render, thumbnail/extract_frame | color-grading/run | motion-graphics/run | 無し（operations inspect/check/validate） |
-| request | `run -`（workspace は request 本体） | `run -` `{tool, params}` | `run -` | `run -` | `run -` |
-| allowed input | 無し（workspace 相対のみ） | `--allowed-input` | `--allowed-input` `--allowed-lut` | `--allowed-input` | `--allowed-input-root` |
-| ffmpeg-skill | env `SUBTITLE_SKILL_FFMPEG_SKILL_DIR` のみ | `--ffmpeg-skill` | `--ffmpeg-skill` [0.9.1,1.0) | `--ffmpeg-skill` [0.9.1,1.0) | 使わない |
-| timeout | 固定 | `--timeout` | `--timeout` | `--timeout` | 無し（request の timeout は未使用） |
-| 成功 | `status:"ok"` | `ok,status:"ok"`（`result` に入れ子） | `ok,status:"ok"` | `ok,status:"ok"` | `status:"completed"` |
-| retryable | TOOL/DEPENDENCY/OUTPUT/INTERNAL、CANCELLED は非 | TOOL_ERROR, CANCELLED | 同左 | 同左 | 同左 |
+|                     | subtitle                                        | thumbnail                                 | color-grading                     | motion-graphics              | qc                                        |
+| ------------------- | ----------------------------------------------- | ----------------------------------------- | --------------------------------- | ---------------------------- | ----------------------------------------- |
+| contract cmd        | `contract`                                      | `skill`                                   | `skill`                           | `skill`                      | `contract`                                |
+| tool id（contract） | 無し（operations generate/render）              | thumbnail/render, thumbnail/extract_frame | color-grading/run                 | motion-graphics/run          | 無し（operations inspect/check/validate） |
+| request             | `run -`（workspace は request 本体）            | `run -` `{tool, params}`                  | `run -`                           | `run -`                      | `run -`                                   |
+| allowed input       | 無し（workspace 相対のみ）                      | `--allowed-input`                         | `--allowed-input` `--allowed-lut` | `--allowed-input`            | `--allowed-input-root`                    |
+| ffmpeg-skill        | env `SUBTITLE_SKILL_FFMPEG_SKILL_DIR` のみ      | `--ffmpeg-skill`                          | `--ffmpeg-skill` [0.9.1,1.0)      | `--ffmpeg-skill` [0.9.1,1.0) | 使わない                                  |
+| timeout             | 固定                                            | `--timeout`                               | `--timeout`                       | `--timeout`                  | 無し（request の timeout は未使用）       |
+| 成功                | `status:"ok"`                                   | `ok,status:"ok"`（`result` に入れ子）     | `ok,status:"ok"`                  | `ok,status:"ok"`             | `status:"completed"`                      |
+| retryable           | TOOL/DEPENDENCY/OUTPUT/INTERNAL、CANCELLED は非 | TOOL_ERROR, CANCELLED                     | 同左                              | 同左                         | 同左                                      |
 
-   - subtitle / qc は tool id を宣言しないので agent 側で `subtitle/generate`, `subtitle/render`, `qc/check` を定義する（contract 不一致は adapter が吸収、ADR に記録）。
-   - subtitle-skill の workspace は request 本体で渡すため、adapter は op dir を絶対 path で入れる。input（video）は workspace 相対のみ受け付けるので、burn-in の入力は op dir 内へ **hard link / copy** するのではなく、Skill の仕様上 `video_input` が workspace 相対である点を adapter が満たす必要がある → adapter は op dir を「入力の親を含む agent workspace」ではなく **agent workspace root** を request.workspace にし、`video_input` / `output_path` を workspace 相対で渡す（入力は常に agent workspace 内の中間物か、workspace 外の source。source を直接 burn する場合は workspace 外になるため、burn-in の入力は compiler が常に中間物（trim 後など）にする。source 直接の burn は前段 step が無い場合に発生し得る → その場合は BLOCK ではなく、subtitle adapter が INPUT_MISSING を返す前に planner が「burn-in は edit 後の中間物にのみ適用」と決め、edit が無ければ `video.trim` 無しの asset は copy step が無いので **PATH_NOT_ALLOWED** になる。これを避けるため、planner は burn-in の入力が source asset のままなら decision を BLOCK（理由: subtitle-skill は workspace 外の入力を受けない）とする。accepted limitation として記録。
-   - motion-graphics doctor は title / lower_third / image_overlay を `unknown` と報告する（ffmpeg-skill doctor が drawbox / overlay / color / scale / colorchannelmixer を分類しないため）。resolver が `ffmpeg -filters` で実測して AVAILABLE にする（audio-production と同じ規則）。
-   - thumbnail-skill は Pillow 必須（未導入なら `skill --json` 自体が落ちる）→ locate は成功しても adapter 生成が失敗 → capability MISSING（CI では Pillow を導入する）。
-   - thumbnail `extract_frame` は ffmpeg-skill `look` の既定 `--width 1280` で **元解像度と異なる幅** になる（実測: 640x360 → 1280x720）。thumbnail の期待サイズは Skill の仕様として扱い、agent は「幅 1280 の静止画」を expected にしない（accepted limitation、QA では integrity と format のみ）。
-   - qc-skill の `kind:"video"` は video 測定のみ、`audio` は audio のみ、`delivery` が両方 + subtitle。deliverable には `delivery` kind を使う。
+- subtitle / qc は tool id を宣言しないので agent 側で `subtitle/generate`, `subtitle/render`, `qc/check` を定義する（contract 不一致は adapter が吸収、ADR に記録）。
+- subtitle-skill の workspace は request 本体で渡すため、adapter は op dir を絶対 path で入れる。input（video）は workspace 相対のみ受け付けるので、burn-in の入力は op dir 内へ **hard link / copy** するのではなく、Skill の仕様上 `video_input` が workspace 相対である点を adapter が満たす必要がある → adapter は op dir を「入力の親を含む agent workspace」ではなく **agent workspace root** を request.workspace にし、`video_input` / `output_path` を workspace 相対で渡す（入力は常に agent workspace 内の中間物か、workspace 外の source。source を直接 burn する場合は workspace 外になるため、burn-in の入力は compiler が常に中間物（trim 後など）にする。source 直接の burn は前段 step が無い場合に発生し得る → その場合は BLOCK ではなく、subtitle adapter が INPUT_MISSING を返す前に planner が「burn-in は edit 後の中間物にのみ適用」と決め、edit が無ければ `video.trim` 無しの asset は copy step が無いので **PATH_NOT_ALLOWED** になる。これを避けるため、planner は burn-in の入力が source asset のままなら decision を BLOCK（理由: subtitle-skill は workspace 外の入力を受けない）とする。accepted limitation として記録。
+- motion-graphics doctor は title / lower_third / image_overlay を `unknown` と報告する（ffmpeg-skill doctor が drawbox / overlay / color / scale / colorchannelmixer を分類しないため）。resolver が `ffmpeg -filters` で実測して AVAILABLE にする（audio-production と同じ規則）。
+- thumbnail-skill は Pillow 必須（未導入なら `skill --json` 自体が落ちる）→ locate は成功しても adapter 生成が失敗 → capability MISSING（CI では Pillow を導入する）。
+- thumbnail `extract_frame` は ffmpeg-skill `look` の既定 `--width 1280` で **元解像度と異なる幅** になる（実測: 640x360 → 1280x720）。thumbnail の期待サイズは Skill の仕様として扱い、agent は「幅 1280 の静止画」を expected にしない（accepted limitation、QA では integrity と format のみ）。
+- qc-skill の `kind:"video"` は video 測定のみ、`audio` は audio のみ、`delivery` が両方 + subtitle。deliverable には `delivery` kind を使う。
 
 2. 「話者が変わったらカメラを切り替える」: SPEAKER / CAMERA event は schema のみ（IMPLEMENTED_CODES 外）、speaker_id は常に null（推定禁止の方針）。ProductionContext の `transition` inference（source ごとの speech 活動の切替）は存在するが、それを実行する operation（multicam 切替）は video-editing-skill に無く、`multi_source_sync` は phase 2 未実装。**本 Phase では実装しない**（Event → step の近道を作らない。必要なのは (1) 同期 Skill、(2) source 切替 operation を持つ編集 Skill、(3) transition inference → `camera.switch` decision。次の作業として記録）。
 

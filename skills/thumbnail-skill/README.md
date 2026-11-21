@@ -70,12 +70,12 @@ Without it nothing changes.
 
 ## Architecture
 
-| layer | owns | does not do |
-|-------|------|-------------|
-| **video-production-agent** | what a thumbnail should show, which frame/timestamp, layout, copy | render pixels |
-| **thumbnail-skill** (this repo) | rendering a typed ThumbnailDocument to a validated PNG/JPEG | choose content, judge design, run ffmpeg |
-| **ffmpeg-skill** | decoding the one video frame this skill was told to use (`probe`, `look --at`) | scene detection, "best frame" search |
-| **Pillow** (in-process) | raster compositing: paste, crop, resize, draw text | anything ffmpeg-skill doesn't already refuse |
+| layer                           | owns                                                                           | does not do                                  |
+| ------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
+| **video-production-agent**      | what a thumbnail should show, which frame/timestamp, layout, copy              | render pixels                                |
+| **thumbnail-skill** (this repo) | rendering a typed ThumbnailDocument to a validated PNG/JPEG                    | choose content, judge design, run ffmpeg     |
+| **ffmpeg-skill**                | decoding the one video frame this skill was told to use (`probe`, `look --at`) | scene detection, "best frame" search         |
+| **Pillow** (in-process)         | raster compositing: paste, crop, resize, draw text                             | anything ffmpeg-skill doesn't already refuse |
 
 Pipeline: `request → ThumbnailDocument validation → asset/font resolution → render plan (identity,
 reuse check) → Pillow compositing (or a cache hit) → output validation → structured response with
@@ -116,36 +116,80 @@ human line goes to stdout and errors to stderr.
 {
   "document": {
     "document_id": "ep42_thumb",
-    "canvas": {"width": 1280, "height": 720, "background": "#000000"},
+    "canvas": { "width": 1280, "height": 720, "background": "#000000" },
     "assets": [
-      {"asset_id": "bg",   "kind": "video_frame", "path": "episode42.mp4", "timestamp": 812.5},
-      {"asset_id": "logo", "kind": "image", "path": "brand/logo.png"}
+      {
+        "asset_id": "bg",
+        "kind": "video_frame",
+        "path": "episode42.mp4",
+        "timestamp": 812.5
+      },
+      { "asset_id": "logo", "kind": "image", "path": "brand/logo.png" }
     ],
     "elements": [
-      {"element_id": "bg_layer", "type": "image", "z_index": 0,
-       "image": {"asset_id": "bg", "position": {"x": 0, "y": 0}, "size": {"width": 1280, "height": 720}, "fit": "cover"}},
-      {"element_id": "logo_layer", "type": "image", "z_index": 5,
-       "image": {"asset_id": "logo", "position": {"x": 1060, "y": 20}, "size": {"width": 200, "height": 200}, "fit": "contain", "opacity": 0.9}},
-      {"element_id": "title", "type": "text", "z_index": 10,
-       "text": {"text": "第38回学会\n特別講演のお知らせ", "font_id": "cjk", "font_size": 64, "color": "#FFFFFF",
-                "position": {"x": 40, "y": 560}, "align": {"horizontal": "left", "vertical": "top"},
-                "background": {"color": "#000000AA", "padding": 16},
-                "stroke": {"color": "#000000", "width": 3}, "shadow": {"color": "#00000080", "offset_x": 3, "offset_y": 3}}}
+      {
+        "element_id": "bg_layer",
+        "type": "image",
+        "z_index": 0,
+        "image": {
+          "asset_id": "bg",
+          "position": { "x": 0, "y": 0 },
+          "size": { "width": 1280, "height": 720 },
+          "fit": "cover"
+        }
+      },
+      {
+        "element_id": "logo_layer",
+        "type": "image",
+        "z_index": 5,
+        "image": {
+          "asset_id": "logo",
+          "position": { "x": 1060, "y": 20 },
+          "size": { "width": 200, "height": 200 },
+          "fit": "contain",
+          "opacity": 0.9
+        }
+      },
+      {
+        "element_id": "title",
+        "type": "text",
+        "z_index": 10,
+        "text": {
+          "text": "第38回学会\n特別講演のお知らせ",
+          "font_id": "cjk",
+          "font_size": 64,
+          "color": "#FFFFFF",
+          "position": { "x": 40, "y": 560 },
+          "align": { "horizontal": "left", "vertical": "top" },
+          "background": { "color": "#000000AA", "padding": 16 },
+          "stroke": { "color": "#000000", "width": 3 },
+          "shadow": { "color": "#00000080", "offset_x": 3, "offset_y": 3 }
+        }
+      }
     ],
-    "metadata": {"episode": 42}
+    "metadata": { "episode": 42 }
   },
-  "output": {"path": "episode42_thumb.png", "format": "png", "overwrite": false},
-  "options": {"allowed_input_roots": ["/jobs/42/media"], "workspace": "/jobs/42/work", "reuse": true, "timeout": 120}
+  "output": {
+    "path": "episode42_thumb.png",
+    "format": "png",
+    "overwrite": false
+  },
+  "options": {
+    "allowed_input_roots": ["/jobs/42/media"],
+    "workspace": "/jobs/42/work",
+    "reuse": true,
+    "timeout": 120
+  }
 }
 ```
 
-| Concept | Fields | Notes |
-|---|---|---|
-| `ThumbnailCanvas` | `width`, `height` (16..7680), `background` (`#RRGGBB`/`#RRGGBBAA`) | the output is always exactly this size; no hard-coded 1280x720. With `output.preset`, omit both to use the preset's size; explicit values win |
-| `ThumbnailAsset` | `asset_id`, `kind` (`image` \| `video_frame`), `path`, `timestamp` (video_frame only) | `timestamp` is the caller's decision; this skill fetches exactly that frame, never a "better" one |
-| `ThumbnailElement` (image) | `asset_id`, `position {x,y}`, `size {width,height}`, `fit` (`cover`\|`contain`\|`fill`\|`none`), `crop {x,y,width,height}`, `opacity`, `rotation` (`0`\|`90`\|`180`\|`270`) | source-pixel crop is applied before fit/scale |
-| `ThumbnailElement` (text) | `text`, `font_id`, `font_size` (6..400), `color`, `position`, `align {horizontal,vertical}`, `line_spacing`, `opacity`, `background {color,padding}`, `stroke {color,width}`, `shadow {color,offset_x,offset_y}` | line breaks are literal `\n` in `text`; there is no automatic word-wrap or layout — that is a caller decision |
-| stacking | `z_index` on every element, ties broken by document order | no implicit ordering |
+| Concept                    | Fields                                                                                                                                                                                                           | Notes                                                                                                                                         |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ThumbnailCanvas`          | `width`, `height` (16..7680), `background` (`#RRGGBB`/`#RRGGBBAA`)                                                                                                                                               | the output is always exactly this size; no hard-coded 1280x720. With `output.preset`, omit both to use the preset's size; explicit values win |
+| `ThumbnailAsset`           | `asset_id`, `kind` (`image` \| `video_frame`), `path`, `timestamp` (video_frame only)                                                                                                                            | `timestamp` is the caller's decision; this skill fetches exactly that frame, never a "better" one                                             |
+| `ThumbnailElement` (image) | `asset_id`, `position {x,y}`, `size {width,height}`, `fit` (`cover`\|`contain`\|`fill`\|`none`), `crop {x,y,width,height}`, `opacity`, `rotation` (`0`\|`90`\|`180`\|`270`)                                      | source-pixel crop is applied before fit/scale                                                                                                 |
+| `ThumbnailElement` (text)  | `text`, `font_id`, `font_size` (6..400), `color`, `position`, `align {horizontal,vertical}`, `line_spacing`, `opacity`, `background {color,padding}`, `stroke {color,width}`, `shadow {color,offset_x,offset_y}` | line breaks are literal `\n` in `text`; there is no automatic word-wrap or layout — that is a caller decision                                 |
+| stacking                   | `z_index` on every element, ties broken by document order                                                                                                                                                        | no implicit ordering                                                                                                                          |
 
 Unknown fields anywhere are rejected (`INVALID_REQUEST`); `command`, `argv`, `shell`, `exec`,
 `executable`, `script`, `filter`, `filter_complex`, `vf`, `af`, `ffmpeg`, `env`, `cwd`, `eval`,
@@ -161,13 +205,13 @@ machine is used (detected, like ffmpeg-skill detects encoders — never assumed)
 sha256; a `font_id` with no resolvable file fails `MISSING_INPUT` — this skill never substitutes a
 different typeface and calls it success.
 
-| font_id | role |
-|---|---|
-| `sans` | default UI sans-serif |
-| `sans-bold` | emphasis / headline sans-serif |
-| `serif` | serif text |
-| `mono` | monospaced text |
-| `cjk` | Japanese / Chinese / Korean text |
+| font_id     | role                             |
+| ----------- | -------------------------------- |
+| `sans`      | default UI sans-serif            |
+| `sans-bold` | emphasis / headline sans-serif   |
+| `serif`     | serif text                       |
+| `mono`      | monospaced text                  |
+| `cjk`       | Japanese / Chinese / Korean text |
 
 Adding a font means adding a registry entry (a reviewed change), not a runtime decision by a caller.
 
@@ -218,7 +262,7 @@ states are marked `unverified` and set conservatively. Full table: [docs/model.m
 - No shell, ever (`subprocess.Popen` with an argv list, `shell=False`, in the adapter to
   ffmpeg-skill only).
 - No arbitrary executable: the only process this skill starts is `python3 <ffmpeg-skill>/scripts/
-  {probe,look}.py <typed argv> --json`, resolved from a checkout directory, never from a
+{probe,look}.py <typed argv> --json`, resolved from a checkout directory, never from a
   request-supplied path.
 - No arbitrary ffmpeg filter, no `filter_complex`/`vf`/`af`, no raw argv: video decoding is exactly
   ffmpeg-skill's own `--at <timestamp> --no-timecode`; nothing from the request reaches that argv
@@ -237,7 +281,7 @@ states are marked `unverified` and set conservatively. Full table: [docs/model.m
 
 ## Deterministic execution and reuse
 
-Given the same document, the same asset/font *content* (by sha256, not by path), the same
+Given the same document, the same asset/font _content_ (by sha256, not by path), the same
 skill/Pillow version and — when a `video_frame` asset is involved — the same ffmpeg-skill version,
 `thumbnail/render` and `thumbnail/extract_frame` reuse a cached artifact instead of re-rendering; a
 `video_frame` asset's identity is its **source video's** sha256 plus the requested timestamp, not the
@@ -255,21 +299,21 @@ ffmpeg-skill's own `content_equivalent` convention for environment-dependent enc
 
 ## Error codes
 
-| Code | Meaning |
-|---|---|
-| `INVALID_REQUEST` | document shape, unknown/forbidden field, bad type or bound |
-| `INVALID_INPUT` | a source file is missing, unreadable, or not a valid image |
-| `PATH_NOT_ALLOWED` | input outside allowed roots, output outside workspace, traversal, symlink escape |
-| `UNSUPPORTED_OPERATION` | unknown tool name, or an unimplemented option (e.g. arbitrary-angle rotation) |
-| `UNSUPPORTED_FORMAT` | output format not in the contract |
-| `MISSING_INPUT` | an element references an `asset_id`/`font_id` that is not declared or not registered |
-| `INVALID_TIME_RANGE` | a `video_frame` timestamp is negative, non-finite, beyond the source's duration, or lands after the last decodable frame (not retryable) |
-| `DEPENDENCY_ERROR` | duplicate id or another structural inconsistency |
-| `TOOL_ERROR` | ffmpeg-skill failed, timed out, or is unavailable |
-| `OUTPUT_ERROR` | output could not be written, is empty, collides with an input, or already exists |
-| `VALIDATION_ERROR` | output written but failed post-render validation, including an `output.preset` limit (`preset_limit_exceeded`) |
-| `CANCELLED` | interrupted by signal |
-| `INTERNAL_ERROR` | a bug in this skill |
+| Code                    | Meaning                                                                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `INVALID_REQUEST`       | document shape, unknown/forbidden field, bad type or bound                                                                               |
+| `INVALID_INPUT`         | a source file is missing, unreadable, or not a valid image                                                                               |
+| `PATH_NOT_ALLOWED`      | input outside allowed roots, output outside workspace, traversal, symlink escape                                                         |
+| `UNSUPPORTED_OPERATION` | unknown tool name, or an unimplemented option (e.g. arbitrary-angle rotation)                                                            |
+| `UNSUPPORTED_FORMAT`    | output format not in the contract                                                                                                        |
+| `MISSING_INPUT`         | an element references an `asset_id`/`font_id` that is not declared or not registered                                                     |
+| `INVALID_TIME_RANGE`    | a `video_frame` timestamp is negative, non-finite, beyond the source's duration, or lands after the last decodable frame (not retryable) |
+| `DEPENDENCY_ERROR`      | duplicate id or another structural inconsistency                                                                                         |
+| `TOOL_ERROR`            | ffmpeg-skill failed, timed out, or is unavailable                                                                                        |
+| `OUTPUT_ERROR`          | output could not be written, is empty, collides with an input, or already exists                                                         |
+| `VALIDATION_ERROR`      | output written but failed post-render validation, including an `output.preset` limit (`preset_limit_exceeded`)                           |
+| `CANCELLED`             | interrupted by signal                                                                                                                    |
+| `INTERNAL_ERROR`        | a bug in this skill                                                                                                                      |
 
 ## Batch thumbnails from a CSV
 
@@ -279,18 +323,55 @@ ThumbnailDocument template for one `output.preset`. 16:9 and 9:16 are two target
 layout. `{{column}}` placeholders are filled from the row (`row` and `preset` are built in).
 
 ```json
-{"tool": "thumbnail/render_batch", "params": {
-  "csv": {"path": "sessions.csv"},
-  "targets": [
-    {"preset": "youtube",
-     "document": {"document_id": "talk-{{session}}", "canvas": {"background": "#14213D"},
-                  "assets": [{"asset_id": "photo", "kind": "image", "path": "{{photo}}"}],
-                  "elements": [
-                    {"element_id": "photo_el", "type": "image", "image": {"asset_id": "photo", "position": {"x": 840, "y": 140}, "size": {"width": 400, "height": 400}}},
-                    {"element_id": "title", "type": "text", "text": {"text": "{{title}}", "font_id": "sans-bold", "font_size": 72, "color": "#FFFFFF", "position": {"x": 40, "y": 600}}}]},
-     "text_fit": {"title": {"max_width": 1200, "max_height": 110, "min_font_size": 24}}},
-    {"preset": "youtube-shorts", "document": {"...": "the 9:16 layout"}}],
-  "output": {"directory": "thumbs", "name": "{{session}}-{{preset}}", "format": "png"}}}
+{
+  "tool": "thumbnail/render_batch",
+  "params": {
+    "csv": { "path": "sessions.csv" },
+    "targets": [
+      {
+        "preset": "youtube",
+        "document": {
+          "document_id": "talk-{{session}}",
+          "canvas": { "background": "#14213D" },
+          "assets": [
+            { "asset_id": "photo", "kind": "image", "path": "{{photo}}" }
+          ],
+          "elements": [
+            {
+              "element_id": "photo_el",
+              "type": "image",
+              "image": {
+                "asset_id": "photo",
+                "position": { "x": 840, "y": 140 },
+                "size": { "width": 400, "height": 400 }
+              }
+            },
+            {
+              "element_id": "title",
+              "type": "text",
+              "text": {
+                "text": "{{title}}",
+                "font_id": "sans-bold",
+                "font_size": 72,
+                "color": "#FFFFFF",
+                "position": { "x": 40, "y": 600 }
+              }
+            }
+          ]
+        },
+        "text_fit": {
+          "title": { "max_width": 1200, "max_height": 110, "min_font_size": 24 }
+        }
+      },
+      { "preset": "youtube-shorts", "document": { "...": "the 9:16 layout" } }
+    ],
+    "output": {
+      "directory": "thumbs",
+      "name": "{{session}}-{{preset}}",
+      "format": "png"
+    }
+  }
+}
 ```
 
 - **CSV:** header row, UTF-8 by default (a byte-order mark is fine). For a CSV saved by Japanese Excel
@@ -340,14 +421,14 @@ path of a Velisa `kit@1` brand kit, which is a superset of ffmpeg-skill `brand.j
 `brand.json` works too. `render`, `render_layers`, `render_variants` and `render_batch` (every
 target) read it. The kit fills only what the document leaves out, and only with what the kit states:
 
-| Kit | ThumbnailDocument |
-|---|---|
-| `colors.text` | each text element's `color` |
-| `colors.background` | `canvas.background`, and the band colour of a text whose `background` gives only `padding` |
-| `colors.outline` | the `stroke.color` of a text whose `stroke` gives only `width` |
-| `font` | each text element's `font_id`: the registered font_id whose font file on this machine has that family name |
-| `logo`, `logo_position`, `logo_scale`, `safe_margin`, `logo_opacity` | an image element `kit-logo`, `logo_scale` px wide, `safe_margin` from the named edge |
-| `colors.primary` | `render_variants`' palettes only |
+| Kit                                                                  | ThumbnailDocument                                                                                          |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `colors.text`                                                        | each text element's `color`                                                                                |
+| `colors.background`                                                  | `canvas.background`, and the band colour of a text whose `background` gives only `padding`                 |
+| `colors.outline`                                                     | the `stroke.color` of a text whose `stroke` gives only `width`                                             |
+| `font`                                                               | each text element's `font_id`: the registered font_id whose font file on this machine has that family name |
+| `logo`, `logo_position`, `logo_scale`, `safe_margin`, `logo_opacity` | an image element `kit-logo`, `logo_scale` px wide, `safe_margin` from the named edge                       |
+| `colors.primary`                                                     | `render_variants`' palettes only                                                                           |
 
 Kit colours are `RRGGBB`; this skill adds the `#`. A value the document states wins, and is listed in
 `kit.kept`. Nothing the kit leaves out is filled in: a text without `color` or `font_id` is still
@@ -368,7 +449,7 @@ Two tools (ADR-15; roadmap step 6) that detect nothing themselves and write no f
   frontal angle and face size. The formula is in `thumbnail skill --json` -> `frame_choice`, and
   every part is listed. A frame whose main face has its eyes closed comes after every frame where
   they are open. Frame sharpness and exposure come from the caller's `measures [{t, sharpness,
-  mean_luma}]`; without them, sharpness is detection-skill's face sharpness and exposure is listed
+mean_luma}]`; without them, sharpness is detection-skill's face sharpness and exposure is listed
   as `missing`. With `video` (its sha256 must match the detections), the chosen frame comes back as
   a `video_frame` asset.
 - `thumbnail/place_text` maps the face boxes onto the canvas through the image element that shows
@@ -377,8 +458,17 @@ Two tools (ADR-15; roadmap step 6) that detect nothing themselves and write no f
   no position is clear it refuses (`no_position_clear_of_faces`) rather than cover a face.
 
 ```json
-{"tool": "thumbnail/place_text", "params": {"document": {"...": "..."}, "text_element": "title", "image_element": "frame_el",
-  "faces": [[500, 160, 220, 260]], "frame_size": {"width": 1920, "height": 1080}, "margin": 16}}
+{
+  "tool": "thumbnail/place_text",
+  "params": {
+    "document": { "...": "..." },
+    "text_element": "title",
+    "image_element": "frame_el",
+    "faces": [[500, 160, 220, 260]],
+    "frame_size": { "width": 1920, "height": 1080 },
+    "margin": 16
+  }
+}
 ```
 
 ## Optional AI background
@@ -390,14 +480,25 @@ what to show and never composes: the result is an ordinary `image` asset for `th
 composition stays deterministic and the ThumbnailDocument model is unchanged.
 
 ```json
-{"tool": "thumbnail/generate_background", "params": {
-  "background": {"provider": "flux2-klein-4b", "prompt": "a calm studio backdrop, soft light",
-                 "width": 1280, "height": 720, "seed": 7, "steps": 4, "guidance_scale": 1.0},
-  "output": {"path": "bg.png", "format": "png", "preset": "youtube"}}}
+{
+  "tool": "thumbnail/generate_background",
+  "params": {
+    "background": {
+      "provider": "flux2-klein-4b",
+      "prompt": "a calm studio backdrop, soft light",
+      "width": 1280,
+      "height": 720,
+      "seed": 7,
+      "steps": 4,
+      "guidance_scale": 1.0
+    },
+    "output": { "path": "bg.png", "format": "png", "preset": "youtube" }
+  }
+}
 ```
 
-| Provider | Engine | Licence | Turned on by | Needs |
-|---|---|---|---|---|
+| Provider         | Engine                                                                                     | Licence    | Turned on by                                                                             | Needs                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `flux2-klein-4b` | FLUX.2 [klein] 4B ([model card](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B)) | Apache-2.0 | `THUMBNAIL_FLUX2_KLEIN_4B_DIR` = a local snapshot of `black-forest-labs/FLUX.2-klein-4B` | `pip install -e '.[flux2]'`; about 13 GB of VRAM (model card) |
 
 - **Without a provider nothing changes.** `render`, `extract_frame` and `validate` never touch it;
@@ -434,15 +535,15 @@ structural check. Additive; no behavior change to any tool.
 
 ## Where this skill ends and others begin
 
-| Repository | Question it answers | Example |
-|---|---|---|
-| **media-analysis-skill** | What exists in the media? (measurement) | `duration = 312.4`, `silence = [...]` |
-| **transcription-skill** | What is being said, and when? | `"本日の講演を始めます"  start 12.3  end 15.8` |
-| **subtitle-skill** | How is speech shown as on-screen subtitles? | line breaks, styling, SRT/ASS, burn-in |
-| **thumbnail-skill** (here) | Render a decided thumbnail specification | one canvas, positioned image/text layers, PNG/JPEG |
-| **video-editing-skill** | Cut, arrange and assemble a video timeline | trims, transitions, sequencing |
-| **motion-graphics-skill** | In-video graphics / motion rendering | lower thirds, animated titles inside the video itself |
-| **qc-skill** | Inspect a finished artifact | does the delivered file meet spec? |
+| Repository                 | Question it answers                                                      | Example                                                           |
+| -------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| **media-analysis-skill**   | What exists in the media? (measurement)                                  | `duration = 312.4`, `silence = [...]`                             |
+| **transcription-skill**    | What is being said, and when?                                            | `"本日の講演を始めます"  start 12.3  end 15.8`                    |
+| **subtitle-skill**         | How is speech shown as on-screen subtitles?                              | line breaks, styling, SRT/ASS, burn-in                            |
+| **thumbnail-skill** (here) | Render a decided thumbnail specification                                 | one canvas, positioned image/text layers, PNG/JPEG                |
+| **video-editing-skill**    | Cut, arrange and assemble a video timeline                               | trims, transitions, sequencing                                    |
+| **motion-graphics-skill**  | In-video graphics / motion rendering                                     | lower thirds, animated titles inside the video itself             |
+| **qc-skill**               | Inspect a finished artifact                                              | does the delivered file meet spec?                                |
 | **video-production-agent** | What should be done, with what content? (inference, decisions, planning) | "use frame at 13:32.5", "title reads X", "put the logo top-right" |
 
 Apart from the optional, caller-prompted background generator above (ADR-12), thumbnail-skill

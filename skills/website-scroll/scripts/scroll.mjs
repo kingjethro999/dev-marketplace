@@ -70,8 +70,17 @@ const DARK = args.dark === "true";
 const KEEP = args["keep-frames"] === "true";
 const STILL = args.still === "true";
 // Named after the page unless --out says otherwise: example.com/pricing -> example-com-pricing
-const pageName = args.url.replace(/^https?:\/\//, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
-const out = resolve((args.out ?? `out/website-scroll/${pageName}`).replace(/\.(mp4|jpg|jpeg|png)$/, ""));
+const pageName = args.url
+  .replace(/^https?:\/\//, "")
+  .replace(/[^a-zA-Z0-9]+/g, "-")
+  .replace(/^-|-$/g, "")
+  .toLowerCase();
+const out = resolve(
+  (args.out ?? `out/website-scroll/${pageName}`).replace(
+    /\.(mp4|jpg|jpeg|png)$/,
+    "",
+  ),
+);
 
 // ---- dependencies ------------------------------------------------------------
 
@@ -82,8 +91,13 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 function loadPlaywright() {
   const path = join(HERE, "node_modules", "playwright");
   if (!existsSync(path)) {
-    console.error("Installing Playwright into this skill's folder (first run)...");
-    execFileSync("npm", ["install", "--silent", "--no-audit", "--no-fund"], { cwd: HERE, stdio: ["ignore", 2, 2] });
+    console.error(
+      "Installing Playwright into this skill's folder (first run)...",
+    );
+    execFileSync("npm", ["install", "--silent", "--no-audit", "--no-fund"], {
+      cwd: HERE,
+      stdio: ["ignore", 2, 2],
+    });
   }
   return createRequire(import.meta.url)(path);
 }
@@ -93,7 +107,11 @@ async function launchBrowser(chromium, options = {}) {
   try {
     return await chromium.launch(options);
   } catch {
-    execFileSync(join(HERE, "node_modules", ".bin", "playwright"), ["install", "chromium"], { stdio: ["ignore", 2, 2] });
+    execFileSync(
+      join(HERE, "node_modules", ".bin", "playwright"),
+      ["install", "chromium"],
+      { stdio: ["ignore", 2, 2] },
+    );
     return chromium.launch(options);
   }
 }

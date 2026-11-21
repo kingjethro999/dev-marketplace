@@ -11,11 +11,11 @@ Skeleton 0.1.0 ([#3](https://github.com/kajisho5/voice-enhance-skill/pull/3)): e
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 声の分離(AI) | experimental | `voice-enhance isolate` ([#4](https://github.com/kajisho5/voice-enhance-skill/pull/4)); measured with the real engine in CI on synthetic fixtures only ([#8](https://github.com/kajisho5/voice-enhance-skill/pull/8)); not yet on Japanese speech |
-| 残響除去 | experimental | `voice-enhance dereverb` ([#5](https://github.com/kajisho5/voice-enhance-skill/pull/5)); measured with the real engine in CI on synthetic fixtures only ([#8](https://github.com/kajisho5/voice-enhance-skill/pull/8)); not yet on Japanese speech |
-| マイク被り低減 | experimental | `voice-enhance bleed-reduce` ([#6](https://github.com/kajisho5/voice-enhance-skill/pull/6)); signal processing (`crosstalk`, no weights); not yet measured on a real multi-mic recording |
+| Owned job      | Status       | Note                                                                                                                                                                                                                                               |
+| -------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 声の分離(AI)   | experimental | `voice-enhance isolate` ([#4](https://github.com/kajisho5/voice-enhance-skill/pull/4)); measured with the real engine in CI on synthetic fixtures only ([#8](https://github.com/kajisho5/voice-enhance-skill/pull/8)); not yet on Japanese speech  |
+| 残響除去       | experimental | `voice-enhance dereverb` ([#5](https://github.com/kajisho5/voice-enhance-skill/pull/5)); measured with the real engine in CI on synthetic fixtures only ([#8](https://github.com/kajisho5/voice-enhance-skill/pull/8)); not yet on Japanese speech |
+| マイク被り低減 | experimental | `voice-enhance bleed-reduce` ([#6](https://github.com/kajisho5/voice-enhance-skill/pull/6)); signal processing (`crosstalk`, no weights); not yet measured on a real multi-mic recording                                                           |
 
 ## Wiring
 
@@ -53,4 +53,5 @@ ffmpeg-skill `probe` (input facts, stem validation) and `audio` (stream extracti
   - Done ([#19](https://github.com/kajisho5/voice-enhance-skill/pull/19)): `not_provided` now lists "music / BGM generation (sound-design-skill)" and "music / BGM separation (provided by no skill; a new owner needs an ADR first)"; SKILL.md's "Not this skill's job" says the same; `test_music_separation_names_no_owner` checks the contract. Separation is not implemented
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

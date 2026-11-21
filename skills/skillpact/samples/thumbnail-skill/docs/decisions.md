@@ -2,7 +2,7 @@
 
 - **ADR-1 Compositing is Pillow, in-process; ffmpeg-skill decodes exactly one frame and nothing
   else.** ffmpeg-skill's `overlay`/`graphics`/`caption` tools operate on a video input and always
-  write a new *video* artifact; forcing a still-image canvas through them would mean building a
+  write a new _video_ artifact; forcing a still-image canvas through them would mean building a
   filter graph neither skill's contract is meant to expose generically. Pillow keeps "no arbitrary
   ffmpeg filter" trivially true for the actual pixel work: no ffmpeg process is involved in
   compositing at all (see docs/architecture.md).
@@ -16,7 +16,7 @@
   typeface the caller meant.
 - **ADR-4 Path containment is resolved-path, never string-prefix; write-path resolution uses
   `os.path.realpath`, not walk-to-nearest-existing-ancestor.** String-prefix containment admits
-  `/w/media_evil` under an allowed root `/w/media`; walking to the nearest *existing* ancestor
+  `/w/media_evil` under an allowed root `/w/media`; walking to the nearest _existing_ ancestor
   before resolving admits a dangling symlink placed at a not-yet-existing path component. Both were
   found and closed during pre-release review (see git history around `security.py`); `PathPolicy`
   now resolves the full target (including a non-existent leaf) and checks containment on the
@@ -29,7 +29,7 @@
   Measured against ffmpeg-skill 0.9.1, `look` used to claim `{"status": "completed"}` regardless of
   this; as of ffmpeg-skill 0.11.0's "fail loudly" pass, `look` instead verifies its own output and
   reports a hard failure instead — `{"status": "failed", "error": {"kind": "output", "code":
-  "OUTPUT_INVALID", "message": "output verification failed: ...: not written"}}` (current behaviour,
+"OUTPUT_INVALID", "message": "output verification failed: ...: not written"}}` (current behaviour,
   measured against ffmpeg-skill 0.12.2). Either shape describes the same permanent fact about the
   timestamp — retrying the identical request fails identically forever — so classifying it as a
   retryable tool failure would be actively misleading to a calling agent. `adapter.extract_frame()`
@@ -61,7 +61,7 @@
   it). Superseded the exact `contract_version` "1.0" match, which could not see that 2.0 change:
   the contract shape was unchanged, yet a re-render with `reuse: false` failed because `look`
   refused to overwrite the deterministic frame file of the previous run. Caveat that still holds
-  (see ADR-5): a *behavioural* change to `look` (like 0.11.0's "fail loudly" pass) shows up in no
+  (see ADR-5): a _behavioural_ change to `look` (like 0.11.0's "fail loudly" pass) shows up in no
   contract, which is why CI runs the suite against ffmpeg-skill `main` daily as well as against the
   oldest tested commit (`336e0c4`, 0.12.2); `tests/test_ffmpeg_skill_compat.py` pins the detection
   against fake current, old, contract-less and unseen-version layouts.

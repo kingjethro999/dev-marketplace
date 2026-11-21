@@ -128,10 +128,7 @@
       "min_speakers": null,
       "max_speakers": null
     },
-    "speakers": [
-      "SPEAKER_00",
-      "SPEAKER_01"
-    ],
+    "speakers": ["SPEAKER_00", "SPEAKER_01"],
     "speaker_count": 2,
     "speech_seconds": 8.0,
     "turns": [
@@ -184,17 +181,12 @@
       {
         "id": "seg_0002",
         "speaker_id": null,
-        "words": [
-          "SPEAKER_01",
-          "SPEAKER_00"
-        ]
+        "words": ["SPEAKER_01", "SPEAKER_00"]
       },
       {
         "id": "seg_0003",
         "speaker_id": null,
-        "words": [
-          null
-        ]
+        "words": [null]
       }
     ],
     "overlap_segment_ids": []

@@ -7,18 +7,18 @@
 
 ## 1. AUDIT_PHASE1 A 分類修正の反映確認
 
-| # | 修正 | コード | テスト | 備考 |
-|---|---|---|---|---|
-| A1 同名ファイル衝突 | ✅ `compiler.py` `stem = f"{idx:02d}_..."` | ✅ `test_same_file_name_twice_gets_distinct_paths` | 実 render でも `01_clip_youtube.mp4` / `02_...` を確認 |
-| A2 プロセスグループ kill / 部分出力削除 | ✅ `adapter.py` `run_process_group`, `kill_tree`, `_remove_partial` | ✅ `test_timeout_kills_the_whole_process_group`（ps 検査、POSIX のみ） | Windows の `taskkill /T` 経路は**未検証** |
-| A3 SIGINT → CANCELLED + 永続化 | ✅ `executor.py` `INTERRUPTED`、`service.py` `finally: store.save` | ✅ `test_interrupt_marks_job_cancelled_and_persists` | 実 SIGINT で job.json=CANCELLED、provenance.json 生成、孤児なしを確認 |
-| A4 strategy の正直な記録 | ✅ `FULL_ANALYSIS`, `budget.enforced=False` | ✅ `test_analysis_strategy_is_honest` | `ir.py` の雛形も本レビューで揃えた |
-| A5 Windows UTF-8 / normcase | ✅ `PYTHONUTF8`, `errors="replace"`, `normcase` | ❌ Windows 実機テストなし | 静的対応のみ |
-| A6 死んだ `render(dry_run)` | ✅ 削除（`service.render` に `dry_run` 無し） | — | |
-| A7 QA 二重実行 / incident 名 | ✅ `check_by_artifact`, `DURATION_MISMATCH` | ✅ `test_qa_measurements_are_recorded` | |
-| A8 未知 `--set` キー拒否 | ✅ `REQUIREMENT_PREFIXES` | ✅ `test_unknown_requirement_key_is_rejected` | |
-| A9 テスト整備 | ✅ | unit 23 / integration 6 / evals 6 | |
-| A10 plan ファイル名に profile | ✅ `cli.py` | ✅ `test_cli_round_trip` が生成パスを使用 | |
+| #                                       | 修正                                                                | コード                                                                 | テスト                                                                | 備考 |
+| --------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------- | ---- |
+| A1 同名ファイル衝突                     | ✅ `compiler.py` `stem = f"{idx:02d}_..."`                          | ✅ `test_same_file_name_twice_gets_distinct_paths`                     | 実 render でも `01_clip_youtube.mp4` / `02_...` を確認                |
+| A2 プロセスグループ kill / 部分出力削除 | ✅ `adapter.py` `run_process_group`, `kill_tree`, `_remove_partial` | ✅ `test_timeout_kills_the_whole_process_group`（ps 検査、POSIX のみ） | Windows の `taskkill /T` 経路は**未検証**                             |
+| A3 SIGINT → CANCELLED + 永続化          | ✅ `executor.py` `INTERRUPTED`、`service.py` `finally: store.save`  | ✅ `test_interrupt_marks_job_cancelled_and_persists`                   | 実 SIGINT で job.json=CANCELLED、provenance.json 生成、孤児なしを確認 |
+| A4 strategy の正直な記録                | ✅ `FULL_ANALYSIS`, `budget.enforced=False`                         | ✅ `test_analysis_strategy_is_honest`                                  | `ir.py` の雛形も本レビューで揃えた                                    |
+| A5 Windows UTF-8 / normcase             | ✅ `PYTHONUTF8`, `errors="replace"`, `normcase`                     | ❌ Windows 実機テストなし                                              | 静的対応のみ                                                          |
+| A6 死んだ `render(dry_run)`             | ✅ 削除（`service.render` に `dry_run` 無し）                       | —                                                                      |                                                                       |
+| A7 QA 二重実行 / incident 名            | ✅ `check_by_artifact`, `DURATION_MISMATCH`                         | ✅ `test_qa_measurements_are_recorded`                                 |                                                                       |
+| A8 未知 `--set` キー拒否                | ✅ `REQUIREMENT_PREFIXES`                                           | ✅ `test_unknown_requirement_key_is_rejected`                          |                                                                       |
+| A9 テスト整備                           | ✅                                                                  | unit 23 / integration 6 / evals 6                                      |                                                                       |
+| A10 plan ファイル名に profile           | ✅ `cli.py`                                                         | ✅ `test_cli_round_trip` が生成パスを使用                              |                                                                       |
 
 CI への反映: **リポジトリに CI は存在しなかった**（下記 2）。本レビューで `.github/workflows/tests.yml` を追加した。
 
@@ -40,16 +40,16 @@ CI への反映: **リポジトリに CI は存在しなかった**（下記 2�
 
 耐えない / 手当てが必要な部分（Phase 2 の最初に schema 1.1 で対処）:
 
-| 項目 | 現状 | 必要な変更 |
-|---|---|---|
-| AI 生成物のメタデータ | 置き場が無い | `provenance.ai_calls[]`（provider, model, prompt_hash, response_hash, tokens, at）と、各 Requirement / Inference / Decision に `origin_call_id` |
-| Intent | `primary` 1 値 + secondary | AI が返す `candidates[{intent, confidence, evidence}]` と選択理由 |
-| Event.kind | `OBSERVED / INFERRED / USER` | AI 由来は `INFERRED` + `source: "ai:<provider>"` で表現できる。enum 追加は不要だが規約として文書化 |
-| REJECTED の扱い | 監査時点では**未強制**（REJECTED でも compile された） | 本レビューで validator error + render 拒否に修正済み。Planner が REJECTED を避けて再計画する経路は Phase 2 |
-| `ir_hash` | decisions を含むため承認で変わる | `plan_hash`（decisions の status を除外）を追加し、「承認前後で計画が同一か」を判定可能にする |
-| operation 語彙 | `video.trim`, `audio.loudness` のみ | conference 用に `video.switch`（multicam）、`audio.replace`、`timeline.align`（sync）を追加 |
-| Session | 無し | `project.production.events[].sessions[]` の schema と、Session 境界 Event |
-| naming | 未使用 | `delivery.targets[].filename` を naming テンプレートから生成 |
+| 項目                  | 現状                                                   | 必要な変更                                                                                                                                      |
+| --------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| AI 生成物のメタデータ | 置き場が無い                                           | `provenance.ai_calls[]`（provider, model, prompt_hash, response_hash, tokens, at）と、各 Requirement / Inference / Decision に `origin_call_id` |
+| Intent                | `primary` 1 値 + secondary                             | AI が返す `candidates[{intent, confidence, evidence}]` と選択理由                                                                               |
+| Event.kind            | `OBSERVED / INFERRED / USER`                           | AI 由来は `INFERRED` + `source: "ai:<provider>"` で表現できる。enum 追加は不要だが規約として文書化                                              |
+| REJECTED の扱い       | 監査時点では**未強制**（REJECTED でも compile された） | 本レビューで validator error + render 拒否に修正済み。Planner が REJECTED を避けて再計画する経路は Phase 2                                      |
+| `ir_hash`             | decisions を含むため承認で変わる                       | `plan_hash`（decisions の status を除外）を追加し、「承認前後で計画が同一か」を判定可能にする                                                   |
+| operation 語彙        | `video.trim`, `audio.loudness` のみ                    | conference 用に `video.switch`（multicam）、`audio.replace`、`timeline.align`（sync）を追加                                                     |
+| Session               | 無し                                                   | `project.production.events[].sessions[]` の schema と、Session 境界 Event                                                                       |
+| naming                | 未使用                                                 | `delivery.targets[].filename` を naming テンプレートから生成                                                                                    |
 
 判断: **構造は Phase 2 に耐える。schema 1.1 への拡張はすべて加算的で、1.0 → 1.1 の migration は空でよい。**
 
@@ -63,13 +63,13 @@ CI への反映: **リポジトリに CI は存在しなかった**（下記 2�
 
 崩れうる点と防止策:
 
-| リスク | 防止策 |
-|---|---|
-| `measure()` が `Operation` を経ずに呼ばれ、provenance に残らない | 本レビューで QA 側の計測を `qa.measurements[]` に記録。analysis 側は `analysis.tool_calls[]` に記録済み。Phase 2 で両者を `provenance.measurements` に統合 |
-| catalog に無いスクリプト（batch, verify, report, graphics, overlay, audio, color, fit）を使いたくなり、`argv` 直渡しを足したくなる | `argv` パススルーは**追加しない**（契約テストで `build_argv` が未知キーを拒否することを固定済み）。必要なら catalog に型付きで追加する |
-| 別レンダラ追加時に `ToolAdapter` 基底が不足 | 基底は `describe / supports / preview / run` の 4 つ。`measure()` を基底に昇格させる（小変更） |
-| ffmpeg-skill のバージョンドリフト | `locate.py` が 0.8.4 ≤ v < 0.9 を要求、契約テストが `--help` のフラグ存在を検査。`--json` の**キー**は未検査（Phase 2 の最初で `result_keys` 検査を追加） |
-| allowed input が入力から導出される | ADR-010。`--allowed-input` 設定は Phase 2 |
+| リスク                                                                                                                             | 防止策                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `measure()` が `Operation` を経ずに呼ばれ、provenance に残らない                                                                   | 本レビューで QA 側の計測を `qa.measurements[]` に記録。analysis 側は `analysis.tool_calls[]` に記録済み。Phase 2 で両者を `provenance.measurements` に統合 |
+| catalog に無いスクリプト（batch, verify, report, graphics, overlay, audio, color, fit）を使いたくなり、`argv` 直渡しを足したくなる | `argv` パススルーは**追加しない**（契約テストで `build_argv` が未知キーを拒否することを固定済み）。必要なら catalog に型付きで追加する                     |
+| 別レンダラ追加時に `ToolAdapter` 基底が不足                                                                                        | 基底は `describe / supports / preview / run` の 4 つ。`measure()` を基底に昇格させる（小変更）                                                             |
+| ffmpeg-skill のバージョンドリフト                                                                                                  | `locate.py` が 0.8.4 ≤ v < 0.9 を要求、契約テストが `--help` のフラグ存在を検査。`--json` の**キー**は未検査（Phase 2 の最初で `result_keys` 検査を追加）  |
+| allowed input が入力から導出される                                                                                                 | ADR-010。`--allowed-input` 設定は Phase 2                                                                                                                  |
 
 判断: **境界は堅い。adapter に手を入れるのは catalog 追加と `measure()` の基底化だけでよい。**
 
@@ -95,30 +95,30 @@ AIProvider.propose(decision_context)  → Decision(provenance=AI_GENERATED, appr
 
 ## 6. Job / Artifact / Provenance / QA は resume・revision・approval に拡張可能か
 
-| 拡張 | 現状の土台 | 不足（Phase 2） |
-|---|---|---|
-| resume | `job.completed_ops` に idempotency_key→出力が保存される。compile は job_dir を与えれば決定論的。本レビューで **op id を決定論化**（tool+args+inputs のハッシュ）したので provenance と照合可能 | `render --job <id>` で既存 Job を読み、`completed_ops` を Executor に渡す経路。中断時の中間ファイル検証（hash） |
-| revision | `plan.version` と `plans/` ディレクトリは存在。Decision に `alternatives` あり | Feedback モデル、PreferenceCandidate、Plan v2 生成、PlanDiff、REJECTED を避けた再計画 |
-| approval | `approve()` が status と `execution.approvals{by,at}` と `USER_DECISION` Event を記録 | `reject()`（理由付き）、部分承認の UI、`who` の実体（現在は OS ユーザ名） |
-| artifact 昇格 | `stage` フィールドと `working/candidate` 遷移 | `approve-artifact` / `finalize` コマンド、final の書き込み禁止、archive |
-| QA | 4 層 + incident + measurements | Semantic QA、incident 検出（ffmpeg-skill 側提案） |
+| 拡張          | 現状の土台                                                                                                                                                                                     | 不足（Phase 2）                                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| resume        | `job.completed_ops` に idempotency_key→出力が保存される。compile は job_dir を与えれば決定論的。本レビューで **op id を決定論化**（tool+args+inputs のハッシュ）したので provenance と照合可能 | `render --job <id>` で既存 Job を読み、`completed_ops` を Executor に渡す経路。中断時の中間ファイル検証（hash） |
+| revision      | `plan.version` と `plans/` ディレクトリは存在。Decision に `alternatives` あり                                                                                                                 | Feedback モデル、PreferenceCandidate、Plan v2 生成、PlanDiff、REJECTED を避けた再計画                           |
+| approval      | `approve()` が status と `execution.approvals{by,at}` と `USER_DECISION` Event を記録                                                                                                          | `reject()`（理由付き）、部分承認の UI、`who` の実体（現在は OS ユーザ名）                                       |
+| artifact 昇格 | `stage` フィールドと `working/candidate` 遷移                                                                                                                                                  | `approve-artifact` / `finalize` コマンド、final の書き込み禁止、archive                                         |
+| QA            | 4 層 + incident + measurements                                                                                                                                                                 | Semantic QA、incident 検出（ffmpeg-skill 側提案）                                                               |
 
 判断: **拡張可能。ただし「REJECTED の強制」と「op id の決定論化」が無いままだと resume/revision は正しく動かないので、本レビューで先に修正した。**
 
 ## 7. 現在のテストで検証できていない重要な失敗系
 
-| 失敗系 | 現状 | 優先度 |
-|---|---|---|
-| Windows でのプロセスグループ kill（`taskkill /T`） | 未検証 | 高（現場 PC は Windows の可能性） |
-| ディスクフル | 分類表にあるが未テスト | 中 |
-| 破損メディア / ffprobe 失敗 | analyze が例外で終了（job 未生成）。挙動は妥当だがテスト無し | 中 |
-| 音声無し・映像無し・0 秒 | 音声無しは warning 経路あり、テスト無し | 中 |
-| render 途中で ffmpeg-skill が消える / バージョン不一致 | `locate` は起動時のみ | 低 |
-| 同一 workspace での並行 render | job id は乱数、plans ファイルは profile 別。衝突は無いはずだがテスト無し | 低 |
-| 巨大ファイルの sha256（数十 GB） | `--no-hash` で回避可能、時間は未計測 | 中（学会素材は大きい） |
-| IR の手編集（asset path 変更、keep 範囲改変） | validator が範囲・存在を検査。REJECTED は本レビューで追加 | 低 |
-| QA の check.py がクラッシュ | `WARN no result` 経路、テスト無し | 低 |
-| 承認済み IR を再 plan で上書き | plan は常に新規作成、承認は失われる | 中（revision 設計で扱う） |
+| 失敗系                                                 | 現状                                                                     | 優先度                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ | --------------------------------- |
+| Windows でのプロセスグループ kill（`taskkill /T`）     | 未検証                                                                   | 高（現場 PC は Windows の可能性） |
+| ディスクフル                                           | 分類表にあるが未テスト                                                   | 中                                |
+| 破損メディア / ffprobe 失敗                            | analyze が例外で終了（job 未生成）。挙動は妥当だがテスト無し             | 中                                |
+| 音声無し・映像無し・0 秒                               | 音声無しは warning 経路あり、テスト無し                                  | 中                                |
+| render 途中で ffmpeg-skill が消える / バージョン不一致 | `locate` は起動時のみ                                                    | 低                                |
+| 同一 workspace での並行 render                         | job id は乱数、plans ファイルは profile 別。衝突は無いはずだがテスト無し | 低                                |
+| 巨大ファイルの sha256（数十 GB）                       | `--no-hash` で回避可能、時間は未計測                                     | 中（学会素材は大きい）            |
+| IR の手編集（asset path 変更、keep 範囲改変）          | validator が範囲・存在を検査。REJECTED は本レビューで追加                | 低                                |
+| QA の check.py がクラッシュ                            | `WARN no result` 経路、テスト無し                                        | 低                                |
+| 承認済み IR を再 plan で上書き                         | plan は常に新規作成、承認は失われる                                      | 中（revision 設計で扱う）         |
 
 ## 8. Windows 対応で残る具体的な問題
 
@@ -149,16 +149,16 @@ Phase 2 開始前に**人手で必要**なこと:
 
 ## 10. Phase 2 で最初に実装すべき機能（優先順位付き）
 
-| 順位 | 機能 | 理由 | 依存 |
-|---|---|---|---|
-| 1 | **schema 1.1**: `plan_hash`、`provenance.ai_calls[]`、`origin_call_id`、`delivery.targets[].filename`、`project.production` の schema、operation 語彙 `timeline.align` / `video.switch` / `audio.replace` | 以降すべての土台。加算的で migration は空 | なし |
-| 2 | **Job resume と冪等スキップ**（`render --job <id>`） | 学会素材は長尺で、途中失敗の再実行コストが最大の運用リスク | op id 決定論化（済） |
-| 3 | **reject / Feedback / Plan v2 / PlanDiff**（`revise` コマンド） | 人間承認の実運用に必須。REJECTED 強制（済）の上に載る | 1 |
-| 4 | **AIProvider の接続規約実装**（`infer` / `propose`、`ai_calls` 記録、`max_ai_calls` 強制、NullProvider で全テスト通過を維持） | AI を入れる前に「AI 無しで同じ IR が出る」保証を固定する | 1 |
-| 5 | **conference 前段**: Asset 役割分類（camera_a / room_audio / slides…）、`sync.py` / `multicam.py --offsets-only` の timeline 反映、Production/Event/Session、ターゲット別ラウドネス（master -23 / web -16） | 戦略ドメイン。multicam 合成は `multicam.py --switch` に任せ、切替判断だけを Agent が持つ | 1, 2 |
-| 6 | `--allowed-input` と workspace 設定ファイル、naming の適用、artifact 昇格コマンド | 運用上の整合 | 1 |
-| 7 | 契約テストに `--json` の `result_keys` 検査を追加、Windows CI の実行、破損/無音/ディスクフルのテスト | 7・8 の穴埋め | CI 実行 |
-| 8 | 解析予算の強制と TARGETED 解析 | 長尺対策。5 の前でもよいが、まず resume が効く方が実益が大きい | 2 |
+| 順位 | 機能                                                                                                                                                                                                        | 理由                                                                                     | 依存                 |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------- |
+| 1    | **schema 1.1**: `plan_hash`、`provenance.ai_calls[]`、`origin_call_id`、`delivery.targets[].filename`、`project.production` の schema、operation 語彙 `timeline.align` / `video.switch` / `audio.replace`   | 以降すべての土台。加算的で migration は空                                                | なし                 |
+| 2    | **Job resume と冪等スキップ**（`render --job <id>`）                                                                                                                                                        | 学会素材は長尺で、途中失敗の再実行コストが最大の運用リスク                               | op id 決定論化（済） |
+| 3    | **reject / Feedback / Plan v2 / PlanDiff**（`revise` コマンド）                                                                                                                                             | 人間承認の実運用に必須。REJECTED 強制（済）の上に載る                                    | 1                    |
+| 4    | **AIProvider の接続規約実装**（`infer` / `propose`、`ai_calls` 記録、`max_ai_calls` 強制、NullProvider で全テスト通過を維持）                                                                               | AI を入れる前に「AI 無しで同じ IR が出る」保証を固定する                                 | 1                    |
+| 5    | **conference 前段**: Asset 役割分類（camera_a / room_audio / slides…）、`sync.py` / `multicam.py --offsets-only` の timeline 反映、Production/Event/Session、ターゲット別ラウドネス（master -23 / web -16） | 戦略ドメイン。multicam 合成は `multicam.py --switch` に任せ、切替判断だけを Agent が持つ | 1, 2                 |
+| 6    | `--allowed-input` と workspace 設定ファイル、naming の適用、artifact 昇格コマンド                                                                                                                           | 運用上の整合                                                                             | 1                    |
+| 7    | 契約テストに `--json` の `result_keys` 検査を追加、Windows CI の実行、破損/無音/ディスクフルのテスト                                                                                                        | 7・8 の穴埋め                                                                            | CI 実行              |
+| 8    | 解析予算の強制と TARGETED 解析                                                                                                                                                                              | 長尺対策。5 の前でもよいが、まず resume が効く方が実益が大きい                           | 2                    |
 
 ---
 
@@ -179,13 +179,13 @@ Phase 2 開始前に**人手で必要**なこと:
 
 `tests.yml` を `workflow_dispatch` で PR ブランチに対して手動実行した。ワークフローは default branch に無いと dispatch できない（404）ため、同一ファイルだけを PR #2 として main に先行マージしてから実行した。
 
-| job | 結果 | 内容 |
-|---|---|---|
-| unit (ubuntu-latest, 3.9) | success | 23 tests OK, evals 6/6 |
-| unit (ubuntu-latest, 3.11) | success | 23 tests OK, evals 6/6 |
-| unit (windows-latest, 3.9) | success | 23 tests OK, evals 6/6（ログで件数確認） |
-| unit (windows-latest, 3.11) | success | 23 tests OK, evals 6/6 |
-| integration (ubuntu-latest, ffmpeg apt + ffmpeg-skill clone) | success | 6 tests OK（38.8 s） |
+| job                                                          | 結果    | 内容                                     |
+| ------------------------------------------------------------ | ------- | ---------------------------------------- |
+| unit (ubuntu-latest, 3.9)                                    | success | 23 tests OK, evals 6/6                   |
+| unit (ubuntu-latest, 3.11)                                   | success | 23 tests OK, evals 6/6                   |
+| unit (windows-latest, 3.9)                                   | success | 23 tests OK, evals 6/6（ログで件数確認） |
+| unit (windows-latest, 3.11)                                  | success | 23 tests OK, evals 6/6                   |
+| integration (ubuntu-latest, ffmpeg apt + ffmpeg-skill clone) | success | 6 tests OK（38.8 s）                     |
 
 - Windows unit が green のため、「Phase 2 開始前の第 0 項（Windows 修正）」は不要。
 - 警告: actions/checkout@v4 と setup-python@v5 の Node 20 非推奨警告のみ（動作影響なし。次回 CI 更新時に v5/v6 へ）。

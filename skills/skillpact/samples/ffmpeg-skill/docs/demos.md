@@ -21,7 +21,6 @@ cut against an accurate one) rather than a before against an after.
 The tools at the bottom, under **Inspection**, have no picture: they answer a question instead
 of changing one, so the command is the demo.
 
-
 ## Captions & text
 
 ### Burned-in captions (English)
@@ -156,7 +155,6 @@ python3 scripts/graphics.py demos/out/fixtures/mandel.mp4 --template title --tit
 ```
 
 **Look for:** A centred title and subtitle fade in over the first seconds and leave the rest of the clip untouched.
-
 
 ## Picture
 
@@ -521,7 +519,6 @@ python3 scripts/multicam.py demos/out/fixtures/motion.mp4 demos/out/fixtures/cam
 
 **Look for:** The literal 'energy' switch list auto-cuts to whichever of the two cameras is loudest at each moment, respecting --min-shot; left is a fixed single-camera cut for contrast.
 
-
 ## Audio
 
 ### Silence removal
@@ -608,7 +605,6 @@ python3 scripts/silence.py demos/out/silence_speech_aware_breathy.mp4 --threshol
 
 **Look for:** A 0.25 s breath sits inside a sentence and a 1 s pause sits between sentences. Left uses a --min-silence low enough to catch the breath too, so plain detection cuts both; right is --speech-aware at the ordinary --min-silence -- its finer 0.12 s floor still measures the breath, but the breath is shorter than --min-silence so it is kept, and only the real sentence-boundary pause is cut.
 
-
 ## Delivery & checks
 
 ### Reels export, then checked
@@ -641,7 +637,6 @@ python3 scripts/proxy.py demos/out/fixtures/mandel.mp4 --width 320 --quality 34 
 ```
 
 **Look for:** Both halves are scaled to the same cell, which is the honest comparison: the proxy is smaller on disk and cheaper to decode, not smaller on screen. The softness is the point of it.
-
 
 ## Projects & inspection
 
@@ -717,7 +712,6 @@ python3 scripts/scenes.py demos/out/fixtures/shots.mp4 --shots --json
 
 **Look for:** scenes.py --shots measures an optical-flow proxy per detected shot and reports a label for each -- a measurement, not an edit. The strip shows the three shots in the fixture with the labels actually returned.
 
-
 ## Inspection
 
 These tools answer a question instead of changing a picture, so there is
@@ -755,7 +749,6 @@ python3 scripts/report.py --before raw.mov --after final.mp4 -o report.html
 ```
 
 **No picture:** a single self-contained HTML page: before/after contact sheets, loudness, the platform check table and the exact commands. It is a file to open, not a picture to embed here.
-
 
 ---
 

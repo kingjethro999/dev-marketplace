@@ -11,9 +11,9 @@ Written from a read-only audit of this repository on 2026-10-30. Each step below
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| サムネイル | done | deterministic composition; the AI background engine named in ecosystem.json (FLUX.2 [klein] 4B, ADR-012) as the optional `thumbnail/generate_background` ([#20](https://github.com/kajisho5/thumbnail-skill/pull/20)) |
+| Owned job  | Status | Note                                                                                                                                                                                                                  |
+| ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| サムネイル | done   | deterministic composition; the AI background engine named in ecosystem.json (FLUX.2 [klein] 4B, ADR-012) as the optional `thumbnail/generate_background` ([#20](https://github.com/kajisho5/thumbnail-skill/pull/20)) |
 
 ## Wiring
 
@@ -57,4 +57,5 @@ imagemagick `preset youtube-thumbnail` and remotion `still` can also produce thu
 Note, not a step: under the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O7) no generative-media skill is created yet; an ADR in Velisa comes first (candidate engines, code and weight licences, VRAM, commercial terms). That ADR is to decide whether this skill's `BackgroundProvider` interface (`background.py`: one provider today, `flux2-klein-4b`, local weights only, a required seed, licence in the provenance) can be reused for generated images. Nothing changes here until that ADR is merged.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

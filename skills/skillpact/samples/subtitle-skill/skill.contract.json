@@ -7,9 +7,7 @@
     "version": "0.1.0",
     "license": "Apache-2.0",
     "source": "https://github.com/kajisho5/subtitle-skill",
-    "authors": [
-      "SEVENTHWELL"
-    ]
+    "authors": ["SEVENTHWELL"]
   },
   "compat": {
     "agents": {
@@ -23,20 +21,14 @@
         "status": "expected"
       }
     },
-    "interfaces": [
-      "skill-md",
-      "cli"
-    ]
+    "interfaces": ["skill-md", "cli"]
   },
   "requirements": {
     "runtimes": [
       {
         "name": "python3",
         "version": ">=3.9",
-        "check": [
-          "python3",
-          "--version"
-        ]
+        "check": ["python3", "--version"]
       }
     ],
     "skills": [
@@ -53,20 +45,14 @@
         "name": "ffmpeg",
         "optional": true,
         "when": "run.render",
-        "check": [
-          "ffmpeg",
-          "-version"
-        ]
+        "check": ["ffmpeg", "-version"]
       }
     ]
   },
   "permissions": {
     "read": {
       "level": "scoped",
-      "scope": [
-        "$INPUT",
-        "$SKILL_DIR/**"
-      ],
+      "scope": ["$INPUT", "$SKILL_DIR/**"],
       "why": "subtitle documents and, for render, the source video"
     },
     "write": {
@@ -84,11 +70,7 @@
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "python3",
-        "ffmpeg",
-        "ffprobe"
-      ],
+      "scope": ["python3", "ffmpeg", "ffprobe"],
       "why": "render delegates to ffmpeg-skill (python3) which runs ffmpeg; doctor checks versions"
     },
     "spend": {
@@ -103,96 +85,49 @@
       "id": "contract",
       "summary": "Print the machine-readable native contract (JSON).",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "subtitle_skill.cli",
-          "contract",
-          "--json"
-        ]
+        "cli": ["python3", "-m", "subtitle_skill.cli", "contract", "--json"]
       },
       "effects": [],
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "doctor",
       "summary": "Report dependency / health status (ffmpeg-skill, ffmpeg).",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "subtitle_skill.cli",
-          "doctor"
-        ]
+        "cli": ["python3", "-m", "subtitle_skill.cli", "doctor"]
       },
-      "effects": [
-        "exec"
-      ],
-      "requires": [
-        "python3"
-      ]
+      "effects": ["exec"],
+      "requires": ["python3"]
     },
     {
       "id": "run.generate",
       "summary": "Validate a typed subtitle document and write an SRT/VTT file (no video I/O).",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "subtitle_skill.cli",
-          "run"
-        ]
+        "cli": ["python3", "-m", "subtitle_skill.cli", "run"]
       },
-      "effects": [
-        "read",
-        "write"
-      ],
+      "effects": ["read", "write"],
       "destructive": false,
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "run.render",
       "summary": "Burn in or mux a subtitle into a video by delegating to ffmpeg-skill `caption`.",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "subtitle_skill.cli",
-          "run"
-        ]
+        "cli": ["python3", "-m", "subtitle_skill.cli", "run"]
       },
-      "effects": [
-        "read",
-        "write",
-        "exec"
-      ],
+      "effects": ["read", "write", "exec"],
       "destructive": false,
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "install",
       "summary": "Place SKILL.md where Claude Code / Cursor / Codex discover skills.",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "subtitle_skill.cli",
-          "install"
-        ]
+        "cli": ["python3", "-m", "subtitle_skill.cli", "install"]
       },
-      "effects": [
-        "write"
-      ],
+      "effects": ["write"],
       "destructive": false,
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     }
   ],
   "tests": {

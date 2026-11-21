@@ -1,24 +1,19 @@
 {
- "name": "ts_speech_events_not_commands",
- "profile": "youtube",
- "fake": {
-  "silences": [
-   [
-    0.0,
-    3.0
-   ]
-  ],
-  "lufs": -11.0
- },
- "transcription": {
-  "mode": "ok",
-  "params": {
-   "language": "ja"
+  "name": "ts_speech_events_not_commands",
+  "profile": "youtube",
+  "fake": {
+    "silences": [[0.0, 3.0]],
+    "lufs": -11.0
+  },
+  "transcription": {
+    "mode": "ok",
+    "params": {
+      "language": "ja"
+    }
+  },
+  "expect": {
+    "speech_events": 2,
+    "speaker_null": true,
+    "no_speech_decisions": true
   }
- },
- "expect": {
-  "speech_events": 2,
-  "speaker_null": true,
-  "no_speech_decisions": true
- }
 }

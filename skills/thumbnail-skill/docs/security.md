@@ -30,18 +30,18 @@ appear or whether the surrounding object happens to be free-form.
 
 Vocabulary:
 
-| term | meaning |
-|---|---|
-| input | an asset's `path`; untrusted |
+| term         | meaning                                                                                                                                                                                        |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| input        | an asset's `path`; untrusted                                                                                                                                                                   |
 | allowed root | a directory `options.allowed_input_roots` declares as the only place inputs may come from; unset means "any readable regular file" (unrestricted mode, matching transcription-skill's default) |
-| workspace | the directory every write (`output.path`, the reuse cache, temp files) must resolve inside |
+| workspace    | the directory every write (`output.path`, the reuse cache, temp files) must resolve inside                                                                                                     |
 
 Rules, in order, for an input:
 
 1. The path is resolved to an absolute, symlink-followed path (`Path.resolve(strict=True)`).
    A path that doesn't exist is `INVALID_INPUT` (not `PATH_NOT_ALLOWED`: existence and authorisation
    are different facts).
-2. If `allowed_input_roots` is set, the *resolved* path must sit inside a *resolved* root by path
+2. If `allowed_input_roots` is set, the _resolved_ path must sit inside a _resolved_ root by path
    components (`Path.relative_to`) — never by string prefix, so `/w/media` never authorises
    `/w/media_evil`. A symlink whose target resolves outside the root fails the same check; there is
    no separate "symlink" code path to bypass.
@@ -55,14 +55,14 @@ Rules for a write (`output.path`, the reuse cache under
 2. The target is resolved with `os.path.realpath`, which follows every symlink in the chain
    component-by-component even when the final component doesn't exist yet, and must land inside the
    resolved workspace. This is deliberately not a "resolve the nearest existing ancestor" scheme: a
-   *dangling* symlink at the exact output path (its target does not exist yet) makes `Path.exists()`
+   _dangling_ symlink at the exact output path (its target does not exist yet) makes `Path.exists()`
    return False, so an existence-gated walk never notices the final component is a symlink at all —
    it approves the write, and the OS's own symlink-following `open()` then creates the real file at
    the symlink's target, outside the workspace. `os.path.realpath` resolves the dangling link
    textually before containment is ever checked, closing that path
    (`tests/test_security.py::test_output_dangling_symlink_escape_rejected` proves it, both that the
    fix rejects it and that the earlier scheme did not).
-3. Every path component under the workspace, in the *resolved* path, is checked by `check_filename`:
+3. Every path component under the workspace, in the _resolved_ path, is checked by `check_filename`:
    no NUL or control characters, no `<>:"|?*`, not `.`/`..`, not longer than 255 bytes, not a Windows
    reserved device name (`CON`, `PRN`, `COM1`.. `LPT9`), no trailing space or dot, and does not start
    with `-` (which could otherwise be parsed as a flag if this value ever reached a CLI — it never

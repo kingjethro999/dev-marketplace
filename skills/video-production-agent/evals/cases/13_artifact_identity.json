@@ -1,20 +1,15 @@
 {
- "name": "artifact_identity",
- "profile": "youtube",
- "fake": {
-  "silences": [
-   [
-    0.0,
-    3.0
-   ]
-  ],
-  "lufs": -11.0
- },
- "expect": {
-  "artifact": {
-   "count": 1,
-   "qa": "PASS",
-   "delivery_status": "READY"
+  "name": "artifact_identity",
+  "profile": "youtube",
+  "fake": {
+    "silences": [[0.0, 3.0]],
+    "lufs": -11.0
+  },
+  "expect": {
+    "artifact": {
+      "count": 1,
+      "qa": "PASS",
+      "delivery_status": "READY"
+    }
   }
- }
 }

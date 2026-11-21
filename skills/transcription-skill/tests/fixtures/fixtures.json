@@ -20,14 +20,27 @@
     "speech_onset": 1.0,
     "tail_silence": 0.5,
     "tts": "espeak-ng en-us",
-    "terms": ["dapagliflozin", "empagliflozin", "semaglutide", "tirzepatide", "pembrolizumab"],
+    "terms": [
+      "dapagliflozin",
+      "empagliflozin",
+      "semaglutide",
+      "tirzepatide",
+      "pembrolizumab"
+    ],
     "programme": "en_drugs_programme.txt",
-    "corrections": [{"from": "napagliflozin", "to": "dapagliflozin"}, {"from": "Akonkwo", "to": "Okonkwo"}]
+    "corrections": [
+      { "from": "napagliflozin", "to": "dapagliflozin" },
+      { "from": "Akonkwo", "to": "Okonkwo" }
+    ]
   },
   "lecture_short.mp4": {
     "parts": [
-      {"language": "ja", "reference": "ja_short.wav", "offset": 0.0},
-      {"language": "en", "reference": "en_short.wav", "offset_after_first_plus_gap": 1.0}
+      { "language": "ja", "reference": "ja_short.wav", "offset": 0.0 },
+      {
+        "language": "en",
+        "reference": "en_short.wav",
+        "offset_after_first_plus_gap": 1.0
+      }
     ],
     "video": "testsrc2 320x180 15 fps H.264",
     "note": "Japanese part, 1.0 s of silence, then the English part; audio is AAC 48 kbps mono 16 kHz"

@@ -1,6 +1,6 @@
 ---
 name: website-scroll
-description: "Record a top-to-bottom scroll of any web page as a short MP4, the way a reader scrolls it (a flick, a look, another flick) (plus a poster JPEG), with cookie banners, consent dialogs, newsletter popups and chat launchers out of the way, so the page shows as a clean scroll. Use when asked for a scroll video, a scrolling screen recording, a \"scroll of the site/page/landing\", a page walkthrough clip, a preview video of a URL, or a hover video for a link card; also for a tidy full-page still with the popups removed."
+description: 'Record a top-to-bottom scroll of any web page as a short MP4, the way a reader scrolls it (a flick, a look, another flick) (plus a poster JPEG), with cookie banners, consent dialogs, newsletter popups and chat launchers out of the way, so the page shows as a clean scroll. Use when asked for a scroll video, a scrolling screen recording, a "scroll of the site/page/landing", a page walkthrough clip, a preview video of a URL, or a hover video for a link card; also for a tidy full-page still with the popups removed.'
 ---
 
 # Website scroll
@@ -33,7 +33,7 @@ Writes `out/website-scroll/pricing.mp4` and `out/website-scroll/pricing.jpg`. Op
 | `--width`, `--height` | 1440, 900 | Viewport in CSS px; this is the video's aspect ratio. `--width 390 --height 844` for a phone. |
 | `--scale`             | 1         | Device pixels per CSS px. 2 for crisp text at the cost of time.                               |
 | `--fps`               | 30        | Frames per second.                                                                            |
-| `--page`              | 0.8       | How far each flick goes, as a share of the viewport height. Less for dense pages (0.6).      |
+| `--page`              | 0.8       | How far each flick goes, as a share of the viewport height. Less for dense pages (0.6).       |
 | `--pause`             | 0.7       | Seconds resting between flicks. Longer for text-heavy pages (1), shorter for galleries (0.4). |
 | `--hold`, `--tail`    | 1.2, 1.5  | Seconds resting at the top and at the bottom.                                                 |
 | `--max`               | 18        | Longest video in seconds; a long page scrolls faster to fit.                                  |

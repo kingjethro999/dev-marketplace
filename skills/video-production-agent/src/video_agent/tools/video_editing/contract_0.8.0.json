@@ -24,122 +24,87 @@
   "capabilities": [
     {
       "capability": "video.concat",
-      "operations": [
-        "CONCAT"
-      ],
+      "operations": ["CONCAT"],
       "tool": "ffmpeg-skill/join"
     },
     {
       "capability": "video.condense",
-      "operations": [
-        "CONDENSE"
-      ],
+      "operations": ["CONDENSE"],
       "tool": "ffmpeg-skill/cut"
     },
     {
       "capability": "video.crop",
-      "operations": [
-        "CROP"
-      ],
+      "operations": ["CROP"],
       "tool": "ffmpeg-skill/crop"
     },
     {
       "capability": "video.cut",
-      "operations": [
-        "CUT"
-      ],
+      "operations": ["CUT"],
       "tool": "ffmpeg-skill/cut"
     },
     {
       "capability": "video.fill",
-      "operations": [
-        "FILL"
-      ],
+      "operations": ["FILL"],
       "tool": "ffmpeg-skill/fit"
     },
     {
       "capability": "video.fit",
-      "operations": [
-        "FIT"
-      ],
+      "operations": ["FIT"],
       "tool": "ffmpeg-skill/fit"
     },
     {
       "capability": "video.freeze",
-      "operations": [
-        "FREEZE"
-      ],
+      "operations": ["FREEZE"],
       "tool": "ffmpeg-skill/freeze"
     },
     {
       "capability": "video.image_insert",
-      "operations": [
-        "IMAGE_INSERT"
-      ],
+      "operations": ["IMAGE_INSERT"],
       "tool": "ffmpeg-skill/insert"
     },
     {
       "capability": "video.overlay",
-      "operations": [
-        "OVERLAY"
-      ],
+      "operations": ["OVERLAY"],
       "tool": "ffmpeg-skill/overlay"
     },
     {
       "capability": "video.punch_in",
-      "operations": [
-        "PUNCH_IN"
-      ],
+      "operations": ["PUNCH_IN"],
       "tool": "ffmpeg-skill/crop"
     },
     {
       "capability": "video.reorder",
-      "operations": [
-        "CONCAT (input order)",
-        "CUT (keep order)"
-      ],
+      "operations": ["CONCAT (input order)", "CUT (keep order)"],
       "tool": "ffmpeg-skill/cut | ffmpeg-skill/join"
     },
     {
       "capability": "video.resize",
-      "operations": [
-        "RESIZE"
-      ],
+      "operations": ["RESIZE"],
       "tool": "ffmpeg-skill/fit"
     },
     {
       "capability": "video.reverse",
-      "operations": [
-        "REVERSE"
-      ],
+      "operations": ["REVERSE"],
       "tool": "ffmpeg-skill/reverse"
     },
     {
       "capability": "video.rotate",
-      "operations": [
-        "ROTATE"
-      ],
+      "operations": ["ROTATE"],
       "tool": "ffmpeg-skill/fit"
     },
     {
       "capability": "video.speed",
-      "operations": [
-        "SPEED"
-      ],
+      "operations": ["SPEED"],
       "tool": "ffmpeg-skill/fit"
     },
     {
       "capability": "video.transition",
-      "operations": [
-        "CONCAT (params.transition)"
-      ],
+      "operations": ["CONCAT (params.transition)"],
       "tool": "ffmpeg-skill/join"
     },
     {
       "capability": "video.trim",
-      "operations": [
-        "TRIM"
-      ],
+      "operations": ["TRIM"],
       "tool": "ffmpeg-skill/cut"
     }
   ],
@@ -187,9 +152,7 @@
         "filter:xfade",
         "filter:acrossfade"
       ],
-      "inputs": [
-        "inputs"
-      ],
+      "inputs": ["inputs"],
       "input_arity": "many",
       "parameters": {
         "transition": "{type: fade|dissolve|wipeleft|wiperight|wipeup|wipedown|slideleft|slideright|circleopen|circleclose|fadeblack|fadewhite|smoothleft|smoothright|radial, duration: time 0.01..10} (optional), or {type: stinger, stinger: video source id (a file with alpha), cut_point: time (the frame the clips switch at), cover: {start, end} (the window the graphic covers the whole frame; must contain cut_point)} (contract.stinger)",
@@ -239,9 +202,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "segments": "[{start, end, label}] non-overlapping spans of the input (e.g. approved proposals: retake, silence, static); label [a-z0-9][a-z0-9_+.-]{0,39}",
@@ -290,9 +251,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "x": "int px >= 0: left edge in the input frame as displayed",
@@ -341,9 +300,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "keep": "[{start, end}, ...] in output order",
@@ -389,9 +346,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "aspect": "W:H",
@@ -439,9 +394,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "aspect": "W:H",
@@ -489,9 +442,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "hold": "time 0.01..600 s: how long the frame is held",
@@ -532,14 +483,8 @@
       "operation_type": "IMAGE_INSERT",
       "capability": "video.image_insert",
       "description": "turn a still image (title card, end slate) into a silent video clip of a set duration that CONCAT and every other type can take",
-      "required_capabilities": [
-        "ffmpeg",
-        "ffprobe",
-        "encoder:libx264"
-      ],
-      "inputs": [
-        "input"
-      ],
+      "required_capabilities": ["ffmpeg", "ffprobe", "encoder:libx264"],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "duration": "time 0.01..600 s: the clip's length",
@@ -588,9 +533,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "image": "image source id (png / jpg); a video source or an operation is INVALID_INPUT overlay_video_layer: use motion-graphics-skill video_overlay",
@@ -642,9 +585,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "start": "time",
@@ -693,9 +634,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "width": "even int",
@@ -741,9 +680,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {},
       "media": {
@@ -787,9 +724,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "degrees": "90 | 180 | 270, clockwise (optional)",
@@ -835,9 +770,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "factor": "number or N/D in [1/4, 4], not 1",
@@ -884,9 +817,7 @@
         "encoder:libx264",
         "encoder:aac"
       ],
-      "inputs": [
-        "input"
-      ],
+      "inputs": ["input"],
       "input_arity": "one",
       "parameters": {
         "start": "time",
@@ -1223,16 +1154,8 @@
       ".mxf",
       ".ts"
     ],
-    "image_inputs": [
-      ".png",
-      ".jpg",
-      ".jpeg"
-    ],
-    "outputs": [
-      ".mp4",
-      ".mov",
-      ".mkv"
-    ]
+    "image_inputs": [".png", ".jpg", ".jpeg"],
+    "outputs": [".mp4", ".mov", ".mkv"]
   },
   "identity": {
     "operation_id": "op_ + sha256(type, canonical params, input identities)[:16]; input identity = sha256 of source bytes or upstream operation_id",
@@ -1323,12 +1246,8 @@
     "status": "completed | reused",
     "project": "...",
     "execution": {
-      "operations": [
-        "provenance records"
-      ],
-      "outputs": [
-        "path, sha256, timeline, observation"
-      ]
+      "operations": ["provenance records"],
+      "outputs": ["path, sha256, timeline, observation"]
     }
   },
   "provides": [
@@ -1503,9 +1422,7 @@
         "audio": "as input",
         "fps": "params.fps or as input"
       },
-      "refused_before_execution": [
-        "source without a video stream or duration"
-      ]
+      "refused_before_execution": ["source without a video stream or duration"]
     },
     "FIT": {
       "inputs": "one video",
@@ -1519,9 +1436,7 @@
         "audio": "as input",
         "fps": "params.fps or as input"
       },
-      "refused_before_execution": [
-        "source without a video stream or duration"
-      ]
+      "refused_before_execution": ["source without a video stream or duration"]
     },
     "FREEZE": {
       "inputs": "one video",
@@ -1616,9 +1531,7 @@
         "audio": "as input",
         "fps": "params.fps or as input"
       },
-      "refused_before_execution": [
-        "source without a video stream or duration"
-      ]
+      "refused_before_execution": ["source without a video stream or duration"]
     },
     "REVERSE": {
       "inputs": "one video (the engine buffers the whole input in memory: keep it short, TRIM first)",
@@ -1787,9 +1700,7 @@
         "type": "…",
         "tool_id": "…",
         "status": "AVAILABLE | MISSING",
-        "missing": [
-          "what is missing"
-        ]
+        "missing": ["what is missing"]
       }
     ],
     "supported_operations": "types whose status is AVAILABLE (never a guess)",
@@ -1912,17 +1823,7 @@
       "restart": "a phrase of 2+ words said again within 8 words and 4 s, with only hesitations between (or a 3+ word opening after at most 3 words)",
       "fragment": "a broken-off word (ends with -, —, ~) or a short false start the next word begins with",
       "filler": {
-        "en": [
-          "ah",
-          "er",
-          "erm",
-          "hmm",
-          "mm",
-          "uh",
-          "uhh",
-          "um",
-          "umm"
-        ],
+        "en": ["ah", "er", "erm", "hmm", "mm", "uh", "uhh", "um", "umm"],
         "ja": [
           "あの",
           "あのー",

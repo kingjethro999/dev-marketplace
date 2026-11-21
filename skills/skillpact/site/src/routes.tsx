@@ -13,8 +13,18 @@ const pages = (lang: Lang): RouteRecord[] => [
   { path: "schema", element: <Schema lang={lang} /> },
   { path: "check", element: <Check lang={lang} /> },
   { path: "badges", element: <Badges lang={lang} /> },
-  ...docSlugs.map((slug) => ({ path: slug, element: <Doc key={`${lang}-${slug}`} lang={lang} slug={slug} /> })),
+  ...docSlugs.map((slug) => ({
+    path: slug,
+    element: <Doc key={`${lang}-${slug}`} lang={lang} slug={slug} />,
+  })),
 ];
 export const routes: RouteRecord[] = [
-  { path: "/", element: <Outlet />, children: [...pages("en"), { path: "ja", element: <Outlet />, children: pages("ja") }] },
+  {
+    path: "/",
+    element: <Outlet />,
+    children: [
+      ...pages("en"),
+      { path: "ja", element: <Outlet />, children: pages("ja") },
+    ],
+  },
 ];

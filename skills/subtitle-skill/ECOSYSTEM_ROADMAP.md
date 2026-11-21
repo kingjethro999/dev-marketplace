@@ -11,13 +11,13 @@ v0.9.1, version single-sourced from `pyproject.toml` (step 1). `generate` (SRT /
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 字幕生成・検証 | done |  |
-| 字幕焼き込み | done |  |
-| 字幕翻訳 | done | `translate` operation; engine chosen: Argos Translate offline by default, OPUS-MT (CTranslate2) and local Ollama LLM optional, DeepL optional, caller translation memory ([ADR-004](docs/adr/ADR-004-translation-engine.md)) |
-| 動く字幕(字幕キュー由来) | done | added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O11): everything generated from subtitle cues, animated captions included, is this skill's; step 12. Effects timed to words in a transcript (`Karaoke`, `Emphasis`) are remotion-ffmpeg-skill's `語の時刻に合わせた字幕演出` |
-| ロケール別字幕整形 | done | ja/zh/ko locale profiles: East Asian Width counting, kinsoku observations, per-locale defaults ([ADR-001](docs/adr/ADR-001-locale-profiles.md)) |
+| Owned job                | Status | Note                                                                                                                                                                                                                                                                                                                            |
+| ------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 字幕生成・検証           | done   |                                                                                                                                                                                                                                                                                                                                 |
+| 字幕焼き込み             | done   |                                                                                                                                                                                                                                                                                                                                 |
+| 字幕翻訳                 | done   | `translate` operation; engine chosen: Argos Translate offline by default, OPUS-MT (CTranslate2) and local Ollama LLM optional, DeepL optional, caller translation memory ([ADR-004](docs/adr/ADR-004-translation-engine.md))                                                                                                    |
+| 動く字幕(字幕キュー由来) | done   | added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O11): everything generated from subtitle cues, animated captions included, is this skill's; step 12. Effects timed to words in a transcript (`Karaoke`, `Emphasis`) are remotion-ffmpeg-skill's `語の時刻に合わせた字幕演出` |
+| ロケール別字幕整形       | done   | ja/zh/ko locale profiles: East Asian Width counting, kinsoku observations, per-locale defaults ([ADR-001](docs/adr/ADR-001-locale-profiles.md))                                                                                                                                                                                 |
 
 ## Wiring
 
@@ -66,4 +66,5 @@ Agent wires generate, render burn and render's mux mode (video-production-agent#
 Under the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O11): animated captions made from subtitle cues are this skill's (step 12); caption effects timed to words in a transcript (remotion-ffmpeg-skill `Captioned --words`, `Karaoke`, `Emphasis`) are remotion-ffmpeg-skill's; single timed text elements (sticker, hook) are motion-graphics-skill's. Transcription exports SRT/VTT as views. dubbing-skill takes translated cues from `translate` (its step 11).
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

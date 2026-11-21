@@ -34,7 +34,7 @@ Do **not** use subtitle-skill to:
 - summarize or rewrite subtitle text (`translate` hands each cue to the
   chosen engine and reports what does not fit; it never shortens or
   rewords a translation),
-- decide *whether* a render "looks good" — subtitle-skill's render
+- decide _whether_ a render "looks good" — subtitle-skill's render
   verification is limited to what a machine can check (file exists, has
   a video stream, duration preserved); it does not run or interpret
   ffmpeg-skill's `look` (visual contact sheet). If you need to confirm
@@ -56,8 +56,14 @@ way you wanted — that is a visual judgement outside this skill's scope.
   "id": "doc-1",
   "language": "en",
   "cues": [
-    {"id": "c1", "start": 0.0, "end": 2.5, "text": "Hello and welcome"},
-    {"id": "c2", "start": 2.5, "end": 5.0, "text": "to the show.", "speaker": "Host"}
+    { "id": "c1", "start": 0.0, "end": 2.5, "text": "Hello and welcome" },
+    {
+      "id": "c2",
+      "start": 2.5,
+      "end": 5.0,
+      "text": "to the show.",
+      "speaker": "Host"
+    }
   ]
 }
 ```
@@ -89,12 +95,12 @@ way you wanted — that is a visual judgement outside this skill's scope.
 
 ### `SubtitleStyle` → caption.py (render, `mode: "burn"` only)
 
-| field | caption.py flag | conversion |
-|---|---|---|
-| `color` | `--color` | forwarded verbatim (caption.py validates the hex format itself) |
-| `bold` | `--bold` | `True` → flag present; `False`/`None` → omitted |
-| `size` (0..100 percent) | `--size` | `round(size / 100 × 288)` — caption.py's `--size` is in ASS points relative to its own 288-line nominal baseline |
-| `align` / `position` / `line` / `italic` | *(none)* | no clean caption.py equivalent — left unmapped, not guessed at; see README "SubtitleStyle → caption.py" for the full per-field reasoning |
+| field                                    | caption.py flag | conversion                                                                                                                               |
+| ---------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `color`                                  | `--color`       | forwarded verbatim (caption.py validates the hex format itself)                                                                          |
+| `bold`                                   | `--bold`        | `True` → flag present; `False`/`None` → omitted                                                                                          |
+| `size` (0..100 percent)                  | `--size`        | `round(size / 100 × 288)` — caption.py's `--size` is in ASS points relative to its own 288-line nominal baseline                         |
+| `align` / `position` / `line` / `italic` | _(none)_        | no clean caption.py equivalent — left unmapped, not guessed at; see README "SubtitleStyle → caption.py" for the full per-field reasoning |
 
 ## Fatal vs. warning: read `observation`, don't assume success means "clean"
 
@@ -102,15 +108,15 @@ A successful response can still carry a non-empty `observation` array —
 these are warnings, not failures, and subtitle-skill never auto-fixes
 them (no cue is deleted, merged, or shifted):
 
-| code | meaning |
-|---|---|
-| `CUE_OVERLAP` | two cues' time ranges overlap |
-| `TOO_MANY_LINES` / `LINE_TOO_LONG` | exceeds `constraints.max_lines` / `max_chars_per_line` |
-| `CUE_TOO_SHORT` / `CUE_TOO_LONG` | outside `constraints.min_duration` / `max_duration` |
-| `READING_SPEED_TOO_HIGH` | more text than `constraints.reading_speed_cps` allows for the cue's duration |
+| code                                      | meaning                                                                                                                                                                           |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CUE_OVERLAP`                             | two cues' time ranges overlap                                                                                                                                                     |
+| `TOO_MANY_LINES` / `LINE_TOO_LONG`        | exceeds `constraints.max_lines` / `max_chars_per_line`                                                                                                                            |
+| `CUE_TOO_SHORT` / `CUE_TOO_LONG`          | outside `constraints.min_duration` / `max_duration`                                                                                                                               |
+| `READING_SPEED_TOO_HIGH`                  | more text than `constraints.reading_speed_cps` allows for the cue's duration                                                                                                      |
 | `KINSOKU_LINE_START` / `KINSOKU_LINE_END` | (ja/zh/ko only) a line break leaves a character that may not begin a line (e.g. `。、」）ー ゃ っ`) at a line start, or one that may not end a line (e.g. `「『（`) at a line end |
-| `RUBY_AS_TEXT` | (`generate` to `srt` / `ebu-tt-d`) the format has no ruby, so the cue's reading is written in brackets after its base (`字幕（じまく）`) |
-| `CAPTION_OVERLAP_UNAVOIDABLE` | (`render` with `placement` only) a face or region overlaps both the bottom and the top caption box while the cue is on screen; the cue stays at the bottom |
+| `RUBY_AS_TEXT`                            | (`generate` to `srt` / `ebu-tt-d`) the format has no ruby, so the cue's reading is written in brackets after its base (`字幕（じまく）`)                                          |
+| `CAPTION_OVERLAP_UNAVOIDABLE`             | (`render` with `placement` only) a face or region overlaps both the bottom and the top caption box while the cue is on screen; the cue stays at the bottom                        |
 
 **Locale profiles (ja / zh / ko).** When `subtitle.language`'s primary
 subtag is `ja`, `zh` or `ko` (`ja-JP`, `zh-Hans`, `ko-KR`, ...), line length
@@ -250,7 +256,7 @@ can omit `constraints` entirely.
   `output_path`, optional `engine`, `glossary`, `translation_memory`,
   `constraints`. Cue ids and start/end times are copied; each cue is one
   segment; the text is re-broken for the target language and validated
-  with the target's limits (`constraints` are the *target's*). Read the
+  with the target's limits (`constraints` are the _target's_). Read the
   response's `subtitle` (the translated document) to feed `mux` or
   `render`.
   - `engine: "argos"` (default) is offline and needs `argostranslate` plus

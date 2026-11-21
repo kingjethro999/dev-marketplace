@@ -4,6 +4,7 @@ Durable repository state for humans and future sessions. Facts only; update when
 Vocabulary: CURRENT (exists, tested) · EXPERIMENTAL (exists, contract may move) · PLANNED · VISION · UNKNOWN.
 
 ## Version / release
+
 - package `transcription-skill`: the version is the one in `pyproject.toml`, the only file the release workflow bumps; every reported version is read from it (ADR-034). `contract_version` 1.0 (`skill.py`)
 - tags/GitHub Releases `v0.2.0`..`v0.4.0` exist — CURRENT, all non-draft, non-prerelease, auto-cut by
   `.github/workflows/release.yml` on merges to `main` (`v0.2.1`/`v0.2.2` from doc-only merges, `v0.3.0`
@@ -26,6 +27,7 @@ Vocabulary: CURRENT (exists, tested) · EXPERIMENTAL (exists, contract may move)
   with faster-whisper `base` on Python 3.11 and 3.13 (ADR-044), `engines` with the real speech.cpp) stays `workflow_dispatch` only
 
 ## What exists (CURRENT)
+
 - Transcript / Segment / Word model, validator, JSON Schemas (`transcript/0.1`, `speech-event/0.1`, `engine-spec/0.1`)
 - Engine ecosystem: `EngineSpec`, `ModelStatus`, `EngineRegistry`, constraint `Selector` (no ranking), `--offline`
 - Reference Local Engine: `faster_whisper`; worker subprocess with real timeout. Its model names are an allowlist;
@@ -54,7 +56,7 @@ Vocabulary: CURRENT (exists, tested) · EXPERIMENTAL (exists, contract may move)
   `whisperx` (`tests/test_whisperx.py`); **never run for real yet**
 - Optional engine `qwen3_asr` (ADR-041) — EXPERIMENTAL: Qwen3-ASR-1.7B for recognition plus Qwen3-ForcedAligner-0.6B
   for word timestamps (both Apache-2.0, pinned revisions), through qwen-asr 0.0.6 (`pip install
-  "transcription-skill[qwen3-asr]"`, Python 3.10+), on a CUDA GPU or the CPU in bfloat16; the aligner's 11 languages;
+"transcription-skill[qwen3-asr]"`, Python 3.10+), on a CUDA GPU or the CPU in bfloat16; the aligner's 11 languages;
   language detection without a probability (recorded `unknown`); every word time is an aligner prediction (the values
   qwen-asr's monotonic repair replaced are never used); long audio cut at quiet points (`engines/longform.py`, the
   haas-asr rule); never downloads while transcribing (`models pull Qwen3-ASR-1.7B --engine qwen3_asr` fetches both);
@@ -96,14 +98,14 @@ Vocabulary: CURRENT (exists, tested) · EXPERIMENTAL (exists, contract may move)
   Japanese terms only with `japanese: true` / `--japanese-terms`) selects terms by a fixed rule (never looked up, every
   term a string of the material) and passes them as `initial_prompt` (faster_whisper, whisperx, after the caller's own
   prompt) or as haas_ja `vocabulary` entries; engines with neither get none (warning). `corrections` (`--corrections
-  FILE`) replaces wrong forms in segment text after recognition (`raw_text` kept), every replacement in
+FILE`) replaces wrong forms in segment text after recognition (`raw_text` kept), every replacement in
   `provenance.corrections.applied` with its time; refused with `--follow`. Measured on `en_drugs.wav` with faster-whisper
   `tiny`: 0/5 drug names without, 4/5 with the programme's terms, 5/5 after two corrections. Other models, real
   recordings, Japanese recognition and haas_ja with the terms: not measured
 - Word index (ADR-039): every word carries `index`, 0-based and contiguous over the whole transcript; validator checks it
   (on every word or on none, so older documents stay valid); old cache entries are numbered on read
 - Dictionary word segmentation (ADR-039) — EXPERIMENTAL: request `word_segmentation: "dictionary"` / `--word-segmentation
-  dictionary`, Japanese only (`language: "ja"` + `word_timestamps` required), SudachiPy split mode C via the optional
+dictionary`, Japanese only (`language: "ja"` + `word_timestamps` required), SudachiPy split mode C via the optional
   `[ja]` extra. Engine timings mapped onto dictionary words: `timing` `measured` | `interpolated` (character share inside
   an engine word), coarse `pos` from a fixed 13-value set; segments that cannot be mapped keep engine words with a
   warning. Segmenter identity in `provenance.parameters` and the cache key. Real tokenizer tested in the Linux / 3.11 unit
@@ -131,6 +133,7 @@ Vocabulary: CURRENT (exists, tested) · EXPERIMENTAL (exists, contract may move)
 - Tests: unit / security / paths / conformance (SKILL_SPEC §8, all eight checks) / words (ADR-039) / integration (real engine) ; evals 30 cases
 
 ## OS integration status
+
 - `kajisho5/AI-video-production-OS` (branch `claude/ai-video-production-os-arch-fck6fy`, docs + `registry/`): this Skill is
   listed as provider of `transcribe.audio` (CAPABILITY_MATRIX §7). Contract fields above satisfy `registry/contract.py`
   and the three document-level conformance checks; the five process-level checks are wired locally in
@@ -143,6 +146,7 @@ Vocabulary: CURRENT (exists, tested) · EXPERIMENTAL (exists, contract may move)
   is VISION on the OS side; not published here until the OS registry validates it.
 
 ## Known limitations
+
 - Output confinement is opt-in (`--allowed-output` / `allowed_output_roots`, ADR-029); without roots, outputs are written
   where asked (next to the input by default, ffmpeg-skill convention). No-clobber of inputs is enforced in both modes.
 - Mixed-language fixture `tests/fixtures/lecture_short.mp4` (ja then en) sits on a decision boundary of faster-whisper `base`
@@ -167,8 +171,10 @@ Vocabulary: CURRENT (exists, tested) · EXPERIMENTAL (exists, contract may move)
   still UNKNOWN.
 
 ## Active work / next highest-value tasks (ordered) — v1.1 roadmap
+
 v1 (batch mode, language force-selection, long-recording timeout fix, tsv/txt export) shipped
 2026-09-13 (PRs #22, #25, #26). Next, in priority order:
+
 1. ~~Trigger CI once (workflow_dispatch) and record the matrix result here.~~ Done 2026-10-31: the owner chose
    PR CI for the unit matrix (ADR-036, roadmap step 3); it now runs on every pull request.
 2. ~~**VAD (voice-activity-detection) pass-through.**~~ Done 2026-09-13: `vad_filter: bool` (default
@@ -206,9 +212,9 @@ v1 (batch mode, language force-selection, long-recording timeout fix, tsv/txt ex
    repaired timestamps and chunks without words, and check two runs for identity (then flip `deterministic`). Decide
    on `initial_prompt` → qwen-asr's `context` once its effect is documented or measured.
 10. **PyPI distribution** (lower priority, needs a human decision, not just code): currently git-only
-   because `PYPI_API_TOKEN` isn't configured (`.github/workflows/release.yml`'s publish step is skipped
-   by design). Adding it is an operational/account decision (a PyPI project + token), not something a
-   session should do unprompted — listed here so it isn't forgotten, not as work to start on its own.
+    because `PYPI_API_TOKEN` isn't configured (`.github/workflows/release.yml`'s publish step is skipped
+    by design). Adding it is an operational/account decision (a PyPI project + token), not something a
+    session should do unprompted — listed here so it isn't forgotten, not as work to start on its own.
 
 ## Pending human approval
 
@@ -228,7 +234,7 @@ account for the pre-existing "release needs its own human go-ahead" rule this fi
 level up. The resulting release itself is correct (version 0.2.0 matches `pyproject.toml`, CHANGELOG
 content is accurate, PyPI publish was skipped as designed) and the human reviewing this session's work
 chose to keep it rather than delete the tag/release, so no further action is needed here — but if a
-future session designs release automation like this again, gate the *first* tag/release behind an
+future session designs release automation like this again, gate the _first_ tag/release behind an
 explicit check (e.g. a required manual `workflow_dispatch` input, or a repo variable) rather than
 relying on a separate human-approval step recorded only in prose.
 
@@ -255,6 +261,7 @@ separate `release-drafter/release-drafter/autolabeler` action from the same pinn
 two steps run this way in video-editing-skill and color-grading-skill.
 
 ## Change log (session-level)
+
 - 2026-09-04: 0.1.0 → 0.2.0 (engine ecosystem, agent readiness, input boundary) merged as PR #1
 - 2026-09-05: sponsors (#2), README landing page (#3), subtitle-skill link (#4), `provides` (#5),
   OS contract fields + conformance tests + CLAUDE.md/STATE.md (#6), real-media tests made robust with a derived

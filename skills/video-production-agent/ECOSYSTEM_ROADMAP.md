@@ -11,11 +11,11 @@ Python orchestrator (`video-agent`). 23 adapters (ffmpeg-skill, video-editing, a
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 制作計画 | done | plan / revise / approve / render |
-| スキルの呼び分け | partial | every ecosystem job has a SkillSpec, so a handoff names its package (ADR-057); 15 of them have no adapter yet (step 9; ingest has one, ADR-066; voice-enhance, ADR-073; dubbing's DUB, ADR-085); imagemagick-skill prepares overlay images (ADR-077) while `still_image_edit` stays a handoff |
-| 制作記録(ProductionReceipt) | done | ADR-040 |
+| Owned job                        | Status  | Note                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 制作計画                         | done    | plan / revise / approve / render                                                                                                                                                                                                                                                                                           |
+| スキルの呼び分け                 | partial | every ecosystem job has a SkillSpec, so a handoff names its package (ADR-057); 15 of them have no adapter yet (step 9; ingest has one, ADR-066; voice-enhance, ADR-073; dubbing's DUB, ADR-085); imagemagick-skill prepares overlay images (ADR-077) while `still_image_edit` stays a handoff                              |
+| 制作記録(ProductionReceipt)      | done    | ADR-040                                                                                                                                                                                                                                                                                                                    |
 | 言い直し・重複の候補の提示と承認 | partial | candidates are computed by video-editing-skill `propose` (its `言い直し・重複の候補計算`); the agent presents them and records the approval (step 35). Renamed from `言い直し・重複の候補提示` by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md) |
 
 ## Wiring
@@ -201,4 +201,5 @@ Uses 17 of ffmpeg-skill's 42 tools directly (3.x, contract_version 2.0 read like
 URL download belongs to ingest-skill since 2026-10-30 (owner decision, URL素材取得), and is handed over: `agent/ingest.py` runs `ingest fetch <url> --dest <workspace>/downloads --json` (ingest-skill #9, its ADR-005) instead of yt-dlp, records ingest-skill's redacted fetch record, reports yt-dlp from `ingest doctor`, and prints an ADR-051 handoff naming ingest-skill (`[fetch]` extra) when it is missing (ADR-059, [#77](https://github.com/kajisho5/video-production-agent/pull/77)). `VIDEO_AGENT_YTDLP` is gone.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

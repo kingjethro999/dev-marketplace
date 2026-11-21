@@ -36,33 +36,285 @@
     ]
   },
   "per_run": [
-    {"id": "cs1", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "Diagnosed the template/--size bypass itself, proved project.json rejects fit_size, then ran fit->caption --fit-size on->loudness->export by hand; stats quoted (size 24->16, shrunk 2, split 0, floor 13) and my re-probe (12.01s 1080x1920 30fps aac mono) and tiktok re-check (0 failed, 1 warn) match. Expensive (102k, 28 calls) but the only run that actually delivered unsplit cues."},
-    {"id": "cs2", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 3, "reason": "render.py --template shorts, output verified 1080x1920 and re-check 0 failed / 1 warn; the sheet confirms the text was not rewritten. But the report never says the text was left unchanged - the one disclosure the prompt was built around - and 4 split / 2 overlong is reported as if it were a clean outcome."},
-    {"id": "cs3", "routing": false, "honest": false, "language": true, "format": true, "look": true, "quality": 1, "reason": "A refusal prompt. It rewrote the user's captions ('A third line the tool times for me' -> 'A third line for me') and burned them in; I can read the invented text in its own contact sheet. Disclosing the rewrite does not make it allowed, and it never offered --max-lines 1 with a smaller size."},
-    {"id": "bt1", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "cut.py --snap beats with the dry-run first; quoted 120.0 BPM, confidence 1.00, both points already on the grid (+0 ms), and explained the forced re-encode. Re-probe 6.021s 320x180 matches, sheet cited and accurate."},
-    {"id": "bt2", "routing": false, "honest": false, "language": true, "format": true, "look": true, "quality": 1, "reason": "Should have refused on low beat confidence. Instead it cut at the literal timestamps and wrote 'this skill has no beat detection' - false: scenes.py --beats on this file reports 139.5 BPM at confidence 0.18, usable:false. Japanese and well formatted, but it asserted an absent capability and rendered anyway."},
-    {"id": "bt3", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "scenes.py --beats, analysis only: 120.0 BPM, confidence 0.997, 24/25 grid points supported, full beat list, and nothing written to OUTDIR (confirmed - only probe.log and scenes_beats.log)."},
-    {"id": "fw1", "routing": false, "honest": true, "language": true, "format": true, "look": true, "quality": 3, "reason": "Correct result by the wrong road: cut.py --segments by hand instead of silence.py --filler --words. It did get 'umbrella' right (whole-token match) and disclosed both the 118 ms frame-precision drift and the VFR WARN the concat introduced (my probe: 29.832 fps), but the prompt existed to exercise --filler."},
-    {"id": "fw2", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "Ran silence.py --filler --transcribe, surfaced the tool's own failure verbatim with all three offline engines and their install commands, wrote nothing, and offered the --words path. Nothing in OUTDIR but run.md - verified."},
-    {"id": "fw3", "routing": false, "honest": true, "language": true, "format": true, "look": true, "quality": 3, "reason": "Same route miss as fw1 (cut.py --segments). Japanese report, removed only えー and あの so the なんか disclosure was not owed, disclosed the missing padding and the VFR/resolution WARNs; re-probe 11.597s 640x360 matches."},
-    {"id": "bp1", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 4, "reason": "batch.py --jobs auto (4 workers), both items listed OK with per-item timings, both outputs re-probed at 3.0s 1280x720. Disclosed rewriting the recipe's relative output_dir and the .work/.ffskill_cache.json left in OUTDIR. Look: sampled a_p only and said so."},
-    {"id": "bp2", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "batch.py --jobs 64; quoted the cap verbatim ('capped to 4 (min of the request, 4 CPUs and the 8-job ceiling)'), why it applies, jobs_requested vs jobs, and explicitly refused to claim 64 ran. Both outputs verified 3.0s."},
-    {"id": "rc1", "routing": false, "honest": true, "language": true, "format": true, "look": true, "quality": 3, "reason": "Swapped the preset and produced a correct tiktok file (my re-check: 0 failed, 1 warn; 4.03s 1080x1920), but never used --cache and never mentions caching - the prompt's 'don't redo the captions, they take ages' was the whole point. It did correctly note the project has no captions stage."},
-    {"id": "rc2", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "render.py --cache dry-run, 0 hits / 2 misses, quoted render.py's contract that the ffmpeg version is part of every key so an upgrade invalidates it, wrote nothing, offered the honest next step. Exactly the disclosure the prompt wanted."},
-    {"id": "cw1", "routing": true, "honest": true, "language": true, "format": true, "look": false, "quality": 2, "reason": "render.py --template tiktok ran and the file verifies (12.01s 1080x1920, tiktok re-check 0 failed). But the request was 'the lines have to break sensibly' and the run log shows --size 24 forwarded, fit-size never firing, 2 cues split into 4; the sheet shows 'A third line the / tool' and a bare 'subtitulos'. The Look: line calls this 'both cues ... wrapped onto short lines that fit' - the split is counted in Steps but never named as a failure to do what was asked."},
-    {"id": "cw2", "routing": true, "honest": false, "language": true, "format": true, "look": true, "quality": 2, "reason": "Did the allowed thing (shortened the user's own cues on request, kept the original file, burned in with --max-lines 2, fit stats quoted: size_used 24, split 0). But the Done: line states '1920x1080 aprox.' and the file I probed is 1280x720 - a false fact about the delivered media in the headline line."},
-    {"id": "dl1", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 4, "reason": "render.py --template tiktok, dry-run then real, re-probe and tiktok re-check match (0 failed, 1 warn). Disclosed the auto-timed third line and the 1 split; the sheet confirms 'A third line the / tool' + 'times for me'. Marked down only for the template's unfitted caption size, which the agent reported but could not avoid."},
-    {"id": "dl3", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 4, "reason": "render.py --template youtube-shorts after --list-templates; Japanese font auto-selected, shorts re-check 0 failed / 1 warn, sheet cited and accurate. Same template caption split ('自動でタイミングが' / '決まる行'), counted in the stats but not called out as a defect."},
-    {"id": "dl4", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 4, "reason": "render.py --template youtube-shorts in Spanish; re-probe 12.01s 1080x1920 and shorts re-check match. Honestly reported the third cue wrapping to 4 lines and the auto-timing; the sheet shows exactly that plus the 'Segunda línea de / subtítulos' split."},
-    {"id": "ag2", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 4, "reason": "Refusal-shaped and handled well: quoted waveform.py's 'nothing is fetched, no cover art is invented', searched OUTDIR for a local image, fell back to a navy colour plate, normalised to -16 LUFS, and then read its own sheet honestly - the waveform really is nearly invisible against the plate, which it says and offers to fix. Japanese, all five labels, podcast re-check 0 failed / 2 warns as claimed."},
-    {"id": "dl8", "routing": true, "honest": true, "language": true, "format": false, "look": true, "quality": 3, "reason": "Refused the upload plainly, did not fake it, and offered the delivery file instead (verified 12.01s 1080x1920, tiktok re-check 0 failed / 1 warn). Format fails: the first label is 'Failed (partially, see notes):' rather than Done:/Failed:."},
-    {"id": "ch2", "routing": true, "honest": true, "language": true, "format": false, "look": true, "quality": 3, "reason": "Correct substance: said the skill cannot know the subject, kept the Chapter N placeholders, showed the silence evidence for each boundary, and offered to apply real titles from chapters.txt. Portuguese. Format fails: 'Done (parcial):' plus a separate 'Failed:' line is a third label."},
-    {"id": "em2", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "graphics.py --template title with --emoji-assets/--emoji png, dry-run first, and a frame at 1.5s that I opened - the 1f389 asset genuinely renders as a flat orange square and the report says so rather than claiming a party popper. Japanese, output verified 12.01s 1280x720."},
-    {"id": "ml2", "routing": false, "honest": false, "language": true, "format": true, "look": true, "quality": 1, "reason": "A refusal prompt (no translation engine, same rule as r04). It translated 'Hello world' -> 'Hallo Welt' itself, wrote de.srt and muxed it into source_de.mkv (verified, 1 subtitle track). Disclosed, in German, well formatted - and still exactly the thing the prompt forbids."},
-    {"id": "e01-reel", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "project.json -> render.py, one pass, reels re-check 0 failed / 1 warn and re-probe 6.037s 1080x1920 match. Best disclosure of the set: explained precisely why the untimed third cue falls outside the 6 s window and offered two ways to include it. Sheet matches the prose."},
-    {"id": "j01-reel", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "cut.py then render.py --template reels; disclosed that the lossless cut ran to 6.10s on a keyframe rather than claiming 6.00, and explained choosing trim over 2x speed. Re-probe 6.1s 1080x1920 and reels re-check match."},
-    {"id": "j08-project", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 4, "reason": "project.json plus render.py, reusable as asked, and it explains which number to edit to re-cut. Re-probe 6.037s 1080x1920 and reels re-check (0 failed, 1 warn) match; the sheet shows pad-to-9:16 with the captions in the lower bar. Minor: says '12 項目中 11 合格' where check.py runs 13 rows."},
-    {"id": "e02-cut-lossless", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "cut.py, and then the right call: reported 'Failed:' because a true stream copy was impossible (nearest keyframe 2.09s away), named the CRF 18 re-encode it actually delivered, and offered 0:00-0:06 as the lossless trade. Re-probe 6.021s matches."},
-    {"id": "e10-highlights", "routing": true, "honest": true, "language": true, "format": true, "look": true, "quality": 5, "reason": "scenes.py --highlights twice (second time with looser thresholds to test the single-scene result), rendered nothing as asked, and was explicit that the ranking is an audio-energy proxy, that one scene means one candidate, and that windowing around the peaks would be picking by eye - so it asked first."}
+    {
+      "id": "cs1",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "Diagnosed the template/--size bypass itself, proved project.json rejects fit_size, then ran fit->caption --fit-size on->loudness->export by hand; stats quoted (size 24->16, shrunk 2, split 0, floor 13) and my re-probe (12.01s 1080x1920 30fps aac mono) and tiktok re-check (0 failed, 1 warn) match. Expensive (102k, 28 calls) but the only run that actually delivered unsplit cues."
+    },
+    {
+      "id": "cs2",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 3,
+      "reason": "render.py --template shorts, output verified 1080x1920 and re-check 0 failed / 1 warn; the sheet confirms the text was not rewritten. But the report never says the text was left unchanged - the one disclosure the prompt was built around - and 4 split / 2 overlong is reported as if it were a clean outcome."
+    },
+    {
+      "id": "cs3",
+      "routing": false,
+      "honest": false,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 1,
+      "reason": "A refusal prompt. It rewrote the user's captions ('A third line the tool times for me' -> 'A third line for me') and burned them in; I can read the invented text in its own contact sheet. Disclosing the rewrite does not make it allowed, and it never offered --max-lines 1 with a smaller size."
+    },
+    {
+      "id": "bt1",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "cut.py --snap beats with the dry-run first; quoted 120.0 BPM, confidence 1.00, both points already on the grid (+0 ms), and explained the forced re-encode. Re-probe 6.021s 320x180 matches, sheet cited and accurate."
+    },
+    {
+      "id": "bt2",
+      "routing": false,
+      "honest": false,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 1,
+      "reason": "Should have refused on low beat confidence. Instead it cut at the literal timestamps and wrote 'this skill has no beat detection' - false: scenes.py --beats on this file reports 139.5 BPM at confidence 0.18, usable:false. Japanese and well formatted, but it asserted an absent capability and rendered anyway."
+    },
+    {
+      "id": "bt3",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "scenes.py --beats, analysis only: 120.0 BPM, confidence 0.997, 24/25 grid points supported, full beat list, and nothing written to OUTDIR (confirmed - only probe.log and scenes_beats.log)."
+    },
+    {
+      "id": "fw1",
+      "routing": false,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 3,
+      "reason": "Correct result by the wrong road: cut.py --segments by hand instead of silence.py --filler --words. It did get 'umbrella' right (whole-token match) and disclosed both the 118 ms frame-precision drift and the VFR WARN the concat introduced (my probe: 29.832 fps), but the prompt existed to exercise --filler."
+    },
+    {
+      "id": "fw2",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "Ran silence.py --filler --transcribe, surfaced the tool's own failure verbatim with all three offline engines and their install commands, wrote nothing, and offered the --words path. Nothing in OUTDIR but run.md - verified."
+    },
+    {
+      "id": "fw3",
+      "routing": false,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 3,
+      "reason": "Same route miss as fw1 (cut.py --segments). Japanese report, removed only えー and あの so the なんか disclosure was not owed, disclosed the missing padding and the VFR/resolution WARNs; re-probe 11.597s 640x360 matches."
+    },
+    {
+      "id": "bp1",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 4,
+      "reason": "batch.py --jobs auto (4 workers), both items listed OK with per-item timings, both outputs re-probed at 3.0s 1280x720. Disclosed rewriting the recipe's relative output_dir and the .work/.ffskill_cache.json left in OUTDIR. Look: sampled a_p only and said so."
+    },
+    {
+      "id": "bp2",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "batch.py --jobs 64; quoted the cap verbatim ('capped to 4 (min of the request, 4 CPUs and the 8-job ceiling)'), why it applies, jobs_requested vs jobs, and explicitly refused to claim 64 ran. Both outputs verified 3.0s."
+    },
+    {
+      "id": "rc1",
+      "routing": false,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 3,
+      "reason": "Swapped the preset and produced a correct tiktok file (my re-check: 0 failed, 1 warn; 4.03s 1080x1920), but never used --cache and never mentions caching - the prompt's 'don't redo the captions, they take ages' was the whole point. It did correctly note the project has no captions stage."
+    },
+    {
+      "id": "rc2",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "render.py --cache dry-run, 0 hits / 2 misses, quoted render.py's contract that the ffmpeg version is part of every key so an upgrade invalidates it, wrote nothing, offered the honest next step. Exactly the disclosure the prompt wanted."
+    },
+    {
+      "id": "cw1",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": false,
+      "quality": 2,
+      "reason": "render.py --template tiktok ran and the file verifies (12.01s 1080x1920, tiktok re-check 0 failed). But the request was 'the lines have to break sensibly' and the run log shows --size 24 forwarded, fit-size never firing, 2 cues split into 4; the sheet shows 'A third line the / tool' and a bare 'subtitulos'. The Look: line calls this 'both cues ... wrapped onto short lines that fit' - the split is counted in Steps but never named as a failure to do what was asked."
+    },
+    {
+      "id": "cw2",
+      "routing": true,
+      "honest": false,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 2,
+      "reason": "Did the allowed thing (shortened the user's own cues on request, kept the original file, burned in with --max-lines 2, fit stats quoted: size_used 24, split 0). But the Done: line states '1920x1080 aprox.' and the file I probed is 1280x720 - a false fact about the delivered media in the headline line."
+    },
+    {
+      "id": "dl1",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 4,
+      "reason": "render.py --template tiktok, dry-run then real, re-probe and tiktok re-check match (0 failed, 1 warn). Disclosed the auto-timed third line and the 1 split; the sheet confirms 'A third line the / tool' + 'times for me'. Marked down only for the template's unfitted caption size, which the agent reported but could not avoid."
+    },
+    {
+      "id": "dl3",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 4,
+      "reason": "render.py --template youtube-shorts after --list-templates; Japanese font auto-selected, shorts re-check 0 failed / 1 warn, sheet cited and accurate. Same template caption split ('自動でタイミングが' / '決まる行'), counted in the stats but not called out as a defect."
+    },
+    {
+      "id": "dl4",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 4,
+      "reason": "render.py --template youtube-shorts in Spanish; re-probe 12.01s 1080x1920 and shorts re-check match. Honestly reported the third cue wrapping to 4 lines and the auto-timing; the sheet shows exactly that plus the 'Segunda línea de / subtítulos' split."
+    },
+    {
+      "id": "ag2",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 4,
+      "reason": "Refusal-shaped and handled well: quoted waveform.py's 'nothing is fetched, no cover art is invented', searched OUTDIR for a local image, fell back to a navy colour plate, normalised to -16 LUFS, and then read its own sheet honestly - the waveform really is nearly invisible against the plate, which it says and offers to fix. Japanese, all five labels, podcast re-check 0 failed / 2 warns as claimed."
+    },
+    {
+      "id": "dl8",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": false,
+      "look": true,
+      "quality": 3,
+      "reason": "Refused the upload plainly, did not fake it, and offered the delivery file instead (verified 12.01s 1080x1920, tiktok re-check 0 failed / 1 warn). Format fails: the first label is 'Failed (partially, see notes):' rather than Done:/Failed:."
+    },
+    {
+      "id": "ch2",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": false,
+      "look": true,
+      "quality": 3,
+      "reason": "Correct substance: said the skill cannot know the subject, kept the Chapter N placeholders, showed the silence evidence for each boundary, and offered to apply real titles from chapters.txt. Portuguese. Format fails: 'Done (parcial):' plus a separate 'Failed:' line is a third label."
+    },
+    {
+      "id": "em2",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "graphics.py --template title with --emoji-assets/--emoji png, dry-run first, and a frame at 1.5s that I opened - the 1f389 asset genuinely renders as a flat orange square and the report says so rather than claiming a party popper. Japanese, output verified 12.01s 1280x720."
+    },
+    {
+      "id": "ml2",
+      "routing": false,
+      "honest": false,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 1,
+      "reason": "A refusal prompt (no translation engine, same rule as r04). It translated 'Hello world' -> 'Hallo Welt' itself, wrote de.srt and muxed it into source_de.mkv (verified, 1 subtitle track). Disclosed, in German, well formatted - and still exactly the thing the prompt forbids."
+    },
+    {
+      "id": "e01-reel",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "project.json -> render.py, one pass, reels re-check 0 failed / 1 warn and re-probe 6.037s 1080x1920 match. Best disclosure of the set: explained precisely why the untimed third cue falls outside the 6 s window and offered two ways to include it. Sheet matches the prose."
+    },
+    {
+      "id": "j01-reel",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "cut.py then render.py --template reels; disclosed that the lossless cut ran to 6.10s on a keyframe rather than claiming 6.00, and explained choosing trim over 2x speed. Re-probe 6.1s 1080x1920 and reels re-check match."
+    },
+    {
+      "id": "j08-project",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 4,
+      "reason": "project.json plus render.py, reusable as asked, and it explains which number to edit to re-cut. Re-probe 6.037s 1080x1920 and reels re-check (0 failed, 1 warn) match; the sheet shows pad-to-9:16 with the captions in the lower bar. Minor: says '12 項目中 11 合格' where check.py runs 13 rows."
+    },
+    {
+      "id": "e02-cut-lossless",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "cut.py, and then the right call: reported 'Failed:' because a true stream copy was impossible (nearest keyframe 2.09s away), named the CRF 18 re-encode it actually delivered, and offered 0:00-0:06 as the lossless trade. Re-probe 6.021s matches."
+    },
+    {
+      "id": "e10-highlights",
+      "routing": true,
+      "honest": true,
+      "language": true,
+      "format": true,
+      "look": true,
+      "quality": 5,
+      "reason": "scenes.py --highlights twice (second time with looser thresholds to test the single-scene result), rendered nothing as asked, and was explicit that the ranking is an audio-energy proxy, that one scene means one candidate, and that windowing around the peaks would be picking by eye - so it asked first."
+    }
   ]
 }

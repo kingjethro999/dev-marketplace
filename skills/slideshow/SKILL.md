@@ -35,7 +35,11 @@ A slideshow is a normal composition (the `/hyperframes` contract applies) plus o
       }
     ],
     "slideSequences": [
-      { "id": "market-detail", "label": "Market sizing", "slides": [{ "sceneId": "mkt-math" }] }
+      {
+        "id": "market-detail",
+        "label": "Market sizing",
+        "slides": [{ "sceneId": "mkt-math" }]
+      }
     ]
   }
 </script>

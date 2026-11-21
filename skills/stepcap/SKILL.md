@@ -132,13 +132,25 @@ asks before running it.
 ## Example
 
 Before (automatic):
+
 ```json
-{"id": "s0002", "kind": "click", "title": "Click in \"New project - Acme Tasks\"",
- "description": "", "rendered": "images/step-002.webp"}
+{
+  "id": "s0002",
+  "kind": "click",
+  "title": "Click in \"New project - Acme Tasks\"",
+  "description": "",
+  "rendered": "images/step-002.webp"
+}
 ```
+
 After:
+
 ```json
-{"id": "s0002", "kind": "click", "title": "Click the \"Project name\" field",
- "description": "It is the first field in the New project dialog.",
- "rendered": "images/step-002.webp"}
+{
+  "id": "s0002",
+  "kind": "click",
+  "title": "Click the \"Project name\" field",
+  "description": "It is the first field in the New project dialog.",
+  "rendered": "images/step-002.webp"
+}
 ```

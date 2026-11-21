@@ -1,47 +1,35 @@
 {
- "name": "ap_extract_confirmed_by_dedicated_requirement",
- "profile": "generic",
- "fake": {
-  "silences": [
-   [
-    0.0,
-    3.0
-   ],
-   [
-    13.7,
-    null
-   ]
-  ],
-  "lufs": -11.0
- },
- "audio_production": {
-  "inputs": [
-   {
-    "channels": 2,
-    "video": true
-   }
-  ]
- },
- "requirements": {
-  "audio.production": true,
-  "audio.fade_in": 0.5,
-  "audio.extract": true
- },
- "expect": {
-  "ir_ops": [
-   "audio.cut",
-   "audio.fade_in"
-  ],
-  "blocked": false,
-  "render": {
-   "status": "COMPLETED",
-   "operations": [
-    "CUT",
-    "FADE_IN"
-   ],
-   "qa_status": "PASS"
+  "name": "ap_extract_confirmed_by_dedicated_requirement",
+  "profile": "generic",
+  "fake": {
+    "silences": [
+      [0.0, 3.0],
+      [13.7, null]
+    ],
+    "lufs": -11.0
   },
-  "plan_status": "APPROVED",
-  "note": "ADR-033: only the dedicated explicit requirement audio.extract=true waives the CONFIRM"
- }
+  "audio_production": {
+    "inputs": [
+      {
+        "channels": 2,
+        "video": true
+      }
+    ]
+  },
+  "requirements": {
+    "audio.production": true,
+    "audio.fade_in": 0.5,
+    "audio.extract": true
+  },
+  "expect": {
+    "ir_ops": ["audio.cut", "audio.fade_in"],
+    "blocked": false,
+    "render": {
+      "status": "COMPLETED",
+      "operations": ["CUT", "FADE_IN"],
+      "qa_status": "PASS"
+    },
+    "plan_status": "APPROVED",
+    "note": "ADR-033: only the dedicated explicit requirement audio.extract=true waives the CONFIRM"
+  }
 }

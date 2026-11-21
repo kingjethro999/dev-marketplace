@@ -21,12 +21,14 @@ What was found, read on 2026-10-31:
   3. Otherwise `0.0.0+unknown`, never a plausible but wrong number.
 
   `__version__`, `SKILL_VERSION`, `contract --json`, `doctor --json` and provenance all use this value.
+
 - **The release bump stays one write, and checks itself.** The inline `sed` moved into `scripts/bump_version.py`, which `release.yml` runs with `NEW_VERSION`. It still writes only `pyproject.toml`. Then it imports the package from `src/` and exits non-zero unless `__version__`, the contract's `version` and doctor's `version` all equal `NEW_VERSION`. That stops the release before anything is committed or tagged. This repository commits no contract snapshot, so nothing needs regenerating.
 - **One source for the dependency: `engine.FFMPEG_SKILL_CONTRACT_VERSION = "1.0"`.** This is the ffmpeg-skill contract_version the delegating code was written against. `contract.dependencies()` derives this entry from it, together with `engine.FFMPEG_SKILL_TOOLS`:
 
   `{"skill_id": "ffmpeg-skill", "version_range": ">=1.0", "range_of": "contract_version", "required": false, "for": ["subtitle/render"], "tools": ["ffmpeg-skill/caption", "ffmpeg-skill/probe"]}`
 
   The range has a lower bound only, as the OS schema describes. Nothing compares it at run time: what a located checkout can do is still checked on that checkout (`engine.is_installed`, doctor's capability check). `required` is `false` because `generate` never touches ffmpeg-skill. `for` names the one tool that needs it.
+
 - **Not chosen: have the release also bump a constant.** audio-production-skill's `bump_version_files.sh` writes both `pyproject.toml` and `VERSION = "..."`. Two copies stay correct only while a second regex keeps matching. One copy cannot drift.
 - **Not chosen: an upper bound (`<2.0`).** Some sibling Skills publish one. The OS schema says Skills do not cap the upper version, and this Skill has no version window.
 

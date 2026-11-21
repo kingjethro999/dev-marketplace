@@ -15,13 +15,13 @@ Thanks to the creators whose channels these styles learned from: Vox (America, E
 
 Style templates are a HyperFrames Pro feature. The CLI pulls them and the server checks the plan.
 
-| Template | Slug | Series | Makes | The person brings |
-| --- | --- | --- | --- | --- |
-| Collage Explainer | `collage-explainer` | `american-policy` | English explainer on one American policy or history question | Voice |
-| Finance Explainer (财经讲解) | `finance-explainer` | `deep-dive` | 中文主持人讲透一个国家、商品或机构 | Voice and face |
-| Animated Science Explainer | `animated-science-explainer` | `science-explainer` | English fully drawn science explainer | Voice |
-| 3D Brand Explainer | `3d-brand-explainer` | `brand-explained` | English breakdown of a brand or design, in one graphic world with real 3D | Voice |
-| 3D True Crime | `3d-true-crime` | `crime-hunt` | English reconstruction of a hunt or a closed case, in a dark 3D world | Voice |
+| Template                     | Slug                         | Series              | Makes                                                                     | The person brings |
+| ---------------------------- | ---------------------------- | ------------------- | ------------------------------------------------------------------------- | ----------------- |
+| Collage Explainer            | `collage-explainer`          | `american-policy`   | English explainer on one American policy or history question              | Voice             |
+| Finance Explainer (财经讲解) | `finance-explainer`          | `deep-dive`         | 中文主持人讲透一个国家、商品或机构                                        | Voice and face    |
+| Animated Science Explainer   | `animated-science-explainer` | `science-explainer` | English fully drawn science explainer                                     | Voice             |
+| 3D Brand Explainer           | `3d-brand-explainer`         | `brand-explained`   | English breakdown of a brand or design, in one graphic world with real 3D | Voice             |
+| 3D True Crime                | `3d-true-crime`              | `crime-hunt`        | English reconstruction of a hunt or a closed case, in a dark 3D world     | Voice             |
 
 ## Which template
 

@@ -22,12 +22,12 @@ audit). macOS uses the built-in Seatbelt sandbox (experimental).
 
 ## Levels
 
-| Level | Means |
-|---|---|
-| `none` | the contract is invalid, or files do not match their hashes |
-| `L1-declared` | the contract is valid and every file matches |
-| `L2-tested` | L1, and the declared tests passed in the full sandbox (bubblewrap or Seatbelt) |
-| `L3-signed` | L2, integrity covers every file, and an author signature verifies against a key given with `--trusted-key` |
+| Level         | Means                                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| `none`        | the contract is invalid, or files do not match their hashes                                                |
+| `L1-declared` | the contract is valid and every file matches                                                               |
+| `L2-tested`   | L1, and the declared tests passed in the full sandbox (bubblewrap or Seatbelt)                             |
+| `L3-signed`   | L2, integrity covers every file, and an author signature verifies against a key given with `--trusted-key` |
 
 ## Authoring a contract
 
@@ -50,27 +50,27 @@ audit). macOS uses the built-in Seatbelt sandbox (experimental).
 `<skill_dir>` holds `SKILL.md` and `skill.contract.json`; `--contract FILE`
 reads the contract from elsewhere. Every command prints one JSON object.
 
-| Task | Command |
-|---|---|
-| Draft a contract | `skillpact init <skill_dir> [-o draft.json] [--force] [--from-native CMD ...]` |
-| Check the contract and the file hashes (L1) | `skillpact validate <skill_dir> [--contract FILE]` |
-| Run the declared tests in the sandbox | `skillpact test <skill_dir> [--only ID ...] [--skills-path DIR ...] [--pass-env NAME ...] [--no-net-sandbox] [--check-idempotent]` |
-| Write the hash of every file into the contract | `skillpact hash <skill_dir>` |
-| Make an ed25519 key | `skillpact keygen key.pem` |
-| Sign | `skillpact sign <skill_dir> key.pem [--signer NAME] [--role author\|reviewer\|scanner]` |
-| Sign keylessly (CI, Sigstore) | `skillpact sign-sigstore <skill_dir> [--identity-token TOKEN] [--staging]` |
-| Check the signatures and hashes | `skillpact verify <skill_dir>` |
-| Level L1 / L2 / L3 | `skillpact conformance <skill_dir> [--trusted-key KEY ...]` |
-| Upgrade an older contract | `skillpact migrate <skill_dir> [--to VERSION] [--write]` |
-| Policy decision per capability | `skillpact policy-check <skill_dir> [<skill_dir> ...] policy.json` |
-| Harness settings from a policy | `skillpact policy-compile <skill_dir> policy.json --target claude-code\|cursor\|codex\|gemini-cli [--mcp-server NAME] [--render]` |
-| Effects of a skill set and dangerous combinations | `skillpact compose <skill_dir> <skill_dir> ... [--trusted-key KEY ...]` |
-| Runtime policy document | `skillpact export <skill_dir> policy.json --format hushspec\|rego\|aps\|acs` |
-| Convert to or from MDA / AutoVault | `skillpact convert <skill_dir> --to mda\|autovault` or `skillpact convert SKILL.md --from mda\|autovault [-o draft.json]` |
+| Task                                                                       | Command                                                                                                                                                                                             |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Draft a contract                                                           | `skillpact init <skill_dir> [-o draft.json] [--force] [--from-native CMD ...]`                                                                                                                      |
+| Check the contract and the file hashes (L1)                                | `skillpact validate <skill_dir> [--contract FILE]`                                                                                                                                                  |
+| Run the declared tests in the sandbox                                      | `skillpact test <skill_dir> [--only ID ...] [--skills-path DIR ...] [--pass-env NAME ...] [--no-net-sandbox] [--check-idempotent]`                                                                  |
+| Write the hash of every file into the contract                             | `skillpact hash <skill_dir>`                                                                                                                                                                        |
+| Make an ed25519 key                                                        | `skillpact keygen key.pem`                                                                                                                                                                          |
+| Sign                                                                       | `skillpact sign <skill_dir> key.pem [--signer NAME] [--role author\|reviewer\|scanner]`                                                                                                             |
+| Sign keylessly (CI, Sigstore)                                              | `skillpact sign-sigstore <skill_dir> [--identity-token TOKEN] [--staging]`                                                                                                                          |
+| Check the signatures and hashes                                            | `skillpact verify <skill_dir>`                                                                                                                                                                      |
+| Level L1 / L2 / L3                                                         | `skillpact conformance <skill_dir> [--trusted-key KEY ...]`                                                                                                                                         |
+| Upgrade an older contract                                                  | `skillpact migrate <skill_dir> [--to VERSION] [--write]`                                                                                                                                            |
+| Policy decision per capability                                             | `skillpact policy-check <skill_dir> [<skill_dir> ...] policy.json`                                                                                                                                  |
+| Harness settings from a policy                                             | `skillpact policy-compile <skill_dir> policy.json --target claude-code\|cursor\|codex\|gemini-cli [--mcp-server NAME] [--render]`                                                                   |
+| Effects of a skill set and dangerous combinations                          | `skillpact compose <skill_dir> <skill_dir> ... [--trusted-key KEY ...]`                                                                                                                             |
+| Runtime policy document                                                    | `skillpact export <skill_dir> policy.json --format hushspec\|rego\|aps\|acs`                                                                                                                        |
+| Convert to or from MDA / AutoVault                                         | `skillpact convert <skill_dir> --to mda\|autovault` or `skillpact convert SKILL.md --from mda\|autovault [-o draft.json]`                                                                           |
 | OS capability contract (kajisho5/Velisa registry): export, compare, import | `skillpact convert <skill_dir> --to os-capability [-o os.json] [--against contract.json]` or `skillpact convert contract.json --from os-capability [-o draft.json]` (spec/os_capability_mapping.md) |
-| OWASP Agentic Skills Top 10 view | `skillpact owasp <skill_dir> [--no-tests]` |
-| MCP server serves what the contract maps | `skillpact mcp-check <skill_dir> python3 '$SKILL_DIR/mcp/server.py'` |
-| MCP tool annotations from the effects | `skillpact mcp-annotations <skill_dir>` |
+| OWASP Agentic Skills Top 10 view                                           | `skillpact owasp <skill_dir> [--no-tests]`                                                                                                                                                          |
+| MCP server serves what the contract maps                                   | `skillpact mcp-check <skill_dir> python3 '$SKILL_DIR/mcp/server.py'`                                                                                                                                |
+| MCP tool annotations from the effects                                      | `skillpact mcp-annotations <skill_dir>`                                                                                                                                                             |
 
 Example policies: `ref/policies/solo-dev.json`, `ref/policies/strict-ci.json`.
 A policy decides `allow` / `ask` / `deny` per effect and per rule, and can
@@ -92,16 +92,16 @@ the harness file itself instead of JSON.
 
 ## Being careful
 
-* `init -o`, `hash`, `sign`, `sign-sigstore` and `migrate --write` write
+- `init -o`, `hash`, `sign`, `sign-sigstore` and `migrate --write` write
   into the skill's contract (`init` without `-o` writes
   `skill.contract.json` and refuses an existing one unless `--force`).
   Changing any file after `hash` breaks L1 until it is hashed and signed
   again, so do it only when the user asked for the contract to be updated.
-* Never print, copy or commit a private key; `keygen` writes it to the path
+- Never print, copy or commit a private key; `keygen` writes it to the path
   given. Publish only the public key it returns.
-* `test` and `conformance` run the skill's own test commands (sandboxed);
+- `test` and `conformance` run the skill's own test commands (sandboxed);
   run them only on a skill the user asked to check.
-* A Sigstore signature that cannot be checked here is `SIGSTORE_UNVERIFIED`
+- A Sigstore signature that cannot be checked here is `SIGSTORE_UNVERIFIED`
   (a warning, not trusted); install `skillpact[sigstore]`.
 
 ## Report results as they are

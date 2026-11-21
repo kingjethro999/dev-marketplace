@@ -1,22 +1,22 @@
 {
- "name": "offload_one_drive_fails_named_no_assets",
- "offload": {
-  "destinations": 2,
-  "modes": {
-   "FAKE_INGEST_OFFLOAD": "partial"
-  }
- },
- "expect": {
-  "plan": {
-   "decision": {
-    "approval": "CONFIRM"
-   }
+  "name": "offload_one_drive_fails_named_no_assets",
+  "offload": {
+    "destinations": 2,
+    "modes": {
+      "FAKE_INGEST_OFFLOAD": "partial"
+    }
   },
-  "render": {
-   "status": "FAILED",
-   "assets": 0,
-   "clip_observations": 0,
-   "error_kind": "PARTIAL"
+  "expect": {
+    "plan": {
+      "decision": {
+        "approval": "CONFIRM"
+      }
+    },
+    "render": {
+      "status": "FAILED",
+      "assets": 0,
+      "clip_observations": 0,
+      "error_kind": "PARTIAL"
+    }
   }
- }
 }

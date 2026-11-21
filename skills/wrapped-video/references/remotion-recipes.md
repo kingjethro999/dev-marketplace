@@ -15,22 +15,57 @@ import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 
 type Item = { rank: number; label: string; value: number };
 
-export const TopList: React.FC<{ items: Item[]; accent: string }> = ({ items, accent }) => {
+export const TopList: React.FC<{ items: Item[]; accent: string }> = ({
+  items,
+  accent,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28, padding: "0 80px",
-        height: "100%", justifyContent: "center" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 28,
+        padding: "0 80px",
+        height: "100%",
+        justifyContent: "center",
+      }}
+    >
       {items.map((it, i) => {
         const delay = i * 8; // 8 frames between rows
-        const p = spring({ frame: frame - delay, fps, config: { damping: 200 } });
+        const p = spring({
+          frame: frame - delay,
+          fps,
+          config: { damping: 200 },
+        });
         const y = interpolate(p, [0, 1], [40, 0]);
         return (
-          <div key={it.rank} style={{ opacity: p, transform: `translateY(${y}px)`,
-              display: "flex", alignItems: "baseline", gap: 24 }}>
-            <span style={{ fontSize: 56, fontWeight: 900, color: accent,
-                fontVariantNumeric: "tabular-nums" }}>{it.rank}</span>
-            <span style={{ fontSize: 64, fontWeight: 800, color: "#fff", flex: 1 }}>{it.label}</span>
+          <div
+            key={it.rank}
+            style={{
+              opacity: p,
+              transform: `translateY(${y}px)`,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 24,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 56,
+                fontWeight: 900,
+                color: accent,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {it.rank}
+            </span>
+            <span
+              style={{ fontSize: 64, fontWeight: 800, color: "#fff", flex: 1 }}
+            >
+              {it.label}
+            </span>
             <span style={{ fontSize: 40, color: "#ffffff99" }}>{it.value}</span>
           </div>
         );
@@ -45,21 +80,49 @@ export const TopList: React.FC<{ items: Item[]; accent: string }> = ({ items, ac
 Bar fills to `percentile` while the number counts up beside it.
 
 ```tsx
-export const Percentile: React.FC<{ percentile: number; accent: string }> = ({ percentile, accent }) => {
+export const Percentile: React.FC<{ percentile: number; accent: string }> = ({
+  percentile,
+  accent,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const p = spring({ frame, fps, config: { damping: 200 } });
   const pct = interpolate(p, [0, 1], [0, percentile]);
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column",
-        justifyContent: "center", padding: "0 80px", gap: 32 }}>
+    <div
+      style={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: "0 80px",
+        gap: 32,
+      }}
+    >
       <span style={{ fontSize: 56, color: "#fff" }}>You're in the top</span>
-      <span style={{ fontSize: 200, fontWeight: 900, color: accent,
-          fontVariantNumeric: "tabular-nums" }}>{Math.round(pct)}%</span>
+      <span
+        style={{
+          fontSize: 200,
+          fontWeight: 900,
+          color: accent,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {Math.round(pct)}%
+      </span>
       <div style={{ height: 24, borderRadius: 12, background: "#ffffff22" }}>
-        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 12, background: accent }} />
+        <div
+          style={{
+            width: `${pct}%`,
+            height: "100%",
+            borderRadius: 12,
+            background: accent,
+          }}
+        />
       </div>
-      <span style={{ fontSize: 40, color: "#ffffff99" }}>of all listeners this year</span>
+      <span style={{ fontSize: 40, color: "#ffffff99" }}>
+        of all listeners this year
+      </span>
     </div>
   );
 };
@@ -76,23 +139,40 @@ import { TopList } from "./TopList";
 import { Percentile } from "./Percentile";
 import type { Wrapped } from "./schema";
 
-const Bg: React.FC<React.PropsWithChildren<{ color?: string }>> = ({ children, color }) => (
-  <AbsoluteFill style={{ background: color ?? "#0a0a0a" }}>{children}</AbsoluteFill>
+const Bg: React.FC<React.PropsWithChildren<{ color?: string }>> = ({
+  children,
+  color,
+}) => (
+  <AbsoluteFill style={{ background: color ?? "#0a0a0a" }}>
+    {children}
+  </AbsoluteFill>
 );
 
 export const Wrapped: React.FC<Wrapped> = (p) => (
   <Series>
     <Series.Sequence durationInFrames={90}>
-      <Bg><Intro name={p.name} year={p.year} /></Bg>
+      <Bg>
+        <Intro name={p.name} year={p.year} />
+      </Bg>
     </Series.Sequence>
     <Series.Sequence durationInFrames={120}>
-      <Bg><BigNumber value={p.minutesListened} label="minutes listened" accent={p.accent} /></Bg>
+      <Bg>
+        <BigNumber
+          value={p.minutesListened}
+          label="minutes listened"
+          accent={p.accent}
+        />
+      </Bg>
     </Series.Sequence>
     <Series.Sequence durationInFrames={120}>
-      <Bg><TopList items={p.topArtists} accent={p.accent} /></Bg>
+      <Bg>
+        <TopList items={p.topArtists} accent={p.accent} />
+      </Bg>
     </Series.Sequence>
     <Series.Sequence durationInFrames={120}>
-      <Bg color={p.accent}><Percentile percentile={p.percentile} accent="#fff" /></Bg>
+      <Bg color={p.accent}>
+        <Percentile percentile={p.percentile} accent="#fff" />
+      </Bg>
     </Series.Sequence>
     {/* add persona, peak-month, outro the same way */}
   </Series>
@@ -111,10 +191,17 @@ import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
 
 <TransitionSeries>
-  <TransitionSeries.Sequence durationInFrames={120}>{/* scene A */}</TransitionSeries.Sequence>
-  <TransitionSeries.Transition presentation={fade()} timing={linearTiming({ durationInFrames: 12 })} />
-  <TransitionSeries.Sequence durationInFrames={120}>{/* scene B */}</TransitionSeries.Sequence>
-</TransitionSeries>
+  <TransitionSeries.Sequence durationInFrames={120}>
+    {/* scene A */}
+  </TransitionSeries.Sequence>
+  <TransitionSeries.Transition
+    presentation={fade()}
+    timing={linearTiming({ durationInFrames: 12 })}
+  />
+  <TransitionSeries.Sequence durationInFrames={120}>
+    {/* scene B */}
+  </TransitionSeries.Sequence>
+</TransitionSeries>;
 ```
 
 Keep transitions short (8–15 frames) and consistent. A quick fade or vertical slide matches the story-swipe feel; avoid mixing many transition types.

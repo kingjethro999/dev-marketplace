@@ -18,7 +18,7 @@ This is ADR-001 and it is the one rule every other decision in this repo defers 
 1. **Code** — `src/video_editing_skill/`. `contract.py`'s `skill_contract()` is generated from
    `operations.py` / `errors.py` / `compiler.py` / `ffmpeg_skill.py`, never maintained beside them.
 2. **`docs/decisions.md`** — the ADR log (currently ADR-001 through ADR-036). Read it before
-   changing anything that looks like a design decision; it explains *why*, not just *what*.
+   changing anything that looks like a design decision; it explains _why_, not just _what_.
 3. **`docs/contract.md`** — contract versioning rules, pinned vs. additive blocks, drift
    classification. Read it before touching `contract.py`'s `PINNED_BLOCKS` or top-level shape.
 4. **`docs/operations.md`**, **`docs/security.md`** — per-operation reference, security posture.
@@ -30,7 +30,7 @@ This is ADR-001 and it is the one rule every other decision in this repo defers 
 Two independent version axes, both on `skill_contract()`:
 
 - **`version`** (currently `"0.8.0"`) — this package's release version. Free to move on any release.
-- **`contract_version`** (currently `"7.0"`) — the version of the *pinned shape*
+- **`contract_version`** (currently `"7.0"`) — the version of the _pinned shape_
   (`PINNED_BLOCKS` in `contract.py`). Bumps only when a pinned block changes in a breaking way.
   A dependent pins a range against `contract_version`, never `version`.
 
@@ -74,7 +74,7 @@ hand-applied `major`/`breaking` label — release-drafter's labels, `.github/rel
 yet) is `v<pyproject version>` unchanged**, and a breaking contract change is released by bumping `version` /
 `contract_version` by hand in its PR. Third-party actions are pinned by commit SHA (tag in a comment), copied from
 the sibling skills; dependabot (`github-actions`, `pip`) keeps them current. `tests/test_release_scripts.py` checks
-the version rule on throwaway git repos. Dependabot labels a PR `major` when its *dependency* moved a major version,
+the version rule on throwaway git repos. Dependabot labels a PR `major` when its _dependency_ moved a major version,
 so before release-drafter runs, `.github/scripts/dependabot_release_labels.py` removes `major`/`breaking`/`minor`/
 `feature`/`enhancement` from Dependabot PRs unless a person applied the label (`tests/test_release_labels.py`).
 
@@ -100,7 +100,7 @@ so before release-drafter runs, `.github/scripts/dependabot_release_labels.py` r
   `-shortest`, so `OVERLAY` no longer refuses an audio-less video input up front. `fit.py`'s
   `--rotate`/`--flip` flags predate this ADR sequence entirely (never evaluated by ADR-002) and were
   mapped into a new `ROTATE` operation type in 0.3.0 (ADR-011); this Skill still uses only five
-  ffmpeg-skill tools (`probe`, `cut`, `join`, `fit`, `overlay`) — `ROTATE` is a new *type* on the
+  ffmpeg-skill tools (`probe`, `cut`, `join`, `fit`, `overlay`) — `ROTATE` is a new _type_ on the
   already-used `fit` tool, not a new engine tool. ffmpeg-skill 0.11.0 also shipped a video-layer +
   chroma-key `overlay.py` extension and `stabilize.py` / `sequence.py` / `background.py`, none of
   which are decided here yet — see `kajisho5/video-editing-skill#11` items 2 and 3. `fit.py`'s
@@ -123,12 +123,12 @@ so before release-drafter runs, `.github/scripts/dependabot_release_labels.py` r
 - **`AI-video-production-OS`** (parent architecture repo) — defines the cross-repository
   `CapabilityContract` (`provides`, `contract_version`, ...) this repo participates in as one of
   ten Skills. Its own `docs/ROADMAP.md` describes an 8-phase rollout; Phases 1–2 (schema + registry
-  + per-Skill `provides`/`contract_version` retrofit) require **zero** changes to
-  `video-production-agent` and are this repo's to do independently. Phase 3 onward (collision
-  resolution, registry-driven execution) is explicitly the agent maintainers' work, not this
-  repo's — do not start it here. Before doing OS-integration work, clone that repo and read
-  `docs/SPEC.md`, `docs/VERSIONING.md`, `docs/ROADMAP.md`, and `registry/` directly; don't trust a
-  stale summary of them (including this one, over time).
+  - per-Skill `provides`/`contract_version` retrofit) require **zero** changes to
+    `video-production-agent` and are this repo's to do independently. Phase 3 onward (collision
+    resolution, registry-driven execution) is explicitly the agent maintainers' work, not this
+    repo's — do not start it here. Before doing OS-integration work, clone that repo and read
+    `docs/SPEC.md`, `docs/VERSIONING.md`, `docs/ROADMAP.md`, and `registry/` directly; don't trust a
+    stale summary of them (including this one, over time).
 
 ## Explicitly out of scope (do not implement here, ever, regardless of how it's asked for)
 
@@ -173,7 +173,7 @@ exception to ADR-001.
   needs a version-number rebase, the same situation ADR-010 already had with PR #9.
 - PR #12 (merged, 0.3.0, ADR-011; issue `kajisho5/video-editing-skill#11` item 1 only — items 2 and 3
   are explicitly out of scope) — a new typed `ROTATE` operation (`{degrees?: 90 | 180 | 270,
-  flip?: h | v}`, at least one required), mapped straight onto `ffmpeg-skill fit.py`'s pre-existing
+flip?: h | v}`, at least one required), mapped straight onto `ffmpeg-skill fit.py`'s pre-existing
   `--rotate`/`--flip` flags (predates ADR-002 entirely; never evaluated until now). Groups with
   `TRIM`/`CUT`/`SPEED`/`OVERLAY` for the `odd_frame` refusal (it keeps every pixel losslessly) but,
   unlike them, its target frame can differ from the input's: `width, height` swap for a 90/270 turn.
@@ -211,7 +211,7 @@ exception to ADR-001.
   `IMAGE_INSERT` (roadmap step 4) and the `CROP` ownership ADR (step 5).
 
 - (this change, ADR-015, `ECOSYSTEM_ROADMAP.md` step 4; same unreleased breaking batch as ADR-014) — `IMAGE_INSERT
-  {duration, width?, height?, fps? (default 30, always passed)}` on one image source → `insert.py`; its result is an
+{duration, width?, height?, fps? (default 30, always passed)}` on one image source → `insert.py`; its result is an
   ordinary operation, so CONCAT (and every other type) can take a still. `insert` is an optional engine tool (absent
   in 0.10.0): the floor stays 0.10.0. `media_compatibility.IMAGE_INSERT.requires.video` is `false`, the first such
   entry. No Ken Burns (`--zoom` / `--pan`) yet. Real-media test green against ffmpeg-skill 2.22.2.

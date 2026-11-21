@@ -7,9 +7,7 @@
     "version": "0.2.0",
     "license": "Apache-2.0",
     "source": "https://github.com/kajisho5/video-editing-skill",
-    "authors": [
-      "SEVENTHWELL"
-    ]
+    "authors": ["SEVENTHWELL"]
   },
   "compat": {
     "agents": {
@@ -23,20 +21,14 @@
         "status": "expected"
       }
     },
-    "interfaces": [
-      "skill-md",
-      "cli"
-    ]
+    "interfaces": ["skill-md", "cli"]
   },
   "requirements": {
     "runtimes": [
       {
         "name": "python3",
         "version": ">=3.9",
-        "check": [
-          "python3",
-          "--version"
-        ]
+        "check": ["python3", "--version"]
       }
     ],
     "skills": [
@@ -52,18 +44,12 @@
   "permissions": {
     "read": {
       "level": "scoped",
-      "scope": [
-        "$INPUT",
-        "$SKILL_DIR/**"
-      ],
+      "scope": ["$INPUT", "$SKILL_DIR/**"],
       "why": "edit request and media inside the --allowed-input roots"
     },
     "write": {
       "level": "scoped",
-      "scope": [
-        "$WORKDIR/**",
-        "$OUTPUT"
-      ],
+      "scope": ["$WORKDIR/**", "$OUTPUT"],
       "why": "writes outputs only inside --workspace"
     },
     "network": {
@@ -71,11 +57,7 @@
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "python3",
-        "ffmpeg",
-        "ffprobe"
-      ],
+      "scope": ["python3", "ffmpeg", "ffprobe"],
       "why": "every media operation is a subprocess call to ffmpeg-skill, which runs ffmpeg"
     },
     "spend": {
@@ -90,93 +72,47 @@
       "id": "contract",
       "summary": "Print the manifest / contract (JSON).",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "video_editing_skill",
-          "contract",
-          "--json"
-        ]
+        "cli": ["python3", "-m", "video_editing_skill", "contract", "--json"]
       },
       "effects": [],
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "validate",
       "summary": "Validate an EditRequest against the workspace and allowed inputs.",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "video_editing_skill",
-          "validate"
-        ]
+        "cli": ["python3", "-m", "video_editing_skill", "validate"]
       },
-      "effects": [
-        "read"
-      ],
-      "requires": [
-        "python3"
-      ]
+      "effects": ["read"],
+      "requires": ["python3"]
     },
     {
       "id": "plan",
       "summary": "Dry run: compile the edit graph without touching media.",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "video_editing_skill",
-          "plan"
-        ]
+        "cli": ["python3", "-m", "video_editing_skill", "plan"]
       },
-      "effects": [
-        "read"
-      ],
-      "requires": [
-        "python3"
-      ]
+      "effects": ["read"],
+      "requires": ["python3"]
     },
     {
       "id": "run",
       "summary": "Execute the edit through ffmpeg-skill inside the workspace.",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "video_editing_skill",
-          "run"
-        ]
+        "cli": ["python3", "-m", "video_editing_skill", "run"]
       },
-      "effects": [
-        "read",
-        "write",
-        "exec"
-      ],
+      "effects": ["read", "write", "exec"],
       "destructive": false,
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "doctor",
       "summary": "Report dependency status (ffmpeg-skill).",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "video_editing_skill",
-          "doctor"
-        ]
+        "cli": ["python3", "-m", "video_editing_skill", "doctor"]
       },
-      "effects": [
-        "exec"
-      ],
-      "requires": [
-        "python3"
-      ]
+      "effects": ["exec"],
+      "requires": ["python3"]
     }
   ],
   "tests": {

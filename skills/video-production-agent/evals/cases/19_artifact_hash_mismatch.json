@@ -1,18 +1,13 @@
 {
- "name": "artifact_hash_mismatch",
- "profile": "youtube",
- "fake": {
-  "silences": [
-   [
-    0.0,
-    3.0
-   ]
-  ],
-  "lufs": -11.0
- },
- "expect": {
-  "artifact": {
-   "hash_mismatch": true
+  "name": "artifact_hash_mismatch",
+  "profile": "youtube",
+  "fake": {
+    "silences": [[0.0, 3.0]],
+    "lufs": -11.0
+  },
+  "expect": {
+    "artifact": {
+      "hash_mismatch": true
+    }
   }
- }
 }

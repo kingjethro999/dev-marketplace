@@ -5,45 +5,45 @@ The validator in `validate.py` is the executable form of this document; `transcr
 
 ## Transcript
 
-| field | type | meaning |
-|-------|------|---------|
-| `schema` | const | `transcription-skill/transcript/0.1` |
-| `id` | string | identity of this document (`tr_<hex>`); a new one per computation, reused on cache hits |
-| `asset_id` | string | identity of the input asset; default `asset_<first 16 hex of fingerprint>`, or the caller's `asset_id` |
-| `language` | string | ISO 639 code (`ja`, `en`, ...) or `unknown` |
-| `language_source` | enum | `requested` (caller stated it), `detected` (engine, probability ≥ 0.5), `unknown` (not stated, not confidently detected) |
-| `language_confidence` | number \| null | detection probability when `detected`; `null` otherwise |
-| `duration` | number > 0 | media duration in seconds (from ffprobe); equals `source.media_duration` |
-| `segments` | Segment[] | ordered by `start`, non-overlapping |
-| `source` | Source | what was transcribed (no path) |
-| `engine`, `engine_version` | string | which recognizer produced it |
-| `created_at` | string | UTC `YYYY-MM-DDTHH:MM:SSZ` |
-| `provenance` | Provenance | how it was produced |
-| `warnings` | string[] | non-fatal facts about the run (dropped empty segments, unknown language, cache recompute) |
+| field                      | type           | meaning                                                                                                                  |
+| -------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `schema`                   | const          | `transcription-skill/transcript/0.1`                                                                                     |
+| `id`                       | string         | identity of this document (`tr_<hex>`); a new one per computation, reused on cache hits                                  |
+| `asset_id`                 | string         | identity of the input asset; default `asset_<first 16 hex of fingerprint>`, or the caller's `asset_id`                   |
+| `language`                 | string         | ISO 639 code (`ja`, `en`, ...) or `unknown`                                                                              |
+| `language_source`          | enum           | `requested` (caller stated it), `detected` (engine, probability ≥ 0.5), `unknown` (not stated, not confidently detected) |
+| `language_confidence`      | number \| null | detection probability when `detected`; `null` otherwise                                                                  |
+| `duration`                 | number > 0     | media duration in seconds (from ffprobe); equals `source.media_duration`                                                 |
+| `segments`                 | Segment[]      | ordered by `start`, non-overlapping                                                                                      |
+| `source`                   | Source         | what was transcribed (no path)                                                                                           |
+| `engine`, `engine_version` | string         | which recognizer produced it                                                                                             |
+| `created_at`               | string         | UTC `YYYY-MM-DDTHH:MM:SSZ`                                                                                               |
+| `provenance`               | Provenance     | how it was produced                                                                                                      |
+| `warnings`                 | string[]       | non-fatal facts about the run (dropped empty segments, unknown language, cache recompute)                                |
 
 ## Segment
 
-| field | type | meaning |
-|-------|------|---------|
-| `id` | string | `seg_0001`, `seg_0002`, ... in order |
-| `start`, `end` | seconds | `0 ≤ start < end ≤ duration + 0.5` |
-| `text` | string | engine text with whitespace runs collapsed and control characters removed |
-| `raw_text` | string | engine text verbatim |
-| `confidence` | number in [0,1] \| null | engine metric (faster-whisper: `exp(avg_logprob)`); `null` when the engine gives none |
-| `words` | Word[] \| null | `null` when word timestamps were not requested or the engine could not provide consistent ones |
-| `speaker_id` | string \| null | `null` from recognition (this skill does no diarization). Filled only by a speaker merge (ADR-037): `transcription/speakers`, or `speaker_turns` on `transcription/transcribe`, copies an anonymous `SPEAKER_nn` id from diarization-skill turns; `null` where no turn overlaps or two speakers tie. Never an empty string. |
+| field          | type                    | meaning                                                                                                                                                                                                                                                                                                                     |
+| -------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`           | string                  | `seg_0001`, `seg_0002`, ... in order                                                                                                                                                                                                                                                                                        |
+| `start`, `end` | seconds                 | `0 ≤ start < end ≤ duration + 0.5`                                                                                                                                                                                                                                                                                          |
+| `text`         | string                  | engine text with whitespace runs collapsed and control characters removed                                                                                                                                                                                                                                                   |
+| `raw_text`     | string                  | engine text verbatim                                                                                                                                                                                                                                                                                                        |
+| `confidence`   | number in [0,1] \| null | engine metric (faster-whisper: `exp(avg_logprob)`); `null` when the engine gives none                                                                                                                                                                                                                                       |
+| `words`        | Word[] \| null          | `null` when word timestamps were not requested or the engine could not provide consistent ones                                                                                                                                                                                                                              |
+| `speaker_id`   | string \| null          | `null` from recognition (this skill does no diarization). Filled only by a speaker merge (ADR-037): `transcription/speakers`, or `speaker_turns` on `transcription/transcribe`, copies an anonymous `SPEAKER_nn` id from diarization-skill turns; `null` where no turn overlaps or two speakers tie. Never an empty string. |
 
 ## Word
 
-| field | type | meaning |
-|-------|------|---------|
-| `index` | integer ≥ 0 | word number, 0-based and contiguous over the **whole transcript** (not per segment), in document order: segments by start, words by start inside a segment (ADR-039). On every word of a document written by 0.9.0 or later; documents written earlier carry none and stay valid |
-| `start`, `end` | seconds | `start < end`, contained in the segment (±0.01 s), ordered |
-| `text` | string | whitespace-trimmed token text |
-| `confidence` | number in [0,1] \| null | engine word probability when available; for a dictionary word, the lowest confidence of the engine words it overlaps (`null` if any of them has none) |
-| `timing` | `measured` \| `interpolated`, optional | dictionary words (below), and an engine word whose times are partly the engine's own estimate (`interpolated`, ADR-041 addendum). Absent on an engine word whose times are what the engine reported |
-| `pos` | enum, optional | dictionary words only: coarse part of speech, one of the fixed set below |
-| `speaker_id` | string \| null, optional | present only after a speaker merge (ADR-037): the word's own speaker or `null` |
+| field          | type                                   | meaning                                                                                                                                                                                                                                                                          |
+| -------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index`        | integer ≥ 0                            | word number, 0-based and contiguous over the **whole transcript** (not per segment), in document order: segments by start, words by start inside a segment (ADR-039). On every word of a document written by 0.9.0 or later; documents written earlier carry none and stay valid |
+| `start`, `end` | seconds                                | `start < end`, contained in the segment (±0.01 s), ordered                                                                                                                                                                                                                       |
+| `text`         | string                                 | whitespace-trimmed token text                                                                                                                                                                                                                                                    |
+| `confidence`   | number in [0,1] \| null                | engine word probability when available; for a dictionary word, the lowest confidence of the engine words it overlaps (`null` if any of them has none)                                                                                                                            |
+| `timing`       | `measured` \| `interpolated`, optional | dictionary words (below), and an engine word whose times are partly the engine's own estimate (`interpolated`, ADR-041 addendum). Absent on an engine word whose times are what the engine reported                                                                              |
+| `pos`          | enum, optional                         | dictionary words only: coarse part of speech, one of the fixed set below                                                                                                                                                                                                         |
+| `speaker_id`   | string \| null, optional               | present only after a speaker merge (ADR-037): the word's own speaker or `null`                                                                                                                                                                                                   |
 
 `index` is deterministic: it depends only on the order of the words, so the same computation (same cache key)
 always numbers the same words the same way. A segment with `words: null` contributes no numbers. A cache entry
@@ -86,21 +86,21 @@ the engine words ("units"):
 
 `pos` is taken from the dictionary's top-level part of speech:
 
-| SudachiDict | `pos` |
-|-------------|-------|
-| 名詞 | `noun` |
-| 代名詞 | `pronoun` |
-| 動詞 | `verb` |
-| 形容詞, 形状詞 | `adjective` |
-| 副詞 | `adverb` |
-| 助詞 (every subcategory) | `particle` |
-| 助動詞 | `auxiliary` |
-| 接続詞 | `conjunction` |
+| SudachiDict               | `pos`          |
+| ------------------------- | -------------- |
+| 名詞                      | `noun`         |
+| 代名詞                    | `pronoun`      |
+| 動詞                      | `verb`         |
+| 形容詞, 形状詞            | `adjective`    |
+| 副詞                      | `adverb`       |
+| 助詞 (every subcategory)  | `particle`     |
+| 助動詞                    | `auxiliary`    |
+| 接続詞                    | `conjunction`  |
 | 感動詞 (fillers included) | `interjection` |
-| 接頭辞 | `prefix` |
-| 接尾辞 | `suffix` |
-| 補助記号, 記号, 空白 | `symbol` |
-| 連体詞 and anything else | `other` |
+| 接頭辞                    | `prefix`       |
+| 接尾辞                    | `suffix`       |
+| 補助記号, 記号, 空白      | `symbol`       |
+| 連体詞 and anything else  | `other`        |
 
 The set `noun, pronoun, verb, adjective, adverb, particle, auxiliary, conjunction, interjection, prefix, suffix,
 symbol, other` is fixed; nothing outside it is written. Punctuation becomes its own `symbol` word.
@@ -117,34 +117,34 @@ default `engine`, neither key appears and existing cache keys are unchanged.
 
 ## Provenance
 
-| field | meaning |
-|-------|---------|
-| `engine`, `engine_version` | same as the top level |
-| `execution_mode` | `local` or `remote`: where recognition ran (from the engine's spec) |
-| `model`, `model_version` | model name; snapshot/commit id when the engine can report one, else `null` |
-| `parameters` | `language`, `word_timestamps`, `temperature`, `initial_prompt`, `beam_size`, `audio_stream` (0-based index actually used; `0` when the request left it unset), `vad_filter`; `vocabulary` (`{written form: [readings]}`) only when the request carried one (ADR-033); `word_segmentation` and `word_segmenter` only for dictionary segmentation (ADR-039); `corrections` (the rules) only when the request carried them (ADR-047) |
-| `parameters_hash` | sha256 of the canonical parameters JSON |
-| `cache_key` | sha256 identity of (fingerprint, {engine id, version, execution_mode}, {model, model_version}, parameters) |
-| `created_at`, `processing_seconds` | when, and total wall clock of the run (probe + extraction + engine) |
-| `skill`, `skill_version`, `tool` | which skill and tool produced the document (`transcription-skill`, `transcription/transcribe`) |
-| `language_detection` | `{candidate, probability, min_probability}` when auto-detect ran, else `null`; kept even when the result is `unknown` so the guess is visible but not stored as fact |
-| `follow` | only on the transcript of a followed recording (`transcribe --follow`, ADR-043): `window_seconds`, `idle_seconds`, `holdback_seconds`, `rounds` (recognitions run), `finals`, `audio_seconds` |
-| `vocabulary` | only when the request had `domain_vocabulary` (ADR-047): `terms` (selected from the caller's programme, slide text, speakers and terms, in rank order), `delivered_as` (`initial_prompt` \| `vocabulary` \| null when the engine takes neither), `terms_passed`, `japanese`, `sources` `{programme_chars, slide_pages, speakers, terms, deck_sha256?}`. The prompt actually used is `parameters.initial_prompt` |
-| `corrections` | only when the request had `corrections` (ADR-047): `rules` `[{from, to, match: word \| substring}]`, `count`, and `applied[]` `{rule, from (the text replaced), to, segment_id, start, end, timing: word \| segment}`, one per replacement in segment `text`; `raw_text` keeps the engine's text |
-| `chunking` | only on a chunked run (request `chunk_seconds`, ADR-042): `chunk_seconds`, `parallel`, `cuts_from` (`speech_regions` \| `level`), `chunk_count`, `chunks_from_cache`, `chunks_recognized`, `device` (as the engine names it, `unknown` when it cannot tell), `engine_seconds` (sum over chunks, cached ones with their original time), `wall_seconds` and `realtime_factor` (this run's wall seconds / media seconds), and `chunks[]` `{index, start, end, cut: {source: speech_regions \| level \| end, pause_seconds \| level_dbfs}, from_cache, engine_seconds}`. `parameters.chunking` `{chunk_seconds, speech_regions: sha256 of the regions \| null}` is then part of the cache key; `parallel` is not |
-| `audio_extraction` | the fixed recipe used (`mono`, `16000 Hz`, `pcm_s16le`), the actually-selected `audio_stream_index` / `stream` (`0:a:N`, the ffmpeg `-map` spec), and `engine_seconds` |
+| field                              | meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `engine`, `engine_version`         | same as the top level                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `execution_mode`                   | `local` or `remote`: where recognition ran (from the engine's spec)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `model`, `model_version`           | model name; snapshot/commit id when the engine can report one, else `null`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `parameters`                       | `language`, `word_timestamps`, `temperature`, `initial_prompt`, `beam_size`, `audio_stream` (0-based index actually used; `0` when the request left it unset), `vad_filter`; `vocabulary` (`{written form: [readings]}`) only when the request carried one (ADR-033); `word_segmentation` and `word_segmenter` only for dictionary segmentation (ADR-039); `corrections` (the rules) only when the request carried them (ADR-047)                                                                                                                                                                                                                                                                            |
+| `parameters_hash`                  | sha256 of the canonical parameters JSON                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `cache_key`                        | sha256 identity of (fingerprint, {engine id, version, execution_mode}, {model, model_version}, parameters)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `created_at`, `processing_seconds` | when, and total wall clock of the run (probe + extraction + engine)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `skill`, `skill_version`, `tool`   | which skill and tool produced the document (`transcription-skill`, `transcription/transcribe`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `language_detection`               | `{candidate, probability, min_probability}` when auto-detect ran, else `null`; kept even when the result is `unknown` so the guess is visible but not stored as fact                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `follow`                           | only on the transcript of a followed recording (`transcribe --follow`, ADR-043): `window_seconds`, `idle_seconds`, `holdback_seconds`, `rounds` (recognitions run), `finals`, `audio_seconds`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `vocabulary`                       | only when the request had `domain_vocabulary` (ADR-047): `terms` (selected from the caller's programme, slide text, speakers and terms, in rank order), `delivered_as` (`initial_prompt` \| `vocabulary` \| null when the engine takes neither), `terms_passed`, `japanese`, `sources` `{programme_chars, slide_pages, speakers, terms, deck_sha256?}`. The prompt actually used is `parameters.initial_prompt`                                                                                                                                                                                                                                                                                              |
+| `corrections`                      | only when the request had `corrections` (ADR-047): `rules` `[{from, to, match: word \| substring}]`, `count`, and `applied[]` `{rule, from (the text replaced), to, segment_id, start, end, timing: word \| segment}`, one per replacement in segment `text`; `raw_text` keeps the engine's text                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `chunking`                         | only on a chunked run (request `chunk_seconds`, ADR-042): `chunk_seconds`, `parallel`, `cuts_from` (`speech_regions` \| `level`), `chunk_count`, `chunks_from_cache`, `chunks_recognized`, `device` (as the engine names it, `unknown` when it cannot tell), `engine_seconds` (sum over chunks, cached ones with their original time), `wall_seconds` and `realtime_factor` (this run's wall seconds / media seconds), and `chunks[]` `{index, start, end, cut: {source: speech_regions \| level \| end, pause_seconds \| level_dbfs}, from_cache, engine_seconds}`. `parameters.chunking` `{chunk_seconds, speech_regions: sha256 of the regions \| null}` is then part of the cache key; `parallel` is not |
+| `audio_extraction`                 | the fixed recipe used (`mono`, `16000 Hz`, `pcm_s16le`), the actually-selected `audio_stream_index` / `stream` (`0:a:N`, the ffmpeg `-map` spec), and `engine_seconds`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 Credentials never appear anywhere; the validator rejects credential-looking values and keys such as
 `api_key`, `token`, `command`, `argv`.
 
 ### Identity roles
 
-| value | names | changes when |
-|-------|-------|--------------|
-| `id` | this result document | every computation (a cache hit returns the stored document unchanged) |
-| `provenance.cache_key` | the computation | input, engine id/version/execution mode, model/model version, or parameters change |
-| `source.fingerprint`, `asset_id` | the input media | the file bytes change |
-| `engine`, `engine_version`, `provenance.execution_mode` | the recognition implementation | the engine changes |
+| value                                                   | names                          | changes when                                                                       |
+| ------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------- |
+| `id`                                                    | this result document           | every computation (a cache hit returns the stored document unchanged)              |
+| `provenance.cache_key`                                  | the computation                | input, engine id/version/execution mode, model/model version, or parameters change |
+| `source.fingerprint`, `asset_id`                        | the input media                | the file bytes change                                                              |
+| `engine`, `engine_version`, `provenance.execution_mode` | the recognition implementation | the engine changes                                                                 |
 
 A cache hit is reported outside the document (`cache_hit`, `cache_key` in the tool response), so the
 cached document stays byte-identical and its provenance stays true.
@@ -197,13 +197,18 @@ Produced by `transcription/segments`; JSON Schema in `schemas/speech_event.schem
   "schema": "transcription-skill/speech-event/0.1",
   "type": "SpeechEvent",
   "id": "tr_92f48a199636_spev_0002",
-  "start": 10.24, "end": 17.38,
+  "start": 10.24,
+  "end": 17.38,
   "asset_id": "asset_5998a34bd16b2048",
   "transcript_id": "tr_92f48a199636",
   "transcript_segment_ids": ["seg_0002", "seg_0003"],
   "source": "transcription-skill/faster_whisper@1.2.1",
-  "confidence": 0.70,
-  "metadata": {"language": "ja", "segment_texts": ["Good morning ...", "Let's begin ..."], "merge_gap": 0.5}
+  "confidence": 0.7,
+  "metadata": {
+    "language": "ja",
+    "segment_texts": ["Good morning ...", "Let's begin ..."],
+    "merge_gap": 0.5
+  }
 }
 ```
 

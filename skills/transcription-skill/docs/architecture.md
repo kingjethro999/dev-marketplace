@@ -52,33 +52,33 @@ Transcript + diarization-skill turns ──► speakers.py ──► Transcript 
 
 ## Modules
 
-| module | responsibility | runs external programs? |
-|--------|----------------|-------------------------|
-| `request.py` | input contract: allowed keys, types, ranges, budget | no |
-| `paths.py` | input boundary: `PathPolicy` (allowed roots, resolution, traversal/symlink refusal), `is_within` (component containment, posix/nt), `make_run_dir`, `resolve_workspace` | no |
-| `media.py` | fingerprint, ffprobe, fixed audio-extraction recipe, child environment, `run_program` (bounded run of an engine's program) | yes: `ffprobe`, `ffmpeg`, and `speech` for `speechcpp` (list argv, own process group) |
-| `engines/base.py` | `TranscriptionEngine` contract, `EngineSpec`, `ModelStatus`, execution modes and capability vocabulary, `EngineRequest`/`EngineResult` | no |
-| `engines/registry.py` | `EngineRegistry`: register / get / list / available / inspect / find_by_* ; `default_registry()` holds implemented engines only | no |
-| `engines/selector.py` | `EngineRequirements` → `select_engines` / `require_engine`: constraint filtering with per-engine rejection reasons, no ranking | no |
-| `engines/faster_whisper.py` | Reference Local Engine | no (in-process library; may fetch a model unless offline) |
-| `engines/haas.py` | optional Haas-ja-v1.0 engine (ADR-033) | no (in-process library) |
-| `engines/speechcpp.py` | optional speech.cpp engine (ADR-035): builds the `speech` argv, maps its JSON to segments | no (calls `media.run_program`) |
-| `engines/whisperx.py` | optional whisperX engine (ADR-038): batched Whisper + wav2vec2 word alignment, no diarization | no (in-process library; reads the WAV itself) |
-| `engines/qwen3_asr.py` | optional Qwen3-ASR engine (ADR-041): Qwen3-ASR-1.7B + Qwen3-ForcedAligner-0.6B through qwen-asr, words from the aligner's own timestamps | no (in-process library; reads the WAV itself; transcription never downloads, `models pull` fetches both models) |
-| `engines/longform.py` | `split_at_quiet_points`: long audio cut at quiet points (haas-asr's rule, plain Python) for `qwen3_asr` | no |
-| `engines/worker.py` | subprocess entry point running one engine call | no |
-| `engines/__init__.py` | public surface of the engine package | no |
-| `service.py` | orchestration, worker launch with timeout, Transcript construction | yes: the worker (list argv) |
-| `cache.py` | cache identity and storage | no |
-| `validate.py` | the Transcript contract as code | no |
-| `words.py` | word index over the whole transcript; optional Japanese dictionary words (SudachiPy, `[ja]` extra) with mapped `timing` and coarse `pos` (ADR-039) | no |
-| `normalize.py` | whitespace / control-character normalization only | no |
-| `models.py` | dataclasses: Transcript, Segment, Word, Source, Provenance, SpeechEvent | no |
-| `speech_events.py` | segments → SpeechEvent candidates (optional gap merge) | no |
-| `export.py` | json / srt / vtt / tsv / txt renderings | no |
-| `doctor.py` | environment report | via `media.tool_version` |
-| `skill.py` | Skill contract, Tool contract, single `run_tool` dispatch | no |
-| `cli.py` | argparse front end over `run_tool`; `run -` = one JSON request on stdin → one JSON response (`skill.run_request`) | no |
+| module                      | responsibility                                                                                                                                                          | runs external programs?                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `request.py`                | input contract: allowed keys, types, ranges, budget                                                                                                                     | no                                                                                                              |
+| `paths.py`                  | input boundary: `PathPolicy` (allowed roots, resolution, traversal/symlink refusal), `is_within` (component containment, posix/nt), `make_run_dir`, `resolve_workspace` | no                                                                                                              |
+| `media.py`                  | fingerprint, ffprobe, fixed audio-extraction recipe, child environment, `run_program` (bounded run of an engine's program)                                              | yes: `ffprobe`, `ffmpeg`, and `speech` for `speechcpp` (list argv, own process group)                           |
+| `engines/base.py`           | `TranscriptionEngine` contract, `EngineSpec`, `ModelStatus`, execution modes and capability vocabulary, `EngineRequest`/`EngineResult`                                  | no                                                                                                              |
+| `engines/registry.py`       | `EngineRegistry`: register / get / list / available / inspect / find_by_* ; `default_registry()` holds implemented engines only                                         | no                                                                                                              |
+| `engines/selector.py`       | `EngineRequirements` → `select_engines` / `require_engine`: constraint filtering with per-engine rejection reasons, no ranking                                          | no                                                                                                              |
+| `engines/faster_whisper.py` | Reference Local Engine                                                                                                                                                  | no (in-process library; may fetch a model unless offline)                                                       |
+| `engines/haas.py`           | optional Haas-ja-v1.0 engine (ADR-033)                                                                                                                                  | no (in-process library)                                                                                         |
+| `engines/speechcpp.py`      | optional speech.cpp engine (ADR-035): builds the `speech` argv, maps its JSON to segments                                                                               | no (calls `media.run_program`)                                                                                  |
+| `engines/whisperx.py`       | optional whisperX engine (ADR-038): batched Whisper + wav2vec2 word alignment, no diarization                                                                           | no (in-process library; reads the WAV itself)                                                                   |
+| `engines/qwen3_asr.py`      | optional Qwen3-ASR engine (ADR-041): Qwen3-ASR-1.7B + Qwen3-ForcedAligner-0.6B through qwen-asr, words from the aligner's own timestamps                                | no (in-process library; reads the WAV itself; transcription never downloads, `models pull` fetches both models) |
+| `engines/longform.py`       | `split_at_quiet_points`: long audio cut at quiet points (haas-asr's rule, plain Python) for `qwen3_asr`                                                                 | no                                                                                                              |
+| `engines/worker.py`         | subprocess entry point running one engine call                                                                                                                          | no                                                                                                              |
+| `engines/__init__.py`       | public surface of the engine package                                                                                                                                    | no                                                                                                              |
+| `service.py`                | orchestration, worker launch with timeout, Transcript construction                                                                                                      | yes: the worker (list argv)                                                                                     |
+| `cache.py`                  | cache identity and storage                                                                                                                                              | no                                                                                                              |
+| `validate.py`               | the Transcript contract as code                                                                                                                                         | no                                                                                                              |
+| `words.py`                  | word index over the whole transcript; optional Japanese dictionary words (SudachiPy, `[ja]` extra) with mapped `timing` and coarse `pos` (ADR-039)                      | no                                                                                                              |
+| `normalize.py`              | whitespace / control-character normalization only                                                                                                                       | no                                                                                                              |
+| `models.py`                 | dataclasses: Transcript, Segment, Word, Source, Provenance, SpeechEvent                                                                                                 | no                                                                                                              |
+| `speech_events.py`          | segments → SpeechEvent candidates (optional gap merge)                                                                                                                  | no                                                                                                              |
+| `export.py`                 | json / srt / vtt / tsv / txt renderings                                                                                                                                 | no                                                                                                              |
+| `doctor.py`                 | environment report                                                                                                                                                      | via `media.tool_version`                                                                                        |
+| `skill.py`                  | Skill contract, Tool contract, single `run_tool` dispatch                                                                                                               | no                                                                                                              |
+| `cli.py`                    | argparse front end over `run_tool`; `run -` = one JSON request on stdin → one JSON response (`skill.run_request`)                                                       | no                                                                                                              |
 
 ## Skill / Tool contract
 
@@ -110,21 +110,21 @@ fetch. Implemented and registered today: `faster_whisper` (local). Remote engine
 
 ## Invariants (fixed by docs and tests)
 
-| # | invariant | where it is enforced |
-|---|-----------|----------------------|
-| 1 | transcription-skill owns speech recognition | `skill.py` tools; no inference/decision module exists |
-| 2 | Engine owns the recognition implementation | `engines/base.py` contract; engine modules cannot import `subprocess`; only `speechcpp` runs a program, via `media.run_program` (`test_security`) |
-| 3 | Selector filters, never ranks | `engines/selector.py`; `SelectionMatrixTests`, eval 19 |
-| 4 | Agent owns final policy / decision | selector returns all candidates + reasons; nothing here picks one |
-| 5–8 | Transcript is a recognition result, not an Event / Decision / Subtitle | `models.py`; SpeechEvent is a separate derived record; SRT/VTT are views |
-| 9 | Cache identity includes engine identity | `cache.py` (`cache_identity`); `CacheKeyTests`, evals 10 and 18 |
-| 10 | Offline = no network for the operation | `service._prepare` + `EngineRequest.offline`; `ServiceTests`, integration, evals 08 and 14 |
-| 11 | Engine availability ≠ model availability | `EngineSpec.available` vs `ModelStatus.availability`; `SelectionMatrixTests` |
-| 12 | Agent does not import engine internals | `skill --json` / `run -` are the interface; `ContractDriftTests` keep it truthful |
-| 13 | Input path is untrusted; prefix is never authorisation; resolved path ∈ resolved root; symlink/junction escapes refused | `paths.py`; `tests/test_paths.py`; evals 21–26 |
-| 14 | Input path controls neither model cache nor temporary output location | HF_* only for models; `make_run_dir` under the workspace; `ServicePathTests` |
-| 15 | Path policy ≠ cache identity | key is content/engine/model/parameters; relative vs absolute path share one entry (eval 21, 27) |
-| 16 | `run -` and the CLI share one boundary | both go through `run_tool` → `parse_request` → `PathPolicy` (eval 29) |
+| #   | invariant                                                                                                               | where it is enforced                                                                                                                              |
+| --- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | transcription-skill owns speech recognition                                                                             | `skill.py` tools; no inference/decision module exists                                                                                             |
+| 2   | Engine owns the recognition implementation                                                                              | `engines/base.py` contract; engine modules cannot import `subprocess`; only `speechcpp` runs a program, via `media.run_program` (`test_security`) |
+| 3   | Selector filters, never ranks                                                                                           | `engines/selector.py`; `SelectionMatrixTests`, eval 19                                                                                            |
+| 4   | Agent owns final policy / decision                                                                                      | selector returns all candidates + reasons; nothing here picks one                                                                                 |
+| 5–8 | Transcript is a recognition result, not an Event / Decision / Subtitle                                                  | `models.py`; SpeechEvent is a separate derived record; SRT/VTT are views                                                                          |
+| 9   | Cache identity includes engine identity                                                                                 | `cache.py` (`cache_identity`); `CacheKeyTests`, evals 10 and 18                                                                                   |
+| 10  | Offline = no network for the operation                                                                                  | `service._prepare` + `EngineRequest.offline`; `ServiceTests`, integration, evals 08 and 14                                                        |
+| 11  | Engine availability ≠ model availability                                                                                | `EngineSpec.available` vs `ModelStatus.availability`; `SelectionMatrixTests`                                                                      |
+| 12  | Agent does not import engine internals                                                                                  | `skill --json` / `run -` are the interface; `ContractDriftTests` keep it truthful                                                                 |
+| 13  | Input path is untrusted; prefix is never authorisation; resolved path ∈ resolved root; symlink/junction escapes refused | `paths.py`; `tests/test_paths.py`; evals 21–26                                                                                                    |
+| 14  | Input path controls neither model cache nor temporary output location                                                   | HF_* only for models; `make_run_dir` under the workspace; `ServicePathTests`                                                                      |
+| 15  | Path policy ≠ cache identity                                                                                            | key is content/engine/model/parameters; relative vs absolute path share one entry (eval 21, 27)                                                   |
+| 16  | `run -` and the CLI share one boundary                                                                                  | both go through `run_tool` → `parse_request` → `PathPolicy` (eval 29)                                                                             |
 
 Directory roles: input (caller's media, untrusted) · allowed root (boundary) · workspace (`tmp/<run>/`,
 worker files) · cache (`transcripts/<key>.json`, key = content identity) · model cache (engine models,
@@ -132,8 +132,9 @@ worker files) · cache (`transcripts/<key>.json`, key = content identity) · mod
 
 Identity roles: `Transcript.id` names one result document (new per computation); `provenance.cache_key`
 names the computation (same inputs → same key); `source.fingerprint` / `asset_id` name the input; `engine`
-+ `engine_version` + `execution_mode` name the recognition implementation. They are never substituted
-for one another (eval 18).
+
+- `engine_version` + `execution_mode` name the recognition implementation. They are never substituted
+  for one another (eval 18).
 
 ## Boundaries with the neighbours
 

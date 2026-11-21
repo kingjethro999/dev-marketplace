@@ -28,7 +28,7 @@ Do **not** use subtitle-skill to:
   speaker label, or word subtitle text — that judgement is yours; hand
   subtitle-skill the finished `SubtitleCue`s, not a `TranscriptSegment`,
 - translate, summarize, or rewrite subtitle text,
-- decide *whether* a render "looks good" — subtitle-skill's render
+- decide _whether_ a render "looks good" — subtitle-skill's render
   verification is limited to what a machine can check (file exists, has
   a video stream, duration preserved); it does not run or interpret
   ffmpeg-skill's `look` (visual contact sheet). If you need to confirm
@@ -50,8 +50,14 @@ way you wanted — that is a visual judgement outside this skill's scope.
   "id": "doc-1",
   "language": "en",
   "cues": [
-    {"id": "c1", "start": 0.0, "end": 2.5, "text": "Hello and welcome"},
-    {"id": "c2", "start": 2.5, "end": 5.0, "text": "to the show.", "speaker": "Host"}
+    { "id": "c1", "start": 0.0, "end": 2.5, "text": "Hello and welcome" },
+    {
+      "id": "c2",
+      "start": 2.5,
+      "end": 5.0,
+      "text": "to the show.",
+      "speaker": "Host"
+    }
   ]
 }
 ```
@@ -83,12 +89,12 @@ way you wanted — that is a visual judgement outside this skill's scope.
 
 ### `SubtitleStyle` → caption.py (render, `mode: "burn"` only)
 
-| field | caption.py flag | conversion |
-|---|---|---|
-| `color` | `--color` | forwarded verbatim (caption.py validates the hex format itself) |
-| `bold` | `--bold` | `True` → flag present; `False`/`None` → omitted |
-| `size` (0..100 percent) | `--size` | `round(size / 100 × 288)` — caption.py's `--size` is in ASS points relative to its own 288-line nominal baseline |
-| `align` / `position` / `line` / `italic` | *(none)* | no clean caption.py equivalent — left unmapped, not guessed at; see README "SubtitleStyle → caption.py" for the full per-field reasoning |
+| field                                    | caption.py flag | conversion                                                                                                                               |
+| ---------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `color`                                  | `--color`       | forwarded verbatim (caption.py validates the hex format itself)                                                                          |
+| `bold`                                   | `--bold`        | `True` → flag present; `False`/`None` → omitted                                                                                          |
+| `size` (0..100 percent)                  | `--size`        | `round(size / 100 × 288)` — caption.py's `--size` is in ASS points relative to its own 288-line nominal baseline                         |
+| `align` / `position` / `line` / `italic` | _(none)_        | no clean caption.py equivalent — left unmapped, not guessed at; see README "SubtitleStyle → caption.py" for the full per-field reasoning |
 
 ## Fatal vs. warning: read `observation`, don't assume success means "clean"
 
@@ -96,12 +102,12 @@ A successful response can still carry a non-empty `observation` array —
 these are warnings, not failures, and subtitle-skill never auto-fixes
 them (no cue is deleted, merged, or shifted):
 
-| code | meaning |
-|---|---|
-| `CUE_OVERLAP` | two cues' time ranges overlap |
-| `TOO_MANY_LINES` / `LINE_TOO_LONG` | exceeds `constraints.max_lines` / `max_chars_per_line` |
-| `CUE_TOO_SHORT` / `CUE_TOO_LONG` | outside `constraints.min_duration` / `max_duration` |
-| `READING_SPEED_TOO_HIGH` | more text than `constraints.reading_speed_cps` allows for the cue's duration |
+| code                               | meaning                                                                      |
+| ---------------------------------- | ---------------------------------------------------------------------------- |
+| `CUE_OVERLAP`                      | two cues' time ranges overlap                                                |
+| `TOO_MANY_LINES` / `LINE_TOO_LONG` | exceeds `constraints.max_lines` / `max_chars_per_line`                       |
+| `CUE_TOO_SHORT` / `CUE_TOO_LONG`   | outside `constraints.min_duration` / `max_duration`                          |
+| `READING_SPEED_TOO_HIGH`           | more text than `constraints.reading_speed_cps` allows for the cue's duration |
 
 Fatal problems (`VALIDATION_ERROR`, `INVALID_TIME_RANGE`, ...) raise
 before any file is written — there is no partial output to clean up.

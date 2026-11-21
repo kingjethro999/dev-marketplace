@@ -21,12 +21,12 @@ A path "draws itself" by animating `stroke-dashoffset` from its full length down
 
 ```js
 const path = document.querySelector("#stroke");
-const len  = path.getTotalLength();
-path.style.strokeDasharray  = len;       // one dash as long as the whole path
-path.style.strokeDashoffset = len;       // pushed fully out of view = invisible
-path.getBoundingClientRect();            // force reflow before transitioning
-path.style.transition       = "stroke-dashoffset 1.2s linear";
-path.style.strokeDashoffset = "0";       // draws start → end
+const len = path.getTotalLength();
+path.style.strokeDasharray = len; // one dash as long as the whole path
+path.style.strokeDashoffset = len; // pushed fully out of view = invisible
+path.getBoundingClientRect(); // force reflow before transitioning
+path.style.transition = "stroke-dashoffset 1.2s linear";
+path.style.strokeDashoffset = "0"; // draws start → end
 ```
 
 Use `pathLength="1"` on the `<path>` to normalize: then `stroke-dasharray:1; stroke-dashoffset:1` draws any path regardless of real length, and a single eased value (0→1) is the draw progress. `linear` (or a very gentle ease) reads as a steady hand; avoid `ease-in-out` on long strokes — it makes the marker lurch.
@@ -36,15 +36,16 @@ Use `pathLength="1"` on the `<path>` to normalize: then `stroke-dasharray:1; str
 The illusion lives or dies on the hand sitting at the exact point being drawn. Sample the path at the current draw progress and place the hand image there each frame; the pen-nib of the hand asset must align to the path point (offset the image so its tip, not its corner, lands on the point).
 
 ```js
-const hand = document.querySelector("#hand");   // <img>/<g>, tip at its top-left "nib"
-const NIB = { x: 6, y: 4 };                      // nib offset inside the hand art
+const hand = document.querySelector("#hand"); // <img>/<g>, tip at its top-left "nib"
+const NIB = { x: 6, y: 4 }; // nib offset inside the hand art
 function drawOn(path, hand, dur = 1200) {
-  const len = path.getTotalLength(), t0 = performance.now();
+  const len = path.getTotalLength(),
+    t0 = performance.now();
   path.style.strokeDasharray = len;
   (function frame(now) {
-    const k = Math.min(1, (now - t0) / dur);     // 0→1 progress
+    const k = Math.min(1, (now - t0) / dur); // 0→1 progress
     path.style.strokeDashoffset = len * (1 - k); // expose start→tip
-    const p = path.getPointAtLength(len * k);    // current tip in SVG coords
+    const p = path.getPointAtLength(len * k); // current tip in SVG coords
     hand.setAttribute("transform", `translate(${p.x - NIB.x} ${p.y - NIB.y})`);
     if (k < 1) requestAnimationFrame(frame);
   })(t0);
@@ -57,14 +58,14 @@ function drawOn(path, hand, dur = 1200) {
 
 Sequence elements the way a person would draw the scene, in narration order: each illustration and each handwriting block draws in, holds, then the next begins. Stagger strokes within one drawing; hold a beat after each element lands before moving the hand on. One drawing = one beat of the VO. Don't draw two things at once — the eye (and the single hand) can only follow one tip.
 
-| Step | Mechanism |
-|---|---|
-| Draw a stroke | `stroke-dashoffset` len→0, hand at `getPointAtLength(len*k)` |
-| Multi-stroke drawing | stagger strokes; hand hops to each new stroke's start |
-| Handwriting | per-letter/word strokes drawn in reading order, hand following |
-| Hold | pause hand off-board after element completes (0.4–1.0s) |
-| Next element | move/fade hand to next start; begin its draw-on |
-| Erase / clear | wipe or reverse-draw to clear the board for the next section |
+| Step                 | Mechanism                                                      |
+| -------------------- | -------------------------------------------------------------- |
+| Draw a stroke        | `stroke-dashoffset` len→0, hand at `getPointAtLength(len*k)`   |
+| Multi-stroke drawing | stagger strokes; hand hops to each new stroke's start          |
+| Handwriting          | per-letter/word strokes drawn in reading order, hand following |
+| Hold                 | pause hand off-board after element completes (0.4–1.0s)        |
+| Next element         | move/fade hand to next start; begin its draw-on                |
+| Erase / clear        | wipe or reverse-draw to clear the board for the next section   |
 
 ## Converting art to drawable paths
 
@@ -112,6 +113,7 @@ Draw-on duration should track the spoken line, not a fixed timer. Estimate from 
 For a self-contained whiteboard scene (draw-on illustration, handwriting, a short scribe beat) the deliverable is **one HTML file that opens directly in a browser** — no build step, no render pipeline. A single file is the right tier for web motion; don't reach for a bundler when one file does the job. (For a full narrated scribe video with baked VO, build it as a Remotion composition and verify via `remotion still` — see explainer-video.)
 
 **Output contract:**
+
 - One `.html` file: SVG inline (paths in draw order, `pathLength="1"` or measured length), the hand asset inline or as a data-URI, and the draw-on driver in one inline `<script>`.
 - All drawing on **one master timeline** (GSAP `tl`, or one rAF clock) so the whole sequence has a single playhead you can seek — `strokeDashoffset` AND the hand position both driven by the same progress value.
 - Include the seek harness below so any moment can be frozen for screenshots. Freezing at `t` shows exactly how much of the path is drawn — the verification leans on this.
@@ -122,16 +124,20 @@ For a self-contained whiteboard scene (draw-on illustration, handwriting, a shor
 <script>
   // ... build your master timeline as `tl` (drawOn calls placed on it) ...
   const t = new URLSearchParams(location.search).get("t");
-  if (t !== null) { tl.pause(); tl.seek(parseFloat(t)); }  // frozen at t seconds
+  if (t !== null) {
+    tl.pause();
+    tl.seek(parseFloat(t));
+  } // frozen at t seconds
   // no ?t → plays normally
-  window.__ready = true;            // ready signal for headless wait
+  window.__ready = true; // ready signal for headless wait
   console.log("duration", tl.duration());
 </script>
 ```
 
 **Verify loop — render → freeze → screenshot → check:**
+
 1. Open the file at moments across the timeline — start, a frame mid-draw, end:
-   `…/scribe.html?t=0`, `?t=<dur/2>`, `?t=<dur>`. Read `tl.duration()` from the console for the end time. Pick at least one `t` in the *middle of a stroke* — that is where the hand-on-tip illusion is proven or broken.
+   `…/scribe.html?t=0`, `?t=<dur/2>`, `?t=<dur>`. Read `tl.duration()` from the console for the end time. Pick at least one `t` in the _middle of a stroke_ — that is where the hand-on-tip illusion is proven or broken.
 2. Headless-screenshot each frozen frame:
    ```bash
    npx playwright screenshot --wait-for-timeout=500 "file://$PWD/scribe.html?t=1.2" frame-mid.png
@@ -140,6 +146,7 @@ For a self-contained whiteboard scene (draw-on illustration, handwriting, a shor
 4. Iterate: adjust `NIB`, stroke order, durations, and re-screenshot until each frozen frame looks like a hand mid-draw.
 
 **Before you finish:**
+
 1. Opens standalone in a browser — no console errors, no missing CDN/assets.
 2. One master timeline; `?t=N` freezes correctly and `strokeDashoffset` + hand position share one progress value.
 3. Screenshotted at start / mid-stroke / end — hand nib on the tip throughout, strokes complete cleanly at the end, draw order correct.

@@ -74,10 +74,7 @@
       "deterministic": true,
       "mutates_input": false,
       "idempotency_hint": "same document + same asset/font content + same skill/engine version reuses the cached artifact",
-      "delegates_to": [
-        "ffmpeg-skill/probe",
-        "ffmpeg-skill/look"
-      ],
+      "delegates_to": ["ffmpeg-skill/probe", "ffmpeg-skill/look"],
       "side_effects": [
         "writes the output file",
         "writes a reuse cache entry under the workspace"
@@ -110,10 +107,7 @@
       "deterministic": true,
       "mutates_input": false,
       "idempotency_hint": "same source content + same timestamp + same skill/engine version reuses the cached artifact",
-      "delegates_to": [
-        "ffmpeg-skill/probe",
-        "ffmpeg-skill/look"
-      ],
+      "delegates_to": ["ffmpeg-skill/probe", "ffmpeg-skill/look"],
       "side_effects": [
         "writes the output file",
         "writes a reuse cache entry under the workspace"
@@ -152,10 +146,7 @@
       "deterministic": true,
       "mutates_input": false,
       "idempotency_hint": "each file is a thumbnail/render and is reused from its cache the same way",
-      "delegates_to": [
-        "ffmpeg-skill/probe",
-        "ffmpeg-skill/look"
-      ],
+      "delegates_to": ["ffmpeg-skill/probe", "ffmpeg-skill/look"],
       "side_effects": [
         "writes one output file per row and target",
         "writes reuse cache entries under the workspace"
@@ -189,10 +180,7 @@
       "writes_media": true,
       "deterministic": true,
       "mutates_input": false,
-      "delegates_to": [
-        "ffmpeg-skill/probe",
-        "ffmpeg-skill/look"
-      ],
+      "delegates_to": ["ffmpeg-skill/probe", "ffmpeg-skill/look"],
       "side_effects": [
         "writes the output file",
         "writes one PNG per layer and layers.json into layers.directory",
@@ -322,9 +310,7 @@
       "ai": true,
       "optional": true,
       "requires": "a configured background provider (see background_providers); never downloads a model, opens no connection",
-      "side_effects": [
-        "writes the output file"
-      ]
+      "side_effects": ["writes the output file"]
     }
   ],
   "provides": [
@@ -372,22 +358,15 @@
         "thumbnail/render_layers",
         "thumbnail/render_variants"
       ],
-      "tools": [
-        "ffmpeg-skill/probe",
-        "ffmpeg-skill/look"
-      ]
+      "tools": ["ffmpeg-skill/probe", "ffmpeg-skill/look"]
     },
     {
       "skill_id": "qc-skill",
       "version_range": ">=1",
       "range_of": "contract_version",
       "required": false,
-      "for": [
-        "thumbnail/render_variants"
-      ],
-      "tools": [
-        "qc-skill/run"
-      ],
+      "for": ["thumbnail/render_variants"],
+      "tools": ["qc-skill/run"],
       "uses": "video.text_regions (text legibility, its ADR-018) on a written thumbnail"
     }
   ],
@@ -423,18 +402,12 @@
       "background": "#RRGGBB(AA), default #000000"
     },
     "assets": {
-      "kinds": [
-        "image",
-        "video_frame"
-      ],
+      "kinds": ["image", "video_frame"],
       "max_assets": 32,
       "video_frame": "explicit timestamp only; this skill never searches for a 'best frame'"
     },
     "elements": {
-      "types": [
-        "image",
-        "text"
-      ],
+      "types": ["image", "text"],
       "max_elements": 64,
       "stacking": "z_index, ties broken by document order",
       "image": {
@@ -449,12 +422,7 @@
             "width": "int",
             "height": "int"
           },
-          "fit": [
-            "cover",
-            "contain",
-            "fill",
-            "none"
-          ],
+          "fit": ["cover", "contain", "fill", "none"],
           "crop": {
             "x": "int",
             "y": "int",
@@ -462,12 +430,7 @@
             "height": "int (optional; source-pixel space)"
           },
           "opacity": "0..1",
-          "rotation": [
-            0,
-            90,
-            180,
-            270
-          ]
+          "rotation": [0, 90, 180, 270]
         }
       },
       "text": {
@@ -482,16 +445,8 @@
             "y": "number"
           },
           "align": {
-            "horizontal": [
-              "left",
-              "center",
-              "right"
-            ],
-            "vertical": [
-              "top",
-              "middle",
-              "bottom"
-            ]
+            "horizontal": ["left", "center", "right"],
+            "vertical": ["top", "middle", "bottom"]
           },
           "line_spacing": "0.5..5.0",
           "opacity": "0..1",
@@ -514,34 +469,23 @@
   },
   "output_formats": {
     "png": {
-      "extensions": [
-        ".png"
-      ],
+      "extensions": [".png"],
       "lossless": true
     },
     "jpeg": {
-      "extensions": [
-        ".jpg",
-        ".jpeg"
-      ],
+      "extensions": [".jpg", ".jpeg"],
       "lossless": false
     }
   },
   "platform_presets": {
     "field": "output.preset",
-    "tools": [
-      "thumbnail/render",
-      "thumbnail/extract_frame"
-    ],
+    "tools": ["thumbnail/render", "thumbnail/extract_frame"],
     "precedence": "explicit document.canvas width+height win over the preset's size; with a preset both may be omitted (the preset's size is used); giving only one of the two is INVALID_REQUEST. The preset's limits are checked either way.",
     "check": "after rendering, the written artifact's real dimensions (min/max width/height and aspect-ratio range), format and byte size are checked against the preset before it is cached or placed at the output path; a cache hit is checked the same way",
     "failure": {
       "code": "VALIDATION_ERROR",
       "reason": "preset_limit_exceeded",
-      "details": [
-        "preset",
-        "violations [{check, limit?, expected, got}]"
-      ]
+      "details": ["preset", "violations [{check, limit?, expected, got}]"]
     },
     "response": "on success, `preset` {name, platform, checked, ok} in the response and `preset` (name) in provenance; absent without a preset",
     "bytes": "max_bytes in bytes, decimal megabytes (1 MB = 1,000,000 bytes)",
@@ -559,15 +503,10 @@
         "min_height": null,
         "max_width": null,
         "max_height": null,
-        "formats": [
-          "png",
-          "jpeg"
-        ],
+        "formats": ["png", "jpeg"],
         "max_bytes": 2000000,
         "unverified": [],
-        "sources": [
-          "https://support.google.com/youtube/answer/72431"
-        ]
+        "sources": ["https://support.google.com/youtube/answer/72431"]
       },
       "youtube-shorts": {
         "platform": "YouTube",
@@ -582,15 +521,10 @@
         "min_height": 640,
         "max_width": null,
         "max_height": null,
-        "formats": [
-          "png",
-          "jpeg"
-        ],
+        "formats": ["png", "jpeg"],
         "max_bytes": 50000000,
         "unverified": [],
-        "sources": [
-          "https://support.google.com/youtube/answer/72431"
-        ]
+        "sources": ["https://support.google.com/youtube/answer/72431"]
       },
       "tiktok": {
         "platform": "TikTok",
@@ -605,9 +539,7 @@
         "min_height": null,
         "max_width": 1080,
         "max_height": 1920,
-        "formats": [
-          "jpeg"
-        ],
+        "formats": ["jpeg"],
         "max_bytes": 2000000,
         "unverified": [
           "width",
@@ -636,20 +568,10 @@
         "min_height": null,
         "max_width": null,
         "max_height": null,
-        "formats": [
-          "png",
-          "jpeg"
-        ],
+        "formats": ["png", "jpeg"],
         "max_bytes": 2000000,
-        "unverified": [
-          "width",
-          "height",
-          "formats",
-          "max_bytes"
-        ],
-        "sources": [
-          "https://help.instagram.com/1038071743007909"
-        ]
+        "unverified": ["width", "height", "formats", "max_bytes"],
+        "sources": ["https://help.instagram.com/1038071743007909"]
       },
       "instagram-feed": {
         "platform": "Instagram",
@@ -664,14 +586,9 @@
         "min_height": null,
         "max_width": null,
         "max_height": null,
-        "formats": [
-          "png",
-          "jpeg"
-        ],
+        "formats": ["png", "jpeg"],
         "max_bytes": 2000000,
-        "unverified": [
-          "max_bytes"
-        ],
+        "unverified": ["max_bytes"],
         "sources": [
           "https://help.instagram.com/1631821640426723",
           "https://www.facebook.com/business/ads-guide/update/image/instagram-feed"
@@ -690,19 +607,10 @@
         "min_height": null,
         "max_width": null,
         "max_height": null,
-        "formats": [
-          "png",
-          "jpeg"
-        ],
+        "formats": ["png", "jpeg"],
         "max_bytes": 5000000,
-        "unverified": [
-          "width",
-          "height",
-          "aspect_ratio"
-        ],
-        "sources": [
-          "https://docs.x.com/x-api/media/quickstart/best-practices"
-        ]
+        "unverified": ["width", "height", "aspect_ratio"],
+        "sources": ["https://docs.x.com/x-api/media/quickstart/best-practices"]
       }
     }
   },
@@ -716,26 +624,16 @@
         "document.elements[].text.text",
         "output.name"
       ],
-      "built_in": [
-        "row",
-        "preset"
-      ],
+      "built_in": ["row", "preset"],
       "unknown": "INVALID_REQUEST (reason unknown_placeholder)",
       "values": "inserted literally, never re-scanned; relative asset paths resolve against the workspace, as in thumbnail/render"
     },
     "csv": {
       "header": "first row, unique non-empty names",
-      "encodings": [
-        "utf-8",
-        "cp932"
-      ],
+      "encodings": ["utf-8", "cp932"],
       "default_encoding": "utf-8",
       "encoding_note": "utf-8 accepts a leading byte-order mark; cp932 is the opt-in choice for a CSV saved by Japanese Excel",
-      "delimiters": [
-        ",",
-        ";",
-        "\t"
-      ],
+      "delimiters": [",", ";", "\t"],
       "max_bytes": 4194304,
       "blank_lines": "skipped",
       "field_count": "must equal the header's"
@@ -748,11 +646,7 @@
     "targets": "one per output.preset; the template's canvas may omit width/height (the preset's size is used); 16:9 and 9:16 are two targets (for example youtube and youtube-shorts), each with its own layout",
     "text_fit": {
       "rule": "the largest font size from the template's own size down to min_font_size at which the element's painted box (layout block, background, ink with stroke and shadow) fits max_width x max_height and lies inside the canvas",
-      "never": [
-        "cut",
-        "wrap",
-        "enlarge"
-      ],
+      "never": ["cut", "wrap", "enlarge"],
       "does_not_fit": "VALIDATION_ERROR (reason text_does_not_fit), before anything is written",
       "outside_canvas": "VALIDATION_ERROR (reason text_outside_canvas)"
     },
@@ -765,10 +659,7 @@
     "decision": "docs/decisions.md ADR-14"
   },
   "frame_choice": {
-    "tools": [
-      "thumbnail/choose_frame",
-      "thumbnail/place_text"
-    ],
+    "tools": ["thumbnail/choose_frame", "thumbnail/place_text"],
     "inputs": {
       "faces": "detection-skill/detections@1 from detection-skill (detection faces --attributes): boxes, eyes_open, frontal, size, sharpness",
       "frame_measures": "caller-supplied [{t, sharpness, mean_luma}]; media-analysis-skill does not publish frame sharpness or exposure yet"
@@ -1032,13 +923,7 @@
     "decision": "docs/decisions.md ADR-12"
   },
   "fonts": {
-    "font_ids": [
-      "cjk",
-      "mono",
-      "sans",
-      "sans-bold",
-      "serif"
-    ],
+    "font_ids": ["cjk", "mono", "sans", "sans-bold", "serif"],
     "resolution": "font_id -> the first existing file among this skill's registered per-platform candidate paths (fonts.py); never an arbitrary caller-supplied path; a font_id with no resolvable file fails MISSING_INPUT, never a silent substitution",
     "registry": {
       "sans": {
@@ -1070,12 +955,7 @@
   },
   "execution": {
     "mode": "local",
-    "canonical_invocation": [
-      "thumbnail",
-      "run",
-      "-",
-      "--json"
-    ],
+    "canonical_invocation": ["thumbnail", "run", "-", "--json"],
     "stdin": "{\"tool\": <tool_id>, \"params\": {...}}",
     "stdout": "exactly one thumbnail-skill/response@1 document (through run -) or {'ok', 'tool', 'result'}",
     "shell": false,
@@ -1110,24 +990,14 @@
   },
   "ffmpeg_skill": {
     "contract_version": "1.0",
-    "tools_used": [
-      "probe",
-      "look"
-    ],
+    "tools_used": ["probe", "look"],
     "compatibility": "any version whose probe/look expose flags_required (detected from its contract or --help; no version window)",
     "flags_required": {
       "probe": [],
-      "look": [
-        "output",
-        "at",
-        "no_timecode",
-        "json"
-      ]
+      "look": ["output", "at", "no_timecode", "json"]
     },
     "flags_optional": {
-      "look": [
-        "overwrite"
-      ]
+      "look": ["overwrite"]
     }
   },
   "schema_versions": {

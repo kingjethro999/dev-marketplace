@@ -35,7 +35,7 @@ pip install -e .
 ```
 
 `subtitle-skill` is not "AI that writes captions." It is the execution
-layer that turns a subtitle *decision* — already made by an upstream
+layer that turns a subtitle _decision_ — already made by an upstream
 agent — into a real artifact: validated, deterministic, verified, and
 traceable. It never decides what a caption should say; it decides
 whether the timeline is valid, generates SRT/WebVTT, and — by
@@ -66,7 +66,7 @@ past the end of the video and calls it done, it forgets that a WebVTT
 file can't be burned in by the tool underneath it, or it reports success
 because a process exited `0` without checking what actually got
 written. subtitle-skill exists to take the guessing out of the
-*execution* half of captioning:
+_execution_ half of captioning:
 
 - **Typed input, not a dict.** A subtitle is a `SubtitleDocument` of
   `SubtitleCue`s — parsed and validated once, never touched as raw JSON
@@ -77,10 +77,10 @@ written. subtitle-skill exists to take the guessing out of the
   no cue is ever deleted, reordered, merged, or shifted.
 - **Verification after execution.** A render is only "done" when the
   output file exists, has a video stream, and its duration matches the
-  *actual*, measured input — not when a subprocess happens to exit `0`.
+  _actual_, measured input — not when a subprocess happens to exit `0`.
 - **A contract the agent can read.** `contract --json` states exactly
   which operations, formats, parameters and error codes this version
-  supports. `doctor --json` states what can *actually* run right now.
+  supports. `doctor --json` states what can _actually_ run right now.
 - **No decisions made here.** What the text says, how it's split, which
   speaker to show — that's `video-production-agent`'s job. subtitle-skill
   only ever receives the result, as a typed request.
@@ -142,7 +142,7 @@ flowchart LR
     S -->|generate| F[SRT / WebVTT file]
 ```
 
-subtitle-skill sits at the bottom of that chain, as a *leaf* execution
+subtitle-skill sits at the bottom of that chain, as a _leaf_ execution
 skill: it receives an already-decided, typed request and executes it
 mechanically. Internally:
 
@@ -202,12 +202,12 @@ Four operations exist. All appear in `contract --json`; nothing else
 does — `convert`, `offset`, `merge`, and ASS/SSA output are not implemented and
 cannot be called.
 
-| Operation | Video I/O | Formats | What it does |
-|---|---|---|---|
-| `generate` | none | SRT, WebVTT, TTML (IMSC 1.1 Text, EBU-TT-D) | Validate the document, write a subtitle file ([ADR-007](docs/adr/ADR-007-ttml-output.md) for TTML) |
-| `render` | required | **SRT only** | Validate against the real video duration, generate the SRT, delegate burn-in (or mux) to ffmpeg-skill's `caption` tool, verify the output |
-| `translate` | none | SRT, WebVTT, TTML | Machine-translate a document into `target_language`: same cue ids and timecodes, text re-broken and re-validated for the target language, glossary checked ([ADR-004](docs/adr/ADR-004-translation-engine.md)) |
-| `mux` | required | **SRT only** | Several documents (one per language) → one video with language-tagged soft subtitle tracks, in one ffmpeg-skill `caption --mode mux` call ([ADR-005](docs/adr/ADR-005-multi-language-mux.md)) |
+| Operation   | Video I/O | Formats                                     | What it does                                                                                                                                                                                                   |
+| ----------- | --------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `generate`  | none      | SRT, WebVTT, TTML (IMSC 1.1 Text, EBU-TT-D) | Validate the document, write a subtitle file ([ADR-007](docs/adr/ADR-007-ttml-output.md) for TTML)                                                                                                             |
+| `render`    | required  | **SRT only**                                | Validate against the real video duration, generate the SRT, delegate burn-in (or mux) to ffmpeg-skill's `caption` tool, verify the output                                                                      |
+| `translate` | none      | SRT, WebVTT, TTML                           | Machine-translate a document into `target_language`: same cue ids and timecodes, text re-broken and re-validated for the target language, glossary checked ([ADR-004](docs/adr/ADR-004-translation-engine.md)) |
+| `mux`       | required  | **SRT only**                                | Several documents (one per language) → one video with language-tagged soft subtitle tracks, in one ffmpeg-skill `caption --mode mux` call ([ADR-005](docs/adr/ADR-005-multi-language-mux.md))                  |
 
 `render`'s `mode` (default `"burn"`, or `"mux"`) and `audio_stream`
 (0-based, optional) map directly onto ffmpeg-skill `caption.py`'s own
@@ -285,6 +285,7 @@ word is drawn larger in the highlight colour). `karaoke` times each word from
 the cue's `words` (`[{text, start, end}]`, from a transcription), and a cue
 without them is `INVALID_INPUT` with `details.field` naming the cue's `words`.
 These are refused with the reason, never burned static:
+
 - a soft track (`mode: "mux"`);
 - a burn through subtitle-skill's own ASS (`placement`, `regional_profile`,
   cue `ruby`, `caption_profile`);
@@ -314,24 +315,40 @@ no ARIB writer, ffmpeg-skill#426); TTML is the delivery format instead.
 {
   "operation": "translate",
   "workspace": "/absolute/path/to/workspace",
-  "subtitle": {"id": "ep01", "language": "ja", "cues": [{"id": "1", "start": 0.5, "end": 3.0, "text": "今日は字幕の\n翻訳を試します。"}]},
+  "subtitle": {
+    "id": "ep01",
+    "language": "ja",
+    "cues": [
+      {
+        "id": "1",
+        "start": 0.5,
+        "end": 3.0,
+        "text": "今日は字幕の\n翻訳を試します。"
+      }
+    ]
+  },
   "target_language": "en",
   "format": "srt",
   "output_path": "ep01.en.srt",
   "engine": "argos | opus-mt | ollama | deepl | memory",
-  "glossary": [{"source": "字幕", "target": "subtitles"}],
-  "translation_memory": [{"source": "今日は字幕の翻訳を試します。", "target": "Today we will try translating subtitles."}],
-  "constraints": {"max_chars_per_line": 42}
+  "glossary": [{ "source": "字幕", "target": "subtitles" }],
+  "translation_memory": [
+    {
+      "source": "今日は字幕の翻訳を試します。",
+      "target": "Today we will try translating subtitles."
+    }
+  ],
+  "constraints": { "max_chars_per_line": 42 }
 }
 ```
 
-| `engine` | Needs | Network | Glossary |
-|---|---|---|---|
-| `argos` (default) | `pip install argostranslate` and an **already installed** language package (`argospm install translate-ja_en`). subtitle-skill never downloads a model, and refuses Argos when it is set to a remote provider | never | each source term is replaced by its target term before translating |
-| `opus-mt` | `pip install ctranslate2 sentencepiece`, and an OPUS-MT model **you converted yourself** (`ct2-transformers-converter --model Helsinki-NLP/opus-mt-ja-en --output_dir <dir>/opus-mt-ja-en --copy_files source.spm target.spm`) with `SUBTITLE_SKILL_OPUS_MT_DIR=<dir>`. Weights Apache-2.0. ja→en only in practice (no general en→ja OPUS-MT model) | never | each source term is replaced by its target term before translating |
-| `ollama` | A running [Ollama](https://github.com/ollama/ollama) with the model **already pulled** (`ollama pull qwen3:8b`; `SUBTITLE_SKILL_OLLAMA_MODEL` picks another, `SUBTITLE_SKILL_OLLAMA_URL` another server — plain `http://` only to localhost). One request per cue, temperature 0. subtitle-skill never pulls a model | local only, unless you point it at an `https://` server | each source term is replaced by its target term before translating |
-| `deepl` | `DEEPL_AUTH_KEY` in the environment (never in the request: `api_key` is a forbidden field). A key ending in `:fx` uses `api-free.deepl.com`; `SUBTITLE_SKILL_DEEPL_API_URL` overrides the URL | yes | a native DeepL glossary, created for the call and deleted after |
-| `memory` | `translation_memory`: exact source → target pairs (whitespace-insensitive) from a human, an earlier job or an agent's own translation | never | the stored targets are used as given |
+| `engine`          | Needs                                                                                                                                                                                                                                                                                                                                               | Network                                                 | Glossary                                                           |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------ |
+| `argos` (default) | `pip install argostranslate` and an **already installed** language package (`argospm install translate-ja_en`). subtitle-skill never downloads a model, and refuses Argos when it is set to a remote provider                                                                                                                                       | never                                                   | each source term is replaced by its target term before translating |
+| `opus-mt`         | `pip install ctranslate2 sentencepiece`, and an OPUS-MT model **you converted yourself** (`ct2-transformers-converter --model Helsinki-NLP/opus-mt-ja-en --output_dir <dir>/opus-mt-ja-en --copy_files source.spm target.spm`) with `SUBTITLE_SKILL_OPUS_MT_DIR=<dir>`. Weights Apache-2.0. ja→en only in practice (no general en→ja OPUS-MT model) | never                                                   | each source term is replaced by its target term before translating |
+| `ollama`          | A running [Ollama](https://github.com/ollama/ollama) with the model **already pulled** (`ollama pull qwen3:8b`; `SUBTITLE_SKILL_OLLAMA_MODEL` picks another, `SUBTITLE_SKILL_OLLAMA_URL` another server — plain `http://` only to localhost). One request per cue, temperature 0. subtitle-skill never pulls a model                                | local only, unless you point it at an `https://` server | each source term is replaced by its target term before translating |
+| `deepl`           | `DEEPL_AUTH_KEY` in the environment (never in the request: `api_key` is a forbidden field). A key ending in `:fx` uses `api-free.deepl.com`; `SUBTITLE_SKILL_DEEPL_API_URL` overrides the URL                                                                                                                                                       | yes                                                     | a native DeepL glossary, created for the call and deleted after    |
+| `memory`          | `translation_memory`: exact source → target pairs (whitespace-insensitive) from a human, an earlier job or an agent's own translation                                                                                                                                                                                                               | never                                                   | the stored targets are used as given                               |
 
 - **Timecodes are kept.** `id`, `start`, `end`, `speaker` and `style` are copied; each cue's lines are joined and translated as one segment, so timing is never stretched, merged or split.
 - **Constraints apply again in the target language.** The translation is re-broken with the target's locale profile (ja/zh/ko: full-width counting and kinsoku) or wrapped at spaces, preferring a natural break (after punctuation; in Japanese after a particle) and then the shortest longer line. The translated document is then validated with the target's line length and reading speed; what still does not fit is an observation, never a rewrite.
@@ -389,10 +406,26 @@ read from `pyproject.toml`, the only place it is written
   "mode": "burn | mux",
   "audio_stream": 0,
   "subtitle": {
-    "id": "doc-1", "language": "ja",
-    "cues": [{"id": "c1", "start": 0.0, "end": 2.0, "text": "...", "speaker": "A", "style": {"align": "center"}}]
+    "id": "doc-1",
+    "language": "ja",
+    "cues": [
+      {
+        "id": "c1",
+        "start": 0.0,
+        "end": 2.0,
+        "text": "...",
+        "speaker": "A",
+        "style": { "align": "center" }
+      }
+    ]
   },
-  "constraints": {"max_chars_per_line": 42, "max_lines": 2, "min_duration": 0.5, "max_duration": 10, "reading_speed_cps": 20}
+  "constraints": {
+    "max_chars_per_line": 42,
+    "max_lines": 2,
+    "min_duration": 0.5,
+    "max_duration": 10,
+    "reading_speed_cps": 20
+  }
 }
 ```
 
@@ -403,12 +436,12 @@ caption.py's own default, track 0); `constraints` is optional for both
 
 ## Format support
 
-| | `generate` / `translate` | `render` (burn-in) |
-|---|---|---|
-| SRT | ✅ | ✅ |
-| WebVTT | ✅ | ❌ `UNSUPPORTED_FORMAT` |
-| TTML: IMSC 1.1 Text (`ttml`) | ✅ | ❌ `UNSUPPORTED_FORMAT` |
-| TTML: EBU-TT-D (`ebu-tt-d`) | ✅ | ❌ `UNSUPPORTED_FORMAT` |
+|                              | `generate` / `translate` | `render` (burn-in)      |
+| ---------------------------- | ------------------------ | ----------------------- |
+| SRT                          | ✅                       | ✅                      |
+| WebVTT                       | ✅                       | ❌ `UNSUPPORTED_FORMAT` |
+| TTML: IMSC 1.1 Text (`ttml`) | ✅                       | ❌ `UNSUPPORTED_FORMAT` |
+| TTML: EBU-TT-D (`ebu-tt-d`)  | ✅                       | ❌ `UNSUPPORTED_FORMAT` |
 
 TTML output ([ADR-007](docs/adr/ADR-007-ttml-output.md)) keeps WebVTT cue settings as
 regions (`line` → region top edge, `position`/`size` → region centre and width,
@@ -426,19 +459,19 @@ anything is generated.
 Neither generator silently drops style it can't represent — it raises
 `UNSUPPORTED_FORMAT` instead:
 
-| | SRT | WebVTT | TTML (IMSC 1.1 / EBU-TT-D) |
-|---|---|---|---|
-| `align` / `position` / `line` / `size` | rejected (no native positioning) | native cue settings | regions + `tts:textAlign` |
-| `bold` / `italic` | `<b>` / `<i>` tags | `<b>` / `<i>` tags | named styles |
-| `color` | rejected | rejected (no safe, non-CSS-injecting form here) | named style `tts:color` |
-| `speaker` | `"Speaker: "` text prefix | `"Speaker: "` text prefix | `"Speaker: "` text prefix |
+|                                        | SRT                              | WebVTT                                          | TTML (IMSC 1.1 / EBU-TT-D) |
+| -------------------------------------- | -------------------------------- | ----------------------------------------------- | -------------------------- |
+| `align` / `position` / `line` / `size` | rejected (no native positioning) | native cue settings                             | regions + `tts:textAlign`  |
+| `bold` / `italic`                      | `<b>` / `<i>` tags               | `<b>` / `<i>` tags                              | named styles               |
+| `color`                                | rejected                         | rejected (no safe, non-CSS-injecting form here) | named style `tts:color`    |
+| `speaker`                              | `"Speaker: "` text prefix        | `"Speaker: "` text prefix                       | `"Speaker: "` text prefix  |
 
 Cue/document `metadata` is auxiliary/provenance data — never written
 into the rendered subtitle body of either format.
 
 **This table describes the SRT/WebVTT text files themselves** — what a
 plain subtitle file can and can't encode on its own. `render`'s actual
-*burn* additionally forwards a subset of `style` to ffmpeg-skill's
+_burn_ additionally forwards a subset of `style` to ffmpeg-skill's
 `caption` tool as its own flags (a completely separate mechanism from
 anything inside the SRT file) — see
 [What SubtitleStyle forwards to caption.py](#what-subtitlestyle-forwards-to-captionpy)
@@ -469,12 +502,12 @@ The primary subtag of `subtitle.language` selects a profile
 (`src/subtitle_skill/locales.py`); every other language keeps the generic
 behavior above unchanged.
 
-| Profile | Default chars/line | Default cps | Half-width char counts as | Kinsoku classes |
-|---|---|---|---|---|
-| `ja` | 13 | 4 | 0.5 | W3C JLREQ (JIS X 4051) §3.1.7 / §3.1.8, strict |
-| `zh` | 16 | 9 | 1 (conservative: not stated by the source) | W3C CLREQ §6.1.1 "basic" |
-| `ko` | 16 | 12 | 0.5 | W3C KLREQ §7.1.2 / §7.1.3 |
-| others | 42 | 20 | 1 (`len()`) | none |
+| Profile | Default chars/line | Default cps | Half-width char counts as                  | Kinsoku classes                                |
+| ------- | ------------------ | ----------- | ------------------------------------------ | ---------------------------------------------- |
+| `ja`    | 13                 | 4           | 0.5                                        | W3C JLREQ (JIS X 4051) §3.1.7 / §3.1.8, strict |
+| `zh`    | 16                 | 9           | 1 (conservative: not stated by the source) | W3C CLREQ §6.1.1 "basic"                       |
+| `ko`    | 16                 | 12          | 0.5                                        | W3C KLREQ §7.1.2 / §7.1.3                      |
+| others  | 42                 | 20          | 1 (`len()`)                                | none                                           |
 
 - Width follows Unicode East Asian Width (UAX #11): wide, fullwidth and
   ambiguous characters count 1; narrow, halfwidth and neutral ones count
@@ -510,7 +543,7 @@ subtitle-skill run req.json --json   # execute one operation — always one JSON
 maintained beside it by hand: `deterministic: true`, per-operation
 `formats`, the full error-code list under `errors`, and `out_of_scope`
 naming what this skill deliberately does not do. `doctor --json` reports
-`render` as available only when an ffmpeg-skill install is found *and*
+`render` as available only when an ffmpeg-skill install is found _and_
 its own `doctor` confirms the `caption` tool's required capabilities
 (`ffmpeg`, `ffprobe`, `encoder:libx264`, `encoder:aac`,
 `filter:subtitles`) — subtitle-skill asks ffmpeg-skill's own detection
@@ -593,10 +626,10 @@ python3 <ffmpeg-skill-install-dir>/scripts/<tool>.py [args] --json
    `~/.cursor/skills/ffmpeg-skill`, `~/.codex/skills/ffmpeg-skill`,
    `./.claude/skills/ffmpeg-skill`);
 2. runs `scripts/probe.py <video> --json` first, to confirm a video
-   stream exists and measure the *actual* duration for validation;
+   stream exists and measure the _actual_ duration for validation;
 3. runs `scripts/caption.py <video> --srt <srt> -o <output> [--mode mux]
-   [--audio-stream N] [--language <lang>] [--color RRGGBB] [--bold]
-   [--size N] --json` — a fixed argv list, never a shell. `--mode mux` is
+[--audio-stream N] [--language <lang>] [--color RRGGBB] [--bold]
+[--size N] --json` — a fixed argv list, never a shell. `--mode mux` is
    added only when `request.mode == "mux"` (the default, `"burn"`, sends
    no `--mode` flag at all, matching caption.py's own default);
    `--audio-stream` only when `request.audio_stream` is given;
@@ -645,14 +678,14 @@ no per-cue equivalent on ffmpeg-skill's side at all. Reconciling those two
 shapes losslessly is only possible when every cue that sets a given field
 agrees on its value (kajisho5/subtitle-skill#5):
 
-| `SubtitleStyle` field | caption.py flag | Conversion | Notes |
-|---|---|---|---|
-| `color` | `--color` | none (forwarded verbatim) | caption.py's own `color_hex()` normalizes `"#RRGGBB"`/`"RRGGBB"`/`"0xRRGGBB"` and fails cleanly (`INVALID_INPUT`) on anything else; `models.py` does not itself validate the string. |
-| `bold` | `--bold` | `True` → flag present; `False`/`None` → omitted | `--bold` is `action="store_true"` — there is no `--no-bold` to send for `False`, and omitting it already matches caption.py's own default. |
-| `size` | `--size` | `points = round(size / 100 × 288)` | `size` is documented as "0..100, percent" with no stated percent-of-what; caption.py's own `--size` help text says its unit is "ASS points relative to a 288p script height, scales automatically". Percent-of-that-same-288-line baseline is the one interpretation that lines up with a number caption.py's own author already chose — confirmed empirically, not just from the help text, by burning the same `--size` into two real videos of different heights and measuring the rendered glyph's pixel height in each: it scaled proportionally with the real video height. |
-| `align` | *(none)* | — | caption.py has no `--align` distinct from `--position`; `--position`'s vocabulary (see next row) is not a lossless target for pure left/center/right text justification — e.g. its `"center"` means the screen's dead center (ASS Alignment 5), not "bottom, center-justified" (Alignment 2, caption.py's own default), so mapping `align="center"` onto it would silently relocate the caption vertically too. **Left unmapped, not guessed at.** |
-| `position` / `line` | *(none)* | — | 0..100 percent, from-left/from-top coordinates. caption.py has no numeric/percent placement for an SRT burn at all — only 7 named anchors (`bottom`, `top`, `center`, `bottom-left`, `bottom-right`, `top-left`, `top-right`) plus one uniform `--margin`. There is no percent-to-bucket formula that doesn't throw away the caller's actual number. **Left unmapped, not guessed at.** |
-| `italic` | *(none)* | — | caption.py's plain-SRT `force_style` string never includes an `Italic=` key (only `Bold=` is exposed there). Smaller gap than it looks in practice: `generate_srt` already wraps a cue's text in `<i>...</i>` when `style.italic` is set, and libass honors that inline SRT tag on its own, independent of `force_style` — so per-cue italic already renders correctly, just not via anything `render` forwards as an argv flag. |
+| `SubtitleStyle` field | caption.py flag | Conversion                                      | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --------------------- | --------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `color`               | `--color`       | none (forwarded verbatim)                       | caption.py's own `color_hex()` normalizes `"#RRGGBB"`/`"RRGGBB"`/`"0xRRGGBB"` and fails cleanly (`INVALID_INPUT`) on anything else; `models.py` does not itself validate the string.                                                                                                                                                                                                                                                                                                                                                                                              |
+| `bold`                | `--bold`        | `True` → flag present; `False`/`None` → omitted | `--bold` is `action="store_true"` — there is no `--no-bold` to send for `False`, and omitting it already matches caption.py's own default.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `size`                | `--size`        | `points = round(size / 100 × 288)`              | `size` is documented as "0..100, percent" with no stated percent-of-what; caption.py's own `--size` help text says its unit is "ASS points relative to a 288p script height, scales automatically". Percent-of-that-same-288-line baseline is the one interpretation that lines up with a number caption.py's own author already chose — confirmed empirically, not just from the help text, by burning the same `--size` into two real videos of different heights and measuring the rendered glyph's pixel height in each: it scaled proportionally with the real video height. |
+| `align`               | _(none)_        | —                                               | caption.py has no `--align` distinct from `--position`; `--position`'s vocabulary (see next row) is not a lossless target for pure left/center/right text justification — e.g. its `"center"` means the screen's dead center (ASS Alignment 5), not "bottom, center-justified" (Alignment 2, caption.py's own default), so mapping `align="center"` onto it would silently relocate the caption vertically too. **Left unmapped, not guessed at.**                                                                                                                                |
+| `position` / `line`   | _(none)_        | —                                               | 0..100 percent, from-left/from-top coordinates. caption.py has no numeric/percent placement for an SRT burn at all — only 7 named anchors (`bottom`, `top`, `center`, `bottom-left`, `bottom-right`, `top-left`, `top-right`) plus one uniform `--margin`. There is no percent-to-bucket formula that doesn't throw away the caller's actual number. **Left unmapped, not guessed at.**                                                                                                                                                                                           |
+| `italic`              | _(none)_        | —                                               | caption.py's plain-SRT `force_style` string never includes an `Italic=` key (only `Bold=` is exposed there). Smaller gap than it looks in practice: `generate_srt` already wraps a cue's text in `<i>...</i>` when `style.italic` is set, and libass honors that inline SRT tag on its own, independent of `force_style` — so per-cue italic already renders correctly, just not via anything `render` forwards as an argv flag.                                                                                                                                                  |
 
 Wired fields only take effect for `mode: "burn"` — caption.py's own docs
 say styling has no meaning for a soft-muxed subtitle stream, so
@@ -664,7 +697,7 @@ rather than accepted and silently having no effect.
 Because `color`/`bold`/`size` can only be sent once per burn, `render`
 requires every cue that sets one of them to agree on the value: two cues
 with the same `style.color` render fine (one, correctly-shared, `--color`
-call); two cues with *different* `style.color` values raise
+call); two cues with _different_ `style.color` values raise
 `INVALID_INPUT` rather than silently keeping one cue's request and
 dropping the other's. `align`/`position`/`line` are rejected the same way
 `generate` already rejects them for a plain SRT file (`UNSUPPORTED_FORMAT`)
@@ -680,21 +713,21 @@ timeout, malformed stdout) is `DEPENDENCY_ERROR`.
 ffmpeg-skill's own contract marks `caption` as needing visual
 verification (`ffmpeg-skill/look`, a PNG contact sheet, for a human or
 agent to inspect). subtitle-skill deliberately does not run or interpret
-`look` — judging whether burnt-in captions *look* right is exactly the
+`look` — judging whether burnt-in captions _look_ right is exactly the
 visual/AI judgement this skill's mandate excludes. That verification, if
 wanted, belongs to whoever is driving the render.
 
 ## Verified
 
-| Result | Measurement |
-|---|---|
-| **148 / 148** | full test suite — models, validation, formats, security, `PathPolicy`, CLI/contract, doctor, the Agent Skill installer, engine boundaries, `SubtitleStyle` → caption.py wiring, and render delegation (burn and mux) |
-| **against real ffmpeg-skill** | render and mux tests run a vendored, byte-identical copy of ffmpeg-skill's actual `caption.py` / `probe.py` / `_common/` / `_contract.py` and the two helpers `caption.py` imports (kajisho5/ffmpeg-skill, skill version 2.24.0) — not a hand-rolled stub — including a real burn-in, a real mux and a real two-language mux (`.mkv` and `.mp4`), each verified by `ffprobe`, and by asserting ffmpeg-skill's own reported command line used the right flags (`subtitles=` for burn, `--mode mux` / `--audio-stream N` / `--language` for mux, `--color`/`--bold`/`--size` for styled burns) |
-| **ffmpeg-skill compatibility checked daily** | `scripts/check_vendor_drift.py` (`.github/workflows/vendor-drift.yml`) clones current ffmpeg-skill main, and the v3.0.0 tag, and runs the test suite against each, separately from normal-PR CI (ffmpeg-skill 3.x needs Python 3.10+ and FFmpeg 6.1+; the `>=1.0` contract_version range already admits its `contract_version` 2.0); a new release fails it only if subtitle-skill actually breaks |
-| **7 CI jobs green** | Ubuntu, macOS, Windows × Python 3.9, 3.11, plus one Ubuntu job with ffmpeg and a Japanese font that runs every burn and mux test against the vendored ffmpeg-skill |
-| **burn from a fonts directory** | under a fontconfig with no Japanese font, a Japanese burn without `fonts_dir` fails with the engine's reason and the field to set; with a font file in `fonts_dir` it draws the text (two different captions give different frames, which empty boxes do not), through the SRT and the ASS path |
-| **animated captions** | one burn per `animate` mode and per `karaoke` style on a lavfi clip; the decoded frames show the caption absent on the cue's first frame, partial inside the entrance and full after it, and the karaoke highlight following the cue's `words` |
-| **cache correctness proven both directions** | a bare ffmpeg-skill version bump with unchanged scripts does *not* invalidate the cache; a script content change with an unbumped version *does* |
+| Result                                       | Measurement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **148 / 148**                                | full test suite — models, validation, formats, security, `PathPolicy`, CLI/contract, doctor, the Agent Skill installer, engine boundaries, `SubtitleStyle` → caption.py wiring, and render delegation (burn and mux)                                                                                                                                                                                                                                                                                                                                                                         |
+| **against real ffmpeg-skill**                | render and mux tests run a vendored, byte-identical copy of ffmpeg-skill's actual `caption.py` / `probe.py` / `_common/` / `_contract.py` and the two helpers `caption.py` imports (kajisho5/ffmpeg-skill, skill version 2.24.0) — not a hand-rolled stub — including a real burn-in, a real mux and a real two-language mux (`.mkv` and `.mp4`), each verified by `ffprobe`, and by asserting ffmpeg-skill's own reported command line used the right flags (`subtitles=` for burn, `--mode mux` / `--audio-stream N` / `--language` for mux, `--color`/`--bold`/`--size` for styled burns) |
+| **ffmpeg-skill compatibility checked daily** | `scripts/check_vendor_drift.py` (`.github/workflows/vendor-drift.yml`) clones current ffmpeg-skill main, and the v3.0.0 tag, and runs the test suite against each, separately from normal-PR CI (ffmpeg-skill 3.x needs Python 3.10+ and FFmpeg 6.1+; the `>=1.0` contract_version range already admits its `contract_version` 2.0); a new release fails it only if subtitle-skill actually breaks                                                                                                                                                                                           |
+| **7 CI jobs green**                          | Ubuntu, macOS, Windows × Python 3.9, 3.11, plus one Ubuntu job with ffmpeg and a Japanese font that runs every burn and mux test against the vendored ffmpeg-skill                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **burn from a fonts directory**              | under a fontconfig with no Japanese font, a Japanese burn without `fonts_dir` fails with the engine's reason and the field to set; with a font file in `fonts_dir` it draws the text (two different captions give different frames, which empty boxes do not), through the SRT and the ASS path                                                                                                                                                                                                                                                                                              |
+| **animated captions**                        | one burn per `animate` mode and per `karaoke` style on a lavfi clip; the decoded frames show the caption absent on the cue's first frame, partial inside the entrance and full after it, and the karaoke highlight following the cue's `words`                                                                                                                                                                                                                                                                                                                                               |
+| **cache correctness proven both directions** | a bare ffmpeg-skill version bump with unchanged scripts does _not_ invalidate the cache; a script content change with an unbumped version _does_                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ```bash
 pytest -q
@@ -742,14 +775,14 @@ all three OSes.
 
 ## Docs
 
-| | |
-|---|---|
-| [SKILL.md](SKILL.md) | what an agent reads: when to call this skill, building a `SubtitleDocument`, fatal vs. observation, failure handling |
-| `contract --json` | the authoritative, machine-readable operation/format/error list — if this README and the live contract ever disagree, the contract is correct |
-| [tests/fixtures/ffmpeg_skill_vendor/README.md](tests/fixtures/ffmpeg_skill_vendor/README.md) | provenance of the vendored ffmpeg-skill scripts used in the render tests |
-| [CLAUDE.md](CLAUDE.md) | repository status for maintainers: ecosystem integration state, known gaps, next tasks |
-| [docs/adr/](docs/adr/) | architecture decision records — [ADR-001](docs/adr/ADR-001-locale-profiles.md): locale profiles (ja/zh/ko) and the sources of their defaults; [ADR-002](docs/adr/ADR-002-provides-tool-id-prefix.md): `provides` tool-id prefix; [ADR-003](docs/adr/ADR-003-single-source-version.md): version and ffmpeg-skill dependency, each from one source; [ADR-004](docs/adr/ADR-004-translation-engine.md): translation engines (Argos / OPUS-MT / Ollama / DeepL / memory), licences and prices; [ADR-005](docs/adr/ADR-005-multi-language-mux.md): multi-language mux; [ADR-006](docs/adr/ADR-006-caption-placement.md): captions placed away from faces; [ADR-007](docs/adr/ADR-007-ttml-output.md): TTML output (IMSC 1.1, EBU-TT-D); [ADR-008](docs/adr/ADR-008-regional-profiles.md): regional caption profiles (`ja-broadcast`), ruby, vertical text; [ADR-009](docs/adr/ADR-009-shorts-captions.md): shorts captions; [ADR-010](docs/adr/ADR-010-fonts-dir.md): `fonts_dir`, a burn with the caller's own font files; [ADR-011](docs/adr/ADR-011-animated-captions.md): animated captions passed through to ffmpeg-skill `caption` |
-| [tests/fixtures/translation/](tests/fixtures/translation/) | ja→en and en→ja acceptance fixtures for `translate` |
+|                                                                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [SKILL.md](SKILL.md)                                                                         | what an agent reads: when to call this skill, building a `SubtitleDocument`, fatal vs. observation, failure handling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `contract --json`                                                                            | the authoritative, machine-readable operation/format/error list — if this README and the live contract ever disagree, the contract is correct                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| [tests/fixtures/ffmpeg_skill_vendor/README.md](tests/fixtures/ffmpeg_skill_vendor/README.md) | provenance of the vendored ffmpeg-skill scripts used in the render tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| [CLAUDE.md](CLAUDE.md)                                                                       | repository status for maintainers: ecosystem integration state, known gaps, next tasks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [docs/adr/](docs/adr/)                                                                       | architecture decision records — [ADR-001](docs/adr/ADR-001-locale-profiles.md): locale profiles (ja/zh/ko) and the sources of their defaults; [ADR-002](docs/adr/ADR-002-provides-tool-id-prefix.md): `provides` tool-id prefix; [ADR-003](docs/adr/ADR-003-single-source-version.md): version and ffmpeg-skill dependency, each from one source; [ADR-004](docs/adr/ADR-004-translation-engine.md): translation engines (Argos / OPUS-MT / Ollama / DeepL / memory), licences and prices; [ADR-005](docs/adr/ADR-005-multi-language-mux.md): multi-language mux; [ADR-006](docs/adr/ADR-006-caption-placement.md): captions placed away from faces; [ADR-007](docs/adr/ADR-007-ttml-output.md): TTML output (IMSC 1.1, EBU-TT-D); [ADR-008](docs/adr/ADR-008-regional-profiles.md): regional caption profiles (`ja-broadcast`), ruby, vertical text; [ADR-009](docs/adr/ADR-009-shorts-captions.md): shorts captions; [ADR-010](docs/adr/ADR-010-fonts-dir.md): `fonts_dir`, a burn with the caller's own font files; [ADR-011](docs/adr/ADR-011-animated-captions.md): animated captions passed through to ffmpeg-skill `caption` |
+| [tests/fixtures/translation/](tests/fixtures/translation/)                                   | ja→en and en→ja acceptance fixtures for `translate`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 ## Limitations / Out of scope
 

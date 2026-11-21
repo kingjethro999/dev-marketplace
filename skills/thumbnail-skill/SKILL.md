@@ -31,6 +31,7 @@ render's document leaves out; the document's own values win, and `response.kit` 
 and every kit key that was not (`unmapped`, `unused`).
 
 Rules for a calling agent:
+
 1. Decide everything about content before calling this skill: which still image, or which exact
    video timestamp (`asset.timestamp`, seconds); what the text says (with literal `\n` for line
    breaks — this skill never wraps or reflows text); where every element sits (`position`, `size`,
@@ -46,7 +47,7 @@ Rules for a calling agent:
 5. Read `output`, `sha256`, `width`/`height`, `reused` and `provenance` from the response; the exit
    code is 0 only when `ok` is true. For a platform target, set `output.preset` (`youtube`,
    `youtube-shorts`, `tiktok`, `instagram-reels`, `instagram-feed`, `x`; limits in `thumbnail skill
-   --json` -> `platform_presets`): it supplies the canvas size unless you give both `width` and
+--json` -> `platform_presets`): it supplies the canvas size unless you give both `width` and
    `height`, and an output over the preset's limits fails `VALIDATION_ERROR` (`preset_limit_exceeded`). A `video_frame` asset needs ffmpeg-skill reachable (env var
    `THUMBNAIL_SKILL_FFMPEG_SKILL_DIR` or `--ffmpeg-skill`); a still-image-only document never needs it.
 

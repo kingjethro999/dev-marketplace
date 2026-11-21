@@ -1,7 +1,7 @@
 {
   "id": "01_japanese_transcription",
   "input": "tests/fixtures/ja_short.wav",
-  "request": {"language": "ja", "word_timestamps": true},
+  "request": { "language": "ja", "word_timestamps": true },
   "reference": "ja_short.wav",
   "metric": "cer",
   "max_error_rate": 0.25,

@@ -3,7 +3,9 @@
 ```
 python3 /root/.claude/skills/ffmpeg-skill/scripts/probe.py iphone.mp4 --json
 ```
+
 Key output:
+
 ```
 "video": {
   "codec": "hevc", "profile": "Main 10", "width": 640, "height": 360,
@@ -13,6 +15,7 @@ Key output:
 },
 "audio": null
 ```
+
 Confirms iphone.mp4 is HDR10/PQ (BT.2020, SMPTE2084 transfer) — this is why it looks washed
 out/dull on a laptop screen that isn't HDR-aware: SDR displays and most players render PQ-tagged
 footage without the required tone mapping.
@@ -20,7 +23,9 @@ footage without the required tone mapping.
 ```
 python3 /root/.claude/skills/ffmpeg-skill/scripts/color.py iphone.mp4 --to-sdr -o iphone_sdr.mp4 --json-brief
 ```
+
 Key output:
+
 ```
 $ ffmpeg ... zscale=tin=smpte2084:pin=bt2020:...,tonemap=tonemap=hable:desat=0,... -c:v libx264 ... -colorspace bt709 -color_primaries bt709 -color_trc bt709 ... iphone_sdr.mp4
 wrote iphone_sdr.mp4 (4.000s, 640x360, bt709/bt709, sdr)
@@ -31,8 +36,10 @@ wrote iphone_sdr.mp4 (4.000s, 640x360, bt709/bt709, sdr)
 ```
 python3 /root/.claude/skills/ffmpeg-skill/scripts/check.py iphone_sdr.mp4 --json-brief
 ```
+
 Key output (no destination platform was given, so YouTube's generic spec was assumed;
 judgement rows are WARN not FAIL without a named platform):
+
 ```
 10 checks, 0 failed, 3 warnings
 PASS duration, aspect, fps, vfr, video codec, colour (bt709/bt709), file size
@@ -44,6 +51,7 @@ WARN audio none (source iphone.mp4 has no audio stream at all — nothing to car
 ```
 python3 /root/.claude/skills/ffmpeg-skill/scripts/look.py iphone_sdr.mp4 --tiles 3x2
 ```
+
 Output: `iphone_sdr_sheet.png` (viewed). Colour bars, checkerboard and moving line render as
 normal, correctly saturated colours (not washed out/grey) after the SDR conversion — the fix
 worked. This is a synthetic test clip (colour bars + moving line + checkerboard), not real

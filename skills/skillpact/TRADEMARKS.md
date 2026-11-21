@@ -5,6 +5,7 @@
 - No registered trademark is claimed at this time; these rules state how we ask the names to be used.
 
 ## Badges
+
 - Show an L1, L2 or L3 badge only for the level that `skillpact conformance` or the GitHub Action actually reported for the published version of your skill.
 - Re-check after every change; remove or downgrade the badge if the level drops.
 - Link the badge to the SkillPact site or to your CI result.

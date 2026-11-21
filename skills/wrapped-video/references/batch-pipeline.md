@@ -22,17 +22,18 @@ import { readFileSync } from "node:fs";
 import { wrappedSchema } from "./src/schema";
 
 const raw = parse(readFileSync("users.csv"), { columns: true });
-export const rows = raw.map((r: any) =>
-  wrappedSchema.parse({
-    name: r.name,
-    year: Number(r.year),
-    minutesListened: Number(r.minutes),
-    topArtists: JSON.parse(r.top_artists), // '[{"rank":1,"label":"...","value":312}]'
-    topGenre: r.top_genre,
-    percentile: Number(r.percentile),
-    accent: r.accent,
-    // attach a stable id for the output filename:
-  }) && { ...r, id: r.id }
+export const rows = raw.map(
+  (r: any) =>
+    wrappedSchema.parse({
+      name: r.name,
+      year: Number(r.year),
+      minutesListened: Number(r.minutes),
+      topArtists: JSON.parse(r.top_artists), // '[{"rank":1,"label":"...","value":312}]'
+      topGenre: r.top_genre,
+      percentile: Number(r.percentile),
+      accent: r.accent,
+      // attach a stable id for the output filename:
+    }) && { ...r, id: r.id },
 );
 ```
 
@@ -51,15 +52,25 @@ const serveUrl = await bundle({ entryPoint: "./src/index.ts" });
 
 for (const user of users) {
   let props;
-  try { props = wrappedSchema.parse(user); }
-  catch (e) { console.warn("skip", user.id, "invalid row"); continue; }
+  try {
+    props = wrappedSchema.parse(user);
+  } catch (e) {
+    console.warn("skip", user.id, "invalid row");
+    continue;
+  }
 
-  const composition = await selectComposition({ serveUrl, id: "Wrapped", inputProps: props });
+  const composition = await selectComposition({
+    serveUrl,
+    id: "Wrapped",
+    inputProps: props,
+  });
   await renderMedia({
-    composition, serveUrl, codec: "h264",
+    composition,
+    serveUrl,
+    codec: "h264",
     inputProps: props,
     outputLocation: `out/wrapped-${user.id}.mp4`,
-    crf: 18,                 // visually lossless for social
+    crf: 18, // visually lossless for social
   });
   console.log("done", user.id);
 }
@@ -67,7 +78,7 @@ for (const user of users) {
 
 ## Concurrency
 
-A single `renderMedia` already uses multiple threads for frames. To render multiple *videos* in parallel, cap concurrency to roughly the core count so machines don't thrash:
+A single `renderMedia` already uses multiple threads for frames. To render multiple _videos_ in parallel, cap concurrency to roughly the core count so machines don't thrash:
 
 ```ts
 import pLimit from "p-limit";
@@ -100,11 +111,11 @@ done < users.jsonl
 
 ## File naming & delivery
 
-| Concern | Pattern |
-|---|---|
-| Output name | `wrapped-<recordId>.mp4` (stable, idempotent) |
-| Share still | `wrapped-<recordId>.jpg` from the outro frame |
-| Hosting | upload to object storage; map `recordId → signed URL` |
+| Concern           | Pattern                                                            |
+| ----------------- | ------------------------------------------------------------------ |
+| Output name       | `wrapped-<recordId>.mp4` (stable, idempotent)                      |
+| Share still       | `wrapped-<recordId>.jpg` from the outro frame                      |
+| Hosting           | upload to object storage; map `recordId → signed URL`              |
 | Personalized link | `app.example.com/wrapped/<recordId>` resolves to that user's video |
 
 ## Pipeline checklist
@@ -117,6 +128,7 @@ done < users.jsonl
 - For very large batches, move to Lambda and dedupe identical prop sets.
 
 ---
+
 ## Built by the team behind iart.ai
 
 This skill is part of an open motion-graphics collection from iart.ai — the AI motion agent that turns data, scripts, and designs into editable motion graphics (Remotion → MP4). If you'd rather not hand-build this, iart.ai can generate thousands of personalized "wrapped"/recap videos from one template and a data table — change the text/data and re-export. → [iart.ai](https://iart.ai/?utm_source=github&utm_medium=reference&utm_campaign=explainer-video-skills&utm_content=ref_footer&utm_term=wrapped-video)

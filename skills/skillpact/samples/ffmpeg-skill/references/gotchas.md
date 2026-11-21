@@ -8,6 +8,7 @@ detail, not an aside.
 ## Colour, HDR and Log
 
 ### HDR and colour
+
 SDR outputs are H.264 tagged BT.709 `yuv420p`. A source tagged with a BT.601 matrix
 (`smpte170m`, `bt470bg`; also `fcc`, `smpte240m`) has its pixels converted to that BT.709 matrix
 by every re-encode (through 2.10.0 only the label changed); `color.py --retag bt709` is a
@@ -37,6 +38,7 @@ colours. The scripts keep HDR; if you hand-write ffmpeg (never do — see SKILL.
 do not tag BT.709 on BT.2020 pixels.
 
 ### Log footage
+
 S-Log, V-Log and C-Log look grey and low-contrast but are tagged SDR. Run
 `probe.py --analyze`; `looks_like_log: true` means apply the manufacturer's
 `.cube` with `color.py --lut` before anything else.
@@ -44,6 +46,7 @@ S-Log, V-Log and C-Log look grey and low-contrast but are tagged SDR. Run
 ## Cutting
 
 ### Keyframe cuts
+
 A lossless `cut.py` result may start up to one GOP (often 1–10 s) earlier than
 requested (`start_snapped: true`); the script re-encodes automatically when the
 deviation exceeds 0.5 s. With `--edit-list`, a single-segment `.mp4`/`.m4v`/`.mov` copy
@@ -70,6 +73,7 @@ non-keyframe boundary produces a file that "works" but starts on a frozen or
 wrong frame — respect the automatic re-encode rather than forcing the copy.
 
 ### Variable frame rate
+
 `probe.py` sets `variable_frame_rate_suspected` when `r_frame_rate` and
 `avg_frame_rate` disagree (phone and screen recordings). Every re-encoding
 script then adds `-fps_mode cfr` at the source's average rate. That flag is a
@@ -84,6 +88,7 @@ dropped frames).
 ## Audio
 
 ### Sync, multicam and drift
+
 A sync or multicam alignment with `confidence` under 0.3, or an offset larger
 than 60 % of the analysis window, is probably wrong: enlarge `--analyze-seconds`
 or find a clap. `multicam.py` reports one `confidence` per camera — check all of
@@ -101,6 +106,7 @@ verify by running it again on the output: offset (and drift ppm with
 devices: always use `--fix-drift`.
 
 ### Loudness and ambience
+
 "Normalised" audio can still clip: check true peak, not just LUFS (`check.py`
 does both). And do not normalise ambience or near-silence to a speech target — a
 clip measured at -40 LUFS or below is room tone, wind or nothing; raising it
@@ -118,6 +124,7 @@ cost of a second full decode. That is why `loudness.py` has no speech-gate flag.
 ## Text and framing
 
 ### Captions, fonts and text order
+
 Captions burned before a crop/resize land off-frame: frame changes first, then
 text. Captions burned at an intermediate size and then upscaled by `export.py`
 come out soft (a 1280x720 source fit to 9:16 is 406x720 until export scales it to
@@ -138,6 +145,7 @@ concrete `--font-file` by default, which avoids it; if one still crashes, pass
 `--font-file` explicitly. Details: `references/ci-platform-pitfalls.md`.
 
 ### Fonts by script
+
 libass and drawtext draw an empty box per character they have no glyph for, and
 ffmpeg still exits 0 — a video full of tofu is the classic "it worked" failure.
 Since 1.12 `caption.py`, `graphics.py` and `overlay.py --text` detect the script
@@ -176,14 +184,14 @@ printing one line — `font: /usr/share/fonts/.../wqy-zenhei.ttc (covers ko)`.
 - **RTL:** libass shapes and reorders Arabic and Hebrew correctly, so
   `caption.py` — which renders every subtitle through libass, `subtitles=` and
   `ass=` alike — is right for them by construction. `drawtext` (`overlay.py
-  --text`, `graphics.py`) depends on the build: `ffmpeg -version` showing
+--text`, `graphics.py`) depends on the build: `ffmpeg -version` showing
   `--enable-libfribidi` (and `--enable-libharfbuzz`) shapes and reorders RTL
   correctly too; a build without them draws logical order with unjoined
   letterforms. Nothing in the tools checks this, so on an unknown machine a
   caption is the safe place for Arabic/Hebrew.
 
 **Shaping is a second problem, and it is not the same one.** A font that covers
-the script still has to be *shaped*: Devanagari matras are reordered, Thai and
+the script still has to be _shaped_: Devanagari matras are reordered, Thai and
 Lao marks re-cluster. drawtext does bidi and Arabic joining correctly on a build
 compiled with fribidi (so Arabic and Hebrew are already right today), but it
 never reorders or re-clusters, because it does not use harfbuzz on any build.
@@ -196,6 +204,7 @@ Arabic output is unchanged. `overlay.py --text` has no ASS route yet and refuses
 a shaping script, naming `caption.py`/`graphics.py`.
 
 ### Emoji
+
 Colour emoji need **either** a libass that can draw colour glyphs **or** a
 directory of PNGs — and on most builds only the second one exists.
 
@@ -208,7 +217,7 @@ directory of PNGs — and on most builds only the second one exists.
   to get the contract without running it; `doctor` itself always probes.
 - **drawtext cannot load an emoji font at all.** Not a degraded render: a
   CBDT/sbix face fails filter initialisation outright (`Could not set font size
-  to 48 pixels: invalid library handle`, and at the font's own strike
+to 48 pixels: invalid library handle`, and at the font's own strike
   `Monocromatic (1bpp) fonts are not supported.`) and no file is written. That
   is why the colour route is a PNG overlay, never a drawtext font.
 - **PNGs**: `--emoji-assets DIR`, a directory of files named by code point in
@@ -223,9 +232,9 @@ directory of PNGs — and on most builds only the second one exists.
   composited on top after the `ass=` filter — libass keeps the shaping and the
   karaoke, including inside a `\kf` run (the placeholder is its own
   zero-duration segment).
-- **What counts as an emoji.** A cluster only starts at an emoji *base*.
+- **What counts as an emoji.** A cluster only starts at an emoji _base_.
   U+200D ZWJ and U+200C ZWNJ are ordinary Indic/Persian orthography (`क्‍ष` is
-  ka + virama + ZWJ + ssa) and are glue only *between* two emoji; a VS16 or a
+  ka + virama + ZWJ + ssa) and are glue only _between_ two emoji; a VS16 or a
   skin-tone modifier after a plain letter is not an emoji either. U+FE0E
   (VS15) asks for the character, so `❤︎` is text and `❤️` is an emoji.
 - **Placement tolerance.** The position comes from the same averaged em table
@@ -244,7 +253,7 @@ directory of PNGs — and on most builds only the second one exists.
   actually draw as an empty box; a run pinned to `--text-render drawtext`
   degrades to `none` and says so. `mode: none` strips the cluster from the drawn
   text (a missing decoration must not fail a delivery) but refuses a
-  `graphics.py` template whose text is *only* emoji — that frame would be blank.
+  `graphics.py` template whose text is _only_ emoji — that frame would be blank.
   `--emoji-max` (default 60) caps the overlay count; `--emoji-max 0` means none.
 - **`--animate` moves the PNG too.** The overlay gets a matching alpha fade, so
   the emoji arrives and leaves with the line instead of popping in.
@@ -252,6 +261,7 @@ directory of PNGs — and on most builds only the second one exists.
   `caption.py`/`graphics.py` instead.
 
 ### Reframing, fps and duration
+
 `--fit crop` to reach 9:16 from 16:9 throws away 70 % of the width: a wide shot
 loses people at the edges. Check the sheet; pad (bars), `--crop-x`/`--crop-y`
 toward the subject, or a reframe is often the honest answer — a silent centre
@@ -265,6 +275,7 @@ trim it drops two thirds of the words. Ask which, or propose a highlight cut wit
 `scenes.py`.
 
 ### Platform safe zones
+
 Every vertical app draws its own UI over the delivery: TikTok covers roughly the
 bottom 22 % (description and caption block), the right 14 % (like/comment/share
 column) and the top 10 % (status bar and tabs); Reels 20/12/8 %; Shorts 18/12/6 %.
@@ -280,6 +291,7 @@ margins from it, `render.py --template NAME` passes it to all three, and
 see what the app covers. An explicit `--margin` always wins.
 
 ### Dimensions and rotation
+
 `yuv420p` needs even width/height; `fit.py` and `export.py` round to even values
 automatically. Phone footage often carries a `rotation` tag. `probe.py` reports
 the stored width and height plus that rotation. A tool that places or measures
@@ -291,6 +303,7 @@ filter graph.
 ## Planning
 
 ### Highlights
+
 `scenes.py --highlights` defaults to the loudest scenes (`--rank-by audio`): a
 quiet but important moment (a confession, a punchline landing in silence) is
 skipped, and pure crowd noise or a mic bump can outrank it. `--rank-by duration`
@@ -298,6 +311,7 @@ picks the longest unbroken scenes instead. Neither is "the best parts" — check
 the contact sheet (`--sheet`) before treating the picks as final.
 
 ### Chaining and speed
+
 Anything chained by hand through three re-encodes should be one `render.py`
 project instead, so the plan is one file and the user can change one number.
 Re-encodes use x264 `medium`; for long files add `--preset veryfast` to
@@ -342,14 +356,14 @@ commands work with `talk.wav` in place of `talk.mp4`. What changes:
 
 ### Audio-only recipes
 
-| User says (audio file) | Do |
-|-----------|----|
-| "normalise this WAV to -14 LUFS", "podcast levels" | `loudness.py talk.wav -I -14 --tp -1 -o talk_norm.wav` (`-I -16 --tp -1.5` podcast) |
-| "remove the silence from this recording" | `silence.py talk.wav -o talk_tight.wav` |
-| "clean up the noise in this M4A" | `audio.py talk.m4a --voice -o talk_clean.m4a` (speech) or `--denoise` |
-| "convert this WAV to MP3" | `audio.py talk.wav -o talk.mp3` |
-| "trim this audio from 00:30 to 02:00" | `cut.py talk.wav --start 0:30 --end 2:00 -o talk_cut.wav` (`--accurate` for sample-exact) |
-| "join these recordings", "intro + episode + outro" | `join.py intro.wav episode.m4a outro.wav -o full.flac` (`--transition none` for a butt join) |
-| "extract the audio from the video" | `audio.py talk.mp4 -o talk.wav` (`--voice -o talk.m4a` to clean it on the way) |
-| "compress / limit / gate the voice" | `audio.py talk.wav --compress --comp-threshold -20 --comp-ratio 4 --limit --limit-ceiling -1 -o talk_dyn.wav` |
-| "is this loud enough for Apple Podcasts?" | `check.py talk.m4a --platform podcast` |
+| User says (audio file)                             | Do                                                                                                            |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| "normalise this WAV to -14 LUFS", "podcast levels" | `loudness.py talk.wav -I -14 --tp -1 -o talk_norm.wav` (`-I -16 --tp -1.5` podcast)                           |
+| "remove the silence from this recording"           | `silence.py talk.wav -o talk_tight.wav`                                                                       |
+| "clean up the noise in this M4A"                   | `audio.py talk.m4a --voice -o talk_clean.m4a` (speech) or `--denoise`                                         |
+| "convert this WAV to MP3"                          | `audio.py talk.wav -o talk.mp3`                                                                               |
+| "trim this audio from 00:30 to 02:00"              | `cut.py talk.wav --start 0:30 --end 2:00 -o talk_cut.wav` (`--accurate` for sample-exact)                     |
+| "join these recordings", "intro + episode + outro" | `join.py intro.wav episode.m4a outro.wav -o full.flac` (`--transition none` for a butt join)                  |
+| "extract the audio from the video"                 | `audio.py talk.mp4 -o talk.wav` (`--voice -o talk.m4a` to clean it on the way)                                |
+| "compress / limit / gate the voice"                | `audio.py talk.wav --compress --comp-threshold -20 --comp-ratio 4 --limit --limit-ceiling -1 -o talk_dyn.wav` |
+| "is this loud enough for Apple Podcasts?"          | `check.py talk.m4a --platform podcast`                                                                        |

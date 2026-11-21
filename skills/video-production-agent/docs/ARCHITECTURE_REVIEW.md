@@ -22,45 +22,45 @@
 
 ### 1.1 全体構造
 
-| 項目 | 事実 |
-|---|---|
-| 言語 / 依存 | Python 3.9+ 標準ライブラリのみ。外部 pip 依存なし。 |
-| 外部ツール | `ffmpeg` / `ffprobe` を PATH から `shutil.which` で解決（`_common.require_tool`）。無ければ exit 127。 |
-| 想定 FFmpeg | README: 5.0+、`libx264`, `libx265`, `libass`, `prores_ks`, `libzimg`（`color.py --to-sdr` 用）。コードで機能検出はしていない（無ければ ffmpeg のエラーで失敗）。 |
-| 形態 | Agent Skill（`SKILL.md` + `scripts/`）。`npx ffmpeg-skill` で `~/.claude/skills/ffmpeg-skill` 等にコピー。 |
+| 項目         | 事実                                                                                                                                                                 |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 言語 / 依存  | Python 3.9+ 標準ライブラリのみ。外部 pip 依存なし。                                                                                                                  |
+| 外部ツール   | `ffmpeg` / `ffprobe` を PATH から `shutil.which` で解決（`_common.require_tool`）。無ければ exit 127。                                                               |
+| 想定 FFmpeg  | README: 5.0+、`libx264`, `libx265`, `libass`, `prores_ks`, `libzimg`（`color.py --to-sdr` 用）。コードで機能検出はしていない（無ければ ffmpeg のエラーで失敗）。     |
+| 形態         | Agent Skill（`SKILL.md` + `scripts/`）。`npx ffmpeg-skill` で `~/.claude/skills/ffmpeg-skill` 等にコピー。                                                           |
 | 呼び出し形態 | 各スクリプトは独立したプロセス（`python3 scripts/<name>.py ...`）。`render.py` / `batch.py` / `report.py` / `verify.py` も兄弟スクリプトを `subprocess` で起動する。 |
-| 共通フラグ | `--dry-run`, `--json`, `--progress`, `--fast`（`_common.add_common`）。 |
-| 出力規約 | stdout の最終行 = 出力パス。`--json` 時は JSON 1文書（`{"output", "dry_run", "commands", "probe"?, ...extra}`）。エラーは stderr に `error: ...`、非0終了。 |
-| 既定出力名 | `<input>_<suffix>.<ext>`（`default_output`）。`-o` で指定可。 |
-| 上書き | `ffmpeg_base()` は常に `-y`。**入力と同じパスを `-o` に渡した場合の保護は無い**。 |
-| ログ | ffmpeg コマンド行は `STATE.commands` に記録され `--json` に含まれる。ffprobe は記録されない。 |
-| 状態 | `_common.STATE` はプロセスグローバル。ライブラリとして同一プロセスで複数回・並列に使う設計ではない。 |
+| 共通フラグ   | `--dry-run`, `--json`, `--progress`, `--fast`（`_common.add_common`）。                                                                                              |
+| 出力規約     | stdout の最終行 = 出力パス。`--json` 時は JSON 1文書（`{"output", "dry_run", "commands", "probe"?, ...extra}`）。エラーは stderr に `error: ...`、非0終了。          |
+| 既定出力名   | `<input>_<suffix>.<ext>`（`default_output`）。`-o` で指定可。                                                                                                        |
+| 上書き       | `ffmpeg_base()` は常に `-y`。**入力と同じパスを `-o` に渡した場合の保護は無い**。                                                                                    |
+| ログ         | ffmpeg コマンド行は `STATE.commands` に記録され `--json` に含まれる。ffprobe は記録されない。                                                                        |
+| 状態         | `_common.STATE` はプロセスグローバル。ライブラリとして同一プロセスで複数回・並列に使う設計ではない。                                                                 |
 
 ### 1.2 スクリプト一覧（20本）
 
-| script | 役割 | 主な入力 | JSON 出力の追加キー | 再エンコード | 備考 |
-|---|---|---|---|---|---|
-| `probe.py` | メディア検査 | files | （probe 本体） | なし | `--analyze` で `levels.looks_like_log`。`--compact`, `--field a.b`。 |
-| `cut.py` | 区間切り出し / 複数区間連結 | `--start/--end/--duration`, `--segments A-B,C-D`, `--accurate`, `--tolerance` | なし | 既定 `-c copy`、ズレ >0.5s で自動再エンコード。VFR は自動 `--accurate`。 | concat は demuxer。 |
-| `fit.py` | 尺合わせ（speed/trim）、アスペクト（pad/crop）、fps | `--duration`, `--method`, `--aspect`, `--fit`, `--width`, `--fps`, `--smooth` | なし | あり | `--max-speed` 4x 超は拒否。 |
-| `silence.py` | 無音検出・除去 | `--threshold`, `--min-silence`, `--margin`, `--min-keep`, `--list`, `--edl` | `silences[[s,e]]`, `keep[[s,e]]`, `input_duration`, `kept_duration`, `removed_seconds` | あり（select/aselect で一括） | `--list --json` で検出のみ。EDL は `cut.py --segments` 互換。 |
-| `join.py` | 連結 + xfade | inputs, `--transition`, `--duration`, `--width/--height/--fps`, `--fit` | `clips`, `transition`, `expected_duration` | あり | サイズ/fps/音声レイアウトを正規化。 |
-| `caption.py` | 字幕焼き込み / SRT 生成 / ASS 生成 | `--srt/--ass/--text/--transcribe`, style, `--animate`, `--karaoke`, `--brand` | なし | あり | `--transcribe` は whisper.cpp / faster-whisper / openai-whisper のいずれかが「あれば」使う。フォント検出は無い（SKILL.md で `fc-list` を促すだけ）。 |
-| `overlay.py` | 画像/テキスト/ブランドロゴ合成 | `--image/--text/--logo`, position, `--start/--end/--fade/--opacity` | なし | あり | |
-| `graphics.py` | lower-third, title, chapter, progress, countdown, bug | `--template`, text, `--brand` | `template` | あり | drawbox/drawtext のみで描画。 |
-| `sync.py` | 2ファイル間オフセット検出、ドリフト補正 | reference, second, `--fix-drift`, `--replace-audio`/`--trim-second` | `offset_seconds`, `confidence`, `meaning`, `drift{drift_ppm,...}` | `--replace-audio` は video copy | 純 Python FFT 相関。confidence 0–1。 |
-| `multicam.py` | N入力を音声で整列しスイッチ | inputs, `--switch "S-E:CAM,..."`, `--auto N`, `--audio IDX`, `--offsets-only`, `--fix-drift` | `offsets_seconds[]`, `confidence[]`, `drift_ppm[]?`, `cuts[[s,e,cam]]` | あり（filter_complex trim/concat） | スイッチは**時刻リストを与えるだけ**。カメラ選択の判断ロジックは無い。 |
-| `audio.py` | voice chain / denoise / music+duck / fades / downmix / replace | 各フラグ | なし | video copy | |
-| `loudness.py` | 2パス loudnorm | `-I`, `--tp`, `--lra`, `--measure-only` | `--measure-only` は `{input_i,input_tp,input_lra,input_thresh,target_offset}` または `{silent:true}` | video copy | |
-| `color.py` | HDR→SDR, LUT, retag, strip-dovi | 排他4モード | なし | to-sdr/lut は x264、retag/strip は copy | |
-| `export.py` | プリセット書き出し | `--preset youtube/youtube4k/reels/x/prores/h265/gif`, `--fit`, `--crf`, `--allow-long` | なし | あり | プリセットは固定テーブル。HDR 入力は警告のみ。 |
-| `check.py` | 納品コンプライアンス | `--platform youtube/shorts/reels/tiktok/x/linkedin/broadcast/podcast/custom` + override | `platform`, `checks[{check,status,value,expected,fix,kind}]`, `failed`, `warnings`, `ok` | なし | `kind` は `format` / `judgement`。FAIL があれば exit 1。 |
-| `scenes.py` | シーンチェンジ + 音声ピーク + ハイライト提案 | `--threshold`, `--ratio`, `--highlights`, `--target`, `--edl`, `--sheet` | `scenes[{index,start,end,duration,audio_rms,audio_peak}]`, `audio_peaks[{time,rms}]`, `highlights[]` | なし | scdet のスパイク判定。 |
-| `look.py` | コンタクトシート / フレーム / 比較 PNG | `--at`, `--tiles`, `--compare` | `outputs[]` | なし | HDR はトーンマップして表示。 |
-| `render.py` | project.json から一括レンダー | project, `--stop-after`, `--work`, `--keep` | `stages[]`, `check` | 各段が別プロセスで再エンコード | 詳細は 1.3。 |
-| `batch.py` | フォルダ一括 + キャッシュ | folder, `--recipe`, `--force`, `--watch` | `results[]`, `processed`, `total` | 手順依存 | キャッシュキー = 名前/サイズ/mtime + 先頭末尾1MB の sha1（全体ハッシュではない）。 |
-| `verify.py` | 実素材でツールチェーン検証 | files/folders | `files[]`, `failed`, `total`, `report` | あり | PASS/FAIL 表。 |
-| `report.py` | HTML 納品レポート | `--after`, `--before`, `--platform`, `--commands` | `report`, `check` | なし | |
+| script        | 役割                                                           | 主な入力                                                                                     | JSON 出力の追加キー                                                                                  | 再エンコード                                                             | 備考                                                                                                                                                 |
+| ------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `probe.py`    | メディア検査                                                   | files                                                                                        | （probe 本体）                                                                                       | なし                                                                     | `--analyze` で `levels.looks_like_log`。`--compact`, `--field a.b`。                                                                                 |
+| `cut.py`      | 区間切り出し / 複数区間連結                                    | `--start/--end/--duration`, `--segments A-B,C-D`, `--accurate`, `--tolerance`                | なし                                                                                                 | 既定 `-c copy`、ズレ >0.5s で自動再エンコード。VFR は自動 `--accurate`。 | concat は demuxer。                                                                                                                                  |
+| `fit.py`      | 尺合わせ（speed/trim）、アスペクト（pad/crop）、fps            | `--duration`, `--method`, `--aspect`, `--fit`, `--width`, `--fps`, `--smooth`                | なし                                                                                                 | あり                                                                     | `--max-speed` 4x 超は拒否。                                                                                                                          |
+| `silence.py`  | 無音検出・除去                                                 | `--threshold`, `--min-silence`, `--margin`, `--min-keep`, `--list`, `--edl`                  | `silences[[s,e]]`, `keep[[s,e]]`, `input_duration`, `kept_duration`, `removed_seconds`               | あり（select/aselect で一括）                                            | `--list --json` で検出のみ。EDL は `cut.py --segments` 互換。                                                                                        |
+| `join.py`     | 連結 + xfade                                                   | inputs, `--transition`, `--duration`, `--width/--height/--fps`, `--fit`                      | `clips`, `transition`, `expected_duration`                                                           | あり                                                                     | サイズ/fps/音声レイアウトを正規化。                                                                                                                  |
+| `caption.py`  | 字幕焼き込み / SRT 生成 / ASS 生成                             | `--srt/--ass/--text/--transcribe`, style, `--animate`, `--karaoke`, `--brand`                | なし                                                                                                 | あり                                                                     | `--transcribe` は whisper.cpp / faster-whisper / openai-whisper のいずれかが「あれば」使う。フォント検出は無い（SKILL.md で `fc-list` を促すだけ）。 |
+| `overlay.py`  | 画像/テキスト/ブランドロゴ合成                                 | `--image/--text/--logo`, position, `--start/--end/--fade/--opacity`                          | なし                                                                                                 | あり                                                                     |                                                                                                                                                      |
+| `graphics.py` | lower-third, title, chapter, progress, countdown, bug          | `--template`, text, `--brand`                                                                | `template`                                                                                           | あり                                                                     | drawbox/drawtext のみで描画。                                                                                                                        |
+| `sync.py`     | 2ファイル間オフセット検出、ドリフト補正                        | reference, second, `--fix-drift`, `--replace-audio`/`--trim-second`                          | `offset_seconds`, `confidence`, `meaning`, `drift{drift_ppm,...}`                                    | `--replace-audio` は video copy                                          | 純 Python FFT 相関。confidence 0–1。                                                                                                                 |
+| `multicam.py` | N入力を音声で整列しスイッチ                                    | inputs, `--switch "S-E:CAM,..."`, `--auto N`, `--audio IDX`, `--offsets-only`, `--fix-drift` | `offsets_seconds[]`, `confidence[]`, `drift_ppm[]?`, `cuts[[s,e,cam]]`                               | あり（filter_complex trim/concat）                                       | スイッチは**時刻リストを与えるだけ**。カメラ選択の判断ロジックは無い。                                                                               |
+| `audio.py`    | voice chain / denoise / music+duck / fades / downmix / replace | 各フラグ                                                                                     | なし                                                                                                 | video copy                                                               |                                                                                                                                                      |
+| `loudness.py` | 2パス loudnorm                                                 | `-I`, `--tp`, `--lra`, `--measure-only`                                                      | `--measure-only` は `{input_i,input_tp,input_lra,input_thresh,target_offset}` または `{silent:true}` | video copy                                                               |                                                                                                                                                      |
+| `color.py`    | HDR→SDR, LUT, retag, strip-dovi                                | 排他4モード                                                                                  | なし                                                                                                 | to-sdr/lut は x264、retag/strip は copy                                  |                                                                                                                                                      |
+| `export.py`   | プリセット書き出し                                             | `--preset youtube/youtube4k/reels/x/prores/h265/gif`, `--fit`, `--crf`, `--allow-long`       | なし                                                                                                 | あり                                                                     | プリセットは固定テーブル。HDR 入力は警告のみ。                                                                                                       |
+| `check.py`    | 納品コンプライアンス                                           | `--platform youtube/shorts/reels/tiktok/x/linkedin/broadcast/podcast/custom` + override      | `platform`, `checks[{check,status,value,expected,fix,kind}]`, `failed`, `warnings`, `ok`             | なし                                                                     | `kind` は `format` / `judgement`。FAIL があれば exit 1。                                                                                             |
+| `scenes.py`   | シーンチェンジ + 音声ピーク + ハイライト提案                   | `--threshold`, `--ratio`, `--highlights`, `--target`, `--edl`, `--sheet`                     | `scenes[{index,start,end,duration,audio_rms,audio_peak}]`, `audio_peaks[{time,rms}]`, `highlights[]` | なし                                                                     | scdet のスパイク判定。                                                                                                                               |
+| `look.py`     | コンタクトシート / フレーム / 比較 PNG                         | `--at`, `--tiles`, `--compare`                                                               | `outputs[]`                                                                                          | なし                                                                     | HDR はトーンマップして表示。                                                                                                                         |
+| `render.py`   | project.json から一括レンダー                                  | project, `--stop-after`, `--work`, `--keep`                                                  | `stages[]`, `check`                                                                                  | 各段が別プロセスで再エンコード                                           | 詳細は 1.3。                                                                                                                                         |
+| `batch.py`    | フォルダ一括 + キャッシュ                                      | folder, `--recipe`, `--force`, `--watch`                                                     | `results[]`, `processed`, `total`                                                                    | 手順依存                                                                 | キャッシュキー = 名前/サイズ/mtime + 先頭末尾1MB の sha1（全体ハッシュではない）。                                                                   |
+| `verify.py`   | 実素材でツールチェーン検証                                     | files/folders                                                                                | `files[]`, `failed`, `total`, `report`                                                               | あり                                                                     | PASS/FAIL 表。                                                                                                                                       |
+| `report.py`   | HTML 納品レポート                                              | `--after`, `--before`, `--platform`, `--commands`                                            | `report`, `check`                                                                                    | なし                                                                     |                                                                                                                                                      |
 
 ### 1.3 `render.py` の project.json（現在の「宣言的編集」契約）[FACT]
 
@@ -111,21 +111,21 @@
 
 Agent からは ffmpeg-skill を **外部プロセス（CLI）として** 利用する。理由は 1.1 の `STATE` グローバルと `die()`（`sys.exit`）がライブラリ利用に向かないため。
 
-| ffmpeg-skill 側 | Agent での利用方法 |
-|---|---|
-| `probe.py --json` | Observation の一次ソース（`media.probe`）。 |
-| `probe.py --analyze` | Log 判定 Observation（Phase 2 以降）。 |
-| `silence.py --list --json` | 無音 Observation → AudioEvent(SILENCE)。 |
-| `loudness.py --measure-only` | ラウドネス Observation（入力 QA / 出力 QA 両方）。 |
-| `scenes.py --json` | SceneEvent / 音声ピーク Observation（Phase 3）。 |
-| `sync.py --json`, `multicam.py --offsets-only --json` | 同期 Observation + confidence（Phase 2/3）。 |
-| `check.py --platform X --json` | Delivery QA の実行器。`kind` をそのまま QA 項目の risk 分類に写像。 |
-| `look.py` | 視覚 QA 用 PNG（Phase 1 では artifact として保存、判断は人間 / 将来 AI）。 |
-| `cut.py`, `fit.py`, `loudness.py`, `export.py`, `caption.py`, `overlay.py`, `graphics.py`, `audio.py`, `color.py`, `join.py`, `multicam.py` | Project IR の operation を compile した先の Tool 呼び出し。 |
-| `render.py` project.json | **Phase 1 では使わない**（1.3 の固定順序・検証無し・check 結果が終了コードに反映されない、が理由）。将来、IR の一部を render プロジェクトへ「lowering」する adapter は作れる。 |
-| `report.py` | 納品レポート生成の下請け（Agent のレポートに HTML を添付）。 |
-| `mcp/server.py` | Phase 1 では使わない（型無し・タイムアウト無し）。他ホストからの利用のために残す。 |
-| `--dry-run --json` の `commands` | Dry Run 表示と provenance に転記。 |
+| ffmpeg-skill 側                                                                                                                             | Agent での利用方法                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `probe.py --json`                                                                                                                           | Observation の一次ソース（`media.probe`）。                                                                                                                                    |
+| `probe.py --analyze`                                                                                                                        | Log 判定 Observation（Phase 2 以降）。                                                                                                                                         |
+| `silence.py --list --json`                                                                                                                  | 無音 Observation → AudioEvent(SILENCE)。                                                                                                                                       |
+| `loudness.py --measure-only`                                                                                                                | ラウドネス Observation（入力 QA / 出力 QA 両方）。                                                                                                                             |
+| `scenes.py --json`                                                                                                                          | SceneEvent / 音声ピーク Observation（Phase 3）。                                                                                                                               |
+| `sync.py --json`, `multicam.py --offsets-only --json`                                                                                       | 同期 Observation + confidence（Phase 2/3）。                                                                                                                                   |
+| `check.py --platform X --json`                                                                                                              | Delivery QA の実行器。`kind` をそのまま QA 項目の risk 分類に写像。                                                                                                            |
+| `look.py`                                                                                                                                   | 視覚 QA 用 PNG（Phase 1 では artifact として保存、判断は人間 / 将来 AI）。                                                                                                     |
+| `cut.py`, `fit.py`, `loudness.py`, `export.py`, `caption.py`, `overlay.py`, `graphics.py`, `audio.py`, `color.py`, `join.py`, `multicam.py` | Project IR の operation を compile した先の Tool 呼び出し。                                                                                                                    |
+| `render.py` project.json                                                                                                                    | **Phase 1 では使わない**（1.3 の固定順序・検証無し・check 結果が終了コードに反映されない、が理由）。将来、IR の一部を render プロジェクトへ「lowering」する adapter は作れる。 |
+| `report.py`                                                                                                                                 | 納品レポート生成の下請け（Agent のレポートに HTML を添付）。                                                                                                                   |
+| `mcp/server.py`                                                                                                                             | Phase 1 では使わない（型無し・タイムアウト無し）。他ホストからの利用のために残す。                                                                                             |
+| `--dry-run --json` の `commands`                                                                                                            | Dry Run 表示と provenance に転記。                                                                                                                                             |
 
 ---
 
@@ -145,34 +145,34 @@ Agent が **唯一** 自前で持つ ffprobe 系の処理は、`ffmpeg -encoders
 
 ## 4. 責務境界 [DESIGN]
 
-| 責務 | ffmpeg-skill (Hands) | video-production-agent (Brain) |
-|---|---|---|
-| ffmpeg コマンド生成・実行 | ○ | ×（禁止。adapter 経由でスクリプトを呼ぶだけ） |
-| メディア観測（probe, silence list, loudness measure, scenes, sync） | ○ 実行 | ○ 結果を Observation として構造化・保存 |
-| 推論（「この無音は不要」「これは登壇者交代」） | × | ○ Inference（confidence, evidence 付き） |
-| 要求理解 / 要件抽出 / 意図 | × | ○ |
-| Policy / Preference / Constraint | × | ○ |
-| 決定（AUTO/CONFIRM/BLOCK, risk） | × | ○ |
-| Skill 選択 / Capability 解決 / Tool 選択 | × | ○ |
-| Project IR / 検証 / compile | × | ○ |
-| operation 実行 | ○ | ○ オーケストレーション（順序、リトライ、キャンセル、ワークスペース） |
-| 出力 QA | ○ `check.py`, `probe.py`, `loudness --measure-only`, `look.py` | ○ 統合・判定・Incident 化 |
-| Recovery | ×（`cut.py` の copy→再エンコード fallback は内部的な処理選択であり、Agent から見れば1 operation） | ○ 分類・戦略・有限リトライ |
-| Job / Artifact / Provenance / Audit | × | ○ |
-| プロファイル（generic / youtube / conference …） | ×（brand.json と固定プリセットのみ） | ○ |
-| AI プロバイダ | × | ○（Phase 1 はオプション、決定論的パスのみで動く） |
+| 責務                                                                | ffmpeg-skill (Hands)                                                                              | video-production-agent (Brain)                                       |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| ffmpeg コマンド生成・実行                                           | ○                                                                                                 | ×（禁止。adapter 経由でスクリプトを呼ぶだけ）                        |
+| メディア観測（probe, silence list, loudness measure, scenes, sync） | ○ 実行                                                                                            | ○ 結果を Observation として構造化・保存                              |
+| 推論（「この無音は不要」「これは登壇者交代」）                      | ×                                                                                                 | ○ Inference（confidence, evidence 付き）                             |
+| 要求理解 / 要件抽出 / 意図                                          | ×                                                                                                 | ○                                                                    |
+| Policy / Preference / Constraint                                    | ×                                                                                                 | ○                                                                    |
+| 決定（AUTO/CONFIRM/BLOCK, risk）                                    | ×                                                                                                 | ○                                                                    |
+| Skill 選択 / Capability 解決 / Tool 選択                            | ×                                                                                                 | ○                                                                    |
+| Project IR / 検証 / compile                                         | ×                                                                                                 | ○                                                                    |
+| operation 実行                                                      | ○                                                                                                 | ○ オーケストレーション（順序、リトライ、キャンセル、ワークスペース） |
+| 出力 QA                                                             | ○ `check.py`, `probe.py`, `loudness --measure-only`, `look.py`                                    | ○ 統合・判定・Incident 化                                            |
+| Recovery                                                            | ×（`cut.py` の copy→再エンコード fallback は内部的な処理選択であり、Agent から見れば1 operation） | ○ 分類・戦略・有限リトライ                                           |
+| Job / Artifact / Provenance / Audit                                 | ×                                                                                                 | ○                                                                    |
+| プロファイル（generic / youtube / conference …）                    | ×（brand.json と固定プリセットのみ）                                                              | ○                                                                    |
+| AI プロバイダ                                                       | ×                                                                                                 | ○（Phase 1 はオプション、決定論的パスのみで動く）                    |
 
 **ffmpeg-skill インターフェースとの不一致と対処**（CLAUDE.md「adapter を設計せよ」への回答）:
 
-| 不一致 | 対処 |
-|---|---|
-| `check.py` FAIL で exit 1、`render.py` は exit 0 | adapter は終了コードと JSON の両方を見る。`render.py` は使わない。 |
-| `--dry-run` でも ffmpeg バイナリと入力ファイルが必要（`cut.py` は存在しない入力で失敗） | Agent の dry-run は **IR とカタログから** operation を列挙し、ffmpeg-skill の `--dry-run` は「実コマンド確認」の任意付加ステップとする。 |
-| 出力名が `<input>_<suffix>` で衝突しうる | adapter は常に `-o` を Agent 管理の workspace パスで指定する。 |
-| 入力=出力の保護が無い | adapter が `-o` を source ディレクトリ外に強制する（Constraint: preserve original）。 |
-| MCP の inputSchema が型無し | Agent 側の Tool カタログ（`tools/ffmpeg_skill/catalog.py`）に引数型を持ち、adapter で検証する。 |
-| バージョン情報が JSON に無い | adapter が `package.json` の `version` と `ffmpeg -version` を provenance に記録。 |
-| 最初の音声トラックしか扱えない | Asset 分析で `ffprobe -show_streams` 相当を Agent が追加取得するか、ffmpeg-skill に `probe.py --streams` を提案（[UNKNOWN] Phase 2 で判断）。 |
+| 不一致                                                                                  | 対処                                                                                                                                          |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check.py` FAIL で exit 1、`render.py` は exit 0                                        | adapter は終了コードと JSON の両方を見る。`render.py` は使わない。                                                                            |
+| `--dry-run` でも ffmpeg バイナリと入力ファイルが必要（`cut.py` は存在しない入力で失敗） | Agent の dry-run は **IR とカタログから** operation を列挙し、ffmpeg-skill の `--dry-run` は「実コマンド確認」の任意付加ステップとする。      |
+| 出力名が `<input>_<suffix>` で衝突しうる                                                | adapter は常に `-o` を Agent 管理の workspace パスで指定する。                                                                                |
+| 入力=出力の保護が無い                                                                   | adapter が `-o` を source ディレクトリ外に強制する（Constraint: preserve original）。                                                         |
+| MCP の inputSchema が型無し                                                             | Agent 側の Tool カタログ（`tools/ffmpeg_skill/catalog.py`）に引数型を持ち、adapter で検証する。                                               |
+| バージョン情報が JSON に無い                                                            | adapter が `package.json` の `version` と `ffmpeg -version` を provenance に記録。                                                            |
+| 最初の音声トラックしか扱えない                                                          | Asset 分析で `ffprobe -show_streams` 相当を Agent が追加取得するか、ffmpeg-skill に `probe.py --streams` を提案（[UNKNOWN] Phase 2 で判断）。 |
 
 ---
 
@@ -314,18 +314,18 @@ Phase 1 の Skill: `media_probe`, `silence_cleanup`（leading/trailing の技術
 
 `CapabilityResolver.resolve() -> dict[str, Capability{status, detail, evidence}]`。検出方法 [DESIGN, ffmpeg-skill には無い]:
 
-| capability | 検出 |
-|---|---|
-| `python` | `sys.version_info` |
-| `ffmpeg`, `ffprobe` | `shutil.which` + `-version` 先頭行 |
-| `encoder:libx264/libx265/prores_ks/h264_videotoolbox/h264_nvenc/hevc_nvenc/libaom-av1/libsvtav1` | `ffmpeg -hide_banner -encoders` |
-| `decoder:hevc/h264/av1/prores` | `ffmpeg -decoders` |
-| `filter:subtitles/ass/zscale/tonemap/loudnorm/scdet` | `ffmpeg -filters`（libass → `subtitles`/`ass`、zimg → `zscale`） |
-| `gpu` | nvenc/videotoolbox/vaapi エンコーダの有無から DEGRADED/AVAILABLE を推定（UNKNOWN も許容） |
-| `font:cjk-ja` | `fc-list :lang=ja` が使えれば AVAILABLE、`fc-list` 自体が無ければ UNKNOWN |
-| `ffmpeg-skill` | 設定パス（`VIDEO_AGENT_FFMPEG_SKILL_DIR` / `~/.claude/skills/ffmpeg-skill` / agent の source checkout の隣。カレントディレクトリの `vendor/` は見ない: ADR-069）で `scripts/probe.py` と `package.json` を確認、version を記録 |
-| `asr:whisper` | `whisper-cli` / `faster_whisper` import / `whisper` の有無 |
-| `ai:<provider>` | API キー環境変数の有無（値は記録しない） |
+| capability                                                                                       | 検出                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `python`                                                                                         | `sys.version_info`                                                                                                                                                                                                             |
+| `ffmpeg`, `ffprobe`                                                                              | `shutil.which` + `-version` 先頭行                                                                                                                                                                                             |
+| `encoder:libx264/libx265/prores_ks/h264_videotoolbox/h264_nvenc/hevc_nvenc/libaom-av1/libsvtav1` | `ffmpeg -hide_banner -encoders`                                                                                                                                                                                                |
+| `decoder:hevc/h264/av1/prores`                                                                   | `ffmpeg -decoders`                                                                                                                                                                                                             |
+| `filter:subtitles/ass/zscale/tonemap/loudnorm/scdet`                                             | `ffmpeg -filters`（libass → `subtitles`/`ass`、zimg → `zscale`）                                                                                                                                                               |
+| `gpu`                                                                                            | nvenc/videotoolbox/vaapi エンコーダの有無から DEGRADED/AVAILABLE を推定（UNKNOWN も許容）                                                                                                                                      |
+| `font:cjk-ja`                                                                                    | `fc-list :lang=ja` が使えれば AVAILABLE、`fc-list` 自体が無ければ UNKNOWN                                                                                                                                                      |
+| `ffmpeg-skill`                                                                                   | 設定パス（`VIDEO_AGENT_FFMPEG_SKILL_DIR` / `~/.claude/skills/ffmpeg-skill` / agent の source checkout の隣。カレントディレクトリの `vendor/` は見ない: ADR-069）で `scripts/probe.py` と `package.json` を確認、version を記録 |
+| `asr:whisper`                                                                                    | `whisper-cli` / `faster_whisper` import / `whisper` の有無                                                                                                                                                                     |
+| `ai:<provider>`                                                                                  | API キー環境変数の有無（値は記録しない）                                                                                                                                                                                       |
 
 ### 9.3 Tool
 
@@ -357,15 +357,15 @@ class Decision:
 
 risk と confidence は独立。approval の決定則（Phase 1、profile で上書き可）:
 
-| ケース | risk | approval |
-|---|---|---|
-| コーデック / コンテナ / プラットフォーム形式（`check.py kind=format` 相当） | LOW | AUTO |
-| 先頭・末尾の技術的無音（発話区間の外側、閾値以下が ≥ N 秒） | LOW | AUTO（profile=conference では CONFIRM） |
-| 中間の無音除去（発話の間） | MEDIUM | CONFIRM |
-| 尺変更 / クロップ / fps 低下（`check.py kind=judgement`） | MEDIUM | CONFIRM |
-| 意味的削除（発話内容に基づく） | HIGH | CONFIRM（conference では既定 BLOCK 候補、後述） |
-| 必要 capability が MISSING | — | BLOCK |
-| 予算超過 | — | CONFIRM または BLOCK（budget policy による） |
+| ケース                                                                      | risk   | approval                                        |
+| --------------------------------------------------------------------------- | ------ | ----------------------------------------------- |
+| コーデック / コンテナ / プラットフォーム形式（`check.py kind=format` 相当） | LOW    | AUTO                                            |
+| 先頭・末尾の技術的無音（発話区間の外側、閾値以下が ≥ N 秒）                 | LOW    | AUTO（profile=conference では CONFIRM）         |
+| 中間の無音除去（発話の間）                                                  | MEDIUM | CONFIRM                                         |
+| 尺変更 / クロップ / fps 低下（`check.py kind=judgement`）                   | MEDIUM | CONFIRM                                         |
+| 意味的削除（発話内容に基づく）                                              | HIGH   | CONFIRM（conference では既定 BLOCK 候補、後述） |
+| 必要 capability が MISSING                                                  | —      | BLOCK                                           |
+| 予算超過                                                                    | —      | CONFIRM または BLOCK（budget policy による）    |
 
 説明可能性: `video-agent explain <project.json> [--decision ID]` は Decision の reason/evidence/alternatives をそのまま表示する（Phase 1 で実装、追加計算なし）。
 
@@ -402,27 +402,27 @@ class Rule:
 
 ### 12.2 トップレベル（MASTER_SPEC §22 をそのまま採用、Phase 1 で埋めるものに ✓）
 
-| キー | 内容 | Phase 1 |
-|---|---|---|
-| `schema_version` | "1.0" | ✓ |
-| `project` | `{id, kind: "single"|"production", name, created_at, profile: {name, version}}` | ✓ |
-| `request` | `{raw, received_at, channel}` | ✓ |
-| `requirements` | `[{id, key, value, provenance}]` | ✓ |
-| `source` | `{tool_versions, agent_version, generator}` | ✓ |
-| `assets` | `{<asset_id>: Asset}` | ✓ |
-| `analysis` | `{observations: [...], inferences: [...], strategy: FULL|COARSE|TARGETED, budget}` | ✓ |
-| `intent` | `{primary, secondary[], confidence, provenance}` | ✓ |
-| `constraints` / `policy` | 解決済み Rule 一覧（provenance 付き） | ✓ |
-| `decisions` | Decision[] | ✓ |
-| `plan` | `{version, steps: [{id, skill, tool, decision_ids, params}], summary(human readable)}` | ✓ |
-| `timeline` | `{timelines: {id: {asset_id, offset, drift_ratio}}, events: Event[]}` | ✓（silence/loudness のみ） |
-| `video` | `{operations: [ {type: trim|fit|..., ...} ]}` 映像側 operation | ✓ trim のみ |
-| `audio` | `{operations: [ {type: loudness_normalize, target_lufs, true_peak} ]}` | ✓ |
-| `captions` / `graphics` / `color` | 空オブジェクト（スキーマ定義のみ） | 定義のみ |
-| `delivery` | `{targets: [{id, preset(ffmpeg-skill export preset名), platform(check.py platform名), filename_rule}]}` | ✓ |
-| `qa` | `{required: [...], thresholds}` | ✓ |
-| `execution` | `{workspace, dry_run, budgets, recovery_policy}` | ✓ |
-| `provenance` | `{source_hashes, profile_version, skill_versions, tool_versions, created_by}` | ✓ |
+| キー                              | 内容                                                                                                    | Phase 1                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `schema_version`                  | "1.0"                                                                                                   | ✓                                                          |
+| `project`                         | `{id, kind: "single"                                                                                    | "production", name, created_at, profile: {name, version}}` | ✓                              |
+| `request`                         | `{raw, received_at, channel}`                                                                           | ✓                                                          |
+| `requirements`                    | `[{id, key, value, provenance}]`                                                                        | ✓                                                          |
+| `source`                          | `{tool_versions, agent_version, generator}`                                                             | ✓                                                          |
+| `assets`                          | `{<asset_id>: Asset}`                                                                                   | ✓                                                          |
+| `analysis`                        | `{observations: [...], inferences: [...], strategy: FULL                                                | COARSE                                                     | TARGETED, budget}`             | ✓           |
+| `intent`                          | `{primary, secondary[], confidence, provenance}`                                                        | ✓                                                          |
+| `constraints` / `policy`          | 解決済み Rule 一覧（provenance 付き）                                                                   | ✓                                                          |
+| `decisions`                       | Decision[]                                                                                              | ✓                                                          |
+| `plan`                            | `{version, steps: [{id, skill, tool, decision_ids, params}], summary(human readable)}`                  | ✓                                                          |
+| `timeline`                        | `{timelines: {id: {asset_id, offset, drift_ratio}}, events: Event[]}`                                   | ✓（silence/loudness のみ）                                 |
+| `video`                           | `{operations: [ {type: trim                                                                             | fit                                                        | ..., ...} ]}` 映像側 operation | ✓ trim のみ |
+| `audio`                           | `{operations: [ {type: loudness_normalize, target_lufs, true_peak} ]}`                                  | ✓                                                          |
+| `captions` / `graphics` / `color` | 空オブジェクト（スキーマ定義のみ）                                                                      | 定義のみ                                                   |
+| `delivery`                        | `{targets: [{id, preset(ffmpeg-skill export preset名), platform(check.py platform名), filename_rule}]}` | ✓                                                          |
+| `qa`                              | `{required: [...], thresholds}`                                                                         | ✓                                                          |
+| `execution`                       | `{workspace, dry_run, budgets, recovery_policy}`                                                        | ✓                                                          |
+| `provenance`                      | `{source_hashes, profile_version, skill_versions, tool_versions, created_by}`                           | ✓                                                          |
 
 ### 12.3 operation の語彙（Phase 1）
 
@@ -473,13 +473,13 @@ class Operation:
 
 ## 14. QA [DESIGN]
 
-| 層 | Phase 1 の実装 | 実行器 |
-|---|---|---|
-| Video QA | resolution / codec / fps / duration / pix_fmt / aspect を **期待値（IR の delivery target + source 観測）と比較** | `probe.py --json` |
-| Audio QA | loudness / true peak / sample rate / channels を期待値と比較、`silent` 検出 | `loudness.py --measure-only`, `probe.py` |
-| Delivery QA | プラットフォーム適合 | `check.py --platform --json`（`kind` を保持） |
-| Visual QA | コンタクトシート生成のみ（判定は人間） | `look.py` |
-| Semantic QA | 未実装（スキーマ上のプレースホルダ） | — |
+| 層          | Phase 1 の実装                                                                                                    | 実行器                                        |
+| ----------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Video QA    | resolution / codec / fps / duration / pix_fmt / aspect を **期待値（IR の delivery target + source 観測）と比較** | `probe.py --json`                             |
+| Audio QA    | loudness / true peak / sample rate / channels を期待値と比較、`silent` 検出                                       | `loudness.py --measure-only`, `probe.py`      |
+| Delivery QA | プラットフォーム適合                                                                                              | `check.py --platform --json`（`kind` を保持） |
+| Visual QA   | コンタクトシート生成のみ（判定は人間）                                                                            | `look.py`                                     |
+| Semantic QA | 未実装（スキーマ上のプレースホルダ）                                                                              | —                                             |
 
 黒フレーム / フリーズ / クリッピング / チャンネル欠落は ffmpeg-skill に無い [FACT]。Phase 3 で `blackdetect` / `freezedetect` / `astats` を ffmpeg-skill 側に `incidents.py` として提案するか Agent 側の `media/` に置くかは [UNKNOWN]（推奨: ffmpeg-skill 側に PR）。
 
@@ -546,32 +546,50 @@ Phase 2 の設計だが、Phase 1 で境界を確保する。
 
 ```json
 {
-  "name": "conference", "version": "0.1",
+  "name": "conference",
+  "version": "0.1",
   "extends": "generic",
-  "delivery": {"targets": [{"id": "master", "preset": "prores", "platform": "broadcast"},
-                            {"id": "web", "preset": "youtube", "platform": "youtube"}]},
-  "audio": {"target_lufs": -16, "true_peak": -1.5},
-  "decisions": {"silence.leading": "CONFIRM", "silence.internal": "CONFIRM", "semantic_deletion": "BLOCK_UNLESS_EXPLICIT"},
+  "delivery": {
+    "targets": [
+      { "id": "master", "preset": "prores", "platform": "broadcast" },
+      { "id": "web", "preset": "youtube", "platform": "youtube" }
+    ]
+  },
+  "audio": { "target_lufs": -16, "true_peak": -1.5 },
+  "decisions": {
+    "silence.leading": "CONFIRM",
+    "silence.internal": "CONFIRM",
+    "semantic_deletion": "BLOCK_UNLESS_EXPLICIT"
+  },
   "naming": "{event}_{session}_{speaker}_{date}_{version}_{format}",
-  "asset_roles": ["camera_a", "camera_b", "camera_c", "presentation", "slides", "presentation_audio", "room_audio", "logo"]
+  "asset_roles": [
+    "camera_a",
+    "camera_b",
+    "camera_c",
+    "presentation",
+    "slides",
+    "presentation_audio",
+    "room_audio",
+    "logo"
+  ]
 }
 ```
 
 - Asset 分類（Phase 2）: 拡張子 / probe（video 無し→AUDIO 候補、画面録画的解像度→SCREEN_CAPTURE 候補、PNG→LOGO/IMAGE）/ ファイル名パターン / ユーザ指定。各分類は `confidence` と `evidence` 付きの Inference。
 - パイプライン段階と対応する Skill / Tool:
 
-| 段階 | Skill | Tool（既存 / 要追加） |
-|---|---|---|
-| 同期 | `multi_source_sync` | `sync.py`, `multicam.py --offsets-only` [FACT 既存] |
-| セッション分割 | `session_segmentation` | `scenes.py` + `silence.py` の長い無音 + ユーザ入力 [DESIGN] |
-| スライド検出 | `slide_detection` | `scenes.py`（画面キャプチャに対して）→ Phase 4 で PowerPoint パーサ [要追加] |
-| 話者検出 | `speaker_detection` | ASR + 話者分離 [要追加、Phase 4] |
-| カメラ選択 | `camera_selection` | 判断は Agent、合成は `multicam.py --switch` [FACT 既存] |
-| 音声 | `audio_cleanup`, `loudness_normalization` | `audio.py`, `loudness.py` |
-| 字幕 | `caption_generation` | `caption.py --transcribe/--srt` |
-| チャプタ | `chapter_generation` | Session 境界からメタデータ生成 [要追加] |
-| マスタ / Web / YouTube | `delivery_export` | `export.py` |
-| QA / 納品 | `delivery_check` | `check.py`, `look.py` |
+| 段階                   | Skill                                     | Tool（既存 / 要追加）                                                        |
+| ---------------------- | ----------------------------------------- | ---------------------------------------------------------------------------- |
+| 同期                   | `multi_source_sync`                       | `sync.py`, `multicam.py --offsets-only` [FACT 既存]                          |
+| セッション分割         | `session_segmentation`                    | `scenes.py` + `silence.py` の長い無音 + ユーザ入力 [DESIGN]                  |
+| スライド検出           | `slide_detection`                         | `scenes.py`（画面キャプチャに対して）→ Phase 4 で PowerPoint パーサ [要追加] |
+| 話者検出               | `speaker_detection`                       | ASR + 話者分離 [要追加、Phase 4]                                             |
+| カメラ選択             | `camera_selection`                        | 判断は Agent、合成は `multicam.py --switch` [FACT 既存]                      |
+| 音声                   | `audio_cleanup`, `loudness_normalization` | `audio.py`, `loudness.py`                                                    |
+| 字幕                   | `caption_generation`                      | `caption.py --transcribe/--srt`                                              |
+| チャプタ               | `chapter_generation`                      | Session 境界からメタデータ生成 [要追加]                                      |
+| マスタ / Web / YouTube | `delivery_export`                         | `export.py`                                                                  |
+| QA / 納品              | `delivery_check`                          | `check.py`, `look.py`                                                        |
 
 - 医学系の安全策（§49）: `semantic_deletion` Skill は conference profile では既定 `BLOCK_UNLESS_EXPLICIT`（Request に明示の削除指示がある場合のみ CONFIRM に緩和）。数値・薬剤名・氏名を含む発話区間は将来 ASR で検出し `PROTECTED` Event として timeline に置き、その区間に重なる trim は CONFIRM 以上に強制する。
 
@@ -579,29 +597,29 @@ Phase 2 の設計だが、Phase 1 で境界を確保する。
 
 ## 19. Phase Roadmap [DESIGN]
 
-| Phase | 内容 | ffmpeg-skill への依存 |
-|---|---|---|
-| 1 | Request → Requirements → Intent → Analysis(probe/silence/loudness) → Decision → Plan → IR → Validation → Execute(cut/loudness/export) → QA(probe/check) → Report。CLI 9コマンド。generic / youtube profile。 | probe, silence, loudness, cut, export, check, look |
-| 2 | conference profile、Asset 分類、Production/Event/Session、sync/multicam offsets、job resume | + sync, multicam |
-| 3 | scenes、transcription（whisper）、captions、chapters、highlights、incident 検出（blackdetect/freezedetect/astats） | + scenes, caption；incident は要追加 |
-| 4 | PowerPoint、semantic editing、AI multicam、slide sync、speaker、thumbnails、YouTube/archive package | 要追加多数 |
-| 5+ | Review UI、diff UI、queue、batch、分散、AI providers、OCR、知識化 | batch.py 等 |
+| Phase | 内容                                                                                                                                                                                                         | ffmpeg-skill への依存                              |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| 1     | Request → Requirements → Intent → Analysis(probe/silence/loudness) → Decision → Plan → IR → Validation → Execute(cut/loudness/export) → QA(probe/check) → Report。CLI 9コマンド。generic / youtube profile。 | probe, silence, loudness, cut, export, check, look |
+| 2     | conference profile、Asset 分類、Production/Event/Session、sync/multicam offsets、job resume                                                                                                                  | + sync, multicam                                   |
+| 3     | scenes、transcription（whisper）、captions、chapters、highlights、incident 検出（blackdetect/freezedetect/astats）                                                                                           | + scenes, caption；incident は要追加               |
+| 4     | PowerPoint、semantic editing、AI multicam、slide sync、speaker、thumbnails、YouTube/archive package                                                                                                          | 要追加多数                                         |
+| 5+    | Review UI、diff UI、queue、batch、分散、AI providers、OCR、知識化                                                                                                                                            | batch.py 等                                        |
 
 ---
 
 ## 20. 技術リスク [FACT + DESIGN]
 
-| リスク | 根拠 | 対処 |
-|---|---|---|
-| ffmpeg-skill の CLI 契約が非公式（semver 化されていない） | `--json` のキーは script ごとに異なり、スキーマ文書が無い | adapter の catalog にバージョン固定（`>=0.8.4,<0.9`）を持ち、起動時に `package.json` を検査。契約テスト（`tests/contract_ffmpeg_skill.py`）で `--help` と `--json` キーを固定。 |
-| 各段が別プロセス・別再エンコード（CRF18 の世代劣化、時間） | `render.py` も同様 | Phase 1 は trim(copy優先) → loudness(copy) → export の3段で再エンコードは export の1回に抑える。 |
-| `--dry-run` が ffmpeg と実ファイルを要求 | 1.3, 4 | Agent の dry-run は IR ベース。 |
-| 入力=出力の上書き事故 | `-y` 固定、保護無し | adapter の workspace 強制。 |
-| VFR / HDR の自動挙動が IR の意図と食い違う | `cut.py` は VFR で勝手に `--accurate`、HDR は HEVC Main10 維持 | Observation（`variable_frame_rate_suspected`, `hdr`）を Decision に反映し、期待値 QA で検出。 |
-| 長尺（学会 1–3 時間）の処理時間 | devices.md「10分超はトーンマップ全体禁止」 | 分析は `TARGETED`（先頭/末尾 N 秒 + サンプリング）を既定、`max_processing_time` 予算。 |
-| 日本語フォント無し→豆腐 | フォント検出はコードに無い | doctor / CapabilityResolver で `font:cjk-ja`、caption Skill の required_capability に。 |
-| Windows パス / `fc-list` 非存在 | ffmpeg-skill は 3OS 対応、`fc-list` は Linux/mac 前提 | capability は UNKNOWN を返す設計。 |
-| AI 推論の混入 | 禁止事項「推測を事実に」 | Phase 1 は AI 無し。Inference は常に別型。 |
+| リスク                                                     | 根拠                                                           | 対処                                                                                                                                                                            |
+| ---------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ffmpeg-skill の CLI 契約が非公式（semver 化されていない）  | `--json` のキーは script ごとに異なり、スキーマ文書が無い      | adapter の catalog にバージョン固定（`>=0.8.4,<0.9`）を持ち、起動時に `package.json` を検査。契約テスト（`tests/contract_ffmpeg_skill.py`）で `--help` と `--json` キーを固定。 |
+| 各段が別プロセス・別再エンコード（CRF18 の世代劣化、時間） | `render.py` も同様                                             | Phase 1 は trim(copy優先) → loudness(copy) → export の3段で再エンコードは export の1回に抑える。                                                                                |
+| `--dry-run` が ffmpeg と実ファイルを要求                   | 1.3, 4                                                         | Agent の dry-run は IR ベース。                                                                                                                                                 |
+| 入力=出力の上書き事故                                      | `-y` 固定、保護無し                                            | adapter の workspace 強制。                                                                                                                                                     |
+| VFR / HDR の自動挙動が IR の意図と食い違う                 | `cut.py` は VFR で勝手に `--accurate`、HDR は HEVC Main10 維持 | Observation（`variable_frame_rate_suspected`, `hdr`）を Decision に反映し、期待値 QA で検出。                                                                                   |
+| 長尺（学会 1–3 時間）の処理時間                            | devices.md「10分超はトーンマップ全体禁止」                     | 分析は `TARGETED`（先頭/末尾 N 秒 + サンプリング）を既定、`max_processing_time` 予算。                                                                                          |
+| 日本語フォント無し→豆腐                                    | フォント検出はコードに無い                                     | doctor / CapabilityResolver で `font:cjk-ja`、caption Skill の required_capability に。                                                                                         |
+| Windows パス / `fc-list` 非存在                            | ffmpeg-skill は 3OS 対応、`fc-list` は Linux/mac 前提          | capability は UNKNOWN を返す設計。                                                                                                                                              |
+| AI 推論の混入                                              | 禁止事項「推測を事実に」                                       | Phase 1 は AI 無し。Inference は常に別型。                                                                                                                                      |
 
 ---
 

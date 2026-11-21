@@ -6,21 +6,21 @@ Field names come from the contract (`operations[<TYPE>].parameters`); unknown ke
 name an execution escape hatch (`command`, `argv`, `shell`, `filter`, `env`, `api_key`, `workspace`, …) are
 `INVALID_REQUEST` with reason `forbidden_key` at any level of the document.
 
-| Type | Inputs | Parameters (required in bold) | Engine tool |
-|---|---|---|---|
-| `TRIM` | `input` (video) | **start**, **end**, precision `frame` \| `keyframe` \| `auto` \| `smart` | `ffmpeg-skill/cut` |
-| `CUT` | `input` (video) | **keep** `[{start, end}, …]` (output order), precision | `ffmpeg-skill/cut` |
-| `CONCAT` | `inputs` (2..100 videos) | transition `{type, duration}`, width, height, fps, mode `pad` \| `crop`, pad_color | `ffmpeg-skill/join` |
-| `SPEED` | `input` (video) | **factor** in [1/4, 4], not 1; smooth `blend \| interpolate` (optional) | `ffmpeg-skill/fit` |
-| `FIT` | `input` (video) | **aspect** `W:H`, width, pad_color, fps | `ffmpeg-skill/fit` |
-| `FILL` | `input` (video) | **aspect** `W:H`, width, anchor `{x, y}` each 0..1, fps | `ffmpeg-skill/fit` |
-| `RESIZE` | `input` (video) | **width** (even), fps | `ffmpeg-skill/fit` |
-| `OVERLAY` | `input` (video) + `params.image` (image source) | **image**, position (name or `{x, y}`), margin, scale, opacity, start, end, fade | `ffmpeg-skill/overlay` |
-| `ROTATE` | `input` (video) | degrees `90 \| 180 \| 270`, flip `h \| v` (at least one required) | `ffmpeg-skill/fit` |
-| `FREEZE` | `input` (video) | **hold** time 0.01..600 s, at time `< input duration` (optional) | `ffmpeg-skill/freeze` (optional tool) |
-| `REVERSE` | `input` (video) | none | `ffmpeg-skill/reverse` (optional tool) |
-| `IMAGE_INSERT` | `input` (image source) | **duration** time 0.01..600 s, width (even), height (even), fps 1..240 (default 30) | `ffmpeg-skill/insert` (optional tool) |
-| `CROP` | `input` (video) | **x**, **y** (int px >= 0), **width**, **height** (even int px); the rectangle must lie inside the input frame as displayed | `ffmpeg-skill/crop` (optional tool) |
+| Type           | Inputs                                          | Parameters (required in bold)                                                                                               | Engine tool                            |
+| -------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `TRIM`         | `input` (video)                                 | **start**, **end**, precision `frame` \| `keyframe` \| `auto` \| `smart`                                                    | `ffmpeg-skill/cut`                     |
+| `CUT`          | `input` (video)                                 | **keep** `[{start, end}, …]` (output order), precision                                                                      | `ffmpeg-skill/cut`                     |
+| `CONCAT`       | `inputs` (2..100 videos)                        | transition `{type, duration}`, width, height, fps, mode `pad` \| `crop`, pad_color                                          | `ffmpeg-skill/join`                    |
+| `SPEED`        | `input` (video)                                 | **factor** in [1/4, 4], not 1; smooth `blend \| interpolate` (optional)                                                     | `ffmpeg-skill/fit`                     |
+| `FIT`          | `input` (video)                                 | **aspect** `W:H`, width, pad_color, fps                                                                                     | `ffmpeg-skill/fit`                     |
+| `FILL`         | `input` (video)                                 | **aspect** `W:H`, width, anchor `{x, y}` each 0..1, fps                                                                     | `ffmpeg-skill/fit`                     |
+| `RESIZE`       | `input` (video)                                 | **width** (even), fps                                                                                                       | `ffmpeg-skill/fit`                     |
+| `OVERLAY`      | `input` (video) + `params.image` (image source) | **image**, position (name or `{x, y}`), margin, scale, opacity, start, end, fade                                            | `ffmpeg-skill/overlay`                 |
+| `ROTATE`       | `input` (video)                                 | degrees `90 \| 180 \| 270`, flip `h \| v` (at least one required)                                                           | `ffmpeg-skill/fit`                     |
+| `FREEZE`       | `input` (video)                                 | **hold** time 0.01..600 s, at time `< input duration` (optional)                                                            | `ffmpeg-skill/freeze` (optional tool)  |
+| `REVERSE`      | `input` (video)                                 | none                                                                                                                        | `ffmpeg-skill/reverse` (optional tool) |
+| `IMAGE_INSERT` | `input` (image source)                          | **duration** time 0.01..600 s, width (even), height (even), fps 1..240 (default 30)                                         | `ffmpeg-skill/insert` (optional tool)  |
+| `CROP`         | `input` (video)                                 | **x**, **y** (int px >= 0), **width**, **height** (even int px); the rectangle must lie inside the input frame as displayed | `ffmpeg-skill/crop` (optional tool)    |
 
 `FREEZE` (ADR-014): with `at`, the frame shown at `at` is held for `hold` and the rest of the clip plays on after it
 (`freeze.py --at --hold --mode insert`; the hold is rounded by the engine to whole frames); without `at`, the last
@@ -49,17 +49,17 @@ integers; times are exact rationals. See `contract.operations` for the documente
 
 ### RESIZE, FIT, FILL, ROTATE (contract.frame_semantics, ADR-003 / ADR-011)
 
-| Type | Changes | Keeps | Target frame |
-|---|---|---|---|
-| `RESIZE` | size | the source aspect; nothing padded, cropped or stretched | `width = params.width`; `height = even(width × sh / sw)` |
-| `FIT` | aspect | every source pixel (scaled to fit inside, padded with `pad_color`) | `width = params.width`, else `sw` if `aspect ≤ source_aspect` else `even(sh × aspect)`; `height = even(width / aspect)` |
-| `FILL` | aspect | the centre by default (scaled to cover, cropped); edges are lost | same rule as FIT |
-| `ROTATE` | orientation only (no scaling, padding or cropping) | every source pixel losslessly | `width, height = sw, sh`; swapped when `params.degrees` is 90 or 270 |
-| `CROP` | size, by cutting away everything outside one rectangle | the pixels inside it exactly (no scaling, padding or stretching) | `width, height = params.width, params.height`; `x + width <= sw`, `y + height <= sh` (as displayed), else `INVALID_REQUEST crop_outside_frame` before execution |
+| Type     | Changes                                                | Keeps                                                              | Target frame                                                                                                                                                    |
+| -------- | ------------------------------------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RESIZE` | size                                                   | the source aspect; nothing padded, cropped or stretched            | `width = params.width`; `height = even(width × sh / sw)`                                                                                                        |
+| `FIT`    | aspect                                                 | every source pixel (scaled to fit inside, padded with `pad_color`) | `width = params.width`, else `sw` if `aspect ≤ source_aspect` else `even(sh × aspect)`; `height = even(width / aspect)`                                         |
+| `FILL`   | aspect                                                 | the centre by default (scaled to cover, cropped); edges are lost   | same rule as FIT                                                                                                                                                |
+| `ROTATE` | orientation only (no scaling, padding or cropping)     | every source pixel losslessly                                      | `width, height = sw, sh`; swapped when `params.degrees` is 90 or 270                                                                                            |
+| `CROP`   | size, by cutting away everything outside one rectangle | the pixels inside it exactly (no scaling, padding or stretching)   | `width, height = params.width, params.height`; `x + width <= sw`, `y + height <= sh` (as displayed), else `INVALID_REQUEST crop_outside_frame` before execution |
 
 `FILL.anchor` (docs/decisions.md ADR-009, 0.2.0): `{x, y}` each `0..1` picks which edge the crop keeps instead of
 always the centre (`0`=left/top, `0.5`=centre — the default when `anchor` is omitted, `1`=right/bottom); maps
-directly to `ffmpeg-skill fit.py`'s `--crop-x`/`--crop-y` (0.10.0). It changes *what part* of the frame survives,
+directly to `ffmpeg-skill fit.py`'s `--crop-x`/`--crop-y` (0.10.0). It changes _what part_ of the frame survives,
 never the target frame size — the size rule above is unaffected.
 
 `SPEED.smooth` (docs/decisions.md ADR-012, 0.4.0): optional `blend | interpolate`, mapped directly to `ffmpeg-skill
@@ -75,7 +75,7 @@ does not enforce.
 required, mapped directly to `ffmpeg-skill fit.py`'s pre-existing `--rotate`/`--flip` flags (rotate applied before
 flip, ffmpeg-skill's own convention). Unlike `RESIZE` / `FIT` / `FILL` it changes no pixel's colour, only its
 position — a turn and/or a mirror, never a scale, pad or crop — so it groups with `TRIM` / `CUT` / `SPEED` /
-`OVERLAY` for the odd-frame refusal below even though its *target frame* can differ from the input's (the
+`OVERLAY` for the odd-frame refusal below even though its _target frame_ can differ from the input's (the
 width×height swap a 90/270 turn implies).
 
 `even(n) = round(n)`, +1 when odd (ffmpeg-skill fit.py). `CONCAT` (join.py): `params.width × params.height`; when
@@ -126,20 +126,20 @@ order of unrelated entries, path strings, timestamps and time notation do not ch
 Every source is probed by `ffmpeg-skill/probe` before execution. A video needs a video stream and a duration; an
 image must decode to a frame. Per operation:
 
-| Type | Requires | Output keeps / becomes |
-|---|---|---|
-| `TRIM`, `CUT` | video | frame size, fps and audio as the input |
-| `CONCAT` | ≥ 2 videos, any sizes / rates | `width × height` and `fps` from params or the first input; audio: stereo AAC when any input has audio (silence is inserted for the others), none when no input has audio |
-| `SPEED` | video | frame size as the input; audio as the input (pitch preserved); duration = input / factor |
-| `FIT` | video | aspect as requested (width when given, padded); audio, fps as the input unless `fps` |
-| `FILL` | video | aspect as requested (width when given, centre-cropped); audio, fps as the input unless `fps` |
-| `RESIZE` | video | `width` as requested, height by the source aspect; audio, fps as the input unless `fps` |
-| `OVERLAY` | video + image (a video in `params.image`: `INVALID_INPUT overlay_video_layer`, use motion-graphics-skill `video_overlay`) | frame size, fps and audio as the input |
-| `ROTATE` | video | frame size as the input, width/height swapped for a 90/270 `degrees`; audio, fps as the input |
-| `FREEZE` | video | frame size, fps as the input; audio as the input, silent under the hold; duration = input + hold |
-| `REVERSE` | video | frame size, fps, duration as the input; audio as the input, reversed |
-| `IMAGE_INSERT` | one image (no video) | frame by insert.py's rule (params or the image, even); `fps` (default 30); duration = `duration`; no audio |
-| `CROP` | video | `width × height` as given; fps, duration and audio as the input |
+| Type           | Requires                                                                                                                  | Output keeps / becomes                                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TRIM`, `CUT`  | video                                                                                                                     | frame size, fps and audio as the input                                                                                                                                   |
+| `CONCAT`       | ≥ 2 videos, any sizes / rates                                                                                             | `width × height` and `fps` from params or the first input; audio: stereo AAC when any input has audio (silence is inserted for the others), none when no input has audio |
+| `SPEED`        | video                                                                                                                     | frame size as the input; audio as the input (pitch preserved); duration = input / factor                                                                                 |
+| `FIT`          | video                                                                                                                     | aspect as requested (width when given, padded); audio, fps as the input unless `fps`                                                                                     |
+| `FILL`         | video                                                                                                                     | aspect as requested (width when given, centre-cropped); audio, fps as the input unless `fps`                                                                             |
+| `RESIZE`       | video                                                                                                                     | `width` as requested, height by the source aspect; audio, fps as the input unless `fps`                                                                                  |
+| `OVERLAY`      | video + image (a video in `params.image`: `INVALID_INPUT overlay_video_layer`, use motion-graphics-skill `video_overlay`) | frame size, fps and audio as the input                                                                                                                                   |
+| `ROTATE`       | video                                                                                                                     | frame size as the input, width/height swapped for a 90/270 `degrees`; audio, fps as the input                                                                            |
+| `FREEZE`       | video                                                                                                                     | frame size, fps as the input; audio as the input, silent under the hold; duration = input + hold                                                                         |
+| `REVERSE`      | video                                                                                                                     | frame size, fps, duration as the input; audio as the input, reversed                                                                                                     |
+| `IMAGE_INSERT` | one image (no video)                                                                                                      | frame by insert.py's rule (params or the image, even); `fps` (default 30); duration = `duration`; no audio                                                               |
+| `CROP`         | video                                                                                                                     | `width × height` as given; fps, duration and audio as the input                                                                                                          |
 
 `OVERLAY` no longer requires audio (ADR-009): ffmpeg-skill 0.9.x's overlay (`-loop 1` image + `-shortest`) could run
 unbounded on a video without an audio stream, but ffmpeg-skill >=0.10.0 bounds it with an explicit `-t <video
@@ -150,18 +150,18 @@ semantics, audio presence, fps, HDR); once an intermediate exists its probe (`OB
 
 ### Media policy (contract.media_policy, ADR-005)
 
-| Situation | Handling |
-|---|---|
-| no video stream (audio-only file, corrupt container) | refused: `INVALID_INPUT no_video_stream` |
-| video source without a duration (still image / broken container as video) | refused: `INVALID_INPUT no_duration` |
-| image that does not decode | refused: `INVALID_INPUT image_undecodable` |
-| TRIM / CUT / SPEED / OVERLAY / ROTATE / FREEZE / REVERSE on an input with an odd width or height | refused: `INVALID_INPUT odd_frame` (RESIZE / FIT / FILL / CONCAT normalize it) |
-| CONCAT of HDR and SDR inputs | refused: `INVALID_INPUT hdr_mismatch` |
-| unsupported extension / container | refused: `UNSUPPORTED_FORMAT` |
-| ranges beyond the input, transition longer than half an input | refused: `INVALID_TIME_RANGE` |
-| engine tool / encoder / filter missing | refused: `TOOL_ERROR` (not retryable) |
-| times, target frames, SPEED duration, audio expectation, encoding flags | normalized by the Skill, reported, verified |
-| scaling / padding / cropping maths, CFR conform of VFR sources (warning), silence insertion and stereo layout in CONCAT, HDR → HEVC 10-bit (warning), AAC | delegated to ffmpeg-skill, verified on the output |
+| Situation                                                                                                                                                 | Handling                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| no video stream (audio-only file, corrupt container)                                                                                                      | refused: `INVALID_INPUT no_video_stream`                                       |
+| video source without a duration (still image / broken container as video)                                                                                 | refused: `INVALID_INPUT no_duration`                                           |
+| image that does not decode                                                                                                                                | refused: `INVALID_INPUT image_undecodable`                                     |
+| TRIM / CUT / SPEED / OVERLAY / ROTATE / FREEZE / REVERSE on an input with an odd width or height                                                          | refused: `INVALID_INPUT odd_frame` (RESIZE / FIT / FILL / CONCAT normalize it) |
+| CONCAT of HDR and SDR inputs                                                                                                                              | refused: `INVALID_INPUT hdr_mismatch`                                          |
+| unsupported extension / container                                                                                                                         | refused: `UNSUPPORTED_FORMAT`                                                  |
+| ranges beyond the input, transition longer than half an input                                                                                             | refused: `INVALID_TIME_RANGE`                                                  |
+| engine tool / encoder / filter missing                                                                                                                    | refused: `TOOL_ERROR` (not retryable)                                          |
+| times, target frames, SPEED duration, audio expectation, encoding flags                                                                                   | normalized by the Skill, reported, verified                                    |
+| scaling / padding / cropping maths, CFR conform of VFR sources (warning), silence insertion and stereo layout in CONCAT, HDR → HEVC 10-bit (warning), AAC | delegated to ffmpeg-skill, verified on the output                              |
 
 By stream: video-only sources go through every operation but OVERLAY and produce video-only outputs (verified);
 video + audio keeps its audio (verified); audio-only sources are refused; images serve OVERLAY only; mixed audio
@@ -188,18 +188,18 @@ with the same probe checks; a candidate that no longer validates is discarded an
 
 ## Error classification per operation
 
-| Situation | Code |
-|---|---|
-| unknown / forbidden key, wrong type, out-of-range parameter, a CROP rectangle outside the input frame (`crop_outside_frame`) | `INVALID_REQUEST` |
-| `start ≥ end`, range beyond the input, transition too long, overlay start / end beyond the input, FREEZE `at` at or beyond the input / `hold` outside 0.01..600 s | `INVALID_TIME_RANGE` |
-| unknown reference, cycle, orphan, conflicting outputs, image / video slot mismatch | `DEPENDENCY_ERROR` |
-| source without video stream / duration, image that does not decode, overlay input without audio, engine says the input is unusable | `INVALID_INPUT` |
-| type not in the allowlist (`POSITION`, anything unknown) | `UNSUPPORTED_OPERATION` |
-| ffmpeg-skill missing / unsupported version / tool or capability missing (not retryable); ffmpeg failed (retryable) | `TOOL_ERROR` |
-| tool exited 0 but wrote nothing / empty / unreadable; output cannot be written | `OUTPUT_ERROR` |
-| output exists but is not what was requested (stream, duration, frame, aspect, fps, audio) | `VALIDATION_ERROR` |
-| timeout (`retryable: true`) or SIGINT / SIGTERM | `CANCELLED` |
-| a bug (including a response that fails the self-check) | `INTERNAL_ERROR` |
+| Situation                                                                                                                                                         | Code                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| unknown / forbidden key, wrong type, out-of-range parameter, a CROP rectangle outside the input frame (`crop_outside_frame`)                                      | `INVALID_REQUEST`       |
+| `start ≥ end`, range beyond the input, transition too long, overlay start / end beyond the input, FREEZE `at` at or beyond the input / `hold` outside 0.01..600 s | `INVALID_TIME_RANGE`    |
+| unknown reference, cycle, orphan, conflicting outputs, image / video slot mismatch                                                                                | `DEPENDENCY_ERROR`      |
+| source without video stream / duration, image that does not decode, overlay input without audio, engine says the input is unusable                                | `INVALID_INPUT`         |
+| type not in the allowlist (`POSITION`, anything unknown)                                                                                                          | `UNSUPPORTED_OPERATION` |
+| ffmpeg-skill missing / unsupported version / tool or capability missing (not retryable); ffmpeg failed (retryable)                                                | `TOOL_ERROR`            |
+| tool exited 0 but wrote nothing / empty / unreadable; output cannot be written                                                                                    | `OUTPUT_ERROR`          |
+| output exists but is not what was requested (stream, duration, frame, aspect, fps, audio)                                                                         | `VALIDATION_ERROR`      |
+| timeout (`retryable: true`) or SIGINT / SIGTERM                                                                                                                   | `CANCELLED`             |
+| a bug (including a response that fails the self-check)                                                                                                            | `INTERNAL_ERROR`        |
 
 ## Engine versions and what the tests prove
 
@@ -216,18 +216,18 @@ reason the `MIN_VERSION` floor no longer allows 0.9.x, which lacks that fix.
 
 What changed between ffmpeg-skill releases and how this Skill handles each, detected rather than version-gated:
 
-| Change | Where | Handling |
-|---|---|---|
-| `fit.py --rotate` / `--flip` | added in 0.11.0 | flags read from the checkout; without them `ROTATE` is MISSING in doctor and refused (`TOOL_ERROR`, `flag:--rotate`) before anything runs |
-| `reverse.py`, `insert.py`, `crop.py`, `freeze.py` | added in 0.11.0, 0.11.0, 0.11.0 and 0.16.0 | optional tools (ADR-014, ADR-015, ADR-016): without one, only `REVERSE` / `IMAGE_INSERT` / `CROP` / `FREEZE` is MISSING in doctor (a note; `ok` stays true) and refused (`TOOL_ERROR`, `tool:ffmpeg-skill/<name>`) before anything runs; the `>=0.10.0` floor is not raised for them |
-| `insert.py --crf` → `--quality` | as for every tool (2.0) | the same detected spelling: `outputs[].encoding.crf` reaches `IMAGE_INSERT` as `--crf` on 0.11.0, `--quality` on 2.x |
-| `crop.py --crf` → `--quality` | as for every tool (2.0) | the same detected spelling: `outputs[].encoding.crf` reaches `CROP` as `--crf` on 0.11.0, `--quality` on 2.x |
-| `--crf` → `--quality` (same CRF scale and default) | `--quality` added in 1.10, `--crf` removed in 2.0 | `outputs[].encoding.crf` is passed as `--quality` where the tool lists it, else as `--crf` |
-| `fit.py`'s aspect-only canvas (no `width`) | 0.16.10: never exceeds the source (9:16 from 1280x720 is 406x720, was 1280x2276) | behaviour, not a flag: the expected frame follows the rule of the installed release (`fit_bounds_by_source()`) |
-| probe `hdr` narrowed to PQ/HLG; `bt2020_or_hdr` keeps the old meaning | 2.0 | `bt2020_or_hdr` is read where present, `hdr` where not: a BT.2020 SDR source still expects HEVC |
-| an existing output refused without `--overwrite` | 1.10 warned, 2.0 refuses | never reached: every tool writes a fresh `.partial` path the executor removes first, so `--overwrite` is not passed |
-| a dry run refuses an output directory that does not exist | by 1.26.0 (not in 0.16.0) | `plan` creates the work directory for its previews and removes it again (a plan still writes nothing) |
-| `_common.py` → `_common/` package | 2.0 | not used: this Skill only runs `scripts/<tool>.py` and `scripts/_contract.py` |
+| Change                                                                | Where                                                                            | Handling                                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `fit.py --rotate` / `--flip`                                          | added in 0.11.0                                                                  | flags read from the checkout; without them `ROTATE` is MISSING in doctor and refused (`TOOL_ERROR`, `flag:--rotate`) before anything runs                                                                                                                                            |
+| `reverse.py`, `insert.py`, `crop.py`, `freeze.py`                     | added in 0.11.0, 0.11.0, 0.11.0 and 0.16.0                                       | optional tools (ADR-014, ADR-015, ADR-016): without one, only `REVERSE` / `IMAGE_INSERT` / `CROP` / `FREEZE` is MISSING in doctor (a note; `ok` stays true) and refused (`TOOL_ERROR`, `tool:ffmpeg-skill/<name>`) before anything runs; the `>=0.10.0` floor is not raised for them |
+| `insert.py --crf` → `--quality`                                       | as for every tool (2.0)                                                          | the same detected spelling: `outputs[].encoding.crf` reaches `IMAGE_INSERT` as `--crf` on 0.11.0, `--quality` on 2.x                                                                                                                                                                 |
+| `crop.py --crf` → `--quality`                                         | as for every tool (2.0)                                                          | the same detected spelling: `outputs[].encoding.crf` reaches `CROP` as `--crf` on 0.11.0, `--quality` on 2.x                                                                                                                                                                         |
+| `--crf` → `--quality` (same CRF scale and default)                    | `--quality` added in 1.10, `--crf` removed in 2.0                                | `outputs[].encoding.crf` is passed as `--quality` where the tool lists it, else as `--crf`                                                                                                                                                                                           |
+| `fit.py`'s aspect-only canvas (no `width`)                            | 0.16.10: never exceeds the source (9:16 from 1280x720 is 406x720, was 1280x2276) | behaviour, not a flag: the expected frame follows the rule of the installed release (`fit_bounds_by_source()`)                                                                                                                                                                       |
+| probe `hdr` narrowed to PQ/HLG; `bt2020_or_hdr` keeps the old meaning | 2.0                                                                              | `bt2020_or_hdr` is read where present, `hdr` where not: a BT.2020 SDR source still expects HEVC                                                                                                                                                                                      |
+| an existing output refused without `--overwrite`                      | 1.10 warned, 2.0 refuses                                                         | never reached: every tool writes a fresh `.partial` path the executor removes first, so `--overwrite` is not passed                                                                                                                                                                  |
+| a dry run refuses an output directory that does not exist             | by 1.26.0 (not in 0.16.0)                                                        | `plan` creates the work directory for its previews and removes it again (a plan still writes nothing)                                                                                                                                                                                |
+| `_common.py` → `_common/` package                                     | 2.0                                                                              | not used: this Skill only runs `scripts/<tool>.py` and `scripts/_contract.py`                                                                                                                                                                                                        |
 
 Known upstream behaviour: from ffmpeg-skill 2.4.1 (`join.py`, ffmpeg-skill PR #302, commit d6f3318) a plain-cut CONCAT
 trims every clip to its own length and starts the next one after it, so a clip whose length is not whole frames of the

@@ -130,10 +130,7 @@
       "min_speakers": null,
       "max_speakers": null
     },
-    "speakers": [
-      "SPEAKER_00",
-      "SPEAKER_01"
-    ],
+    "speakers": ["SPEAKER_00", "SPEAKER_01"],
     "speaker_count": 2,
     "speech_seconds": 8.0,
     "turns": [
@@ -176,19 +173,12 @@
       {
         "id": "seg_0001",
         "speaker_id": "SPEAKER_01",
-        "words": [
-          "SPEAKER_00",
-          "SPEAKER_01",
-          "SPEAKER_01"
-        ]
+        "words": ["SPEAKER_00", "SPEAKER_01", "SPEAKER_01"]
       },
       {
         "id": "seg_0002",
         "speaker_id": "SPEAKER_00",
-        "words": [
-          null,
-          "SPEAKER_00"
-        ]
+        "words": [null, "SPEAKER_00"]
       }
     ],
     "overlap_segment_ids": []
