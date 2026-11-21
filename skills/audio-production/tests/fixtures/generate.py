@@ -1,0 +1,79 @@
+"""Synthetic audio fixtures generated with ffmpeg at test time (nothing binary is committed). Only the tests call
+ffmpeg directly; the skill under test never does. Every fixture has a known construction:
+
+  tone.wav     6 s mono PCM 16-bit 48 kHz, 1 kHz sine amplitude 0.1 (-23.0 LUFS, -20 dBTP)
+  stereo.m4a   4 s stereo AAC 48 kHz, 440 Hz sine amplitude 0.1 both channels
+  gated.wav    6 s mono PCM 48 kHz, tone only between 2..5 s (silence 0-2 and 5-6)
+  surround.wav 2 s 5.1 PCM 48 kHz
+  silence.wav  2 s mono digital silence
+  video.mp4    3 s 160x90 H.264 + mono AAC tone (audio inside a video container)
+  noaudio.mp4  2 s 160x90 H.264, no audio stream
+  multitrack.mka  3 s Matroska audio container, two mono PCM streams muxed together (audio.py --audio-stream N
+                  selects between them): stream 0 a quiet 300 Hz tone (amplitude 0.05, measured mean_volume -29 dB),
+                  stream 1 a loud 900 Hz tone (amplitude 0.5, measured mean_volume -9 dB) -- a 20 dB / distinct-tone
+                  difference objective enough that picking the wrong stream cannot be mistaken for picking the right one
+  fillers.wav  6 s mono PCM 48 kHz, 1 kHz sine: amplitude 0.1 ("words") except 1.0-1.5 s and 3.0-3.4 s, where it is 0.5
+               ("fillers", 14 dB louder): removing exactly those ranges leaves 5.1 s = 244800 samples peaking at -20 dBFS
+  ambiguous.wav 8.5 s mono PCM 48 kHz, 1 kHz sine in 17 half-second "words" (tests.test_integration.AMBIGUOUS_WORDS):
+               amplitude 0.5 where a word equal to an opt-in list entry is expected to be cut (0-0.5, 1-2.5, 3-3.5,
+               4-4.5, 5-6.5 s), 0.1 elsewhere: removing exactly those leaves 4.0 s = 192000 samples peaking at -20 dBFS
+  keyed.wav    6 s mono PCM 48 kHz, loud 1 kHz sine (amplitude 0.5) only between 2..5 s: the key a bed ducks under
+  bed.wav      6 s mono PCM 48 kHz, steady 440 Hz sine amplitude 0.1: a bed whose level is measured around 440 Hz
+  programme.wav 6 s mono PCM 48 kHz, 1 kHz sine amplitude 0.1 with a 50 ms burst to 0.4 every second (measured
+               -20.5 LUFS, -8.0 dBTP): -14 LUFS needs about -1.4 dBTP, so a -1 dBTP ceiling is close but holds
+  peaky.wav    6 s mono PCM 48 kHz, 1 kHz sine amplitude 0.05 with a 50 ms burst to 0.65 every second (crest about
+               20 dB): -14 LUFS under -1 dBTP is out of reach of a linear gain
+  sfx.wav      4 s mono PCM 48 kHz, 2 kHz sine amplitude 0.2 (an effects track shorter than the programme)
+  longbed.wav  8 s mono PCM 48 kHz, 220 Hz sine amplitude 0.1 (a music bed longer than the programme)
+  text.txt     not media"""
+from __future__ import annotations
+
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Dict
+
+FF = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-nostdin"]
+TONE = "0.1*sin(2*PI*1000*t)"
+TONE_GATED = "0.1*sin(2*PI*1000*t)*between(t\\,2\\,5)"
+TONE_FILLERS = "(0.1+0.4*(between(t\\,1\\,1.5)+between(t\\,3\\,3.4)))*sin(2*PI*1000*t)"
+TONE_AMBIGUOUS = ("(0.1+0.4*(between(t\\,0\\,0.5)+between(t\\,1\\,2.5)+between(t\\,3\\,3.5)+between(t\\,4\\,4.5)+between(t\\,5\\,6.5)))"
+                  "*sin(2*PI*1000*t)")
+TONE_KEYED = "0.5*sin(2*PI*1000*t)*between(t\\,2\\,5)"
+TONE_PROGRAMME = "(0.1+0.3*between(mod(t\\,1)\\,0.5\\,0.55))*sin(2*PI*1000*t)"
+TONE_PEAKY = "(0.05+0.6*between(mod(t\\,1)\\,0\\,0.05))*sin(2*PI*1000*t)"
+
+
+def available() -> bool:
+    return shutil.which("ffmpeg") is not None and shutil.which("ffprobe") is not None
+
+
+def _run(args):
+    subprocess.run(FF + args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+
+def build_all(directory: Path) -> Dict[str, Path]:
+    d = Path(directory)
+    d.mkdir(parents=True, exist_ok=True)
+    f = {k: d / v for k, v in {"tone": "tone.wav", "stereo": "stereo.m4a", "gated": "gated.wav", "surround": "surround.wav", "silence": "silence.wav",
+                               "video": "video.mp4", "noaudio": "noaudio.mp4", "multitrack": "multitrack.mka", "fillers": "fillers.wav",
+                               "ambiguous": "ambiguous.wav",
+                               "keyed": "keyed.wav", "bed": "bed.wav", "programme": "programme.wav", "peaky": "peaky.wav", "sfx": "sfx.wav", "longbed": "longbed.wav", "text": "text.txt"}.items()}
+    _run(["-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000:c=mono", "-t", "6", "-c:a", "pcm_s16le", str(f["tone"])])
+    _run(["-f", "lavfi", "-i", "aevalsrc='0.1*sin(2*PI*440*t)|0.1*sin(2*PI*440*t)':s=48000:c=stereo", "-t", "4", "-c:a", "aac", str(f["stereo"])])
+    _run(["-f", "lavfi", "-i", f"aevalsrc='{TONE_GATED}':s=48000:c=mono", "-t", "6", "-c:a", "pcm_s16le", str(f["gated"])])
+    _run(["-f", "lavfi", "-i", "aevalsrc='0.1*sin(2*PI*440*t)|0.1*sin(2*PI*440*t)|0.1*sin(2*PI*440*t)|0|0.05*sin(2*PI*440*t)|0.05*sin(2*PI*440*t)':s=48000:c=5.1",
+          "-t", "2", "-c:a", "pcm_s16le", str(f["surround"])])
+    _run(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", "2", "-c:a", "pcm_s16le", str(f["silence"])])
+    _run(["-f", "lavfi", "-i", "testsrc2=size=160x90:rate=25", "-f", "lavfi", "-i", f"aevalsrc='{TONE}':s=48000", "-t", "3",
+          "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(f["video"])])
+    _run(["-f", "lavfi", "-i", "testsrc2=size=160x90:rate=25", "-t", "2", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", str(f["noaudio"])])
+    _run(["-f", "lavfi", "-i", "aevalsrc='0.05*sin(2*PI*300*t)':s=48000:c=mono", "-f", "lavfi", "-i", "aevalsrc='0.5*sin(2*PI*900*t)':s=48000:c=mono",
+          "-t", "3", "-map", "0:a", "-map", "1:a", "-c:a", "pcm_s16le", str(f["multitrack"])])
+    for key, expr in (("fillers", TONE_FILLERS), ("keyed", TONE_KEYED), ("bed", "0.1*sin(2*PI*440*t)"), ("programme", TONE_PROGRAMME), ("peaky", TONE_PEAKY)):
+        _run(["-f", "lavfi", "-i", f"aevalsrc='{expr}':s=48000:c=mono", "-t", "6", "-c:a", "pcm_s16le", str(f[key])])
+    _run(["-f", "lavfi", "-i", f"aevalsrc='{TONE_AMBIGUOUS}':s=48000:c=mono", "-t", "8.5", "-c:a", "pcm_s16le", str(f["ambiguous"])])
+    _run(["-f", "lavfi", "-i", "aevalsrc='0.2*sin(2*PI*2000*t)':s=48000:c=mono", "-t", "4", "-c:a", "pcm_s16le", str(f["sfx"])])
+    _run(["-f", "lavfi", "-i", "aevalsrc='0.1*sin(2*PI*220*t)':s=48000:c=mono", "-t", "8", "-c:a", "pcm_s16le", str(f["longbed"])])
+    f["text"].write_text("not media\n", encoding="utf-8")
+    return f

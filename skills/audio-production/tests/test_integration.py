@@ -1,0 +1,765 @@
+"""Integration tests with real audio through the real ffmpeg-skill checkout (nothing is mocked or skipped).
+One positive and at least one negative case per implemented operation, a multi-operation pipeline, a two-source mix,
+output validation, failure handling, dry run, idempotent re-runs, cancellation by timeout, and the CLI boundary."""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from audio_production.errors import EXIT_CODES
+from conftest import one_json, request_doc, run_cli
+
+
+def run(doc, *extra):
+    import shutil
+    shutil.rmtree("out", ignore_errors=True)
+    code, out, err = run_cli(["run", "-", "--json", *extra], json.dumps(doc))
+    d = one_json(out)
+    assert err == "" or "$" in err or "wrote" in err or "measured" in err or "result" in err  # stderr is diagnostics only
+    return code, d
+
+
+def probe(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_format", "-show_streams", str(path)], capture_output=True, text=True, check=True)
+    d = json.loads(r.stdout)
+    a = next(s for s in d["streams"] if s["codec_type"] == "audio")
+    return {"duration": float(d["format"]["duration"]), "channels": int(a["channels"]), "sample_rate": int(a["sample_rate"]), "codec": a["codec_name"]}
+
+
+def op(op_id, typ, inputs, **params):
+    return {"op_id": op_id, "type": typ, "inputs": inputs, "parameters": params}
+
+
+def mean_volume_dbfs(path):
+    """mean_volume in dBFS, measured with ffmpeg's own volumedetect (test-only tool; the skill under test never
+    calls ffmpeg directly). Used to prove which of two distinct, known-level audio streams an operation actually
+    read -- an objective signal, not just "the run did not error"."""
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-nostdin", "-i", str(path), "-af", "volumedetect", "-f", "null", "-"],
+                       capture_output=True, text=True)
+    line = next(l for l in r.stderr.splitlines() if "mean_volume" in l)
+    return float(line.split(":")[1].strip().split(" ")[0])
+
+
+def results(d):
+    return {r["node_id"]: r for r in d["results"]}
+
+
+def test_gain(workspace):
+    code, d = run(request_doc([op("g", "GAIN", ["track:t1"], gain_db=-6)]))
+    assert code == 0 and d["ok"] and d["status"] == "ok", d.get("error")
+    out = workspace / "out" / "main.wav"
+    p = probe(out)
+    assert abs(p["duration"] - 6.0) < 0.05 and p["channels"] == 1 and p["codec"] == "pcm_s16le"
+    r = results(d)["op:g"]
+    assert r["tool"] == "ffmpeg-skill/audio" and r["status"] == "completed" and r["artifact"]["sha256"] and r["input_hashes"]
+    assert d["outputs"][0]["provenance"]["output_hash"] == r["artifact"]["sha256"] or d["outputs"][0]["artifact"]["sha256"]
+    assert d["outputs"][0]["provenance"]["tool_versions"]["ffmpeg-skill"]
+    # negative: out of range
+    code, d = run(request_doc([op("g", "GAIN", ["track:t1"], gain_db=90)]))
+    assert d["error"]["code"] == "INVALID_REQUEST" and code == EXIT_CODES["INVALID_REQUEST"]
+
+
+def test_trim_and_timeline(workspace):
+    code, d = run(request_doc([op("t", "TRIM", ["track:t1"], start=1.0, end=4.0)]))
+    assert d["ok"], d.get("error")
+    assert abs(probe(workspace / "out" / "main.wav")["duration"] - 3.0) < 0.002        # sample-accurate (--accurate)
+    assert results(d)["op:t"]["measurements"]["cut"]["precision"] == "sample"
+    seg = results(d)["op:t"]["segments"]
+    assert seg == [{"timeline": {"start": 0.0, "end": 3.0}, "source_id": "a", "source": {"start": 1.0, "end": 4.0}, "input_index": 0}]
+    assert d["outputs"][0]["segments"] == seg
+    # a compressed (AAC) source is decoded on the way: exact on ffmpeg 6.1, up to one AAC frame short where the
+    # decoder's priming handling differs (measured -12 ms on the Windows CI runner's FFmpeg); PCM stays exact
+    code, d = run(request_doc([op("t", "TRIM", ["track:t1"], start=0.5, end=2.5)], sources=[{"source_id": "a", "path": "stereo.m4a"}]))
+    assert d["ok"] and abs(probe(workspace / "out" / "main.wav")["duration"] - 2.0) < 0.025 and results(d)["op:t"]["measurements"]["cut"]["precision"] == "sample"
+    code, d = run(request_doc([op("t", "TRIM", ["track:t1"], start=0.5, end=2.0)], sources=[{"source_id": "a", "path": "video.mp4"}]))
+    assert d["ok"] and abs(probe(workspace / "out" / "main.wav")["duration"] - 1.5) < 0.025
+    code, d = run(request_doc([op("t", "TRIM", ["track:t1"], start=5.0, end=9.0)]))
+    assert d["error"]["code"] == "INVALID_TIME_RANGE"
+
+
+def test_cut_and_silence_remove(workspace):
+    code, d = run(request_doc([op("c", "CUT", ["track:t1"], remove=[{"start": 1.0, "end": 2.0}, {"start": 4.0, "end": 6.0}])]))
+    assert d["ok"], d.get("error")
+    assert abs(probe(workspace / "out" / "main.wav")["duration"] - 3.0) < 0.1
+    segs = results(d)["op:c"]["segments"]
+    assert [(s["source"]["start"], s["source"]["end"]) for s in segs] == [(0.0, 1.0), (2.0, 4.0)]
+    doc = request_doc([op("s", "SILENCE_REMOVE", ["track:t1"], ranges=[{"start": 0.0, "end": 2.0}, {"start": 5.0, "end": 6.0}], margin=0.25, min_duration=0.6, threshold_db=-40)],
+                      sources=[{"source_id": "a", "path": "gated.wav"}])
+    code, d = run(doc)
+    assert d["ok"], d.get("error")
+    r = results(d)["op:s"]
+    assert r["measurements"]["effective_ranges"] == [{"start": 0.25, "end": 1.75}]     # 5.0-6.0 shrinks to 0.5 s < min_duration
+    assert abs(probe(workspace / "out" / "main.wav")["duration"] - 4.5) < 0.1
+    code, d = run(request_doc([op("c", "CUT", ["track:t1"], remove=[{"start": 0.0, "end": 6.0}])]))
+    assert d["error"]["code"] == "INVALID_TIME_RANGE"
+
+
+def test_fades(workspace):
+    code, d = run(request_doc([op("i", "FADE_IN", ["track:t1"], duration=0.5), op("o", "FADE_OUT", ["op:i"], duration=1.0)]))
+    assert d["ok"], d.get("error")
+    assert abs(probe(workspace / "out" / "main.wav")["duration"] - 6.0) < 0.05
+    code, d = run(request_doc([op("i", "FADE_IN", ["track:t1"], duration=7.0)]))
+    assert d["error"]["code"] == "INVALID_TIME_RANGE"
+
+
+def test_normalize_with_tolerance_and_profile(workspace):
+    code, d = run(request_doc([op("n", "NORMALIZE", ["track:t1"], target_lufs=-16, true_peak_db=-1.5, tolerance_lufs=1.0, profile="podcast", sample_rate=44100)],
+                              outputs=[{"output_id": "main", "operation": "op:n", "path": "out/main.flac", "format": "flac", "expect": {"sample_rate": 44100}}]))
+    assert d["ok"], d.get("error")
+    m = results(d)["op:n"]["measurements"]["loudness"]
+    assert abs(m["integrated_lufs"] - (-16.0)) <= 1.0 and m["measured_by"].startswith("ffmpeg-skill/loudness")
+    p = probe(workspace / "out" / "main.flac")
+    assert p["sample_rate"] == 44100 and p["codec"] == "flac"
+    code, d = run(request_doc([op("n", "NORMALIZE", ["track:t1"], target_lufs=-16)]))
+    assert d["error"]["code"] == "INVALID_REQUEST"
+    # a silent input cannot be normalised: ffmpeg-skill refuses, we report TOOL_ERROR and write nothing
+    code, d = run(request_doc([op("n", "NORMALIZE", ["track:t1"], target_lufs=-16, true_peak_db=-1)], sources=[{"source_id": "a", "path": "silence.wav"}]))
+    assert d["error"]["code"] == "TOOL_ERROR" and not (workspace / "out").exists()
+
+
+def test_channel_operations(workspace):
+    code, d = run(request_doc([op("s", "STEREO", ["track:t1"])]))
+    assert d["ok"] and probe(workspace / "out" / "main.wav")["channels"] == 2
+    code, d = run(request_doc([op("s", "STEREO", ["track:t1"]), op("m", "MONO", ["op:s"])], outputs=[{"output_id": "o", "operation": "op:m", "path": "out/m.wav", "format": "wav", "expect": {"channel_layout": "mono"}}]))
+    assert d["ok"] and probe(workspace / "out" / "m.wav")["channels"] == 1
+    code, d = run(request_doc([op("d", "DOWNMIX", ["track:t1"])], sources=[{"source_id": "a", "path": "surround.wav"}], tracks=[{"track_id": "t1", "source_id": "a", "channel_layout": "5.1"}],
+                              outputs=[{"output_id": "o", "operation": "op:d", "path": "out/d.wav", "format": "wav", "expect": {"channels": 2}}]))
+    assert d["ok"], d.get("error")
+    assert probe(workspace / "out" / "d.wav")["channels"] == 2
+    code, d = run(request_doc([op("m", "MONO", ["track:t1"])]))            # mono input: refused, never silently attenuated
+    assert d["error"]["code"] == "INVALID_CHANNEL_LAYOUT"
+    code, d = run(request_doc([op("d", "DOWNMIX", ["track:t1"])]))
+    assert d["error"]["code"] == "INVALID_CHANNEL_LAYOUT"
+    code, d = run(request_doc([], tracks=[{"track_id": "t1", "source_id": "a", "channel_layout": "stereo"}]))
+    assert d["error"]["code"] == "INVALID_CHANNEL_LAYOUT" and d["error"]["details"]["channels"] == 1
+
+
+def test_noise_reduction(workspace):
+    code, d = run(request_doc([op("d", "NOISE_REDUCTION", ["track:t1"], mode="fft", strength_db=20)]))
+    assert d["ok"] and "filter:afftdn" in results(d)["op:d"]["required_capabilities"]
+    code, d = run(request_doc([op("d", "NOISE_REDUCTION", ["track:t1"], mode="spectral_ai", strength_db=20)]))
+    assert d["error"]["code"] == "UNSUPPORTED_OPERATION"
+
+
+def test_noise_reduction_strength_floor_at_planning(workspace):
+    # ADR-17: 19 dB would become afftdn nf=-19 (afftdn accepts -80..-20): refused before any tool runs, dry run included
+    for extra in ((), ("--dry-run",)):
+        code, d = run(request_doc([op("d", "NOISE_REDUCTION", ["track:t1"], mode="fft", strength_db=19)]), *extra)
+        assert not d["ok"] and d["error"]["code"] == "INVALID_REQUEST" and "afftdn" in d["error"]["message"], d
+        assert not (workspace / "out" / "main.wav").exists()
+    code, d = run(request_doc([op("d", "NOISE_REDUCTION", ["track:t1"], mode="fft", strength_db=20)]), "--dry-run")
+    assert d["ok"] and d["dry_run"], d.get("error")
+
+
+def test_concat(workspace):
+    doc = request_doc([op("k", "CONCAT", ["track:t1", "track:t2"])],
+                      sources=[{"source_id": "a", "path": "tone.wav"}, {"source_id": "b", "path": "stereo.m4a"}],
+                      tracks=[{"track_id": "t1", "source_id": "a"}, {"track_id": "t2", "source_id": "b"}],
+                      outputs=[{"output_id": "main", "operation": "op:k", "path": "out/cat.wav", "format": "wav", "expect": {"channels": 2, "duration": 10.0}}])
+    code, d = run(doc)
+    assert d["ok"], d.get("error")
+    segs = results(d)["op:k"]["segments"]
+    assert [(s["source_id"], s["timeline"]["start"], s["timeline"]["end"], s["input_index"]) for s in segs] == [("a", 0.0, 6.0, 0), ("b", 6.0, 10.0, 1)]
+    assert probe(workspace / "out" / "cat.wav")["channels"] == 2                     # widest input (ffmpeg-skill/join)
+    doc["project"]["operations"][0]["parameters"] = {"crossfade": 1.0, "channels": 1, "sample_rate": 44100}
+    doc["project"]["outputs"][0]["expect"] = {"channels": 1, "duration": 9.0, "sample_rate": 44100}
+    code, d = run(doc)
+    assert d["ok"], d.get("error")
+    assert results(d)["op:k"]["segments"][1]["timeline"] == {"start": 5.0, "end": 9.0}
+    doc["project"]["operations"][0]["parameters"] = {"crossfade": 5.0}
+    code, d = run(doc)
+    assert d["error"]["code"] == "INVALID_TIME_RANGE" and d["error"]["details"]["input_index"] == 1
+    code, d = run(request_doc([op("k", "CONCAT", ["track:t1"])]))
+    assert d["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_dynamics(workspace):
+    code, d = run(request_doc([op("y", "DYNAMICS", ["track:t1"], gate={"threshold_db": -40, "range_db": -30}, compressor={"threshold_db": -20, "ratio": 4, "attack_ms": 5, "release_ms": 80, "makeup_db": 2}, limiter={"ceiling_db": -1, "attack_ms": 5, "release_ms": 50})]))
+    assert d["ok"], d.get("error")
+    r = results(d)["op:y"]
+    assert r["tool"] == "ffmpeg-skill/audio" and abs(r["artifact"]["duration"] - 6.0) < 0.01
+    assert any("agate" in c and "acompressor" in c and "alimiter" in c for c in r["tool_commands_observed"])
+    code, d = run(request_doc([op("y", "DYNAMICS", ["track:t1"], limiter={"ceiling_db": -3})]))
+    assert d["ok"], d.get("error")
+    for bad in ({}, {"compressor": {"ratio": 50}}, {"compressor": {"threshold_db": -20, "filter": "x"}}, {"limiter": {"ceiling_db": "0dB"}}, {"expander": {"ratio": 2}}):
+        code, d = run(request_doc([op("y", "DYNAMICS", ["track:t1"], **bad)]))
+        assert d["ok"] is False and d["error"]["code"] == "INVALID_REQUEST", bad
+
+
+def test_voice_cleanup(workspace, skill_dir):
+    """VOICE_CLEANUP runs ffmpeg-skill/audio --voice on real audio: medium on every ffmpeg-skill (the bare --voice chain
+    of releases before 1.13), light / strong where the located contract declares the levels, refused before any tool
+    runs where it does not. The afftdn noise floor ffmpeg-skill uses inside the chain is within afftdn's valid range."""
+    import re
+    from audio_production.adapter import FfmpegSkill
+    from audio_production.model import VOICE_LEVELS
+    levels = FfmpegSkill(skill_dir).info().voice_levels()
+    assert "medium" in levels
+    for level in VOICE_LEVELS:
+        code, d = run(request_doc([op("v", "VOICE_CLEANUP", ["track:t1"], level=level)]))
+        if level not in levels:
+            assert d["ok"] is False and d["error"]["code"] == "TOOL_ERROR" and d["error"]["details"]["reason"] == "voice_level_unsupported", d
+            assert d["error"]["details"]["available_levels"] == levels and not (workspace / "out" / "main.wav").exists()
+            assert not any(r["tool"] == "ffmpeg-skill/audio" for r in d.get("tool_runs", []))
+            continue
+        assert code == 0 and d["ok"], (level, d.get("error"))
+        r = results(d)["op:v"]
+        assert r["tool"] == "ffmpeg-skill/audio" and r["status"] == "completed" and abs(r["artifact"]["duration"] - 6.0) < 0.05 and r["artifact"]["channels"] == 1
+        assert r["parameters"] == {"level": level, "audio_stream": 0}
+        assert r["measurements"]["voice_cleanup"]["level"] == level
+        cmds = " ".join(r["tool_commands_observed"])
+        assert "highpass=f=80" in cmds and "acompressor" in cmds and "--denoise" not in cmds
+        assert ("deesser" in cmds and "afftdn" in cmds) == (level != "light")
+        assert ("alimiter" in cmds) == (level == "strong")
+        for nf in re.findall(r"afftdn=nf=(-?[0-9.]+)", cmds):
+            assert -80.0 <= float(nf) <= -20.0, nf                                 # afftdn refuses nf outside [-80, -20]
+        chain = d["outputs"][0]["provenance"]["operations"]
+        assert any(c["type"] == "VOICE_CLEANUP" and c["parameters"]["level"] == level and c["output_hash"] == r["artifact"]["sha256"] for c in chain)
+    code, d = run(request_doc([op("v", "VOICE_CLEANUP", ["track:t1"], level="medium")]), "--dry-run")
+    assert d["ok"] and d["dry_run"] and not (workspace / "out" / "main.wav").exists()
+    for bad, want in (({}, "INVALID_REQUEST"), ({"level": "max"}, "UNSUPPORTED_OPERATION"), ({"level": "medium", "denoise_strength": 30}, "INVALID_REQUEST"),
+                      ({"level": "medium", "filter": "highpass"}, "INVALID_REQUEST")):
+        code, d = run(request_doc([op("v", "VOICE_CLEANUP", ["track:t1"], **bad)]))
+        assert d["ok"] is False and d["error"]["code"] == want, (bad, d["error"])
+
+
+def test_audio_stream_selects_the_correct_track(workspace):
+    """multitrack.mka (fixtures/generate.py) muxes two mono streams with an objective, easy-to-measure difference:
+    stream 0 a quiet 300 Hz tone (mean_volume ~ -29 dBFS), stream 1 a loud 900 Hz tone (~ -9 dBFS), 20 dB apart.
+    audio_stream must make ffmpeg-skill/audio actually read the requested track, not merely run without error."""
+    sources = [{"source_id": "a", "path": "multitrack.mka"}]
+    # omitted and explicit 0 both mean the (quiet) first stream, matching ffmpeg-skill audio.py's own default
+    for params in ({}, {"audio_stream": 0}):
+        code, d = run(request_doc([op("g", "GAIN", ["track:t1"], gain_db=0, **params)], sources=sources))
+        assert d["ok"], d.get("error")
+        assert -31 < mean_volume_dbfs(workspace / "out" / "main.wav") < -27
+        assert results(d)["op:g"]["parameters"]["audio_stream"] == 0
+    # explicit 1 selects the (loud) second stream -- unambiguously a different track, not sampling noise
+    code, d = run(request_doc([op("g", "GAIN", ["track:t1"], gain_db=0, audio_stream=1)], sources=sources))
+    assert d["ok"], d.get("error")
+    assert -11 < mean_volume_dbfs(workspace / "out" / "main.wav") < -7
+    assert results(d)["op:g"]["parameters"]["audio_stream"] == 1
+    # every other operation that reaches ffmpeg-skill/audio directly threads audio_stream through the same way
+    code, d = run(request_doc([op("f", "FADE_IN", ["track:t1"], duration=0.01, audio_stream=1)], sources=sources))
+    assert d["ok"], d.get("error")
+    assert -11 < mean_volume_dbfs(workspace / "out" / "main.wav") < -7
+    code, d = run(request_doc([op("n", "NOISE_REDUCTION", ["track:t1"], mode="fft", strength_db=20, audio_stream=1)], sources=sources))
+    assert d["ok"], d.get("error")
+    assert mean_volume_dbfs(workspace / "out" / "main.wav") > -20      # denoised, but still clearly the loud stream
+    # two operations differing only in audio_stream do not collide in the intermediate cache (different identity);
+    # a dedicated project_id isolates this check's work directory from the runs above
+    code, d0 = run(request_doc([op("g", "GAIN", ["track:t1"], gain_db=0, audio_stream=0)], sources=sources, project_id="cache-check",
+                               outputs=[{"output_id": "main", "operation": "op:g", "path": "out/s0.wav", "format": "wav"}]))
+    code, d1 = run(request_doc([op("g", "GAIN", ["track:t1"], gain_db=0, audio_stream=1)], sources=sources, project_id="cache-check",
+                               outputs=[{"output_id": "main", "operation": "op:g", "path": "out/s1.wav", "format": "wav"}]))
+    assert d0["ok"] and d1["ok"]
+    assert results(d0)["op:g"]["operation_id"] != results(d1)["op:g"]["operation_id"]
+    assert results(d0)["op:g"]["artifact"]["sha256"] != results(d1)["op:g"]["artifact"]["sha256"]
+    assert len(list(workspace.glob(".audio-production/cache-check/*.wav"))) == 2   # both intermediates kept, neither overwrote the other
+    # out of range: ffmpeg-skill's own audio.py refuses (this fixture has streams 0..1)
+    code, d = run(request_doc([op("g", "GAIN", ["track:t1"], gain_db=0, audio_stream=5)], sources=sources))
+    assert d["error"]["code"] == "TOOL_ERROR" and not (workspace / "out").exists()
+    # negative / non-integer values never reach a tool at all
+    code, d = run(request_doc([op("g", "GAIN", ["track:t1"], gain_db=0, audio_stream=-1)], sources=sources))
+    assert d["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_format_conversion_of_a_bare_track(workspace, skill_dir):
+    from audio_production.doctor import doctor_report
+    formats = doctor_report(str(skill_dir))["checks"]["output_formats"]
+    for fmt in ("m4a", "mp3", "flac", "ogg", "opus"):
+        code, d = run(request_doc([], outputs=[{"output_id": "o", "operation": "track:t1", "path": f"out/o.{fmt}", "format": fmt}]))
+        if formats[fmt]["status"] == "unsupported":      # encoder not in this ffmpeg build: the negative path must be explicit
+            assert d["error"]["code"] == "UNSUPPORTED_FORMAT" and d["error"]["details"]["capability"] == formats[fmt]["capability"], (fmt, d.get("error"))
+            continue
+        assert d["ok"], (fmt, d.get("error"))
+        assert d["outputs"][0]["artifact"]["codec"] == d["plan"]["outputs"][0]["format"].replace("m4a", "aac").replace("ogg", "vorbis")
+    # a video container: the audio track is extracted (ffmpeg-skill/audio) and the output has no video stream
+    code, d = run(request_doc([], sources=[{"source_id": "a", "path": "video.mp4"}]))
+    assert d["ok"], d.get("error")
+    r = results(d)["track:t1"]
+    assert r["tool"] == "ffmpeg-skill/audio" and r["measurements"]["has_video"] is True and r["artifact"]["codec"] == "pcm_s16le"
+    assert probe(workspace / "out" / "main.wav")["codec"] == "pcm_s16le"
+    assert subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(workspace / "out" / "main.wav")], capture_output=True, text=True).stdout.strip() == ""
+
+
+def test_mix_two_sources_then_normalize(workspace):
+    doc = request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3), op("m", "MIX", ["op:g", "track:t2"], levels=[{"gain_db": 0}, {"gain_db": -10}]),
+                       op("n", "NORMALIZE", ["op:m"], target_lufs=-18, true_peak_db=-2, tolerance_lufs=1.0)],
+                      sources=[{"source_id": "a", "path": "tone.wav"}, {"source_id": "b", "path": "stereo.m4a"}],
+                      tracks=[{"track_id": "t1", "source_id": "a"}, {"track_id": "t2", "source_id": "b", "range": {"start": 0.5, "end": 3.5}, "gain_db": -2}],
+                      outputs=[{"output_id": "main", "operation": "op:n", "path": "out/mix.wav", "format": "wav", "expect": {"duration": 6.0}}])
+    code, d = run(doc)
+    assert d["ok"], d.get("error")
+    r = results(d)
+    assert r["op:t2.range"]["implicit"] and r["op:t2.gain"]["implicit"]
+    segs = r["op:m"]["segments"]
+    assert {s["source_id"] for s in segs} == {"a", "b"} and max(s["timeline"]["end"] for s in segs) == 6.0
+    assert abs(probe(workspace / "out" / "mix.wav")["duration"] - 6.0) < 0.05
+    prov = d["outputs"][0]["provenance"]
+    assert set(prov["sources"]) == {"a", "b"} and {o["type"] for o in prov["operations"]} >= {"MIX", "NORMALIZE", "GAIN", "TRIM", "SOURCE_TRACK"}
+    # three-way mix with a muted input
+    doc2 = request_doc([op("m", "MIX", ["track:t1", "track:t2", "track:t3"], levels=[{"gain_db": 0}, {"gain_db": -6}, {"mute": True}])],
+                       sources=[{"source_id": "a", "path": "tone.wav"}, {"source_id": "b", "path": "stereo.m4a"}, {"source_id": "c", "path": "gated.wav"}],
+                       tracks=[{"track_id": "t1", "source_id": "a"}, {"track_id": "t2", "source_id": "b"}, {"track_id": "t3", "source_id": "c"}])
+    code, d = run(doc2)
+    assert d["ok"], d.get("error")
+    code, d = run(request_doc([op("m", "MIX", ["track:t1", "track:t2"], levels=[{"mute": True}, {"mute": True}])],
+                              sources=[{"source_id": "a", "path": "tone.wav"}, {"source_id": "b", "path": "stereo.m4a"}], tracks=[{"track_id": "t1", "source_id": "a"}, {"track_id": "t2", "source_id": "b"}]))
+    assert d["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_real_audio_pipeline_trim_gain_fade_normalize(workspace):
+    """The end-to-end scenario of the specification: source -> trim -> gain -> fade -> normalize -> validated output."""
+    doc = request_doc([op("trim", "TRIM", ["track:t1"], start=1.0, end=5.0), op("gain", "GAIN", ["op:trim"], gain_db=-6),
+                       op("fade", "FADE_OUT", ["op:gain"], duration=0.5), op("norm", "NORMALIZE", ["op:fade"], target_lufs=-16, true_peak_db=-1.5, tolerance_lufs=1.0)],
+                      outputs=[{"output_id": "main", "operation": "op:norm", "path": "out/main.wav", "format": "wav", "expect": {"channels": 1, "duration": 4.0, "sample_rate": 48000}}])
+    code, d = run(doc)
+    assert code == 0 and d["ok"], d.get("error")
+    r = results(d)
+    assert [r[n]["status"] for n in ("op:trim", "op:gain", "op:fade", "op:norm")] == ["completed"] * 4
+    assert r["op:norm"]["input_hashes"] == [r["op:fade"]["artifact"]["sha256"]]
+    out = d["outputs"][0]
+    p = probe(out["path"])
+    assert abs(p["duration"] - 4.0) < 0.1 and p["channels"] == 1 and p["sample_rate"] == 48000
+    assert out["artifact"]["sha256"] and out["provenance"]["skill_version"] and out["provenance"]["tool_versions"]["ffmpeg"]
+    assert abs(r["op:norm"]["measurements"]["loudness"]["integrated_lufs"] + 16.0) <= 1.0
+    assert all("commands_observed" in t for t in d["tool_runs"])
+
+
+def test_dry_run_writes_nothing(workspace):
+    doc = request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3), op("n", "NORMALIZE", ["op:g"], target_lufs=-16, true_peak_db=-1)])
+    code, out, _ = run_cli(["plan", "-", "--json"], json.dumps(doc))
+    d = one_json(out)
+    assert code == 0 and d["ok"] and d["dry_run"] is True
+    assert [s["tool"] for s in d["plan"]["steps"]] == ["ffmpeg-skill/audio", "ffmpeg-skill/loudness"]
+    assert d["plan"]["required_capabilities"] and d["plan"]["outputs"][0]["expected_duration"] == 6.0 and d["plan"]["plan_id"]
+    assert all(r["status"] == "planned" for r in d["results"])
+    assert not (workspace / "out").exists() and not (workspace / ".audio-production").exists()
+    code2, out2, _ = run_cli(["run", "-", "--json", "--dry-run"], json.dumps(doc))
+    assert one_json(out2)["plan"]["plan_id"] == d["plan"]["plan_id"]
+
+
+def test_rerun_reuses_intermediates_and_is_deterministic(workspace):
+    doc = request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3), op("f", "FADE_IN", ["op:g"], duration=0.2)],
+                      outputs=[{"output_id": "main", "operation": "op:f", "path": "out/main.wav", "format": "wav", "overwrite": True}])
+    code, d1 = run(doc)
+    code, d2 = run(doc)
+    assert d1["ok"] and d2["ok"]
+    assert [r["status"] for r in d2["results"]] == ["completed", "reused", "reused"]
+    assert [r["operation_id"] for r in d1["results"]] == [r["operation_id"] for r in d2["results"]]
+    assert d1["outputs"][0]["artifact"]["sha256"] == d2["outputs"][0]["artifact"]["sha256"]
+    code, d3 = run(doc, "--no-reuse")
+    assert [r["status"] for r in d3["results"]] == ["completed", "completed", "completed"]
+    assert d3["outputs"][0]["artifact"]["sha256"] == d1["outputs"][0]["artifact"]["sha256"]
+    # a tampered intermediate is not reused
+    inter = next(workspace.glob(".audio-production/p1/*.wav"))
+    inter.write_bytes(inter.read_bytes()[:-100])
+    code, d4 = run(doc)
+    assert d4["ok"] and "completed" in [r["status"] for r in d4["results"][1:]]
+
+
+def test_options_reuse_false(workspace):
+    doc = request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3)], outputs=[{"output_id": "main", "operation": "op:g", "path": "out/main.wav", "format": "wav", "overwrite": True}], options={"reuse_intermediates": False})
+    run(doc)
+    code, d = run(doc)
+    assert [r["status"] for r in d["results"]] == ["completed", "completed"]
+
+
+def test_invalid_inputs(workspace):
+    code, d = run(request_doc([], sources=[{"source_id": "a", "path": "missing.wav"}]))
+    assert d["error"]["code"] == "INVALID_INPUT" and code == EXIT_CODES["INVALID_INPUT"]
+    code, d = run(request_doc([], sources=[{"source_id": "a", "path": "text.txt"}]))
+    assert d["error"]["code"] == "INVALID_INPUT"
+    code, d = run(request_doc([], sources=[{"source_id": "a", "path": "noaudio.mp4"}]))
+    assert d["error"]["code"] == "INVALID_INPUT" and d["error"]["details"]["reason"] == "no_audio_stream"
+
+
+def test_output_expectation_failure_removes_output(workspace):
+    doc = request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3)], outputs=[{"output_id": "main", "operation": "op:g", "path": "out/main.wav", "format": "wav", "expect": {"duration": 3.0}}])
+    code, d = run(doc)
+    assert d["error"]["code"] == "VALIDATION_ERROR" and d["error"]["details"]["reason"] == "duration_mismatch"
+    assert not (workspace / "out" / "main.wav").exists()
+    assert d["outputs"][0]["status"] == "failed" and results(d)["op:g"]["status"] == "completed"
+    doc = request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3)], outputs=[{"output_id": "main", "operation": "op:g", "path": "out/main.wav", "format": "wav", "expect": {"channels": 2}}])
+    code, d = run(doc)
+    assert d["error"]["code"] == "VALIDATION_ERROR" and d["error"]["details"]["reason"] == "channel_mismatch"
+
+
+def test_loudness_verification_failure(workspace):
+    # a target the linear two-pass cannot reach under the true-peak ceiling (a sine at -5 LUFS needs about -2 dBTP):
+    # ffmpeg-skill completes, the re-measurement is off target, the tolerance check reports it
+    code, d = run(request_doc([op("n", "NORMALIZE", ["track:t1"], target_lufs=-5, true_peak_db=-3, tolerance_lufs=0.5)]))
+    assert d["error"]["code"] == "VALIDATION_ERROR" and d["error"]["details"]["reason"] in ("loudness_off_target", "true_peak_exceeded")
+    assert results(d)["op:n"]["status"] == "failed" and not list(workspace.glob(".audio-production/p1/*.wav"))
+
+
+def test_timeout_is_a_retryable_tool_error(workspace):
+    doc = request_doc([op("n", "NORMALIZE", ["track:t1"], target_lufs=-16, true_peak_db=-1)], options={"timeout": 1.0})
+    # probe of the input happens first with the same timeout; a 1 s budget is enough for probe but the two-pass
+    # normalisation of a 6 s file needs several ffmpeg runs; we cannot guarantee which step trips, only the outcome
+    code, out, _ = run_cli(["run", "-", "--json", "--timeout", "0.05"], json.dumps(doc))
+    d = one_json(out)
+    assert d["ok"] is False and d["error"]["code"] in ("TOOL_ERROR", "INVALID_INPUT")
+    if d["error"]["code"] == "TOOL_ERROR":
+        assert d["error"]["retryable"] is True and d["error"]["details"]["reason"] == "timeout"
+    assert not list(workspace.glob(".audio-production/p1/*.wav")) and not (workspace / "out").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="a console signal cannot be delivered to one child on Windows without also hitting the test runner; SIGBREAK is registered in the CLI but exercised manually")
+def test_signal_cancellation_leaves_no_partial_output(workspace):
+    import signal
+    import time
+    doc = request_doc([op("n", "NORMALIZE", ["track:t1"], target_lufs=-16, true_peak_db=-1), op("n2", "NORMALIZE", ["op:n"], target_lufs=-17, true_peak_db=-1),
+                       op("n3", "NORMALIZE", ["op:n2"], target_lufs=-18, true_peak_db=-1)])
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parent.parent / "src")
+    proc = subprocess.Popen([sys.executable, "-m", "audio_production.cli", "run", "-", "--json"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+    proc.stdin.write(json.dumps(doc))
+    proc.stdin.close()
+    deadline = time.time() + 20
+    while time.time() < deadline and not (workspace / ".audio-production" / "p1").exists():
+        time.sleep(0.05)
+    time.sleep(0.4)
+    proc.send_signal(signal.SIGINT if os.name != "nt" else signal.CTRL_BREAK_EVENT)
+    out = proc.stdout.read()
+    proc.stderr.read()
+    proc.wait(timeout=30)
+    d = one_json(out)
+    assert d["ok"] is False and d["status"] == "cancelled" and d["error"]["code"] == "CANCELLED", d
+    assert proc.returncode == EXIT_CODES["CANCELLED"]
+    assert not (workspace / "out").exists()
+    for wav in workspace.glob(".audio-production/p1/*.wav"):
+        assert wav.with_suffix(".json").exists(), "an intermediate without a manifest is a partial output"
+
+
+def test_cli_validate_and_exit_codes(workspace):
+    code, out, _ = run_cli(["validate", "-", "--json"], json.dumps(request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3)])))
+    d = one_json(out)
+    assert code == 0 and d["validation"]["ok"] and d["validation"]["graph"]["order"] == ["track:t1", "op:g"]
+    code, out, _ = run_cli(["validate", "-", "--json"], json.dumps(request_doc([op("g", "ECHO", ["track:t1"])])))
+    assert code == EXIT_CODES["UNSUPPORTED_OPERATION"] and one_json(out)["error"]["code"] == "UNSUPPORTED_OPERATION"
+    code, out, _ = run_cli(["run", "-"], json.dumps(request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3)])))
+    assert code == 0 and "op:g" in out and not out.strip().startswith("{")
+
+
+def test_cleanup_policy_removes_intermediates_only_after_success(workspace):
+    doc = request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3), op("f", "FADE_IN", ["op:g"], duration=0.2)],
+                      outputs=[{"output_id": "main", "operation": "op:f", "path": "out/main.wav", "format": "wav", "overwrite": True}])
+    code, d = run(doc)                                          # default: keep
+    assert d["ok"] and d["cleanup"] == {"policy": "keep", "applied": False, "work_dir": str(workspace / ".audio-production" / "p1")}
+    assert list(workspace.glob(".audio-production/p1/*.wav"))
+    code, d = run(doc, "--cleanup", "intermediates")
+    assert d["ok"] and d["cleanup"]["applied"] is True and d["cleanup"]["removed_files"] >= 4 and d["cleanup"]["errors"] == []
+    assert not (workspace / ".audio-production" / "p1").exists() and (workspace / "out" / "main.wav").exists()
+    # a failed run keeps whatever validated intermediates exist (nothing here) and reports the policy as not applied
+    bad = request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3)], outputs=[{"output_id": "main", "operation": "op:g", "path": "out/main.wav", "format": "wav", "overwrite": True, "expect": {"channels": 2}}])
+    code, d = run(bad, "--cleanup", "intermediates")
+    assert d["ok"] is False and d["cleanup"]["applied"] is False and list(workspace.glob(".audio-production/p1/*.json"))
+    code, out, _ = run_cli(["run", "-", "--json", "--cleanup", "everything"], json.dumps(doc))
+    assert code == 2 and "invalid choice" in _
+
+
+# ---- FILLER_REMOVE (ADR-18): sample-accurate removal at caller-supplied word timings
+FILLER_WORDS = [{"start": 0.0, "end": 1.0, "text": "本日は"}, {"start": 1.0, "end": 1.5, "text": "えー、"}, {"start": 1.5, "end": 3.0, "text": "症例を"},
+                {"start": 3.0, "end": 3.4, "text": "Um"}, {"start": 3.4, "end": 6.0, "text": "報告します"}]
+
+
+def samples(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=duration_ts", "-of", "csv=p=0", str(path)],
+                       capture_output=True, text=True, check=True)
+    return int(r.stdout.strip())
+
+
+def max_volume_dbfs(path):
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-nostdin", "-i", str(path), "-af", "volumedetect", "-f", "null", "-"], capture_output=True, text=True)
+    return float(next(l for l in r.stderr.splitlines() if "max_volume" in l).split(":")[1].strip().split(" ")[0])
+
+
+def test_filler_remove_sample_accurate(workspace, skill_dir):
+    """fillers.wav is 0.1-amplitude "words" with two 0.5-amplitude "fillers" at 1.0-1.5 s and 3.0-3.4 s. Removing
+    exactly those leaves 244800 samples (5.1 s at 48 kHz) whose peak is the words' -20 dBFS: proof that the cut
+    points are where the caller's timings say, to the sample."""
+    src = [{"source_id": "a", "path": "fillers.wav"}]
+    doc = request_doc([op("f", "FILLER_REMOVE", ["track:t1"], words=FILLER_WORDS, lexicon={"presets": ["ja", "en"]}, declick_ms=0)], sources=src)
+    code, d = run(doc)
+    assert code == 0 and d["ok"], d.get("error")
+    out = workspace / "out" / "main.wav"
+    assert samples(out) == 244800
+    assert max_volume_dbfs(out) < -19.0                                   # both fillers (-6 dBFS) are gone
+    r = results(d)["op:f"]
+    assert r["tool"] == "ffmpeg-skill/cut" and r["measurements"]["cut"]["precision"] == "sample"
+    m = r["measurements"]["filler_remove"]
+    assert [x["text"] for x in m["matched"]] == ["えー、", "Um"] and m["removed_seconds"] == 0.9 and m["words_count"] == 5
+    assert r["measurements"]["effective_ranges"] == [{"start": 1.0, "end": 1.5}, {"start": 3.0, "end": 3.4}]
+    assert [(s["source"]["start"], s["source"]["end"]) for s in r["segments"]] == [(0.0, 1.0), (1.5, 3.0), (3.4, 6.0)]
+    chain = d["outputs"][0]["provenance"]["operations"]
+    assert any(c["type"] == "FILLER_REMOVE" and c["output_hash"] == r["artifact"]["sha256"] for c in chain)
+    # keep: "um" stays a word for this run, only えー goes
+    doc = request_doc([op("f", "FILLER_REMOVE", ["track:t1"], words=FILLER_WORDS, lexicon={"presets": ["ja", "en"], "keep": ["um"]})], sources=src)
+    code, d = run(doc)
+    assert d["ok"] and samples(workspace / "out" / "main.wav") == 264000, d.get("error")
+    # the same words as a transcription-skill transcript give the same cut
+    tr = {"schema": "transcription-skill/transcript/0.1", "id": "tr_x", "asset_id": "asset_x", "language": "ja", "duration": 6.0,
+          "segments": [{"id": "seg_0001", "start": 0.0, "end": 3.0, "text": "", "raw_text": "", "confidence": None, "words": FILLER_WORDS[:3], "speaker_id": None},
+                       {"id": "seg_0002", "start": 3.0, "end": 6.0, "text": "", "raw_text": "", "confidence": None, "words": FILLER_WORDS[3:], "speaker_id": None}]}
+    code, d = run(request_doc([op("f", "FILLER_REMOVE", ["track:t1"], transcript=tr, lexicon={"presets": ["ja", "en"]})], sources=src))
+    assert d["ok"] and samples(workspace / "out" / "main.wav") == 244800, d.get("error")
+    assert results(d)["op:f"]["parameters"]["transcript"]["id"] == "tr_x"
+    # no word timestamps: refused before any tool runs (dry run too), nothing written
+    tr["segments"][1]["words"] = None
+    for extra in ((), ("--dry-run",)):
+        code, d = run(request_doc([op("f", "FILLER_REMOVE", ["track:t1"], transcript=tr, lexicon={"presets": ["ja"]})], sources=src), *extra)
+        assert d["error"]["code"] == "INVALID_REQUEST" and d["error"]["details"]["reason"] == "word_timestamps_missing" and code == EXIT_CODES["INVALID_REQUEST"]
+        assert not (workspace / "out").exists()
+    # a word past the input's end: the times are on another timeline
+    code, d = run(request_doc([op("f", "FILLER_REMOVE", ["track:t1"], words=[{"start": 7.0, "end": 7.5, "text": "えー"}], lexicon={"presets": ["ja"]})], sources=src))
+    assert d["error"]["code"] == "INVALID_TIME_RANGE"
+
+
+# ---- the opt-in list ja-ambiguous (ADR-25, ECOSYSTEM_ROADMAP step 13): each of its four words as a filler and as a
+# content word. Half-second words; "cut" marks what the run removes. The run matches tokens, not meanings: a content
+# use that arrives as its own token is cut like a filler, one inside a longer token is kept.
+AMBIGUOUS_WORDS = [   # (text, use, cut)
+    ("あの、", "filler", True), ("今日は", "other", False), ("その、", "filler", True), ("まあ、", "filler", True), ("なんか、", "filler", True),
+    ("話します", "other", False), ("あの", "content, own token", True), ("人", "other", False), ("その", "content, own token", True), ("日", "other", False),
+    ("まあ", "content, own token", True), ("まあ", "content, own token", True), ("なんか", "content, own token", True), ("ある", "other", False),
+    ("あの人", "content, inside a longer token", False), ("その日", "content, inside a longer token", False), ("まあまあ", "content, inside a longer token", False)]
+
+
+def test_filler_remove_opt_in_ambiguous_list(workspace, skill_dir):
+    """ambiguous.wav is loud exactly where a token equal to あの / その / まあ / なんか is (fillers and content words on
+    their own token alike), quiet elsewhere. With ja-ambiguous copied into lexicon.words, those nine tokens go: 4.0 s
+    (192000 samples) remain, peaking at the quiet words' -20 dBFS. Every removal is a warning and is listed in
+    measurements.filler_remove.ambiguous. Without the list, the ja preset alone cuts none of them."""
+    from audio_production.contract import skill_contract
+    words = [{"start": 0.5 * i, "end": 0.5 * i + 0.5, "text": t} for i, (t, _, _) in enumerate(AMBIGUOUS_WORDS)]
+    opt_in = skill_contract()["filler_lexicons"]["opt_in"]["ja-ambiguous"]
+    assert sorted(opt_in) == sorted(["あの", "その", "まあ", "なんか"])
+    src = [{"source_id": "a", "path": "ambiguous.wav"}]
+    code, d = run(request_doc([op("f", "FILLER_REMOVE", ["track:t1"], words=words, lexicon={"presets": ["ja"], "words": opt_in}, declick_ms=0)], sources=src))
+    assert code == 0 and d["ok"], d.get("error")
+    out = workspace / "out" / "main.wav"
+    assert samples(out) == 192000
+    assert max_volume_dbfs(out) < -19.0                                   # every loud (expected-cut) word is gone
+    m = results(d)["op:f"]["measurements"]["filler_remove"]
+    cut = [(0.5 * i, t) for i, (t, _, c) in enumerate(AMBIGUOUS_WORDS) if c]
+    assert [(x["start"], x["text"]) for x in m["matched"]] == cut
+    assert [(x["start"], x["text"], x["list"]) for x in m["ambiguous"]] == [(s, t, "ja-ambiguous") for s, t in cut]
+    assert len([w for w in d["warnings"] if "ordinary word" in w]) == len(cut) == 9
+    kept = {t for t, _, c in AMBIGUOUS_WORDS if not c}
+    assert not kept & {x["text"] for x in m["matched"]}                   # あの人 / その日 / まあまあ and the other words stay
+    # the ja preset alone: none of the four is a preset filler, nothing is cut, no warning
+    code, d = run(request_doc([op("f", "FILLER_REMOVE", ["track:t1"], words=words, lexicon={"presets": ["ja"]})], sources=src))
+    assert d["ok"] and samples(workspace / "out" / "main.wav") == 408000, d.get("error")
+    assert results(d)["op:f"]["measurements"]["filler_remove"]["ambiguous"] == [] and not [w for w in d["warnings"] if "ordinary word" in w]
+
+
+def test_filler_remove_declick_is_detected(workspace, skill_dir):
+    """declick_ms > 0 runs where the located cut declares --declick-ms (fades, same sample count) and is refused at
+    planning where it does not (ffmpeg-skill 0.12.2), never silently dropped."""
+    from audio_production.adapter import FfmpegSkill
+    doc = request_doc([op("f", "FILLER_REMOVE", ["track:t1"], words=FILLER_WORDS, lexicon={"presets": ["ja", "en"]}, declick_ms=15)],
+                      sources=[{"source_id": "a", "path": "fillers.wav"}])
+    code, d = run(doc)
+    if FfmpegSkill(skill_dir).info().takes_flag("cut", "declick_ms"):
+        assert d["ok"] and samples(workspace / "out" / "main.wav") == 244800, d.get("error")
+        r = results(d)["op:f"]
+        assert r["measurements"]["filler_remove"]["declick_ms"] == 15.0 and r["measurements"]["cut"].get("declick_ms") == 15.0
+    else:
+        assert d["error"]["code"] == "TOOL_ERROR" and d["error"]["details"]["reason"] == "ffmpeg_skill_flag_missing", d
+        assert d["error"]["retryable"] is False and not (workspace / "out").exists()
+
+
+# ---- MIX.duck (ADR-19): the bed is lower while input 0 is above the threshold
+def band_level_dbfs(path, start, end, freq=440):
+    """mean_volume of the `freq` band of [start, end), via a cascaded band-pass (test-only measurement)."""
+    af = f"atrim={start}:{end},bandpass=f={freq}:width_type=q:w=8,bandpass=f={freq}:width_type=q:w=8,volumedetect"
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-nostdin", "-i", str(path), "-af", af, "-f", "null", "-"], capture_output=True, text=True)
+    return float(next(l for l in r.stderr.splitlines() if "mean_volume" in l).split(":")[1].strip().split(" ")[0])
+
+
+def test_mix_ducks_the_bed_under_input_0(workspace, skill_dir):
+    """keyed.wav is a loud 1 kHz key only between 2..5 s; bed.wav a steady 440 Hz bed. Mixed without duck the bed
+    keeps its level throughout; with duck its 440 Hz band drops while the key sounds and is unchanged before it."""
+    srcs = [{"source_id": "k", "path": "keyed.wav"}, {"source_id": "b", "path": "bed.wav"}]
+    trks = [{"track_id": "t1", "source_id": "k"}, {"track_id": "t2", "source_id": "b"}]
+    outs = {}
+    for name, params in (("plain", {}), ("ducked", {"duck": {"input": 1, "amount_db": 24}})):
+        code, d = run(request_doc([op("m", "MIX", ["track:t1", "track:t2"], **params)], sources=srcs, tracks=trks,
+                                  outputs=[{"output_id": "o", "operation": "op:m", "path": f"out/{name}.wav", "format": "wav", "expect": {"duration": 6.0}}]))
+        assert d["ok"], d.get("error")
+        outs[name] = (workspace / "out" / f"{name}.wav").read_bytes()
+        (workspace / f"{name}.wav").write_bytes(outs[name])
+        if name == "ducked":
+            r = results(d)["op:m"]
+            assert r["measurements"]["duck"]["input"] == 1 and any("sidechaincompress" in c for c in r["tool_commands_observed"])
+    plain_pre, plain_on = band_level_dbfs(workspace / "plain.wav", 0.3, 1.7), band_level_dbfs(workspace / "plain.wav", 2.5, 4.5)
+    duck_pre, duck_on = band_level_dbfs(workspace / "ducked.wav", 0.3, 1.7), band_level_dbfs(workspace / "ducked.wav", 2.5, 4.5)
+    assert abs(plain_on - plain_pre) < 1.5, (plain_pre, plain_on)          # without duck the bed is steady
+    assert abs(duck_pre - plain_pre) < 1.5, (duck_pre, plain_pre)          # before the key: untouched
+    assert duck_on < plain_on - 6.0, (duck_on, plain_on)                    # under the key: lowered
+    # refusals: the key / the ducked bed muted (validation), a duck knob the located ffmpeg-skill does not declare (planning)
+    code, d = run(request_doc([op("m", "MIX", ["track:t1", "track:t2"], duck={"input": 1, "amount_db": 12}, levels=[{}, {"mute": True}])], sources=srcs, tracks=trks))
+    assert d["error"]["code"] == "INVALID_REQUEST"
+    from audio_production.adapter import FfmpegSkill
+    code, d = run(request_doc([op("m", "MIX", ["track:t1", "track:t2"], duck={"input": 1, "amount_db": 12, "threshold_db": -35, "release_ms": 200})],
+                              sources=srcs, tracks=trks), "--dry-run")
+    if FfmpegSkill(skill_dir).info().takes_flag("audio", "duck_threshold"):
+        assert d["ok"] and "--duck-threshold -35.000" in results(d)["op:m"]["measurements"]["duck"]["ffmpeg_skill_flags"], d.get("error")
+    else:
+        assert d["error"]["code"] == "TOOL_ERROR" and d["error"]["details"]["reason"] == "ffmpeg_skill_flag_missing", d
+
+
+def loudness_set_doc(source, versions, outputs, tolerance=0.5):
+    return request_doc([op("deliver", "LOUDNESS_SET", ["track:t1"], tolerance_lufs=tolerance, versions=versions)],
+                       outputs=outputs, sources=[{"source_id": "a", "path": source}])
+
+
+def test_loudness_set_three_versions_in_one_run(workspace):
+    # ECOSYSTEM_ROADMAP step 9 "Done when": three versions of one master, each within 0.5 LU of its target and never
+    # above its true-peak ceiling, measured on the intermediate and again on every delivered file
+    versions = [{"version_id": "web", "target_lufs": -14, "true_peak_db": -1}, {"version_id": "ebu", "profile": "ebu_r128"},
+                {"version_id": "atsc", "profile": "atsc_a85"}]
+    outputs = [{"output_id": "web", "operation": "op:deliver.web", "path": "out/web.wav", "format": "wav"},
+               {"output_id": "web_aac", "operation": "op:deliver.web", "path": "out/web.m4a", "format": "m4a"},
+               {"output_id": "ebu", "operation": "op:deliver.ebu", "path": "out/ebu.wav", "format": "wav"},
+               {"output_id": "atsc", "operation": "op:deliver.atsc", "path": "out/atsc.flac", "format": "flac"}]
+    code, d = run(loudness_set_doc("programme.wav", versions, outputs))
+    assert code == 0 and d["ok"], d.get("error")
+    (s,) = d["loudness_sets"]
+    want = {"web": (-14.0, -1.0, None), "ebu": (-23.0, -1.0, "ebu_r128"), "atsc": (-24.0, -2.0, "atsc_a85")}
+    assert [v["version_id"] for v in s["versions"]] == ["web", "ebu", "atsc"] and s["tolerance_lufs"] == 0.5
+    for v in s["versions"]:
+        target, ceiling, profile = want[v["version_id"]]
+        assert (v["target_lufs"], v["true_peak_db"], v["profile"], v["status"]) == (target, ceiling, profile, "completed")
+        m = v["measured"]
+        assert abs(m["integrated_lufs"] - target) <= 0.5 and m["true_peak_dbtp"] <= ceiling, v
+        assert v["outputs"], v
+        for o in v["outputs"]:
+            lm = o["loudness"]
+            assert o["status"] == "completed" and lm["measured_by"].endswith("(delivered file)")
+            assert abs(lm["integrated_lufs"] - target) <= 0.5 and lm["true_peak_dbtp"] <= ceiling, o
+    # the versions really differ, and the -14 one is close to its ceiling (the fixture's crest makes the ceiling matter)
+    by_id = {v["version_id"]: v["measured"] for v in s["versions"]}
+    assert by_id["web"]["true_peak_dbtp"] > -2.5 and by_id["ebu"]["integrated_lufs"] - by_id["atsc"]["integrated_lufs"] > 0.5
+    r = results(d)
+    assert {n for n, x in r.items() if x["type"] == "LOUDNESS_VERSION"} == {"op:deliver.web", "op:deliver.ebu", "op:deliver.atsc"}
+    assert all(r[n]["implicit"] and r[n]["parameters"]["loudness_set"] == "deliver" for n in ("op:deliver.web", "op:deliver.ebu", "op:deliver.atsc"))
+    assert {o["output_id"] for o in d["outputs"]} == {"web", "web_aac", "ebu", "atsc"} and all("loudness" in o for o in d["outputs"])
+    assert all((workspace / "out" / f).is_file() for f in ("web.wav", "web.m4a", "ebu.wav", "atsc.flac"))
+
+
+def test_loudness_set_refuses_an_unreachable_version(workspace):
+    # a crest factor of about 20 dB: -14 LUFS under -1 dBTP is out of reach of loudnorm's linear gain; the version is
+    # named, its numbers are reported, and no version of the set is delivered
+    versions = [{"version_id": "ebu", "profile": "ebu_r128"}, {"version_id": "web", "target_lufs": -14, "true_peak_db": -1}]
+    outputs = [{"output_id": "ebu", "operation": "op:deliver.ebu", "path": "out/ebu.wav", "format": "wav"},
+               {"output_id": "web", "operation": "op:deliver.web", "path": "out/web.wav", "format": "wav"}]
+    code, d = run(loudness_set_doc("peaky.wav", versions, outputs))
+    assert not d["ok"] and d["error"]["code"] == "VALIDATION_ERROR" and code == EXIT_CODES["VALIDATION_ERROR"]
+    det = d["error"]["details"]
+    assert det["version_id"] == "web" and det["reason"] in ("loudness_off_target", "true_peak_exceeded") and det["measured_lufs"] is not None
+    assert results(d)["op:deliver.web"]["status"] == "failed" and not (workspace / "out").exists()
+    assert {v["version_id"]: v["status"] for v in d["loudness_sets"][0]["versions"]} == {"ebu": "completed", "web": "failed"}
+
+
+def test_loudness_set_dry_run_and_set_reference(workspace):
+    versions = [{"version_id": "jp", "profile": "arib_tr_b32"}]
+    outputs = [{"output_id": "jp", "operation": "op:deliver.jp", "path": "out/jp.wav", "format": "wav"}]
+    code, out, err = run_cli(["plan", "-", "--json"], json.dumps(loudness_set_doc("tone.wav", versions, outputs)))
+    d = one_json(out)
+    assert d["ok"] and d["dry_run"] and d["loudness_sets"][0]["versions"][0]["status"] == "planned"
+    assert d["loudness_sets"][0]["versions"][0]["target_lufs"] == -24.0 and d["loudness_sets"][0]["versions"][0]["true_peak_db"] == -1.0
+    assert [s["tool"] for s in d["plan"]["steps"]] == ["ffmpeg-skill/loudness"] and not (workspace / "out").exists()
+    bad = loudness_set_doc("tone.wav", versions, [{"output_id": "jp", "operation": "op:deliver", "path": "out/jp.wav", "format": "wav"}])
+    code, d = run(bad)
+    assert d["error"]["code"] == "INVALID_REQUEST" and d["error"]["details"]["versions"] == ["op:deliver.jp"]
+
+
+def test_a_failing_output_leaves_no_output_of_the_run_behind(workspace):
+    # outputs are staged and validated first, then moved into place together: the second output fails its expectation,
+    # so the first is not delivered either and a pre-existing target (overwrite: true) keeps its old content
+    (workspace / "out").mkdir()
+    (workspace / "out" / "a.wav").write_bytes(b"old")
+    outputs = [{"output_id": "a", "operation": "op:g", "path": "out/a.wav", "format": "wav", "overwrite": True},
+               {"output_id": "b", "operation": "op:g", "path": "out/b.flac", "format": "flac"},
+               {"output_id": "c", "operation": "op:g", "path": "out/c.wav", "format": "wav", "expect": {"duration": 3.0}}]
+    code, out, err = run_cli(["run", "-", "--json"], json.dumps(request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3)], outputs=outputs)))
+    d = one_json(out)
+    assert d["error"]["code"] == "VALIDATION_ERROR" and d["error"]["details"]["reason"] == "duration_mismatch"
+    assert sorted(p.name for p in (workspace / "out").iterdir()) == ["a.wav"] and (workspace / "out" / "a.wav").read_bytes() == b"old"
+    outputs[2].pop("expect")
+    code, out, err = run_cli(["run", "-", "--json"], json.dumps(request_doc([op("g", "GAIN", ["track:t1"], gain_db=-3)], outputs=outputs)))
+    d = one_json(out)
+    assert d["ok"], d.get("error")
+    assert sorted(p.name for p in (workspace / "out").iterdir()) == ["a.wav", "b.flac", "c.wav"] and probe(workspace / "out" / "a.wav")["duration"] > 5
+    assert all(o["artifact"]["path"] == o["path"] for o in d["outputs"])
+
+
+def pcm16(path):
+    import wave
+    import array
+    with wave.open(str(path)) as w:
+        assert w.getsampwidth() == 2 and w.getnchannels() == 1
+        a = array.array("h")
+        a.frombytes(w.readframes(w.getnframes()))
+        return a, w.getframerate()
+
+
+def test_stems_sum_to_the_mix(workspace):
+    # ECOSYSTEM_ROADMAP step 8 "Done when": the stems summed equal the mix within -60 dB residual and every stem has the
+    # programme's sample count. Dialogue is input 0 (6 s); the music bed is longer (8 s) and the effects shorter (4 s)
+    tracks = [{"track_id": "dia", "source_id": "d"}, {"track_id": "mus", "source_id": "m"}, {"track_id": "fx", "source_id": "e"}]
+    sources = [{"source_id": "d", "path": "keyed.wav"}, {"source_id": "m", "path": "longbed.wav"}, {"source_id": "e", "path": "sfx.wav"}]
+    levels = [{"gain_db": -2}, {"gain_db": -6}, {"gain_db": -3}]
+    ins = ["track:dia", "track:mus", "track:fx"]
+    ops = [op("mix", "MIX", ins, levels=levels),
+           op("st", "STEMS", ins, levels=[{"gain_db": lv["gain_db"]} for lv in levels],
+              stems=[{"stem_id": "dialogue", "inputs": [0], "role": "dialogue"}, {"stem_id": "music", "inputs": [1], "role": "music"},
+                     {"stem_id": "effects", "inputs": [2], "role": "effects"}])]
+    outputs = [{"output_id": "mix", "operation": "op:mix", "path": "out/mix.wav", "format": "wav"}] + [
+        {"output_id": s, "operation": f"op:st.{s}", "path": f"out/{s}.wav", "format": "wav"} for s in ("dialogue", "music", "effects")]
+    code, d = run(request_doc(ops, outputs=outputs, sources=sources, tracks=tracks))
+    assert code == 0 and d["ok"], d.get("error")
+    mixed, sr = pcm16(workspace / "out" / "mix.wav")
+    assert sr == 48000 and len(mixed) == 6 * 48000
+    stems = {s: pcm16(workspace / "out" / f"{s}.wav")[0] for s in ("dialogue", "music", "effects")}
+    assert all(len(a) == len(mixed) for a in stems.values()), {s: len(a) for s, a in stems.items()}
+    residual = max(abs(stems["dialogue"][i] + stems["music"][i] + stems["effects"][i] - mixed[i]) for i in range(len(mixed)))
+    import math
+    assert 20 * math.log10(max(residual, 1) / 32768) <= -60, residual
+    # the stems carry their own content: the effects stem is silent after 4 s (padded), the music stem is not (trimmed bed)
+    assert max(abs(x) for x in stems["effects"][4 * 48000 + 10:]) == 0 and max(abs(x) for x in stems["music"][5 * 48000:]) > 1000
+    (summary,) = d["stems"]
+    assert [(s["stem_id"], s["role"], s["samples"], s["programme_samples"]) for s in summary["stems"]] == [
+        ("dialogue", "dialogue", 288000, 288000), ("music", "music", 288000, 288000), ("effects", "effects", 288000, 288000)]
+    assert all(s["status"] == "completed" and s["outputs"] for s in summary["stems"])
+
+
+def test_stems_group_two_inputs_and_refuse_the_group_reference(workspace):
+    # the shorter effects track is the stem's first member: it is conformed to the programme on its own before the
+    # longer bed is folded on top, so the bed is still heard after the effects end (4 s)
+    tracks = [{"track_id": "dia", "source_id": "d"}, {"track_id": "fx", "source_id": "e"}, {"track_id": "mus", "source_id": "m"}]
+    sources = [{"source_id": "d", "path": "keyed.wav"}, {"source_id": "e", "path": "sfx.wav"}, {"source_id": "m", "path": "longbed.wav"}]
+    ops = [op("st", "STEMS", ["track:dia", "track:fx", "track:mus"], stems=[{"stem_id": "dx", "inputs": [0]}, {"stem_id": "me", "inputs": [1, 2]}])]
+    outputs = [{"output_id": s, "operation": f"op:st.{s}", "path": f"out/{s}.wav", "format": "wav"} for s in ("dx", "me")]
+    code, d = run(request_doc(ops, outputs=outputs, sources=sources, tracks=tracks))
+    assert d["ok"], d.get("error")
+    assert [s["samples"] for s in d["stems"][0]["stems"]] == [288000, 288000]
+    assert [o["samples"] for s in d["stems"][0]["stems"] for o in s["outputs"]] == [288000, 288000]
+    me, _ = pcm16(workspace / "out" / "me.wav")
+    assert max(abs(x) for x in me[5 * 48000:]) > 1000
+    assert len(results(d)["op:st.me"]["tool_commands_observed"]) >= 2      # --replace alone, then --music on top
+    code, d = run(request_doc(ops, outputs=[{"output_id": "x", "operation": "op:st", "path": "out/x.wav", "format": "wav"}], sources=sources, tracks=tracks))
+    assert d["error"]["code"] == "INVALID_REQUEST" and d["error"]["details"]["reason"] == "stems_reference" and d["error"]["details"]["stems"] == ["op:st.dx", "op:st.me"]
+    code, d = run(request_doc(ops, outputs=[{"output_id": s, "operation": f"op:st.{s}", "path": f"out/{s}.m4a", "format": "m4a"} for s in ("dx", "me")], sources=sources, tracks=tracks))
+    assert d["error"]["code"] == "UNSUPPORTED_FORMAT" and d["error"]["details"]["reason"] == "stem_needs_lossless"
+    # a stem that reaches full scale is clipped in its 16-bit intermediate and would not sum to the mix: refused
+    loud = [op("st", "STEMS", ["track:dia", "track:fx", "track:mus"], levels=[{"gain_db": 12}, {"gain_db": 0}, {"gain_db": 0}],
+               stems=[{"stem_id": "dx", "inputs": [0]}, {"stem_id": "me", "inputs": [1, 2]}])]
+    code, d = run(request_doc(loud, outputs=outputs, sources=sources, tracks=tracks))
+    assert d["error"]["code"] == "VALIDATION_ERROR" and d["error"]["details"]["reason"] == "stem_clipped" and not (workspace / "out").exists()
