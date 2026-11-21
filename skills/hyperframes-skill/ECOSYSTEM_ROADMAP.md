@@ -11,11 +11,11 @@ v0.8.0, released by its workflow (step 2). Node 22. batch, doctor, preview, prob
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| HTMLシーンの動画化(HyperFrames) | done | audio is a later theme |
-| テロップ・スティンガー・ループ素材 | partly | added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O4, O9): title and stinger material files. The `motion-titles-skill` idea is folded in here, not a new repository. Lower thirds, title cards and IN / LOOP / OUT loops ship (steps 12-13); stingers with `stinger.json` and `title.json` ship (steps 15, 17); brand input via `kit@1` ships (step 16) |
-| キネティックタイポ・幾何学モーション | open | added by the same decisions (O17): steps 7, 9 and 10. Visualizers driven by measured audio belong to remotion-ffmpeg-skill, 3D depth to blender-skill |
+| Owned job                            | Status | Note                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTMLシーンの動画化(HyperFrames)      | done   | audio is a later theme                                                                                                                                                                                                                                                                                                                                                                                   |
+| テロップ・スティンガー・ループ素材   | partly | added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O4, O9): title and stinger material files. The `motion-titles-skill` idea is folded in here, not a new repository. Lower thirds, title cards and IN / LOOP / OUT loops ship (steps 12-13); stingers with `stinger.json` and `title.json` ship (steps 15, 17); brand input via `kit@1` ships (step 16) |
+| キネティックタイポ・幾何学モーション | open   | added by the same decisions (O17): steps 7, 9 and 10. Visualizers driven by measured audio belong to remotion-ffmpeg-skill, 3D depth to blender-skill                                                                                                                                                                                                                                                    |
 
 ## Wiring
 
@@ -79,4 +79,5 @@ The agent names `hyperframes-skill/render` in a CONFIRM handoff from a pinned co
 Titles burned into a programme are motion-graphics-skill's (`タイトル・テロップ`); title and stinger material files are this skill's (`テロップ・スティンガー・ループ素材`); remotion-ffmpeg-skill's titles stay inside its own compositions ([Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156), O9). Kinetic typography and geometric motion are this skill's; audio visualizers and the beat- or lyric-measured versions are remotion-ffmpeg-skill's; blender-skill stays 3D only (O17). Placement on a programme is motion-graphics-skill's `rendered_layer`, a stinger between two clips is cut by video-editing-skill, and the checks on the material (cut-point cover, loop seam, alpha edge, key / fill) are qc-skill's.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

@@ -8,7 +8,9 @@ import { ToolError } from "./result.mjs";
 
 function num(v) {
   const n = Number(v);
-  return v === undefined || v === null || v === "" || !Number.isFinite(n) ? null : n;
+  return v === undefined || v === null || v === "" || !Number.isFinite(n)
+    ? null
+    : n;
 }
 
 function rate(v) {
@@ -21,9 +23,13 @@ function rate(v) {
 function ffprobePath() {
   const t = resolveFfTool("ffprobe");
   if (!t.path) {
-    throw new ToolError("missing_tool", `ffprobe not found (${t.source}: ${t.requested})`, {
-      hint: "install FFmpeg >= 5.0 (it ships ffprobe) and put it on PATH, or set HYPERFRAMES_SKILL_FFPROBE",
-    });
+    throw new ToolError(
+      "missing_tool",
+      `ffprobe not found (${t.source}: ${t.requested})`,
+      {
+        hint: "install FFmpeg >= 5.0 (it ships ffprobe) and put it on PATH, or set HYPERFRAMES_SKILL_FFPROBE",
+      },
+    );
   }
   return t.path;
 }
@@ -35,7 +41,11 @@ export const SEQUENCE_FRAME_RE = /^frame_(\d{6,})\.png$/;
 export function sequenceFrames(dir) {
   return readdirSync(dir)
     .filter((f) => SEQUENCE_FRAME_RE.test(f))
-    .sort((a, b) => Number(SEQUENCE_FRAME_RE.exec(a)[1]) - Number(SEQUENCE_FRAME_RE.exec(b)[1]));
+    .sort(
+      (a, b) =>
+        Number(SEQUENCE_FRAME_RE.exec(a)[1]) -
+        Number(SEQUENCE_FRAME_RE.exec(b)[1]),
+    );
 }
 
 /**
@@ -43,9 +53,11 @@ export function sequenceFrames(dir) {
  * they are numbered 1..N without a gap. A sequence has no frame rate or duration of its own.
  */
 export function probeSequence(ctx, dir) {
-  if (!existsSync(dir) || !statSync(dir).isDirectory()) throw new ToolError("input", `not a directory: ${dir}`);
+  if (!existsSync(dir) || !statSync(dir).isDirectory())
+    throw new ToolError("input", `not a directory: ${dir}`);
   const frames = sequenceFrames(dir);
-  if (frames.length === 0) throw new ToolError("input", `${dir} holds no frame_NNNNNN.png files`);
+  if (frames.length === 0)
+    throw new ToolError("input", `${dir} holds no frame_NNNNNN.png files`);
   const first = probeFile(ctx, join(dir, frames[0]), { countFrames: false });
   const numbers = frames.map((f) => Number(SEQUENCE_FRAME_RE.exec(f)[1]));
   const contiguous = numbers.every((n, i) => n === i + 1);
@@ -57,7 +69,15 @@ export function probeSequence(ctx, dir) {
     bitrate: null,
     first_frame: first.file,
     contiguous,
-    video: first.video ? { ...first.video, fps: null, r_frame_rate: null, frames: frames.length, frames_source: "files" } : null,
+    video: first.video
+      ? {
+          ...first.video,
+          fps: null,
+          r_frame_rate: null,
+          frames: frames.length,
+          frames_source: "files",
+        }
+      : null,
     audio: null,
   };
 }
@@ -67,23 +87,44 @@ export function probeSequence(ctx, dir) {
  * does not state nb_frames (never assumed from duration x fps).
  */
 export function probeFile(ctx, file, { countFrames = true } = {}) {
-  if (!existsSync(file) || !statSync(file).isFile()) throw new ToolError("input", `not a file: ${file}`);
+  if (!existsSync(file) || !statSync(file).isFile())
+    throw new ToolError("input", `not a file: ${file}`);
   const exe = ffprobePath();
-  const argv = [exe, "-v", "error", "-print_format", "json", "-show_format", "-show_streams", "--", file];
+  const argv = [
+    exe,
+    "-v",
+    "error",
+    "-print_format",
+    "json",
+    "-show_format",
+    "-show_streams",
+    "--",
+    file,
+  ];
   const entry = ctx.record(argv, { exit_code: null });
   const r = runSync(argv, { timeoutMs: 120000 });
   entry.exit_code = r.status;
-  if (r.timedOut) throw new ToolError("timeout", `ffprobe timed out on ${file}`);
-  if (!r.ok) throw new ToolError("input", `ffprobe cannot read ${file}: ${(r.stderr || r.error || "").trim()}`);
+  if (r.timedOut)
+    throw new ToolError("timeout", `ffprobe timed out on ${file}`);
+  if (!r.ok)
+    throw new ToolError(
+      "input",
+      `ffprobe cannot read ${file}: ${(r.stderr || r.error || "").trim()}`,
+    );
   let raw;
   try {
     raw = JSON.parse(r.stdout);
   } catch (e) {
-    throw new ToolError("input", `ffprobe printed unreadable JSON for ${file}: ${e.message}`);
+    throw new ToolError(
+      "input",
+      `ffprobe printed unreadable JSON for ${file}: ${e.message}`,
+    );
   }
   const fmt = raw.format ?? {};
   const streams = raw.streams ?? [];
-  const v = streams.find((s) => s.codec_type === "video" && !s.disposition?.attached_pic);
+  const v = streams.find(
+    (s) => s.codec_type === "video" && !s.disposition?.attached_pic,
+  );
   const a = streams.find((s) => s.codec_type === "audio");
   const out = {
     file,
@@ -98,7 +139,20 @@ export function probeFile(ctx, file, { countFrames = true } = {}) {
     let frames = num(v.nb_frames);
     let framesSource = frames === null ? null : "container";
     if (frames === null && countFrames) {
-      const cargv = [exe, "-v", "error", "-select_streams", "v:0", "-count_frames", "-show_entries", "stream=nb_read_frames", "-of", "json", "--", file];
+      const cargv = [
+        exe,
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-count_frames",
+        "-show_entries",
+        "stream=nb_read_frames",
+        "-of",
+        "json",
+        "--",
+        file,
+      ];
       const centry = ctx.record(cargv, { exit_code: null });
       const c = runSync(cargv, { timeoutMs: 600000 });
       centry.exit_code = c.status;
@@ -126,7 +180,11 @@ export function probeFile(ctx, file, { countFrames = true } = {}) {
     };
   }
   if (a) {
-    out.audio = { codec: a.codec_name ?? null, channels: num(a.channels), sample_rate: num(a.sample_rate) };
+    out.audio = {
+      codec: a.codec_name ?? null,
+      channels: num(a.channels),
+      sample_rate: num(a.sample_rate),
+    };
   }
   return out;
 }

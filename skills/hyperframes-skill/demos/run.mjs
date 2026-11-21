@@ -4,7 +4,14 @@
 // demos/out/<name>/. Any step that does not end completed + verified fails the run, so a broken
 // flag fails CI instead of the reader.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,15 +19,24 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUT = join(ROOT, "demos", "out");
 
 function step(tool, args) {
-  const r = spawnSync(process.execPath, [join(ROOT, "scripts", `${tool}.mjs`), ...args, "--json"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync(
+    process.execPath,
+    [join(ROOT, "scripts", `${tool}.mjs`), ...args, "--json"],
+    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  );
   let doc = null;
   try {
     doc = JSON.parse(r.stdout);
   } catch {
     /* reported below */
   }
-  const ok = r.status === 0 && doc?.status === "completed" && (tool === "probe" || doc.verified === true);
-  console.log(`  ${ok ? "ok  " : "FAIL"} ${tool} ${ok ? "" : `(exit ${r.status}: ${doc?.error?.message ?? r.stderr.trim().split("\n").pop()})`}`);
+  const ok =
+    r.status === 0 &&
+    doc?.status === "completed" &&
+    (tool === "probe" || doc.verified === true);
+  console.log(
+    `  ${ok ? "ok  " : "FAIL"} ${tool} ${ok ? "" : `(exit ${r.status}: ${doc?.error?.message ?? r.stderr.trim().split("\n").pop()})`}`,
+  );
   if (!ok) process.exitCode = 1;
   return ok ? doc : null;
 }
@@ -29,8 +45,13 @@ function step(tool, args) {
 // ({template, values, kit?}: the request is made by the template tool first; `kit` is a brand kit
 // file beside it, passed as --kit).
 // A batch demo is demos/<name>/rows.csv + batch.json ({template, name_field?, codec?}).
-const hasInput = (name) => ["request.json", "template.json", "batch.json"].some((f) => existsSync(join(ROOT, "demos", name, f)));
-const demos = readdirSync(join(ROOT, "demos"), { withFileTypes: true }).filter((d) => d.isDirectory() && d.name !== "out" && hasInput(d.name));
+const hasInput = (name) =>
+  ["request.json", "template.json", "batch.json"].some((f) =>
+    existsSync(join(ROOT, "demos", name, f)),
+  );
+const demos = readdirSync(join(ROOT, "demos"), { withFileTypes: true }).filter(
+  (d) => d.isDirectory() && d.name !== "out" && hasInput(d.name),
+);
 for (const d of demos) {
   const out = join(OUT, d.name);
   rmSync(out, { recursive: true, force: true });
@@ -39,7 +60,13 @@ for (const d of demos) {
   const batch = join(ROOT, "demos", d.name, "batch.json");
   if (existsSync(batch)) {
     const b = JSON.parse(readFileSync(batch, "utf8"));
-    const args = [join(ROOT, "demos", d.name, "rows.csv"), "--template", b.template, "-o", join(out, "batch")];
+    const args = [
+      join(ROOT, "demos", d.name, "rows.csv"),
+      "--template",
+      b.template,
+      "-o",
+      join(out, "batch"),
+    ];
     if (b.name_field) args.push("--name-field", b.name_field);
     if (b.codec) args.push("--codec", b.codec);
     const r = step("batch", args);
@@ -48,7 +75,9 @@ for (const d of demos) {
       const p = step("probe", [row.output]);
       if (!p) continue;
       const v = p.probe.video;
-      console.log(`  ${row.name}: ${p.probe.duration.toFixed(3)} s, ${v.width}x${v.height}, ${v.fps} fps, ${v.frames} frames, ${v.codec} ${v.pix_fmt}`);
+      console.log(
+        `  ${row.name}: ${p.probe.duration.toFixed(3)} s, ${v.width}x${v.height}, ${v.fps} fps, ${v.frames} frames, ${v.codec} ${v.pix_fmt}`,
+      );
     }
     continue;
   }
@@ -58,32 +87,90 @@ for (const d of demos) {
     const { template, values, kit } = JSON.parse(readFileSync(tpl, "utf8"));
     writeFileSync(join(out, "values.json"), JSON.stringify(values));
     request = join(out, "request.json");
-    const t = step("template", [template, "--values", join(out, "values.json"), ...(kit ? ["--kit", join(ROOT, "demos", d.name, kit)] : []), "-o", request]);
+    const t = step("template", [
+      template,
+      "--values",
+      join(out, "values.json"),
+      ...(kit ? ["--kit", join(ROOT, "demos", d.name, kit)] : []),
+      "-o",
+      request,
+    ]);
     if (!t) continue;
-    if (t.kit) for (const k of [...t.kit.applied, ...t.kit.unused]) console.log(`  kit ${k.field}: ${k.value ? `${k.to} = ${k.value}` : `unused (${k.reason})`}`);
+    if (t.kit)
+      for (const k of [...t.kit.applied, ...t.kit.unused])
+        console.log(
+          `  kit ${k.field}: ${k.value ? `${k.to} = ${k.value}` : `unused (${k.reason})`}`,
+        );
   }
   if (!step("scene", [request, "-o", join(out, "scene")])) continue;
-  if (!step("preview", [join(out, "scene"), "-o", join(out, "preview.mp4")])) continue;
+  if (!step("preview", [join(out, "scene"), "-o", join(out, "preview.mp4")]))
+    continue;
   // a request with segments also renders IN / LOOP / OUT files and measures the loop seam
-  const segmented = JSON.parse(readFileSync(request, "utf8")).segments !== undefined;
-  const r = step("render", [join(out, "scene"), "-o", join(out, "render.mp4"), ...(segmented ? ["--segments"] : [])]);
+  const segmented =
+    JSON.parse(readFileSync(request, "utf8")).segments !== undefined;
+  const r = step("render", [
+    join(out, "scene"),
+    "-o",
+    join(out, "render.mp4"),
+    ...(segmented ? ["--segments"] : []),
+  ]);
   if (!r) continue;
-  for (const S of r.segments ?? []) console.log(`  ${S.name}: ${S.output ? `${S.probe.video.frames} frames from frame ${S.start_frame}` : "empty"}`);
-  if (r.loop_seam) console.log(`  loop seam: wrap ${r.loop_seam.wrap_diff} <= largest step ${r.loop_seam.max_step_diff} + ${r.loop_seam.tolerance}`);
+  for (const S of r.segments ?? [])
+    console.log(
+      `  ${S.name}: ${S.output ? `${S.probe.video.frames} frames from frame ${S.start_frame}` : "empty"}`,
+    );
+  if (r.loop_seam)
+    console.log(
+      `  loop seam: wrap ${r.loop_seam.wrap_diff} <= largest step ${r.loop_seam.max_step_diff} + ${r.loop_seam.tolerance}`,
+    );
   // a transparent background also goes out in every alpha delivery, read back by probe --alpha
   if (JSON.parse(readFileSync(request, "utf8")).background === "transparent") {
-    for (const [codec, file] of [["vp9", "alpha.webm"], ["prores", "alpha.mov"], ["png", "alpha-frames"]]) {
-      if (!step("render", [join(out, "scene"), "-o", join(out, file), "--codec", codec])) continue;
+    for (const [codec, file] of [
+      ["vp9", "alpha.webm"],
+      ["prores", "alpha.mov"],
+      ["png", "alpha-frames"],
+    ]) {
+      if (
+        !step("render", [
+          join(out, "scene"),
+          "-o",
+          join(out, file),
+          "--codec",
+          codec,
+        ])
+      )
+        continue;
       const a = step("probe", [join(out, file), "--alpha"]);
-      if (a) console.log(`  ${file}: alpha ${a.probe.alpha.mode}, first frame ${a.probe.alpha.first_frame.min}..${a.probe.alpha.first_frame.max}, top-left ${a.probe.alpha.first_frame.corners.top_left}`);
+      if (a)
+        console.log(
+          `  ${file}: alpha ${a.probe.alpha.mode}, first frame ${a.probe.alpha.first_frame.min}..${a.probe.alpha.first_frame.max}, top-left ${a.probe.alpha.first_frame.corners.top_left}`,
+        );
     }
   }
   const p = step("probe", [join(out, "render.mp4")]);
   if (!p) continue;
   const v = p.probe.video;
-  console.log(`  ${d.name}/render.mp4: ${p.probe.duration.toFixed(3)} s, ${v.width}x${v.height}, ${v.fps} fps, ${v.frames} frames, ${v.codec}`);
+  console.log(
+    `  ${d.name}/render.mp4: ${p.probe.duration.toFixed(3)} s, ${v.width}x${v.height}, ${v.fps} fps, ${v.frames} frames, ${v.codec}`,
+  );
   // after: one frame per half second, tiled
   const n = Math.max(1, Math.round(p.probe.duration * 2));
-  const sheet = spawnSync(process.env.HYPERFRAMES_SKILL_FFMPEG || "ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", join(out, "render.mp4"), "-vf", `fps=2,scale=320:-2,tile=${n}x1`, "-frames:v", "1", join(out, "sheet.png")]);
-  console.log(sheet.status === 0 ? `  sheet: ${join(out, "sheet.png")}` : "  sheet: not written (ffmpeg failed)");
+  const sheet = spawnSync(process.env.HYPERFRAMES_SKILL_FFMPEG || "ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    join(out, "render.mp4"),
+    "-vf",
+    `fps=2,scale=320:-2,tile=${n}x1`,
+    "-frames:v",
+    "1",
+    join(out, "sheet.png"),
+  ]);
+  console.log(
+    sheet.status === 0
+      ? `  sheet: ${join(out, "sheet.png")}`
+      : "  sheet: not written (ffmpeg failed)",
+  );
 }

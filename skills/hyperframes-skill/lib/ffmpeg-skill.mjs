@@ -22,11 +22,14 @@ import { ROOT, which } from "./deps.mjs";
 import { runSync } from "./proc.mjs";
 import { ToolError } from "./result.mjs";
 
-export const FFMPEG_SKILL_ENV = Object.freeze(["HYPERFRAMES_SKILL_FFMPEG_SKILL_DIR", "VIDEO_AGENT_FFMPEG_SKILL_DIR"]);
+export const FFMPEG_SKILL_ENV = Object.freeze([
+  "HYPERFRAMES_SKILL_FFMPEG_SKILL_DIR",
+  "VIDEO_AGENT_FFMPEG_SKILL_DIR",
+]);
 export const FFMPEG_SKILL_TOOL = "ffmpeg-skill/probe";
 export const FFMPEG_SKILL_TIMEOUT_MS = 120000;
 /** The ffmpeg-skill releases this was checked against (informational; not a gate, see D3). */
-export const FFMPEG_SKILL_RANGE = ">=2.0.0 <4.0.0";   // 3.0.0 checked too (D11): probe's keys read here are unchanged
+export const FFMPEG_SKILL_RANGE = ">=2.0.0 <4.0.0"; // 3.0.0 checked too (D11): probe's keys read here are unchanged
 
 // The pixel formats HyperFrames encodes alpha into (yuva420p for VP9, yuva444p10le for ProRes
 // 4444; prores_ks reads back as yuva444p12le). Same family test HyperFrames itself applies.
@@ -46,10 +49,20 @@ export function ffmpegSkillCandidates(explicit, search = {}) {
   if (explicit) return [{ path: resolve(explicit), source: "--ffmpeg-skill" }];
   const env = search.env ?? process.env;
   const out = [];
-  for (const key of FFMPEG_SKILL_ENV) if (env[key]) out.push({ path: resolve(env[key]), source: `env:${key}` });
-  out.push({ path: join(search.home ?? homedir(), ".claude", "skills", "ffmpeg-skill"), source: "claude-skills" });
-  out.push({ path: join(search.cwd ?? process.cwd(), "vendor", "ffmpeg-skill"), source: "vendor" });
-  out.push({ path: join(dirname(search.root ?? ROOT), "ffmpeg-skill"), source: "sibling" });
+  for (const key of FFMPEG_SKILL_ENV)
+    if (env[key]) out.push({ path: resolve(env[key]), source: `env:${key}` });
+  out.push({
+    path: join(search.home ?? homedir(), ".claude", "skills", "ffmpeg-skill"),
+    source: "claude-skills",
+  });
+  out.push({
+    path: join(search.cwd ?? process.cwd(), "vendor", "ffmpeg-skill"),
+    source: "vendor",
+  });
+  out.push({
+    path: join(dirname(search.root ?? ROOT), "ffmpeg-skill"),
+    source: "sibling",
+  });
   return out;
 }
 
@@ -66,7 +79,8 @@ export function locateFfmpegSkill(explicit, search = {}) {
   const tried = [];
   for (const c of ffmpegSkillCandidates(explicit, search)) {
     tried.push(`${c.source}: ${c.path}`);
-    if (isFile(join(c.path, "scripts", "probe.py"))) return { dir: c.path, source: c.source, tried };
+    if (isFile(join(c.path, "scripts", "probe.py")))
+      return { dir: c.path, source: c.source, tried };
   }
   return { dir: null, source: null, tried };
 }
@@ -75,12 +89,26 @@ export function locateFfmpegSkill(explicit, search = {}) {
 export function requireExplicitFfmpegSkill(explicit) {
   if (!explicit) return;
   const loc = locateFfmpegSkill(explicit);
-  if (!loc.dir) throw new ToolError("input", `--ffmpeg-skill ${explicit} is not an ffmpeg-skill checkout (no scripts/probe.py)`, { hint: "pass the directory that contains scripts/probe.py, or leave the flag out to use the default search" });
+  if (!loc.dir)
+    throw new ToolError(
+      "input",
+      `--ffmpeg-skill ${explicit} is not an ffmpeg-skill checkout (no scripts/probe.py)`,
+      {
+        hint: "pass the directory that contains scripts/probe.py, or leave the flag out to use the default search",
+      },
+    );
 }
 
 /** python3 for ffmpeg-skill: HYPERFRAMES_SKILL_PYTHON, else python3, else python on PATH. */
 export function resolvePython(env = process.env) {
-  if (env.HYPERFRAMES_SKILL_PYTHON) return { path: existsSync(env.HYPERFRAMES_SKILL_PYTHON) ? env.HYPERFRAMES_SKILL_PYTHON : null, source: "env:HYPERFRAMES_SKILL_PYTHON", requested: env.HYPERFRAMES_SKILL_PYTHON };
+  if (env.HYPERFRAMES_SKILL_PYTHON)
+    return {
+      path: existsSync(env.HYPERFRAMES_SKILL_PYTHON)
+        ? env.HYPERFRAMES_SKILL_PYTHON
+        : null,
+      source: "env:HYPERFRAMES_SKILL_PYTHON",
+      requested: env.HYPERFRAMES_SKILL_PYTHON,
+    };
   const p = which("python3") ?? which("python");
   return { path: p, source: "PATH", requested: "python3" };
 }
@@ -91,8 +119,11 @@ export function resolvePython(env = process.env) {
  */
 export function ffmpegSkillVersion(dir) {
   try {
-    const v = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).version;
-    if (typeof v === "string" && v) return { version: v, version_source: "package.json" };
+    const v = JSON.parse(
+      readFileSync(join(dir, "package.json"), "utf8"),
+    ).version;
+    if (typeof v === "string" && v)
+      return { version: v, version_source: "package.json" };
   } catch {
     /* fall through */
   }
@@ -132,30 +163,95 @@ export function measuredFrom(doc) {
 export function compare(expected, codec, measured) {
   const tol = 1 / expected.fps + 0.001;
   const checks = [
-    { check: "codec", ok: measured.codec === null ? null : measured.codec === expected.codec, expected: expected.codec, actual: measured.codec },
-    { check: "resolution", ok: measured.width === null || measured.height === null ? null : measured.width === expected.width && measured.height === expected.height, expected: `${expected.width}x${expected.height}`, actual: measured.width === null ? null : `${measured.width}x${measured.height}` },
-    { check: "fps", ok: measured.fps === null ? null : Math.abs(measured.fps - expected.fps) < 0.01, expected: expected.fps, actual: measured.fps },
-    { check: "duration", ok: measured.duration === null ? null : Math.abs(measured.duration - expected.duration) <= tol, expected: expected.duration, actual: measured.duration, tolerance: Number(tol.toFixed(4)) },
+    {
+      check: "codec",
+      ok: measured.codec === null ? null : measured.codec === expected.codec,
+      expected: expected.codec,
+      actual: measured.codec,
+    },
+    {
+      check: "resolution",
+      ok:
+        measured.width === null || measured.height === null
+          ? null
+          : measured.width === expected.width &&
+            measured.height === expected.height,
+      expected: `${expected.width}x${expected.height}`,
+      actual:
+        measured.width === null ? null : `${measured.width}x${measured.height}`,
+    },
+    {
+      check: "fps",
+      ok:
+        measured.fps === null
+          ? null
+          : Math.abs(measured.fps - expected.fps) < 0.01,
+      expected: expected.fps,
+      actual: measured.fps,
+    },
+    {
+      check: "duration",
+      ok:
+        measured.duration === null
+          ? null
+          : Math.abs(measured.duration - expected.duration) <= tol,
+      expected: expected.duration,
+      actual: measured.duration,
+      tolerance: Number(tol.toFixed(4)),
+    },
   ];
   if (expectsAlpha(codec)) {
-    const row = { check: "alpha", ok: measured.alpha === null ? null : measured.alpha === true, expected: true, actual: measured.alpha, pix_fmt: measured.pix_fmt };
-    if (measured.alpha === null) row.detail = codec === "vp9" ? "ffmpeg-skill/probe does not report VP9 alpha (the alpha_mode stream tag); not measurable through it" : "no pixel format reported";
+    const row = {
+      check: "alpha",
+      ok: measured.alpha === null ? null : measured.alpha === true,
+      expected: true,
+      actual: measured.alpha,
+      pix_fmt: measured.pix_fmt,
+    };
+    if (measured.alpha === null)
+      row.detail =
+        codec === "vp9"
+          ? "ffmpeg-skill/probe does not report VP9 alpha (the alpha_mode stream tag); not measurable through it"
+          : "no pixel format reported";
     checks.push(row);
   }
   return checks;
 }
 
 function statusOf(checks) {
-  if (checks.some((c) => c.ok === false)) return { status: "FAILED", reason: `ffmpeg-skill/probe measured a mismatch: ${checks.filter((c) => c.ok === false).map((c) => c.check).join(", ")}` };
+  if (checks.some((c) => c.ok === false))
+    return {
+      status: "FAILED",
+      reason: `ffmpeg-skill/probe measured a mismatch: ${checks
+        .filter((c) => c.ok === false)
+        .map((c) => c.check)
+        .join(", ")}`,
+    };
   const open = checks.filter((c) => c.ok === null);
-  if (open.length) return { status: "UNCHECKED", reason: `ffmpeg-skill/probe cannot measure: ${open.map((c) => c.check).join(", ")}` };
+  if (open.length)
+    return {
+      status: "UNCHECKED",
+      reason: `ffmpeg-skill/probe cannot measure: ${open.map((c) => c.check).join(", ")}`,
+    };
   return { status: "PASSED" };
 }
 
 /** Dry run: what would be run, and that nothing was checked. */
-export function planFfmpegSkill({ file, explicit, search, env = process.env } = {}) {
+export function planFfmpegSkill({
+  file,
+  explicit,
+  search,
+  env = process.env,
+} = {}) {
   const loc = locateFfmpegSkill(explicit, search);
-  if (!loc.dir) return { status: "UNCHECKED", reason: "dry run: nothing was rendered; ffmpeg-skill not found", tool: FFMPEG_SKILL_TOOL, skill: null, tried: loc.tried };
+  if (!loc.dir)
+    return {
+      status: "UNCHECKED",
+      reason: "dry run: nothing was rendered; ffmpeg-skill not found",
+      tool: FFMPEG_SKILL_TOOL,
+      skill: null,
+      tried: loc.tried,
+    };
   const py = resolvePython(env);
   return {
     status: "UNCHECKED",
@@ -171,19 +267,59 @@ export function planFfmpegSkill({ file, explicit, search, env = process.env } = 
  * width, height, duration, fps, codec). Never throws for anything about the file or ffmpeg-skill;
  * the answer is in `status`. Records the probe in ctx.commands.
  */
-export function verifyWithFfmpegSkill(ctx, { file, expected, codec, explicit, search, env = process.env, timeoutMs = FFMPEG_SKILL_TIMEOUT_MS }) {
+export function verifyWithFfmpegSkill(
+  ctx,
+  {
+    file,
+    expected,
+    codec,
+    explicit,
+    search,
+    env = process.env,
+    timeoutMs = FFMPEG_SKILL_TIMEOUT_MS,
+  },
+) {
   const base = { tool: FFMPEG_SKILL_TOOL };
   const loc = locateFfmpegSkill(explicit, search);
-  if (!loc.dir) return { status: "UNCHECKED", reason: "ffmpeg-skill not found", ...base, skill: null, tried: loc.tried };
-  const skill = { dir: loc.dir, source: loc.source, ...ffmpegSkillVersion(loc.dir) };
+  if (!loc.dir)
+    return {
+      status: "UNCHECKED",
+      reason: "ffmpeg-skill not found",
+      ...base,
+      skill: null,
+      tried: loc.tried,
+    };
+  const skill = {
+    dir: loc.dir,
+    source: loc.source,
+    ...ffmpegSkillVersion(loc.dir),
+  };
   const py = resolvePython(env);
-  if (!py.path) return { status: "UNCHECKED", reason: `ffmpeg-skill found but Python is not (${py.source}: ${py.requested})`, ...base, skill };
+  if (!py.path)
+    return {
+      status: "UNCHECKED",
+      reason: `ffmpeg-skill found but Python is not (${py.source}: ${py.requested})`,
+      ...base,
+      skill,
+    };
   const argv = probeArgv(py.path, loc.dir, file);
   const entry = ctx.record(argv, { exit_code: null, role: FFMPEG_SKILL_TOOL });
   const r = runSync(argv, { timeoutMs });
   entry.exit_code = r.status;
-  if (r.timedOut) return { status: "UNCHECKED", reason: `ffmpeg-skill/probe timed out after ${timeoutMs / 1000}s`, ...base, skill };
-  if (r.error && r.status === null) return { status: "UNCHECKED", reason: `ffmpeg-skill/probe did not run: ${r.error}`, ...base, skill };
+  if (r.timedOut)
+    return {
+      status: "UNCHECKED",
+      reason: `ffmpeg-skill/probe timed out after ${timeoutMs / 1000}s`,
+      ...base,
+      skill,
+    };
+  if (r.error && r.status === null)
+    return {
+      status: "UNCHECKED",
+      reason: `ffmpeg-skill/probe did not run: ${r.error}`,
+      ...base,
+      skill,
+    };
   let doc = null;
   try {
     doc = JSON.parse(r.stdout);
@@ -193,14 +329,36 @@ export function verifyWithFfmpegSkill(ctx, { file, expected, codec, explicit, se
   if (doc && typeof doc === "object" && doc.status === "failed") {
     // ffmpeg-skill read the file and refused it: corrupt, empty, not media.
     const msg = String(doc.error?.message ?? "no message").split("\n")[0];
-    return { status: "FAILED", reason: `ffmpeg-skill/probe refused the file (${doc.error?.kind ?? "error"}): ${msg}`, ...base, skill, error: doc.error ?? null };
+    return {
+      status: "FAILED",
+      reason: `ffmpeg-skill/probe refused the file (${doc.error?.kind ?? "error"}): ${msg}`,
+      ...base,
+      skill,
+      error: doc.error ?? null,
+    };
   }
   if (r.status !== 0 || !doc || typeof doc !== "object" || Array.isArray(doc)) {
-    const why = r.status !== 0 ? `exit ${r.status}: ${(r.stderr || "").trim().split("\n").slice(-2).join(" | ").slice(0, 300)}` : "no JSON probe document on stdout";
-    return { status: "UNCHECKED", reason: `ffmpeg-skill/probe gave no usable result (${why})`, ...base, skill };
+    const why =
+      r.status !== 0
+        ? `exit ${r.status}: ${(r.stderr || "").trim().split("\n").slice(-2).join(" | ").slice(0, 300)}`
+        : "no JSON probe document on stdout";
+    return {
+      status: "UNCHECKED",
+      reason: `ffmpeg-skill/probe gave no usable result (${why})`,
+      ...base,
+      skill,
+    };
   }
   const measured = measuredFrom(doc);
-  if (!doc.video) return { status: "FAILED", reason: "ffmpeg-skill/probe found no video stream", ...base, skill, measured, checks: [] };
+  if (!doc.video)
+    return {
+      status: "FAILED",
+      reason: "ffmpeg-skill/probe found no video stream",
+      ...base,
+      skill,
+      measured,
+      checks: [],
+    };
   const checks = compare(expected, codec, measured);
   return { ...statusOf(checks), ...base, skill, measured, checks };
 }
@@ -208,5 +366,12 @@ export function verifyWithFfmpegSkill(ctx, { file, expected, codec, explicit, se
 /** The verification[] step a checked result adds; null for UNCHECKED (no step, never a pass). */
 export function ffmpegSkillStep(res) {
   if (res.status === "UNCHECKED") return null;
-  return { step: "ffmpeg_skill", ok: res.status === "PASSED", detail: res.status === "PASSED" ? `${FFMPEG_SKILL_TOOL} ${res.skill.version} agrees: ${res.checks.map((c) => c.check).join(", ")}` : res.reason };
+  return {
+    step: "ffmpeg_skill",
+    ok: res.status === "PASSED",
+    detail:
+      res.status === "PASSED"
+        ? `${FFMPEG_SKILL_TOOL} ${res.skill.version} agrees: ${res.checks.map((c) => c.check).join(", ")}`
+        : res.reason,
+  };
 }

@@ -5,7 +5,9 @@
 if (process.platform === "win32") {
   process.env.NoDefaultCurrentDirectoryInExePath ??= "1";
 } else if (process.env.PATH !== undefined) {
-  const absolute = process.env.PATH.split(":").filter((dir) => dir.startsWith("/"));
+  const absolute = process.env.PATH.split(":").filter((dir) =>
+    dir.startsWith("/"),
+  );
   if (absolute.length > 0) process.env.PATH = absolute.join(":");
   else delete process.env.PATH;
 }

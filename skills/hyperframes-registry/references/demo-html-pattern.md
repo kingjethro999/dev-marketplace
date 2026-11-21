@@ -25,7 +25,12 @@ A demo is a complete, standalone HTML composition:
     </style>
   </head>
   <body>
-    <div data-composition-id="<name>-demo" data-width="1920" data-height="1080" data-duration="N">
+    <div
+      data-composition-id="<name>-demo"
+      data-width="1920"
+      data-height="1080"
+      data-duration="N"
+    >
       <!-- Demo content showing the effect -->
       <!-- Component snippet inlined here -->
     </div>

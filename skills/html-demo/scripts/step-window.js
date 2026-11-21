@@ -49,32 +49,32 @@
   }
 
   const ARROW =
-    'M5.17 5.18Q5 5 5 5.25L5 15.9Q5 16.4 5.5 16.46L8.6 16.86Q8.9 16.9 9.01 17.18L9.64 18.76Q9.95 19.55 10.76 19.29L10.84 19.26Q11.65 19 11.38 18.19L10.05 14.23Q9.95 13.95 10.25 13.91L12.8 13.57Q13.3 13.5 12.95 13.14Z';
+    "M5.17 5.18Q5 5 5 5.25L5 15.9Q5 16.4 5.5 16.46L8.6 16.86Q8.9 16.9 9.01 17.18L9.64 18.76Q9.95 19.55 10.76 19.29L10.84 19.26Q11.65 19 11.38 18.19L10.05 14.23Q9.95 13.95 10.25 13.91L12.8 13.57Q13.3 13.5 12.95 13.14Z";
   const icon = (d) =>
     `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
   const ICONS = {
-    home: 'M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z',
+    home: "M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z",
     globe:
-      'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm-9 9h18M12 3c2.5 2.6 3.7 5.6 3.7 9s-1.2 6.4-3.7 9c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3z',
-    chev: 'm7 10 5 5 5-5',
-    x: 'M7 7l10 10M17 7 7 17',
+      "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm-9 9h18M12 3c2.5 2.6 3.7 5.6 3.7 9s-1.2 6.4-3.7 9c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3z",
+    chev: "m7 10 5 5 5-5",
+    x: "M7 7l10 10M17 7 7 17",
   };
-  const SWATCH = ['#efb36c', '#ef7d9b', '#82c1ee'];
+  const SWATCH = ["#efb36c", "#ef7d9b", "#82c1ee"];
   const esc = (s) =>
     String(s).replace(
       /[&<>"]/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
     );
   const lessMotion = () =>
-    typeof matchMedia !== 'undefined' &&
-    matchMedia('(prefers-reduced-motion: reduce)').matches;
+    typeof matchMedia !== "undefined" &&
+    matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /** Plays `steps` in a Mac window inside `el`. Returns its controls:
       play(i), seek(seconds), pause(), resume(), setStill(bool), state(),
       onChange(fn) and destroy(). */
   function mount(
     el,
-    { steps, tabs = [], label = 'Demo', bar = true, stageClass = '' },
+    { steps, tabs = [], label = "Demo", bar = true, stageClass = "" },
   ) {
     const total = steps.reduce((s, x) => s + x.dur, 0);
     let still = lessMotion();
@@ -83,38 +83,38 @@
     let built = -1;
     const listeners = new Set();
 
-    el.classList.add('hd');
+    el.classList.add("hd");
     el.innerHTML = `<figure class="hd-win">
       <div class="hd-bar" aria-hidden="true">
         <span class="hd-lights"><i></i><i></i><i></i></span>${icon(ICONS.home)}
         ${tabs
           .map(
             (t, i) =>
-              `<span class="hd-tab${i === tabs.length - 1 ? ' on' : ''}"><b style="background:${SWATCH[i % 3]}"></b><span>${esc(t)}</span>${i === tabs.length - 1 ? icon(ICONS.x) : ''}</span>`,
+              `<span class="hd-tab${i === tabs.length - 1 ? " on" : ""}"><b style="background:${SWATCH[i % 3]}"></b><span>${esc(t)}</span>${i === tabs.length - 1 ? icon(ICONS.x) : ""}</span>`,
           )
-          .join('')}
+          .join("")}
         <span class="hd-gap"></span>${icon(ICONS.globe)}${icon(ICONS.chev)}
       </div>
-      <div class="hd-view" role="img" aria-label="${esc(label)}: ${esc(steps.map((s) => s.name).join(', '))}"></div>
+      <div class="hd-view" role="img" aria-label="${esc(label)}: ${esc(steps.map((s) => s.name).join(", "))}"></div>
       ${
         bar
           ? `<ol class="hd-steps" aria-label="${esc(label)}, step by step">${steps
               .map(
                 (s, i) =>
-                  `<li><button type="button" data-i="${i}"><span class="hd-n">${String(i + 1).padStart(2, '0')}</span><span class="hd-label">${esc(s.name)}</span><i></i></button></li>`,
+                  `<li><button type="button" data-i="${i}"><span class="hd-n">${String(i + 1).padStart(2, "0")}</span><span class="hd-label">${esc(s.name)}</span><i></i></button></li>`,
               )
-              .join('')}</ol>`
-          : ''
+              .join("")}</ol>`
+          : ""
       }
     </figure>`;
-    const view = el.querySelector('.hd-view');
-    const buttons = [...el.querySelectorAll('.hd-steps button')];
+    const view = el.querySelector(".hd-view");
+    const buttons = [...el.querySelectorAll(".hd-steps button")];
     buttons.forEach((b) =>
-      b.addEventListener('click', () => play(Number(b.dataset.i))),
+      b.addEventListener("click", () => play(Number(b.dataset.i))),
     );
 
     // One number scales the whole stage to the window.
-    const fit = () => view.style.setProperty('--k', view.clientWidth / W);
+    const fit = () => view.style.setProperty("--k", view.clientWidth / W);
     const ro = new ResizeObserver(fit);
     ro.observe(view);
     fit();
@@ -125,13 +125,13 @@
       const step = steps[at.i];
       if (built !== at.i) {
         built = at.i;
-        stage = document.createElement('div');
+        stage = document.createElement("div");
         stage.className = `hd-stage ${stageClass}`;
         stage.innerHTML = step.html;
-        cursor = document.createElement('span');
-        cursor.className = 'hd-cursor';
-        cursor.style.transitionDuration = '0s, 0.3s';
-        cursor.setAttribute('aria-hidden', 'true');
+        cursor = document.createElement("span");
+        cursor.className = "hd-cursor";
+        cursor.style.transitionDuration = "0s, 0.3s";
+        cursor.setAttribute("aria-hidden", "true");
         cursor.innerHTML = `<svg width="32" height="32" viewBox="0 0 32 32" overflow="visible"><path d="${ARROW}" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="${ARROW}" fill="#000"/></svg>`;
         stage.append(cursor);
         view.replaceChildren(stage);
@@ -141,16 +141,16 @@
       cursor.hidden = !c;
       if (c) {
         cursor.style.transform = `translate(${c.x - 5}px, ${c.y - 5}px)`;
-        cursor.classList.toggle('press', !!c.press);
-        cursor.classList.toggle('away', !!c.hide);
+        cursor.classList.toggle("press", !!c.press);
+        cursor.classList.toggle("away", !!c.hide);
       }
       buttons.forEach((b, i) => {
-        b.classList.toggle('on', i === at.i);
-        if (i === at.i) b.setAttribute('aria-current', 'step');
-        else b.removeAttribute('aria-current');
+        b.classList.toggle("on", i === at.i);
+        if (i === at.i) b.setAttribute("aria-current", "step");
+        else b.removeAttribute("aria-current");
         const p =
           i === at.i ? Math.min(1, at.t / steps[i].dur) : i < at.i ? 1 : 0;
-        b.querySelector('i').style.setProperty('--p', p);
+        b.querySelector("i").style.setProperty("--p", p);
       });
       listeners.forEach((fn) => fn(state()));
     }

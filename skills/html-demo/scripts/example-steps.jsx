@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 import StepWindow, {
   Cursor,
   ease,
@@ -6,7 +6,7 @@ import StepWindow, {
   held,
   typed,
   useStepClock,
-} from './StepWindow.jsx';
+} from "./StepWindow.jsx";
 
 /* An example to copy: two steps of an image app, written against the
    contract. Times are names at the top; every value is worked out from t;
@@ -15,7 +15,7 @@ import StepWindow, {
    and CSS, copied from its references. */
 
 const ASK =
-  'The Ashen One, a knight in blackened armour resting on his sword, torn cloak, on plain light grey';
+  "The Ashen One, a knight in blackened armour resting on his sword, torn cloak, on plain light grey";
 
 // 1 · The prompt typed, the pointer onto Generate.
 const FOCUS_AT = 0.95;
@@ -60,7 +60,7 @@ function Generate({ t }) {
       <Node
         ask={ASK}
         pressed={held(t, PRESS_AT)}
-        label={done ? 'Add' : running ? 'Generating' : 'Generate'}
+        label={done ? "Add" : running ? "Generating" : "Generate"}
       >
         {t >= REVEAL[0] && (
           <img
@@ -102,19 +102,19 @@ function Node({
   caret,
   hover,
   pressed,
-  label = 'Generate',
+  label = "Generate",
   children,
 }) {
   return (
     <div className="ex-node" style={{ left: 511, top: 110 }}>
       <div className="ex-head">Image · Nano Banana 2.1</div>
-      <div className={`ex-ask${focused ? ' focus' : ''}`}>
-        {ask || 'Describe what to make'}
+      <div className={`ex-ask${focused ? " focus" : ""}`}>
+        {ask || "Describe what to make"}
         {caret && <i className="ex-caret" />}
       </div>
       <div className="ex-pre">{children}</div>
       <span
-        className={`ex-run${hover ? ' hover' : ''}${pressed ? ' down' : ''}`}
+        className={`ex-run${hover ? " hover" : ""}${pressed ? " down" : ""}`}
       >
         {label} · 7
       </span>
@@ -123,8 +123,8 @@ function Node({
 }
 
 export const STEPS = [
-  { id: 'prompt', name: 'Write the prompt', dur: 6, View: Prompt },
-  { id: 'generate', name: 'Generate', dur: 6.5, View: Generate },
+  { id: "prompt", name: "Write the prompt", dur: 6, View: Prompt },
+  { id: "generate", name: "Generate", dur: 6.5, View: Generate },
 ];
 
 /** The window with a scrubber under it: the clock comes from outside. */
@@ -138,7 +138,7 @@ export function DemoWithClock() {
     <>
       <StepWindow
         steps={STEPS}
-        tabs={['The Ashen One']}
+        tabs={["The Ashen One"]}
         label="Make a picture"
         clock={clock}
       />

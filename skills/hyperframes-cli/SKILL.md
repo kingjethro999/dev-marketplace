@@ -15,18 +15,18 @@ A `--json` result may carry `_meta.updateNotice`: a newer HyperFrames release is
 
 ## Commands by job
 
-| Job | Commands |
-| --- | --- |
-| Start | `init <dir> --skip-skills` (blank; `--example <name>` only when asked), `capture <url>` |
-| Read a project | `info`, `compositions`, `timeline --json`, `docs <topic>` |
-| Check it | `lint` while writing; `check --json` as the gate (lint, runtime, layout, contrast) |
-| Look at it | `snapshot` (`--at <t,…>`, `--range START,END`, `--composition <id>`, `--zoom`, `--angle`, `--against <video>`), `keyframes`, `compare`, `audio` |
-| Edit the timeline | `timeline` with `move`, `trim`, `split`, `set`, `duplicate`, `delete`, `apply`, `undo`, `ids` |
-| Reuse | `catalog`, `add` (`/hyperframes-registry`) |
-| Media and sound | `media-treatment`, `grade-compare`, `remove-background`, `tts`, `transcribe`, `beats`, `normalize-audio` (`/media-use`) |
-| Show and ship | `preview`, `present` (`/slideshow`), `render`, `share`, `publish` (legacy), `cloud`, `lambda`, `cloudrun` |
-| Desktop app | `open`, `catch-up` |
-| Upkeep | `doctor`, `browser`, `upgrade`, `usage`, `clean`, `feedback` |
+| Job               | Commands                                                                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Start             | `init <dir> --skip-skills` (blank; `--example <name>` only when asked), `capture <url>`                                                         |
+| Read a project    | `info`, `compositions`, `timeline --json`, `docs <topic>`                                                                                       |
+| Check it          | `lint` while writing; `check --json` as the gate (lint, runtime, layout, contrast)                                                              |
+| Look at it        | `snapshot` (`--at <t,…>`, `--range START,END`, `--composition <id>`, `--zoom`, `--angle`, `--against <video>`), `keyframes`, `compare`, `audio` |
+| Edit the timeline | `timeline` with `move`, `trim`, `split`, `set`, `duplicate`, `delete`, `apply`, `undo`, `ids`                                                   |
+| Reuse             | `catalog`, `add` (`/hyperframes-registry`)                                                                                                      |
+| Media and sound   | `media-treatment`, `grade-compare`, `remove-background`, `tts`, `transcribe`, `beats`, `normalize-audio` (`/media-use`)                         |
+| Show and ship     | `preview`, `present` (`/slideshow`), `render`, `share`, `publish` (legacy), `cloud`, `lambda`, `cloudrun`                                       |
+| Desktop app       | `open`, `catch-up`                                                                                                                              |
+| Upkeep            | `doctor`, `browser`, `upgrade`, `usage`, `clean`, `feedback`                                                                                    |
 
 `captions` is not a command: run `transcribe`, then read ../hyperframes/references/captions.md.
 
@@ -61,13 +61,13 @@ Every write is kept and can be undone. At the start of a turn, `npx hyperframes 
 
 ## Render where
 
-| Need | Command |
-| --- | --- |
-| Local | `render --quality looks -o out.mp4` (`draft`, `delivery`) |
-| Reproducible container | `render --docker --strict -o out.mp4` |
-| Batch from variables | `render --batch rows.json -o "renders/{name}.mp4"` |
-| Hosted, no local Chrome or FFmpeg | `cloud render` (`references/cloud.md`) |
-| Your own AWS or GCP | `lambda render`, `cloudrun render` (`references/lambda.md`, `references/cloudrun.md`) |
+| Need                              | Command                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------- |
+| Local                             | `render --quality looks -o out.mp4` (`draft`, `delivery`)                             |
+| Reproducible container            | `render --docker --strict -o out.mp4`                                                 |
+| Batch from variables              | `render --batch rows.json -o "renders/{name}.mp4"`                                    |
+| Hosted, no local Chrome or FFmpeg | `cloud render` (`references/cloud.md`)                                                |
+| Your own AWS or GCP               | `lambda render`, `cloudrun render` (`references/lambda.md`, `references/cloudrun.md`) |
 
 A 30 s film renders in a minute or two: run it in the foreground. Detach only a render longer than your tool's timeout (`HYPERFRAMES_RENDER_DETACHED=1`, its own group, output to a log) and wait with `until grep -qE 'Render (complete|failed)' render.log; do sleep 5; done`, never `pgrep -f`, which matches its own loop and waits until the tool times out.
 
@@ -75,29 +75,29 @@ After a verified render, send one `feedback --rating`, plus a report for anythin
 
 ## When a command fails
 
-| Symptom | Fix |
-| --- | --- |
-| Chrome missing or won't start | `npx hyperframes browser ensure`; `doctor --json` always exits 0, gate on `.ok` |
-| A heavy page isn't ready in time | Raise `--timeout` on `check` or `snapshot` |
-| Unusual codec looks blank | Keep `--proxy` on (the default) |
-| Render slow on Linux | The summary's second line says `screenshot` + `software gpu`: the slow path |
-| `capture` fails or writes `BLOCKED.md` | Take nothing from its partial files; retry into a new `-o` folder |
-| Disk tight | `clean --dry-run`, then `clean`; never delete `.hyperframes` (it holds history) |
+| Symptom                                | Fix                                                                             |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| Chrome missing or won't start          | `npx hyperframes browser ensure`; `doctor --json` always exits 0, gate on `.ok` |
+| A heavy page isn't ready in time       | Raise `--timeout` on `check` or `snapshot`                                      |
+| Unusual codec looks blank              | Keep `--proxy` on (the default)                                                 |
+| Render slow on Linux                   | The summary's second line says `screenshot` + `software gpu`: the slow path     |
+| `capture` fails or writes `BLOCKED.md` | Take nothing from its partial files; retry into a new `-o` folder               |
+| Disk tight                             | `clean --dry-run`, then `clean`; never delete `.hyperframes` (it holds history) |
 
 ## References
 
 Read the row before running its command.
 
-| Commands | Read |
-| --- | --- |
-| `init`, `capture`, `skills` | `references/init-and-scaffold.md` |
-| `lint`, `check`, motion sidecars, `snapshot` | `references/lint-validate-inspect.md` |
-| `compare`, `grade-compare`, `render --batch` | `references/compare-and-batch.md` |
-| `beats` | `references/beats.md` |
-| `preview`, `play`, `render`, `share`, `publish` (legacy), Studio context | `references/preview-render.md` |
-| `doctor`, `browser` | `references/doctor-browser.md` |
-| `auth`, `cloud`, template variables | `references/cloud.md` |
-| `lambda`, `cloudrun` | `references/lambda.md`, `references/cloudrun.md` |
-| `info`, `upgrade`, `compositions`, `timeline`, `docs`, `usage`, telemetry | `references/upgrade-info-misc.md` |
-| `--strict` flags, run ids, `clean`, shader lint, JSON paths | `references/conventions.md` |
-| `keyframes` | `../hyperframes/references/motion.md` (Seeing motion) |
+| Commands                                                                  | Read                                                  |
+| ------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `init`, `capture`, `skills`                                               | `references/init-and-scaffold.md`                     |
+| `lint`, `check`, motion sidecars, `snapshot`                              | `references/lint-validate-inspect.md`                 |
+| `compare`, `grade-compare`, `render --batch`                              | `references/compare-and-batch.md`                     |
+| `beats`                                                                   | `references/beats.md`                                 |
+| `preview`, `play`, `render`, `share`, `publish` (legacy), Studio context  | `references/preview-render.md`                        |
+| `doctor`, `browser`                                                       | `references/doctor-browser.md`                        |
+| `auth`, `cloud`, template variables                                       | `references/cloud.md`                                 |
+| `lambda`, `cloudrun`                                                      | `references/lambda.md`, `references/cloudrun.md`      |
+| `info`, `upgrade`, `compositions`, `timeline`, `docs`, `usage`, telemetry | `references/upgrade-info-misc.md`                     |
+| `--strict` flags, run ids, `clean`, shader lint, JSON paths               | `references/conventions.md`                           |
+| `keyframes`                                                               | `../hyperframes/references/motion.md` (Seeing motion) |

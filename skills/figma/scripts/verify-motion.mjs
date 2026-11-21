@@ -92,7 +92,17 @@ if (crop) {
 
 const dir = mkdtempSync(join(tmpdir(), "verify-motion-"));
 const frame = (src, t, vf, dst) => {
-  const args = ["-y", "-v", "error", "-ss", String(t), "-i", src, "-frames:v", "1"];
+  const args = [
+    "-y",
+    "-v",
+    "error",
+    "-ss",
+    String(t),
+    "-i",
+    src,
+    "-frames:v",
+    "1",
+  ];
   if (vf) args.push("-vf", vf);
   execFileSync("ffmpeg", args.concat(dst));
 };
@@ -111,9 +121,13 @@ const diff = (a, b, dst) =>
   ]);
 const psnr = (a, b) => {
   // spawnSync with array args (no shell): psnr stats land on stderr
-  const r = spawnSync("ffmpeg", ["-i", a, "-i", b, "-lavfi", "psnr", "-f", "null", "-"], {
-    encoding: "utf8",
-  });
+  const r = spawnSync(
+    "ffmpeg",
+    ["-i", a, "-i", b, "-lavfi", "psnr", "-f", "null", "-"],
+    {
+      encoding: "utf8",
+    },
+  );
   const m = (r.stderr || "").match(/average:([\d.]+|inf)/);
   return m ? (m[1] === "inf" ? 99 : Number(m[1])) : NaN;
 };
@@ -151,4 +165,6 @@ if (min < minMotion) {
   );
   process.exit(1);
 }
-console.log("VERDICT: PASS — motion matches the Figma export within the static-fidelity ceiling");
+console.log(
+  "VERDICT: PASS — motion matches the Figma export within the static-fidelity ceiling",
+);

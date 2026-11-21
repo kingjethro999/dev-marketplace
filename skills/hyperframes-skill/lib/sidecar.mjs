@@ -5,24 +5,57 @@
 // the contract between this skill and that caller. Each sidecar holds only fields the spec names:
 // the ones a receiver reads today (`read`) and the ones the spec marks PROPOSED (`proposed`),
 // which no receiver reads yet. The result lists both, so a caller knows which are which.
-import { closeSync, existsSync, openSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  readSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { basename, dirname, extname, join } from "node:path";
 import { ALPHA_MODE, readAlphaFrames } from "./alpha.mjs";
 import { codecHasAlpha } from "./render-core.mjs";
 import { ToolError } from "./result.mjs";
-import { MATERIAL_FILE, MATERIAL_VERSION, readSegments } from "./scene-spec.mjs";
+import {
+  MATERIAL_FILE,
+  MATERIAL_VERSION,
+  readSegments,
+} from "./scene-spec.mjs";
 
 export const SIDECAR = Object.freeze({
   stinger: {
     schema: "velisa/stinger@1",
     read: ["cut_point", "cover"],
-    proposed: ["schema", "file", "sha256", "frame_rate", "cut_point_frame", "cover_frames", "alpha", "duration", "frames", "audio"],
+    proposed: [
+      "schema",
+      "file",
+      "sha256",
+      "frame_rate",
+      "cut_point_frame",
+      "cover_frames",
+      "alpha",
+      "duration",
+      "frames",
+      "audio",
+    ],
   },
   title: {
     schema: "velisa/title@1",
     read: ["segments"],
-    proposed: ["schema", "file", "sha256", "frame_rate", "alpha", "segment_frames", "loop_seam", "safe_area", "text"],
+    proposed: [
+      "schema",
+      "file",
+      "sha256",
+      "frame_rate",
+      "alpha",
+      "segment_frames",
+      "loop_seam",
+      "safe_area",
+      "text",
+    ],
   },
 });
 
@@ -34,10 +67,20 @@ export function readMaterial(sceneDir) {
   try {
     m = JSON.parse(readFileSync(file, "utf8"));
   } catch (e) {
-    throw new ToolError("input", `${file} is not valid JSON: ${e.message}`, { hint: "run scene again on the request" });
+    throw new ToolError("input", `${file} is not valid JSON: ${e.message}`, {
+      hint: "run scene again on the request",
+    });
   }
-  if (m?.material_version !== MATERIAL_VERSION || !Object.hasOwn(SIDECAR, m.kind) || !Number.isInteger(m.fps)) {
-    throw new ToolError("input", `${file} is not a material file this version reads (material_version ${MATERIAL_VERSION}, kind stinger or title)`, { hint: "run scene again on the request" });
+  if (
+    m?.material_version !== MATERIAL_VERSION ||
+    !Object.hasOwn(SIDECAR, m.kind) ||
+    !Number.isInteger(m.fps)
+  ) {
+    throw new ToolError(
+      "input",
+      `${file} is not a material file this version reads (material_version ${MATERIAL_VERSION}, kind stinger or title)`,
+      { hint: "run scene again on the request" },
+    );
   }
   return m;
 }
@@ -51,7 +94,12 @@ export function sidecarPath(output, kind, sequence = false) {
 // A frame number of the scene's fps at the render's fps; refused when it does not land on a frame.
 function atFps(frame, from, to, what) {
   const f = (frame * to) / from;
-  if (!Number.isInteger(f)) throw new ToolError("input", `the scene's ${what} (frame ${frame} at ${from} fps) is not on a frame at --fps ${to}`, { hint: `render at ${from} fps or a multiple of it` });
+  if (!Number.isInteger(f))
+    throw new ToolError(
+      "input",
+      `the scene's ${what} (frame ${frame} at ${from} fps) is not on a frame at --fps ${to}`,
+      { hint: `render at ${from} fps or a multiple of it` },
+    );
   return f;
 }
 
@@ -66,20 +114,52 @@ export function planSidecar(plan, { overwrite = false } = {}) {
   if (!material) return null;
   const fps = plan.expected.fps;
   const path = sidecarPath(plan.output, material.kind, !!plan.spec.sequence);
-  if (existsSync(path) && !overwrite) throw new ToolError("input", `output exists: ${path} (the ${material.kind}.json beside the render)`, { hint: "pass --overwrite to replace it" });
+  if (existsSync(path) && !overwrite)
+    throw new ToolError(
+      "input",
+      `output exists: ${path} (the ${material.kind}.json beside the render)`,
+      { hint: "pass --overwrite to replace it" },
+    );
   const sc = { kind: material.kind, path, material, fps };
   if (material.kind === "stinger") {
-    if (!codecHasAlpha(plan.codec)) throw new ToolError("input", `a stinger needs an alpha channel; --codec ${plan.codec} has none`, { hint: "render it with --codec prores (.mov), vp9 (.webm) or png" });
-    sc.cut_point_frame = atFps(material.cut_point_frame, material.fps, fps, "cut point");
-    sc.cover_frames = { start: atFps(material.cover_frames.start, material.fps, fps, "cover start"), end: atFps(material.cover_frames.end, material.fps, fps, "cover end") };
+    if (!codecHasAlpha(plan.codec))
+      throw new ToolError(
+        "input",
+        `a stinger needs an alpha channel; --codec ${plan.codec} has none`,
+        { hint: "render it with --codec prores (.mov), vp9 (.webm) or png" },
+      );
+    sc.cut_point_frame = atFps(
+      material.cut_point_frame,
+      material.fps,
+      fps,
+      "cut point",
+    );
+    sc.cover_frames = {
+      start: atFps(
+        material.cover_frames.start,
+        material.fps,
+        fps,
+        "cover start",
+      ),
+      end: atFps(material.cover_frames.end, material.fps, fps, "cover end"),
+    };
   } else {
     const segs = readSegments(plan.declared, plan.index);
-    if (!segs) throw new ToolError("input", `${plan.index}: title material declares no segments`, { hint: "run scene again on the request" });
+    if (!segs)
+      throw new ToolError(
+        "input",
+        `${plan.index}: title material declares no segments`,
+        { hint: "run scene again on the request" },
+      );
     sc.segment_frames = Object.fromEntries(
       segs.map((S) => {
         const f = S.duration * fps;
         // the declaration carries seconds to six decimals, so a frame count within 1/1000 is whole
-        if (Math.abs(f - Math.round(f)) > 1e-3) throw new ToolError("input", `the ${S.name} segment (${S.duration}s) is not a whole number of frames at ${fps} fps`);
+        if (Math.abs(f - Math.round(f)) > 1e-3)
+          throw new ToolError(
+            "input",
+            `the ${S.name} segment (${S.duration}s) is not a whole number of frames at ${fps} fps`,
+          );
         return [S.name, Math.round(f)];
       }),
     );
@@ -91,7 +171,12 @@ export function planSidecar(plan, { overwrite = false } = {}) {
 export function publicSidecar(sc) {
   if (!sc) return undefined;
   const S = SIDECAR[sc.kind];
-  return { kind: sc.kind, path: sc.path, schema: S.schema, fields: { read: S.read, proposed: S.proposed } };
+  return {
+    kind: sc.kind,
+    path: sc.path,
+    schema: S.schema,
+    fields: { read: S.read, proposed: S.proposed },
+  };
 }
 
 /**
@@ -101,18 +186,41 @@ export function publicSidecar(sc) {
 export function stingerCoverStep(ctx, plan, sc, probe) {
   const { start, end } = sc.cover_frames;
   const video = probe?.video;
-  const frameFile = plan.spec.sequence ? (n) => join(plan.output, `frame_${String(n + 1).padStart(6, "0")}.png`) : null;
-  const m = video ? readAlphaFrames(ctx, plan.output, video, start, end, { frameFile }) : { measured: false, reason: "the output was not probed" };
+  const frameFile = plan.spec.sequence
+    ? (n) => join(plan.output, `frame_${String(n + 1).padStart(6, "0")}.png`)
+    : null;
+  const m = video
+    ? readAlphaFrames(ctx, plan.output, video, start, end, { frameFile })
+    : { measured: false, reason: "the output was not probed" };
   const bad = m.measured ? m.frames.filter((f) => f.below > 0) : [];
-  const cut = m.measured ? m.frames.find((f) => f.frame === sc.cut_point_frame) : null;
-  const cover = { measured: m.measured, ...(m.measured ? { threshold: m.threshold, cut_point_frame: sc.cut_point_frame, cut_point_min_alpha: cut?.min ?? null, frames: m.frames } : { reason: m.reason }) };
+  const cut = m.measured
+    ? m.frames.find((f) => f.frame === sc.cut_point_frame)
+    : null;
+  const cover = {
+    measured: m.measured,
+    ...(m.measured
+      ? {
+          threshold: m.threshold,
+          cut_point_frame: sc.cut_point_frame,
+          cut_point_min_alpha: cut?.min ?? null,
+          frames: m.frames,
+        }
+      : { reason: m.reason }),
+  };
   return {
     cover,
     step: {
       step: "stinger_cover",
       ok: m.measured && bad.length === 0 && !!cut,
       expected: `every pixel at alpha >= ${m.threshold ?? 253}/255 in frames ${start}..${end - 1} (cut point: frame ${sc.cut_point_frame})`,
-      actual: m.measured ? (bad.length ? { not_covered: bad.slice(0, 10) } : { frames: m.frames.length, min_alpha: Math.min(...m.frames.map((f) => f.min)) }) : m.reason,
+      actual: m.measured
+        ? bad.length
+          ? { not_covered: bad.slice(0, 10) }
+          : {
+              frames: m.frames.length,
+              min_alpha: Math.min(...m.frames.map((f) => f.min)),
+            }
+        : m.reason,
     },
   };
 }
@@ -123,7 +231,8 @@ function sha256File(file) {
   try {
     const buf = Buffer.alloc(1 << 20);
     let n;
-    while ((n = readSync(fd, buf, 0, buf.length, null)) > 0) h.update(buf.subarray(0, n));
+    while ((n = readSync(fd, buf, 0, buf.length, null)) > 0)
+      h.update(buf.subarray(0, n));
   } finally {
     closeSync(fd);
   }
@@ -138,8 +247,16 @@ function sha256File(file) {
 export function buildSidecar(sc, plan, { probe, loopSeam = null }) {
   const fps = sc.fps;
   const t = (frame) => frame / fps;
-  const isFile = !plan.spec.sequence && existsSync(plan.output) && statSync(plan.output).isFile();
-  const head = { schema: SIDECAR[sc.kind].schema, file: basename(plan.output), ...(isFile ? { sha256: sha256File(plan.output) } : {}), frame_rate: `${fps}/1` };
+  const isFile =
+    !plan.spec.sequence &&
+    existsSync(plan.output) &&
+    statSync(plan.output).isFile();
+  const head = {
+    schema: SIDECAR[sc.kind].schema,
+    file: basename(plan.output),
+    ...(isFile ? { sha256: sha256File(plan.output) } : {}),
+    frame_rate: `${fps}/1`,
+  };
   const frames = probe?.video?.frames ?? plan.expected.frames;
   const alpha = codecHasAlpha(plan.codec) ? { alpha: ALPHA_MODE } : {};
   if (sc.kind === "stinger") {
@@ -178,14 +295,25 @@ export function writeSidecar(ctx, sc, doc) {
   } catch {
     /* reported below */
   }
-  return { step: "sidecar", ok: back === text, detail: `${basename(sc.path)}: ${SIDECAR[sc.kind].schema}, ${Buffer.byteLength(text)} bytes, read back` };
+  return {
+    step: "sidecar",
+    ok: back === text,
+    detail: `${basename(sc.path)}: ${SIDECAR[sc.kind].schema}, ${Buffer.byteLength(text)} bytes, read back`,
+  };
 }
 
 /**
  * After a render: measure a stinger's cover, then, when every step so far held, write the sidecar.
  * Appends the steps to `verification` and returns the result keys ({stinger?, sidecar}).
  */
-export function finishSidecar(ctx, plan, sc, probe, verification, { loopSeam = null } = {}) {
+export function finishSidecar(
+  ctx,
+  plan,
+  sc,
+  probe,
+  verification,
+  { loopSeam = null } = {},
+) {
   const out = {};
   if (sc.kind === "stinger") {
     const { cover, step } = stingerCoverStep(ctx, plan, sc, probe);

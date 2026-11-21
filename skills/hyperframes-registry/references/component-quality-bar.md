@@ -105,14 +105,15 @@ _Escalates to fatal_ only when there is no motion anywhere to fold in, which usu
 **X2. Name claims a technique the code lacks.** Grep the code region, never the doc header: the
 header's prose is full of the exact words you are looking for, and will report a match on an item
 that has none.
-| Name pattern | Must contain |
-| -------------------------------- | -------------------------------------------------- |
-| `spring-*` | `elastic`, `back.`, `bounce` or a custom spring ease |
-| `mask-*`, `*-mask*` | `mask` or `clip-path` |
-| `frosted*`, `*glass*` | `backdrop-filter` |
-| `*3d*`, `*depth*`, `*orbit*`, `*camera*` | `perspective`, `rotateX`, `rotateY`, `translateZ` |
-| `*-draw`, `*-trace`, `*stroke*` | `stroke-dash` or `pathLength` |
-_Repair:_ add the technique, or rename the item. Renaming is often the honest fix.
+
+| Name pattern                                                                       | Must contain                                         |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `spring-*`                                                                         | `elastic`, `back.`, `bounce` or a custom spring ease |
+| `mask-*`, `*-mask*`                                                                | `mask` or `clip-path`                                |
+| `frosted*`, `*glass*`                                                              | `backdrop-filter`                                    |
+| `*3d*`, `*depth*`, `*orbit*`, `*camera*`                                           | `perspective`, `rotateX`, `rotateY`, `translateZ`    |
+| `*-draw`, `*-trace`, `*stroke*`                                                    | `stroke-dash` or `pathLength`                        |
+| _Repair:_ add the technique, or rename the item. Renaming is often the honest fix. |
 
 **X3. Illegible.** At 1920x1080 on its own ground: text under 4.5:1, or a subject whose smallest
 meaningful feature is under about 24px.

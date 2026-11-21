@@ -47,7 +47,9 @@ export function runChild(argv, { timeoutMs, env, cwd, onStderr } = {}) {
       acc += chunk;
       return acc.length > TAIL_BYTES ? acc.slice(-TAIL_BYTES) : acc;
     };
-    child.stdout.setEncoding("utf8").on("data", (c) => (stdout = append(stdout, c)));
+    child.stdout
+      .setEncoding("utf8")
+      .on("data", (c) => (stdout = append(stdout, c)));
     child.stderr.setEncoding("utf8").on("data", (c) => {
       stderr = append(stderr, c);
       onStderr?.(c);
@@ -58,7 +60,17 @@ export function runChild(argv, { timeoutMs, env, cwd, onStderr } = {}) {
         if (process.platform !== "win32") process.kill(-child.pid, sig);
         // Windows has no process groups or signals: taskkill /T ends the whole tree (Chrome and
         // ffmpeg included), /F forcibly, as SIGKILL would
-        else spawnSync("taskkill", ["/pid", String(child.pid), "/T", ...(sig === "SIGKILL" ? ["/F"] : [])], { stdio: "ignore", timeout: 10000 });
+        else
+          spawnSync(
+            "taskkill",
+            [
+              "/pid",
+              String(child.pid),
+              "/T",
+              ...(sig === "SIGKILL" ? ["/F"] : []),
+            ],
+            { stdio: "ignore", timeout: 10000 },
+          );
       } catch {
         /* already gone */
       }
@@ -70,27 +82,47 @@ export function runChild(argv, { timeoutMs, env, cwd, onStderr } = {}) {
       setTimeout(() => killGroup("SIGKILL"), 5000).unref();
     };
 
-    const timer = timeoutMs > 0 ? setTimeout(() => stop({ kind: "timeout" }), timeoutMs) : null;
-    const unsubscribe = onInterrupt((sig) => stop({ kind: "interrupted", signal: sig }));
+    const timer =
+      timeoutMs > 0
+        ? setTimeout(() => stop({ kind: "timeout" }), timeoutMs)
+        : null;
+    const unsubscribe = onInterrupt((sig) =>
+      stop({ kind: "interrupted", signal: sig }),
+    );
 
     child.on("error", (err) => {
       cleanup();
       reject(
         err.code === "ENOENT"
-          ? new ToolError("missing_tool", `cannot execute ${argv[0]}: not found`)
+          ? new ToolError(
+              "missing_tool",
+              `cannot execute ${argv[0]}: not found`,
+            )
           : new ToolError("render", `cannot start ${argv[0]}: ${err.message}`),
       );
     });
     child.on("close", (status, signal) => {
       cleanup();
       if (stopReason?.kind === "timeout") {
-        reject(new ToolError("timeout", `timed out after ${timeoutMs / 1000}s; the process group was killed`, {
-          details: { stderr_tail: tail(stderr) },
-        }));
+        reject(
+          new ToolError(
+            "timeout",
+            `timed out after ${timeoutMs / 1000}s; the process group was killed`,
+            {
+              details: { stderr_tail: tail(stderr) },
+            },
+          ),
+        );
       } else if (stopReason?.kind === "interrupted") {
-        reject(new ToolError("interrupted", `interrupted by ${stopReason.signal}; the process group was killed`, {
-          exitCode: signalExitCode(stopReason.signal),
-        }));
+        reject(
+          new ToolError(
+            "interrupted",
+            `interrupted by ${stopReason.signal}; the process group was killed`,
+            {
+              exitCode: signalExitCode(stopReason.signal),
+            },
+          ),
+        );
       } else {
         resolve({ status, signal, stdout, stderr });
       }

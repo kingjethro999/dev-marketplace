@@ -18,7 +18,7 @@
     <script>
       // ?embed: only the window, for a page that shows the demo in a frame.
       if (/[?&]embed\b/.test(location.search))
-        document.documentElement.classList.add('embed');
+        document.documentElement.classList.add("embed");
     </script>
     <style>
       :root {
@@ -28,8 +28,8 @@
         --fg-3: #8a8e96;
         --line: rgba(255, 255, 255, 0.09);
         --accent: #a3abff;
-        --hd-font: 'Geist', ui-sans-serif, system-ui, sans-serif;
-        --hd-mono: 'Geist Mono', ui-monospace, monospace;
+        --hd-font: "Geist", ui-sans-serif, system-ui, sans-serif;
+        --hd-mono: "Geist Mono", ui-monospace, monospace;
         color-scheme: dark;
       }
       * {
@@ -928,14 +928,14 @@
           '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
         frame:
           '<line x1="22" x2="2" y1="6" y2="6"/><line x1="22" x2="2" y1="18" y2="18"/><line x1="6" x2="6" y1="2" y2="22"/><line x1="18" x2="18" y1="2" y2="22"/>',
-        'img-plus':
+        "img-plus":
           '<path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/>',
         search: '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',
         bolt: '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
         share:
           '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>',
-        'chev-r': '<path d="m9 18 6-6-6-6"/>',
-        'chev-d': '<path d="m6 9 6 6 6-6"/>',
+        "chev-r": '<path d="m9 18 6-6-6-6"/>',
+        "chev-d": '<path d="m6 9 6 6 6-6"/>',
         x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
         lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
         play: '<path d="M7.5 4.8v14.4a.8.8 0 0 0 1.22.68l11.2-7.2a.8.8 0 0 0 0-1.36L8.72 4.12A.8.8 0 0 0 7.5 4.8z" fill="currentColor" stroke="none"/>',
@@ -953,7 +953,7 @@
         expand:
           '<path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/>',
         check: '<path d="M20 6 9 17l-5-5"/>',
-        'panel-l':
+        "panel-l":
           '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
         dup: '<line x1="15" x2="15" y1="12" y2="18"/><line x1="12" x2="18" y1="15" y2="15"/><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
         pencil:
@@ -968,75 +968,75 @@
       };
       const { ease, typed, glide, mount } = HTMLDemo;
       const ic = (n) =>
-        `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n] || ''}</svg>`;
+        `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n] || ""}</svg>`;
       const ASK =
-        'The Ashen One, a knight in blackened armour resting on his sword, torn cloak, on plain light grey';
+        "The Ashen One, a knight in blackened armour resting on his sword, torn cloak, on plain light grey";
       const CATHEDRAL =
-        'A ruined gothic cathedral in ash fog, a small bonfire on the stones to one side';
+        "A ruined gothic cathedral in ash fog, a small bonfire on the stones to one side";
 
       // The app around every step: Fil's rail, its top bar and the canvas.
       const RAIL = [
-        'home',
-        'comment',
-        'image',
-        'film',
-        'cube',
-        'terminal',
-        '',
-        'grid',
-        'star',
-        'globe',
-        'compass',
-        'workflow',
-        'puzzle',
-        'bot',
-        'book',
+        "home",
+        "comment",
+        "image",
+        "film",
+        "cube",
+        "terminal",
+        "",
+        "grid",
+        "star",
+        "globe",
+        "compass",
+        "workflow",
+        "puzzle",
+        "bot",
+        "book",
       ];
       const COL = {
-        image: '#efb36c',
-        film: '#ef7d9b',
-        cube: '#82c1ee',
-        terminal: '#5fcf98',
+        image: "#efb36c",
+        film: "#ef7d9b",
+        cube: "#82c1ee",
+        terminal: "#5fcf98",
       };
       const TOOLS = [
-        'pointer',
-        'hand',
-        'annotate',
-        'comment',
-        '',
-        'undo',
-        'redo',
-        '',
-        'type',
-        'image',
-        'film',
-        'cube',
-        'terminal',
-        'music',
-        '',
-        'frame',
-        'img-plus',
+        "pointer",
+        "hand",
+        "annotate",
+        "comment",
+        "",
+        "undo",
+        "redo",
+        "",
+        "type",
+        "image",
+        "film",
+        "cube",
+        "terminal",
+        "music",
+        "",
+        "frame",
+        "img-plus",
       ];
-      const app = (canvas, over = '') => `<div class="fd">
+      const app = (canvas, over = "") => `<div class="fd">
         <nav class="fd-rail">
           <svg class="fd-logo" viewBox="0 0 32 32"><path d="m16 5 10 6-10 6-10-6z" fill="#efb36c"/><path d="m6 11 10 6v11L6 22z" fill="#ef7d9b"/><path d="m26 11-10 6v11l10-6z" fill="#82c1ee"/></svg>
-          ${RAIL.map((n) => (n ? `<span style="color:${COL[n] || 'inherit'}">${ic(n)}</span>` : '<hr>')).join('')}
+          ${RAIL.map((n) => (n ? `<span style="color:${COL[n] || "inherit"}">${ic(n)}</span>` : "<hr>")).join("")}
           <span class="fd-sw"></span>
           <span class="fd-gap"></span>
           <img class="fd-me" src="avatar.webp" alt="">
         </nav>
         <div class="fd-main">
           <div class="fd-top">
-            <span class="fd-crumb">Drafts ${ic('chev-r')} <b>The Ashen One</b></span>
-            <span class="fd-search">${ic('search')}<span>Search or run a command</span><kbd>⌘K</kbd></span>
-            <span class="fd-credits">${ic('bolt')}<span data-k="credits">2,400</span>${ic('chev-d')}</span>
+            <span class="fd-crumb">Drafts ${ic("chev-r")} <b>The Ashen One</b></span>
+            <span class="fd-search">${ic("search")}<span>Search or run a command</span><kbd>⌘K</kbd></span>
+            <span class="fd-credits">${ic("bolt")}<span data-k="credits">2,400</span>${ic("chev-d")}</span>
             <img class="fd-me" src="avatar.webp" alt="">
-            <span class="fd-share">${ic('share')}<span>Share</span></span>
+            <span class="fd-share">${ic("share")}<span>Share</span></span>
           </div>
           <div class="fd-canvas">
-            <span class="fd-chip">${ic('panel-l')}<span class="fd-sw"></span>The Ashen One${ic('comment')}</span>
+            <span class="fd-chip">${ic("panel-l")}<span class="fd-sw"></span>The Ashen One${ic("comment")}</span>
             ${canvas}
-            <div class="fd-tools">${TOOLS.map((n, j) => (n ? `<span class="${j ? '' : 'on'}" style="color:${j ? COL[n] || 'inherit' : ''}">${ic(n)}</span>` : '<i></i>')).join('')}</div>
+            <div class="fd-tools">${TOOLS.map((n, j) => (n ? `<span class="${j ? "" : "on"}" style="color:${j ? COL[n] || "inherit" : ""}">${ic(n)}</span>` : "<i></i>")).join("")}</div>
           </div>
           ${over}
         </div>
@@ -1045,32 +1045,32 @@
       // A node's button: Generate until it has made something, then Add
       // (another run), with its price.
       const button = (label, key) =>
-        `${ic(label === 'Add' ? 'plus' : 'play')}<span data-k="${key}-run-l">${label}</span><small>${ic('bolt')}7</small>`;
+        `${ic(label === "Add" ? "plus" : "play")}<span data-k="${key}-run-l">${label}</span><small>${ic("bolt")}7</small>`;
       // An image node: its name, model, prompt, picture and footer.
       const node = (key, name, left, { ask, pic, made }) => `
         <div class="fd-node" data-k="${key}" style="left:${left}px">
           <div class="fd-name">${name}</div>
           <div class="fd-card">
-            <div class="fd-head">${ic('image')}Image<span class="fd-model"><span class="fd-g">G</span>Nano Banana 2.1${ic('chev-d')}</span>${ic('x')}</div>
+            <div class="fd-head">${ic("image")}Image<span class="fd-model"><span class="fd-g">G</span>Nano Banana 2.1${ic("chev-d")}</span>${ic("x")}</div>
             <div class="fd-ask" data-k="${key}-ask">${ask}</div>
             <div class="fd-pre" data-k="${key}-pre">${pic}</div>
-            <div class="fd-last" data-k="${key}-last">${made || ''}</div>
-            <div class="fd-foot"><span class="fd-tag">${ic('layers')}Template</span><span class="fd-tag">2:3</span><span class="fd-tag">2K</span><span class="fd-tag">Medium effort</span><span class="fd-tag">×1</span></div>
-            <div class="fd-go">${ic('lock')}<span class="fd-run" data-k="${key}-run">${button(made ? 'Add' : 'Generate', key)}</span></div>
+            <div class="fd-last" data-k="${key}-last">${made || ""}</div>
+            <div class="fd-foot"><span class="fd-tag">${ic("layers")}Template</span><span class="fd-tag">2:3</span><span class="fd-tag">2K</span><span class="fd-tag">Medium effort</span><span class="fd-tag">×1</span></div>
+            <div class="fd-go">${ic("lock")}<span class="fd-run" data-k="${key}-run">${button(made ? "Add" : "Generate", key)}</span></div>
           </div>
         </div>`;
-      const cathedral = node('c', 'Cathedral', 196, {
+      const cathedral = node("c", "Cathedral", 196, {
         ask: CATHEDRAL,
         pic: '<img src="cathedral.webp" alt="">',
-        made: 'Last run · 0:05 · 7 credits',
+        made: "Last run · 0:05 · 7 credits",
       });
       const knight = (pic, made) =>
-        node('k', 'Knight', 448, {
-          ask: '',
+        node("k", "Knight", 448, {
+          ask: "",
           made,
           pic:
             pic ||
-            `<div class="fd-empty">${ic('image')}<span>Images will appear here</span></div>`,
+            `<div class="fd-empty">${ic("image")}<span>Images will appear here</span></div>`,
         });
       const MAKING = `<div class="fd-making" data-k="shimmer"></div>
         <img class="fd-dev" data-k="dev" src="knight.webp" alt="">
@@ -1078,53 +1078,53 @@
         <span class="fd-scan" data-k="scan"></span>
         <span class="fd-glint" data-k="glint"></span>
         <span class="fd-status" data-k="status"><span class="fd-spin" data-k="spin"></span><span data-k="elapsed">Generating 0:00</span></span>
-        <span class="fd-full-btn" data-k="full-btn">${ic('expand')}</span>`;
+        <span class="fd-full-btn" data-k="full-btn">${ic("expand")}</span>`;
       const details = (rows) =>
-        `<dl>${rows.map(([a, b, k]) => `<dt>${a}</dt><dd${k ? ` data-k="${k}"` : ''}>${b}</dd>`).join('')}</dl>`;
+        `<dl>${rows.map(([a, b, k]) => `<dt>${a}</dt><dd${k ? ` data-k="${k}"` : ""}>${b}</dd>`).join("")}</dl>`;
       const inspector = (head) =>
         `<aside class="fd-insp" data-k="insp">${head}</aside>`;
       const before = `<h4>Details</h4>${details([
-        ['Status', 'Not generated yet', 'st'],
-        ['Visibility', `${ic('lock')} Private`],
-        ['Model', 'Nano Banana 2.1'],
-        ['Effort', 'Medium'],
-        ['Runs', '0', 'runs'],
-        ['Cost per run', '7 credits'],
-        ['Credits left', '2,400', 'left'],
+        ["Status", "Not generated yet", "st"],
+        ["Visibility", `${ic("lock")} Private`],
+        ["Model", "Nano Banana 2.1"],
+        ["Effort", "Medium"],
+        ["Runs", "0", "runs"],
+        ["Cost per run", "7 credits"],
+        ["Credits left", "2,400", "left"],
       ])}<hr><h4>Note</h4><div class="fd-note">Where it comes from, what it's for</div>
-        <div class="fd-wide" data-k="insp-go">${ic('play')}<span data-k="insp-go-l">Generate</span></div>
-        <div class="fd-pair"><span>${ic('dup')}Duplicate</span><span>${ic('trash')}Delete</span></div>`;
+        <div class="fd-wide" data-k="insp-go">${ic("play")}<span data-k="insp-go-l">Generate</span></div>
+        <div class="fd-pair"><span>${ic("dup")}Duplicate</span><span>${ic("trash")}Delete</span></div>`;
       const after = `<div class="fd-insp-pic"><img src="knight.webp" alt=""></div>
-        <div class="fd-pair" style="margin-bottom:14px"><span>${ic('pencil')}Edit</span><span>${ic('shuffle')}Variations</span></div>
+        <div class="fd-pair" style="margin-bottom:14px"><span>${ic("pencil")}Edit</span><span>${ic("shuffle")}Variations</span></div>
         <h4>Details</h4>${details([
-          ['Status', 'Generated'],
-          ['Visibility', `${ic('lock')} Private`],
-          ['Model', 'Nano Banana 2.1'],
-          ['Format', 'WEBP'],
-          ['Time', '0:04'],
-          ['Cost', '7 credits'],
-          ['Runs', '1'],
+          ["Status", "Generated"],
+          ["Visibility", `${ic("lock")} Private`],
+          ["Model", "Nano Banana 2.1"],
+          ["Format", "WEBP"],
+          ["Time", "0:04"],
+          ["Cost", "7 credits"],
+          ["Runs", "1"],
         ])}`;
 
-      const show = (el, on) => el && (el.style.display = on ? '' : 'none');
+      const show = (el, on) => el && (el.style.display = on ? "" : "none");
 
       // 1 · The prompt typed into the Knight node, the pointer onto Generate.
       const PROMPT = {
-        id: 'prompt',
-        name: 'Write the prompt',
+        id: "prompt",
+        name: "Write the prompt",
         dur: 6,
         html: app(cathedral + knight() + inspector(before)),
         draw(t, $) {
           const box = $('[data-k="k-ask"]');
           const on = t >= 1.05;
           const text = typed(ASK, t, 1.25, 3.45);
-          box.className = `fd-ask${on ? ' focus' : text ? '' : ' ph'}`;
+          box.className = `fd-ask${on ? " focus" : text ? "" : " ph"}`;
           box.innerHTML =
             on || text
-              ? `${text}${on && t < 3.9 ? '<i class="fd-caret"></i>' : ''}`
-              : 'Describe what to make';
-          $('[data-k="k"]').classList.toggle('on', t >= 0.95);
-          $('[data-k="k-run"]').classList.toggle('hover', t >= 4.55);
+              ? `${text}${on && t < 3.9 ? '<i class="fd-caret"></i>' : ""}`
+              : "Describe what to make";
+          $('[data-k="k"]').classList.toggle("on", t >= 0.95);
+          $('[data-k="k-run"]').classList.toggle("hover", t >= 4.55);
           return {
             cursor: glide(
               t,
@@ -1144,12 +1144,12 @@
       const RUN = 0.45;
       const REV = [1.15, 4.35];
       const GENERATE = {
-        id: 'generate',
-        name: 'Generate',
+        id: "generate",
+        name: "Generate",
         dur: 6.5,
         html: app(cathedral + knight(MAKING) + inspector(before)),
         draw(t, $) {
-          $('[data-k="k"]').classList.add('on');
+          $('[data-k="k"]').classList.add("on");
           $('[data-k="k-ask"]').textContent = ASK;
           const running = t >= RUN && t < REV[1];
           const done = t >= REV[1];
@@ -1171,7 +1171,7 @@
           const settle = done ? ease(t, REV[1], REV[1] + 0.9) : 0;
           rev.style.filter = done
             ? `brightness(${1.35 - 0.35 * settle}) saturate(${1.1 - 0.1 * settle})`
-            : '';
+            : "";
           const scan = $('[data-k="scan"]');
           show(scan, t >= REV[0] && !done);
           scan.style.top = `${lin * 100}%`;
@@ -1185,33 +1185,33 @@
           show($('[data-k="full-btn"]'), false);
           // The node's button, the canvas's balance and the inspector.
           const run = $('[data-k="k-run"]');
-          run.classList.toggle('busy', running);
-          run.classList.toggle('hover', t < 0.3);
-          const label = done ? 'Add' : running ? 'Generating' : 'Generate';
+          run.classList.toggle("busy", running);
+          run.classList.toggle("hover", t < 0.3);
+          const label = done ? "Add" : running ? "Generating" : "Generate";
           if ($('[data-k="k-run-l"]').textContent !== label)
-            run.innerHTML = button(label, 'k');
+            run.innerHTML = button(label, "k");
           $('[data-k="k-last"]').textContent = done
-            ? 'Last run · 0:04 · 7 credits'
+            ? "Last run · 0:04 · 7 credits"
             : running
-              ? 'Usually under a minute'
-              : '';
+              ? "Usually under a minute"
+              : "";
           $('[data-k="credits"]').textContent =
-            t >= REV[1] + 0.15 ? '2,393' : '2,400';
+            t >= REV[1] + 0.15 ? "2,393" : "2,400";
           const insp = $('[data-k="insp"]');
-          const want = t >= REV[1] + 0.3 ? 'after' : 'before';
+          const want = t >= REV[1] + 0.3 ? "after" : "before";
           if (insp.dataset.v !== want) {
             insp.dataset.v = want;
-            insp.innerHTML = want === 'after' ? after : before;
+            insp.innerHTML = want === "after" ? after : before;
           }
-          if (want === 'before') {
+          if (want === "before") {
             $('[data-k="st"]').textContent = running
-              ? 'Generating'
-              : 'Not generated yet';
-            $('[data-k="runs"]').textContent = running ? '1' : '0';
-            $('[data-k="insp-go"]').classList.toggle('busy', running);
+              ? "Generating"
+              : "Not generated yet";
+            $('[data-k="runs"]').textContent = running ? "1" : "0";
+            $('[data-k="insp-go"]').classList.toggle("busy", running);
             $('[data-k="insp-go-l"]').textContent = running
-              ? 'Generating'
-              : 'Generate';
+              ? "Generating"
+              : "Generate";
           }
           return {
             cursor: glide(
@@ -1232,36 +1232,36 @@
       const TO = { x: 350, y: 70, w: 435, h: 652 };
       const OPEN = [1.6, 2.35];
       const FULL = {
-        id: 'full',
-        name: 'Open it',
+        id: "full",
+        name: "Open it",
         dur: 5.6,
         html: app(
           cathedral +
             knight(
               '<img src="knight.webp" alt=""><span class="fd-full-btn" data-k="full-btn">' +
-                ic('expand') +
-                '</span>',
-              'Last run · 0:04 · 7 credits',
+                ic("expand") +
+                "</span>",
+              "Last run · 0:04 · 7 credits",
             ) +
             inspector(after),
           `<div class="fd-full" data-k="full">
             <div class="fd-fbar" data-k="fbar">
               <span class="who"><b>Knight</b><small>Image · Nano Banana 2.1 · 2:3 · 2K</small></span>
-              <span style="color:var(--f3)">${ic('star')}</span>
-              <span class="fd-btn">${ic('upscale')}Upscale</span>
-              <span class="fd-btn">${ic('cutout')}Remove background</span>
-              <span class="fd-seg"><span class="on">${ic('eye')}View</span><span data-k="edit">${ic('brush')}Edit</span></span>
-              <span class="fd-btn">${ic('download')}Download</span>
-              <span class="fd-x">${ic('x')}</span>
+              <span style="color:var(--f3)">${ic("star")}</span>
+              <span class="fd-btn">${ic("upscale")}Upscale</span>
+              <span class="fd-btn">${ic("cutout")}Remove background</span>
+              <span class="fd-seg"><span class="on">${ic("eye")}View</span><span data-k="edit">${ic("brush")}Edit</span></span>
+              <span class="fd-btn">${ic("download")}Download</span>
+              <span class="fd-x">${ic("x")}</span>
             </div>
           </div>
           <img class="fd-fimg" data-k="fimg" src="knight.webp" alt="">`,
         ),
         draw(t, $) {
-          $('[data-k="k"]').classList.add('on');
+          $('[data-k="k"]').classList.add("on");
           $('[data-k="k-ask"]').textContent = ASK;
-          $('[data-k="k-last"]').textContent = 'Last run · 0:04 · 7 credits';
-          $('[data-k="credits"]').textContent = '2,393';
+          $('[data-k="k-last"]').textContent = "Last run · 0:04 · 7 credits";
+          $('[data-k="credits"]').textContent = "2,393";
           show($('[data-k="full-btn"]'), t >= 0.85 && t < OPEN[0] + 0.1);
           const o = ease(t, OPEN[0], OPEN[1]);
           const full = $('[data-k="full"]');
@@ -1275,14 +1275,14 @@
           const img = $('[data-k="fimg"]');
           show(img, t >= OPEN[0]);
           for (const [prop, k] of [
-            ['left', 'x'],
-            ['top', 'y'],
-            ['width', 'w'],
-            ['height', 'h'],
+            ["left", "x"],
+            ["top", "y"],
+            ["width", "w"],
+            ["height", "h"],
           ])
             img.style[prop] = `${FROM[k] + (TO[k] - FROM[k]) * o}px`;
           img.style.borderRadius = `${6 - 2 * o}px`;
-          $('[data-k="edit"]').classList.toggle('hover', t >= 3.75);
+          $('[data-k="edit"]').classList.toggle("hover", t >= 3.75);
           return {
             cursor: glide(
               t,
@@ -1299,41 +1299,41 @@
       };
 
       const STEPS = [PROMPT, GENERATE, FULL];
-      const demo = mount(document.getElementById('demo'), {
+      const demo = mount(document.getElementById("demo"), {
         steps: STEPS,
-        tabs: ['The Ashen One'],
-        label: 'Fil for Mac making a picture',
+        tabs: ["The Ashen One"],
+        label: "Fil for Mac making a picture",
       });
 
       // For screenshots of exact frames (scripts/shoot.mjs --frozen).
       window.__hd = demo;
 
       // The controls: pause, the clock to scrub, and the still end frames.
-      const play = document.getElementById('play');
-      const clock = document.getElementById('clock');
-      const time = document.getElementById('time');
-      const still = document.getElementById('still');
+      const play = document.getElementById("play");
+      const clock = document.getElementById("clock");
+      const time = document.getElementById("time");
+      const still = document.getElementById("still");
       const fmt = (s) =>
-        `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+        `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
       clock.max = demo.state().total;
       still.checked = demo.state().still;
       demo.onChange((s) => {
         clock.value = s.elapsed;
         time.value = `${fmt(s.elapsed)} / ${fmt(s.total)}`;
-        play.textContent = s.paused ? 'Play' : 'Pause';
-        play.setAttribute('aria-pressed', String(s.paused));
+        play.textContent = s.paused ? "Play" : "Pause";
+        play.setAttribute("aria-pressed", String(s.paused));
       });
-      play.addEventListener('click', () =>
+      play.addEventListener("click", () =>
         demo.state().paused ? demo.resume() : demo.pause(),
       );
-      clock.addEventListener('input', () => {
+      clock.addEventListener("input", () => {
         // Read the slider before pausing: pause() redraws, and the redraw
         // writes the old time back into it.
         const s = Number(clock.value);
         demo.pause();
         demo.seek(s);
       });
-      still.addEventListener('change', () => demo.setStill(still.checked));
+      still.addEventListener("change", () => demo.setStill(still.checked));
       // The controls' first reading: the window drew before they listened.
       demo.resume();
     </script>

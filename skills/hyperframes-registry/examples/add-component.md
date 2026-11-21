@@ -21,7 +21,10 @@ Open `compositions/components/shimmer-sweep.html` and read the comment header.
 **HTML** — wrap target elements:
 
 ```html
-<div class="shimmer-sweep-target" style="--shimmer-color: rgba(255, 255, 255, 0.5)">
+<div
+  class="shimmer-sweep-target"
+  style="--shimmer-color: rgba(255, 255, 255, 0.5)"
+>
   <h1 class="title">AI-Powered Video</h1>
 </div>
 ```

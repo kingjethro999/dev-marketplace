@@ -66,12 +66,12 @@ Format:
   - `UNCHECKED` + `reason`: no checkout, no Python, ffmpeg-skill gave no usable result (did not
     start, timed out, printed no JSON), or a property it cannot measure. No step is added, so it
     is never counted as a pass, and an absent optional dependency never fails a render.
-  ffmpeg-skill is found the way the other ecosystem skills find it (color-grading-skill's
-  adapter): `--ffmpeg-skill DIR` alone when given, else `HYPERFRAMES_SKILL_FFMPEG_SKILL_DIR`,
-  `VIDEO_AGENT_FFMPEG_SKILL_DIR`, `~/.claude/skills/ffmpeg-skill`, `./vendor/ffmpeg-skill`, and
-  `ffmpeg-skill` next to this checkout. Its version comes from its `package.json`. There is no
-  version gate (the declared range `>=2.0.0 <4.0.0` in the contract's `dependencies` is what it was
-  checked against): the probe document's keys are read directly and a missing one is `UNCHECKED`.
+    ffmpeg-skill is found the way the other ecosystem skills find it (color-grading-skill's
+    adapter): `--ffmpeg-skill DIR` alone when given, else `HYPERFRAMES_SKILL_FFMPEG_SKILL_DIR`,
+    `VIDEO_AGENT_FFMPEG_SKILL_DIR`, `~/.claude/skills/ffmpeg-skill`, `./vendor/ffmpeg-skill`, and
+    `ffmpeg-skill` next to this checkout. Its version comes from its `package.json`. There is no
+    version gate (the declared range `>=2.0.0 <4.0.0` in the contract's `dependencies` is what it was
+    checked against): the probe document's keys are read directly and a missing one is `UNCHECKED`.
 - **Why:** HyperFrames streams each captured frame into ffmpeg as it is captured (`image2pipe`,
   visible in `commands`). ffmpeg-skill has no tool that takes such a stream: `sequence.py` encodes
   an image sequence already on disk (h264 / hevc / av1 / prores, no VP9) and `render.py` executes
@@ -121,9 +121,9 @@ Format:
   - Keeping the shims on POSIX and the preload on Windows would mean two code paths to keep equal.
   - Recording nothing on Windows would make `commands[]` untrue there.
   - HyperFrames' own logs are not argv.
-  The preload sees only processes started through those five functions. `exec` / `execSync` take a shell command
-  line, which is not an argv, and HyperFrames does not start these binaries that way: the end-to-end render test
-  requires the chrome and the frame-encoding ffmpeg (`image2pipe`) argv in `commands`, on every CI OS.
+    The preload sees only processes started through those five functions. `exec` / `execSync` take a shell command
+    line, which is not an argv, and HyperFrames does not start these binaries that way: the end-to-end render test
+    requires the chrome and the frame-encoding ffmpeg (`image2pipe`) argv in `commands`, on every CI OS.
 - **Pinned by:** `tests/render.test.mjs` ("end to end": the hyperframes argv carries `--require <recorder>`, and the
   recorded roles include chrome and the image2pipe ffmpeg with exit 0), `tests/failures.test.mjs` (a failing encode
   is classified from the recorded ffmpeg exit 1), and CI on `ubuntu-latest`, `macos-latest` and `windows-latest`.
@@ -170,7 +170,7 @@ Format:
   identical to the full render's frame at the same scene time (tested). Only the order of the steps is new: the full
   render still comes first, unchanged. qc-skill's loop seam check (1.3.0) measures audio only, so the video seam is
   measured here.
-- **Known gap, measured:** HyperFrames' alpha plane for a *scaled* layer over a transparent background is not
+- **Known gap, measured:** HyperFrames' alpha plane for a _scaled_ layer over a transparent background is not
   bit-exact between two renders of the same scene. For a `pulse` loop animation, and for the existing `zoom`
   transition, 1 to 16 of 50 ProRes frames differed in alpha (PSNR 37 to 50 dB) while colour stayed identical. With
   `bob`, `spin` and no loop animation, 3 or 4 runs were identical. `will-change` on the layer made repeated renders

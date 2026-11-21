@@ -18,11 +18,11 @@
 ```jsx
 <StepWindow
   steps={STEPS}
-  tabs={['Ashgrove']}        // the title bar's tabs; the last one is shown
-  label="Import a page"      // the stage's aria-label begins with this
-  stageClass="my-app"        // the app's own tokens and fonts on the stage
-  clock={clock}              // optional: drive it from outside
-  bar={true}                 // the steps bar along the foot
+  tabs={["Ashgrove"]} // the title bar's tabs; the last one is shown
+  label="Import a page" // the stage's aria-label begins with this
+  stageClass="my-app" // the app's own tokens and fonts on the stage
+  clock={clock} // optional: drive it from outside
+  bar={true} // the steps bar along the foot
 />
 ```
 
@@ -46,24 +46,38 @@ const clock = useStepClock(STEPS, { still, start, off });
 
 ## Helpers
 
-| helper | what it gives |
-| --- | --- |
-| `ease(t, a, b)` | 0 → 1 between `a` and `b` seconds, cubic in-out; 0 before, 1 after |
-| `typed(text, t, a, b)` | the text typed so far, all of it by `b` |
-| `cue(t, [[at, v], …], before)` | the last value whose time has come |
-| `held(t, at, len = 0.16)` | whether a click at `at` is still pressed |
-| `glide(t, [[from, to, x, y], …], clicks)` | pointer props worked out from `t` (exact under scrubs) |
-| `<Cursor x y press hide move />` | the macOS arrow, its tip at (x, y); `move` is the glide's CSS seconds |
+| helper                                    | what it gives                                                         |
+| ----------------------------------------- | --------------------------------------------------------------------- |
+| `ease(t, a, b)`                           | 0 → 1 between `a` and `b` seconds, cubic in-out; 0 before, 1 after    |
+| `typed(text, t, a, b)`                    | the text typed so far, all of it by `b`                               |
+| `cue(t, [[at, v], …], before)`            | the last value whose time has come                                    |
+| `held(t, at, len = 0.16)`                 | whether a click at `at` is still pressed                              |
+| `glide(t, [[from, to, x, y], …], clicks)` | pointer props worked out from `t` (exact under scrubs)                |
+| `<Cursor x y press hide move />`          | the macOS arrow, its tip at (x, y); `move` is the glide's CSS seconds |
 
 ## Writing a step
 
 Put the times at the top, as names, so the step reads like a script and can be retimed in one place:
 
 ```jsx
-const TYPE_FROM = 1.9, TYPE_TO = 3.7, SEND_AT = 4.3, ASK_AT = 4.8, GO_AT = 5.42, DONE_AT = 6.9;
+const TYPE_FROM = 1.9,
+  TYPE_TO = 3.7,
+  SEND_AT = 4.3,
+  ASK_AT = 4.8,
+  GO_AT = 5.42,
+  DONE_AT = 6.9;
 function AgentStep({ t }) {
   const sent = t >= SEND_AT;
-  const phase = t >= DONE_AT ? 'done' : t >= GO_AT ? 'working' : t >= ASK_AT ? 'asking' : sent ? 'reading' : '';
+  const phase =
+    t >= DONE_AT
+      ? "done"
+      : t >= GO_AT
+        ? "working"
+        : t >= ASK_AT
+          ? "asking"
+          : sent
+            ? "reading"
+            : "";
   const glow = ease(t, DONE_AT - 0.2, DONE_AT + 0.8);
   // …
 }
@@ -91,8 +105,13 @@ Hard-coded coordinates break the first time a label changes. Measure instead:
 useLayoutEffect(() => {
   const r = stage.getBoundingClientRect();
   const k = r.width / 1200;
-  const b = stage.querySelector('[data-aim="headline"]').getBoundingClientRect();
-  setAim({ x: (b.left - r.left + b.width * 0.55) / k, y: (b.top - r.top + b.height * 0.6) / k });
+  const b = stage
+    .querySelector('[data-aim="headline"]')
+    .getBoundingClientRect();
+  setAim({
+    x: (b.left - r.left + b.width * 0.55) / k,
+    y: (b.top - r.top + b.height * 0.6) / k,
+  });
 }, [frame]);
 ```
 

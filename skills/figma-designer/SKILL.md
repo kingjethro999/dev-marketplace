@@ -28,6 +28,7 @@ These are the designer's own rules for working in Figma. They sit on top of the 
      - Text styles: one sample line per style
    - **Bind the samples so they update with the tokens.** Every swatch fill is bound to its variable. Every spacing bar and radius sample is bound to its variable. Every text sample uses its style. When the user edits a token, the frame updates by itself.
    - **Labels:** each sample is labeled with its token name and, for Color System, its alias (`Surface/Primary → Grayscale/870`). Text can't bind to a color value, so hex labels don't update by themselves. Re-sync the labels whenever you create, rename or change tokens.
+
 3. **Build section by section.** Do the hero first, then one section per step. Never build a whole page in one pass. Screenshot after each section and fix it before moving on.
 4. **Use auto layout everywhere.** Every frame with children uses auto layout. Padding and gap are bound to spacing variables, never typed numbers.
 5. **Bind, don't type.**
@@ -99,6 +100,7 @@ The names and structure are fixed. The hex values follow the user's brand. Full 
   - light theme `#000000` → `#666666`
 
   Bind both gradient stops to color variables (`boundVariables.color` on each stop) so the gradient switches with the mode.
+
 - **One accent color**, kept below 80% saturation.
 - **Borders go all the way around or not at all.** Never a single-side border on a card. To divide rows, use a 1px rectangle filled with a `Border/*` token, not a one-side stroke.
 
@@ -135,6 +137,7 @@ The names and structure are fixed. The hex values follow the user's brand. Full 
   - `State` = Default | Hover | Pressed | Focus | Disabled
 
   Bind fills to `Action/*` (for example `Action/Primary`, `Action/Primary-Hover`, `Action/Primary-Click`, `Action/Primary-Disabled`), borders to `Border/*` and labels to `Text/*`. Focus adds a visible ring (2px outside stroke at 3:1 or better), not just a color change.
+
 - **Data views** get **Loading** (a skeleton shaped like the real layout), **Empty** (a composed getting-started view) and **Error** states.
 
 ## Motion (prototype only)
@@ -186,70 +189,70 @@ The names are fixed. Color hex values follow the user's brand; spacing, radius a
 
 Collection `spacing`, one mode, `FLOAT`, scope `GAP`.
 
-| Token | Value |
-|---|---|
-| spacing/0 | 0 |
-| spacing/25 | 2 |
-| spacing/50 | 4 |
-| spacing/75 | 8 |
-| spacing/100 | 12 |
-| spacing/200 | 16 |
-| spacing/300 | 24 |
-| spacing/400 | 32 |
-| spacing/500 | 40 |
-| spacing/600 | 48 |
-| spacing/700 | 64 |
-| spacing/800 | 80 |
-| spacing/900 | 96 |
+| Token       | Value |
+| ----------- | ----- |
+| spacing/0   | 0     |
+| spacing/25  | 2     |
+| spacing/50  | 4     |
+| spacing/75  | 8     |
+| spacing/100 | 12    |
+| spacing/200 | 16    |
+| spacing/300 | 24    |
+| spacing/400 | 32    |
+| spacing/500 | 40    |
+| spacing/600 | 48    |
+| spacing/700 | 64    |
+| spacing/800 | 80    |
+| spacing/900 | 96    |
 
 ### Radius
 
 Collection `radius`, one mode, `FLOAT`, scope `CORNER_RADIUS`.
 
-| Token | Value |
-|---|---|
-| radius/0 | 0 |
-| radius/2 | 2 |
-| radius/4 | 4 |
-| radius/6 | 6 |
-| radius/8 | 8 |
-| radius/12 | 12 |
-| radius/16 | 16 |
-| radius/24 | 24 |
-| radius/full | 9999 |
+| Token       | Value |
+| ----------- | ----- |
+| radius/0    | 0     |
+| radius/2    | 2     |
+| radius/4    | 4     |
+| radius/6    | 6     |
+| radius/8    | 8     |
+| radius/12   | 12    |
+| radius/16   | 16    |
+| radius/24   | 24    |
+| radius/full | 9999  |
 
 ### Text styles
 
 The font is the file's one typeface (any font). Style names go in folders (`Heading / Heading 1`). Letter spacing is 0 unless the user sets it.
 
-| Folder / Style | Scale step | Size / line height | Weight |
-|---|---|---|---|
-| Heading / Heading 1 | `text-6xl` | 60 / 60 | Regular |
-| Heading / Heading 2 | `text-5xl` | 48 / 48 | Regular |
-| Heading / Heading 3 | `text-4xl` | 36 / 40 | Regular |
-| Heading / Heading 4 | `text-3xl` | 30 / 36 | Regular |
-| Heading / Heading 5 | `text-2xl` | 24 / 32 | Regular |
-| Heading / Heading 6 | `text-xl` | 20 / 28 | Regular |
-| Title / Title 1 | `text-xl` | 20 / 28 | Medium |
-| Title / Title 2 | `text-lg` | 18 / 28 | Medium |
-| Title / Title 3 | `text-base` | 16 / 24 | Medium |
-| Title / Title 4 | `text-sm` | 14 / 20 | Medium |
-| Title / Title 5 | `text-xs` | 12 / 16 | Medium |
-| Body / Body 1 | `text-base` | 16 / 24 | Semibold |
-| Body / Body 2 | `text-base` | 16 / 24 | Medium |
-| Body / Body 3 | `text-base` | 16 / 24 | Regular |
-| Body / Body 4 | `text-sm` | 14 / 20 | Semibold |
-| Body / Body 5 | `text-sm` | 14 / 20 | Medium |
-| Body / Body 6 | `text-sm` | 14 / 20 | Regular |
-| Button / Button-lg | `text-lg` | 18 / 28 | Semibold |
-| Button / Button-md | `text-base` | 16 / 24 | Semibold |
-| Button / Button-sm | `text-sm` | 14 / 20 | Semibold |
-| Button / Button-Xsm | `text-xs` | 12 / 16 | Semibold |
-| Caption / Caption 1 | `text-sm` | 14 / 20 | Medium |
-| Caption / Caption 2 | `text-sm` | 14 / 20 | Regular |
-| Caption / Caption 3 | `text-xs` | 12 / 16 | Semibold |
-| Caption / Caption 4 | `text-xs` | 12 / 16 | Medium |
-| Caption / Caption 5 | `text-xs` | 12 / 16 | Regular |
+| Folder / Style      | Scale step  | Size / line height | Weight   |
+| ------------------- | ----------- | ------------------ | -------- |
+| Heading / Heading 1 | `text-6xl`  | 60 / 60            | Regular  |
+| Heading / Heading 2 | `text-5xl`  | 48 / 48            | Regular  |
+| Heading / Heading 3 | `text-4xl`  | 36 / 40            | Regular  |
+| Heading / Heading 4 | `text-3xl`  | 30 / 36            | Regular  |
+| Heading / Heading 5 | `text-2xl`  | 24 / 32            | Regular  |
+| Heading / Heading 6 | `text-xl`   | 20 / 28            | Regular  |
+| Title / Title 1     | `text-xl`   | 20 / 28            | Medium   |
+| Title / Title 2     | `text-lg`   | 18 / 28            | Medium   |
+| Title / Title 3     | `text-base` | 16 / 24            | Medium   |
+| Title / Title 4     | `text-sm`   | 14 / 20            | Medium   |
+| Title / Title 5     | `text-xs`   | 12 / 16            | Medium   |
+| Body / Body 1       | `text-base` | 16 / 24            | Semibold |
+| Body / Body 2       | `text-base` | 16 / 24            | Medium   |
+| Body / Body 3       | `text-base` | 16 / 24            | Regular  |
+| Body / Body 4       | `text-sm`   | 14 / 20            | Semibold |
+| Body / Body 5       | `text-sm`   | 14 / 20            | Medium   |
+| Body / Body 6       | `text-sm`   | 14 / 20            | Regular  |
+| Button / Button-lg  | `text-lg`   | 18 / 28            | Semibold |
+| Button / Button-md  | `text-base` | 16 / 24            | Semibold |
+| Button / Button-sm  | `text-sm`   | 14 / 20            | Semibold |
+| Button / Button-Xsm | `text-xs`   | 12 / 16            | Semibold |
+| Caption / Caption 1 | `text-sm`   | 14 / 20            | Medium   |
+| Caption / Caption 2 | `text-sm`   | 14 / 20            | Regular  |
+| Caption / Caption 3 | `text-xs`   | 12 / 16            | Semibold |
+| Caption / Caption 4 | `text-xs`   | 12 / 16            | Medium   |
+| Caption / Caption 5 | `text-xs`   | 12 / 16            | Regular  |
 
 Font style strings differ by family. Check them with `figma.listAvailableFontsAsync()` before loading (for example Geist uses `SemiBold`, Inter-style families use `Semi Bold`).
 
@@ -259,15 +262,15 @@ Font style strings differ by family. Check them with `figma.listAvailableFontsAs
 
 One mode. Raw hex values from the brand.
 
-| Palette | Role | Shades |
-|---|---|---|
-| `Primary` | main brand hue | 00, 50, 100, 150, 200, 300, 350, 400, 450, 500, 600, 700, 800, 850, 900, 950, 1000 |
-| `Secondary` | second brand hue | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000 |
-| `Accent` | accent hue | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000 |
-| `Grayscale` | neutrals | 00, 50, 100, 150, 200, 250, 300, 400, 450, 500, 600, 700, 750, 800, 850, 870, 900, 950, 1000 |
-| `Red` | error | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000 |
-| `Green` | success | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000 |
-| `Yellow` | warning | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000 |
+| Palette           | Role                              | Shades                                                                                                                                        |
+| ----------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Primary`         | main brand hue                    | 00, 50, 100, 150, 200, 300, 350, 400, 450, 500, 600, 700, 800, 850, 900, 950, 1000                                                            |
+| `Secondary`       | second brand hue                  | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000                                                                      |
+| `Accent`          | accent hue                        | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000                                                                      |
+| `Grayscale`       | neutrals                          | 00, 50, 100, 150, 200, 250, 300, 400, 450, 500, 600, 700, 750, 800, 850, 870, 900, 950, 1000                                                  |
+| `Red`             | error                             | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000                                                                      |
+| `Green`           | success                           | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000                                                                      |
+| `Yellow`          | warning                           | 00, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950, 1000                                                                      |
 | `Grayscale-Alpha` | see-through neutrals for overlays | 700-16, 700-24, 700-40, 700-64, 700-80 (the Grayscale/700 hex at 16%, 24%, 40%, 64%, 80% opacity, stored in the variable's own opacity field) |
 
 - `00` is near white, `500` is the base hue and `1000` is near black.
@@ -279,127 +282,127 @@ Modes `Light` and `Dark`. Every value is an alias to a Core Color. The Dark colu
 
 **Border**
 
-| Token | Dark alias |
-|---|---|
-| Border/Primary | Grayscale/750 |
-| Border/Primary-Disabled | Grayscale/800 |
-| Border/Primary-light | Grayscale/700 |
-| Border/Secondary | Grayscale/750 |
-| Border/Tertiary | Grayscale/600 |
-| Border/Action-Primary | Primary/400 |
-| Border/Action-Disabled | Primary/600 |
-| Border/Action-Secondary | Grayscale/500 |
-| Border/Error | Red/400 |
-| Border/Error-disabled | Red/700 |
-| Border/Success | Green/400 |
-| Border/Warning | Yellow/300 |
-| Border/Warning - Disabled | Yellow/700 |
+| Token                     | Dark alias    |
+| ------------------------- | ------------- |
+| Border/Primary            | Grayscale/750 |
+| Border/Primary-Disabled   | Grayscale/800 |
+| Border/Primary-light      | Grayscale/700 |
+| Border/Secondary          | Grayscale/750 |
+| Border/Tertiary           | Grayscale/600 |
+| Border/Action-Primary     | Primary/400   |
+| Border/Action-Disabled    | Primary/600   |
+| Border/Action-Secondary   | Grayscale/500 |
+| Border/Error              | Red/400       |
+| Border/Error-disabled     | Red/700       |
+| Border/Success            | Green/400     |
+| Border/Warning            | Yellow/300    |
+| Border/Warning - Disabled | Yellow/700    |
 
 **Surface**
 
-| Token | Dark alias |
-|---|---|
-| Surface/Primary | Grayscale/870 |
-| Surface/Primary-Hover | Grayscale/800 |
-| Surface/Primary-Selected | Grayscale/700 |
-| Surface/Primary-subtle | Grayscale/850 |
-| Surface/Secondary | Grayscale/800 |
-| Surface/Secondary-Hover | Grayscale/700 |
+| Token                      | Dark alias    |
+| -------------------------- | ------------- |
+| Surface/Primary            | Grayscale/870 |
+| Surface/Primary-Hover      | Grayscale/800 |
+| Surface/Primary-Selected   | Grayscale/700 |
+| Surface/Primary-subtle     | Grayscale/850 |
+| Surface/Secondary          | Grayscale/800 |
+| Surface/Secondary-Hover    | Grayscale/700 |
 | Surface/Secondary-Selected | Grayscale/700 |
-| Surface/Secondary-Subtle | Grayscale/750 |
-| Surface/Tertiary | Grayscale/600 |
-| Surface/Tertiary-Hover | Grayscale/450 |
-| Surface/Accent | Accent/500 |
-| Surface/Accent-subtle | Accent/200 |
-| Surface/Info | Primary/400 |
-| Surface/Info-subtle | Primary/150 |
-| Surface/Error | Red/500 |
-| Surface/Error-subtle | Red/100 |
-| Surface/Error - Darker | Red/700 |
-| Surface/Inverted | Grayscale/00 |
-| Surface/Inverted-Hover | Grayscale/250 |
-| Surface/Inverted-Disabled | Grayscale/450 |
-| Surface/Warning | Yellow/500 |
-| Surface/Warning-subtle | Yellow/100 |
-| Surface/Warning - Hover | Yellow/700 |
-| Surface/Success | Green/500 |
-| Surface/Success-Subtle | Green/100 |
+| Surface/Secondary-Subtle   | Grayscale/750 |
+| Surface/Tertiary           | Grayscale/600 |
+| Surface/Tertiary-Hover     | Grayscale/450 |
+| Surface/Accent             | Accent/500    |
+| Surface/Accent-subtle      | Accent/200    |
+| Surface/Info               | Primary/400   |
+| Surface/Info-subtle        | Primary/150   |
+| Surface/Error              | Red/500       |
+| Surface/Error-subtle       | Red/100       |
+| Surface/Error - Darker     | Red/700       |
+| Surface/Inverted           | Grayscale/00  |
+| Surface/Inverted-Hover     | Grayscale/250 |
+| Surface/Inverted-Disabled  | Grayscale/450 |
+| Surface/Warning            | Yellow/500    |
+| Surface/Warning-subtle     | Yellow/100    |
+| Surface/Warning - Hover    | Yellow/700    |
+| Surface/Success            | Green/500     |
+| Surface/Success-Subtle     | Green/100     |
 
 **Action** (button and control fills)
 
-| Token | Dark alias |
-|---|---|
-| Action/Primary | Primary/500 |
-| Action/Primary-Hover | Primary/700 |
-| Action/Primary-Click | Primary/600 |
-| Action/Primary-Disabled | Primary/700 |
-| Action/Secondary | Grayscale/600 |
-| Action/Secondary-Hover | Grayscale/750 |
-| Action/Secondary-Click | Grayscale/700 |
-| Action/Error | Red/700 |
-| Action/Error-Hover | Red/800 |
-| Action/Error-Disabled | Red/800 |
-| Action/Error-Subtle | Red/150 |
-| Action/Warning | Yellow/500 |
-| Action/Warning - Hover | Yellow/700 |
-| Action/Warning - Disabled | Yellow/800 |
-| Action/Warning - Subtle | Yellow/100 |
+| Token                     | Dark alias    |
+| ------------------------- | ------------- |
+| Action/Primary            | Primary/500   |
+| Action/Primary-Hover      | Primary/700   |
+| Action/Primary-Click      | Primary/600   |
+| Action/Primary-Disabled   | Primary/700   |
+| Action/Secondary          | Grayscale/600 |
+| Action/Secondary-Hover    | Grayscale/750 |
+| Action/Secondary-Click    | Grayscale/700 |
+| Action/Error              | Red/700       |
+| Action/Error-Hover        | Red/800       |
+| Action/Error-Disabled     | Red/800       |
+| Action/Error-Subtle       | Red/150       |
+| Action/Warning            | Yellow/500    |
+| Action/Warning - Hover    | Yellow/700    |
+| Action/Warning - Disabled | Yellow/800    |
+| Action/Warning - Subtle   | Yellow/100    |
 
 **Text**
 
-| Token | Dark alias |
-|---|---|
-| Text/Primary | Grayscale/50 |
-| Text/Primary-Disabled | Grayscale/750 |
-| Text/Primary-Subtle | Grayscale/500 |
-| Text/Secondary | Grayscale/200 |
-| Text/Secondary-Disabled | Grayscale/500 |
-| Text/Tertiary | Grayscale/400 |
-| Text/Inverted | Grayscale/850 |
-| Text/Error | Red/500 |
-| Text/Error-Disabled | Red/800 |
-| Text/Error-Inverted | Red/800 |
-| Text/Error-Inverted-Disabled | Red/200 |
-| Text/Success | Green/600 |
-| Text/Success-Inverted | Green/700 |
-| Text/Success-Inverted-Disabled | Green/300 |
-| Text/Info | Primary/350 |
-| Text/Info-Inverted | Primary/700 |
-| Text/Info-Inverted-Disabled | Primary/200 |
-| Text/Warning | Yellow/500 |
-| Text/Warning - Disabled | Yellow/800 |
-| Text/Warning-Inverted | Yellow/800 |
-| Text/Warning-Inverted-Disabled | Yellow/300 |
+| Token                          | Dark alias    |
+| ------------------------------ | ------------- |
+| Text/Primary                   | Grayscale/50  |
+| Text/Primary-Disabled          | Grayscale/750 |
+| Text/Primary-Subtle            | Grayscale/500 |
+| Text/Secondary                 | Grayscale/200 |
+| Text/Secondary-Disabled        | Grayscale/500 |
+| Text/Tertiary                  | Grayscale/400 |
+| Text/Inverted                  | Grayscale/850 |
+| Text/Error                     | Red/500       |
+| Text/Error-Disabled            | Red/800       |
+| Text/Error-Inverted            | Red/800       |
+| Text/Error-Inverted-Disabled   | Red/200       |
+| Text/Success                   | Green/600     |
+| Text/Success-Inverted          | Green/700     |
+| Text/Success-Inverted-Disabled | Green/300     |
+| Text/Info                      | Primary/350   |
+| Text/Info-Inverted             | Primary/700   |
+| Text/Info-Inverted-Disabled    | Primary/200   |
+| Text/Warning                   | Yellow/500    |
+| Text/Warning - Disabled        | Yellow/800    |
+| Text/Warning-Inverted          | Yellow/800    |
+| Text/Warning-Inverted-Disabled | Yellow/300    |
 
 **Icon**
 
-| Token | Dark alias |
-|---|---|
-| Icon/Default | Grayscale/50 |
-| Icon/Secondary | Grayscale/200 |
-| Icon/Subtle | Grayscale/500 |
-| Icon/Inverted | Grayscale/850 |
-| Icon/Disabled | Grayscale/750 |
-| Icon/Error | Red/500 |
-| Icon/Error-Disabled | Red/800 |
-| Icon/Error-Inverted-Disabled | Red/200 |
-| Icon/Info | Primary/350 |
-| Icon/Info-Disabled | Primary/200 |
-| Icon/Warning | Yellow/500 |
-| Icon/Warning-Inverted | Yellow/700 |
-| Icon/Warning - Disabled | Yellow/800 |
-| Icon/Warning-Inverted-Disabled | Yellow/300 |
-| Icon/Success | Green/400 |
-| Icon/Success-Inverted-Disabled | Green/300 |
+| Token                          | Dark alias    |
+| ------------------------------ | ------------- |
+| Icon/Default                   | Grayscale/50  |
+| Icon/Secondary                 | Grayscale/200 |
+| Icon/Subtle                    | Grayscale/500 |
+| Icon/Inverted                  | Grayscale/850 |
+| Icon/Disabled                  | Grayscale/750 |
+| Icon/Error                     | Red/500       |
+| Icon/Error-Disabled            | Red/800       |
+| Icon/Error-Inverted-Disabled   | Red/200       |
+| Icon/Info                      | Primary/350   |
+| Icon/Info-Disabled             | Primary/200   |
+| Icon/Warning                   | Yellow/500    |
+| Icon/Warning-Inverted          | Yellow/700    |
+| Icon/Warning - Disabled        | Yellow/800    |
+| Icon/Warning-Inverted-Disabled | Yellow/300    |
+| Icon/Success                   | Green/400     |
+| Icon/Success-Inverted-Disabled | Green/300     |
 
 **Overlay**
 
-| Token | Value |
-|---|---|
-| Overlay/xs | Grayscale-Alpha/700-16 |
-| Overlay/sm | Grayscale-Alpha/700-24 |
-| Overlay/md | Grayscale-Alpha/700-40 |
-| Overlay/lg | Grayscale-Alpha/700-64 |
+| Token       | Value                  |
+| ----------- | ---------------------- |
+| Overlay/xs  | Grayscale-Alpha/700-16 |
+| Overlay/sm  | Grayscale-Alpha/700-24 |
+| Overlay/md  | Grayscale-Alpha/700-40 |
+| Overlay/lg  | Grayscale-Alpha/700-64 |
 | Overlay/xlg | Grayscale-Alpha/700-80 |
 
 An alias can't add opacity; it takes the target as it is. So the transparency lives in Core Colors (`Grayscale-Alpha`) and Overlay aliases it. Never put opacity on an overlay layer by hand.

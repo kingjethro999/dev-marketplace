@@ -14,16 +14,14 @@
 
 <p align="center"><b>Dubbing: translated speech, timed to the picture</b></p>
 
-
-
 AI narration (TTS), voice replacement (dubbing) and audio description, timed to the picture, for the [AI Video Production OS](https://github.com/kajisho5/AI-video-production-OS) (department 音 / Audio). Local engines only. They are optional and never downloaded by the skill. Every media step (probe, assembling clips, putting the voice into the video, loudness) goes through [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill).
 
 **Status: 0.2.1, all three ops experimental.** `contract`, `doctor`, `engines`, `narrate`, `dub` ([ADR-008](docs/decisions.md)), `describe` ([ADR-010](docs/decisions.md)) and `fit` (timing fit, [ADR-007](docs/decisions.md)) work. NARRATE speaks with Chatterbox (default) or VOICEVOX ([ADR-006](docs/decisions.md)). A reference voice needs its owner's consent record ([ADR-009](docs/decisions.md)). Qwen3-TTS is an optional, experimental engine for cloned voices, never a default ([ADR-018](docs/decisions.md)). See the [roadmap](ECOSYSTEM_ROADMAP.md).
 
-| Op | Capability | Default engine | Lifecycle | Step |
-|---|---|---|---|---|
-| NARRATE | `speech.narrate` | Chatterbox Multilingual | `EXPERIMENTAL` | 2 ([ADR-005](docs/decisions.md)) |
-| DUB | `speech.dub` | Chatterbox Multilingual | `EXPERIMENTAL` | 5 ([ADR-008](docs/decisions.md)) |
+| Op                | Capability                 | Default engine          | Lifecycle      | Step                             |
+| ----------------- | -------------------------- | ----------------------- | -------------- | -------------------------------- |
+| NARRATE           | `speech.narrate`           | Chatterbox Multilingual | `EXPERIMENTAL` | 2 ([ADR-005](docs/decisions.md)) |
+| DUB               | `speech.dub`               | Chatterbox Multilingual | `EXPERIMENTAL` | 5 ([ADR-008](docs/decisions.md)) |
 | AUDIO_DESCRIPTION | `speech.audio_description` | Chatterbox Multilingual | `EXPERIMENTAL` | 7 ([ADR-010](docs/decisions.md)) |
 
 How an agent or Claude should use the skill (workflow, request → command, consent, pitfalls) is in [SKILL.md](SKILL.md).
@@ -105,9 +103,19 @@ Medical terms, drug names and people's names that an engine misreads are written
 a `dubbing/pronunciation@1` JSON file, and given to `narrate`, `dub` or `describe` with `--pronunciation terms.json`:
 
 ```json
-{"schema": "dubbing/pronunciation@1", "name": "clinic-2026",
- "entries": [{"term": "acetaminophen", "lang": "en", "reading": "a-seet-a-MIN-oh-fen", "ipa": "əˌsiːtəˈmɪnəfən"},
-             {"term": "口腔", "lang": "ja", "reading": "コウクウ", "accent": 0}]}
+{
+  "schema": "dubbing/pronunciation@1",
+  "name": "clinic-2026",
+  "entries": [
+    {
+      "term": "acetaminophen",
+      "lang": "en",
+      "reading": "a-seet-a-MIN-oh-fen",
+      "ipa": "əˌsiːtəˈmɪnəfən"
+    },
+    { "term": "口腔", "lang": "ja", "reading": "コウクウ", "accent": 0 }
+  ]
+}
 ```
 
 - Every entry names its language (an entry for `en` serves `en-US` and `en-GB`). Nothing is built in and no language is assumed; only the entries for the op's `--lang` are used.
@@ -121,8 +129,17 @@ a `dubbing/pronunciation@1` JSON file, and given to `narrate`, `dub` or `describ
 A channel or a series keeps one voice with a `dubbing/voice-profile@1` file, given to `narrate`, `dub` or `describe` with `--profile narrator.json`:
 
 ```json
-{"schema": "dubbing/voice-profile@1", "id": "clinic-narrator", "name": "Clinic channel narrator",
- "engine": "voicevox", "voice": "3", "lang": "ja", "speed": 1.05, "pitch": 0.0, "loudness_target": -16.0}
+{
+  "schema": "dubbing/voice-profile@1",
+  "id": "clinic-narrator",
+  "name": "Clinic channel narrator",
+  "engine": "voicevox",
+  "voice": "3",
+  "lang": "ja",
+  "speed": 1.05,
+  "pitch": 0.0,
+  "loudness_target": -16.0
+}
 ```
 
 - It fixes the engine, the voice (or a reference voice with its owner's consent record, paths relative to the profile; the consent gate applies as on the command line), the languages it is for, and the seed. A flag that says otherwise is refused.
@@ -142,13 +159,13 @@ Every op result says that its speech is AI-generated, in `disclosure` (and `prov
 
 ## Engines (optional, [ADR-001](docs/decisions.md))
 
-| Engine | Code / weights licence | Japanese | Obligation | How the skill reaches it |
-|---|---|---|---|---|
-| `chatterbox` Chatterbox Multilingual (default; `chatterbox-tts` 0.1.7 loads the V2 checkpoint, ADR-005) | MIT / MIT | native | Perth watermark in every clip | worker, ideally its own venv: `DUBBING_CHATTERBOX_PYTHON` |
-| `voicevox` VOICEVOX (NARRATE since step 3, ADR-006) | ENGINE LGPL-3.0, CORE MIT / per voice library terms (ずんだもん, 四国めたん verified; others refused unless acknowledged) | native | credit `VOICEVOX:<character>`, per clip | the app on loopback: `DUBBING_VOICEVOX_URL` (default `http://127.0.0.1:50021`) |
-| `style_bert_vits2` Style-Bert-VITS2 (NARRATE, DUB, AUDIO_DESCRIPTION since step 8, [ADR-011](docs/decisions.md)) | AGPL-3.0 / per model (JP-Extra AGPL-3.0, JVNV CC BY-SA 4.0) | native (JP, EN, ZH) | credit per model; JVNV models as they are, any other model only with its voice owner's consent record | its own API server on loopback: `DUBBING_SBV2_URL` (default `http://127.0.0.1:5000`); never imported |
-| `kokoro` Kokoro-82M (NARRATE, AUDIO_DESCRIPTION since step 8, [ADR-011](docs/decisions.md)) | Apache-2.0 / Apache-2.0 | weak (also en-us, en-gb, es, fr, hi, it, pt-br, zh) | CC BY 3.0 credit for four Japanese voices, per clip | worker, ideally its own venv: `DUBBING_KOKORO_PYTHON` |
-| `qwen3_tts` Qwen3-TTS-12Hz Base, 1.7B or 0.6B (**experimental**, never a default; NARRATE, DUB, AUDIO_DESCRIPTION, [ADR-018](docs/decisions.md)) | Apache-2.0 / Apache-2.0 | native (also de, en, es, fr, it, ko, pt, ru, zh) | none (no watermark, no credit); every line is a cloned voice, so every run needs a consent record | worker, in its own venv: `DUBBING_QWEN3_TTS_PYTHON` (Python >= 3.10) |
+| Engine                                                                                                                                           | Code / weights licence                                                                                                    | Japanese                                            | Obligation                                                                                            | How the skill reaches it                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `chatterbox` Chatterbox Multilingual (default; `chatterbox-tts` 0.1.7 loads the V2 checkpoint, ADR-005)                                          | MIT / MIT                                                                                                                 | native                                              | Perth watermark in every clip                                                                         | worker, ideally its own venv: `DUBBING_CHATTERBOX_PYTHON`                                            |
+| `voicevox` VOICEVOX (NARRATE since step 3, ADR-006)                                                                                              | ENGINE LGPL-3.0, CORE MIT / per voice library terms (ずんだもん, 四国めたん verified; others refused unless acknowledged) | native                                              | credit `VOICEVOX:<character>`, per clip                                                               | the app on loopback: `DUBBING_VOICEVOX_URL` (default `http://127.0.0.1:50021`)                       |
+| `style_bert_vits2` Style-Bert-VITS2 (NARRATE, DUB, AUDIO_DESCRIPTION since step 8, [ADR-011](docs/decisions.md))                                 | AGPL-3.0 / per model (JP-Extra AGPL-3.0, JVNV CC BY-SA 4.0)                                                               | native (JP, EN, ZH)                                 | credit per model; JVNV models as they are, any other model only with its voice owner's consent record | its own API server on loopback: `DUBBING_SBV2_URL` (default `http://127.0.0.1:5000`); never imported |
+| `kokoro` Kokoro-82M (NARRATE, AUDIO_DESCRIPTION since step 8, [ADR-011](docs/decisions.md))                                                      | Apache-2.0 / Apache-2.0                                                                                                   | weak (also en-us, en-gb, es, fr, hi, it, pt-br, zh) | CC BY 3.0 credit for four Japanese voices, per clip                                                   | worker, ideally its own venv: `DUBBING_KOKORO_PYTHON`                                                |
+| `qwen3_tts` Qwen3-TTS-12Hz Base, 1.7B or 0.6B (**experimental**, never a default; NARRATE, DUB, AUDIO_DESCRIPTION, [ADR-018](docs/decisions.md)) | Apache-2.0 / Apache-2.0                                                                                                   | native (also de, en, es, fr, it, ko, pt, ru, zh)    | none (no watermark, no credit); every line is a cloned voice, so every run needs a consent record     | worker, in its own venv: `DUBBING_QWEN3_TTS_PYTHON` (Python >= 3.10)                                 |
 
 Weights are fetched once by you into the Hugging Face cache, or into `DUBBING_CHATTERBOX_MODEL_DIR` / `DUBBING_KOKORO_MODEL_DIR` / `DUBBING_QWEN3_TTS_MODEL_DIR` (Kokoro: `config.json`, `kokoro-v1_0.pth` and `voices/<voice>.pt`; Qwen3-TTS: the whole checkpoint directory, `speech_tokenizer/` included). `doctor` prints the exact install line for each engine. Chatterbox's Japanese text path depends on pykakasi (GPL-3.0-or-later), which is why it belongs in its own virtual environment rather than this package's.
 
@@ -166,13 +183,20 @@ A reference voice is used only with a consent record (`dubbing/consent@1` JSON) 
 ```json
 {
   "schema": "dubbing/consent@1",
-  "voice_owner": {"name": "山田花子"},
-  "consenter": {"name": "山田花子", "relation": "self"},
+  "voice_owner": { "name": "山田花子" },
+  "consenter": { "name": "山田花子", "relation": "self" },
   "granted_at": "2026-10-01T10:00:00+09:00",
   "expires_at": null,
-  "scope": {"ops": ["dub"], "engines": ["chatterbox"], "languages": ["en"], "purpose": "conference talk, English dub"},
-  "evidence": [{"path": "hanako-consent-form.pdf", "sha256": "<sha256 of the file>"}],
-  "reference": {"sha256": "<sha256 of voice.wav>"}
+  "scope": {
+    "ops": ["dub"],
+    "engines": ["chatterbox"],
+    "languages": ["en"],
+    "purpose": "conference talk, English dub"
+  },
+  "evidence": [
+    { "path": "hanako-consent-form.pdf", "sha256": "<sha256 of the file>" }
+  ],
+  "reference": { "sha256": "<sha256 of voice.wav>" }
 }
 ```
 

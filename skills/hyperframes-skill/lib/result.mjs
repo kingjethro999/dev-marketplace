@@ -8,7 +8,13 @@
 //   error.retryable  always false (nothing here can tell a transient failure from a deterministic one)
 //   commands      argv of every process that actually ran, in the order they started
 
-export const EXIT = Object.freeze({ ok: 0, failure: 1, unknown: 2, timeout: 124, missing_tool: 127 });
+export const EXIT = Object.freeze({
+  ok: 0,
+  failure: 1,
+  unknown: 2,
+  timeout: 124,
+  missing_tool: 127,
+});
 
 export const ERROR_KINDS = Object.freeze({
   input: "INPUT_INVALID",
@@ -63,14 +69,18 @@ export class Context {
 
   /** stderr progress line; under --dry-run "wrote X" becomes "[dry-run] would write X". */
   info(msg) {
-    if (this.dryRun && msg.startsWith("wrote ")) msg = "[dry-run] would write " + msg.slice("wrote ".length);
+    if (this.dryRun && msg.startsWith("wrote "))
+      msg = "[dry-run] would write " + msg.slice("wrote ".length);
     process.stderr.write(msg + "\n");
   }
 }
 
 // the executable's file name, without Windows' ".exe", so a command reads the same on every OS
 function programName(p) {
-  return String(p).split(/[\\/]/).pop().replace(/\.exe$/i, "");
+  return String(p)
+    .split(/[\\/]/)
+    .pop()
+    .replace(/\.exe$/i, "");
 }
 
 export function printJson(doc) {
@@ -82,14 +92,18 @@ export function printJson(doc) {
  * it here, never passed in, so no call site can claim a check it did not make. A dry run
  * performed no checks on an artifact and is never verified.
  */
-export function emit(ctx, { output = null, verification = [], humanLine, ...extra }) {
+export function emit(
+  ctx,
+  { output = null, verification = [], humanLine, ...extra },
+) {
   const steps = ctx.dryRun ? [] : verification;
   const doc = {
     status: "completed",
     exit_code: EXIT.ok,
     output,
     dry_run: ctx.dryRun,
-    verified: !ctx.dryRun && steps.length > 0 && steps.every((s) => s.ok === true),
+    verified:
+      !ctx.dryRun && steps.length > 0 && steps.every((s) => s.ok === true),
     verification: steps,
     commands: ctx.commands,
     ...extra,
@@ -97,7 +111,9 @@ export function emit(ctx, { output = null, verification = [], humanLine, ...extr
   if (doc.verified === false && !ctx.dryRun && steps.length > 0) {
     // emit() is only for runs whose verification passed or that have nothing to verify;
     // a failed step must go through fail(kind: "verification").
-    throw new Error("emit() called with a failed verification step; use fail()");
+    throw new Error(
+      "emit() called with a failed verification step; use fail()",
+    );
   }
   if (ctx.json) printJson(doc);
   else if (humanLine !== undefined) process.stdout.write(humanLine + "\n");
@@ -107,8 +123,13 @@ export function emit(ctx, { output = null, verification = [], humanLine, ...extr
 
 /** Failure. Prints the failure document under --json and returns the exit code. */
 export function fail(ctx, err, extra = {}) {
-  const e = err instanceof ToolError ? err : new ToolError("input", String(err?.message ?? err));
-  process.stderr.write(`error: ${e.message}\n` + (e.hint ? `hint: ${e.hint}\n` : ""));
+  const e =
+    err instanceof ToolError
+      ? err
+      : new ToolError("input", String(err?.message ?? err));
+  process.stderr.write(
+    `error: ${e.message}\n` + (e.hint ? `hint: ${e.hint}\n` : ""),
+  );
   if (ctx.json) {
     const doc = {
       status: "failed",

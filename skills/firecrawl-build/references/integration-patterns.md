@@ -36,4 +36,3 @@ Examples:
 - form-driven search results
 - paginated listings
 - authenticated dashboards
-

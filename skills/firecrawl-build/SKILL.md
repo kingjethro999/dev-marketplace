@@ -78,20 +78,20 @@ For the full checklist, see [references/project-intake.md](references/project-in
 
 ## What Do You Need?
 
-| Task                                                 | Reference                                                                |
-| ---------------------------------------------------- | ------------------------------------------------------------------------ |
-| **Choose fresh project vs existing project flow**    | [references/project-intake.md](references/project-intake.md)             |
-| **Choose the right endpoint**                        | [references/endpoint-selection.md](references/endpoint-selection.md)     |
-| **Wire Firecrawl into product code**                 | [references/integration-patterns.md](references/integration-patterns.md) |
-| **Install an SDK or use REST**                       | [references/sdk-installation.md](references/sdk-installation.md)         |
-| **Set up `FIRECRAWL_API_KEY` or self-hosted config** | [references/auth-and-env.md](references/auth-and-env.md)                 |
-| **Get credentials into the project**                 | [firecrawl-build-onboarding](../firecrawl-build-onboarding/SKILL.md)     |
-| **Implement single-page extraction**                 | [firecrawl-build-scrape](../firecrawl-build-scrape/SKILL.md)             |
-| **Implement discovery-first flows**                  | [firecrawl-build-search](../firecrawl-build-search/SKILL.md)             |
-| **Implement post-scrape browser actions**            | [firecrawl-build-interact](../firecrawl-build-interact/SKILL.md)         |
-| **Search published research papers (biomedical, clinical, life-science, arXiv)** | [firecrawl-research-index](../firecrawl-research-index/SKILL.md) |
-| **Answer developer questions from issues, PRs, READMEs, or docs** | [firecrawl-developer-index](../firecrawl-developer-index/SKILL.md) |
-| **Verify the integration actually works**            | [references/verification.md](references/verification.md)                 |
+| Task                                                                             | Reference                                                                |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **Choose fresh project vs existing project flow**                                | [references/project-intake.md](references/project-intake.md)             |
+| **Choose the right endpoint**                                                    | [references/endpoint-selection.md](references/endpoint-selection.md)     |
+| **Wire Firecrawl into product code**                                             | [references/integration-patterns.md](references/integration-patterns.md) |
+| **Install an SDK or use REST**                                                   | [references/sdk-installation.md](references/sdk-installation.md)         |
+| **Set up `FIRECRAWL_API_KEY` or self-hosted config**                             | [references/auth-and-env.md](references/auth-and-env.md)                 |
+| **Get credentials into the project**                                             | [firecrawl-build-onboarding](../firecrawl-build-onboarding/SKILL.md)     |
+| **Implement single-page extraction**                                             | [firecrawl-build-scrape](../firecrawl-build-scrape/SKILL.md)             |
+| **Implement discovery-first flows**                                              | [firecrawl-build-search](../firecrawl-build-search/SKILL.md)             |
+| **Implement post-scrape browser actions**                                        | [firecrawl-build-interact](../firecrawl-build-interact/SKILL.md)         |
+| **Search published research papers (biomedical, clinical, life-science, arXiv)** | [firecrawl-research-index](../firecrawl-research-index/SKILL.md)         |
+| **Answer developer questions from issues, PRs, READMEs, or docs**                | [firecrawl-developer-index](../firecrawl-developer-index/SKILL.md)       |
+| **Verify the integration actually works**                                        | [references/verification.md](references/verification.md)                 |
 
 ## Docs Are the Source of Truth
 

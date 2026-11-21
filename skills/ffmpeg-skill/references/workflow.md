@@ -5,7 +5,7 @@ lines per step; every rule below still applies.
 
 ## Workflow (in this order)
 
-0. **Environment, only on failure.** Never start a job with `doctor`: a broken machine fails with `kind: missing_tool` or an ffmpeg error naming the filter/encoder. Run `python3 <skill-dir>/scripts/_contract.py doctor` (the installed copy) after such a failure, or when asked what the machine can do: read `ok`/`usable`, report the missing capability. `contract --json`'s tool schema is for a *planning* agent, not this workflow.
+0. **Environment, only on failure.** Never start a job with `doctor`: a broken machine fails with `kind: missing_tool` or an ffmpeg error naming the filter/encoder. Run `python3 <skill-dir>/scripts/_contract.py doctor` (the installed copy) after such a failure, or when asked what the machine can do: read `ok`/`usable`, report the missing capability. `contract --json`'s tool schema is for a _planning_ agent, not this workflow.
 1. **Probe what you must plan from.** Run `probe.py` on each input you plan from — duration, fps, resolution, codecs, channels, `variable_frame_rate_suspected` — and whenever the user asks about a file. No separate probe before every edit: every writing tool's `--json` already carries its input and a probe of the output. Plan from real numbers, never assumptions.
 2. **Prefer lossless.** If the request can be met without re-encoding (plain cuts on keyframes, remuxing, audio-only changes), do not re-encode. `cut.py` and `loudness.py` stream-copy video by default; `--accurate` on `cut.py` only for frame-exact cuts.
 3. **Plan with `--dry-run --json`, then execute.** Trust `--json`, not a dry run's summary line, for any number in the plan (a dimension there can be a placeholder). Use before long encodes, to report facts.
@@ -14,9 +14,9 @@ lines per step; every rule below still applies.
 6. **Verify the output.** Confirm duration, resolution, fps and audio match the request, from the writing tool's `--json`/`--json-brief` probe or `probe.py`, and report those numbers ("final.mp4: 59.98 s, 1080x1920, 30 fps, AAC stereo"). A step is done only when the script exited 0 and the output probes as expected: a non-zero exit, a missing or empty file, or a probe that contradicts the request is a failure reported with the script's error message.
 7. **Keep the user's originals.** Never overwrite the source; write new files next to input or where asked. An existing output path is refused (`kind: input`); add `--overwrite` only for a file this job made or the user asked to replace.
 8. **Look at the picture.** Whenever the picture changed (captions, overlays, graphics, crop/pad, resize, colour, transitions, a `join.py` scaling a clip to the first clip's frame, `color.py --to-sdr`) run `look.py OUTPUT --tiles 3x2` (or `--at T` for one frame) and view the PNG (4x3 for whole-clip layout). Not finished until `Look:` names that PNG — a probe cannot see a caption on a face. Audio-only: `Look: not needed`. What to look for splits like `check.py`'s rows in step 5:
-   - **Mechanical (this skill's own job to verify and report):** the specified text/logo is at the specified position, subtitles appear at the specified timestamps, dimensions are even. Letterboxing from `fit.py --fit pad` is the *correct* result of that mode, never a defect to flag.
-   - **Judgement (report it, don't silently pass or fail):** whether a subject or face is cut off, text sits over a face, colours look washed out, a transition lands. These need deciding what the subject *is*, the calling agent's call — say what you see in one line; they judge.
-   With no vision capability, write `Look: PATH (pixels not inspected; agent has no image view)` — never claim a picture was inspected when it wasn't, without stalling for a capability that isn't there.
+   - **Mechanical (this skill's own job to verify and report):** the specified text/logo is at the specified position, subtitles appear at the specified timestamps, dimensions are even. Letterboxing from `fit.py --fit pad` is the _correct_ result of that mode, never a defect to flag.
+   - **Judgement (report it, don't silently pass or fail):** whether a subject or face is cut off, text sits over a face, colours look washed out, a transition lands. These need deciding what the subject _is_, the calling agent's call — say what you see in one line; they judge.
+     With no vision capability, write `Look: PATH (pixels not inspected; agent has no image view)` — never claim a picture was inspected when it wasn't, without stalling for a capability that isn't there.
 
 ## Before you run anything: what to ask, what to assume
 
@@ -41,10 +41,10 @@ This skill cuts, joins, measures, syncs, exports and checks files — it execute
 - **Which cut is right, or whether a deliverable is approvable** — this skill measures and reports (`check.py`'s PASS/WARN/FAIL, `cut.py`'s duration error); the user or production agent decides whether that ships.
 - **What makes a highlight interesting** — `scenes.py --highlights` ranks by a measured proxy (audio energy, duration): candidates, not a verdict.
 - **Thumbnail or cover composition** — a design decision, not measurement.
-- **Understanding what a video is *about*** — there is no vision here beyond `look.py`'s contact sheets, for the calling agent's eyes, not for this skill to interpret.
+- **Understanding what a video is _about_** — there is no vision here beyond `look.py`'s contact sheets, for the calling agent's eyes, not for this skill to interpret.
 - **Judging what looks good** — "apply this LUT", "correct exposure by +0.3 stops" (`color.py`) is mechanical; "grade this scene to look cinematic" belongs to a colour-grading skill ([`color-grading-skill`](https://github.com/kajisho5/color-grading-skill)) that decides the parameters, then calls `color.py`.
 - **The words in a caption** — cue text is burned as written. Too long for the frame means a smaller size, `--max-lines`, or the user's own edit; never rewrite, shorten or paraphrase it, even when asked to "make it fit" — say so, offer `--max-lines 1` at a smaller size.
-- **Picking a subject or region you were not given** — "crop to x=200,y=0" is mechanical once the box is known; "crop to keep the speaker in frame" needs deciding *what* the speaker is, a judgement for the calling agent (from a `look.py` sheet).
+- **Picking a subject or region you were not given** — "crop to x=200,y=0" is mechanical once the box is known; "crop to keep the speaker in frame" needs deciding _what_ the speaker is, a judgement for the calling agent (from a `look.py` sheet).
 
 The line: same input + same explicit parameters giving the same verifiable output belongs here; taste or understanding belongs to whoever judges.
 

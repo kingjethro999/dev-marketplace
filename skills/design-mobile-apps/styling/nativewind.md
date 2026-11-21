@@ -6,10 +6,10 @@ Tailwind classes on React Native primitives: same elements, `className` in place
 
 The two Nativewind lines consume different Tailwind majors, and everything below branches on which one is installed:
 
-| Installed Nativewind | Tailwind it expects | Sleek's classes | `oklch(...)` tokens                                            |
-| -------------------- | ------------------- | --------------- | -------------------------------------------------------------- |
-| v4                   | v3 | convert v4 → v3 | convert to hex; `react-native-css-interop` rejects `oklch` |
-| v5                   | v4 | use as-is | keep as `oklch`; `react-native-css` converts them at build time |
+| Installed Nativewind | Tailwind it expects | Sleek's classes | `oklch(...)` tokens                                             |
+| -------------------- | ------------------- | --------------- | --------------------------------------------------------------- |
+| v4                   | v3                  | convert v4 → v3 | convert to hex; `react-native-css-interop` rejects `oklch`      |
+| v5                   | v4                  | use as-is       | keep as `oklch`; `react-native-css` converts them at build time |
 
 Read the resolved version from the lockfile and check registry tags when installing; choose prereleases deliberately. For v5, use the matched Nativewind/`react-native-css` pair from the [current installation guide](https://www.nativewind.dev/v5/getting-started/installation). Use Expo's installer for compatible native peers and check dependency minimums in the guide for the selected major.
 

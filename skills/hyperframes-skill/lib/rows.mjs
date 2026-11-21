@@ -27,7 +27,16 @@ export function parseCsv(text) {
         }
         quoted = false;
         i++;
-        if (i < text.length && text[i] !== "," && text[i] !== "\n" && text[i] !== "\r") throw new ToolError("input", `CSV line ${line}: text after a closing quote`);
+        if (
+          i < text.length &&
+          text[i] !== "," &&
+          text[i] !== "\n" &&
+          text[i] !== "\r"
+        )
+          throw new ToolError(
+            "input",
+            `CSV line ${line}: text after a closing quote`,
+          );
         continue;
       }
       if (c === "\n") line++;
@@ -36,7 +45,11 @@ export function parseCsv(text) {
       continue;
     }
     if (c === '"') {
-      if (field !== "") throw new ToolError("input", `CSV line ${line}: a quote inside an unquoted field`);
+      if (field !== "")
+        throw new ToolError(
+          "input",
+          `CSV line ${line}: a quote inside an unquoted field`,
+        );
       quoted = true;
       i++;
     } else if (c === ",") {
@@ -55,7 +68,11 @@ export function parseCsv(text) {
       i++;
     }
   }
-  if (quoted) throw new ToolError("input", `CSV: a quoted field is not closed (started before line ${line})`);
+  if (quoted)
+    throw new ToolError(
+      "input",
+      `CSV: a quoted field is not closed (started before line ${line})`,
+    );
   if (field !== "" || row.length) {
     row.push(field);
     rows.push(row);
@@ -68,7 +85,11 @@ export function parseCsv(text) {
  * strings; an empty cell means "not given". JSON rows keep their types.
  */
 export function loadRows(path, { encoding = "utf-8" } = {}) {
-  if (!ENCODINGS.includes(encoding)) throw new ToolError("input", `--encoding must be one of ${ENCODINGS.join(", ")}`);
+  if (!ENCODINGS.includes(encoding))
+    throw new ToolError(
+      "input",
+      `--encoding must be one of ${ENCODINGS.join(", ")}`,
+    );
   let buf;
   try {
     buf = readFileSync(path);
@@ -80,7 +101,10 @@ export function loadRows(path, { encoding = "utf-8" } = {}) {
     text = new TextDecoder(encoding, { fatal: true }).decode(buf);
   } catch {
     throw new ToolError("input", `${path} is not valid ${encoding} text`, {
-      hint: encoding === "utf-8" ? "a CSV saved by Excel on Japanese Windows is usually Shift_JIS: pass --encoding shift_jis, or save it as \"CSV UTF-8\"" : undefined,
+      hint:
+        encoding === "utf-8"
+          ? 'a CSV saved by Excel on Japanese Windows is usually Shift_JIS: pass --encoding shift_jis, or save it as "CSV UTF-8"'
+          : undefined,
     });
   }
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
@@ -92,19 +116,44 @@ export function loadRows(path, { encoding = "utf-8" } = {}) {
     } catch (e) {
       throw new ToolError("input", `${path} is not valid JSON: ${e.message}`);
     }
-    if (!Array.isArray(data) || data.some((r) => typeof r !== "object" || r === null || Array.isArray(r))) {
-      throw new ToolError("input", `${path} must hold a JSON array of objects (one per item)`);
+    if (
+      !Array.isArray(data) ||
+      data.some((r) => typeof r !== "object" || r === null || Array.isArray(r))
+    ) {
+      throw new ToolError(
+        "input",
+        `${path} must hold a JSON array of objects (one per item)`,
+      );
     }
-    return { columns: [...new Set(data.flatMap((r) => Object.keys(r)))], rows: data.map((values, n) => ({ index: n + 1, values })) };
+    return {
+      columns: [...new Set(data.flatMap((r) => Object.keys(r)))],
+      rows: data.map((values, n) => ({ index: n + 1, values })),
+    };
   }
-  if (ext !== ".csv") throw new ToolError("input", `rows must be a .csv or .json file, not ${ext || "(no extension)"}`);
+  if (ext !== ".csv")
+    throw new ToolError(
+      "input",
+      `rows must be a .csv or .json file, not ${ext || "(no extension)"}`,
+    );
   const table = parseCsv(text);
-  if (table.length < 2) throw new ToolError("input", `${path} needs a header row and at least one data row`);
+  if (table.length < 2)
+    throw new ToolError(
+      "input",
+      `${path} needs a header row and at least one data row`,
+    );
   const header = table[0].map((h) => h.trim());
   const dup = header.find((h, i) => h === "" || header.indexOf(h) !== i);
-  if (dup !== undefined) throw new ToolError("input", `${path}: header has an empty or repeated column name ("${dup}")`);
+  if (dup !== undefined)
+    throw new ToolError(
+      "input",
+      `${path}: header has an empty or repeated column name ("${dup}")`,
+    );
   const rows = table.slice(1).map((cells, n) => {
-    if (cells.length !== header.length) throw new ToolError("input", `${path} row ${n + 1}: ${cells.length} cells, the header has ${header.length}`);
+    if (cells.length !== header.length)
+      throw new ToolError(
+        "input",
+        `${path} row ${n + 1}: ${cells.length} cells, the header has ${header.length}`,
+      );
     const values = {};
     header.forEach((h, i) => {
       if (cells[i] !== "") values[h] = cells[i];

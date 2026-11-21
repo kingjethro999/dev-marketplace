@@ -16,7 +16,12 @@ export function inputSchema(cmd) {
   const required = [];
   const positional = [];
   for (const a of cmd.registeredArguments) {
-    properties[a.name()] = { type: "string", cli: `<${a.name()}>`, positional: true, description: a.description };
+    properties[a.name()] = {
+      type: "string",
+      cli: `<${a.name()}>`,
+      positional: true,
+      description: a.description,
+    };
     positional.push(a.name());
     if (a.required) required.push(a.name());
   }
@@ -72,7 +77,11 @@ export function provides() {
   return TOOLS.map((t) => t.meta.name)
     .filter((name) => name !== "doctor")
     .sort()
-    .map((name) => ({ id: `html_scene.${name}`, lifecycle: "EXPERIMENTAL", tool_id: `${PKG.name}/${name}` }));
+    .map((name) => ({
+      id: `html_scene.${name}`,
+      lifecycle: "EXPERIMENTAL",
+      tool_id: `${PKG.name}/${name}`,
+    }));
 }
 
 export function buildContract() {
@@ -84,7 +93,18 @@ export function buildContract() {
     skill_id: PKG.name,
     version: PKG.version,
     provides: provides(),
-    dependencies: [{ skill_id: "ffmpeg-skill", version_range: FFMPEG_SKILL_RANGE, range_of: "version", required: false, tools: [FFMPEG_SKILL_TOOL], used_by: [`${PKG.name}/render`], purpose: "read the rendered file back and compare it with what was requested (ffmpeg_skill.status)" }],
+    dependencies: [
+      {
+        skill_id: "ffmpeg-skill",
+        version_range: FFMPEG_SKILL_RANGE,
+        range_of: "version",
+        required: false,
+        tools: [FFMPEG_SKILL_TOOL],
+        used_by: [`${PKG.name}/render`],
+        purpose:
+          "read the rendered file back and compare it with what was requested (ffmpeg_skill.status)",
+      },
+    ],
     contract_version: CONTRACT_VERSION,
     deprecated: DEPRECATED,
     skill: {
@@ -92,12 +112,41 @@ export function buildContract() {
       version: PKG.version,
       execution_mode: "local",
       kind: "execution",
-      entrypoints: { cli: "bin/hyperframes-skill.mjs <tool> [args]", scripts: "scripts/<tool>.mjs", contract: "bin/hyperframes-skill.mjs contract --json", doctor: "scripts/doctor.mjs --json", mcp: "bin/hyperframes-skill.mjs mcp" },
-      not_provided: ["AI reasoning", "creative or compositional decisions", "scene content (copy, pacing, asset choice)", "network access", "cloud rendering", "audio mixing (later theme)", "free-form animation (only fade / slide / zoom layer transitions and pulse / bob / spin loop animations)"],
+      entrypoints: {
+        cli: "bin/hyperframes-skill.mjs <tool> [args]",
+        scripts: "scripts/<tool>.mjs",
+        contract: "bin/hyperframes-skill.mjs contract --json",
+        doctor: "scripts/doctor.mjs --json",
+        mcp: "bin/hyperframes-skill.mjs mcp",
+      },
+      not_provided: [
+        "AI reasoning",
+        "creative or compositional decisions",
+        "scene content (copy, pacing, asset choice)",
+        "network access",
+        "cloud rendering",
+        "audio mixing (later theme)",
+        "free-form animation (only fade / slide / zoom layer transitions and pulse / bob / spin loop animations)",
+      ],
     },
     requirements: REQUIREMENTS,
-    execution: { shell: false, arbitrary_executables: false, network: false, input_mutation: false, telemetry: false, argv_recorder: "render and preview run HyperFrames with a Node preload (node --require lib/argv-recorder.cjs) that records the argv of every chrome, ffmpeg and ffprobe process it starts, then starts it unchanged; no shell, no generated script (docs/design-decisions.md D10)" },
-    exit_codes: { ok: EXIT.ok, failure: EXIT.failure, doctor_unknown: EXIT.unknown, timeout: EXIT.timeout, missing_tool: EXIT.missing_tool, interrupted: "128+signal" },
+    execution: {
+      shell: false,
+      arbitrary_executables: false,
+      network: false,
+      input_mutation: false,
+      telemetry: false,
+      argv_recorder:
+        "render and preview run HyperFrames with a Node preload (node --require lib/argv-recorder.cjs) that records the argv of every chrome, ffmpeg and ffprobe process it starts, then starts it unchanged; no shell, no generated script (docs/design-decisions.md D10)",
+    },
+    exit_codes: {
+      ok: EXIT.ok,
+      failure: EXIT.failure,
+      doctor_unknown: EXIT.unknown,
+      timeout: EXIT.timeout,
+      missing_tool: EXIT.missing_tool,
+      interrupted: "128+signal",
+    },
     error: { kinds: ERROR_KINDS, retryable: ERROR_RETRYABLE },
     tools: TOOLS.map(toolSpec).sort((a, b) => a.id.localeCompare(b.id)),
   };

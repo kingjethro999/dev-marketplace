@@ -8,15 +8,41 @@
 // HYPERFRAMES_FFMPEG_PATH, HYPERFRAMES_FFPROBE_PATH). No shell script is generated, so the same
 // path runs on Linux, macOS and Windows.
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveChromium, resolveFfTool, resolveHyperframes } from "./deps.mjs";
 import { ALPHA_MODE, readAlpha } from "./alpha.mjs";
 import { probeFile, probeSequence, SEQUENCE_FRAME_RE } from "./probe.mjs";
 import { runChild, tail } from "./proc.mjs";
-import { DEFAULT_FPS, expectedFrames, readDeclared, readSegments, segmentHtmlPath, setRootAttr } from "./scene-spec.mjs";
+import {
+  DEFAULT_FPS,
+  expectedFrames,
+  readDeclared,
+  readSegments,
+  segmentHtmlPath,
+  setRootAttr,
+} from "./scene-spec.mjs";
 import { ToolError } from "./result.mjs";
 
 export const CODECS = Object.freeze({
@@ -24,11 +50,18 @@ export const CODECS = Object.freeze({
   vp9: { format: "webm", ext: ".webm", probe: "vp9", crf: [0, 63] },
   prores: { format: "mov", ext: ".mov", probe: "prores", crf: null },
   // a directory of RGBA frames, frame_000001.png ... (HyperFrames' png-sequence format)
-  png: { format: "png-sequence", ext: "", probe: "png", crf: null, sequence: true },
+  png: {
+    format: "png-sequence",
+    ext: "",
+    probe: "png",
+    crf: null,
+    sequence: true,
+  },
 });
 
 /** Does a render with this codec carry an alpha channel? h264 never; vp9, prores and png always. */
-export const codecHasAlpha = (codec) => codec === "vp9" || codec === "prores" || codec === "png";
+export const codecHasAlpha = (codec) =>
+  codec === "vp9" || codec === "prores" || codec === "png";
 
 export const DEFAULT_TIMEOUT_S = 1800;
 
@@ -52,7 +85,10 @@ export function hyperframesEnv(extra = {}) {
 }
 
 // The preload HyperFrames runs with (docs/design-decisions.md D10).
-export const ARGV_RECORDER = join(dirname(fileURLToPath(import.meta.url)), "argv-recorder.cjs");
+export const ARGV_RECORDER = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "argv-recorder.cjs",
+);
 
 /**
  * The recorder's configuration: which executables to record, under which role, and whether to
@@ -61,18 +97,31 @@ export const ARGV_RECORDER = join(dirname(fileURLToPath(import.meta.url)), "argv
  */
 export function recorderEnv(logDir, tools) {
   const table = {};
-  for (const [role, path, rc] of [["chrome", tools.chrome.path, false], ["ffmpeg", tools.ffmpeg, true], ["ffprobe", tools.ffprobe, true]]) {
+  for (const [role, path, rc] of [
+    ["chrome", tools.chrome.path, false],
+    ["ffmpeg", tools.ffmpeg, true],
+    ["ffprobe", tools.ffprobe, true],
+  ]) {
     table[path] = { role, rc };
     try {
-      const real = realpathSync(path);   // HyperFrames may start the resolved path of a symlink
+      const real = realpathSync(path); // HyperFrames may start the resolved path of a symlink
       if (real !== path) table[real] = { role, rc };
     } catch {
       /* recorded under the given path only */
     }
   }
   // in NODE_OPTIONS as well as on HyperFrames' own command line, so a Node process HyperFrames starts records too
-  const nodeOptions = [process.env.NODE_OPTIONS, `--require ${JSON.stringify(ARGV_RECORDER)}`].filter(Boolean).join(" ");
-  return { HYPERFRAMES_SKILL_ARGV_LOG: logDir, HYPERFRAMES_SKILL_ARGV_TOOLS: JSON.stringify(table), NODE_OPTIONS: nodeOptions };
+  const nodeOptions = [
+    process.env.NODE_OPTIONS,
+    `--require ${JSON.stringify(ARGV_RECORDER)}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return {
+    HYPERFRAMES_SKILL_ARGV_LOG: logDir,
+    HYPERFRAMES_SKILL_ARGV_TOOLS: JSON.stringify(table),
+    NODE_OPTIONS: nodeOptions,
+  };
 }
 
 function readArgvLog(logDir) {
@@ -84,11 +133,18 @@ function readArgvLog(logDir) {
       const argv = readFileSync(full, "utf8").split("\0");
       argv.pop();
       const rcFile = full.replace(/\.argv$/, ".rc");
-      const rc = existsSync(rcFile) ? Number(readFileSync(rcFile, "utf8")) : null;
-      const role = f.replace(/\.argv$/, "").split("-").pop();
+      const rc = existsSync(rcFile)
+        ? Number(readFileSync(rcFile, "utf8"))
+        : null;
+      const role = f
+        .replace(/\.argv$/, "")
+        .split("-")
+        .pop();
       return { t: st.mtimeNs, f, argv, rc, role };
     });
-  entries.sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : a.f.localeCompare(b.f)));
+  entries.sort((a, b) =>
+    a.t < b.t ? -1 : a.t > b.t ? 1 : a.f.localeCompare(b.f),
+  );
   return entries;
 }
 
@@ -105,7 +161,8 @@ export function snapshotDir(dir) {
       } else {
         const st = statSync(full);
         let h = null;
-        if (/\.(html?|css|m?js|json|svg)$/i.test(ent.name)) h = createHash("sha256").update(readFileSync(full)).digest("hex");
+        if (/\.(html?|css|m?js|json|svg)$/i.test(ent.name))
+          h = createHash("sha256").update(readFileSync(full)).digest("hex");
         out[rel] = `${st.size}:${st.mtimeMs}:${h ?? ""}`;
       }
     }
@@ -116,7 +173,8 @@ export function snapshotDir(dir) {
 
 function diffSnapshots(a, b) {
   const changed = [];
-  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) if (a[k] !== b[k]) changed.push(k);
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)]))
+    if (a[k] !== b[k]) changed.push(k);
   return changed.sort();
 }
 
@@ -139,16 +197,41 @@ function isInside(file, dir) {
 
 function requireTools() {
   const hf = resolveHyperframes();
-  if (!hf.path) throw new ToolError("missing_tool", "the hyperframes package is not installed", { hint: "run npm install in the hyperframes-skill directory" });
+  if (!hf.path)
+    throw new ToolError(
+      "missing_tool",
+      "the hyperframes package is not installed",
+      { hint: "run npm install in the hyperframes-skill directory" },
+    );
   const ffmpeg = resolveFfTool("ffmpeg");
-  if (!ffmpeg.path) throw new ToolError("missing_tool", `ffmpeg not found (${ffmpeg.source}: ${ffmpeg.requested})`, { hint: "install FFmpeg >= 5.0 and put it on PATH, or set HYPERFRAMES_SKILL_FFMPEG" });
+  if (!ffmpeg.path)
+    throw new ToolError(
+      "missing_tool",
+      `ffmpeg not found (${ffmpeg.source}: ${ffmpeg.requested})`,
+      {
+        hint: "install FFmpeg >= 5.0 and put it on PATH, or set HYPERFRAMES_SKILL_FFMPEG",
+      },
+    );
   const ffprobe = resolveFfTool("ffprobe");
-  if (!ffprobe.path) throw new ToolError("missing_tool", `ffprobe not found (${ffprobe.source}: ${ffprobe.requested})`, { hint: "install FFmpeg >= 5.0 (it ships ffprobe) and put it on PATH, or set HYPERFRAMES_SKILL_FFPROBE" });
+  if (!ffprobe.path)
+    throw new ToolError(
+      "missing_tool",
+      `ffprobe not found (${ffprobe.source}: ${ffprobe.requested})`,
+      {
+        hint: "install FFmpeg >= 5.0 (it ships ffprobe) and put it on PATH, or set HYPERFRAMES_SKILL_FFPROBE",
+      },
+    );
   const chrome = resolveChromium();
   if (!chrome.path || !chrome.exists) {
-    throw new ToolError("missing_tool", chrome.path ? `Chromium not found at ${chrome.path} (${chrome.source})` : "no headless-capable Chromium found", {
-      hint: "run `npx hyperframes browser ensure` to download chrome-headless-shell, or set HYPERFRAMES_BROWSER_PATH; `hyperframes-skill doctor` lists what was searched",
-    });
+    throw new ToolError(
+      "missing_tool",
+      chrome.path
+        ? `Chromium not found at ${chrome.path} (${chrome.source})`
+        : "no headless-capable Chromium found",
+      {
+        hint: "run `npx hyperframes browser ensure` to download chrome-headless-shell, or set HYPERFRAMES_BROWSER_PATH; `hyperframes-skill doctor` lists what was searched",
+      },
+    );
   }
   return { hf, ffmpeg: ffmpeg.path, ffprobe: ffprobe.path, chrome };
 }
@@ -157,31 +240,77 @@ function requireTools() {
  * Validate everything that can be validated without Chrome or ffmpeg, and work out what the
  * artifact must look like. Pure: reads files, writes nothing.
  */
-export function planRender({ sceneDir, output, codec = "h264", quality, fps, workers = "auto", overwrite = false, maxDuration }) {
+export function planRender({
+  sceneDir,
+  output,
+  codec = "h264",
+  quality,
+  fps,
+  workers = "auto",
+  overwrite = false,
+  maxDuration,
+}) {
   const dir = resolve(sceneDir);
   const index = join(dir, "index.html");
-  if (!existsSync(dir) || !statSync(dir).isDirectory()) throw new ToolError("input", `scene directory not found: ${sceneDir}`);
-  if (!existsSync(index)) throw new ToolError("input", `${sceneDir} has no index.html`, { hint: "pass the directory `scene` wrote" });
+  if (!existsSync(dir) || !statSync(dir).isDirectory())
+    throw new ToolError("input", `scene directory not found: ${sceneDir}`);
+  if (!existsSync(index))
+    throw new ToolError("input", `${sceneDir} has no index.html`, {
+      hint: "pass the directory `scene` wrote",
+    });
   if (!output) throw new ToolError("input", "-o/--output is required");
   const out = resolve(output);
   const spec = CODECS[codec];
-  if (!spec) throw new ToolError("input", `--codec must be one of ${Object.keys(CODECS).join(", ")}`);
+  if (!spec)
+    throw new ToolError(
+      "input",
+      `--codec must be one of ${Object.keys(CODECS).join(", ")}`,
+    );
   if (spec.sequence) {
-    if (Object.values(CODECS).some((c) => c.ext && extname(out).toLowerCase() === c.ext)) throw new ToolError("input", `--codec ${codec} writes a directory of PNG frames; the output ${basename(out)} has a video file extension`);
-  } else if (extname(out).toLowerCase() !== spec.ext) throw new ToolError("input", `--codec ${codec} writes ${spec.ext}; the output ${basename(out)} has a different extension`);
-  if (isInside(out, dir)) throw new ToolError("input", "the output must be outside the scene directory (the scene is an input and is never written to)");
+    if (
+      Object.values(CODECS).some(
+        (c) => c.ext && extname(out).toLowerCase() === c.ext,
+      )
+    )
+      throw new ToolError(
+        "input",
+        `--codec ${codec} writes a directory of PNG frames; the output ${basename(out)} has a video file extension`,
+      );
+  } else if (extname(out).toLowerCase() !== spec.ext)
+    throw new ToolError(
+      "input",
+      `--codec ${codec} writes ${spec.ext}; the output ${basename(out)} has a different extension`,
+    );
+  if (isInside(out, dir))
+    throw new ToolError(
+      "input",
+      "the output must be outside the scene directory (the scene is an input and is never written to)",
+    );
   checkOutputFree(out, output, spec, overwrite);
   if (quality !== undefined) {
-    if (!spec.crf) throw new ToolError("input", `--quality is not supported with --codec ${codec} (fixed ProRes 4444 profile)`);
+    if (!spec.crf)
+      throw new ToolError(
+        "input",
+        `--quality is not supported with --codec ${codec} (fixed ProRes 4444 profile)`,
+      );
     const [lo, hi] = spec.crf;
-    if (!Number.isInteger(quality) || quality < lo || quality > hi) throw new ToolError("input", `--quality for ${codec} must be an integer ${lo}..${hi} (CRF scale: lower is better)`);
+    if (!Number.isInteger(quality) || quality < lo || quality > hi)
+      throw new ToolError(
+        "input",
+        `--quality for ${codec} must be an integer ${lo}..${hi} (CRF scale: lower is better)`,
+      );
   }
-  if (workers !== "auto" && !(Number.isInteger(workers) && workers >= 1 && workers <= 8)) throw new ToolError("input", "--workers must be auto or an integer 1..8");
+  if (
+    workers !== "auto" &&
+    !(Number.isInteger(workers) && workers >= 1 && workers <= 8)
+  )
+    throw new ToolError("input", "--workers must be auto or an integer 1..8");
   const html = readFileSync(index, "utf8");
   const declared = readDeclared(html, index);
   const resolvedFps = fps ?? declared.fps ?? DEFAULT_FPS;
   let duration = declared.duration;
-  if (maxDuration !== undefined && maxDuration < duration) duration = maxDuration;
+  if (maxDuration !== undefined && maxDuration < duration)
+    duration = maxDuration;
   return {
     sceneDir: dir,
     index,
@@ -199,7 +328,12 @@ export function planRender({ sceneDir, output, codec = "h264", quality, fps, wor
       fps: resolvedFps,
       frames: expectedFrames(duration, resolvedFps),
       codec: spec.probe,
-      fps_source: fps !== undefined ? "--fps" : declared.fps !== null ? "data-fps" : "default",
+      fps_source:
+        fps !== undefined
+          ? "--fps"
+          : declared.fps !== null
+            ? "data-fps"
+            : "default",
     },
     truncated: duration < declared.duration,
   };
@@ -212,12 +346,25 @@ export function planRender({ sceneDir, output, codec = "h264", quality, fps, wor
  */
 function checkOutputFree(out, given, spec, overwrite) {
   if (!existsSync(out)) return;
-  if (!overwrite) throw new ToolError("input", `output exists: ${given}`, { hint: "pass --overwrite to replace it" });
+  if (!overwrite)
+    throw new ToolError("input", `output exists: ${given}`, {
+      hint: "pass --overwrite to replace it",
+    });
   if (!spec.sequence) return;
-  if (!statSync(out).isDirectory()) throw new ToolError("input", `--codec png writes a directory; ${given} is a file`);
+  if (!statSync(out).isDirectory())
+    throw new ToolError(
+      "input",
+      `--codec png writes a directory; ${given} is a file`,
+    );
   // regular files named like frames only: a directory called frame_000001.png would be deleted with what is inside it
-  const other = readdirSync(out, { withFileTypes: true }).filter((e) => !e.isFile() || !SEQUENCE_FRAME_RE.test(e.name)).map((e) => e.name + (e.isDirectory() ? "/" : ""));
-  if (other.length) throw new ToolError("input", `--overwrite refused: ${given} holds files that are not frames of a PNG sequence (${other.slice(0, 5).join(", ")}); nothing was touched`);
+  const other = readdirSync(out, { withFileTypes: true })
+    .filter((e) => !e.isFile() || !SEQUENCE_FRAME_RE.test(e.name))
+    .map((e) => e.name + (e.isDirectory() ? "/" : ""));
+  if (other.length)
+    throw new ToolError(
+      "input",
+      `--overwrite refused: ${given} holds files that are not frames of a PNG sequence (${other.slice(0, 5).join(", ")}); nothing was touched`,
+    );
 }
 
 /** `<dir>/<stem>.<segment><ext>` next to the full render's output. */
@@ -235,7 +382,14 @@ export function segmentOutput(output, name) {
  */
 export function planSegments(plan, { overwrite = false } = {}) {
   const segs = readSegments(plan.declared, plan.index);
-  if (!segs) throw new ToolError("input", `--segments: ${plan.index} declares no segments`, { hint: "add segments {in, loop, out} to the scene request and run scene again" });
+  if (!segs)
+    throw new ToolError(
+      "input",
+      `--segments: ${plan.index} declares no segments`,
+      {
+        hint: "add segments {in, loop, out} to the scene request and run scene again",
+      },
+    );
   const fps = plan.expected.fps;
   let startFrame = 0;
   let start = 0;
@@ -243,36 +397,94 @@ export function planSegments(plan, { overwrite = false } = {}) {
     const f = S.duration * fps;
     const frames = Math.round(f);
     // the declaration carries seconds to six decimals (1/30 s reads 0.033333), so a frame count within 1/1000 is whole
-    if (Math.abs(f - frames) > 1e-3) throw new ToolError("input", `--segments: the ${S.name} segment (${S.duration}s) is not a whole number of frames at ${fps} fps`);
-    const seg = { name: S.name, start: Number(start.toFixed(6)), duration: S.duration, start_frame: startFrame, frames, output: null, plan: null };
+    if (Math.abs(f - frames) > 1e-3)
+      throw new ToolError(
+        "input",
+        `--segments: the ${S.name} segment (${S.duration}s) is not a whole number of frames at ${fps} fps`,
+      );
+    const seg = {
+      name: S.name,
+      start: Number(start.toFixed(6)),
+      duration: S.duration,
+      start_frame: startFrame,
+      frames,
+      output: null,
+      plan: null,
+    };
     startFrame += frames;
     start += S.duration;
     if (frames === 0) return seg;
     const html = join(plan.sceneDir, segmentHtmlPath(S.name));
-    if (!existsSync(html)) throw new ToolError("input", `--segments: ${html} is missing`, { hint: "run scene again on the request; it writes one composition per segment" });
+    if (!existsSync(html))
+      throw new ToolError("input", `--segments: ${html} is missing`, {
+        hint: "run scene again on the request; it writes one composition per segment",
+      });
     const text = readFileSync(html, "utf8");
     const declared = readDeclared(text, html);
-    if (Math.abs(declared.duration - S.duration) > 1e-6) throw new ToolError("input", `--segments: ${html} declares ${declared.duration}s; the root declares the ${S.name} segment as ${S.duration}s`);
+    if (Math.abs(declared.duration - S.duration) > 1e-6)
+      throw new ToolError(
+        "input",
+        `--segments: ${html} declares ${declared.duration}s; the root declares the ${S.name} segment as ${S.duration}s`,
+      );
     const output = segmentOutput(plan.output, S.name);
-    if (isInside(output, plan.sceneDir)) throw new ToolError("input", "the output must be outside the scene directory (the scene is an input and is never written to)");
+    if (isInside(output, plan.sceneDir))
+      throw new ToolError(
+        "input",
+        "the output must be outside the scene directory (the scene is an input and is never written to)",
+      );
     checkOutputFree(output, output, plan.spec, overwrite);
     seg.output = output;
-    seg.plan = { ...plan, output, html: text, declared, stageHtml: text, truncated: false, expected: { ...plan.expected, duration: S.duration, frames } };
+    seg.plan = {
+      ...plan,
+      output,
+      html: text,
+      declared,
+      stageHtml: text,
+      truncated: false,
+      expected: { ...plan.expected, duration: S.duration, frames },
+    };
     return seg;
   });
-  if (startFrame !== plan.expected.frames) throw new ToolError("input", `--segments: the segments add up to ${startFrame} frames; the scene has ${plan.expected.frames}`);
+  if (startFrame !== plan.expected.frames)
+    throw new ToolError(
+      "input",
+      `--segments: the segments add up to ${startFrame} frames; the scene has ${plan.expected.frames}`,
+    );
   return out;
 }
 
 export function hyperframesArgv(hfBin, plan, renderDir, { preset } = {}) {
-  const argv = [process.execPath, "--require", ARGV_RECORDER, hfBin, "render", renderDir, "-o", plan.output, "--fps", String(plan.expected.fps), "--format", plan.spec.format, "--workers", String(plan.workers), "--no-browser-gpu", "--no-best-effort", "--sdr", "--quiet"];
+  const argv = [
+    process.execPath,
+    "--require",
+    ARGV_RECORDER,
+    hfBin,
+    "render",
+    renderDir,
+    "-o",
+    plan.output,
+    "--fps",
+    String(plan.expected.fps),
+    "--format",
+    plan.spec.format,
+    "--workers",
+    String(plan.workers),
+    "--no-browser-gpu",
+    "--no-best-effort",
+    "--sdr",
+    "--quiet",
+  ];
   if (preset) argv.push("--quality", preset);
   if (plan.quality !== undefined) argv.push("--crf", String(plan.quality));
   return argv;
 }
 
 /** Run a plan for real. Returns {probe, verification, hyperframes}; throws ToolError on failure. */
-export async function executeRender(ctx, plan, { timeoutS = DEFAULT_TIMEOUT_S, preset } = {}) {
+export async function executeRender(
+  ctx,
+  plan,
+  { timeoutS = DEFAULT_TIMEOUT_S, preset } = {},
+) {
   const tools = requireTools();
   const before = snapshotDir(plan.sceneDir);
   const work = mkdtempSync(join(tmpdir(), "hyperframes-skill-"));
@@ -290,7 +502,12 @@ export async function executeRender(ctx, plan, { timeoutS = DEFAULT_TIMEOUT_S, p
       // scene directory itself is never modified.
       renderDir = join(work, "scene");
       cpSync(plan.sceneDir, renderDir, { recursive: true });
-      const staged = setRootAttr(plan.html, plan.declared, "data-duration", String(plan.expected.duration));
+      const staged = setRootAttr(
+        plan.html,
+        plan.declared,
+        "data-duration",
+        String(plan.expected.duration),
+      );
       writeFileSync(join(renderDir, "index.html"), staged.html);
     }
     const env = hyperframesEnv({
@@ -301,23 +518,43 @@ export async function executeRender(ctx, plan, { timeoutS = DEFAULT_TIMEOUT_S, p
     });
     mkdirSync(dirname(plan.output), { recursive: true });
     // --overwrite of a PNG sequence: checkOutputFree made sure it holds only frames
-    if (plan.spec.sequence && existsSync(plan.output)) rmSync(plan.output, { recursive: true });
+    if (plan.spec.sequence && existsSync(plan.output))
+      rmSync(plan.output, { recursive: true });
     const argv = hyperframesArgv(tools.hf.path, plan, renderDir, { preset });
     const hfEntry = ctx.record(argv, { exit_code: null });
-    ctx.info(`rendering ${plan.index} -> ${plan.output} (${plan.expected.frames} frames @ ${plan.expected.fps} fps)`);
+    ctx.info(
+      `rendering ${plan.index} -> ${plan.output} (${plan.expected.frames} frames @ ${plan.expected.fps} fps)`,
+    );
     let r;
     try {
       r = await runChild(argv, { env, cwd: work, timeoutMs: timeoutS * 1000 });
     } finally {
-      for (const e of readArgvLog(logDir)) ctx.record(e.argv, { via: "hyperframes", role: e.role, exit_code: e.rc });
+      for (const e of readArgvLog(logDir))
+        ctx.record(e.argv, {
+          via: "hyperframes",
+          role: e.role,
+          exit_code: e.rc,
+        });
     }
     hfEntry.exit_code = r.status;
-    const hyperframes = { version: tools.hf.version, chromium: { path: tools.chrome.path, source: tools.chrome.source } };
+    const hyperframes = {
+      version: tools.hf.version,
+      chromium: { path: tools.chrome.path, source: tools.chrome.source },
+    };
     if (r.status !== 0) {
       const failure = classifyFailure(ctx.commands, r.stderr + "\n" + r.stdout);
-      throw new ToolError(failure.kind, `hyperframes render exited ${r.status ?? r.signal}: ${failure.message}`, {
-        details: { hyperframes, classification: failure.evidence, hyperframes_error: failure.message, stderr_tail: tail(r.stderr + "\n" + r.stdout) },
-      });
+      throw new ToolError(
+        failure.kind,
+        `hyperframes render exited ${r.status ?? r.signal}: ${failure.message}`,
+        {
+          details: {
+            hyperframes,
+            classification: failure.evidence,
+            hyperframes_error: failure.message,
+            stderr_tail: tail(r.stderr + "\n" + r.stdout),
+          },
+        },
+      );
     }
     return { hyperframes, ...verifyArtifact(ctx, plan, before) };
   } finally {
@@ -350,8 +587,15 @@ export function hyperframesFailureMessage(text) {
  * Anything else is `render` (page load / capture). docs/contract.md, "error.kind".
  */
 export function classifyFailure(commands, output) {
-  const message = hyperframesFailureMessage(output) ?? "no failure message from hyperframes";
-  const ffmpegFailed = commands.filter((c) => c.via === "hyperframes" && c.role === "ffmpeg" && c.exit_code !== null && c.exit_code !== 0);
+  const message =
+    hyperframesFailureMessage(output) ?? "no failure message from hyperframes";
+  const ffmpegFailed = commands.filter(
+    (c) =>
+      c.via === "hyperframes" &&
+      c.role === "ffmpeg" &&
+      c.exit_code !== null &&
+      c.exit_code !== 0,
+  );
   const saysEncode = /ffmpeg|encod/i.test(message);
   const kind = saysEncode && ffmpegFailed.length > 0 ? "encode" : "render";
   return {
@@ -369,7 +613,13 @@ export function verifyArtifact(ctx, plan, before) {
   if (plan.spec.sequence) return verifySequence(ctx, plan, before);
   const steps = [];
   const exists = existsSync(plan.output) && statSync(plan.output).size > 0;
-  steps.push({ step: "exists", ok: exists, detail: exists ? `${statSync(plan.output).size} bytes` : "output missing or empty" });
+  steps.push({
+    step: "exists",
+    ok: exists,
+    detail: exists
+      ? `${statSync(plan.output).size} bytes`
+      : "output missing or empty",
+  });
   let probe = null;
   if (exists) {
     try {
@@ -383,13 +633,46 @@ export function verifyArtifact(ctx, plan, before) {
     const v = probe.video;
     const E = plan.expected;
     const tol = 1 / E.fps + 0.001;
-    steps.push({ step: "probe", ok: !!v, detail: v ? "video stream read" : "no video stream" });
+    steps.push({
+      step: "probe",
+      ok: !!v,
+      detail: v ? "video stream read" : "no video stream",
+    });
     if (v) {
-      steps.push({ step: "codec", ok: v.codec === E.codec, expected: E.codec, actual: v.codec });
-      steps.push({ step: "resolution", ok: v.width === E.width && v.height === E.height, expected: `${E.width}x${E.height}`, actual: `${v.width}x${v.height}` });
-      steps.push({ step: "fps", ok: v.fps !== null && Math.abs(v.fps - E.fps) < 0.01, expected: E.fps, actual: v.fps });
-      steps.push({ step: "frames", ok: v.frames === E.frames, expected: E.frames, actual: v.frames, source: v.frames_source });
-      steps.push({ step: "duration", ok: probe.duration !== null && Math.abs(probe.duration - E.duration) <= tol, expected: E.duration, actual: probe.duration, tolerance: Number(tol.toFixed(4)) });
+      steps.push({
+        step: "codec",
+        ok: v.codec === E.codec,
+        expected: E.codec,
+        actual: v.codec,
+      });
+      steps.push({
+        step: "resolution",
+        ok: v.width === E.width && v.height === E.height,
+        expected: `${E.width}x${E.height}`,
+        actual: `${v.width}x${v.height}`,
+      });
+      steps.push({
+        step: "fps",
+        ok: v.fps !== null && Math.abs(v.fps - E.fps) < 0.01,
+        expected: E.fps,
+        actual: v.fps,
+      });
+      steps.push({
+        step: "frames",
+        ok: v.frames === E.frames,
+        expected: E.frames,
+        actual: v.frames,
+        source: v.frames_source,
+      });
+      steps.push({
+        step: "duration",
+        ok:
+          probe.duration !== null &&
+          Math.abs(probe.duration - E.duration) <= tol,
+        expected: E.duration,
+        actual: probe.duration,
+        tolerance: Number(tol.toFixed(4)),
+      });
       alpha = alphaStep(ctx, plan, plan.output, v, steps);
     }
   }
@@ -399,7 +682,13 @@ export function verifyArtifact(ctx, plan, before) {
 
 function inputStep(plan, before, steps) {
   const changed = diffSnapshots(before, snapshotDir(plan.sceneDir));
-  steps.push({ step: "input_preserved", ok: changed.length === 0, detail: changed.length ? `changed: ${changed.slice(0, 20).join(", ")}` : "scene directory unchanged (names, sizes, mtimes; sha256 of markup files)" });
+  steps.push({
+    step: "input_preserved",
+    ok: changed.length === 0,
+    detail: changed.length
+      ? `changed: ${changed.slice(0, 20).join(", ")}`
+      : "scene directory unchanged (names, sizes, mtimes; sha256 of markup files)",
+  });
 }
 
 /**
@@ -409,7 +698,19 @@ function inputStep(plan, before, steps) {
 function alphaStep(ctx, plan, frameFile, video, steps) {
   if (!codecHasAlpha(plan.codec)) return { mode: "none", channel: false };
   const a = readAlpha(ctx, frameFile, video);
-  steps.push({ step: "alpha", ok: a.channel === true, expected: `an alpha channel (${ALPHA_MODE})`, actual: a.channel === true ? { min: a.first_frame.min, max: a.first_frame.max, corners: a.first_frame.corners } : a.reason });
+  steps.push({
+    step: "alpha",
+    ok: a.channel === true,
+    expected: `an alpha channel (${ALPHA_MODE})`,
+    actual:
+      a.channel === true
+        ? {
+            min: a.first_frame.min,
+            max: a.first_frame.max,
+            corners: a.first_frame.corners,
+          }
+        : a.reason,
+  });
   return a;
 }
 
@@ -421,17 +722,44 @@ function verifySequence(ctx, plan, before) {
   let alpha = null;
   try {
     probe = probeSequence(ctx, plan.output);
-    steps.push({ step: "exists", ok: true, detail: `${probe.video?.frames ?? 0} frame files, ${probe.size_bytes} bytes` });
+    steps.push({
+      step: "exists",
+      ok: true,
+      detail: `${probe.video?.frames ?? 0} frame files, ${probe.size_bytes} bytes`,
+    });
   } catch (e) {
     steps.push({ step: "exists", ok: false, detail: e.message });
   }
   if (probe) {
     const v = probe.video;
-    steps.push({ step: "probe", ok: !!v, detail: v ? `first frame read: ${probe.first_frame}` : "first frame has no image stream" });
+    steps.push({
+      step: "probe",
+      ok: !!v,
+      detail: v
+        ? `first frame read: ${probe.first_frame}`
+        : "first frame has no image stream",
+    });
     if (v) {
-      steps.push({ step: "codec", ok: v.codec === E.codec, expected: E.codec, actual: v.codec });
-      steps.push({ step: "resolution", ok: v.width === E.width && v.height === E.height, expected: `${E.width}x${E.height}`, actual: `${v.width}x${v.height}` });
-      steps.push({ step: "frames", ok: v.frames === E.frames && probe.contiguous, expected: E.frames, actual: v.frames, source: "files", detail: probe.contiguous ? "numbered 1..N" : "numbering has a gap" });
+      steps.push({
+        step: "codec",
+        ok: v.codec === E.codec,
+        expected: E.codec,
+        actual: v.codec,
+      });
+      steps.push({
+        step: "resolution",
+        ok: v.width === E.width && v.height === E.height,
+        expected: `${E.width}x${E.height}`,
+        actual: `${v.width}x${v.height}`,
+      });
+      steps.push({
+        step: "frames",
+        ok: v.frames === E.frames && probe.contiguous,
+        expected: E.frames,
+        actual: v.frames,
+        source: "files",
+        detail: probe.contiguous ? "numbered 1..N" : "numbering has a gap",
+      });
       alpha = alphaStep(ctx, plan, probe.first_frame, v, steps);
     }
   }

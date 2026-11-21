@@ -21,21 +21,21 @@
    Run it with its own cache folder and port, so it never fights the
    project's own dev server:
    npx vite --config scratch/vite.preview.mjs  (cacheDir: 'scratch/cache') */
-export function htmlDemoPreview({ theme = 'dark' } = {}) {
+export function htmlDemoPreview({ theme = "dark" } = {}) {
   return {
-    name: 'html-demo-preview',
+    name: "html-demo-preview",
     configureServer(server) {
-      server.middlewares.use('/preview', async (req, res) => {
-        const entry = new URL(req.url, 'http://x').searchParams.get('entry');
+      server.middlewares.use("/preview", async (req, res) => {
+        const entry = new URL(req.url, "http://x").searchParams.get("entry");
         if (!entry) {
           res.statusCode = 400;
-          return res.end('Add ?entry=<absolute path to an entry .jsx>');
+          return res.end("Add ?entry=<absolute path to an entry .jsx>");
         }
         const html = await server.transformIndexHtml(
           req.url,
           `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>preview</title></head><body style="margin:0;background:#060607"><div id="root"></div><script type="module" src="/@fs${entry}"></script></body></html>`,
         );
-        res.setHeader('Content-Type', 'text/html');
+        res.setHeader("Content-Type", "text/html");
         res.end(html);
       });
     },

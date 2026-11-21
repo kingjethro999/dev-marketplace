@@ -6,6 +6,7 @@ deterministically, safely, and verifiably.
 ## Scope
 
 This project intentionally does **not**:
+
 - add AI/LLM-based scene understanding, highlight detection, or content judgement
 - fall back to raw Chrome/ffmpeg shell invocations outside the toolset's own scripts
 - depend on cloud services or require API keys
@@ -13,7 +14,7 @@ This project intentionally does **not**:
 - make creative or compositional decisions on the calling agent's behalf
 
 If your idea needs one of these, it likely belongs in a different, complementary skill rather
-than this one. The calling agent decides *what a scene should say* (copy, pacing, which assets
+than this one. The calling agent decides _what a scene should say_ (copy, pacing, which assets
 go where); this toolset only turns an already-decided, structured scene description into valid
 HyperFrames markup, renders it, and reports back.
 

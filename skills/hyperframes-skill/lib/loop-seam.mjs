@@ -39,10 +39,25 @@ export function seamMeter(tolerance = SEAM_TOLERANCE) {
       n++;
     },
     result() {
-      if (n === 0) return { measured: false, reason: "no frame was decoded", frames: 0, tolerance, ok: false };
+      if (n === 0)
+        return {
+          measured: false,
+          reason: "no frame was decoded",
+          frames: 0,
+          tolerance,
+          ok: false,
+        };
       const wrap = n < 2 ? 0 : diff(prev, first);
       const r = (v) => Number(v.toFixed(4));
-      return { measured: true, frames: n, wrap_diff: r(wrap), max_step_diff: r(max), mean_step_diff: r(n < 2 ? 0 : sum / (n - 1)), tolerance, ok: wrap <= max + tolerance };
+      return {
+        measured: true,
+        frames: n,
+        wrap_diff: r(wrap),
+        max_step_diff: r(max),
+        mean_step_diff: r(n < 2 ? 0 : sum / (n - 1)),
+        tolerance,
+        ok: wrap <= max + tolerance,
+      };
     },
   };
 }
@@ -58,21 +73,47 @@ export function seamFromFrames(frames, tolerance = SEAM_TOLERANCE) {
  * Decode `file` and measure its wrap, frame by frame as ffmpeg writes them (a long loop is never
  * held in memory). Records the ffmpeg command in ctx.
  */
-export function measureLoopSeam(ctx, file, { tolerance = SEAM_TOLERANCE } = {}) {
+export function measureLoopSeam(
+  ctx,
+  file,
+  { tolerance = SEAM_TOLERANCE } = {},
+) {
   const ff = resolveFfTool("ffmpeg");
-  if (!ff.path) return Promise.resolve({ measured: false, reason: `ffmpeg not found (${ff.source}: ${ff.requested})`, ok: false });
-  const argv = [ff.path, "-hide_banner", "-nostdin", "-v", "error", "-i", file, "-an", "-vf", `scale=${SEAM_SIZE}:${SEAM_SIZE}:flags=area,format=gray`, "-f", "rawvideo", "-"];
+  if (!ff.path)
+    return Promise.resolve({
+      measured: false,
+      reason: `ffmpeg not found (${ff.source}: ${ff.requested})`,
+      ok: false,
+    });
+  const argv = [
+    ff.path,
+    "-hide_banner",
+    "-nostdin",
+    "-v",
+    "error",
+    "-i",
+    file,
+    "-an",
+    "-vf",
+    `scale=${SEAM_SIZE}:${SEAM_SIZE}:flags=area,format=gray`,
+    "-f",
+    "rawvideo",
+    "-",
+  ];
   const entry = ctx.record(argv, { exit_code: null });
   const size = SEAM_SIZE * SEAM_SIZE;
   const meter = seamMeter(tolerance);
   return new Promise((done) => {
-    const child = spawn(argv[0], argv.slice(1), { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(argv[0], argv.slice(1), {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let pending = Buffer.alloc(0);
     let stderr = "";
     child.stdout.on("data", (chunk) => {
       pending = pending.length ? Buffer.concat([pending, chunk]) : chunk;
       let o = 0;
-      for (; o + size <= pending.length; o += size) meter.push(pending.subarray(o, o + size));
+      for (; o + size <= pending.length; o += size)
+        meter.push(pending.subarray(o, o + size));
       pending = pending.subarray(o);
     });
     child.stderr.on("data", (d) => {
@@ -80,11 +121,20 @@ export function measureLoopSeam(ctx, file, { tolerance = SEAM_TOLERANCE } = {}) 
     });
     child.on("error", (e) => {
       entry.exit_code = null;
-      done({ measured: false, reason: `ffmpeg did not start: ${e.message}`, ok: false });
+      done({
+        measured: false,
+        reason: `ffmpeg did not start: ${e.message}`,
+        ok: false,
+      });
     });
     child.on("close", (code) => {
       entry.exit_code = code;
-      if (code !== 0) return done({ measured: false, reason: `ffmpeg could not decode ${file}: ${stderr.trim().slice(0, 300)}`, ok: false });
+      if (code !== 0)
+        return done({
+          measured: false,
+          reason: `ffmpeg could not decode ${file}: ${stderr.trim().slice(0, 300)}`,
+          ok: false,
+        });
       done(meter.result());
     });
   });

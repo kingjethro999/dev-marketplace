@@ -4,12 +4,12 @@ The full explainer pipeline with templates, timing math, and a worked example.
 
 ## 1. Script formula: problem → solution → how → payoff
 
-| Beat | Goal | Runtime share | Notes |
-|---|---|---|---|
-| Hook/Problem | Make the viewer feel the pain in one line | ~20% | Open mid-tension; no logo-first intros |
-| Solution | Name the product/idea as the fix | ~15% | One sentence, plain language |
-| How | Show the mechanism in 1–3 concrete steps | ~45% | This is the meat; each step = one scene |
-| Payoff + CTA | The outcome and the single next action | ~20% | One CTA, not three |
+| Beat         | Goal                                      | Runtime share | Notes                                   |
+| ------------ | ----------------------------------------- | ------------- | --------------------------------------- |
+| Hook/Problem | Make the viewer feel the pain in one line | ~20%          | Open mid-tension; no logo-first intros  |
+| Solution     | Name the product/idea as the fix          | ~15%          | One sentence, plain language            |
+| How          | Show the mechanism in 1–3 concrete steps  | ~45%          | This is the meat; each step = one scene |
+| Payoff + CTA | The outcome and the single next action    | ~20%          | One CTA, not three                      |
 
 Write VO first, in spoken language: contractions, short sentences, one idea per line. Read aloud and time with a stopwatch before touching any animation.
 
@@ -90,32 +90,55 @@ Progressive diagram reveal (nodes → edges → labels):
 ```js
 import gsap from "gsap";
 gsap.set(".edge", { strokeDasharray: 1, strokeDashoffset: 1 });
-gsap.timeline({ defaults: { ease: "power2.out" } })
-  .from(".node",  { opacity: 0, scale: .85, transformOrigin: "center",
-                    duration: .45, stagger: .3, ease: "back.out(1.5)" })
-  .to(".edge",   { strokeDashoffset: 0, duration: .5, stagger: .3 }, "-=0.6")
-  .from(".label", { opacity: 0, y: 6, duration: .3, stagger: .12 }, "-=0.4");
+gsap
+  .timeline({ defaults: { ease: "power2.out" } })
+  .from(".node", {
+    opacity: 0,
+    scale: 0.85,
+    transformOrigin: "center",
+    duration: 0.45,
+    stagger: 0.3,
+    ease: "back.out(1.5)",
+  })
+  .to(".edge", { strokeDashoffset: 0, duration: 0.5, stagger: 0.3 }, "-=0.6")
+  .from(".label", { opacity: 0, y: 6, duration: 0.3, stagger: 0.12 }, "-=0.4");
 ```
 
 Kinetic keyword stagger:
 
 ```js
-gsap.from(".headline .word", { yPercent: 120, opacity: 0,
-  duration: .4, stagger: .05, ease: "power3.out" });
+gsap.from(".headline .word", {
+  yPercent: 120,
+  opacity: 0,
+  duration: 0.4,
+  stagger: 0.05,
+  ease: "power3.out",
+});
 ```
 
 Bar grow + count-up stat:
 
 ```css
-.bar{ transform:scaleY(0); transform-origin:bottom;
-      transition:transform .6s cubic-bezier(.22,1,.36,1); }
-.bar.in{ transform:scaleY(1); }
+.bar {
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bar.in {
+  transform: scaleY(1);
+}
 ```
 
 ```js
-function countUp(el,to,dur=1200){const t0=performance.now();(function f(n){
-  const k=Math.min(1,(n-t0)/dur),e=1-Math.pow(1-k,3);
-  el.textContent=Math.round(to*e).toLocaleString();if(k<1)requestAnimationFrame(f);})(t0);}
+function countUp(el, to, dur = 1200) {
+  const t0 = performance.now();
+  (function f(n) {
+    const k = Math.min(1, (n - t0) / dur),
+      e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(to * e).toLocaleString();
+    if (k < 1) requestAnimationFrame(f);
+  })(t0);
+}
 ```
 
 Remotion caption-from-timing (single source of truth):
@@ -127,9 +150,10 @@ const cues = [
   { from: 2.8, to: 5.4, text: "Shipfast automates the whole pipeline." },
 ];
 export const Captions = () => {
-  const frame = useCurrentFrame(); const { fps } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const t = frame / fps;
-  const cue = cues.find(c => t >= c.from && t <= c.to);
+  const cue = cues.find((c) => t >= c.from && t <= c.to);
   return cue ? <div className="cap">{cue.text}</div> : null;
 };
 ```
@@ -170,4 +194,5 @@ SAFE      : keep text inside 90% center safe area for multi-platform crops
 Consistency is what makes a string of scenes feel like a single film. Reuse the same enter/exit transitions and the same curve everywhere; vary content, not grammar.
 
 ---
+
 Lock the script and the VO timing first, and the scenes assemble cleanly. Built by **[iart.ai](https://iart.ai/?utm_source=github&utm_medium=readme&utm_campaign=explainer-video-skills&utm_content=skill_footer&utm_term=explainer-video)** — the AI motion agent for editable, on-brand motion graphics.

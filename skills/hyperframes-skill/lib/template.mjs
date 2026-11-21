@@ -15,7 +15,8 @@ const NAME_RE = /^[a-z][a-z0-9-]{0,63}$/;
 const PLACEHOLDER = /\{\{([a-z_][a-z0-9_]*)\}\}/g;
 const VALUE_TYPES = ["string", "number", "color"];
 // `kit` in a template: value name -> the kit@1 field that fills it (lib/kit.mjs).
-const KIT_FIELD_RE = /^(colors\.(primary|secondary|text|outline|background|accent)|logo)$/;
+const KIT_FIELD_RE =
+  /^(colors\.(primary|secondary|text|outline|background|accent)|logo)$/;
 
 export function listTemplates() {
   return readdirSync(TEMPLATE_DIR)
@@ -25,32 +26,68 @@ export function listTemplates() {
 }
 
 export function loadTemplate(name) {
-  if (!NAME_RE.test(name ?? "")) throw new ToolError("input", `template name must match ${NAME_RE}`);
+  if (!NAME_RE.test(name ?? ""))
+    throw new ToolError("input", `template name must match ${NAME_RE}`);
   const file = join(TEMPLATE_DIR, `${name}.json`);
   if (!existsSync(file)) {
-    const known = readdirSync(TEMPLATE_DIR).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5));
-    throw new ToolError("input", `no template named "${name}" (templates: ${known.join(", ")})`);
+    const known = readdirSync(TEMPLATE_DIR)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => f.slice(0, -5));
+    throw new ToolError(
+      "input",
+      `no template named "${name}" (templates: ${known.join(", ")})`,
+    );
   }
   const t = JSON.parse(readFileSync(file, "utf8"));
-  if (t.template_version !== TEMPLATE_VERSION || t.name !== name) throw new ToolError("internal", `templates/${name}.json is malformed (template_version / name)`);
+  if (t.template_version !== TEMPLATE_VERSION || t.name !== name)
+    throw new ToolError(
+      "internal",
+      `templates/${name}.json is malformed (template_version / name)`,
+    );
   for (const [k, field] of Object.entries(t.kit ?? {})) {
-    if (!(k in t.values) || !KIT_FIELD_RE.test(field) || t.values[k].type !== (field === "logo" ? "string" : "color")) throw new ToolError("internal", `templates/${name}.json: kit maps ${field} to ${k}, which is not a matching value`);
+    if (
+      !(k in t.values) ||
+      !KIT_FIELD_RE.test(field) ||
+      t.values[k].type !== (field === "logo" ? "string" : "color")
+    )
+      throw new ToolError(
+        "internal",
+        `templates/${name}.json: kit maps ${field} to ${k}, which is not a matching value`,
+      );
   }
   return t;
 }
 
 function coerce(key, spec, raw, fromCli) {
   if (spec.type === "number") {
-    const n = typeof raw === "number" ? raw : fromCli && typeof raw === "string" && raw.trim() !== "" ? Number(raw) : NaN;
+    const n =
+      typeof raw === "number"
+        ? raw
+        : fromCli && typeof raw === "string" && raw.trim() !== ""
+          ? Number(raw)
+          : NaN;
     if (!Number.isFinite(n)) return { error: `${key} must be a number` };
-    if (spec.min !== undefined && n < spec.min) return { error: `${key} must be >= ${spec.min}` };
-    if (spec.max !== undefined && n > spec.max) return { error: `${key} must be <= ${spec.max}` };
+    if (spec.min !== undefined && n < spec.min)
+      return { error: `${key} must be >= ${spec.min}` };
+    if (spec.max !== undefined && n > spec.max)
+      return { error: `${key} must be <= ${spec.max}` };
     return { value: n };
   }
   if (typeof raw !== "string") return { error: `${key} must be a string` };
-  if (spec.type === "color") return COLOR_RE.test(raw) ? { value: raw } : { error: `${key} must be a colour (#rgb, #rrggbb, #rrggbbaa, rgb(), rgba(), transparent)` };
-  if (raw.trim() === "") return { error: `${key} must not be empty (leave an optional value out instead)` };
-  if (spec.max_length !== undefined && [...raw].length > spec.max_length) return { error: `${key} is ${[...raw].length} characters; this template allows ${spec.max_length}` };
+  if (spec.type === "color")
+    return COLOR_RE.test(raw)
+      ? { value: raw }
+      : {
+          error: `${key} must be a colour (#rgb, #rrggbb, #rrggbbaa, rgb(), rgba(), transparent)`,
+        };
+  if (raw.trim() === "")
+    return {
+      error: `${key} must not be empty (leave an optional value out instead)`,
+    };
+  if (spec.max_length !== undefined && [...raw].length > spec.max_length)
+    return {
+      error: `${key} is ${[...raw].length} characters; this template allows ${spec.max_length}`,
+    };
   return { value: raw };
 }
 
@@ -63,12 +100,21 @@ export function resolveValues(template, given, cliKeys = new Set()) {
   const errs = [];
   const values = {};
   const omitted = [];
-  for (const k of Object.keys(given)) if (!(k in template.values)) errs.push(`unknown value "${k}" (this template takes: ${Object.keys(template.values).join(", ")})`);
+  for (const k of Object.keys(given))
+    if (!(k in template.values))
+      errs.push(
+        `unknown value "${k}" (this template takes: ${Object.keys(template.values).join(", ")})`,
+      );
   for (const [k, spec] of Object.entries(template.values)) {
-    if (!VALUE_TYPES.includes(spec.type)) throw new ToolError("internal", `templates/${template.name}.json: value ${k} has unknown type ${spec.type}`);
+    if (!VALUE_TYPES.includes(spec.type))
+      throw new ToolError(
+        "internal",
+        `templates/${template.name}.json: value ${k} has unknown type ${spec.type}`,
+      );
     if (given[k] === undefined) {
       if (spec.default !== undefined) values[k] = spec.default;
-      else if (spec.required) errs.push(`${k} is required: ${spec.description}`);
+      else if (spec.required)
+        errs.push(`${k} is required: ${spec.description}`);
       else omitted.push(k);
       continue;
     }
@@ -76,7 +122,12 @@ export function resolveValues(template, given, cliKeys = new Set()) {
     if (r.error) errs.push(r.error);
     else values[k] = r.value;
   }
-  if (errs.length) throw new ToolError("input", `invalid template values:\n  - ${errs.join("\n  - ")}`, { details: { problems: errs } });
+  if (errs.length)
+    throw new ToolError(
+      "input",
+      `invalid template values:\n  - ${errs.join("\n  - ")}`,
+      { details: { problems: errs } },
+    );
   return { values, omitted };
 }
 
@@ -84,16 +135,31 @@ function substitute(node, values, where) {
   if (typeof node === "string") {
     const whole = /^\{\{([a-z_][a-z0-9_]*)\}\}$/.exec(node);
     if (whole) {
-      if (!(whole[1] in values)) throw new ToolError("internal", `template placeholder {{${whole[1]}}} at ${where} has no value`);
+      if (!(whole[1] in values))
+        throw new ToolError(
+          "internal",
+          `template placeholder {{${whole[1]}}} at ${where} has no value`,
+        );
       return values[whole[1]];
     }
     return node.replace(PLACEHOLDER, (_, k) => {
-      if (!(k in values)) throw new ToolError("internal", `template placeholder {{${k}}} at ${where} has no value`);
+      if (!(k in values))
+        throw new ToolError(
+          "internal",
+          `template placeholder {{${k}}} at ${where} has no value`,
+        );
       return String(values[k]);
     });
   }
-  if (Array.isArray(node)) return node.map((v, i) => substitute(v, values, `${where}[${i}]`));
-  if (node && typeof node === "object") return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, substitute(v, values, `${where}.${k}`)]));
+  if (Array.isArray(node))
+    return node.map((v, i) => substitute(v, values, `${where}[${i}]`));
+  if (node && typeof node === "object")
+    return Object.fromEntries(
+      Object.entries(node).map(([k, v]) => [
+        k,
+        substitute(v, values, `${where}.${k}`),
+      ]),
+    );
   return node;
 }
 
@@ -104,10 +170,16 @@ export const CUSTOM_FONT_FAMILY = "HFS Custom";
  * so the template's text renders with it on any machine. The file serves every weight.
  */
 export function applyFont(request, fontPath) {
-  request.fonts = [...(request.fonts ?? []), { family: CUSTOM_FONT_FAMILY, src: resolve(fontPath) }];
+  request.fonts = [
+    ...(request.fonts ?? []),
+    { family: CUSTOM_FONT_FAMILY, src: resolve(fontPath) },
+  ];
   for (const L of request.layers) {
     if (L.type !== "text") continue;
-    L.style = { ...(L.style ?? {}), font_family: `${CUSTOM_FONT_FAMILY}, ${L.style?.font_family ?? "sans-serif"}` };
+    L.style = {
+      ...(L.style ?? {}),
+      font_family: `${CUSTOM_FONT_FAMILY}, ${L.style?.font_family ?? "sans-serif"}`,
+    };
   }
   return request;
 }
@@ -124,19 +196,42 @@ export function deriveValues(template, values) {
   const all = { ...values };
   const errs = [];
   for (const [name, D] of Object.entries(template.derived ?? {})) {
-    if (name in template.values) throw new ToolError("internal", `templates/${template.name}.json: derived value ${name} shadows a value`);
+    if (name in template.values)
+      throw new ToolError(
+        "internal",
+        `templates/${template.name}.json: derived value ${name} shadows a value`,
+      );
     const op = D.add ? "add" : D.sub ? "sub" : null;
-    if (!op || !Array.isArray(D[op]) || D[op].length === 0) throw new ToolError("internal", `templates/${template.name}.json: derived value ${name} needs add or sub`);
+    if (!op || !Array.isArray(D[op]) || D[op].length === 0)
+      throw new ToolError(
+        "internal",
+        `templates/${template.name}.json: derived value ${name} needs add or sub`,
+      );
     const frames = D[op].map((x) => {
       const v = typeof x === "number" ? x : all[x];
-      if (typeof v !== "number") throw new ToolError("internal", `templates/${template.name}.json: derived value ${name} uses ${x}, which is not a number value`);
+      if (typeof v !== "number")
+        throw new ToolError(
+          "internal",
+          `templates/${template.name}.json: derived value ${name} uses ${x}, which is not a number value`,
+        );
       return Math.round(v * fps);
     });
-    const f = op === "add" ? frames.reduce((a, b) => a + b, 0) : frames.slice(1).reduce((a, b) => a - b, frames[0]);
-    if (f <= 0) errs.push(`${name} (${D.description ?? `${op} of ${D[op].join(", ")}`}) comes to ${f} frames at ${fps} fps; it must be at least 1 frame`);
+    const f =
+      op === "add"
+        ? frames.reduce((a, b) => a + b, 0)
+        : frames.slice(1).reduce((a, b) => a - b, frames[0]);
+    if (f <= 0)
+      errs.push(
+        `${name} (${D.description ?? `${op} of ${D[op].join(", ")}`}) comes to ${f} frames at ${fps} fps; it must be at least 1 frame`,
+      );
     all[name] = f / fps;
   }
-  if (errs.length) throw new ToolError("input", `invalid template values:\n  - ${errs.join("\n  - ")}`, { details: { problems: errs } });
+  if (errs.length)
+    throw new ToolError(
+      "input",
+      `invalid template values:\n  - ${errs.join("\n  - ")}`,
+      { details: { problems: errs } },
+    );
   return all;
 }
 
@@ -159,7 +254,8 @@ export function fillTemplate(template, values, omitted, { font } = {}) {
   const filled = substitute(req, deriveValues(template, values), "request");
   for (const L of filled.layers) {
     if (!L.srcFrom) continue;
-    L.src = L.srcFrom === "template" ? join(TEMPLATE_DIR, L.src) : resolve(L.src);
+    L.src =
+      L.srcFrom === "template" ? join(TEMPLATE_DIR, L.src) : resolve(L.src);
     delete L.srcFrom;
   }
   if (font) applyFont(filled, font);

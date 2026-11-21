@@ -11,11 +11,11 @@ Written from a read-only audit of this repository on 2026-10-30. Each step below
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
+| Owned job           | Status       | Note                                                                                                                                                                                                             |
+| ------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | AIナレーション(TTS) | experimental | NARRATE ([#4](https://github.com/kajisho5/dubbing-skill/pull/4)): text works with Chatterbox or VOICEVOX ([#5](https://github.com/kajisho5/dubbing-skill/pull/5)); timed cues wait for ffmpeg-skill/pad on audio |
-| 吹替・声の置換 | experimental | DUB ([#7](https://github.com/kajisho5/dubbing-skill/pull/7), ADR-008) on caller-translated cues; nobody translates today. Timing fit at tempo 1.0 until ffmpeg-skill changes tempo on audio alone |
-| 音声解説 | experimental | AUDIO_DESCRIPTION ([#9](https://github.com/kajisho5/dubbing-skill/pull/9), ADR-010): caller gaps or ffmpeg-skill/silence |
+| 吹替・声の置換      | experimental | DUB ([#7](https://github.com/kajisho5/dubbing-skill/pull/7), ADR-008) on caller-translated cues; nobody translates today. Timing fit at tempo 1.0 until ffmpeg-skill changes tempo on audio alone                |
+| 音声解説            | experimental | AUDIO_DESCRIPTION ([#9](https://github.com/kajisho5/dubbing-skill/pull/9), ADR-010): caller gaps or ffmpeg-skill/silence                                                                                         |
 
 ## Wiring
 
@@ -69,4 +69,5 @@ ffmpeg-skill probe, join (NARRATE), audio (extract, `--music --music-volume --ga
 Translation is subtitle-skill's (`translate`, its steps 4-5, done); this skill takes translated cues as input (ADR-003) and never translates.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

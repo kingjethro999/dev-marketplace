@@ -14,7 +14,8 @@ export const PKG = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
 export const REQUIREMENTS = Object.freeze({
   node: PKG.engines.node,
   hyperframes: PKG.dependencies.hyperframes,
-  chromium: "headless-capable Chrome/Chromium or chrome-headless-shell: bundled or system, detected",
+  chromium:
+    "headless-capable Chrome/Chromium or chrome-headless-shell: bundled or system, detected",
   ffmpeg: ">=5.0",
   ffprobe: ">=5.0",
 });
@@ -23,7 +24,10 @@ export const MIN_NODE_MAJOR = Number(/(\d+)/.exec(REQUIREMENTS.node)[1]);
 export const MIN_FFMPEG_MAJOR = 5;
 
 export function which(name) {
-  const exts = process.platform === "win32" ? (process.env.PATHEXT || ".EXE").split(";") : [""];
+  const exts =
+    process.platform === "win32"
+      ? (process.env.PATHEXT || ".EXE").split(";")
+      : [""];
   for (const dir of (process.env.PATH || "").split(delimiter)) {
     if (!dir) continue;
     for (const ext of exts) {
@@ -42,7 +46,12 @@ export function which(name) {
 export function resolveFfTool(name) {
   const envName = `HYPERFRAMES_SKILL_${name.toUpperCase()}`;
   const fromEnv = process.env[envName];
-  if (fromEnv) return { path: existsSync(fromEnv) ? fromEnv : null, source: `env:${envName}`, requested: fromEnv };
+  if (fromEnv)
+    return {
+      path: existsSync(fromEnv) ? fromEnv : null,
+      source: `env:${envName}`,
+      requested: fromEnv,
+    };
   const p = which(name);
   return { path: p, source: "PATH", requested: name };
 }
@@ -54,7 +63,11 @@ export function resolveHyperframes() {
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
     const bin = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.hyperframes;
     const binPath = join(dirname(pkgPath), bin);
-    return { path: existsSync(binPath) ? binPath : null, version: pkg.version, packageDir: dirname(pkgPath) };
+    return {
+      path: existsSync(binPath) ? binPath : null,
+      version: pkg.version,
+      packageDir: dirname(pkgPath),
+    };
   } catch {
     return { path: null, version: null, packageDir: null };
   }
@@ -77,14 +90,17 @@ function headlessShellIn(base) {
   const out = [];
   for (const verDir of newestSubdir(base)) {
     for (const inner of newestSubdir(verDir)) {
-      for (const exe of ["chrome-headless-shell", "chrome-headless-shell.exe"]) out.push(join(inner, exe));
+      for (const exe of ["chrome-headless-shell", "chrome-headless-shell.exe"])
+        out.push(join(inner, exe));
     }
   }
   return out;
 }
 
 function playwrightCandidates() {
-  const base = process.env.PLAYWRIGHT_BROWSERS_PATH || join(homedir(), ".cache", "ms-playwright");
+  const base =
+    process.env.PLAYWRIGHT_BROWSERS_PATH ||
+    join(homedir(), ".cache", "ms-playwright");
   const out = [];
   let entries = [];
   try {
@@ -92,13 +108,26 @@ function playwrightCandidates() {
   } catch {
     return out;
   }
-  for (const d of entries.filter((e) => e.startsWith("chromium_headless_shell-"))) {
-    out.push(join(base, d, "chrome-linux", "headless_shell"), join(base, d, "chrome-mac", "headless_shell"));
+  for (const d of entries.filter((e) =>
+    e.startsWith("chromium_headless_shell-"),
+  )) {
+    out.push(
+      join(base, d, "chrome-linux", "headless_shell"),
+      join(base, d, "chrome-mac", "headless_shell"),
+    );
   }
   for (const d of entries.filter((e) => /^chromium-\d+$/.test(e))) {
     out.push(
       join(base, d, "chrome-linux", "chrome"),
-      join(base, d, "chrome-mac", "Chromium.app", "Contents", "MacOS", "Chromium"),
+      join(
+        base,
+        d,
+        "chrome-mac",
+        "Chromium.app",
+        "Contents",
+        "MacOS",
+        "Chromium",
+      ),
     );
   }
   return out;
@@ -110,11 +139,28 @@ function playwrightCandidates() {
  */
 export function chromiumCandidates() {
   const c = [];
-  if (process.env.HYPERFRAMES_BROWSER_PATH) c.push({ path: process.env.HYPERFRAMES_BROWSER_PATH, source: "env:HYPERFRAMES_BROWSER_PATH" });
-  for (const p of headlessShellIn(join(homedir(), ".cache", "hyperframes", "chrome", "chrome-headless-shell"))) c.push({ path: p, source: "bundled" });
-  for (const p of headlessShellIn(join(homedir(), ".cache", "puppeteer", "chrome-headless-shell"))) c.push({ path: p, source: "puppeteer-cache" });
-  for (const p of playwrightCandidates()) c.push({ path: p, source: "playwright" });
-  for (const name of ["chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "chrome"]) {
+  if (process.env.HYPERFRAMES_BROWSER_PATH)
+    c.push({
+      path: process.env.HYPERFRAMES_BROWSER_PATH,
+      source: "env:HYPERFRAMES_BROWSER_PATH",
+    });
+  for (const p of headlessShellIn(
+    join(homedir(), ".cache", "hyperframes", "chrome", "chrome-headless-shell"),
+  ))
+    c.push({ path: p, source: "bundled" });
+  for (const p of headlessShellIn(
+    join(homedir(), ".cache", "puppeteer", "chrome-headless-shell"),
+  ))
+    c.push({ path: p, source: "puppeteer-cache" });
+  for (const p of playwrightCandidates())
+    c.push({ path: p, source: "playwright" });
+  for (const name of [
+    "chromium",
+    "chromium-browser",
+    "google-chrome",
+    "google-chrome-stable",
+    "chrome",
+  ]) {
     const p = which(name);
     if (p) c.push({ path: p, source: "system" });
   }
@@ -122,7 +168,8 @@ export function chromiumCandidates() {
     for (const p of [
       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       "/Applications/Chromium.app/Contents/MacOS/Chromium",
-    ]) c.push({ path: p, source: "system" });
+    ])
+      c.push({ path: p, source: "system" });
   }
   return c;
 }
@@ -131,14 +178,21 @@ export function chromiumCandidates() {
 export function resolveChromium() {
   const all = chromiumCandidates();
   for (const cand of all) {
-    if (cand.source.startsWith("env:")) return { ...cand, exists: existsSync(cand.path), candidates: all };
-    if (existsSync(cand.path)) return { ...cand, exists: true, candidates: all };
+    if (cand.source.startsWith("env:"))
+      return { ...cand, exists: existsSync(cand.path), candidates: all };
+    if (existsSync(cand.path))
+      return { ...cand, exists: true, candidates: all };
   }
   return { path: null, source: null, exists: false, candidates: all };
 }
 
 export function parseFfVersion(text) {
-  const m = /version\s+n?(\d+)\.(\d+)/i.exec(text) || /version\s+n?(\d+)/i.exec(text);
+  const m =
+    /version\s+n?(\d+)\.(\d+)/i.exec(text) || /version\s+n?(\d+)/i.exec(text);
   if (!m) return null;
-  return { major: Number(m[1]), minor: Number(m[2] ?? 0), raw: text.split(/\r?\n/)[0].trim() };
+  return {
+    major: Number(m[1]),
+    minor: Number(m[2] ?? 0),
+    raw: text.split(/\r?\n/)[0].trim(),
+  };
 }

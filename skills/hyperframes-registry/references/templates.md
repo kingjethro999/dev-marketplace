@@ -101,7 +101,13 @@ Copy-paste starter templates for each component type. These embed the proven pat
         ];
 
         var GROUPS = [
-          { start: 0.3, end: 1.3, wordStart: 0, wordEnd: 3, text: "Welcome to the future" },
+          {
+            start: 0.3,
+            end: 1.3,
+            wordStart: 0,
+            wordEnd: 3,
+            text: "Welcome to the future",
+          },
           // ... add all groups
         ];
 
@@ -122,13 +128,16 @@ Copy-paste starter templates for each component type. These embed the proven pat
 
           // Pretext overflow prevention
           if (window.__hyperframes && window.__hyperframes.fitTextFontSize) {
-            var _fit = window.__hyperframes.fitTextFontSize(g.text.toUpperCase(), {
-              fontFamily: "Montserrat",
-              fontWeight: 900,
-              maxWidth: 1550,
-              baseFontSize: 128,
-              minFontSize: 48,
-            });
+            var _fit = window.__hyperframes.fitTextFontSize(
+              g.text.toUpperCase(),
+              {
+                fontFamily: "Montserrat",
+                fontWeight: 900,
+                maxWidth: 1550,
+                baseFontSize: 128,
+                minFontSize: 48,
+              },
+            );
             if (_fit.fontSize < 128) {
               for (var _fi = 0; _fi < groupEl.children.length; _fi++) {
                 groupEl.children[_fi].style.fontSize = _fit.fontSize + "px";
@@ -147,17 +156,33 @@ Copy-paste starter templates for each component type. These embed the proven pat
           tl.set(groupEl, { opacity: 1, visibility: "visible" }, g.start);
 
           // ENTRANCE — customize this per style
-          tl.from(groupEl, { scale: 1.3, duration: 0.15, ease: "back.out(2)" }, g.start);
+          tl.from(
+            groupEl,
+            { scale: 1.3, duration: 0.15, ease: "back.out(2)" },
+            g.start,
+          );
 
           // KARAOKE — highlight each word
           for (var wi = g.wordStart; wi <= g.wordEnd; wi++) {
             var wordEl = document.getElementById("PREFIX-cw-" + wi);
-            tl.to(wordEl, { color: "#FFD700", scale: 1.1, duration: 0.06 }, WORDS[wi].start);
-            tl.to(wordEl, { color: "#FFFFFF", scale: 1, duration: 0.08 }, WORDS[wi].end);
+            tl.to(
+              wordEl,
+              { color: "#FFD700", scale: 1.1, duration: 0.06 },
+              WORDS[wi].start,
+            );
+            tl.to(
+              wordEl,
+              { color: "#FFFFFF", scale: 1, duration: 0.08 },
+              WORDS[wi].end,
+            );
           }
 
           // EXIT
-          tl.to(groupEl, { opacity: 0, scale: 0.9, duration: 0.1 }, g.end - 0.1);
+          tl.to(
+            groupEl,
+            { opacity: 0, scale: 0.9, duration: 0.1 },
+            g.end - 0.1,
+          );
 
           // HARD KILL (mandatory)
           tl.set(groupEl, { opacity: 0, visibility: "hidden" }, g.end);
@@ -256,7 +281,10 @@ Copy-paste starter templates for each component type. These embed the proven pat
         var W = 1920,
           H = 1080;
         var canvas = document.getElementById("canvas-BLOCKNAME");
-        var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        var renderer = new THREE.WebGLRenderer({
+          canvas: canvas,
+          antialias: true,
+        });
         renderer.setSize(W, H);
         renderer.setPixelRatio(1);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;

@@ -20,19 +20,19 @@ An explainer is an argument, not a feature tour. Before any pipeline step, lock 
 
 - **One core idea.** A single sentence the viewer should be able to repeat afterward. If you can't state it in one line, the video has no spine — cut scope until you can. Everything that doesn't serve that idea gets dropped, not shrunk.
 - **Script-first.** The VO is the spine; visuals illustrate the line being spoken, never lead it. Write and time the words before you storyboard or animate — it is far cheaper to cut a sentence than a built scene.
-- **Earn the "how" with stakes.** Don't jump from problem to mechanism. Make the viewer *feel* the cost of the problem first; that tension is what makes them watch the solution.
+- **Earn the "how" with stakes.** Don't jump from problem to mechanism. Make the viewer _feel_ the cost of the problem first; that tension is what makes them watch the solution.
 
 The explainer story arc — a beat per stage, in order:
 
-| Stage | Narrative job | What the viewer should think |
-|---|---|---|
-| Problem | Name the pain in their words | "That's me." |
-| Stakes | Show what the pain costs (time, money, risk) | "I need this fixed." |
-| Solution | Introduce the product/idea as the fix, in one line | "Oh — that solves it." |
-| How it works | The mechanism in 1–3 concrete steps | "I get how it does that." |
-| Payoff / CTA | The after-state + one next action | "I want that. I'll do X." |
+| Stage        | Narrative job                                      | What the viewer should think |
+| ------------ | -------------------------------------------------- | ---------------------------- |
+| Problem      | Name the pain in their words                       | "That's me."                 |
+| Stakes       | Show what the pain costs (time, money, risk)       | "I need this fixed."         |
+| Solution     | Introduce the product/idea as the fix, in one line | "Oh — that solves it."       |
+| How it works | The mechanism in 1–3 concrete steps                | "I get how it does that."    |
+| Payoff / CTA | The after-state + one next action                  | "I want that. I'll do X."    |
 
-(The `Script formula` table below maps these stages to runtime shares and word budgets — this section is the *why* and order; that one is the *how long*.)
+(The `Script formula` table below maps these stages to runtime shares and word budgets — this section is the _why_ and order; that one is the _how long_.)
 
 ### Pick one analogy and ride it
 
@@ -46,12 +46,12 @@ Abstract mechanisms land when mapped to something the viewer already knows. Choo
 
 Pace tracks tension. Move quickly through Problem/Stakes to reach the value; slow down on the "how" so each step lands; let the payoff breathe.
 
-| Beat | Feel | Cut rhythm |
-|---|---|---|
-| Problem / Stakes | Brisk, a little tense | Faster cuts, short holds |
-| Solution | A beat of relief | One clear hold |
-| How it works | Deliberate, one step at a time | Slowest — hold each step to read |
-| Payoff / CTA | Confident, open | Hold the end card; one CTA |
+| Beat             | Feel                           | Cut rhythm                       |
+| ---------------- | ------------------------------ | -------------------------------- |
+| Problem / Stakes | Brisk, a little tense          | Faster cuts, short holds         |
+| Solution         | A beat of relief               | One clear hold                   |
+| How it works     | Deliberate, one step at a time | Slowest — hold each step to read |
+| Payoff / CTA     | Confident, open                | Hold the end card; one CTA       |
 
 ## The pipeline
 
@@ -64,12 +64,12 @@ Pace tracks tension. Move quickly through Problem/Stakes to reach the value; slo
 
 ## Script formula
 
-| Beat | Job | Share of runtime |
-|---|---|---|
-| Problem | Name the pain the viewer feels | ~20% |
-| Solution | Introduce the product/idea as the fix | ~15% |
-| How | Show the mechanism, 1–3 concrete steps | ~45% |
-| Payoff | The outcome + a clear next step (CTA) | ~20% |
+| Beat     | Job                                    | Share of runtime |
+| -------- | -------------------------------------- | ---------------- |
+| Problem  | Name the pain the viewer feels         | ~20%             |
+| Solution | Introduce the product/idea as the fix  | ~15%             |
+| How      | Show the mechanism, 1–3 concrete steps | ~45%             |
+| Payoff   | The outcome + a clear next step (CTA)  | ~20%             |
 
 Write VO first, in spoken language (contractions, short sentences). Read it aloud and time it before building anything.
 
@@ -86,25 +86,46 @@ Diagram / data reveal (progressive disclosure: nodes → edges → labels):
 ```js
 import gsap from "gsap";
 gsap.set(".edge", { strokeDasharray: 1, strokeDashoffset: 1 });
-gsap.timeline()
-  .from(".node", { opacity: 0, scale: .85, transformOrigin: "center",
-                   duration: .45, stagger: .3, ease: "back.out(1.5)" })
-  .to(".edge",  { strokeDashoffset: 0, duration: .5, stagger: .3 }, "-=0.6");
+gsap
+  .timeline()
+  .from(".node", {
+    opacity: 0,
+    scale: 0.85,
+    transformOrigin: "center",
+    duration: 0.45,
+    stagger: 0.3,
+    ease: "back.out(1.5)",
+  })
+  .to(".edge", { strokeDashoffset: 0, duration: 0.5, stagger: 0.3 }, "-=0.6");
 ```
 
 Kinetic keyword (word pops in on the stressed syllable):
 
 ```css
-.kw { display:inline-block; opacity:0; transform:translateY(18px); }
-.kw.in { opacity:1; transform:none; transition:all .4s cubic-bezier(.22,1,.36,1); }
+.kw {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(18px);
+}
+.kw.in {
+  opacity: 1;
+  transform: none;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
 ```
 
 Count-up stat:
 
 ```js
-function countUp(el, to, dur=1200){ const t0=performance.now(); (function f(n){
-  const k=Math.min(1,(n-t0)/dur), e=1-Math.pow(1-k,3);
-  el.textContent=Math.round(to*e).toLocaleString(); if(k<1)requestAnimationFrame(f);})(t0); }
+function countUp(el, to, dur = 1200) {
+  const t0 = performance.now();
+  (function f(n) {
+    const k = Math.min(1, (n - t0) / dur),
+      e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(to * e).toLocaleString();
+    if (k < 1) requestAnimationFrame(f);
+  })(t0);
+}
 ```
 
 Render the assembled piece with Remotion (data-driven, deterministic) or After Effects.
@@ -145,6 +166,7 @@ Lock one type scale, one color grammar (color = meaning, never reassigned), and 
 The assembled explainer is a Remotion composition — frame-deterministic, so any exact frame renders headlessly with no seek harness. Use this tier when the deliverable is an MP4/GIF that carries baked narration and burned captions; for a single web scene, deliver standalone HTML instead.
 
 **Output contract:**
+
 - A Remotion project with the composition registered (`<Composition>` + zod `schema` + `defaultProps`), all motion frame-driven (no timers / `Date.now()` / `Math.random()`).
 - Deliverable = the rendered `out/*.mp4` (plus the project, so VO/script/data can be re-rendered).
 - Narration via `<Audio src={staticFile()}>`; VO/scene timing baked into props (no realtime audio at render). Captions driven from that same timing array so they never drift.
@@ -169,6 +191,7 @@ npx remotion render Explainer out/explainer.mp4 --props='{...}'
 - **README demo GIF for free**: `npx remotion render Explainer out/demo.gif --codec=gif`.
 
 **Before you finish:**
+
 1. `npx remotion still` renders cleanly at frame 0, a frame inside each scene's hold, and last — no errors, no missing assets/fonts.
 2. At every sampled scene frame, the caption and the spoken VO line match the visual on screen (no drift).
 3. Captions are inside safe areas, ≤2 lines, readable; text is exact and not clipped.

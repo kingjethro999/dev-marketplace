@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import './step-window.css';
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import "./step-window.css";
 
 /* HTML Demo's engine: an app shown working, drawn live in HTML instead of
    recorded.
@@ -20,8 +20,8 @@ export const W = 1200;
 export const H = 750;
 
 export const lessMotion = () =>
-  typeof matchMedia !== 'undefined' &&
-  matchMedia('(prefers-reduced-motion: reduce)').matches;
+  typeof matchMedia !== "undefined" &&
+  matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
 
@@ -71,7 +71,7 @@ export function glide(t, path, clicks = []) {
 }
 
 const ARROW =
-  'M5.17 5.18Q5 5 5 5.25L5 15.9Q5 16.4 5.5 16.46L8.6 16.86Q8.9 16.9 9.01 17.18L9.64 18.76Q9.95 19.55 10.76 19.29L10.84 19.26Q11.65 19 11.38 18.19L10.05 14.23Q9.95 13.95 10.25 13.91L12.8 13.57Q13.3 13.5 12.95 13.14Z';
+  "M5.17 5.18Q5 5 5 5.25L5 15.9Q5 16.4 5.5 16.46L8.6 16.86Q8.9 16.9 9.01 17.18L9.64 18.76Q9.95 19.55 10.76 19.29L10.84 19.26Q11.65 19 11.38 18.19L10.05 14.23Q9.95 13.95 10.25 13.91L12.8 13.57Q13.3 13.5 12.95 13.14Z";
 
 /** The pointer at (x, y) in the stage's W × H, its tip on that point,
     pressed while `press`, faded out while `hide`. With `move` it glides
@@ -80,7 +80,7 @@ const ARROW =
 export function Cursor({ x, y, press = false, hide = false, move = 0.7 }) {
   return (
     <span
-      className={`hd-cursor${press ? ' press' : ''}${hide ? ' away' : ''}`}
+      className={`hd-cursor${press ? " press" : ""}${hide ? " away" : ""}`}
       style={{
         transform: `translate(${x - 5}px, ${y - 5}px)`,
         transitionDuration: `${move}s, 0.3s`,
@@ -185,17 +185,17 @@ export function useStepClock(steps, { still, start, off = false } = {}) {
   };
 }
 
-const SWATCH = ['#efb36c', '#ef7d9b', '#82c1ee'];
+const SWATCH = ["#efb36c", "#ef7d9b", "#82c1ee"];
 const svg = (d) => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path d={d} />
   </svg>
 );
-const HOME = 'M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z';
+const HOME = "M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z";
 const GLOBE =
-  'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm-9 9h18M12 3c2.5 2.6 3.7 5.6 3.7 9s-1.2 6.4-3.7 9c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3z';
-const CHEV = 'm7 10 5 5 5-5';
-const CLOSE = 'M7 7l10 10M17 7 7 17';
+  "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm-9 9h18M12 3c2.5 2.6 3.7 5.6 3.7 9s-1.2 6.4-3.7 9c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3z";
+const CHEV = "m7 10 5 5 5-5";
+const CLOSE = "M7 7l10 10M17 7 7 17";
 
 /** A Mac window that plays `steps`: its title bar with `tabs` (the last
     one shown), the app at W × H scaled to fit, and the steps' bar.
@@ -204,9 +204,9 @@ const CLOSE = 'M7 7l10 10M17 7 7 17';
 export default function StepWindow({
   steps,
   tabs = [],
-  label = 'Demo',
+  label = "Demo",
   clock: given,
-  stageClass = '',
+  stageClass = "",
   bar = true,
 }) {
   const own = useStepClock(steps, { off: !!given });
@@ -216,7 +216,7 @@ export default function StepWindow({
   // Scaled to the window: one number for the whole stage.
   useLayoutEffect(() => {
     const el = view.current;
-    const fit = () => el.style.setProperty('--k', el.clientWidth / W);
+    const fit = () => el.style.setProperty("--k", el.clientWidth / W);
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
@@ -238,7 +238,7 @@ export default function StepWindow({
           {tabs.map((t, i) => (
             <span
               key={t}
-              className={`hd-tab${i === tabs.length - 1 ? ' on' : ''}`}
+              className={`hd-tab${i === tabs.length - 1 ? " on" : ""}`}
             >
               <b style={{ background: SWATCH[i % SWATCH.length] }} />
               <span>{t}</span>
@@ -253,7 +253,7 @@ export default function StepWindow({
           className="hd-view"
           ref={view}
           role="img"
-          aria-label={`${label}: ${steps.map((s) => s.name).join(', ')}`}
+          aria-label={`${label}: ${steps.map((s) => s.name).join(", ")}`}
         >
           <div className={`hd-stage ${stageClass}`} key={step.id}>
             <View t={clock.t} dur={step.dur} />
@@ -265,15 +265,15 @@ export default function StepWindow({
               <li key={s.id}>
                 <button
                   type="button"
-                  className={i === clock.i ? 'on' : ''}
-                  aria-current={i === clock.i ? 'step' : undefined}
+                  className={i === clock.i ? "on" : ""}
+                  aria-current={i === clock.i ? "step" : undefined}
                   onClick={() => clock.play(i)}
                 >
-                  <span className="hd-n">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="hd-n">{String(i + 1).padStart(2, "0")}</span>
                   <span className="hd-label">{s.name}</span>
                   <i
                     style={{
-                      '--p':
+                      "--p":
                         i === clock.i
                           ? Math.min(1, clock.t / s.dur)
                           : i < clock.i

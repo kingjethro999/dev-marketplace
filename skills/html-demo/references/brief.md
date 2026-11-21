@@ -48,9 +48,10 @@ YOUR SECTION: [numeral], "[title]". The owner's words: "[quote]". All on [exampl
 Files you create: [path]/steps[Name].jsx (export `[NAME]_STEPS`) and steps[Name].css. CSS prefix: `[x..-]`. Scratch folder: [scratch]/[prefix]/. Window tab: ['[tab]'].
 
 Steps, in this order (names as shown in the bar):
+
 1. "[Name]": [what the app shows, what the pointer does, what result appears and how; the result file to use].
 2. …
-Each step [n]–[m] s; about [total] s in all.
+   Each step [n]–[m] s; about [total] s in all.
 
 References of the real UI (open them): [screenshots], [docs recordings and their .mp4 for frames], [source files for wording]. [Any pictures that show real customer or partner content: copy the UI only, never their content.]
 

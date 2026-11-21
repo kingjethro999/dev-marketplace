@@ -19,7 +19,10 @@ const ALPHA_PIX_FMT = /^(yuva|rgba|argb|bgra|abgr|gbrap|ya|ayuv|pal8)/i;
 /** Does the probed video stream carry an alpha channel? */
 export function hasAlpha(video) {
   if (!video) return false;
-  return ALPHA_PIX_FMT.test(video.pix_fmt ?? "") || (video.codec === "vp9" && video.alpha_mode === "1");
+  return (
+    ALPHA_PIX_FMT.test(video.pix_fmt ?? "") ||
+    (video.codec === "vp9" && video.alpha_mode === "1")
+  );
 }
 
 /** "X,Y" -> {x, y}; throws on anything else (the caller turns it into kind: input). */
@@ -36,16 +39,56 @@ export function parseSample(s) {
  * the frame could not be decoded. Records the ffmpeg command in ctx.
  */
 export function readAlpha(ctx, file, video, { samples = [] } = {}) {
-  if (!hasAlpha(video)) return { mode: "none", channel: false, reason: `${video?.codec ?? "no video"} ${video?.pix_fmt ?? ""} carries no alpha channel`.trim() };
+  if (!hasAlpha(video))
+    return {
+      mode: "none",
+      channel: false,
+      reason:
+        `${video?.codec ?? "no video"} ${video?.pix_fmt ?? ""} carries no alpha channel`.trim(),
+    };
   const ff = resolveFfTool("ffmpeg");
-  if (!ff.path) return { mode: ALPHA_MODE, channel: null, reason: `ffmpeg not found (${ff.source}: ${ff.requested})` };
+  if (!ff.path)
+    return {
+      mode: ALPHA_MODE,
+      channel: null,
+      reason: `ffmpeg not found (${ff.source}: ${ff.requested})`,
+    };
   const { width: W, height: H } = video;
-  const argv = [ff.path, "-hide_banner", "-nostdin", "-v", "error", ...(video.codec === "vp9" ? ["-c:v", "libvpx-vp9"] : []), "-i", file, "-frames:v", "1", "-vf", "alphaextract,format=gray", "-f", "rawvideo", "-"];
+  const argv = [
+    ff.path,
+    "-hide_banner",
+    "-nostdin",
+    "-v",
+    "error",
+    ...(video.codec === "vp9" ? ["-c:v", "libvpx-vp9"] : []),
+    "-i",
+    file,
+    "-frames:v",
+    "1",
+    "-vf",
+    "alphaextract,format=gray",
+    "-f",
+    "rawvideo",
+    "-",
+  ];
   const entry = ctx.record(argv, { exit_code: null, role: "alpha" });
-  const r = spawnSync(argv[0], argv.slice(1), { timeout: 120000, maxBuffer: 512 * 1024 * 1024 });
+  const r = spawnSync(argv[0], argv.slice(1), {
+    timeout: 120000,
+    maxBuffer: 512 * 1024 * 1024,
+  });
   entry.exit_code = r.status;
   if (r.error || r.status !== 0 || r.stdout.length !== W * H) {
-    return { mode: ALPHA_MODE, channel: null, reason: `could not decode the alpha plane of ${file}: ${String(r.error?.message ?? r.stderr ?? `${r.stdout?.length} bytes, expected ${W * H}`).trim().slice(0, 300)}` };
+    return {
+      mode: ALPHA_MODE,
+      channel: null,
+      reason: `could not decode the alpha plane of ${file}: ${String(
+        r.error?.message ??
+          r.stderr ??
+          `${r.stdout?.length} bytes, expected ${W * H}`,
+      )
+        .trim()
+        .slice(0, 300)}`,
+    };
   }
   const a = r.stdout;
   let min = 255;
@@ -63,7 +106,12 @@ export function readAlpha(ctx, file, video, { samples = [] } = {}) {
   const at = (x, y) => a[y * W + x];
   const n = a.length;
   const out = [];
-  for (const s of samples) out.push({ x: s.x, y: s.y, alpha: s.x < W && s.y < H ? at(s.x, s.y) : null });
+  for (const s of samples)
+    out.push({
+      x: s.x,
+      y: s.y,
+      alpha: s.x < W && s.y < H ? at(s.x, s.y) : null,
+    });
   return {
     mode: ALPHA_MODE,
     channel: true,
@@ -73,7 +121,12 @@ export function readAlpha(ctx, file, video, { samples = [] } = {}) {
       mean: Number((sum / n).toFixed(3)),
       transparent_fraction: Number((zero / n).toFixed(4)),
       opaque_fraction: Number((full / n).toFixed(4)),
-      corners: { top_left: at(0, 0), top_right: at(W - 1, 0), bottom_left: at(0, H - 1), bottom_right: at(W - 1, H - 1) },
+      corners: {
+        top_left: at(0, 0),
+        top_right: at(W - 1, 0),
+        bottom_left: at(0, H - 1),
+        bottom_right: at(W - 1, H - 1),
+      },
     },
     samples: out,
   };
@@ -88,18 +141,61 @@ export const OPAQUE_MIN = 253;
  * file of frame n). Returns {measured: true, frames: [{frame, min, below}]} where `below` counts the
  * pixels under OPAQUE_MIN, or {measured: false, reason}. Records every ffmpeg command in ctx.
  */
-export function readAlphaFrames(ctx, file, video, from, to, { frameFile = null } = {}) {
-  if (!hasAlpha(video)) return { measured: false, reason: `${video?.codec ?? "no video"} ${video?.pix_fmt ?? ""} carries no alpha channel`.trim() };
+export function readAlphaFrames(
+  ctx,
+  file,
+  video,
+  from,
+  to,
+  { frameFile = null } = {},
+) {
+  if (!hasAlpha(video))
+    return {
+      measured: false,
+      reason:
+        `${video?.codec ?? "no video"} ${video?.pix_fmt ?? ""} carries no alpha channel`.trim(),
+    };
   const ff = resolveFfTool("ffmpeg");
-  if (!ff.path) return { measured: false, reason: `ffmpeg not found (${ff.source}: ${ff.requested})` };
+  if (!ff.path)
+    return {
+      measured: false,
+      reason: `ffmpeg not found (${ff.source}: ${ff.requested})`,
+    };
   const { width: W, height: H } = video;
   const n = to - from;
   const decode = (input, vf, count) => {
-    const argv = [ff.path, "-hide_banner", "-nostdin", "-v", "error", ...(video.codec === "vp9" ? ["-c:v", "libvpx-vp9"] : []), "-i", input, "-vf", vf, "-frames:v", String(count), "-f", "rawvideo", "-"];
+    const argv = [
+      ff.path,
+      "-hide_banner",
+      "-nostdin",
+      "-v",
+      "error",
+      ...(video.codec === "vp9" ? ["-c:v", "libvpx-vp9"] : []),
+      "-i",
+      input,
+      "-vf",
+      vf,
+      "-frames:v",
+      String(count),
+      "-f",
+      "rawvideo",
+      "-",
+    ];
     const entry = ctx.record(argv, { exit_code: null, role: "alpha" });
-    const r = spawnSync(argv[0], argv.slice(1), { timeout: 300000, maxBuffer: Math.max(64, count) * W * H + 1024 * 1024 });
+    const r = spawnSync(argv[0], argv.slice(1), {
+      timeout: 300000,
+      maxBuffer: Math.max(64, count) * W * H + 1024 * 1024,
+    });
     entry.exit_code = r.status;
-    if (r.error || r.status !== 0 || r.stdout.length !== count * W * H) return { reason: `could not decode the alpha plane of ${input}: ${String(r.error?.message ?? r.stderr ?? "").trim().slice(0, 300) || `${r.stdout?.length} bytes, expected ${count * W * H}`}` };
+    if (r.error || r.status !== 0 || r.stdout.length !== count * W * H)
+      return {
+        reason: `could not decode the alpha plane of ${input}: ${
+          String(r.error?.message ?? r.stderr ?? "")
+            .trim()
+            .slice(0, 300) ||
+          `${r.stdout?.length} bytes, expected ${count * W * H}`
+        }`,
+      };
     return { bytes: r.stdout };
   };
   const stats = (a, offset, frame) => {
@@ -123,9 +219,14 @@ export function readAlphaFrames(ctx, file, video, from, to, { frameFile = null }
     }
   } else {
     // trim by frame number, then restart the timestamps, so exactly frames from..to-1 come out
-    const d = decode(file, `trim=start_frame=${from}:end_frame=${to},setpts=PTS-STARTPTS,alphaextract,format=gray`, n);
+    const d = decode(
+      file,
+      `trim=start_frame=${from}:end_frame=${to},setpts=PTS-STARTPTS,alphaextract,format=gray`,
+      n,
+    );
     if (d.reason) return { measured: false, reason: d.reason };
-    for (let k = 0; k < n; k++) frames.push(stats(d.bytes, k * W * H, from + k));
+    for (let k = 0; k < n; k++)
+      frames.push(stats(d.bytes, k * W * H, from + k));
   }
   return { measured: true, threshold: OPAQUE_MIN, frames };
 }

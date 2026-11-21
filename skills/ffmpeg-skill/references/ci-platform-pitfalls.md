@@ -80,8 +80,8 @@ subprocesses, which is out of this repo's control.
 
 ### `vidstabdetect`/`vidstabtransform` (libvidstab) behaves meaningfully differently across ffmpeg builds
 
-A synthetic camera-shake test fixture that reliably gets *less* jittery
-after `stabilize.py` on Linux CI can reliably get *more* jittery (a larger
+A synthetic camera-shake test fixture that reliably gets _less_ jittery
+after `stabilize.py` on Linux CI can reliably get _more_ jittery (a larger
 measured frame-to-frame motion, not smaller) on macOS CI's ffmpeg build —
 this was independently confirmed across three different fixture designs
 (a single clean sine-wave jitter; a multi-frequency jitter including a fast
@@ -148,11 +148,11 @@ these had ever shown up before.
   7.1 added colourspace negotiation to libavfilter, and the CLI feeds the encoder's
   `-colorspace/-color_primaries/-color_trc` into the graph's output constraints. A source
   whose bitstream carries no colour tags (`color_space=unknown` -- test sources, screen
-  recordings, many cameras) then *differs* from the requested BT.709, so ffmpeg auto-inserts
+  recordings, many cameras) then _differs_ from the requested BT.709, so ffmpeg auto-inserts
   a real matrix conversion (swscale guesses bt601 for "unknown"): every SDR re-encode through
   `x264_args()` shifted the picture, and a `--lut-strength 0` no-op grade came back ~24 dB
   PSNR from its source. 5.x/6.x wrote the same options as tags only (47 dB, no conversion).
-  The 7.0.2 static build does *not* show it; 7.1.1 (conda-forge) reproduces it locally, so
+  The 7.0.2 static build does _not_ show it; 7.1.1 (conda-forge) reproduces it locally, so
   that is the build to use when the trixie job goes red on a colour test.
   Fix: `_common.bt709_tag_args()` writes the tags through the encoder's own VUI parameters
   (`-x264-params colorprim=...:transfer=...:colormatrix=...`, x265 likewise) from 7.1 on,
@@ -161,7 +161,7 @@ these had ever shown up before.
   was tried first and rejected: it also tags a `-c copy` output of an untagged source (export
   copy must stay a real copy), and it exposed a separate, pre-existing `--correct` bug (below).
   Verified on 5.1.1, 6.1.1, 7.1.1 and 8.1.2. 8.x has the same encode-time conversion; it
-  went unnoticed there because 8.x's `psnr` filter *also* negotiates colourspace and undid it
+  went unnoticed there because 8.x's `psnr` filter _also_ negotiates colourspace and undid it
   before measuring (40 dB for re-matrixed pixels), and it then flagged the fixed, byte-clean
   output as 26 dB instead. The tests' `_psnr` helper now pins identical colour tags on both
   inputs so every build reports the same number for the same two files.
@@ -192,7 +192,7 @@ these had ever shown up before.
   `setparams` (or the encoder's own VUI params) instead. On a stream copy they change only the
   container: H.264/HEVC/MPEG-2/AV1/VP9 keep their own description, which decoders read first, so
   rewrite it with the codec's `*_metadata` bitstream filter (`color.py --retag`).
-- **Not a 7.1 issue, found while chasing it: `color --correct` desaturates a bt709-*tagged*
+- **Not a 7.1 issue, found while chasing it: `color --correct` desaturates a bt709-_tagged_
   source by ~8 % at identity settings on 6.1 and 7.1 alike** (113.6 → 103.9 saturation_avg):
   the RGB stages (exposure/colortemperature/colorbalance) make swscale go yuv→rgb with the
   frame's bt709 matrix and back with its bt601 default. The identity test only ever used an

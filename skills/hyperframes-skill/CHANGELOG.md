@@ -4,6 +4,7 @@ All notable changes. The stability guarantee and deprecation policy are in
 [docs/contract.md](docs/contract.md).
 
 ## 0.10.0
+
 ### Added
 
 - Brand input (roadmap step 16, design-decisions D15): `--kit FILE` on `template` and `batch` takes a
@@ -20,13 +21,14 @@ All notable changes. The stability guarantee and deprecation policy are in
 - Roadmap step 18 ticked (the agent runs `render` for `rendered_layer`); no code change.
 
 ## 0.9.0
+
 ### Added
 
 - Stinger templates with a cut point (roadmap step 15, design-decisions D14): `stinger-geometric`,
   `stinger-glitch`, `stinger-particles`, `stinger-brush` and `stinger-logo-reveal`, each taking `duration`,
   `cut_point` and `hold` (`--set duration=1.2 --set cut_point=0.5`): the graphic enters until the cut point,
   covers the whole frame for the hold and exits. A scene request may declare `stinger: {cut_point, cover:
-  {start, end}}` (on frames, the cut point inside the cover). `render` refuses a stinger without an alpha codec,
+{start, end}}` (on frames, the cut point inside the cover). `render` refuses a stinger without an alpha codec,
   decodes the alpha plane of every frame of the cover (`stinger_cover`: every pixel >= 253/255, qc-skill's
   threshold; the result gains `stinger`) and writes `<stem>.stinger.json` beside the output: `cut_point` and
   `cover` (what video-editing-skill's stinger transition and qc-skill's stinger check read) plus the spec's
@@ -54,6 +56,7 @@ The contract change is additive: two new request keys, new templates, new result
 that appear only for stinger or title material, and no flag added, removed or renamed.
 
 ## 0.8.1
+
 ### Changed
 
 - docs: the roadmap takes title and stinger material, `kit@1` brand input and `title.json` from the 2026-11-12
@@ -61,11 +64,11 @@ that appear only for stinger or title material, and no flag added, removed or re
   the release left 0.8.1 without one.)
 
 ## 0.8.0
+
 ### Added
 
 - Alpha deliveries (roadmap step 13, design-decisions D13): `render --codec png` writes a PNG sequence
-  directory (RGBA `frame_000001.png ...`, through HyperFrames' png-sequence format) beside WebM VP9 and ProRes
-  4444. Every alpha render decodes its first frame's alpha plane: `verification[]` gains `alpha`, and the result
+  directory (RGBA `frame_000001.png ...`, through HyperFrames' png-sequence format) beside WebM VP9 and ProRes 4444. Every alpha render decodes its first frame's alpha plane: `verification[]` gains `alpha`, and the result
   gains `alpha: {mode: "straight", channel, first_frame: {min, max, mean, corners, ...}}` (`mode: "none"` for
   h264). `probe --alpha [--sample X,Y]` reads the same from any file or a PNG sequence directory; probe reports
   VP9's `alpha_mode` tag and reads PNG sequence directories. `--overwrite` replaces a PNG sequence directory
@@ -75,6 +78,7 @@ The contract change is additive: new flags (`render --segments`, `--codec png`, 
 appear only when they are used.
 
 ## 0.7.0
+
 ### Added
 
 - IN / LOOP / OUT segments and seamless loops (roadmap step 12, design-decisions D12). A scene request may
@@ -92,6 +96,7 @@ appear only when they are used.
   no larger than its largest step between its own frames, plus 1/255).
 
 ## 0.6.7
+
 ### Changed
 
 - ci: `CI` runs on pushes to `main` and on pull requests, no longer on every branch push, so a pull request
@@ -99,6 +104,7 @@ appear only when they are used.
   replaces. Runs on `main` are never cancelled. No code change.
 
 ## 0.6.6
+
 ### Changed
 
 - docs: `ECOSYSTEM_ROADMAP.md` gained steps 7-15 from the 2026-11-05 field review (#18). No code change.
@@ -106,6 +112,7 @@ appear only when they are used.
   `tests/release.test.mjs` failed on `main`.
 
 ## 0.6.5
+
 ### Changed
 
 - docs: `ECOSYSTEM_ROADMAP.md` brought up to date in the 2026-11-05 ecosystem review: 0.6.4 released by
@@ -113,6 +120,7 @@ appear only when they are used.
   and the footer names ffmpeg-skill 3.x (#17). No code change.
 
 ## 0.6.4
+
 ### Changed
 
 - docs: `ECOSYSTEM_ROADMAP.md` step 5 ticked (agent side done in video-production-agent#95) (#16). No code
@@ -120,6 +128,7 @@ appear only when they are used.
   one, so `tests/release.test.mjs` failed on `main`.
 
 ## 0.6.3
+
 ### Changed
 
 - ffmpeg-skill 3.0.0 is accepted: the contract's `dependencies[0].version_range` is `>=2.0.0 <4.0.0`
@@ -128,6 +137,7 @@ appear only when they are used.
   2.23.1 on Linux (docs/design-decisions.md D11).
 
 ## 0.6.2
+
 ### Changed
 
 - Windows is supported (roadmap step 4): `render` / `preview` no longer generate POSIX `sh` shims to
@@ -148,6 +158,7 @@ appear only when they are used.
   workflow files the tests compare byte for byte would otherwise be checked out with CRLF.
 
 ## 0.6.1
+
 ### Added
 
 - `render` cross-checks its output with ffmpeg-skill when a checkout is present (roadmap step 3;

@@ -37,7 +37,9 @@ const norm = (p) => {
   const r = path.resolve(String(p));
   return win ? r.toLowerCase() : r;
 };
-const table = new Map(Object.entries(tools).map(([p, spec]) => [norm(p), spec]));
+const table = new Map(
+  Object.entries(tools).map(([p, spec]) => [norm(p), spec]),
+);
 let seq = 0;
 
 function lookup(file) {
@@ -47,12 +49,15 @@ function lookup(file) {
 
 function record(file, args, spec) {
   const stamp = process.hrtime.bigint().toString().padStart(20, "0");
-  const base = path.join(logDir, `${stamp}-${process.pid}-${String(seq++).padStart(6, "0")}-${spec.role}`);
+  const base = path.join(
+    logDir,
+    `${stamp}-${process.pid}-${String(seq++).padStart(6, "0")}-${spec.role}`,
+  );
   const argv = [file, ...(Array.isArray(args) ? args.map(String) : [])];
   try {
     fs.writeFileSync(base + ".argv", argv.map((a) => a + "\0").join(""));
   } catch {
-    return null;   // a log that cannot be written never breaks the render
+    return null; // a log that cannot be written never breaks the render
   }
   return base;
 }
@@ -60,7 +65,12 @@ function record(file, args, spec) {
 function writeRc(base, code, signal) {
   if (!base) return;
   // the sh shim wrote $?, which is 128 + n for a signal
-  const rc = code !== null && code !== undefined ? code : signal ? 128 + (require("node:os").constants.signals[signal] || 0) : null;
+  const rc =
+    code !== null && code !== undefined
+      ? code
+      : signal
+        ? 128 + (require("node:os").constants.signals[signal] || 0)
+        : null;
   if (rc === null) return;
   try {
     fs.writeFileSync(base + ".rc", String(rc));
@@ -81,7 +91,8 @@ function wrapAsync(name) {
     const spec = lookup(file);
     const base = spec ? record(file, argsOf(rest), spec) : null;
     const child = original.call(this, file, ...rest);
-    if (base && spec.rc && child && typeof child.once === "function") child.once("exit", (code, signal) => writeRc(base, code, signal));
+    if (base && spec.rc && child && typeof child.once === "function")
+      child.once("exit", (code, signal) => writeRc(base, code, signal));
     return child;
   };
 }
@@ -94,10 +105,20 @@ function wrapSync(name) {
     const base = spec ? record(file, argsOf(rest), spec) : null;
     try {
       const out = original.call(this, file, ...rest);
-      if (base && spec.rc) writeRc(base, name === "spawnSync" ? out.status : 0, name === "spawnSync" ? out.signal : null);
+      if (base && spec.rc)
+        writeRc(
+          base,
+          name === "spawnSync" ? out.status : 0,
+          name === "spawnSync" ? out.signal : null,
+        );
       return out;
     } catch (e) {
-      if (base && spec.rc) writeRc(base, typeof e.status === "number" ? e.status : null, e.signal || null);
+      if (base && spec.rc)
+        writeRc(
+          base,
+          typeof e.status === "number" ? e.status : null,
+          e.signal || null,
+        );
       throw e;
     }
   };

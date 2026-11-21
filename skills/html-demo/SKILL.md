@@ -20,23 +20,40 @@ It looks recorded, but it's HTML. Each frame is computed, so it stays sharp at a
 If you take that away, the demo breaks. When state lives in `setTimeout` chains, animation callbacks or effects, you can't jump to a step. It drifts after a hidden tab, screenshots differ between runs, and reduced motion catches it half-done. Designing responsively inside the window breaks it differently: text reflows at every width, the pointer misses its targets, and phones show a different app.
 
 ```jsx
-import StepWindow, { Cursor, ease, typed, glide } from './scripts/StepWindow.jsx';
+import StepWindow, {
+  Cursor,
+  ease,
+  typed,
+  glide,
+} from "./scripts/StepWindow.jsx";
 
-const ASK = 'The Ashen One, a knight in blackened armour resting on his sword';
-function Prompt({ t }) {                           // t: 0 → dur, nothing else
-  const text = typed(ASK, t, 0.9, 2.6);            // typed between 0.9 s and 2.6 s
-  const made = ease(t, 3.4, 5.2);                  // the picture draws in
-  const c = glide(t, [[0, 0, 900, 600], [0.2, 0.8, 520, 330], [2.8, 3.3, 760, 470]], [0.85, 3.35]);
-  return (<>
-    <App prompt={text} reveal={made} />            {/* the app's real markup at 1200 × 750 */}
-    <Cursor {...c} />                              {/* last, over everything */}
-  </>);
+const ASK = "The Ashen One, a knight in blackened armour resting on his sword";
+function Prompt({ t }) {
+  // t: 0 → dur, nothing else
+  const text = typed(ASK, t, 0.9, 2.6); // typed between 0.9 s and 2.6 s
+  const made = ease(t, 3.4, 5.2); // the picture draws in
+  const c = glide(
+    t,
+    [
+      [0, 0, 900, 600],
+      [0.2, 0.8, 520, 330],
+      [2.8, 3.3, 760, 470],
+    ],
+    [0.85, 3.35],
+  );
+  return (
+    <>
+      <App prompt={text} reveal={made} />{" "}
+      {/* the app's real markup at 1200 × 750 */}
+      <Cursor {...c} /> {/* last, over everything */}
+    </>
+  );
 }
 export const STEPS = [
-  { id: 'prompt', name: 'Prompt', dur: 6, View: Prompt },
+  { id: "prompt", name: "Prompt", dur: 6, View: Prompt },
   // 3–5 steps, 4–8 s each
 ];
-<StepWindow steps={STEPS} tabs={['The Ashen One']} label="Make a picture" />
+<StepWindow steps={STEPS} tabs={["The Ashen One"]} label="Make a picture" />;
 ```
 
 `scripts/StepWindow.jsx` provides the window, its clock (`useStepClock`), the scaling, the steps bar, `Cursor`, and the helpers `ease`, `typed`, `cue`, `held` and `glide`. `references/contract.md` has the full API, and `references/film.md` covers the hero variant (many flows, a camera, beats).
@@ -72,20 +89,20 @@ export const STEPS = [
 
 ## Numbers that shipped
 
-| what | value |
-| --- | --- |
-| stage | 1200 × 750, `--k = clientWidth / 1200` |
-| steps | 3–5 per window, 4–8 s each, 18–30 s per window |
-| hold on the result | ≥ 1 s |
-| typing | ~50 characters/s (90 characters in 1.8 s); a person reads it, nobody waits for it |
-| pointer glide | 0.5–0.9 s, `cubic-bezier(0.55, 0, 0.25, 1)`; arrive 0.3–0.6 s early |
-| click | 0.15–0.2 s pressed; arrow scale 1.15 → 0.98 |
-| step fade-in | 0.45 s, `cubic-bezier(0.2, 0.7, 0.1, 1)` |
-| scene crossfade | 300 ms lag before the next scene draws |
-| clock | tick 40 ms (windows) or 50 ms (film); `dt ≤ 0.25 s`; on-screen threshold 0.3 (0.15 hero) |
-| threads | 1.6 px at 0.8 opacity in the source node's colour; live: dashes `6 7` marching 0.7 s; quiet (brief, skill): 0.14 |
-| camera | up to 1.2× on the step being made plus what feeds it; whole canvas 0.86–1.08×; glide 1.3 s `cubic-bezier(0.45, 0, 0.2, 1)` |
-| time shown | 18 s of app time for every demo second |
+| what               | value                                                                                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| stage              | 1200 × 750, `--k = clientWidth / 1200`                                                                                     |
+| steps              | 3–5 per window, 4–8 s each, 18–30 s per window                                                                             |
+| hold on the result | ≥ 1 s                                                                                                                      |
+| typing             | ~50 characters/s (90 characters in 1.8 s); a person reads it, nobody waits for it                                          |
+| pointer glide      | 0.5–0.9 s, `cubic-bezier(0.55, 0, 0.25, 1)`; arrive 0.3–0.6 s early                                                        |
+| click              | 0.15–0.2 s pressed; arrow scale 1.15 → 0.98                                                                                |
+| step fade-in       | 0.45 s, `cubic-bezier(0.2, 0.7, 0.1, 1)`                                                                                   |
+| scene crossfade    | 300 ms lag before the next scene draws                                                                                     |
+| clock              | tick 40 ms (windows) or 50 ms (film); `dt ≤ 0.25 s`; on-screen threshold 0.3 (0.15 hero)                                   |
+| threads            | 1.6 px at 0.8 opacity in the source node's colour; live: dashes `6 7` marching 0.7 s; quiet (brief, skill): 0.14           |
+| camera             | up to 1.2× on the step being made plus what feeds it; whole canvas 0.86–1.08×; glide 1.3 s `cubic-bezier(0.45, 0, 0.2, 1)` |
+| time shown         | 18 s of app time for every demo second                                                                                     |
 
 ## Many windows at once
 
