@@ -1,0 +1,410 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/app-icon-dark.png">
+    <img src="brand/app-icon.png" width="128" alt="publish-skill app icon">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/logo/publish-skill-wordmark-white.svg">
+    <img src="brand/logo/publish-skill-wordmark-black.svg" height="48" alt="publish-skill">
+  </picture>
+</p>
+
+<p align="center"><b>Upload to delivery platforms, after QC</b></p>
+
+
+
+Upload finished deliverables to delivery platforms (YouTube, Vimeo, TikTok, X, LinkedIn, Facebook and Instagram Reels) for the [AI Video Production OS](https://github.com/kajisho5/AI-video-production-OS) (department 納品 / Delivery), after QC and a human's confirmation. Platform delivery specs (codecs, resolution, loudness) belong to [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill); this skill reads them and owns only the upload-side limits.
+
+**Status: 0.2.0.** `contract`, `doctor`, `platforms`, `plan`, `auth` and `upload` work. `upload` is a dry run unless it is given the exact confirmation token; then the YouTube uploader ([ADR-004](docs/decisions.md), [roadmap](ECOSYSTEM_ROADMAP.md) step 4) sends the video, its thumbnail and its captions with the YouTube Data API v3 resumable upload, the Vimeo uploader ([ADR-005](docs/decisions.md), step 5) sends the video with its title, description and privacy with Vimeo's tus resumable upload, and the TikTok uploader ([ADR-006](docs/decisions.md), step 5) posts the video with its title and privacy through the Content Posting API's Direct Post, and the X uploader ([ADR-007](docs/decisions.md), step 5) uploads the video with the X API v2 chunked media upload and makes one public post with the title as its text, and the LinkedIn uploader ([ADR-008](docs/decisions.md), step 5) uploads the video with the Videos API and makes one public post with the title as its commentary, and the Facebook uploader ([ADR-009](docs/decisions.md), step 5) uploads the video with the Resumable Upload API and publishes it on a Page with its title, description and privacy, and the Instagram Reels uploader ([ADR-010](docs/decisions.md), step 5) uploads the video to a resumable REELS container and publishes it with the title as its caption. All seven have been tested only against local mocks of the APIs, never against the platforms themselves: the first real upload to each is the owner's, with their credentials and their confirmation.
+
+```bash
+pip install -e .                                          # stdlib only, Python >= 3.9
+pip install -e '.[keychain]'                              # optional: the OS keychain (keyring>=25.0)
+publish doctor                                            # platforms, credentials present/absent, keychain, ffmpeg-skill
+publish plan final.mp4 --platform youtube --title "Launch" --privacy unlisted --thumbnail thumb.jpg --json
+                                                          # offline: every limit, PASS/WARN/FAIL with a fix per row
+publish upload final.mp4 --platform youtube --title "Launch" --privacy unlisted --thumbnail thumb.jpg --json
+                                                          # dry run: what would be sent, and the confirm_token
+publish upload final.mp4 --platform youtube --title "Launch" --privacy unlisted --thumbnail thumb.jpg --confirm <confirm_token> --json
+                                                          # the upload, after QC and a human's approval: a receipt
+publish auth login --platform youtube                     # store credentials in the OS keychain (stdin or a hidden prompt)
+publish auth status --json                                # present/absent in the environment and the keychain
+publish auth logout --platform youtube                    # remove them from the keychain
+publish upload talk.mp4 --platform vimeo --title "Keynote" --json
+                                                          # Vimeo: the same gate; title, description and privacy only
+publish upload short.mp4 --platform tiktok --title "Launch #film" --json
+                                                          # TikTok: the same gate; title (the caption) and privacy only
+publish upload clip.mp4 --platform x --title "Launch day" --privacy public --json
+                                                          # X: the same gate; title (the post's text), public only
+publish upload clip.mp4 --platform linkedin --title "Launch day" --privacy public --json
+                                                          # LinkedIn: the same gate; title (the commentary), public only
+publish upload talk.mp4 --platform facebook --title "Keynote" --privacy unlisted --json
+                                                          # Facebook: the same gate; title, description, public or unlisted
+publish upload reel.mp4 --platform reels --title "Launch #film" --privacy public --json
+                                                          # Instagram Reels: the same gate; title (the caption), public only
+publish contract --json                                   # machine-readable contract (alias: skill --json)
+```
+
+Metadata flags, the same on `plan` and `upload`: `--title`, `--description` or `--description-file` (UTF-8), `--tag` (repeat), `--privacy private|unlisted|public` (default `private`; the YouTube API would default to `public`; on Vimeo `private` is `privacy.view: nobody`, "no one except the owner"), `--thumbnail`, `--caption` (repeat) with `--caption-language` (its BCP-47 tag, one per `--caption`, in order).
+
+## Safety ([ADR-001](docs/decisions.md))
+
+- **Dry run by default.** Without `--confirm`, `upload` reads the file and reports; it opens no connection.
+- **A confirmation token per deliverable.** The dry run prints `confirm_token`, derived from the platform, the file's sha256 and size, and the metadata (title, description, tags, privacy, the thumbnail's bytes, and each caption file's bytes and language; [ADR-002](docs/decisions.md), [ADR-004](docs/decisions.md)). Only that exact token on the command line goes further, so an approval cannot be reused for a re-exported file, another platform or edited metadata. No environment variable or config file confirms for you. Metadata that breaks an upload limit is refused (`METADATA_INVALID`) before a token is printed.
+- **Credentials from the environment or the OS keychain** ([ADR-003](docs/decisions.md)), never from files or flags, and never printed: reports say `present` / `absent`, and every output passes through a redactor. YouTube reads `PUBLISH_YOUTUBE_CLIENT_ID`, `PUBLISH_YOUTUBE_CLIENT_SECRET` and `PUBLISH_YOUTUBE_REFRESH_TOKEN`; Vimeo reads `PUBLISH_VIMEO_ACCESS_TOKEN` (a personal access token); TikTok reads `PUBLISH_TIKTOK_ACCESS_TOKEN` (a user access token with the `video.publish` scope); X reads `PUBLISH_X_ACCESS_TOKEN` (an OAuth 2.0 user access token with `media.write`, `tweet.write`, `tweet.read` and `users.read`); LinkedIn reads `PUBLISH_LINKEDIN_ACCESS_TOKEN` (a member access token with `w_member_social`, or `w_organization_social` for a page) and `PUBLISH_LINKEDIN_AUTHOR` (the author's URN, `urn:li:person:<id>` or `urn:li:organization:<id>`); Facebook reads `PUBLISH_FACEBOOK_APP_ID`, `PUBLISH_FACEBOOK_USER_ACCESS_TOKEN` (for the upload), `PUBLISH_FACEBOOK_PAGE_ID` and `PUBLISH_FACEBOOK_PAGE_ACCESS_TOKEN` (for the publish: `pages_manage_posts`, `pages_read_engagement`, `pages_show_list`, from a person with the Page's CREATE_CONTENT task); Instagram Reels reads `PUBLISH_INSTAGRAM_USER_ID` (the professional account's id) and `PUBLISH_INSTAGRAM_ACCESS_TOKEN` (from Facebook Login for Business, with `instagram_basic` and `instagram_content_publish`). See below.
+- **Exactly what was confirmed is sent** ([ADR-004](docs/decisions.md), [ADR-005](docs/decisions.md)). The video resource is the bound title, description, tags and privacy, nothing added; the thumbnail and captions are the bound files. Every file is hashed as it is sent, and the last chunk is held back unless the bytes match the token, so a file edited mid-upload is never published (`CONFIRM_MISMATCH`). Privacy is `private` unless `--privacy` says otherwise. A field a platform's uploader does not send (on Vimeo: tags, thumbnail, captions; on TikTok: description, tags, thumbnail, captions, and `unlisted`; on X and LinkedIn: the same, and `private` too, as their posts are public; LinkedIn takes .mp4 only; on Facebook: tags, thumbnail, captions and `private`, and any file but .mp4; on Instagram Reels: as on X, and any file but .mp4/.mov) is refused (`METADATA_INVALID`) before a token is printed, never silently dropped.
+- **Network code lives in the uploader modules only**, `src/publish_skill/platforms/youtube.py`, `src/publish_skill/platforms/vimeo.py`, `src/publish_skill/platforms/tiktok.py`, `src/publish_skill/platforms/x.py`, `src/publish_skill/platforms/linkedin.py`, `src/publish_skill/platforms/facebook.py` and `src/publish_skill/platforms/reels.py` (stdlib `http.client`, verified TLS), and runs only after the token matched and the credentials were read. The access token, the upload session URI, Vimeo's upload link, TikTok's upload URL, LinkedIn's signed upload URLs and Facebook's file handle are redacted like the credentials. The only process the package starts is ffmpeg-skill (below), from an argv list, never a shell.
+
+## `publish upload` to YouTube ([ADR-004](docs/decisions.md))
+
+1. The refresh token is exchanged for an access token at `https://oauth2.googleapis.com/token`. If the token response lists its scopes and none that an upload step accepts is granted (for example `youtube.upload` for the video and thumbnail, `youtube.force-ssl` for captions), the upload stops before any byte is sent (`AUTH_FAILED`).
+2. `videos.insert`: a resumable session (`POST https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=...`), then the file in 8 MiB chunks (`Content-Range`, 308 + `Range` until the last).
+3. An interrupted chunk (no answer, a reset, a 60 s timeout, 5xx, 429 or a rate-limit reason) waits with exponential backoff (`random × 2^n` s, at most 64 s, or `Retry-After` up to 5 min), asks the session how far it got (`Content-Range: bytes */TOTAL`) and resumes from the next byte; at most 10 retries per request. An expired session (404) starts again from the beginning, at most twice.
+4. `thumbnails.set` and `captions.insert` (one per caption file, named by its language) use the same protocol, with the new video's id.
+   `--language` (snippet.defaultLanguage), `--localizations FILE` (translated titles and descriptions, `{"ja": {"title": "...", "description": "..."}}`) and `--publish-at 2026-12-01T09:00:00Z` (status.publishAt; with `--privacy private`, YouTube makes the video public at that time) go into the `videos.insert` resource ([ADR-011](docs/decisions.md)). `plan` checks description chapters against YouTube's rules (first at 0:00, at least three, ascending, each at least 10 s) and refuses captions that repeat a language: one track per language.
+5. The receipt (`uploaded: true`, `result.video_id`, `url`, `privacy`, `sent`, `transfer`) passes through the redactor. YouTube processes the video afterwards.
+
+| Error | Exit | Retryable | Meaning |
+|---|---|---|---|
+| `AUTH_FAILED` | 3 | no | the refresh token was refused (`invalid_grant`...) or lacks a scope; nothing uploaded |
+| `QUOTA_EXCEEDED` | 4 | yes, after the quota resets | `quotaExceeded`; nothing uploaded |
+| `UPLOAD_LIMIT_EXCEEDED` | 4 | yes, later | the channel's daily upload limit (`uploadLimitExceeded`); nothing uploaded |
+| `UPLOAD_INTERRUPTED` | 4 | yes | still failing after every retry; nothing published (an unfinished resumable upload creates no video) |
+| `UPLOAD_REJECTED` | 4 | no | another 4xx, or a protocol error; nothing published |
+| `UPLOAD_PARTIAL` | 4 | no | the video is uploaded (`details.video_id`, `url`), its thumbnail or captions are not; finish in YouTube Studio, do not run `upload` again |
+
+An interrupted run is not resumed by a later run (each run starts a new session); no proxy is used (direct HTTPS only).
+
+## `publish upload` to Vimeo ([ADR-005](docs/decisions.md))
+
+Protocol read from Vimeo's developer documentation on 2026-10-31: [Working with Video Uploads](https://developer.vimeo.com/api/upload/videos) (the resumable "tus" approach), [Getting Started: The Basics](https://developer.vimeo.com/api/guides/start) (personal access tokens), the [API reference](https://developer.vimeo.com/api/reference/videos#upload_video) (API 3.4, reference 3.4.9) and the [tus 1.0.0 protocol](https://tus.io/protocols/resumable-upload).
+
+1. `POST https://api.vimeo.com/me/videos` with `Authorization: bearer <PUBLISH_VIMEO_ACCESS_TOKEN>`, `Accept: application/vnd.vimeo.*+json;version=3.4` and the body `{"upload": {"approach": "tus", "size": "<bytes>"}, "name", "description", "privacy": {"view"}}`: exactly the bound title, description and privacy (`private` -> `nobody`, `unlisted` -> `unlisted`, `public` -> `anybody`). The answer carries `upload.upload_link`, which must be https on a vimeo.com host.
+2. `PATCH <upload_link>` in 128 MiB chunks (the guide recommends 128-512 MB) with `Tus-Resumable: 1.0.0`, `Upload-Offset` and `Content-Type: application/offset+octet-stream`; `204` and the new `Upload-Offset` after each. These requests carry no `Authorization` header: the token goes to `api.vimeo.com` only.
+3. An interrupted chunk (no answer, a reset, a 60 s timeout, 5xx, 429) or a `409` (offset mismatch) waits with exponential backoff (`random × 2^n` s, at most 64 s, or `Retry-After` up to 5 min), asks `HEAD <upload_link>` for `Upload-Offset` and resumes from it; at most 10 retries per request. The create `POST` is retried on 429/5xx answers only: without an answer a placeholder may already exist, and a second `POST` would add another.
+4. The receipt (`uploaded: true`, `result.video_id`, `uri`, `url`, `privacy`, `privacy_view`, `sent`, `transfer`) passes through the redactor. Vimeo transcodes the video afterwards.
+5. Restricted delivery ([ADR-013](docs/decisions.md)): `--privacy password` sends `privacy.view` `password` and the video password from `PUBLISH_VIMEO_VIDEO_PASSWORD` (environment or keychain: `publish auth login --platform vimeo --variable PUBLISH_VIMEO_VIDEO_PASSWORD`; at most 32 characters; never printed, never in the token or a receipt). `--privacy domains --embed-domain events.example.org` (repeat) sends `privacy.view` `disable` (embed only, hidden on Vimeo) and `privacy.embed` `whitelist`, then `PUT /videos/{id}/privacy/domains/{domain}` once per domain; a domain that fails after the upload is `UPLOAD_PARTIAL` (`details.domains_added`).
+
+| Error | Exit | Retryable | Meaning |
+|---|---|---|---|
+| `AUTH_FAILED` | 3 | no | 401: the access token was refused (for example error 8003); nothing uploaded |
+| `UPLOAD_LIMIT_EXCEEDED` | 4 | yes, after it resets | error 4102 (weekly quota) or 4104 (daily quota); nothing uploaded |
+| `UPLOAD_REJECTED` | 4 | no | error 4101 (storage full), another 4xx, or a protocol error |
+| `UPLOAD_INTERRUPTED` | 4 | yes | still failing after every retry, no answer to the create request, or the upload link expired (404/410/403); the video was not completed, and Vimeo keeps an empty placeholder (`details.video_uri`, privacy as sent) |
+
+Tags, thumbnails and text tracks are not sent to Vimeo in this release: `plan` FAILs them and `upload` refuses them before a token is printed. ffmpeg-skill has no Vimeo delivery spec, so `plan --platform vimeo` reports the delivery spec and the duration as `UNCHECKED` (verdict `INCOMPLETE`).
+
+## `publish upload` to TikTok ([ADR-006](docs/decisions.md))
+
+Protocol read from TikTok's developer documentation on 2026-10-31: [Content Posting API: Get Started](https://developers.tiktok.com/doc/content-posting-api-get-started) (Direct Post), [Query Creator Info](https://developers.tiktok.com/doc/content-posting-api-reference-query-creator-info), [Direct Post reference](https://developers.tiktok.com/doc/content-posting-api-reference-direct-post), [Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [Get Post Status](https://developers.tiktok.com/doc/content-posting-api-reference-get-video-status) and [Manage User Access Tokens](https://developers.tiktok.com/doc/oauth-user-access-token-management).
+
+1. `POST https://open.tiktokapis.com/v2/post/publish/creator_info/query/` with `Authorization: Bearer <PUBLISH_TIKTOK_ACCESS_TOKEN>`: the creator's `privacy_level_options` must offer the bound level (`private` -> `SELF_ONLY`, `public` -> `PUBLIC_TO_EVERYONE`), or the upload stops before any byte is sent.
+2. `POST /v2/post/publish/video/init/` with `{"post_info": {"title", "privacy_level"}, "source_info": {"source": "FILE_UPLOAD", "video_size", "chunk_size", "total_chunk_count"}}`: exactly the bound title (TikTok's caption) and privacy level, nothing else. The answer carries `publish_id` and `upload_url`, which must be https on a `tiktokapis.com` host.
+3. `PUT <upload_url>` chunk by chunk with `Content-Type` (`video/mp4`, `video/quicktime` or `video/webm`, by the extension) and `Content-Range: bytes FIRST-LAST/TOTAL`; `206` after each, `201` after the last. Chunks are 64 000 000 bytes (the guide: 5-64 MB; the last takes the trailing bytes, below 128 MB); a file of at most that size is sent whole. These requests carry no `Authorization` header.
+4. An interrupted chunk (no answer, a reset, a 60 s timeout, 5xx, 429) waits with exponential backoff (`random × 2^n` s, at most 64 s, or `Retry-After` up to 5 min) and is sent again; a `416` (the chunk's range is not where TikTok is) asks `POST /v2/post/publish/status/fetch/` for `uploaded_bytes` and resumes from there. At most 10 retries per request. The init `POST` is retried on 429/5xx answers only.
+5. `POST /v2/post/publish/status/fetch/` every 6 s, at most 20 times, until `PUBLISH_COMPLETE` or `FAILED`. The receipt (`uploaded: true`, `result.publish_id`, `status`, `post_ids`, `url`, `privacy`, `privacy_level`, `creator`, `sent`, `transfer`) passes through the redactor. A post still processing when the polls run out is a receipt with a warning, not an error.
+
+| Error | Exit | Retryable | Meaning |
+|---|---|---|---|
+| `AUTH_FAILED` | 3 | no | `access_token_invalid` (expired: access tokens last 24 hours) or `scope_not_authorized` (no `video.publish`); nothing uploaded |
+| `UPLOAD_LIMIT_EXCEEDED` | 4 | yes, later | `spam_risk_too_many_posts`: the creator's daily post cap; nothing posted |
+| `QUOTA_EXCEEDED` | 4 | yes, later | `reached_active_user_cap`: the app's daily quota of publishing users; nothing uploaded |
+| `UPLOAD_REJECTED` | 4 | no | the creator does not offer the privacy level, `unaudited_client_can_only_post_to_private_accounts`, another 4xx, a `FAILED` post (`fail_reason`, e.g. `duration_check_failed`), or a protocol error |
+| `UPLOAD_INTERRUPTED` | 4 | yes | still failing after every retry, no answer to the init request, the upload URL expired (403/404), or a `FAILED` post with `fail_reason: internal`; nothing posted |
+
+A description, tags, a thumbnail, captions and `--privacy unlisted` (TikTok has no link-only level) are refused before a token is printed, and so is a file that is not `.mp4`, `.mov` or `.webm` (`plan` FAILs it). The duet, stitch and comment switches, the cover frame and the branded-content and AI-generated labels are not sent (TikTok's and the creator's own settings apply). An app TikTok has not audited can post only privately: "All content posted by unaudited clients will be restricted to private viewing mode." TikTok may moderate a public post before it is visible.
+
+## `publish upload` to X ([ADR-007](docs/decisions.md))
+
+Protocol read from X's developer documentation on 2026-10-31: [Chunked media upload](https://docs.x.com/x-api/media/quickstart/media-upload-chunked), [Initialize](https://docs.x.com/x-api/media/initialize-media-upload), [Append](https://docs.x.com/x-api/media/append-media-upload), [Finalize](https://docs.x.com/x-api/media/finalize-media-upload), [Get upload status](https://docs.x.com/x-api/media/get-media-upload-status), [Create Post](https://docs.x.com/x-api/posts/create-post), [Rate limits](https://docs.x.com/x-api/fundamentals/rate-limits), [Counting characters](https://docs.x.com/fundamentals/counting-characters) and [OAuth 2.0 authorization code](https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code).
+
+1. `POST https://api.x.com/2/media/upload/initialize` with `Authorization: Bearer <PUBLISH_X_ACCESS_TOKEN>` and `{"media_type", "total_bytes", "media_category": "tweet_video"}` (`video/mp4`, `video/quicktime`, `video/webm` or `video/mp2t`, by the extension); the answer's `data.id` is the media id.
+2. `POST /2/media/upload/{id}/append`, `multipart/form-data` with `segment_index` and `media`, 4 MiB per segment (the guide: "at or below 5 MB"), in order.
+3. `POST /2/media/upload/{id}/finalize`: `data.size` must be the file's size. While `processing_info.state` is `pending` or `in_progress`, `GET /2/media/upload?command=STATUS&media_id={id}` after `check_after_secs` (at most 30 s), at most 60 times.
+4. `POST /2/tweets` with `{"text": <the bound title>, "media": {"media_ids": [id]}}` (no `text` when no title is bound): one post, nothing else. The receipt (`uploaded: true`, `result.post_id`, `media_id`, `privacy`, `sent`, `transfer`) passes through the redactor; X's API documentation states no URL for a post, so `url` is `null`.
+5. An interrupted segment (no answer, a reset, a 60 s timeout, 5xx, 429) waits with exponential backoff (`random × 2^n` s, at most 64 s; `Retry-After`, or on a 429 `x-rate-limit-reset`, up to 5 min) and is sent again with the same `segment_index`; finalize's size then shows the media is whole. Initialize and finalize are retried on 429/5xx answers only; the create-post request on 429 only, so a post is never made twice.
+
+| Error | Exit | Retryable | Meaning |
+|---|---|---|---|
+| `AUTH_FAILED` | 3 | no | 401 (an expired token: access tokens last two hours) or a 403 naming a missing scope; nothing posted |
+| `UPLOAD_REJECTED` | 4 | no | another 4xx (e.g. 403 "not allowed to post a video longer than 20 minutes"), failed processing, a size mismatch at finalize, or a protocol error; nothing posted |
+| `UPLOAD_INTERRUPTED` | 4 | yes | still failing after every retry, no answer to initialize or finalize, or still processing after the last status query; nothing posted |
+| `UPLOAD_INTERRUPTED` | 4 | **no** | the create-post request got no answer or a 5xx: the media is uploaded, and whether the post exists is unknown; check the profile before running `upload` again |
+
+X has no private or unlisted post, so `--privacy public` must be given (`plan` FAILs the default `private`). A description, tags, a thumbnail and captions are refused before a token is printed, and so is a file that is not `.mp4`, `.mov`, `.webm` or `.ts`. Reply settings, polls, `for_super_followers_only`, `nullcast` and the AI or paid-partnership labels are not sent. The access token is not refreshed (`offline.access` is not used).
+
+## `publish upload` to LinkedIn ([ADR-008](docs/decisions.md))
+
+Protocol read from LinkedIn's documentation (API version 202610) on 2026-10-31: [Videos API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api), [Posts API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api), [Post API schema](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/post-api-schema), [`little` text format](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/little-text-format) and [Authorization Code Flow](https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow). Every API request carries `Authorization: Bearer <PUBLISH_LINKEDIN_ACCESS_TOKEN>`, `Linkedin-Version: 202610` and `X-Restli-Protocol-Version: 2.0.0`.
+
+1. `POST https://api.linkedin.com/rest/videos?action=initializeUpload` with `{"initializeUploadRequest": {"owner": <PUBLISH_LINKEDIN_AUTHOR>, "fileSizeBytes", "uploadCaptions": false, "uploadThumbnail": false}}`; the answer's `value` has the video URN, `uploadToken` and `uploadInstructions` (each `firstByte`, `lastByte`, `uploadUrl`), which must cover the file in order. Each upload URL must be https on a linkedin.com host; it is redacted from every output.
+2. `PUT` each byte range to its `uploadUrl` (`application/octet-stream`, no token: the URL is signed); the answer's `ETag` is the part's id.
+3. `POST /rest/videos?action=finalizeUpload` with `{"finalizeUploadRequest": {"video", "uploadToken", "uploadedPartIds"}}`, the ETags in order.
+4. `GET /rest/videos/{urn}` until `status` is `AVAILABLE` (every 5 s, at most 120 times; the interval is not documented). `PROCESSING_FAILED` stops with `processingFailureReason`.
+5. `POST /rest/posts` with `{"author", "commentary": <the bound title, little-escaped>, "visibility": "PUBLIC", "distribution": {"feedDistribution": "MAIN_FEED", "targetEntities": [], "thirdPartyDistributionChannels": []}, "content": {"media": {"id": <video URN>}}, "lifecycleState": "PUBLISHED", "isReshareDisabledByAuthor": false}`: one post, nothing else. 201; the receipt's `result.post_id` is `x-restli-id`. `url` is `https://www.linkedin.com/feed/update/<urn>/` for a `ugcPost` URN (the only form the documentation gives) and `null` otherwise.
+6. An interrupted part (no answer, a reset, a 60 s timeout, 5xx, 429) waits with exponential backoff (`random × 2^n` s, at most 64 s; `Retry-After` up to 5 min) and is `PUT` again; finalize then names its newer ETag. Initialize and finalize are retried on 429/5xx answers only; the create-post request on 429 only, so a post is never made twice.
+
+| Error | Exit | Retryable | Meaning |
+|---|---|---|---|
+| `AUTH_FAILED` | 3 | no | 401 (an expired or invalid token: tokens last 60 days) or 403 (a missing permission, or no page role for an organization author); nothing posted |
+| `UPLOAD_REJECTED` | 4 | no | another 4xx, `PROCESSING_FAILED`, a part without an ETag, an upload URL off linkedin.com, or a protocol error; nothing posted |
+| `UPLOAD_INTERRUPTED` | 4 | yes | still failing after every retry, no answer to initialize or finalize, or still processing after the last status query; nothing posted |
+| `UPLOAD_INTERRUPTED` | 4 | **no** | the create-post request got no answer or a 5xx: the video is uploaded, and whether the post exists is unknown; check the author's page before running `upload` again |
+
+The commentary is the title as typed: every `little` reserved character (`| { } @ [ ] ( ) < > # \ * _ ~`) is escaped with a backslash, so a `#word` is text, not a hashtag, and no mention is made. LinkedIn's other visibilities, CONNECTIONS and LOGGED_IN, are neither private nor unlisted, so `--privacy public` must be given (`plan` FAILs the default `private`). A description, tags, a thumbnail and captions are refused before a token is printed, and so is a file that is not `.mp4`. A media title, alt text, calls to action, targeting and sponsored-content fields are not sent. The author's URN is not looked up (it is stored with the token), and the access token is not refreshed.
+
+## `publish upload` to Facebook ([ADR-009](docs/decisions.md))
+
+Protocol read from Meta's developer documentation (Graph API v26.0) on 2026-10-31: [Publishing a video](https://developers.facebook.com/docs/video-api/guides/publishing), [Resumable Upload API](https://developers.facebook.com/docs/graph-api/guides/upload), [Page videos reference](https://developers.facebook.com/docs/graph-api/reference/page/videos/), [Video API overview](https://developers.facebook.com/docs/video-api/overview) and [Error handling](https://developers.facebook.com/docs/graph-api/guides/error-handling).
+
+1. `POST https://graph.facebook.com/v26.0/<PUBLISH_FACEBOOK_APP_ID>/uploads?file_name=…&file_length=<bytes>&file_type=video/mp4&access_token=<user token>`; the answer's `id` is `upload:<UPLOAD_SESSION_ID>`.
+2. `POST https://graph.facebook.com/v26.0/upload:<UPLOAD_SESSION_ID>` with `Authorization: OAuth <user token>`, `file_offset: 0` and the file as the body, streamed from disk (the guide documents one body from an offset, no chunk size); the answer's `h` is the file handle (redacted from every output). The stream is hashed as it is read, and its last block is sent only if the file still has the bound sha256.
+3. `POST https://graph-video.facebook.com/v26.0/<PUBLISH_FACEBOOK_PAGE_ID>/videos`, multipart: `access_token` (the Page token), `title` and `description` (when bound), `fbuploader_video_file_chunk` (the handle), `published=true` and `secret` (`false` for `public`, `true` for `unlisted`). The answer's `id` is the receipt's `result.video_id`; the guide gives no URL, so `url` is `null`.
+4. An interrupted upload (no answer, a reset, a 60 s timeout, 5xx, 429, or Graph codes 1, 2, 4, 17, 341) waits with exponential backoff (`random × 2^n` s, at most 64 s; `Retry-After` up to 5 min), asks `GET /upload:<id>` for `file_offset`, and sends the rest of the file from there. The session request is retried on answers only; the publish only when throttled (429, codes 4, 17, 341), so a video is never published twice.
+
+| Error | Exit | Retryable | Meaning |
+|---|---|---|---|
+| `AUTH_FAILED` | 3 | no | 401 or Graph code 190, 102, 10 or 200-299 (an expired token or a missing permission); nothing published |
+| `UPLOAD_REJECTED` | 4 | no | another error (e.g. 6000 "problem uploading the video file", 368, 506), or a protocol error; nothing published |
+| `UPLOAD_INTERRUPTED` | 4 | yes | still failing after every retry, or no answer to the session request; nothing published |
+| `UPLOAD_INTERRUPTED` | 4 | **no** | the publish request got no answer, a 5xx or code 1/2: the file is uploaded, and whether the video exists is unknown; check the Page before running `upload` again |
+
+`--privacy unlisted` is Facebook's `secret`: "the video doesn't appear on Facebook or in search, but can be viewed via permalink and embeds". What an unpublished Page video (`published=false`) is visible to is not documented, so `private` is not offered (`plan` FAILs the default). Tags, a thumbnail and captions are refused before a token is printed, and so is a file that is not `.mp4` (the upload session's only video type). Scheduling, backdating, targeting, crossposting and Reels are not sent. The tokens are not exchanged or refreshed by this skill.
+
+## `publish upload` to Instagram Reels ([ADR-010](docs/decisions.md))
+
+Protocol read from Meta's developer documentation (Graph API v26.0) on 2026-10-31: [Content publishing](https://developers.facebook.com/docs/instagram-platform/content-publishing/) and the [IG User media reference](https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media). The resumable upload is "Only for apps that have implemented Facebook Login for Business", so the hosts are graph.facebook.com and rupload.facebook.com.
+
+1. `POST https://graph.facebook.com/v26.0/<PUBLISH_INSTAGRAM_USER_ID>/media` with `media_type=REELS`, `upload_type=resumable`, `caption` (the bound title, when set) and `access_token`; the answer's `id` is the container.
+2. `POST https://rupload.facebook.com/ig-api-upload/v26.0/<container>` with `Authorization: OAuth <token>`, `offset: 0`, `file_size` and the file as the body, streamed from disk; `{"success": true}` on success, `{"debug_info": {"retriable", "type", "message"}}` on failure. The stream is hashed as it is read, and its last block is sent only if the file still has the bound sha256.
+3. `GET /v26.0/<container>?fields=status_code`, once a minute, at most five times ("once per minute, for no more than 5 minutes"), until `FINISHED`; `ERROR` and `EXPIRED` stop.
+4. `POST /v26.0/<PUBLISH_INSTAGRAM_USER_ID>/media_publish` with `creation_id`: one reel. The answer's `id` is the receipt's `result.media_id`; the guide gives no URL, so `url` is `null`.
+5. An interrupted upload (no answer, a reset, a 60 s timeout, 5xx, 429, or `debug_info.retriable: true`) waits with exponential backoff (`random × 2^n` s, at most 64 s; `Retry-After` up to 5 min) and is sent again whole from offset 0: the guide documents no way to ask how many bytes arrived. The container request is retried on 429/5xx or Graph codes 1, 2, 4, 17, 341 only; the publish only when throttled (429, codes 4, 17, 341), so a reel is never published twice.
+
+| Error | Exit | Retryable | Meaning |
+|---|---|---|---|
+| `AUTH_FAILED` | 3 | no | 401, Graph code 190, 102, 10 or 200-299, or an "unauthorized" upload; nothing published |
+| `UPLOAD_REJECTED` | 4 | no | a non-retriable `debug_info`, `ERROR` or `EXPIRED`, another Graph error (e.g. the publishing limit), or a protocol error; nothing published |
+| `UPLOAD_INTERRUPTED` | 4 | yes | still failing after every retry, no answer to the container request, or still `IN_PROGRESS` after five minutes; nothing published (the container expires after 24 hours) |
+| `UPLOAD_INTERRUPTED` | 4 | **no** | the publish request got no answer, a 5xx or code 1/2: the video is uploaded, and whether the reel exists is unknown; check the account before running `upload` again |
+
+A reel published through the API is public on the account, so `--privacy public` must be given (`plan` FAILs the default `private`). A description, tags, a thumbnail and captions files are refused before a token is printed, and so is a file that is not `.mp4` or `.mov`. A cover, `thumb_offset`, collaborators, a location, an audio name and `share_to_feed` are not sent (Instagram's defaults apply). The token is not refreshed.
+
+## `publish series`: clips in order ([ADR-012](docs/decisions.md))
+
+A set of Shorts or Reels cut from one source, uploaded in order, each with its own title and a link back to the full video:
+
+```json
+{"full_video_url": "https://www.youtube.com/watch?v=...", "link_label": "Full video", "privacy": "public",
+ "clips": [{"file": "clip-01.mp4", "title": "Highlight 1", "description": "..."},
+           {"file": "clip-02.mp4", "title": "Highlight 2"}]}
+```
+
+- `publish series clips.json --platform youtube --json` is a dry run: every clip goes through `upload`'s gate (refusals first) and gets its own `confirm_token`. The link back is the line `<link_label>: <url>` after the description, or after the title where the platform sends no description (Instagram Reels, TikTok, X, LinkedIn); `link_label` defaults to English and can be any language. Paths are relative to the manifest.
+- `--confirm <token>` (repeat, one per approved clip) uploads the approved clips in order and stops at the first clip without a token. A token that matches no clip is refused before anything is sent.
+- A state file (`<manifest>.publish-state.json`, or `--state`) records each clip: `sending`, then `uploaded` (id, URL, privacy, sha256), or removed when nothing was published. Running the same command again skips uploaded clips and resumes at the first one that is not, so no clip is sent twice. A clip whose file or metadata changed after it was uploaded is never sent again.
+- An unknown outcome (a lost publish answer, an interrupted process) leaves the clip `uncertain`, and the series stops there (`UPLOAD_PARTIAL`) until a human checks the platform and runs `--resolve N=uploaded` or `--resolve N=not-uploaded`.
+- The state holds no credential, session URI or upload link.
+- **Sessions and the organiser's receipt** ([ADR-013](docs/decisions.md)): the manifest may list `sessions` instead of `clips` (each with an optional `id`, e.g. a programme code, and on Vimeo `embed_domains`), with `unlisted`, `private`, or on Vimeo `password` / `domains` privacy. `--receipt receipt.json` (or `receipt.csv`, UTF-8 with a header row) is written after every confirmed run: per session its `id`, `title`, `file`, `status`, `url`, `privacy`, `access` (who can watch it, in words), `video_id`, the `sha256` and `size` of the uploaded file, and `uploaded_at` (UTC). It never holds a credential or a video password.
+
+## Credentials ([ADR-003](docs/decisions.md))
+
+- **Two sources, the environment first.** If any of a platform's variables is set in the environment, the environment is that platform's only source and the keychain is not consulted; otherwise the OS keychain is. One platform's values never mix sources (a refresh token belongs to the OAuth client that issued it).
+- **The OS keychain** is the macOS Keychain, the Windows Credential Manager or the Secret Service on Linux, reached through [keyring](https://pypi.org/project/keyring/) (MIT), an optional extra: `pip install 'publish-skill[keychain]'` installs `keyring>=25.0`. Without it, credentials come from the environment only and `doctor` says so. Only those three OS keychains are used: keyring's own backend choice (`PYTHON_KEYRING_BACKEND`, plug-in or file backends) is ignored. `PUBLISH_KEYCHAIN=off` turns the keychain off (headless machines, CI).
+- **Items** are stored under the service `publish-skill`, with the variable's name as the account.
+- **`publish auth login --platform youtube`** (or `--platform vimeo` / `--platform tiktok` / `--platform x`: one value, the personal or user access token; `--platform linkedin`: two, the access token and the author's URN; `--platform facebook`: four, the app id, the user token, the Page id and the Page token; `--platform reels`: two, the account id and the access token) reads the values from stdin, one per line in the order of the platform's variables (or of `--variable NAME`, repeatable), or from a prompt that does not echo when stdin is a terminal. No flag takes a value, so none reaches shell history. Every value is read before the first is stored. `login` stores values you already have; it does not run Google's OAuth consent screen or Vimeo's authorization flow (a Vimeo personal access token is generated on the app's page at https://developer.vimeo.com/apps, with the `upload` scope; a TikTok user access token comes from TikTok's Login Kit authorization with the `video.publish` scope, lasts 24 hours, and is not refreshed by this skill; an X OAuth 2.0 user access token comes from X's authorization code flow with PKCE, lasts two hours, and is not refreshed either; a LinkedIn member access token comes from LinkedIn's Authorization Code Flow with `w_member_social` or `w_organization_social`, lasts 60 days, and is not refreshed).
+- **`publish auth status`** reports, per platform, the chosen `source`, whether each variable is `present` / `absent` in the environment and in the keychain, and the keychain's availability. **`publish auth logout`** removes the items.
+- Refusals (unknown platform or variable, keychain unavailable, a wrong `--confirm`) all come before any credential is read. `KEYCHAIN_UNAVAILABLE` and `KEYCHAIN_ERROR` exit 3, like `CREDENTIALS_MISSING`.
+
+## `publish plan` ([ADR-002](docs/decisions.md))
+
+`plan` checks the deliverable and its metadata against the platform's limits, offline, and prints one row per limit: `PASS`, `WARN`, `FAIL` (with a `fix`) or `UNCHECKED` (with the reason). The verdict is `FAIL` if any counted row fails, `INCOMPLETE` if any counted row could not be checked, otherwise `WARN` or `PASS`; it exits 1 unless the verdict is `PASS` or `WARN`. Nothing is uploaded and no credential is read. Every row says whether it counts (`in_verdict`).
+
+- Rows with owner `publish` come from the upload-limit table below, and each row carries its limit's `limit_status` and `accessed` date: a `documented` limit its `source`, an `unknown` one (not stated on the pages read) the pages `searched`, with no value and nothing checked against it.
+- For duration and file size, this skill's limits decide ([ADR-015](docs/decisions.md)). ffmpeg-skill's `duration` and `file size` rows are shown as guidance (`basis: guidance`, `in_verdict: false`, counted in `counts.guidance` only) and never change the verdict: a 5-minute video for X passes on X's cited 20 minutes even though ffmpeg-skill's table says 140 s.
+- Rows with owner `ffmpeg-skill` are the output of ffmpeg-skill `check --platform youtube --json --no-loudness` (codec, frame size, aspect, frame rate, colour...), passed through unchanged; all but the duration and file-size rows count. ffmpeg-skill owns those specs; this skill never copies them.
+- ffmpeg-skill is found as `doctor` finds it (`--ffmpeg-skill`, `PUBLISH_FFMPEG_SKILL_DIR`, ...) and used only when its contract (`scripts/_contract.py --json --static`) declares `export --list`, `check --platform/--json/--no-loudness` and `execution.network: false`. Without a usable checkout, its rows and the duration row are `UNCHECKED` and the verdict is `INCOMPLETE`, never `PASS`.
+
+### Upload limits: YouTube
+
+Read from YouTube's own documentation on 2026-10-31 (`publish contract --json` → `upload_limits` has every value with the quoted sentence). A size written as "GB" or "MB" is read as decimal, the smaller reading. A limit the documentation does not state is `unknown` and nothing is checked against it.
+
+| Key | Limit | plan | Source |
+|---|---|---|---|
+| `video.max_bytes` | 256 GB (256 000 000 000 bytes) | FAIL above | https://developers.google.com/youtube/v3/docs/videos/insert |
+| `video.max_duration_s` | 12 hours (43 200 s) | FAIL above | https://support.google.com/youtube/answer/71673?hl=en |
+| `video.unverified_max_duration_s` | 15 minutes unless the account is verified | WARN above | https://support.google.com/youtube/answer/71673?hl=en |
+| `video.mime_types` | `video/*`, `application/octet-stream` | reported | https://developers.google.com/youtube/v3/docs/videos/insert |
+| `video.file_formats` | .MOV .MPEG-1 .MPEG-2 .MPEG4 .MP4 .MPG .AVI .WMV .MPEGPS .FLV 3GPP WebM (plus the codecs DNxHR, ProRes, CineForm, HEVC) | WARN on another extension | https://support.google.com/youtube/troubleshooter/2888402?hl=en |
+| `video.codecs`, `video.resolution`, `video.aspect`, `video.fps` | delegated: ffmpeg-skill `check --platform youtube` | ffmpeg-skill's rows | ffmpeg-skill `scripts/_platforms.py` |
+| `title.max_chars` | 100 characters | FAIL above | https://developers.google.com/youtube/v3/docs/videos |
+| `title.forbidden_chars` | `<` and `>` | FAIL | https://developers.google.com/youtube/v3/docs/videos |
+| `description.max_bytes` | 5000 bytes (UTF-8) | FAIL above | https://developers.google.com/youtube/v3/docs/videos |
+| `description.forbidden_chars` | `<` and `>` | FAIL | https://developers.google.com/youtube/v3/docs/videos |
+| `tags.max_chars` | 500 characters for the list; commas count, a tag with a space counts its quotation marks | FAIL above | https://developers.google.com/youtube/v3/docs/videos |
+| `tags.max_chars_per_tag`, `tags.max_count` | unknown (not stated) | not checked | searched: the two API pages above |
+| `privacy.values` | `private`, `public`, `unlisted` | FAIL otherwise | https://developers.google.com/youtube/v3/docs/videos |
+| `thumbnail.max_bytes` | 50 MB | FAIL above | https://developers.google.com/youtube/v3/docs/thumbnails/set |
+| `thumbnail.types` | JPEG, PNG (by the file's first bytes) | FAIL otherwise | https://developers.google.com/youtube/v3/docs/thumbnails/set |
+| `thumbnail.min_width_px` | 640 px (a recommendation) | not checked | https://support.google.com/youtube/answer/72431?hl=en |
+| `captions.max_bytes` | 100 MB | FAIL above | https://developers.google.com/youtube/v3/docs/captions/insert |
+| `captions.extensions` | .srt .sbv .sub .mpsub .lrc .cap .smi .sami .rt .vtt .ttml .dfxp .scc .stl .tds .cin .asc | WARN otherwise | https://support.google.com/youtube/answer/2734698?hl=en |
+| `captions.plain_utf8_extensions` | .srt, .sbv and .sub must be plain UTF-8 | FAIL otherwise | https://support.google.com/youtube/answer/2734698?hl=en |
+| `captions.language` | a BCP-47 language tag, required by captions.insert (`--caption-language`) | FAIL when missing or not tag-shaped | https://developers.google.com/youtube/v3/docs/captions |
+| `chapters.first_at_s` | the first chapter timestamp is 0:00 (read 2026-11-06) | FAIL otherwise, when the description has chapter lines | https://support.google.com/youtube/answer/9884579?hl=en |
+| `chapters.min_count` | at least three timestamps, in ascending order | FAIL otherwise | https://support.google.com/youtube/answer/9884579?hl=en |
+| `chapters.min_length_s` | each chapter at least 10 s (the last one against the measured duration) | FAIL otherwise | https://support.google.com/youtube/answer/9884579?hl=en |
+| `schedule.publish_at` | `status.publishAt`, ISO 8601, only with privacy `private` (`--publish-at`, RFC 3339 with an offset) | FAIL on another format or privacy | https://developers.google.com/youtube/v3/docs/videos |
+| `localizations.default_language` | `snippet.defaultLanguage` (`--language`) is required with localizations (`defaultLanguageNotSet`) | FAIL without it | https://developers.google.com/youtube/v3/docs/errors |
+| `localizations.language` | each localization keyed by a BCP-47 tag | FAIL when not tag-shaped | https://developers.google.com/youtube/v3/docs/videos |
+| `localizations.text_limits` | unknown (not stated for localized titles and descriptions) | WARN above the snippet's own limits | searched: the two API pages above |
+| `quota.videos_insert` | 100 calls per day, 1 unit each in the Video Uploads bucket | reported | https://developers.google.com/youtube/v3/docs/videos/insert |
+| `quota.thumbnails_set_units` | about 50 units per call | reported | https://developers.google.com/youtube/v3/docs/thumbnails/set |
+| `quota.captions_insert_units` | 400 units per call | reported | https://developers.google.com/youtube/v3/docs/captions/insert |
+| `uploads.per_user` | unknown (`uploadLimitExceeded` exists, no number is stated) | not checked | searched: https://developers.google.com/youtube/v3/docs/videos/insert |
+
+### Upload limits: Vimeo
+
+Read from Vimeo's developer documentation on 2026-10-31 (API 3.4; `publish contract --json` → `upload_limits.platforms.vimeo` has every value with the quoted sentence). A limit the documentation does not state is `unknown` and nothing is checked against it.
+
+| Key | Limit | plan | Source |
+|---|---|---|---|
+| `video.max_bytes` | 322 122 547 200 bytes ("300 GB", stated in bytes) | FAIL above | https://developer.vimeo.com/api/reference/videos#upload_video |
+| `video.max_duration_s` | 24 hours (86 400 s) | FAIL above (needs ffmpeg-skill's measured duration) | https://developer.vimeo.com/api/upload/videos |
+| `video.file_formats` | unknown ("a wide range of video codecs and file types") | not checked | searched: https://developer.vimeo.com/api/upload/videos, https://developer.vimeo.com/api/guides/videos/upload, the reference |
+| `video.codecs`, `video.resolution`, `video.aspect`, `video.fps` | delegated: ffmpeg-skill, which has no `vimeo` spec today | `UNCHECKED` | ffmpeg-skill `scripts/_platforms.py` |
+| `upload.content_type` | `application/offset+octet-stream` (tus PATCH) | protocol, not a plan row | https://developer.vimeo.com/api/upload/videos |
+| `upload.chunk_bytes` | 128-512 MB recommended (this uploader: 128 MiB) | protocol, not a plan row | https://developer.vimeo.com/api/upload/videos |
+| `title.max_chars` | 128 characters | FAIL above | https://developer.vimeo.com/api/reference/videos#edit_video |
+| `title.forbidden_chars`, `description.forbidden_chars` | unknown (not stated) | not checked | searched: the upload and edit reference |
+| `description.max_chars` | 5000 characters | FAIL above | https://developer.vimeo.com/api/reference/videos#edit_video |
+| `privacy.values` | `private` (`nobody`), `unlisted` (`unlisted`), `public` (`anybody`), `password` (`password`), `domains` (`disable`: embed only) | FAIL otherwise | https://developer.vimeo.com/api/reference/videos#upload_video |
+| `privacy.password` | the video password, at most 32 characters (`PUBLISH_VIMEO_VIDEO_PASSWORD`, read 2026-11-06) | refused at upload, before any request | https://developer.vimeo.com/api/reference/videos#edit_video |
+| `privacy.embed_domains` | `privacy.embed` `whitelist` and one `PUT /videos/{id}/privacy/domains/{domain}` per `--embed-domain` | FAIL without a domain, or a domain without `--privacy domains` | https://developer.vimeo.com/api/reference/videos#add_video_privacy_domain |
+| `storage.max_bytes`, `quota.weekly_uploads`, `quota.daily_uploads` | unknown, per account (errors 4101, 4102, 4104 exist; no number is stated) | not checked; typed errors at upload | searched: https://developer.vimeo.com/api/reference/videos#upload_video |
+| `rate_limit.requests_per_minute` | 25 (Free), 125 (Starter), 250 (Standard), 750 (Advanced), 1500 (Studio), 2500 (Enterprise); 429 and error 9000 above | reported | https://developer.vimeo.com/guidelines/rate-limiting |
+| `upload.access` | the API app needs upload access (Vimeo Free: approval by support ticket) | reported | https://developer.vimeo.com/api/guides/videos/upload |
+| `token.scopes` | `upload` and `edit` | reported | https://developer.vimeo.com/api/upload/videos |
+
+### Upload limits: TikTok
+
+Read from TikTok's developer documentation on 2026-10-31 (`publish contract --json` → `upload_limits.platforms.tiktok` has every value with the quoted sentence). A size written as "GB" or "MB" is read as decimal, the smaller reading. A limit the documentation does not state is `unknown` and nothing is checked against it.
+
+| Key | Limit | plan | Source |
+|---|---|---|---|
+| `video.max_bytes` | 4 GB (4 000 000 000 bytes) | FAIL above | https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide |
+| `video.max_duration_s` | 10 minutes (600 s) through the API | FAIL above (needs ffmpeg-skill's measured duration) | https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide |
+| `video.creator_max_duration_s` | unknown offline: per creator (3, 5 or 10 minutes), `max_video_post_duration_sec` in creator info | not checked; reported in the receipt | searched: the transfer guide, https://developers.tiktok.com/doc/content-posting-api-reference-query-creator-info |
+| `video.file_formats` | .mp4 .webm .mov | FAIL otherwise (the upload's `Content-Type` must name one) | https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide |
+| `video.codecs`, `video.resolution`, `video.aspect`, `video.fps` | delegated: ffmpeg-skill `check --platform tiktok` | ffmpeg-skill's rows | ffmpeg-skill `scripts/_platforms.py` |
+| `upload.chunk_bytes` | 5-64 MB per chunk, the last up to 128 MB, a file under 5 MB whole (this uploader: 64 000 000 bytes) | protocol, not a plan row | https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide |
+| `upload.max_chunks` | 1000 | protocol, not a plan row | https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide |
+| `upload.url_validity_s` | 1 hour | protocol, not a plan row | https://developers.tiktok.com/doc/content-posting-api-reference-direct-post |
+| `title.max_utf16_units` | 2200 UTF-16 code units (the caption) | FAIL above | https://developers.tiktok.com/doc/content-posting-api-reference-direct-post |
+| `title.forbidden_chars` | unknown (not stated) | not checked | searched: the Direct Post reference |
+| `privacy.values` | `private` (`SELF_ONLY`), `public` (`PUBLIC_TO_EVERYONE`) | FAIL otherwise (`unlisted` included) | https://developers.tiktok.com/doc/content-posting-api-reference-direct-post |
+| `quota.daily_posts`, `quota.active_users` | unknown (`spam_risk_too_many_posts`, `reached_active_user_cap` exist; no number is stated) | not checked; typed errors at upload | searched: the Direct Post reference, Get Started |
+| `rate_limit.requests_per_minute` | 6 (init), 20 (creator info), 30 (status) per user access token | reported | https://developers.tiktok.com/doc/content-posting-api-reference-direct-post |
+| `upload.audit` | an unaudited app's posts are private | reported | https://developers.tiktok.com/doc/content-posting-api-get-started |
+| `token.scopes` | `video.publish` | reported | https://developers.tiktok.com/doc/content-posting-api-reference-direct-post |
+| `token.lifetime_s` | 24 hours (the access token) | reported | https://developers.tiktok.com/doc/oauth-user-access-token-management |
+
+### Upload limits: X
+
+Read from X's developer documentation on 2026-10-31 (`publish contract --json` → `upload_limits.platforms.x` has every value with the quoted sentence). The values for an account without Premium are checked (Premium allows 125 minutes and 16 GB; `plan` cannot tell). A limit the documentation does not state is `unknown` and nothing is checked against it.
+
+| Key | Limit | plan | Source |
+|---|---|---|---|
+| `video.max_bytes` | 8 GB (8 000 000 000 bytes), `tweet_video` | FAIL above | https://docs.x.com/x-api/media/quickstart/media-upload-chunked |
+| `video.max_duration_s` | 20 minutes (1200 s) | FAIL above (needs ffmpeg-skill's measured duration) | https://docs.x.com/x-api/media/quickstart/media-upload-chunked |
+| `video.file_formats` | .mp4 .mov .webm .ts | FAIL otherwise (initialize's `media_type` must name one) | https://docs.x.com/x-api/media/initialize-media-upload |
+| `video.codecs`, `video.resolution`, `video.aspect`, `video.fps` | delegated: ffmpeg-skill `check --platform x` | ffmpeg-skill's rows | ffmpeg-skill `scripts/_platforms.py` |
+| `upload.chunk_bytes` | at or below 5 MB per segment (this uploader: 4 MiB) | protocol, not a plan row | https://docs.x.com/x-api/media/quickstart/media-upload-chunked |
+| `upload.max_segments` | 10000 (`segment_index` 0-9999) | protocol, not a plan row | https://docs.x.com/x-api/media/append-media-upload |
+| `upload.session_validity_s` | 86400 s | protocol, not a plan row | https://docs.x.com/x-api/media/quickstart/media-upload-chunked |
+| `title.max_weighted` | 280 weighted characters (CJK and emoji 2, a URL 23; twitter-text v3 ranges) | FAIL above when exact; with URLs or emoji an upper bound, WARN above | https://docs.x.com/fundamentals/counting-characters |
+| `title.forbidden_chars` | unknown (not stated) | not checked | searched: Create Post, Counting characters |
+| `privacy.values` | `public` only | FAIL otherwise (the default `private` included) | https://docs.x.com/x-api/posts/create-post |
+| `rate_limit.requests` | 100 posts / 15 min per user; 1,875 upload requests / 15 min per user | reported | https://docs.x.com/x-api/fundamentals/rate-limits |
+| `quota.daily_posts` | unknown (not stated beyond the rate limits) | not checked | searched: Create Post, Rate limits |
+| `token.scopes` | `media.write`, `tweet.write`, `tweet.read`, `users.read` | reported | https://docs.x.com/x-api/posts/create-post |
+| `token.lifetime_s` | two hours (the access token) | reported | https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code |
+
+### Upload limits: LinkedIn
+
+Read from LinkedIn's documentation on 2026-10-31 (`publish contract --json` → `upload_limits.platforms.linkedin` has every value with the quoted sentence). A limit the documentation does not state is `unknown` and nothing is checked against it.
+
+| Key | Limit | plan | Source |
+|---|---|---|---|
+| `video.min_bytes` | 75 KB (read as 76 800 bytes, the larger reading) | FAIL below | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api |
+| `video.max_bytes` | 500 MB (500 000 000 bytes); the API caps `fileSizeBytes` at 5 GB | FAIL above | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api |
+| `video.min_duration_s` | 3 s | FAIL below (needs ffmpeg-skill's measured duration) | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api |
+| `video.max_duration_s` | 30 minutes (1800 s) | FAIL above (needs ffmpeg-skill's measured duration) | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api |
+| `video.file_formats` | .mp4 | FAIL otherwise | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api |
+| `video.codecs`, `video.resolution`, `video.aspect`, `video.fps` | delegated: ffmpeg-skill `check --platform linkedin` | ffmpeg-skill's rows | ffmpeg-skill `scripts/_platforms.py` |
+| `upload.chunk_bytes` | the byte ranges LinkedIn gives (4 MiB) | protocol, not a plan row | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api |
+| `upload.session_validity_s` | typically 30 days (the upload URLs) | protocol, not a plan row | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api |
+| `title.max_chars` | unknown: the Posts API states no `commentary` maximum (3000 is stated for the older UGC Post API only) | not checked | searched: Post API schema, Posts API, https://learn.microsoft.com/en-us/linkedin/compliance/integrations/shares/ugc-post-api |
+| `title.forbidden_chars` | none (reserved `little` characters are escaped) | not checked | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/little-text-format |
+| `privacy.values` | `public` only (sent as `PUBLIC`) | FAIL otherwise (the default `private` included) | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/post-api-schema |
+| `rate_limit.requests` | unknown (not stated; 429 is named) | not checked | searched: Videos API, Posts API |
+| `quota.daily_posts` | unknown (not stated) | not checked | searched: Posts API |
+| `token.scopes` | `w_member_social` (a person) or `w_organization_social` (an organization, with a page role) | reported | https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api |
+| `token.lifetime_s` | 60 days (the access token) | reported | https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow |
+
+### Upload limits: Facebook
+
+Read from Meta's developer documentation on 2026-10-31 (`publish contract --json` → `upload_limits.platforms.facebook` has every value with the quoted sentence). A limit the documentation does not state is `unknown` and nothing is checked against it; on the pages read, that is most of them.
+
+| Key | Limit | plan | Source |
+|---|---|---|---|
+| `video.max_bytes`, `video.min_bytes`, `video.max_duration_s` | unknown (not stated; error 382 "The video file is too small" has no number) | not checked | searched: https://developers.facebook.com/docs/video-api/guides/publishing, https://developers.facebook.com/docs/graph-api/guides/upload, https://developers.facebook.com/docs/graph-api/reference/page/videos/, https://developers.facebook.com/docs/video-api/overview |
+| `video.file_formats` | .mp4 (the upload session's `file_type`: `video/mp4` is the only video type) | FAIL otherwise | https://developers.facebook.com/docs/graph-api/guides/upload |
+| `video.codecs`, `video.resolution`, `video.aspect`, `video.fps` | delegated: ffmpeg-skill `check --platform facebook` | ffmpeg-skill's rows | ffmpeg-skill `scripts/_platforms.py` |
+| `upload.chunk_bytes` | one body from `file_offset` (no chunk size documented) | protocol, not a plan row | https://developers.facebook.com/docs/graph-api/guides/upload |
+| `title.max_chars`, `title.forbidden_chars`, `description.max_chars` | unknown (not stated) | not checked | searched: https://developers.facebook.com/docs/graph-api/reference/page/videos/, https://developers.facebook.com/docs/video-api/guides/publishing |
+| `privacy.values` | `public` (published), `unlisted` (published, `secret`) | FAIL otherwise (the default `private` included) | https://developers.facebook.com/docs/graph-api/reference/page/videos/ |
+| `rate_limit.requests` | unknown (throttling is typed: codes 4, 17, 341) | not checked | searched: https://developers.facebook.com/docs/graph-api/guides/error-handling, https://developers.facebook.com/docs/graph-api/reference/page/videos/ |
+| `quota.daily_posts` | unknown | not checked | searched: https://developers.facebook.com/docs/graph-api/reference/page/videos/, https://developers.facebook.com/docs/video-api/guides/publishing |
+| `token.scopes` | `pages_manage_posts`, `pages_read_engagement`, `pages_show_list` (the Page token; CREATE_CONTENT); a user token for the upload | reported | https://developers.facebook.com/docs/video-api/guides/publishing |
+| `token.lifetime_s` | unknown (not stated on the pages read) | not checked | searched: https://developers.facebook.com/docs/video-api/guides/publishing, https://developers.facebook.com/docs/graph-api/guides/upload |
+
+### Upload limits: Instagram Reels
+
+Read from Meta's developer documentation on 2026-10-31 (`publish contract --json` → `upload_limits.platforms.reels` has every value with the quoted sentence).
+
+| Key | Limit | plan | Source |
+|---|---|---|---|
+| `video.max_bytes` | 300 MB (300 000 000 bytes) | FAIL above | https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media |
+| `video.min_duration_s`, `video.max_duration_s` | 3 s, 15 minutes (900 s) | FAIL outside (needs ffmpeg-skill's measured duration) | https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media |
+| `video.file_formats` | .mp4 .mov | FAIL otherwise | https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media |
+| `video.codecs`, `video.resolution`, `video.aspect`, `video.fps` | delegated: ffmpeg-skill `check --platform reels` | ffmpeg-skill's rows | ffmpeg-skill `scripts/_platforms.py` |
+| `upload.chunk_bytes` | one body from offset 0 (no chunk size, no offset query) | protocol, not a plan row | https://developers.facebook.com/docs/instagram-platform/content-publishing/ |
+| `upload.session_validity_s` | 24 hours (an unpublished container expires) | protocol, not a plan row | https://developers.facebook.com/docs/instagram-platform/content-publishing/ |
+| `title.max_chars` | 2200 characters (the caption) | FAIL above | https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media |
+| `title.max_hashtags`, `title.max_mentions` | 30 hashtags, 20 @ tags | WARN above (counted as `#word` / `@name`; Instagram's own count decides) | https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media |
+| `title.forbidden_chars` | unknown (not stated) | not checked | searched: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media, https://developers.facebook.com/docs/instagram-platform/content-publishing/ |
+| `privacy.values` | `public` only | FAIL otherwise (the default `private` included) | https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media |
+| `quota.daily_posts` | 100 API-published posts per 24-hour moving period (the carousel section says 50) | reported | https://developers.facebook.com/docs/instagram-platform/content-publishing/ |
+| `rate_limit.requests` | unknown (throttling is typed: codes 4, 17, 341) | not checked | searched: https://developers.facebook.com/docs/instagram-platform/content-publishing/ |
+| `token.scopes` | `instagram_basic`, `instagram_content_publish` (Facebook Login for Business) | reported | https://developers.facebook.com/docs/instagram-platform/content-publishing/ |
+| `token.lifetime_s` | unknown (not stated on the pages read) | not checked | searched: https://developers.facebook.com/docs/instagram-platform/content-publishing/ |
+
+## JSON and errors
+
+With `--json`, stdout holds exactly one JSON document. Failures are `{"ok": false, "error": {"code", "message", "retryable", "details"}}`; the code fixes the exit code (`contract --json` lists them under `errors`).
+
+## Tests
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Every unit test runs with network access patched to fail, except to `127.0.0.1` on the port of a mock server the test itself started: the YouTube uploader's tests run against `tests/mock_youtube.py`, an in-process mock of the token endpoint and the resumable protocol (chunks, an interrupted chunk and its resume, timeouts, 5xx/429 backoff, quota and upload-limit errors, expired sessions, thumbnail, captions), and the Vimeo uploader's against `tests/mock_vimeo.py`, an in-process mock of `POST /me/videos` and tus 1.0.0 (PATCH/HEAD, 409 offset conflicts, an interrupted chunk and its resume, timeouts, 5xx/429 backoff, the 4101/4102/4104 account errors, an expired upload link), and the TikTok uploader's against `tests/mock_tiktok.py`, an in-process mock of creator info, the Direct Post init and the chunked PUT (206/201, a resent chunk, a lost answer resolved by 416 and `uploaded_bytes`, timeouts, 5xx/429 backoff, the post cap and the app quota, an expired upload URL, the post's status), and the X uploader's against `tests/mock_x.py`, an in-process mock of the chunked media upload and create-post endpoints (segments, a resent segment after a lost answer or a drop, timeouts, 5xx/429 backoff with `x-rate-limit-reset`, processing status, failed processing, a post never sent twice), and the LinkedIn uploader's against `tests/mock_linkedin.py`, an in-process mock of the Videos API and the Posts API (signed part uploads and their ETags, a resent part after a lost answer or a drop, timeouts, 5xx/429 backoff, processing status, failed processing, a post never sent twice), and the Facebook uploader's against `tests/mock_facebook.py`, an in-process mock of the Resumable Upload API and the Page videos endpoint (a streamed upload, a resume from `file_offset` after a cut connection or a lost answer, timeouts, 5xx/429 and Graph-code backoff, a video never published twice), and the Instagram Reels uploader's against `tests/mock_reels.py`, an in-process mock of the resumable REELS container, the rupload upload, the container's status and `media_publish` (a whole resend after a cut, a lost answer or a retriable `debug_info`, timeouts, 5xx/429 and Graph-code backoff, `ERROR`/`EXPIRED`, a reel never published twice). No test contacts Google, Vimeo, TikTok, X, LinkedIn, Facebook or Instagram, and no workflow performs a real upload; CI fails unless `test_the_guard_allows_only_the_mock_this_test_started`, `test_the_guard_blocks_every_non_loopback_host_for_vimeo`, `test_the_guard_blocks_every_non_loopback_host_for_tiktok`, `test_the_guard_blocks_every_non_loopback_host_for_x`, `test_the_guard_blocks_every_non_loopback_host_for_linkedin`, `test_the_guard_blocks_every_non_loopback_host_for_facebook`, `test_the_guard_blocks_every_non_loopback_host_for_reels` and the resume and quota (or never-twice) tests of the seven uploaders passed. `plan`'s tests run fake ffmpeg-skill checkouts. No test reaches a real OS keychain: the package's only import of keyring is replaced by a guard for the whole test run, every test gets an in-memory fake keychain, and CI fails unless `test_the_fake_keychain_is_what_runs` passed. The OS registry conformance checks and the JSON Schema validation of the contract run when `AI_VIDEO_PRODUCTION_OS_DIR` (or `../AI-video-production-OS`) is present and `jsonschema` is installed; the integration tests against a real ffmpeg-skill run when `PUBLISH_FFMPEG_SKILL_DIR` (or `../ffmpeg-skill`), FFmpeg and Python >= 3.10 are present. CI's `conformance` job provides all of them and fails if any test is skipped.
+
+## Licence
+
+MIT.
