@@ -51,14 +51,19 @@ npx dev-marketplace add --all --global
 
 ## CLI Commands
 
-| Command                                       | Description                                                                                                 |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `npx dev-marketplace list`                    | Browse and filter all available skills by keyword or category                                               |
-| `npx dev-marketplace add <name...>`           | Copy specified skill(s) into your current project (`.agents/skills`, `.claude/skills`, or `.gemini/skills`) |
-| `npx dev-marketplace add --all`               | Install all 133+ marketplace skills at once                                                                 |
-| `npx dev-marketplace add --category "<name>"` | Install all skills belonging to a specific category                                                         |
-| `npx dev-marketplace info <name>`             | Inspect full skill description, frontmatter, and file contents                                              |
-| `npx dev-marketplace categories`              | List all marketplace categories and counts                                                                  |
+| Command                                       | Description                                                                                                         |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `npx dev-marketplace list`                    | Browse and filter all available skills by keyword or category (`--json` supported)                                  |
+| `npx dev-marketplace search <query>`          | Ranked search across skill names, titles, tags, categories, and descriptions                                        |
+| `npx dev-marketplace add <name...>`           | Install skill(s) into `.agents/skills`, `.claude/skills`, `.gemini/skills`, `.cursor/skills`, `.codex/skills`, etc. |
+| `npx dev-marketplace add --all`               | Install all 133+ marketplace skills at once                                                                         |
+| `npx dev-marketplace add --category "<name>"` | Install all skills belonging to a specific category                                                                 |
+| `npx dev-marketplace status`                  | Check installed skills for available updates or local modifications (`--check` exits 1 if outdated)                 |
+| `npx dev-marketplace upgrade [name...]`       | Upgrade outdated installed skills via SHA-256 lockfile tracking (protects local edits unless `--force` is passed)   |
+| `npx dev-marketplace remove <name...>`        | Uninstall installed skill(s) and clean up lockfile entries                                                          |
+| `npx dev-marketplace doctor`                  | Verify installed skill directories, `SKILL.md` frontmatter, and lockfile integrity                                  |
+| `npx dev-marketplace info <name>`             | Inspect full skill description, tags, hash, and included files                                                      |
+| `npx dev-marketplace categories`              | List all marketplace categories and counts                                                                          |
 
 ---
 
