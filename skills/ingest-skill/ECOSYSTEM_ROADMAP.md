@@ -1,0 +1,64 @@
+# Roadmap — ingest-skill
+
+Part of the [AI Video Production OS](https://github.com/kajisho5/AI-video-production-OS/blob/main/docs/ecosystem/ROADMAP.md) ecosystem: department **取込 (Ingest)**, status `scaffold`.
+Written from a read-only audit of this repository on 2026-10-30. Each step below is meant to be one pull request; tick it off by linking the PR.
+
+## Where it stands
+
+v0.1.0 on main, SKILL.md on the default branch. Python 3.9+ stdlib (`xxhash` and `yt-dlp` optional). `ingest offload | verify | inventory | fetch | contract | doctor`; sha256 or xxh64 read-back, never overwrites, resumable, manifest and ASC MHL history per destination; card-structure-aware inventory (one clip per recording, camera sidecars, reel / card id, ADR-003); the source read once for every destination (ADR-004); `ingest fetch <url>` downloads through yt-dlp and offloads like a card, with a redacted download record (ADR-005); `offload --follow` copies recordings still being written as they grow and seals each once it is stable (ADR-007); inventory carries sync facts per clip and groups several cards into multicam sync-group candidates (ADR-008); `offload --progress` reports bytes, per-drive speed and ETA as JSON lines and warns about a slow destination (ADR-009); `offload --proxy` queues ffmpeg-skill `proxy` on verified clips and links each proxy by hash (ADR-010). 88 tests, CI on 3 OSes × Python 3.9 / 3.11 / 3.12 (3.9 on ubuntu-24.04, see ADR-002), contract validated against the OS schema in CI.
+
+## What this repository owns
+
+`ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
+
+| Owned job | Status | Note |
+|---|---|---|
+| 素材取り込み(検証付きコピー) | done |  |
+| 二重バックアップ | done | the source is read once per file and written to every destination in parallel; each destination read back and verified on its own; a failed drive does not stop the others (ADR-004) |
+| 素材台帳 | done | one clip per recording (Sony XDCAM / XAVC, XDCAM EX, AVCHD, BRAW, generic), camera sidecars, reel / card id, ffprobe facts, sync facts and multicam sync-group candidates; P2 / Canon XF / RED listed file by file |
+| URL素材取得 | done | `ingest fetch <url>` ([#9](https://github.com/kajisho5/ingest-skill/pull/9), ADR-005); the agent calls `ingest fetch` instead of its own yt-dlp (video-production-agent#77, its ADR-059) |
+
+## Wiring
+
+The agent's adapter runs `offload` / `inventory` (step 6, video-production-agent#83) and `fetch` (its ADR-059). Calls ffprobe (and, for LTC detection, ffmpeg) directly; proxy encoding stays with ffmpeg-skill `proxy`, which `offload --proxy` runs as a subprocess (ADR-010). The agent pins this contract at 0.1.0: the new optional flags of steps 8–11 in the `offload` / `inventory` argv are a re-pin on its side.
+
+## Steps
+
+- [x] **1. Contract fits the OS schema** — `skill` as an object (or drop it), ffprobe under capabilities.optional, SOURCE_CHANGED in ERRORS, a jsonschema test against the OS schema (the jsonschema test landed with step 4, [#7](https://github.com/kajisho5/ingest-skill/pull/7))
+  - Done when: contract validates against registry/capability_contract.schema.json in CI
+- [x] **2. Merge to main; CI on Python 3.9 / 3.11 / 3.12** ([#6](https://github.com/kajisho5/ingest-skill/pull/6))
+  - Done when: CI green; SKILL.md on the default branch (marketplace install shows 1 skill)
+- [x] **3. ASC MHL output + xxHash64** — MHL per destination; `verify` accepts sha256 or xxh64 ([#5](https://github.com/kajisho5/ingest-skill/pull/5))
+  - Done when: MHL round-trips; verify passes on both hash kinds
+- [x] **4. Card-structure-aware inventory** — group spanned clips (XDCAM/AVCHD/BRAW/etc.), read camera sidecars, reel/card naming ([#7](https://github.com/kajisho5/ingest-skill/pull/7))
+  - Done when: fixture card trees give one clip per recording
+- [x] **5. Read the source once for all destinations** — single read, fan-out writes ([#8](https://github.com/kajisho5/ingest-skill/pull/8), ADR-004)
+  - Done when: a test counts one read per file
+- [x] **6. Agent adapter + SkillSpec media_offload** — inventory becomes OBSERVED observations on new assets ([video-production-agent#83](https://github.com/kajisho5/video-production-agent/pull/83))
+  - Done when: `video-agent plan <card>` offloads then analyses, with provenance
+  - Done (video-production-agent ADR-066): a card folder with `ingest.dest` plans one always-CONFIRM `media_offload` step from `offload --dry-run` + `inventory`; after approval `render` runs `ingest offload` once, checks every destination's manifest, and the first copy's inventory becomes new assets with OBSERVED `ingest_clip` observations (clip, members, reel, hashes, sidecar facts, MHL); the agent's own analysis then runs on the verified copies. The agent pins this contract at 0.1.0 and checks live == pin against main
+- [x] **7. `ingest fetch <url>`** — URL download through yt-dlp (optional dependency, reported by doctor), the same verify + manifest + inventory as a card, source URL and extractor version recorded ([#9](https://github.com/kajisho5/ingest-skill/pull/9), ADR-005; the agent's switch to `ingest fetch` is its own change)
+  - Done when: a fixture URL (local HTTP server) lands with a manifest; the agent calls ingest-skill instead of yt-dlp
+- [x] **8. Recordings still being written (growing files)** — `offload --follow`: a file whose size or mtime is still changing is copied as it grows (appended bytes only, re-read from the last verified offset) and marked `growing: true` in the manifest; it is hashed, verified and written into the MHL only once it has been stable for a stated window or the recorder closed it. Field review 2026-11-05 (Velisa ROADMAP, third round) ([#15](https://github.com/kajisho5/ingest-skill/pull/15), ADR-007)
+  - なぜ要るか：終日の学会収録を、休憩ごとに途中まで取り込んで編集を始められる
+  - Done when: a fixture file appended in three bursts ends with one verified copy and one MHL entry; a copy taken mid-growth is never sealed
+  - Done (ADR-007): `offload --follow [--settle S] [--poll P] [--follow-for T]`; a growing file is appended pass by pass from its last verified offset, each appended range read back, and listed under the manifest's optional `"growing"` (`"growing": true`, verified size and hash); it is sealed (full read-back, manifest `files`, ASC MHL) only after S seconds unchanged, with a full re-hash of the source when it was read in several passes (a header rewritten at close is found and the file copied again). `verify` reports a partial copy as `growing` / `INCOMPLETE`, `inventory` marks the clip; the next run (or a plain offload once recording ended) continues it. Whether the recorder still holds the file open is not detected (no portable API): the settle window is the end-of-recording signal
+- [x] **9. Sync facts and multicam sets in the inventory** — per clip: start timecode, frame rate, whether an audio channel carries LTC (detected, not decoded), recorder and camera ids, wall-clock start; clips from different cards whose times overlap are grouped as a `sync_group` candidate for ffmpeg-skill `multicam` / `sync` ([#16](https://github.com/kajisho5/ingest-skill/pull/16), ADR-008)
+  - なぜ要るか：カメラと別録りレコーダーの素材を、取り込み時点でマルチカム用にまとめられる
+  - Done when: a fixture with two cameras and one recorder over the same 10 minutes gives one sync group with three members
+  - Done (ADR-008): every inventory clip has `sync` (start timecode, time of day, frame and timecode rates, LTC channels detected from the signal, camera / recorder ids, wall-clock start, duration, each with its source: ffprobe, Sony NonRealTimeMeta, Broadcast Wave `bext` / `iXML`); `ingest inventory <card> <card> ...` gives `ingest/inventory-set@1` with `sync_groups` (clips of different cards overlapping on timecode, else UTC, else local clock), each with the reference and the ffmpeg-skill `scripts/multicam.py --offsets-only` call. LTC in video files needs ffmpeg on PATH (WAV is checked with the standard library); the Sony LtcChange byte order is checked against fixtures only, not a real card
+- [x] **10. Progress, speed and ETA** — `--progress` writes JSON lines (file, bytes, MB/s per destination, ETA); a destination much slower than the others is warned about while the copy runs ([#17](https://github.com/kajisho5/ingest-skill/pull/17), ADR-009)
+  - なぜ要るか：現場で「あと何分で取り込みが終わるか」と遅いドライブがすぐ分かる
+  - Done when: a fixture run emits monotonic progress, and a throttled destination raises the warning
+  - Done (ADR-009): every destination's writer times its own writes and syncs, so `destinations[].write_mb_s` is the drive's speed (the copy itself runs at the slowest one's pace); a destination under half the median speed of all, judged once each has written 64 MB, gets one `slow_destination` warning while the copy runs (also in its `warnings`, never a failure). `offload --progress` writes JSON lines to stderr (`start`, `progress`, `file`, `slow_destination`, `done`) with `bytes_done` (monotonic, ends at `bytes_total`), files, MB/s, `eta_s` and per-destination speeds; stdout stays the one report
+- [x] **11. Proxies queued at ingest** — after a clip is verified, ffmpeg-skill `proxy` runs on it (a hardware encoder when doctor reports one) while the next files copy; the proxy and its original are linked in the inventory by hash ([#18](https://github.com/kajisho5/ingest-skill/pull/18), ADR-010)
+  - なぜ要るか：撮って出しで、カード取り込みが終わった時点でノートPCで編集できる軽い素材が揃う
+  - Done when: an offload with `--proxy` gives one proxy per clip linked by the original's hash; a failed proxy does not fail the offload
+  - Done (ADR-010): `offload --proxy [--ffmpeg-skill DIR] [--proxy-width PX]` queues ffmpeg-skill `scripts/proxy.py` for each verified video member of the card's clips, from the first verified copy, in one worker thread while the next files copy; proxies go to `<copy>/ingest-proxies/` with `proxies.json` (`ingest/proxies@1`: original hash, proxy sha256, encoder, ffmpeg-skill version) and `inventory` links them by the original's manifest hash (`ingest_proxies`). A failed proxy is a warning, never a failed offload; a resume keeps proxies already made; no ffmpeg-skill is `PROXY_UNAVAILABLE`. `--hw` is passed when ffmpeg-skill's doctor reports `hw.platform_ok` (VideoToolbox, the only hardware path its tools take; its NVENC / QSV / VAAPI / AMF `gpu_encoders` are listed, not used). Tested with a stand-in ffmpeg-skill and once with the real 3.1.8 on CPU; VideoToolbox not exercised (no Apple Silicon machine)
+
+## Boundaries
+
+URL download (URL素材取得) is owned here since 2026-10-30 (owner decision) and ships as `ingest fetch` (step 7); the agent has switched to `ingest fetch ... --json` (its ADR-059).
+
+---
+Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).
