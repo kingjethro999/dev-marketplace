@@ -1,0 +1,54 @@
+{
+  "threatModel": {
+    "projectType": "private",
+    "pushAccess": "core-team",
+    "blastRadius": "medium",
+    "compliance": ["none"]
+  },
+  "gitConfig": {
+    "requireSignedCommits": true,
+    "requireSignedTags": true,
+    "enforceConventionalCommits": true,
+    "disableForcePush": true,
+    "requireLinearHistory": true,
+    "followTags": true
+  },
+  "branchProtection": {
+    "protectedBranches": ["main", "release/*"],
+    "requiredReviews": 2,
+    "dismissStaleReviews": true,
+    "requireConversationResolution": true,
+    "requiredStatusChecks": ["ci/lint", "ci/test", "ci/periderm"],
+    "requireUpToDateBranch": true,
+    "lockBranch": true
+  },
+  "secretScanning": {
+    "enabled": true,
+    "pushProtection": true,
+    "customPatterns": [],
+    "scanHistory": true,
+    "usePeriderm": true
+  },
+  "dependencies": {
+    "dependabotAlerts": true,
+    "dependabotAutoFix": true,
+    "schedule": "weekly",
+    "autoMerge": ["patch", "minor"],
+    "pinVersions": false,
+    "auditSources": ["npm", "osv", "snyk"]
+  },
+  "supplyChain": {
+    "verifySignatures": true,
+    "generateSBOM": true,
+    "signReleases": true,
+    "slsaProvenance": false,
+    "reproducibleBuilds": false
+  },
+  "governance": {
+    "securityPolicy": true,
+    "codeowners": true,
+    "contributingSecurity": true,
+    "gitignoreSecrets": true,
+    "securityAdvisories": true
+  }
+}
