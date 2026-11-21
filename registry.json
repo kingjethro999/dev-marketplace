@@ -406,8 +406,8 @@
       "periderm",
       "code-review-quality"
     ],
-    "files": ["SKILL.md", "config", "scripts", "templates"],
-    "hash": "3776bf55785b1eb03af96f122af3a735718e124545863465e35b797613f18fe3"
+    "files": ["SKILL.md", "config", "scripts", "templates", "tests"],
+    "hash": "23889501a92877e7b7a39bb3664168da02864cb868a0c2ad0a55bd3107bb963e"
   },
   {
     "name": "design-mobile-apps",
