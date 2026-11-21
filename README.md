@@ -1,12 +1,12 @@
 # Dev Marketplace
 
-[![Skills Count](https://img.shields.io/badge/skills-131%20curated-blue.svg?style=flat-square)](https://github.com/kingjethro999/dev-marketplace)
+[![Skills Count](https://img.shields.io/badge/skills-133%20curated-blue.svg?style=flat-square)](https://github.com/kingjethro999/dev-marketplace)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Compatible with Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-orange?style=flat-square)](https://docs.anthropic.com/en/docs/claude-code)
 [![Compatible with Cursor & Antigravity](https://img.shields.io/badge/Agent-Cursor%20%7C%20Antigravity%20%7C%20Codex-purple?style=flat-square)](https://github.com/kingjethro999/dev-marketplace)
 [![Vercel Skills Standard](https://img.shields.io/badge/npx%20skills-ready-black?style=flat-square)](https://skills.sh)
 
-An open developer marketplace packed with **131+ curated, battle-tested AI agent skills, language server (LSP) connectors, design engines, code quality verifiers, and video synthesis toolkits**.
+An open developer marketplace packed with **133+ curated, battle-tested AI agent skills, language server (LSP) connectors, design engines, code quality verifiers, and video synthesis toolkits**.
 
 Compatible across **Claude Code**, **Cursor**, **Antigravity (`agy`)**, **Codex**, and any agent platform following the standard `SKILL.md` specification.
 
@@ -54,16 +54,16 @@ npx dev-marketplace add --all --global
 |---|---|
 | `npx dev-marketplace list` | Browse and filter all available skills by keyword or category |
 | `npx dev-marketplace add <name...>` | Copy specified skill(s) into your current project (`.agents/skills`, `.claude/skills`, or `.gemini/skills`) |
-| `npx dev-marketplace add --all` | Install all 131+ marketplace skills at once |
+| `npx dev-marketplace add --all` | Install all 133+ marketplace skills at once |
 | `npx dev-marketplace add --category "<name>"` | Install all skills belonging to a specific category |
 | `npx dev-marketplace info <name>` | Inspect full skill description, frontmatter, and file contents |
 | `npx dev-marketplace categories` | List all marketplace categories and counts |
 
 ---
 
-## Marketplace Catalog (131 Skills & Connectors)
+## Marketplace Catalog (133 Skills & Connectors)
 
-### Code Review & Quality (15 skills)
+### Code Review & Quality (16 skills)
 
 | Skill | Description | Install |
 |---|---|---|
@@ -82,6 +82,7 @@ npx dev-marketplace add --all --global
 | `branch-sec` | Enforce branch protection, signed commits, Periderm checks | `npx dev-marketplace add branch-sec` |
 | `cyber-sec` | Cybersecurity toolkit: threat modeling, OWASP, crypto audit | `npx dev-marketplace add cyber-sec` |
 | `commit-hook` | Git hooks with Periderm CLI integration | `npx dev-marketplace add commit-hook` |
+| `repo-sec` | Repository security hardening: signed commits, branch protection, secret scanning, dependency audit | `npx dev-marketplace add repo-sec` |
 
 ### Connectors & LSP (15 skills)
 
@@ -154,7 +155,7 @@ npx dev-marketplace add --all --global
 | `write-swift` | How to write modern Swift well | `npx dev-marketplace add write-swift` |
 | `writing-skills` | Create, edit, verify skills before deployment | `npx dev-marketplace add writing-skills` |
 
-### Engineering & Workflow (17 skills)
+### Engineering & Workflow (18 skills)
 
 | Skill | Description | Install |
 |---|---|---|
@@ -175,6 +176,7 @@ npx dev-marketplace add --all --global
 | `branch-sec` | Enforce branch protection, signed commits, Periderm checks | `npx dev-marketplace add branch-sec` |
 | `cyber-sec` | Cybersecurity toolkit: threat modeling, OWASP, crypto audit | `npx dev-marketplace add cyber-sec` |
 | `commit-hook` | Git hooks with Periderm CLI integration | `npx dev-marketplace add commit-hook` |
+| `ci-cd` | CI/CD pipeline analyzer/generator: GitHub Actions, GitLab CI, CircleCI, Azure Pipelines | `npx dev-marketplace add ci-cd` |
 
 ### Video & Motion (48 skills)
 
@@ -247,7 +249,7 @@ dev-marketplace/
 │   ├── typescript-lsp/
 │   │   ├── SKILL.md
 │   │   └── .claude-plugin/
-│   └── ... (131+ skills)
+│   └── ... (133+ skills)
 ├── registry.json         # Searchable machine-readable index
 └── package.json          # npm bin definition
 ```
