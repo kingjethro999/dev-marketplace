@@ -2,38 +2,42 @@
   {
     "name": "animate",
     "title": "Animate",
-    "description": "Build an animation from scratch, making the decisions in the order that determines whether it feels right \u2014 should it animate at all, what purpose, which tool, which properties, which curve and duration, how it interrupts, how it exits. Writes the implementation. Use when asked to animate something, add motion, make a component feel alive, or build a transition. For critiquing existing motion use review-animations; for auditing a whole codebase use improve-animations.",
+    "description": "Build an animation from scratch, making the decisions in the order that determines whether it feels right — should it animate at all, what purpose, which tool, which properties, which curve and duration, how it interrupts, how it exits. Writes the implementation. Use when asked to animate something, add motion, make a component feel alive, or build a transition. For critiquing existing motion use review-animations; for auditing a whole codebase use improve-animations.",
     "category": "Video & Motion",
     "path": "skills/animate",
     "tags": ["animate", "video-motion"],
-    "files": ["RECIPES.md", "SKILL.md"]
+    "files": ["RECIPES.md", "SKILL.md"],
+    "hash": "1700213bfe68aa67a3895cfe2b1387d63f4995406f3c2076de2d53a8040f3c21"
   },
   {
     "name": "animate-expo",
     "title": "Animate Expo",
-    "description": "Build animations in React Native and Expo, making the decisions in the order that determines whether they feel right \u2014 should it animate, which thread it runs on, which properties, spring or timing, how the gesture hands off, how it degrades. Writes the implementation with Reanimated, Gesture Handler, Expo Router and expo-haptics. Use when animating anything in an Expo app, adding gestures, sheets, screen transitions, press feedback or haptics, or fixing motion that stutters on device. For web animation use `animate`.",
+    "description": "Build animations in React Native and Expo, making the decisions in the order that determines whether they feel right — should it animate, which thread it runs on, which properties, spring or timing, how the gesture hands off, how it degrades. Writes the implementation with Reanimated, Gesture Handler, Expo Router and expo-haptics. Use when animating anything in an Expo app, adding gestures, sheets, screen transitions, press feedback or haptics, or fixing motion that stutters on device. For web animation use `animate`.",
     "category": "Video & Motion",
     "path": "skills/animate-expo",
     "tags": ["animate-expo", "video-motion"],
-    "files": ["RECIPES.md", "SKILL.md"]
+    "files": ["RECIPES.md", "SKILL.md"],
+    "hash": "979989705ded4a9136d2e7eae0797247ebcb267540a504d037d2731f3011f68f"
   },
   {
     "name": "animation-performance",
     "title": "Animation Performance",
-    "description": "Keep web animations inside the frame budget \u2014 animate composite-only properties, keep motion off the main thread when the page is busy, and find the cause when an animation drops frames. Use when an animation is janky, choppy, stutters, or drops frames; when choosing which property to animate; when deciding between CSS and JS animation on performance grounds; or when reaching for `will-change` or GPU layers. For choosing easing, duration, or whether to animate at all use animate; for reviewing motion as a whole use review-animations.",
+    "description": "Keep web animations inside the frame budget — animate composite-only properties, keep motion off the main thread when the page is busy, and find the cause when an animation drops frames. Use when an animation is janky, choppy, stutters, or drops frames; when choosing which property to animate; when deciding between CSS and JS animation on performance grounds; or when reaching for `will-change` or GPU layers. For choosing easing, duration, or whether to animate at all use animate; for reviewing motion as a whole use review-animations.",
     "category": "Video & Motion",
     "path": "skills/animation-performance",
     "tags": ["animation-performance", "video-motion"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "59fba209af5da352eda40d7718e06aa4c94699dd155c3064974eac56856979b0"
   },
   {
     "name": "animation-vocabulary",
     "title": "Animation Vocabulary",
-    "description": "Reverse-lookup glossary that turns a vague description of a web animation or motion effect into its exact term (\"the bouncy thing when a popover opens\" \u2192 Pop in; \"the iOS rubber-band scroll\" \u2192 Rubber-banding). Use when the user asks \"what's it called when\u2026\", or describes a motion effect without knowing its name and wants the right word to prompt an AI or designer with. For naming an effect, not designing or building one.",
+    "description": "Reverse-lookup glossary that turns a vague description of a web animation or motion effect into its exact term (\"the bouncy thing when a popover opens\" → Pop in; \"the iOS rubber-band scroll\" → Rubber-banding). Use when the user asks \"what's it called when…\", or describes a motion effect without knowing its name and wants the right word to prompt an AI or designer with. For naming an effect, not designing or building one.",
     "category": "Video & Motion",
     "path": "skills/animation-vocabulary",
     "tags": ["animation-vocabulary", "video-motion"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "a0831e0f8211619e3059a486dfe22dbd7d8d6438b896c8facedb6a5c52f181ba"
   },
   {
     "name": "apple-design",
@@ -42,27 +46,36 @@
     "category": "Design & UI",
     "path": "skills/apple-design",
     "tags": ["apple-design", "design-ui"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "6cc38667af4b6e4da4c4d30e76b1206a52b471fdbfb1d73ed61a51d973395cc8"
   },
   {
     "name": "artifacts-skill",
     "title": "Artifacts Skill",
-    "description": "Local-first execution and verification engine for real-world artifacts (PDF, PPTX, DOCX, XLSX, PNG/JPEG/WebP, HTML, SVG, CSV, Markdown, EPUB, video/audio media). Use it whenever you create or modify a document-like file and need to prove it is actually correct before calling the job done \u2014 inspect what a file really is, plan a mutation before touching it, execute it without overwriting the original, render it to images, run structural checks, and get a machine-readable Artifact Verification Receipt. Trigger on requests like \"make sure this PDF is correct\", \"verify this document before I send it\", \"did the page count come out right\", \"check this file isn't corrupted\", or any time you are about to say a generated artifact is \"done\" without having checked it.",
+    "description": "Local-first execution and verification engine for real-world artifacts (PDF, PPTX, DOCX, XLSX, PNG/JPEG/WebP, HTML, SVG, CSV, Markdown, EPUB, video/audio media). Use it whenever you create or modify a document-like file and need to prove it is actually correct before calling the job done — inspect what a file really is, plan a mutation before touching it, execute it without overwriting the original, render it to images, run structural checks, and get a machine-readable Artifact Verification Receipt. Trigger on requests like \"make sure this PDF is correct\", \"verify this document before I send it\", \"did the page count come out right\", \"check this file isn't corrupted\", or any time you are about to say a generated artifact is \"done\" without having checked it.",
     "category": "Developer Tools & AI",
     "path": "skills/artifacts-skill",
     "tags": ["artifacts-skill", "developer-tools-ai"],
     "files": [
-      "examples",
-      "tests",
-      "scripts",
-      "README.md",
-      "bin",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "package.json",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "bin",
+      "brand",
       "docs",
-      "SKILL.md"
-    ]
+      "examples",
+      "package.json",
+      "pyproject.toml",
+      "schemas",
+      "scripts",
+      "src",
+      "tests"
+    ],
+    "hash": "6bf14df3a549355ab48a8c917caf19d82953b4890ac41ee85511ef0d958f68ab"
   },
   {
     "name": "ask-emil",
@@ -71,16 +84,18 @@
     "category": "Developer Tools & AI",
     "path": "skills/ask-emil",
     "tags": ["ask-emil", "developer-tools-ai"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "326803d614c5e70b3c6aa60e7614c32c52c5ec907d1be6561065f6f2247522d6"
   },
   {
     "name": "ask-sonner",
     "title": "Ask Sonner",
-    "description": "Guide to Sonner, the React toast library \u2014 install and wire up the Toaster, pick the right toast() call, promise and loading toasts, updating, dismissing and persisting toasts, styling, theming and icons, positioning and multiple toasters. Use when working with Sonner or troubleshooting it \u2014 toasts that don't appear, appear twice, lose their styles, ignore Tailwind classes, sit behind a modal, or don't follow dark mode.",
+    "description": "Guide to Sonner, the React toast library — install and wire up the Toaster, pick the right toast() call, promise and loading toasts, updating, dismissing and persisting toasts, styling, theming and icons, positioning and multiple toasters. Use when working with Sonner or troubleshooting it — toasts that don't appear, appear twice, lose their styles, ignore Tailwind classes, sit behind a modal, or don't follow dark mode.",
     "category": "Developer Tools & AI",
     "path": "skills/ask-sonner",
     "tags": ["ask-sonner", "developer-tools-ai"],
-    "files": ["SKILL.md", "API.md"]
+    "files": ["API.md", "SKILL.md"],
+    "hash": "5b945504917c3c1831ddb025c79eb5e16a730b4b5df3f25443b249bed2c49712"
   },
   {
     "name": "audio-production",
@@ -90,17 +105,22 @@
     "path": "skills/audio-production",
     "tags": ["audio-production", "video-motion"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
       "CLAUDE.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
       "SECURITY.md",
-      "LICENSE"
-    ]
+      "SKILL.md",
+      "brand",
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "289b8a31f9ebcf93abb70f8c7e59f154a0afc9051c5e3654e7131eeee504ec16"
   },
   {
     "name": "blender-skill",
@@ -110,17 +130,34 @@
     "path": "skills/blender-skill",
     "tags": ["blender-skill", "video-motion"],
     "files": [
-      "examples",
-      "tests",
-      "scripts",
-      "README.md",
-      "CODE_OF_CONDUCT.md",
-      "bin",
-      "ROADMAP.md",
+      ".claude-plugin",
+      ".github",
+      ".gitignore",
+      ".npmignore",
+      ".release-please-manifest.json",
       "CHANGELOG.md",
+      "CODE_OF_CONDUCT.md",
+      "CONTRIBUTING.md",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
+      "ROADMAP.md",
+      "SECURITY.md",
+      "SKILL.md",
+      "bin",
+      "brand",
+      "docs",
+      "evals",
+      "examples",
+      "mcp",
       "package.json",
-      "docs"
-    ]
+      "references",
+      "release-please-config.json",
+      "scripts",
+      "tests"
+    ],
+    "hash": "7262e845aac6a567a9fbfecdc465f3b7c2fda83eb1777c238244cf2021027d83",
+    "version": "0.31.0 # x-release-please-version"
   },
   {
     "name": "brainstorming",
@@ -130,38 +167,79 @@
     "path": "skills/brainstorming",
     "tags": ["brainstorming", "developer-tools-ai"],
     "files": [
-      "scripts",
-      "visual-companion.md",
       "SKILL.md",
-      "builder-check-prompt.md"
-    ]
+      "builder-check-prompt.md",
+      "scripts",
+      "visual-companion.md"
+    ],
+    "hash": "057f9810c4eb8e15b603d23d3fc9c3551661148c754ae208067ab204072ee079"
+  },
+  {
+    "name": "branch-sec",
+    "title": "Branch Security",
+    "description": "Enforce branch protection rules, signed commits, required reviews, status checks, and linear history via GitHub/GitLab API. Generates branch protection configs, commit message templates with security footers, and CI integration for Periderm scans on protected branches. Use to harden your Git workflow against unauthorized changes.",
+    "category": "Code Review & Quality",
+    "path": "skills/branch-sec",
+    "tags": [
+      "branch-sec",
+      "branch-protection",
+      "git-security",
+      "signed-commits",
+      "periderm",
+      "code-review-quality"
+    ],
+    "files": ["SKILL.md", "config", "scripts", "templates"],
+    "hash": "93f5811af677bbee60621780f970f7e9847bb3de4c8386bee936854d4808ea85"
   },
   {
     "name": "break-ui",
     "title": "Break Ui",
-    "description": "Try to break a piece of UI by feeding it worst-case data \u2014 long names, unbreakable emails, one-letter names, missing fields, huge counts, zero items, long labels, non-Latin text, emoji, extreme numbers \u2014 then render it behind a \"Demo data / Worst case\" toggle and report everything that broke, with the fix for each. Use when the user asks to stress-test, break, or find edge cases in a component or screen, or to \"try the worst case\". For visual design critique use emil-design-eng; for motion use review-animations.",
+    "description": "Try to break a piece of UI by feeding it worst-case data — long names, unbreakable emails, one-letter names, missing fields, huge counts, zero items, long labels, non-Latin text, emoji, extreme numbers — then render it behind a \"Demo data / Worst case\" toggle and report everything that broke, with the fix for each. Use when the user asks to stress-test, break, or find edge cases in a component or screen, or to \"try the worst case\". For visual design critique use emil-design-eng; for motion use review-animations.",
     "category": "Design & UI",
     "path": "skills/break-ui",
     "tags": ["break-ui", "design-ui"],
-    "files": ["SKILL.md", "CATALOG.md"]
+    "files": ["CATALOG.md", "SKILL.md"],
+    "hash": "8162b00be6f7fcd42d9ff21bbaabe999ad0edcbb794cab7f732d6f3ffe65b100"
   },
   {
     "name": "caveman",
     "title": "Caveman",
-    "description": ">",
+    "description": "Terse caveman voice: answer first, fluff gone, every technical fact kept. Use for /caveman, \"caveman mode\", \"talk like caveman\", \"be brief\", \"less tokens\". Stays on until \"stop caveman\" or \"normal mode\".",
     "category": "Developer Tools & AI",
     "path": "skills/caveman",
     "tags": ["caveman", "developer-tools-ai"],
-    "files": ["README.md", "SKILL.md"]
+    "files": ["README.md", "SKILL.md"],
+    "hash": "d84fc0baf017f30c51e3a00efadc7aad25b0b4ac6954a7f17927909dd00b507b"
   },
   {
     "name": "choreograph",
     "title": "Choreograph",
-    "description": "Coordinate several elements that animate together \u2014 decide what moves, in what order, how much they overlap, and what stays still \u2014 so a group reads as one intentional motion instead of a pile of separate animations. Use when building or fixing a staggered list, a hero entrance, a view swap inside a container, a multi-step flow, an element leaving while its siblings close the gap, a morph between rich states, or any interaction with several moving parts (icon + background + lines, panel + content, items flying into a target). Triggers on \u2014 stagger, sequence, choreography, \"one after another\", crossfade, AnimatePresence mode, hero entrance, multi-step, useAnimate, \"feels mechanical\", \"too much going on\", \"feels slow to open\".",
+    "description": "Coordinate several elements that animate together — decide what moves, in what order, how much they overlap, and what stays still — so a group reads as one intentional motion instead of a pile of separate animations. Use when building or fixing a staggered list, a hero entrance, a view swap inside a container, a multi-step flow, an element leaving while its siblings close the gap, a morph between rich states, or any interaction with several moving parts (icon + background + lines, panel + content, items flying into a target). Triggers on — stagger, sequence, choreography, \"one after another\", crossfade, AnimatePresence mode, hero entrance, multi-step, useAnimate, \"feels mechanical\", \"too much going on\", \"feels slow to open\".",
     "category": "Developer Tools & AI",
     "path": "skills/choreograph",
     "tags": ["choreograph", "developer-tools-ai"],
-    "files": ["RECIPES.md", "SKILL.md"]
+    "files": ["RECIPES.md", "SKILL.md"],
+    "hash": "9f041b961c0c386c1b1c5510690e823bbd52bb0629fd8e169e0fb25303b71944"
+  },
+  {
+    "name": "ci-cd",
+    "title": "CI/CD Pipeline Analyzer & Generator",
+    "description": "Analyze existing CI/CD pipelines, generate new ones, or explain workflows. Supports GitHub Actions, GitLab CI, CircleCI, Azure Pipelines, and more. Interactive mode grills user: create new, edit existing, or understand a specific workflow. Generates production-ready configs with caching, matrix testing, security scanning, and deployment.",
+    "category": "Engineering & Workflow",
+    "path": "skills/ci-cd",
+    "tags": [
+      "ci-cd",
+      "github-actions",
+      "gitlab-ci",
+      "circleci",
+      "azure-pipelines",
+      "pipeline-generation",
+      "workflow-analysis",
+      "interactive-setup",
+      "devops"
+    ],
+    "files": ["SKILL.md", "config", "scripts", "templates"],
+    "hash": "cc646f9e36fd4d8a91cfbf1e6bdca231bd16f9f82dcb0a0d4d2bd37569e67021"
   },
   {
     "name": "clangd-lsp",
@@ -170,7 +248,8 @@
     "category": "Connectors & LSP",
     "path": "skills/clangd-lsp",
     "tags": ["clangd-lsp", "code-intelligence", "connectors-lsp", "lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "13262c39016fb3262f2ddbfadf5e83709a7bc918b9484ce0856aa0d34259dadc"
   },
   {
     "name": "claude-md-management",
@@ -180,14 +259,16 @@
     "path": "skills/claude-md-management",
     "tags": ["claude-md-management", "developer-tools-ai"],
     "files": [
-      "commands",
-      "skills",
+      ".claude-plugin",
+      "LICENSE",
       "README.md",
       "SKILL.md",
-      "revise-claude-md-example.png",
       "claude-md-improver-example.png",
-      "LICENSE"
-    ]
+      "commands",
+      "revise-claude-md-example.png",
+      "skills"
+    ],
+    "hash": "01c5dd5fa9d0be972ef2d5504bba84d82cd0c2701ebaf9548b1dc3e160b30e58"
   },
   {
     "name": "claude-security",
@@ -197,17 +278,20 @@
     "path": "skills/claude-security",
     "tags": ["claude-security", "code-review-quality"],
     "files": [
-      "skills",
-      "scripts",
-      "README.md",
-      "NOTICE.md",
-      "hooks",
-      "workflows",
-      "SKILL.md",
-      "SECURITY.md",
+      ".claude-plugin",
+      ".gitattributes",
       "LICENSE",
-      "agents"
-    ]
+      "NOTICE.md",
+      "README.md",
+      "SECURITY.md",
+      "SKILL.md",
+      "agents",
+      "hooks",
+      "scripts",
+      "skills",
+      "workflows"
+    ],
+    "hash": "1112b17bf296f08cf0b408f921d71b429c99a370a8a9a31f8ef4710bfefd5146"
   },
   {
     "name": "code-modernization",
@@ -217,17 +301,21 @@
     "path": "skills/code-modernization",
     "tags": ["code-modernization", "engineering-workflow"],
     "files": [
+      ".claude-plugin",
+      "CHANGELOG.md",
+      "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "agents",
       "assets",
       "commands",
-      "tsconfig.json",
-      "tests",
-      "scripts",
-      "README.md",
-      "CHANGELOG.md",
       "hooks",
-      "workflows",
-      "SKILL.md"
-    ]
+      "scripts",
+      "tests",
+      "tsconfig.json",
+      "workflows"
+    ],
+    "hash": "da045b5e468211533a6c180f6b0d25ad5522cfd3471c7f0a1a594835a5e0b821"
   },
   {
     "name": "color-grading",
@@ -237,17 +325,22 @@
     "path": "skills/color-grading",
     "tags": ["color-grading", "developer-tools-ai"],
     "files": [
-      "assets",
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
       "SECURITY.md",
-      "LICENSE"
-    ]
+      "SKILL.md",
+      "assets",
+      "brand",
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "6575d40068512e9153d90b480d048b4e2c88d5a7b224869f8bd8099defc6f415"
   },
   {
     "name": "commit-commands",
@@ -256,7 +349,27 @@
     "category": "Engineering & Workflow",
     "path": "skills/commit-commands",
     "tags": ["commit-commands", "engineering-workflow"],
-    "files": ["commands", "README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md", "commands"],
+    "hash": "c3c85bf98cd34830af59068b87dade8085a44ff51e678121cfff6aeb7969e361"
+  },
+  {
+    "name": "commit-hook",
+    "title": "Commit Hook",
+    "description": "Install Git hooks that run Periderm CLI scans, tests, linting, and custom commands before commit/push. Enforces conventional commits with security footers. Runs: periderm scan on staged files, periderm review --deep on push. AI analyzes results and blocks on critical findings. Interactive setup grills user for preferences. Use to prevent broken/insecure code from entering history.",
+    "category": "Engineering & Workflow",
+    "path": "skills/commit-hook",
+    "tags": [
+      "commit-hook",
+      "git-hooks",
+      "pre-commit",
+      "pre-push",
+      "periderm",
+      "quality-gates",
+      "engineering-workflow",
+      "interactive-setup"
+    ],
+    "files": ["SKILL.md", "config", "scripts", "templates"],
+    "hash": "5d9bca65fcaa0a1ce65e5505a7dc384714563075fc9a84fa22f8ef8328c86f8a"
   },
   {
     "name": "context7-mcp",
@@ -265,7 +378,8 @@
     "category": "Connectors & LSP",
     "path": "skills/context7-mcp",
     "tags": ["connectors-lsp", "context7-mcp"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "b2d3dbe9e43cce42b30f7450607625135c383afa66e85a5cc12b62b0b3e79c03"
   },
   {
     "name": "csharp-lsp",
@@ -274,7 +388,26 @@
     "category": "Connectors & LSP",
     "path": "skills/csharp-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "csharp-lsp", "lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "a175400502cf989a3039783bf31fa5b9c8f1c17558e7c2ccf20eeeb2b19dec49"
+  },
+  {
+    "name": "cyber-sec",
+    "title": "Cyber Security",
+    "description": "Cybersecurity skillset for threat modeling, attack surface analysis, penetration testing guidance, secure code review, and incident response. Includes OWASP Top 10 checks, STRIDE threat modeling, security headers validation, crypto audit, and integration with Periderm CLI for automated vulnerability scanning. Use for security assessments, pre-release audits, and continuous security monitoring.",
+    "category": "Code Review & Quality",
+    "path": "skills/cyber-sec",
+    "tags": [
+      "cyber-sec",
+      "cybersecurity",
+      "threat-modeling",
+      "penetration-testing",
+      "owasp",
+      "periderm",
+      "code-review-quality"
+    ],
+    "files": ["SKILL.md", "config", "scripts", "templates"],
+    "hash": "3776bf55785b1eb03af96f122af3a735718e124545863465e35b797613f18fe3"
   },
   {
     "name": "design-mobile-apps",
@@ -284,21 +417,23 @@
     "path": "skills/design-mobile-apps",
     "tags": ["design-mobile-apps", "design-ui"],
     "files": [
+      "SKILL.md",
       "designing.md",
       "endpoints.md",
-      "styling",
       "implementing.md",
-      "SKILL.md"
-    ]
+      "styling"
+    ],
+    "hash": "2a9efaf36b196339b6e1c789d50f772d98429ec23fa1a9dead942d833c4cd527"
   },
   {
     "name": "diagnosing-superpowers",
     "title": "Diagnosing Superpowers",
-    "description": "Use when a superpowers session went wrong and your human partner wants to know why \u2014 repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, \"it took too long\", \"why is it so expensive\", \"what is it doing\" \u2014 or wants to build a bug report for the superpowers maintainers, for the current session or a past one identified by id or path, on any harness.",
+    "description": "Use when a superpowers session went wrong and your human partner wants to know why — repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, \"it took too long\", \"why is it so expensive\", \"what is it doing\" — or wants to build a bug report for the superpowers maintainers, for the current session or a past one identified by id or path, on any harness.",
     "category": "Engineering & Workflow",
     "path": "skills/diagnosing-superpowers",
     "tags": ["diagnosing-superpowers", "engineering-workflow"],
-    "files": ["SKILL.md", "prompts", "references", "templates"]
+    "files": ["SKILL.md", "prompts", "references", "templates"],
+    "hash": "4ee417a2d6790701350a48af3af9cfc22ff8bc700cabaffa2b5e159bdabdb36e"
   },
   {
     "name": "diagram-animation",
@@ -307,7 +442,9 @@
     "category": "Video & Motion",
     "path": "skills/diagram-animation",
     "tags": ["diagram-animation", "video-motion"],
-    "files": ["README.md", "SKILL.md", "references"]
+    "files": ["README.md", "SKILL.md", "references"],
+    "hash": "663c8d8507af2bef119590bebf0724f5ba88a6998da4fb669e27a6f205b462b6",
+    "version": "0.1.0"
   },
   {
     "name": "dispatching-parallel-agents",
@@ -316,7 +453,8 @@
     "category": "Engineering & Workflow",
     "path": "skills/dispatching-parallel-agents",
     "tags": ["dispatching-parallel-agents", "engineering-workflow"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "f22e759cc218c832489663d1d8be0f2f7349424200cb069bbc2896b61b75fde6"
   },
   {
     "name": "dubbing",
@@ -326,17 +464,20 @@
     "path": "skills/dubbing",
     "tags": ["dubbing", "video-motion"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
+      "README.md",
+      "SKILL.md",
       "brand",
-      "ECOSYSTEM_ROADMAP.md"
-    ]
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "2f11335b8e43bb51973b3ac6d7a3658c21e5295d1cc58c1483887a859a8ff30d"
   },
   {
     "name": "emil-design-eng",
@@ -345,25 +486,29 @@
     "category": "Design & UI",
     "path": "skills/emil-design-eng",
     "tags": ["design-ui", "emil-design-eng"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "96f91ddf32b47870536e2a096fb2e1aee83d7d8ccfc232b2b39dd04f21e48b7b"
   },
   {
     "name": "executing-plans",
     "title": "Executing Plans",
-    "description": "Use when executing an implementation plan in the current session as the implementer yourself \u2014 your human partner chose inline execution, or no subagent tool is available",
+    "description": "Use when executing an implementation plan in the current session as the implementer yourself — your human partner chose inline execution, or no subagent tool is available",
     "category": "Engineering & Workflow",
     "path": "skills/executing-plans",
     "tags": ["engineering-workflow", "executing-plans"],
-    "files": ["scripts", "SKILL.md"]
+    "files": ["SKILL.md", "scripts"],
+    "hash": "6f8fc56aca235f9decddb6765a716f5b2d2dafe0ffaead5ee5439aae2c129993"
   },
   {
     "name": "explainer-video",
     "title": "Explainer Video",
-    "description": "This skill should be used when the user asks to \"make an explainer video\", \"turn this into a short explainer\", \"write a script and storyboard for a product video\", \"produce a how-it-works/onboarding video\", \"sync narration and captions\", or \"build a 30\u201390s animated explainer\". Covers script\u2192storyboard\u2192scene build\u2192narration/caption sync\u2192edit\u2192polish.",
+    "description": "This skill should be used when the user asks to \"make an explainer video\", \"turn this into a short explainer\", \"write a script and storyboard for a product video\", \"produce a how-it-works/onboarding video\", \"sync narration and captions\", or \"build a 30–90s animated explainer\". Covers script→storyboard→scene build→narration/caption sync→edit→polish.",
     "category": "Video & Motion",
     "path": "skills/explainer-video",
     "tags": ["explainer-video", "media", "video", "video-motion"],
-    "files": ["README.md", "SKILL.md", "references"]
+    "files": ["README.md", "SKILL.md", "references"],
+    "hash": "51100309e9b66c9eb5118c57a07a58c990ef968204373a2348e47abf40cef47a",
+    "version": "0.1.0"
   },
   {
     "name": "feature-dev",
@@ -372,7 +517,15 @@
     "category": "Developer Tools & AI",
     "path": "skills/feature-dev",
     "tags": ["developer-tools-ai", "feature-dev"],
-    "files": ["commands", "README.md", "SKILL.md", "LICENSE", "agents"]
+    "files": [
+      ".claude-plugin",
+      "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "agents",
+      "commands"
+    ],
+    "hash": "e6b5decb0f5421c055fd3c47ed7e27930fbac7b7fc1e1301166e01789c392d02"
   },
   {
     "name": "ffmpeg-skill",
@@ -382,15 +535,16 @@
     "path": "skills/ffmpeg-skill",
     "tags": ["ffmpeg-skill", "video-motion"],
     "files": [
-      "scripts",
-      "package.json",
-      "docs",
-      "SKILL.md",
-      "references",
       "LICENSE",
+      "SKILL.md",
+      "docs",
       "mcp",
+      "package.json",
+      "references",
+      "scripts",
       "templates"
-    ]
+    ],
+    "hash": "6fa051a0bb2d4e76a7b671b77e59e9910c3e60d782d781cb7366bbc250d84fe7"
   },
   {
     "name": "figma",
@@ -399,7 +553,8 @@
     "category": "Design & UI",
     "path": "skills/figma",
     "tags": ["design-ui", "figma"],
-    "files": ["scripts", "SKILL.md"]
+    "files": ["SKILL.md", "scripts"],
+    "hash": "a689357ee81b06f62604ed8a3b3ddcb9c80a01bb8c802303d481f3257790dab2"
   },
   {
     "name": "figma-designer",
@@ -408,7 +563,8 @@
     "category": "Design & UI",
     "path": "skills/figma-designer",
     "tags": ["design-ui", "figma-designer"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "4966b17c900b40cc665ba2d0174a825529c90d6881f32e2f16e9e524905a8ba4"
   },
   {
     "name": "find-animation-opportunities",
@@ -417,7 +573,8 @@
     "category": "Video & Motion",
     "path": "skills/find-animation-opportunities",
     "tags": ["find-animation-opportunities", "video-motion"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "003d9212abeb14cef1c6d4594f70532d159909f415efce5b329476724ee37840"
   },
   {
     "name": "find-skills",
@@ -426,7 +583,8 @@
     "category": "Developer Tools & AI",
     "path": "skills/find-skills",
     "tags": ["developer-tools-ai", "find-skills"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "5578a410bc663fcafab0d2e7c6d18077d6d2d41c5636259dfd91777e0566d346"
   },
   {
     "name": "finishing-a-development-branch",
@@ -435,25 +593,28 @@
     "category": "Developer Tools & AI",
     "path": "skills/finishing-a-development-branch",
     "tags": ["developer-tools-ai", "finishing-a-development-branch"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "8a1777b8e366a53a8b5bf9bc90834e9587d49bdf1524e9d0ca8dc91115f2e9d7"
   },
   {
     "name": "firecrawl-build",
     "title": "Firecrawl Build",
-    "description": "Optional base URL for self-hosted Firecrawl deployments. Only set this when the project is not using the hosted `api.firecrawl.dev`.",
+    "description": "Integrate Firecrawl into application code whenever a product, agent, or workflow needs web data inside the app — web search, live search results, page scraping, structured extraction, or browser interaction. Use when building any feature that needs data from the web in code, even if the user does not mention Firecrawl explicitly and only describes wanting web data, website content, search, scraping, or interaction in an application. Trigger for Firecrawl requests, \"fire girl\" shorthand, and generic app-level web-data needs that should map to `/scrape`, `/search`, or `/interact`. Do not use this skill for one-off terminal-only web tasks during the current session; use `firecrawl/cli` for those.",
     "category": "Design & UI",
     "path": "skills/firecrawl-build",
     "tags": ["design-ui", "firecrawl-build"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "408241cfb7f84bf880fe570add9bc66c5cae5d850243725e94e34654e5eee97b"
   },
   {
     "name": "gestures",
     "title": "Gestures",
-    "description": "Build drag, swipe, and sheet interactions that track the finger 1:1 and stay interruptible. Use when building or fixing anything the user drags, swipes, flings, holds, or dismisses with a gesture \u2014 drawers, sheets, swipe-to-dismiss toasts and cards, drag-to-reorder, pull-to-refresh, hold-to-confirm \u2014 or when a gesture feels laggy, disconnected from the finger, jumps on release, or can't be caught mid-animation. Triggers on \u2014 gesture, drag, swipe, fling, sheet, snap points, Vaul, Motion drag props, rubber-band, pull to refresh, hold to delete, touch-action, \"doesn't follow my finger\", \"jumps when I let go\", \"can't grab it mid-animation\".",
+    "description": "Build drag, swipe, and sheet interactions that track the finger 1:1 and stay interruptible. Use when building or fixing anything the user drags, swipes, flings, holds, or dismisses with a gesture — drawers, sheets, swipe-to-dismiss toasts and cards, drag-to-reorder, pull-to-refresh, hold-to-confirm — or when a gesture feels laggy, disconnected from the finger, jumps on release, or can't be caught mid-animation. Triggers on — gesture, drag, swipe, fling, sheet, snap points, Vaul, Motion drag props, rubber-band, pull to refresh, hold to delete, touch-action, \"doesn't follow my finger\", \"jumps when I let go\", \"can't grab it mid-animation\".",
     "category": "Design & UI",
     "path": "skills/gestures",
     "tags": ["design-ui", "gestures"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "170b23fd73be284d37a2ce8f875bd17d3af5b28f61d0c0fbb41b1ee31d2b764f"
   },
   {
     "name": "gopls-lsp",
@@ -462,7 +623,8 @@
     "category": "Connectors & LSP",
     "path": "skills/gopls-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "gopls-lsp", "lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "d21a27306ba686d1491899db8952ef3e903215bac5dbe980041c50a7fc3b7cee"
   },
   {
     "name": "hookify",
@@ -472,26 +634,31 @@
     "path": "skills/hookify",
     "tags": ["engineering-workflow", "hookify"],
     "files": [
-      "matchers",
-      "examples",
-      "core",
-      "commands",
-      "skills",
+      ".claude-plugin",
+      ".gitignore",
+      "LICENSE",
       "README.md",
-      "hooks",
       "SKILL.md",
-      "utils",
-      "LICENSE"
-    ]
+      "agents",
+      "commands",
+      "core",
+      "examples",
+      "hooks",
+      "matchers",
+      "skills",
+      "utils"
+    ],
+    "hash": "901a974a3d40f0ecadeb0d40e731b5c5376c6ce168d6e8fab50f9cbbfd7c3ed5"
   },
   {
     "name": "html-demo",
     "title": "Html Demo",
-    "description": "Show an app working on a web page by drawing it live in HTML instead of recording it. A Mac-style window plays the app step by step, and every frame is a pure function of one clock, View(t), drawn on a fixed 1200 \u00d7 750 stage that one CSS scale fits to any width. The pointer is scripted, labels and pictures come from the real app, a steps bar sits under the window, it plays only while on screen, and reduced motion gets designed end frames. Use when someone wants a product demo, an animated app window or hero, a feature walkthrough, \"the UI animated and simulated in HTML\", \"like a screen recording but HTML\", an interactive product tour on a landing or download page, or wants to replace screen recordings, GIFs or MP4s of their UI with crisp live HTML. Also use to build many such windows at once with helper agents, or to scrub, freeze and screenshot them.",
+    "description": "Show an app working on a web page by drawing it live in HTML instead of recording it. A Mac-style window plays the app step by step, and every frame is a pure function of one clock, View(t), drawn on a fixed 1200 × 750 stage that one CSS scale fits to any width. The pointer is scripted, labels and pictures come from the real app, a steps bar sits under the window, it plays only while on screen, and reduced motion gets designed end frames. Use when someone wants a product demo, an animated app window or hero, a feature walkthrough, \"the UI animated and simulated in HTML\", \"like a screen recording but HTML\", an interactive product tour on a landing or download page, or wants to replace screen recordings, GIFs or MP4s of their UI with crisp live HTML. Also use to build many such windows at once with helper agents, or to scrub, freeze and screenshot them.",
     "category": "Developer Tools & AI",
     "path": "skills/html-demo",
     "tags": ["developer-tools-ai", "html-demo"],
-    "files": ["scripts", "demo", "SKILL.md", "references", "agents"]
+    "files": ["SKILL.md", "agents", "demo", "references", "scripts"],
+    "hash": "fb2eed161c234aace571670a22ee9f11316d57a113fc5f7dc76f007b30a106d5"
   },
   {
     "name": "hyperframes",
@@ -500,7 +667,8 @@
     "category": "Video & Motion",
     "path": "skills/hyperframes",
     "tags": ["hyperframes", "video-motion"],
-    "files": ["assets", "scripts", "SKILL.md", "references"]
+    "files": ["SKILL.md", "assets", "references", "scripts"],
+    "hash": "cb43d88f80cc8285605cb41b818a5a906957758e94d275bddb70e074ff2a2dfc"
   },
   {
     "name": "hyperframes-cli",
@@ -509,7 +677,8 @@
     "category": "Video & Motion",
     "path": "skills/hyperframes-cli",
     "tags": ["hyperframes-cli", "video-motion"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "8d27999119524fffa232d8d88a742a4536d9001c9ca483a146c46990288e60b0"
   },
   {
     "name": "hyperframes-registry",
@@ -518,7 +687,8 @@
     "category": "Video & Motion",
     "path": "skills/hyperframes-registry",
     "tags": ["hyperframes-registry", "video-motion"],
-    "files": ["examples", "SKILL.md", "references"]
+    "files": ["SKILL.md", "examples", "references"],
+    "hash": "3aa4e1ba244049b55fee7b34fcfc6e6e9d986d1eb1a0adf6f94bb4ef182e5654"
   },
   {
     "name": "hyperframes-skill",
@@ -528,17 +698,29 @@
     "path": "skills/hyperframes-skill",
     "tags": ["hyperframes-skill", "video-motion"],
     "files": [
-      "lib",
-      "tests",
-      "scripts",
-      "README.md",
-      "bin",
-      "node_modules",
+      ".gitattributes",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "package.json",
+      "CONTRIBUTING.md",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "bin",
+      "brand",
+      "demos",
       "docs",
-      "SKILL.md"
-    ]
+      "lib",
+      "mcp",
+      "package-lock.json",
+      "package.json",
+      "references",
+      "scripts",
+      "templates",
+      "tests"
+    ],
+    "hash": "1f0373f68520e58229378882fbe1cafea2e586575e5b4f61b3daf1ee2c43bf61"
   },
   {
     "name": "imagemagick-skill",
@@ -548,17 +730,30 @@
     "path": "skills/imagemagick-skill",
     "tags": ["developer-tools-ai", "imagemagick-skill"],
     "files": [
-      "assets",
-      "tests",
-      "scripts",
-      "README.md",
-      "CODE_OF_CONDUCT.md",
-      "bin",
+      ".claude-plugin",
+      ".github",
+      ".gitignore",
+      "AGENTS.md",
       "CHANGELOG.md",
-      "package.json",
+      "CODE_OF_CONDUCT.md",
+      "CONTRIBUTING.md",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
+      "SECURITY.md",
+      "SKILL.md",
+      "assets",
+      "bin",
+      "demos",
       "docs",
-      "skill.contract.json"
-    ]
+      "evals",
+      "mcp",
+      "package.json",
+      "scripts",
+      "skill.contract.json",
+      "tests"
+    ],
+    "hash": "d03aabe00abefb736c85a46aef93e5c3bb1c4a8ce7141f738ed2e0ec4d046233"
   },
   {
     "name": "impeccable",
@@ -567,25 +762,28 @@
     "category": "Design & UI",
     "path": "skills/impeccable",
     "tags": ["design-ui", "impeccable"],
-    "files": ["scripts", "SKILL.md", "reference", "agents"]
+    "files": ["SKILL.md", "agents", "reference", "scripts"],
+    "hash": "90e473d29a1ea1c8d1cef63ed94bbe98e4cc87ed1ef7a82887eff83e45385ee7"
   },
   {
     "name": "improve",
     "title": "Improve",
-    "description": "Survey any codebase as a senior advisor and produce prioritized, self-contained implementation plans for OTHER models/agents to execute. Strictly read-only on source code \u2014 never implements, fixes, or refactors anything itself. Use when asked to audit a codebase, find improvement opportunities (bugs, security, performance, test coverage, tech debt, migrations, DX), suggest features or where to take the project next (roadmap, product direction), or generate handoff plans for another agent to implement.",
+    "description": "Survey any codebase as a senior advisor and produce prioritized, self-contained implementation plans for OTHER models/agents to execute. Strictly read-only on source code — never implements, fixes, or refactors anything itself. Use when asked to audit a codebase, find improvement opportunities (bugs, security, performance, test coverage, tech debt, migrations, DX), suggest features or where to take the project next (roadmap, product direction), or generate handoff plans for another agent to implement.",
     "category": "Design & UI",
     "path": "skills/improve",
     "tags": ["design-ui", "improve"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "6a661e339b5a37e2ea5a063e11b72befbe59ded0a943c86dc15d0194b8e079a5"
   },
   {
     "name": "improve-animations",
     "title": "Improve Animations",
-    "description": "Survey a codebase's animation and motion code as a senior motion advisor, then produce a prioritized audit and self-contained implementation plans for other agents (or cheaper models) to execute. Read-only on source code \u2014 it plans improvements, it does not apply them. Use when the user asks to \"improve the animations\", \"audit the motion\", \"make this app feel better\", or wants a roadmap of animation fixes rather than a review of a single diff.",
+    "description": "Survey a codebase's animation and motion code as a senior motion advisor, then produce a prioritized audit and self-contained implementation plans for other agents (or cheaper models) to execute. Read-only on source code — it plans improvements, it does not apply them. Use when the user asks to \"improve the animations\", \"audit the motion\", \"make this app feel better\", or wants a roadmap of animation fixes rather than a review of a single diff.",
     "category": "Video & Motion",
     "path": "skills/improve-animations",
     "tags": ["improve-animations", "video-motion"],
-    "files": ["PLAN-TEMPLATE.md", "AUDIT.md", "SKILL.md"]
+    "files": ["AUDIT.md", "PLAN-TEMPLATE.md", "SKILL.md"],
+    "hash": "18c9fc26ca4628f88a709f86458713c16db85c85f86b840c892af939ee7b01b2"
   },
   {
     "name": "ingest-skill",
@@ -595,26 +793,31 @@
     "path": "skills/ingest-skill",
     "tags": ["developer-tools-ai", "ingest-skill"],
     "files": [
-      "tests",
-      "README.md",
-      "benchmarks",
-      "pyproject.toml",
-      "docs",
-      "SKILL.md",
-      "src",
+      ".github",
+      ".gitignore",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "benchmarks",
       "brand",
-      "ECOSYSTEM_ROADMAP.md"
-    ]
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "c4d4ec270a113516bc51adea44db82142d28d260390f2c2860543c3b58326ab8"
   },
   {
     "name": "isometric-animation",
     "title": "Isometric Animation",
-    "description": "This skill should be used when the user asks to \"make an isometric animation\", \"build a 2.5D isometric scene\", \"create an isometric infographic\", \"animate an exploded diagram\", \"do an isometric city/stack build\", \"show stacked layers in iso\", \"extrude blocks with depth\", or \"add a gentle camera drift to an iso scene\". Covers CSS 3D transforms, SVG iso planes, and Three.js OrthographicCamera for true 3D iso \u2014 no build step.",
+    "description": "This skill should be used when the user asks to \"make an isometric animation\", \"build a 2.5D isometric scene\", \"create an isometric infographic\", \"animate an exploded diagram\", \"do an isometric city/stack build\", \"show stacked layers in iso\", \"extrude blocks with depth\", or \"add a gentle camera drift to an iso scene\". Covers CSS 3D transforms, SVG iso planes, and Three.js OrthographicCamera for true 3D iso — no build step.",
     "category": "Video & Motion",
     "path": "skills/isometric-animation",
     "tags": ["isometric-animation", "video-motion"],
-    "files": ["README.md", "SKILL.md", "references"]
+    "files": ["README.md", "SKILL.md", "references"],
+    "hash": "be383dd4166f44a9fb583536150e58da42e14235012ab70aeabd262c615657de",
+    "version": "0.1.0"
   },
   {
     "name": "jdtls-lsp",
@@ -623,7 +826,8 @@
     "category": "Connectors & LSP",
     "path": "skills/jdtls-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "jdtls-lsp", "lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "f26de5f2eb4fe645c6df6ce5a07d6a66a982760c9632d658201d6e596f78d056"
   },
   {
     "name": "kotlin-lsp",
@@ -632,7 +836,8 @@
     "category": "Connectors & LSP",
     "path": "skills/kotlin-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "kotlin-lsp", "lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "979f5fc1a1d42d994d62906325638cf90b966c376dc11d2af391326a5587dac9"
   },
   {
     "name": "landing-page-design",
@@ -641,7 +846,41 @@
     "category": "Design & UI",
     "path": "skills/landing-page-design",
     "tags": ["design-ui", "landing-page-design"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "5c51b5537386639f3d3950aade41d8d76e605b901488e64d416924919114eec1"
+  },
+  {
+    "name": "launch-ready",
+    "title": "Launch Ready",
+    "description": "Pre-launch verification that runs Periderm CLI through its full suite: npm i -g periderm-cli, periderm --help, periderm --version, periderm scan, periderm review --deep. AI analyzes all results and makes launch/block decision with remediation steps. Use before every production release.",
+    "category": "Engineering & Workflow",
+    "path": "skills/launch-ready",
+    "tags": [
+      "launch-ready",
+      "periderm",
+      "release-checklist",
+      "quality-gates",
+      "engineering-workflow"
+    ],
+    "files": ["SKILL.md", "config", "scripts", "templates"],
+    "hash": "1df010038b35fbe9085cf4dd91fe81ff8bc0bd694f4e1f5145ebeebf4c0154f3"
+  },
+  {
+    "name": "leak-spots",
+    "title": "Leak Spots",
+    "description": "Detect leaked secrets, API keys, tokens, and credentials in your Git history using Periderm CLI. Scans all commits (not just working tree) to find secrets that were ever committed. Runs: periderm scan --json, periderm review --deep. AI analyzes results and provides remediation steps. Use before releases, during audits, or as pre-push hook.",
+    "category": "Code Review & Quality",
+    "path": "skills/leak-spots",
+    "tags": [
+      "leak-spots",
+      "secret-scanning",
+      "periderm",
+      "security",
+      "credentials",
+      "code-review-quality"
+    ],
+    "files": ["SKILL.md", "config", "scripts"],
+    "hash": "a6baad92c10d3953e02b65cf06885b810070b9cb48b1d620743b35ea33490385"
   },
   {
     "name": "learn-taste",
@@ -650,7 +889,8 @@
     "category": "Design & UI",
     "path": "skills/learn-taste",
     "tags": ["design-ui", "learn-taste"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "ccc9134405c4192a3b095aecc018baf55534941536a11a1951f5716d9e184add"
   },
   {
     "name": "lua-lsp",
@@ -659,7 +899,8 @@
     "category": "Connectors & LSP",
     "path": "skills/lua-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "lsp", "lua-lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "45598f3b61d15bdd194395ebe7a11f72afd71fb272aaf9d8fc3cfd6a2336d21b"
   },
   {
     "name": "mcp-server-dev",
@@ -668,7 +909,8 @@
     "category": "Connectors & LSP",
     "path": "skills/mcp-server-dev",
     "tags": ["connectors-lsp", "mcp-server-dev"],
-    "files": ["skills", "README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md", "skills"],
+    "hash": "ef77b8a526c6c8d8220a29e01b912bdcbee9dc0bdb1af8d632c29277c545a704"
   },
   {
     "name": "mcp-tunnels",
@@ -677,7 +919,8 @@
     "category": "Connectors & LSP",
     "path": "skills/mcp-tunnels",
     "tags": ["connectors-lsp", "mcp-tunnels"],
-    "files": ["commands", "README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md", "commands"],
+    "hash": "8fee4ce5d45ad12a1319af42f8c35854a88184a610e3cf9e14f9c1f8fb8e16f6"
   },
   {
     "name": "media-analysis",
@@ -687,17 +930,25 @@
     "path": "skills/media-analysis",
     "tags": ["media-analysis", "video-motion"],
     "files": [
-      "assets",
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
       "CLAUDE.md",
-      "docs",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
       "SKILL.md",
+      "STATE.md",
+      "assets",
+      "brand",
+      "docs",
+      "evals",
+      "pyproject.toml",
       "src",
-      "LICENSE"
-    ]
+      "tests",
+      "tools"
+    ],
+    "hash": "83a7efc8227aef5cc97b05366bed2437cd120b682f242fefc6b2cacce7d6cc57"
   },
   {
     "name": "media-use",
@@ -706,16 +957,25 @@
     "category": "Video & Motion",
     "path": "skills/media-use",
     "tags": ["media-use", "video-motion"],
-    "files": ["audio", "scripts", "luts", "SKILL.md", "references"]
+    "files": [
+      ".gitignore",
+      "SKILL.md",
+      "audio",
+      "luts",
+      "references",
+      "scripts"
+    ],
+    "hash": "85725040c91a525228e91cac695cf8f98e860976bdbdcdcb0fb3f344bf149e13"
   },
   {
     "name": "mobile-native",
     "title": "Mobile Native",
-    "description": "Make a web app feel native on a phone \u2014 the small CSS and meta-tag fixes that separate \"a website in a browser\" from something that feels installed. Covers sticky hover states, tap highlight flashes, the 100vh bug, inputs that zoom the page, laggy taps, pull-to-refresh hijacking scroll, content under the notch, long-press selecting button text, carousels that scroll the wrong way, mismatched status bars, and the rule that you test on real hardware. Use when a web app is being built for or reviewed on mobile, when something \"works in Chrome but feels wrong on my phone\", when building a PWA, a bottom sheet, a carousel, a full-screen layout, or any touch interaction. For motion itself use animate; for React Native use animate-expo.",
+    "description": "Make a web app feel native on a phone — the small CSS and meta-tag fixes that separate \"a website in a browser\" from something that feels installed. Covers sticky hover states, tap highlight flashes, the 100vh bug, inputs that zoom the page, laggy taps, pull-to-refresh hijacking scroll, content under the notch, long-press selecting button text, carousels that scroll the wrong way, mismatched status bars, and the rule that you test on real hardware. Use when a web app is being built for or reviewed on mobile, when something \"works in Chrome but feels wrong on my phone\", when building a PWA, a bottom sheet, a carousel, a full-screen layout, or any touch interaction. For motion itself use animate; for React Native use animate-expo.",
     "category": "Developer Tools & AI",
     "path": "skills/mobile-native",
     "tags": ["developer-tools-ai", "mobile-native"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "5d2160c7d62033438348a7702e437ddac7b70f02b82b45dacae74c3e9a0cf0e4"
   },
   {
     "name": "motion-graphics",
@@ -725,17 +985,22 @@
     "path": "skills/motion-graphics",
     "tags": ["media", "motion-graphics", "video", "video-motion"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
       "CLAUDE.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
       "SECURITY.md",
-      "LICENSE"
-    ]
+      "SKILL.md",
+      "brand",
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "c494d45dc76ecbc901fc69fd27779cd1bec71e0b3fed9d21587e47db272c39a4"
   },
   {
     "name": "nle-bridge-skill",
@@ -745,17 +1010,20 @@
     "path": "skills/nle-bridge-skill",
     "tags": ["nle-bridge-skill", "video-motion"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
+      "README.md",
+      "SKILL.md",
       "brand",
-      "ECOSYSTEM_ROADMAP.md"
-    ]
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "95664d1215597252bcfdf70f2436140003e2788d76fed28a8e74523027e603f1"
   },
   {
     "name": "php-lsp",
@@ -764,16 +1032,18 @@
     "category": "Connectors & LSP",
     "path": "skills/php-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "lsp", "php-lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "2979b92d85af5d97e0df30d74e1507bbc84cd9f89ef921a021953c90345e4fc4"
   },
   {
     "name": "pick-ui-library",
     "title": "Pick Ui Library",
-    "description": "Pick the library for a frontend task from a curated list \u2014 primitives, toasts, drawers, command menus, OTP, numbers, charts, virtualization, drag and drop, state, styling.",
+    "description": "Pick the library for a frontend task from a curated list — primitives, toasts, drawers, command menus, OTP, numbers, charts, virtualization, drag and drop, state, styling.",
     "category": "Design & UI",
     "path": "skills/pick-ui-library",
     "tags": ["design-ui", "pick-ui-library"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "a8f2e46bea5afc81e85fbeb053a3b300b1b9ffc6a439022e8478691a29186e52"
   },
   {
     "name": "pr-review-toolkit",
@@ -782,16 +1052,25 @@
     "category": "Code Review & Quality",
     "path": "skills/pr-review-toolkit",
     "tags": ["code-review-quality", "pr-review-toolkit"],
-    "files": ["commands", "README.md", "SKILL.md", "LICENSE", "agents"]
+    "files": [
+      ".claude-plugin",
+      "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "agents",
+      "commands"
+    ],
+    "hash": "17591abefb43b81a69d23af36a4fb3b032b34bdf1df2ebac1295426446f802cb"
   },
   {
     "name": "product-demo",
     "title": "Product Demo",
-    "description": "Record a short, polished product demo video of the running app for social media, ScreenStudio-style \u2014 the real UI in a rounded window on a soft wallpaper, a drawn cursor that glides, hovers and clicks like a hand would (arrow over content, pointing hand over anything clickable, a ripple on click), captured frame by frame at 2x and encoded to a square (or any aspect) MP4 with a poster frame. Use when asked to record a demo, a walkthrough, a screen recording, a \\\"video of the modal/page/flow\\\", a clip for X/LinkedIn/Product Hunt, or anything \\\"like ScreenStudio\\\" of the product's own interface.",
+    "description": "Record a short, polished product demo video of the running app for social media, ScreenStudio-style — the real UI in a rounded window on a soft wallpaper, a drawn cursor that glides, hovers and clicks like a hand would (arrow over content, pointing hand over anything clickable, a ripple on click), captured frame by frame at 2x and encoded to a square (or any aspect) MP4 with a poster frame. Use when asked to record a demo, a walkthrough, a screen recording, a \"video of the modal/page/flow\", a clip for X/LinkedIn/Product Hunt, or anything \"like ScreenStudio\" of the product's own interface.",
     "category": "Developer Tools & AI",
     "path": "skills/product-demo",
     "tags": ["developer-tools-ai", "product-demo"],
-    "files": ["scripts", "SKILL.md", "references"]
+    "files": ["SKILL.md", "references", "scripts"],
+    "hash": "831ed2be131d2585c924738aea282148834836dc6cea54fe4983b788a205d404"
   },
   {
     "name": "product-film",
@@ -800,7 +1079,9 @@
     "category": "Developer Tools & AI",
     "path": "skills/product-film",
     "tags": ["developer-tools-ai", "product-film"],
-    "files": ["scripts", "bin", "SKILL.md", "references", "templates"]
+    "files": ["SKILL.md", "bin", "references", "scripts", "templates"],
+    "hash": "a146ac1b185d515b5f57d74d200e44ecbfcadd3f5bccd8ce0635ad7a769ee836",
+    "version": "0.3.0"
   },
   {
     "name": "prototype",
@@ -809,7 +1090,8 @@
     "category": "Design & UI",
     "path": "skills/prototype",
     "tags": ["design-ui", "prototype"],
-    "files": ["SKILL.md", "PICKER.md"]
+    "files": ["PICKER.md", "SKILL.md"],
+    "hash": "96777c62b6cfe19202e3c9bf2099358c90a1f19b42b0cdd783835d633f14fdc5"
   },
   {
     "name": "publish-skill",
@@ -819,17 +1101,20 @@
     "path": "skills/publish-skill",
     "tags": ["developer-tools-ai", "publish-skill"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
+      "README.md",
+      "SKILL.md",
       "brand",
-      "ECOSYSTEM_ROADMAP.md"
-    ]
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "3450b0d2e85e07d2b0ff2806058dc0cd60a2df1873f2de5f89da9357a9b87a7c"
   },
   {
     "name": "pyright-lsp",
@@ -838,7 +1123,8 @@
     "category": "Connectors & LSP",
     "path": "skills/pyright-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "lsp", "pyright-lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "72d58c0e0498da8cb88588aed5ae2e39aeec0c1e9e11d64f605c95962e0839ff"
   },
   {
     "name": "qc-skill",
@@ -848,17 +1134,22 @@
     "path": "skills/qc-skill",
     "tags": ["code-review-quality", "qc-skill"],
     "files": [
-      "tests",
-      "scripts",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
       "SECURITY.md",
-      "LICENSE"
-    ]
+      "SKILL.md",
+      "brand",
+      "docs",
+      "pyproject.toml",
+      "scripts",
+      "src",
+      "tests"
+    ],
+    "hash": "47e1a13a28a00d6429528c11bf1be0252b4d4cf1dc235f96199fd2e9a6e7e94e"
   },
   {
     "name": "ralph-loop",
@@ -868,13 +1159,15 @@
     "path": "skills/ralph-loop",
     "tags": ["engineering-workflow", "ralph-loop"],
     "files": [
-      "commands",
-      "scripts",
+      ".claude-plugin",
+      "LICENSE",
       "README.md",
-      "hooks",
       "SKILL.md",
-      "LICENSE"
-    ]
+      "commands",
+      "hooks",
+      "scripts"
+    ],
+    "hash": "dd29b1d492523eea0221c3f717cc067ba4a47a6c796573b01ad89c16dd47e0ef"
   },
   {
     "name": "receiving-code-review",
@@ -883,7 +1176,8 @@
     "category": "Code Review & Quality",
     "path": "skills/receiving-code-review",
     "tags": ["code-review-quality", "receiving-code-review"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "33c5c2478a65efe6088ed37c7b0e0a08fed6f55c4002ed41af079cae939cb665"
   },
   {
     "name": "remotion-best-practices",
@@ -893,17 +1187,24 @@
     "path": "skills/remotion-best-practices",
     "tags": ["media", "remotion-best-practices", "video", "video-motion"],
     "files": [
+      "SKILL.md",
+      "agents",
+      "assets",
+      "remotion-captions",
+      "remotion-create",
+      "remotion-docs",
       "remotion-interactivity",
       "remotion-license",
-      "assets",
-      "remotion-docs",
+      "remotion-maps",
       "remotion-markup",
-      "remotion-studio",
+      "remotion-multimedia",
+      "remotion-render",
       "remotion-saas",
-      "remotion-captions",
-      "SKILL.md",
+      "remotion-studio",
       "remotion-upgrade"
-    ]
+    ],
+    "hash": "ebc3e2ce7eb210ca4212aa88168b0d38c9cac8fad931b825152dec92689651cd",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-captions",
@@ -913,13 +1214,15 @@
     "path": "skills/remotion-captions",
     "tags": ["media", "remotion-captions", "video", "video-motion"],
     "files": [
-      "display-captions.md",
-      "assets",
-      "transcribe-captions.md",
-      "import-srt-captions.md",
       "SKILL.md",
-      "agents"
-    ]
+      "agents",
+      "assets",
+      "display-captions.md",
+      "import-srt-captions.md",
+      "transcribe-captions.md"
+    ],
+    "hash": "62aedeba39a2539508a3c1e1de3004ee182752ce3d8e321c6f6201ef911945cd",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-create",
@@ -928,7 +1231,9 @@
     "category": "Video & Motion",
     "path": "skills/remotion-create",
     "tags": ["media", "remotion-create", "video", "video-motion"],
-    "files": ["assets", "tailwind.md", "SKILL.md", "video-layout.md", "agents"]
+    "files": ["SKILL.md", "agents", "assets", "tailwind.md", "video-layout.md"],
+    "hash": "7a71b4da6bce43c266caf41bfaa7817e15094ae4dd8f341a07e8e4e70008c3bc",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-docs",
@@ -937,7 +1242,9 @@
     "category": "Video & Motion",
     "path": "skills/remotion-docs",
     "tags": ["media", "remotion-docs", "video", "video-motion"],
-    "files": ["assets", "SKILL.md", "agents"]
+    "files": ["SKILL.md", "agents", "assets"],
+    "hash": "ceb7ac37c69b6c25d3be5698d202358edd6de86852b5492e076539ce5402e0a3",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-ffmpeg-skill",
@@ -947,17 +1254,32 @@
     "path": "skills/remotion-ffmpeg-skill",
     "tags": ["media", "remotion-ffmpeg-skill", "video", "video-motion"],
     "files": [
-      "tests",
-      "scripts",
-      "README.md",
-      "CODE_OF_CONDUCT.md",
-      "ROADMAP.md",
-      "CHANGELOG.md",
-      "package.json",
-      "docs",
+      ".claude-plugin",
+      ".github",
+      ".gitignore",
+      ".npmignore",
       "AGENTS.md",
-      "SKILL.md"
-    ]
+      "CHANGELOG.md",
+      "CODE_OF_CONDUCT.md",
+      "CONTRIBUTING.md",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
+      "ROADMAP.md",
+      "SECURITY.md",
+      "SKILL.md",
+      "brand",
+      "cli",
+      "docs",
+      "evals",
+      "mcp",
+      "package.json",
+      "references",
+      "scripts",
+      "templates",
+      "tests"
+    ],
+    "hash": "dcdbc2682ae03d0b6590b7178fbbc02084c0c818f8088eacfc83ffe2e29ff33c"
   },
   {
     "name": "remotion-interactivity",
@@ -967,12 +1289,14 @@
     "path": "skills/remotion-interactivity",
     "tags": ["media", "remotion-interactivity", "video", "video-motion"],
     "files": [
-      "assets",
       "SKILL.md",
+      "agents",
+      "assets",
       "inline-effects.md",
-      "timeline-structure.md",
-      "agents"
-    ]
+      "timeline-structure.md"
+    ],
+    "hash": "ddbbbe8cd3a6cb718d92cf370b20f2b27ea486a220eb28ac99dc77495ebb5515",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-license",
@@ -981,7 +1305,9 @@
     "category": "Video & Motion",
     "path": "skills/remotion-license",
     "tags": ["media", "remotion-license", "video", "video-motion"],
-    "files": ["assets", "SKILL.md", "agents"]
+    "files": ["SKILL.md", "agents", "assets"],
+    "hash": "d08cff38ff076eb0bc1991d59160c5f85e418b0ca717f280f0f185b34561639b",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-maps",
@@ -990,7 +1316,9 @@
     "category": "Video & Motion",
     "path": "skills/remotion-maps",
     "tags": ["media", "remotion-maps", "video", "video-motion"],
-    "files": ["assets", "techniques", "SKILL.md", "agents"]
+    "files": ["SKILL.md", "agents", "assets", "techniques"],
+    "hash": "2881baf8467b3927c6c2fca538b488a5bb3ea5537a76ec09be0738c33c51c870",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-markup",
@@ -1000,17 +1328,46 @@
     "path": "skills/remotion-markup",
     "tags": ["media", "remotion-markup", "video", "video-motion"],
     "files": [
-      "multi-scene-video.md",
-      "compositions.md",
-      "arabic-text.md",
-      "transitions.md",
       "3d.md",
+      "SKILL.md",
+      "agents",
+      "arabic-text.md",
       "assets",
-      "connected-compositions.md",
       "audio-visualization.md",
+      "audio.md",
+      "calculate-metadata.md",
+      "color-correction.md",
+      "compositions.md",
+      "connected-compositions.md",
+      "cropping.md",
+      "effects.md",
+      "embedding-videos.md",
+      "ffmpeg.md",
+      "gifs.md",
+      "google-fonts.md",
+      "html-in-canvas.md",
+      "images.md",
+      "light-leaks.md",
+      "local-fonts.md",
+      "lottie.md",
+      "measuring-dom-nodes.md",
       "measuring-text.md",
-      "audio.md"
-    ]
+      "motion-blur.md",
+      "multi-scene-video.md",
+      "parameters.md",
+      "remotion-maps",
+      "sequencing.md",
+      "sfx.md",
+      "silence-detection.md",
+      "text-highlights.md",
+      "timing-props.md",
+      "timing.md",
+      "transitions.md",
+      "video-editing.md",
+      "video-matting.md"
+    ],
+    "hash": "6163540edc8545ee379cc2d46eec586e5ee0cf3abfa7a94bfdb092caf946487c",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-multimedia",
@@ -1020,13 +1377,15 @@
     "path": "skills/remotion-multimedia",
     "tags": ["media", "remotion-multimedia", "video", "video-motion"],
     "files": [
-      "get-audio-duration.md",
-      "assets",
-      "get-video-duration.md",
-      "get-video-dimensions.md",
       "SKILL.md",
-      "agents"
-    ]
+      "agents",
+      "assets",
+      "get-audio-duration.md",
+      "get-video-dimensions.md",
+      "get-video-duration.md"
+    ],
+    "hash": "dd6b322b9302f012e6ac1d825427ccf7c46330cb9ec7a091fdf153d11d536c4a",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-render",
@@ -1036,12 +1395,14 @@
     "path": "skills/remotion-render",
     "tags": ["media", "remotion-render", "video", "video-motion"],
     "files": [
-      "transparent-videos.md",
-      "assets",
       "SKILL.md",
+      "agents",
+      "assets",
       "opentimeline.md",
-      "agents"
-    ]
+      "transparent-videos.md"
+    ],
+    "hash": "128bf173bbdfa2f9713f5f6ad652e66c937597cd0b28d8db0b23249046e4dcad",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-saas",
@@ -1051,13 +1412,15 @@
     "path": "skills/remotion-saas",
     "tags": ["media", "remotion-saas", "video", "video-motion"],
     "files": [
-      "assets",
-      "framework.md",
-      "rendering.md",
       "SKILL.md",
       "agents",
-      "player.md"
-    ]
+      "assets",
+      "framework.md",
+      "player.md",
+      "rendering.md"
+    ],
+    "hash": "3d611cc16c42714cb429560d893f0037c08945b50bf15fd5c5058480447ec6f3",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-studio",
@@ -1066,7 +1429,9 @@
     "category": "Video & Motion",
     "path": "skills/remotion-studio",
     "tags": ["media", "remotion-studio", "video", "video-motion"],
-    "files": ["assets", "SKILL.md", "agents"]
+    "files": ["SKILL.md", "agents", "assets"],
+    "hash": "f621a18c016de733ca99e034a7fb2777eb8a661b11dd3166a1d0855dbf2d6c8e",
+    "version": "4.0.545"
   },
   {
     "name": "remotion-to-hyperframes",
@@ -1075,7 +1440,8 @@
     "category": "Video & Motion",
     "path": "skills/remotion-to-hyperframes",
     "tags": ["media", "remotion-to-hyperframes", "video", "video-motion"],
-    "files": ["assets", "scripts", "SKILL.md", "references"]
+    "files": ["SKILL.md", "assets", "references", "scripts"],
+    "hash": "1c60303346adeaf667b60102f64bbfd1f48c7759a37375bfa2a88bd8feeae07d"
   },
   {
     "name": "remotion-upgrade",
@@ -1084,16 +1450,39 @@
     "category": "Video & Motion",
     "path": "skills/remotion-upgrade",
     "tags": ["media", "remotion-upgrade", "video", "video-motion"],
-    "files": ["assets", "SKILL.md", "agents"]
+    "files": ["SKILL.md", "agents", "assets"],
+    "hash": "efd0c4ac6620efedc110e202500065769b9de4506b6d08f96830f04e450e8b28",
+    "version": "4.0.545"
   },
   {
     "name": "remove-animations",
     "title": "Remove Animations",
-    "description": "Find the animations an interface doesn't need and remove them \u2014 motion on keyboard actions, high-frequency surfaces, functional data, and decoration with no purpose \u2014 then clean up what they leave behind. Edits code, but only to subtract; it never adds or retunes motion. Use when the user says the app \"feels slow\", \"has too much animation\", \"feels over-animated\", wants to \"tone down the motion\", or asks what animations to remove. For finding places that should animate, use find-animation-opportunities; for fixing animations that should stay, use improve-animations or review-animations.",
+    "description": "Find the animations an interface doesn't need and remove them — motion on keyboard actions, high-frequency surfaces, functional data, and decoration with no purpose — then clean up what they leave behind. Edits code, but only to subtract; it never adds or retunes motion. Use when the user says the app \"feels slow\", \"has too much animation\", \"feels over-animated\", wants to \"tone down the motion\", or asks what animations to remove. For finding places that should animate, use find-animation-opportunities; for fixing animations that should stay, use improve-animations or review-animations.",
     "category": "Video & Motion",
     "path": "skills/remove-animations",
     "tags": ["remove-animations", "video-motion"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "63a7e3ed199ca9784d1ec072b214865b8f95f262b62af01a66e4acfdea849d2d"
+  },
+  {
+    "name": "repo-sec",
+    "title": "Repository Security",
+    "description": "Comprehensive repository security hardening - analyzes Git config, branch protection, secret scanning, dependency auditing, signed commits, security policies, and more. Interactive setup grills user for their threat model and applies tailored hardening. Use to lock down repository security posture.",
+    "category": "Code Review & Quality",
+    "path": "skills/repo-sec",
+    "tags": [
+      "repo-security",
+      "git-security",
+      "branch-protection",
+      "secret-scanning",
+      "dependency-audit",
+      "signed-commits",
+      "security-policy",
+      "supply-chain",
+      "interactive-setup"
+    ],
+    "files": ["SKILL.md", "config", "scripts", "templates"],
+    "hash": "87f4f1912ee4636ffe6dd1fbdccfa9428811f5115b543a760441df2ef4a35b40"
   },
   {
     "name": "requesting-code-review",
@@ -1102,16 +1491,18 @@
     "category": "Code Review & Quality",
     "path": "skills/requesting-code-review",
     "tags": ["code-review-quality", "requesting-code-review"],
-    "files": ["code-reviewer.md", "SKILL.md"]
+    "files": ["SKILL.md", "code-reviewer.md"],
+    "hash": "dae1d833a9ddc8f0037d8f3ebaa355356b60de492e7addfb979a4b0bf7f16b33"
   },
   {
     "name": "reverse-any-video",
     "title": "Reverse Any Video",
-    "description": "Rebuild any video file as an editable HyperFrames project - motion graphics, talking heads, live action or AI-generated footage - checked against the original frame by frame. Use to reverse, recreate, remake, replicate or copy a video, or \u300c\u590d\u523b\u8fd9\u4e2a\u89c6\u9891\u300d\u300c\u7167\u7740\u8fd9\u4e2a\u89c6\u9891\u505a\u4e00\u4e2a\u300d.",
+    "description": "Rebuild any video file as an editable HyperFrames project - motion graphics, talking heads, live action or AI-generated footage - checked against the original frame by frame. Use to reverse, recreate, remake, replicate or copy a video, or 「复刻这个视频」「照着这个视频做一个」.",
     "category": "Video & Motion",
     "path": "skills/reverse-any-video",
     "tags": ["media", "reverse-any-video", "video", "video-motion"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "9f6d821e76d43c50d157b24f3a3f03616a386ebbcae0d0fa6d61e1fee4aece3a"
   },
   {
     "name": "reverse-engineer-anything",
@@ -1120,7 +1511,8 @@
     "category": "Developer Tools & AI",
     "path": "skills/reverse-engineer-anything",
     "tags": ["developer-tools-ai", "reverse-engineer-anything"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "8345c407970087ea17e224bc4fad25d42450ce6995e572f8e9356d510f8ab892"
   },
   {
     "name": "review-animations",
@@ -1129,7 +1521,8 @@
     "category": "Video & Motion",
     "path": "skills/review-animations",
     "tags": ["review-animations", "video-motion"],
-    "files": ["STANDARDS.md", "SKILL.md"]
+    "files": ["SKILL.md", "STANDARDS.md"],
+    "hash": "46ef486ef8b9dfda5617fcfa20ae58a7755f43009564b7c2b3e049787934ab13"
   },
   {
     "name": "ruby-lsp",
@@ -1138,7 +1531,8 @@
     "category": "Connectors & LSP",
     "path": "skills/ruby-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "lsp", "ruby-lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "8e3767781cf58a05cce6610f8e0f998ac4e2385fdeb41bc0f00cc386ec075ba8"
   },
   {
     "name": "rust-analyzer-lsp",
@@ -1147,7 +1541,8 @@
     "category": "Connectors & LSP",
     "path": "skills/rust-analyzer-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "lsp", "rust-analyzer-lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "5977eb6faa74831ac34d6b80d456c364a76fadc6048fbc8a90a126f0e04cd55a"
   },
   {
     "name": "security",
@@ -1156,7 +1551,8 @@
     "category": "Code Review & Quality",
     "path": "skills/security",
     "tags": ["code-review-quality", "security"],
-    "files": ["scripts", "SKILL.md", "references"]
+    "files": ["SKILL.md", "references", "scripts"],
+    "hash": "8e0f07eeedcbe8c3d28a508b52d894109ad7520238579e428c79e3eb7a7db50c"
   },
   {
     "name": "security-and-hardening",
@@ -1165,7 +1561,8 @@
     "category": "Code Review & Quality",
     "path": "skills/security-and-hardening",
     "tags": ["code-review-quality", "security-and-hardening"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "b277faab910142c7305c866e2fefa00ec4930e7ab160b109ad305d3d2d34c116"
   },
   {
     "name": "session-report",
@@ -1174,7 +1571,8 @@
     "category": "Engineering & Workflow",
     "path": "skills/session-report",
     "tags": ["engineering-workflow", "session-report"],
-    "files": ["skills", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "SKILL.md", "skills"],
+    "hash": "af0ce7b8c5414322d11124f9d8e9227e86908cb1ef864c75b60efedfe9214239"
   },
   {
     "name": "skillpact",
@@ -1184,17 +1582,41 @@
     "path": "skills/skillpact",
     "tags": ["developer-tools-ai", "skillpact"],
     "files": [
+      ".github",
+      ".gitignore",
+      "ACCESSIBILITY.md",
+      "ACKNOWLEDGEMENTS.md",
+      "CHANGELOG.md",
+      "CITATION.cff",
+      "CODE_OF_CONDUCT.md",
+      "CONTRIBUTING.md",
+      "ECOSYSTEM_ROADMAP.md",
+      "GOVERNANCE.md",
+      "IPR.md",
+      "LICENSE",
+      "LICENSE-spec-CC-BY-4.0.txt",
+      "README.md",
+      "REVIEW.md",
+      "ROADMAP.md",
+      "SECURITY.md",
+      "SKILL.md",
+      "STANDARDS_CHECKLIST.md",
+      "TRADEMARKS.md",
+      "action.yml",
+      "brand",
+      "conformance",
+      "content",
+      "docs",
       "examples",
       "keys",
-      "CITATION.cff",
-      "LICENSE-spec-CC-BY-4.0.txt",
-      "spec",
-      "action.yml",
-      "conformance",
-      "README.md",
       "ref",
-      "CODE_OF_CONDUCT.md"
-    ]
+      "review",
+      "samples",
+      "site",
+      "spec",
+      "ts"
+    ],
+    "hash": "f83d84fbf22fa1f5512f70d79a8d7eea228171b273a974e8f29357bc1615597d"
   },
   {
     "name": "slide-sync-skill",
@@ -1204,17 +1626,20 @@
     "path": "skills/slide-sync-skill",
     "tags": ["developer-tools-ai", "slide-sync-skill"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
+      "README.md",
+      "SKILL.md",
       "brand",
-      "ECOSYSTEM_ROADMAP.md"
-    ]
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "3797f63a4d58e641f918e2bfe9801757336e74e9316b81e7ae2085e9e48cc4f2"
   },
   {
     "name": "slideshow",
@@ -1223,7 +1648,8 @@
     "category": "Video & Motion",
     "path": "skills/slideshow",
     "tags": ["slideshow", "video-motion"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "e6fa3027d6bb993325bb22e9a213380e65d1832b098154afb49ac3ad6ce9d52b"
   },
   {
     "name": "sound-design-skill",
@@ -1233,17 +1659,21 @@
     "path": "skills/sound-design-skill",
     "tags": ["sound-design-skill", "video-motion"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "brand",
+      "docs",
+      "pyproject.toml",
       "schemas",
-      "brand"
-    ]
+      "src",
+      "tests"
+    ],
+    "hash": "c0641a77b939a3980656108697a299a84ea8a2d98721b39dab8472225725194f"
   },
   {
     "name": "stepcap",
@@ -1252,16 +1682,18 @@
     "category": "Developer Tools & AI",
     "path": "skills/stepcap",
     "tags": ["developer-tools-ai", "stepcap"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "a317e04aebeeadfd44331f880d5606b9c16e1b971d6e9e06c6b817f9ca861a98"
   },
   {
     "name": "style-sampling",
     "title": "Style Sampling",
-    "description": "Make a new episode in a proven video style - Collage Explainer, Finance Explainer, Animated Science Explainer, 3D Brand Explainer, 3D True Crime - on the person's topic. Use for \"an episode of\", \"in the style of\", \"sample this style\", \u300c\u7528\u8fd9\u4e2a\u98ce\u683c\u505a\u4e00\u96c6\u300d. One video to copy is reverse-any-video.",
+    "description": "Make a new episode in a proven video style - Collage Explainer, Finance Explainer, Animated Science Explainer, 3D Brand Explainer, 3D True Crime - on the person's topic. Use for \"an episode of\", \"in the style of\", \"sample this style\", 「用这个风格做一集」. One video to copy is reverse-any-video.",
     "category": "Developer Tools & AI",
     "path": "skills/style-sampling",
     "tags": ["developer-tools-ai", "style-sampling"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "bad38fa0b9d7707db682c497796a292cfd77f40152c012bef769f9aa0f2fdc65"
   },
   {
     "name": "subagent-driven-development",
@@ -1271,13 +1703,14 @@
     "path": "skills/subagent-driven-development",
     "tags": ["engineering-workflow", "subagent-driven-development"],
     "files": [
-      "scripts",
-      "task-reviewer-prompt.md",
       "SKILL.md",
       "implementer-prompt.md",
+      "re-review-prompt.md",
       "references",
-      "re-review-prompt.md"
-    ]
+      "scripts",
+      "task-reviewer-prompt.md"
+    ],
+    "hash": "4fdc6d6b741b4b768ea5a112d241a0a5948b7805e709f8dbb68d36d1fe98e9b8"
   },
   {
     "name": "subtitle-skill",
@@ -1287,17 +1720,24 @@
     "path": "skills/subtitle-skill",
     "tags": ["subtitle-skill", "video-motion"],
     "files": [
-      "assets",
-      "tests",
-      "scripts",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
       "CLAUDE.md",
-      "docs",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
+      "SECURITY.md",
       "SKILL.md",
-      "src"
-    ]
+      "assets",
+      "brand",
+      "docs",
+      "pyproject.toml",
+      "scripts",
+      "src",
+      "tests"
+    ],
+    "hash": "2234ac9c22017940af28768e1565ad1d6d310cd1d993133e3e7fe65b7f5d7347"
   },
   {
     "name": "swift-lsp",
@@ -1306,7 +1746,8 @@
     "category": "Connectors & LSP",
     "path": "skills/swift-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "lsp", "swift-lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "392a2ee838588a8e4bf1ac57b5cebc49f046e23ca5073800e64ab27c2fa479c1"
   },
   {
     "name": "systematic-debugging",
@@ -1316,13 +1757,14 @@
     "path": "skills/systematic-debugging",
     "tags": ["code-review-quality", "systematic-debugging"],
     "files": [
+      "SKILL.md",
       "condition-based-waiting-example.ts",
-      "find-polluter.sh",
-      "root-cause-tracing.md",
-      "defense-in-depth.md",
       "condition-based-waiting.md",
-      "SKILL.md"
-    ]
+      "defense-in-depth.md",
+      "find-polluter.sh",
+      "root-cause-tracing.md"
+    ],
+    "hash": "83881941f5ec57b4e4f124f6816d4315f505f2b82b3e61d2f18faa4c5348ecb8"
   },
   {
     "name": "test-driven-development",
@@ -1331,7 +1773,8 @@
     "category": "Code Review & Quality",
     "path": "skills/test-driven-development",
     "tags": ["code-review-quality", "test-driven-development"],
-    "files": ["SKILL.md", "writing-good-tests.md"]
+    "files": ["SKILL.md", "writing-good-tests.md"],
+    "hash": "995e92d6ef91933a8757822d7c2f41d17cfb51baf838d8957673dc32cc7d8372"
   },
   {
     "name": "thumbnail-skill",
@@ -1341,17 +1784,21 @@
     "path": "skills/thumbnail-skill",
     "tags": ["thumbnail-skill", "video-motion"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
-      "SECURITY.md",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
-      "brand"
-    ]
+      "README.md",
+      "SECURITY.md",
+      "SKILL.md",
+      "brand",
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "d4fe266f83f88a21daa90f4aaf6fd336e2103424e06bfb0d84d8bf39957433da"
   },
   {
     "name": "transcription-skill",
@@ -1361,17 +1808,28 @@
     "path": "skills/transcription-skill",
     "tags": ["developer-tools-ai", "transcription-skill"],
     "files": [
-      "assets",
-      "tests",
-      "scripts",
-      "README.md",
-      "pyproject.toml",
+      ".gitattributes",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
       "CLAUDE.md",
-      "docs",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
+      "SECURITY.md",
       "SKILL.md",
-      "src"
-    ]
+      "STATE.md",
+      "assets",
+      "brand",
+      "docs",
+      "evals",
+      "pyproject.toml",
+      "schemas",
+      "scripts",
+      "src",
+      "tests"
+    ],
+    "hash": "6854497d14cdf62a01d4a8389346e5c5b5ca0e0269e92f3c0ca18361f65355ee"
   },
   {
     "name": "typescript-lsp",
@@ -1380,7 +1838,8 @@
     "category": "Connectors & LSP",
     "path": "skills/typescript-lsp",
     "tags": ["code-intelligence", "connectors-lsp", "lsp", "typescript-lsp"],
-    "files": ["README.md", "SKILL.md", "LICENSE"]
+    "files": [".claude-plugin", "LICENSE", "README.md", "SKILL.md"],
+    "hash": "e419ff8401c72b67748a886f35f09ad07e724364fcc8c0736a22ee102643dcc9"
   },
   {
     "name": "using-git-worktrees",
@@ -1389,7 +1848,8 @@
     "category": "Engineering & Workflow",
     "path": "skills/using-git-worktrees",
     "tags": ["engineering-workflow", "using-git-worktrees"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "df17db62fe5ac5ceda77db7ddc8168ca9970b6a304bcbea111d0c05a836dd68f"
   },
   {
     "name": "using-superpowers",
@@ -1398,7 +1858,8 @@
     "category": "Engineering & Workflow",
     "path": "skills/using-superpowers",
     "tags": ["engineering-workflow", "using-superpowers"],
-    "files": ["SKILL.md", "references"]
+    "files": ["SKILL.md", "references"],
+    "hash": "197280359ae41d5176121f67046273cf1282c0d435804c481cec9d3776aa54f0"
   },
   {
     "name": "verification-before-completion",
@@ -1407,7 +1868,8 @@
     "category": "Code Review & Quality",
     "path": "skills/verification-before-completion",
     "tags": ["code-review-quality", "verification-before-completion"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "8f5227c476c211c3245b0fcfd7c782a2ebdbdf7b2fa2d8f64afdfc133e930602"
   },
   {
     "name": "video-editing-skill",
@@ -1417,17 +1879,22 @@
     "path": "skills/video-editing-skill",
     "tags": ["media", "video", "video-editing-skill", "video-motion"],
     "files": [
-      "examples",
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
       "CLAUDE.md",
-      "docs",
+      "ECOSYSTEM_ROADMAP.md",
+      "LICENSE",
+      "README.md",
       "SKILL.md",
+      "brand",
+      "docs",
+      "examples",
+      "pyproject.toml",
       "src",
-      "LICENSE"
-    ]
+      "tests"
+    ],
+    "hash": "5de011b19b8fb0a82f0e1eb005253ec34715e743ff06e505f50527313e42fbd9"
   },
   {
     "name": "video-production-agent",
@@ -1437,17 +1904,24 @@
     "path": "skills/video-production-agent",
     "tags": ["media", "video", "video-motion", "video-production-agent"],
     "files": [
-      "profiles",
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CLAUDE.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
+      "README.md",
+      "SKILL.md",
+      "brand",
+      "docs",
+      "evals",
+      "profiles",
+      "pyproject.toml",
+      "schemas",
+      "src",
+      "tests",
       "tools"
-    ]
+    ],
+    "hash": "86e9de3a037b22aeb69bb2382681b042b0a1bd033d1f5572bcd62355ecf5e51c"
   },
   {
     "name": "voice-enhance-skill",
@@ -1457,26 +1931,30 @@
     "path": "skills/voice-enhance-skill",
     "tags": ["video-motion", "voice-enhance-skill"],
     "files": [
-      "tests",
-      "README.md",
-      "pyproject.toml",
+      ".github",
+      ".gitignore",
       "CHANGELOG.md",
-      "docs",
-      "SKILL.md",
-      "src",
+      "ECOSYSTEM_ROADMAP.md",
       "LICENSE",
+      "README.md",
+      "SKILL.md",
       "brand",
-      "ECOSYSTEM_ROADMAP.md"
-    ]
+      "docs",
+      "pyproject.toml",
+      "src",
+      "tests"
+    ],
+    "hash": "32b9c3807dcd89cf42ad627eed912fb5d19a35d273535f7e4ff42f65866b03ce"
   },
   {
     "name": "website-scroll",
     "title": "Website Scroll",
-    "description": "Record a top-to-bottom scroll of any web page as a short MP4, the way a reader scrolls it (a flick, a look, another flick) (plus a poster JPEG), with cookie banners, consent dialogs, newsletter popups and chat launchers out of the way, so the page shows as a clean scroll. Use when asked for a scroll video, a scrolling screen recording, a \\\"scroll of the site/page/landing\\\", a page walkthrough clip, a preview video of a URL, or a hover video for a link card; also for a tidy full-page still with the popups removed.",
+    "description": "Record a top-to-bottom scroll of any web page as a short MP4, the way a reader scrolls it (a flick, a look, another flick) (plus a poster JPEG), with cookie banners, consent dialogs, newsletter popups and chat launchers out of the way, so the page shows as a clean scroll. Use when asked for a scroll video, a scrolling screen recording, a \"scroll of the site/page/landing\", a page walkthrough clip, a preview video of a URL, or a hover video for a link card; also for a tidy full-page still with the popups removed.",
     "category": "Developer Tools & AI",
     "path": "skills/website-scroll",
     "tags": ["developer-tools-ai", "website-scroll"],
-    "files": ["scripts", "SKILL.md"]
+    "files": ["SKILL.md", "scripts"],
+    "hash": "bd00b48ff64be913215ef22056815263c428dc7fea614d7c36e2a35bf86da72c"
   },
   {
     "name": "whiteboard-animation",
@@ -1485,25 +1963,30 @@
     "category": "Video & Motion",
     "path": "skills/whiteboard-animation",
     "tags": ["video-motion", "whiteboard-animation"],
-    "files": ["README.md", "SKILL.md", "references"]
+    "files": ["README.md", "SKILL.md", "references"],
+    "hash": "99ed4c2fdba6a5d2453c244b08c2b5a0ab97978b76f5a92d785f3aed76bff6fa",
+    "version": "0.1.0"
   },
   {
     "name": "wrapped-video",
     "title": "Wrapped Video",
-    "description": "This skill should be used when the user asks to \"make a Spotify Wrapped style video\", \"build a year in review / year-in-review video\", \"create a personalized data video\", \"generate a recap video\", \"build a wrapped video generator\", \"turn a data table into shareable videos\", or \"make per-user stat videos\". Covers the data row \u2192 one shareable video pattern, the Wrapped scene grammar (big-number reveals, top-X lists, superlatives), animated data counters, vertical 9:16 framing, and batch-rendering many personalized videos from one template.",
+    "description": "This skill should be used when the user asks to \"make a Spotify Wrapped style video\", \"build a year in review / year-in-review video\", \"create a personalized data video\", \"generate a recap video\", \"build a wrapped video generator\", \"turn a data table into shareable videos\", or \"make per-user stat videos\". Covers the data row → one shareable video pattern, the Wrapped scene grammar (big-number reveals, top-X lists, superlatives), animated data counters, vertical 9:16 framing, and batch-rendering many personalized videos from one template.",
     "category": "Video & Motion",
     "path": "skills/wrapped-video",
     "tags": ["media", "video", "video-motion", "wrapped-video"],
-    "files": ["README.md", "SKILL.md", "references"]
+    "files": ["README.md", "SKILL.md", "references"],
+    "hash": "3c95f0922371073fe616d8277ab8c7d187726b023292b5f28c0da5c0c35a7add",
+    "version": "0.1.0"
   },
   {
     "name": "write-swift",
     "title": "Write Swift",
-    "description": "How to write modern Swift well \u2014 modeling with value types, Swift 6 data-race safety and approachable concurrency (@concurrent, main-actor-by-default, actors, task groups), protocols and generics (some vs any), API design, performance and ARC, Swift Testing, macros, and the modern language features agents don't know about yet. Use when writing, reviewing, or migrating Swift, or when a concurrency error, a hang, a data race, a retain cycle, or a performance problem needs fixing.",
+    "description": "How to write modern Swift well — modeling with value types, Swift 6 data-race safety and approachable concurrency (@concurrent, main-actor-by-default, actors, task groups), protocols and generics (some vs any), API design, performance and ARC, Swift Testing, macros, and the modern language features agents don't know about yet. Use when writing, reviewing, or migrating Swift, or when a concurrency error, a hang, a data race, a retain cycle, or a performance problem needs fixing.",
     "category": "Developer Tools & AI",
     "path": "skills/write-swift",
     "tags": ["developer-tools-ai", "write-swift"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "41a08c6719484ca941f9cd955e8c382f62d2e272a35e1b90a120de104d2d203f"
   },
   {
     "name": "writing-plans",
@@ -1512,7 +1995,8 @@
     "category": "Engineering & Workflow",
     "path": "skills/writing-plans",
     "tags": ["engineering-workflow", "writing-plans"],
-    "files": ["SKILL.md"]
+    "files": ["SKILL.md"],
+    "hash": "270f4df5c9e479ea6eac93a2e9b006202c93d613e3a309fc0b22647d5bd5ad5d"
   },
   {
     "name": "writing-skills",
@@ -1521,6 +2005,7 @@
     "category": "Developer Tools & AI",
     "path": "skills/writing-skills",
     "tags": ["developer-tools-ai", "writing-skills"],
-    "files": ["render-graphs.js", "SKILL.md", "references"]
+    "files": ["SKILL.md", "references", "render-graphs.js"],
+    "hash": "723f0ffacd6593b74d1707edebf908ae3bf62b2d0d8a7600f177813d82a1e30d"
   }
 ]
