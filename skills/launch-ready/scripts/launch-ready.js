@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Launch Ready - Pre-launch verification using Periderm CLI
- * Runs: npm i -g periderm-cli, periderm --help, periderm --version, periderm scan, periderm review --deep
- * AI takes over from results to decide LAUNCH/BLOCK/LAUNCH_WITH_CONDITIONS
+ * Launch Ready - Pre-launch verification using Periderm CLI, build, and test gates
+ * Supports --dry-run, --skip-periderm, --skip-install, and clean --format=json output.
  */
 
 const { spawnSync } = require("child_process");
@@ -23,7 +22,10 @@ const COLORS = {
   gray: "\x1b[90m",
 };
 
+let JSON_MODE = false;
+
 function log(msg, color = "reset") {
+  if (JSON_MODE) return;
   console.log(`${COLORS[color]}${msg}${COLORS.reset}`);
 }
 
@@ -32,14 +34,17 @@ function error(msg) {
 }
 
 function success(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.green}✓ ${msg}${COLORS.reset}`);
 }
 
 function warn(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.yellow}⚠ ${msg}${COLORS.reset}`);
 }
 
 function info(msg) {
+  if (JSON_MODE) return;
   console.log(`${COLORS.blue}ℹ ${msg}${COLORS.reset}`);
 }
 
@@ -59,8 +64,8 @@ function runCmd(cmd, args, opts = {}) {
   });
 }
 
-function loadConfig() {
-  const configPath = path.join(process.cwd(), "launch-ready.json");
+function loadConfig(cwd = process.cwd()) {
+  const configPath = path.join(cwd, "launch-ready.json");
   const defaults = {
     thresholds: {
       minLaunchConfidence: 60,
@@ -113,14 +118,19 @@ function parseScanOutput(output) {
   try {
     return JSON.parse(output);
   } catch {
-    const text = output;
+    const text = output || "";
     return {
       launchConfidence: parseInt(
         text.match(/Launch Confidence:\s*(\d+)/)?.[1] || "0",
+        10,
       ),
-      realityScore: parseInt(text.match(/Reality Score:\s*(\d+)/)?.[1] || "0"),
+      realityScore: parseInt(
+        text.match(/Reality Score:\s*(\d+)/)?.[1] || "0",
+        10,
+      ),
       perceivedPerformance: parseInt(
         text.match(/Perceived Performance:\s*(\d+)/)?.[1] || "0",
+        10,
       ),
       findings: [],
       verdict: text.includes("DO NOT LAUNCH") ? "FAIL" : "PASS",
@@ -131,10 +141,106 @@ function parseScanOutput(output) {
 function countSeverity(findings) {
   const c = { critical: 0, high: 0, medium: 0, low: 0 };
   for (const f of findings || []) {
-    const s = (f.severity || "").toLowerCase();
-    if (c.hasOwnProperty(s)) c[s]++;
+    const s = String(f.severity || "").toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(c, s)) c[s]++;
   }
   return c;
+}
+
+function evaluateLaunchReadiness(results, config, options = {}) {
+  const skipPeriderm = Boolean(options.skipPeriderm);
+  const fc = countSeverity(results.scanResult?.findings);
+  const scanEnabled = !skipPeriderm && Boolean(config.checks.peridermScan);
+  const reviewEnabled = !skipPeriderm && Boolean(config.checks.peridermReview);
+
+  const checks = [
+    {
+      name: "Build Verification",
+      passed: results.buildCheck.passed,
+      required: Boolean(config.checks.buildVerification),
+    },
+    {
+      name: "Test Suite",
+      passed: results.testCheck.passed,
+      required: Boolean(config.checks.testSuite),
+    },
+  ];
+
+  if (!skipPeriderm) {
+    checks.unshift({
+      name: "Periderm Install",
+      passed: results.peridermInstall.passed,
+      required: true,
+    });
+    checks.push(
+      {
+        name: "Periderm Scan",
+        passed: results.scanResult.passed,
+        required: scanEnabled,
+      },
+      {
+        name: "Periderm Deep Review",
+        passed: results.reviewResult.passed,
+        required: reviewEnabled,
+      },
+      {
+        name: "Launch Confidence",
+        passed:
+          results.scanResult.launchConfidence >=
+          config.thresholds.minLaunchConfidence,
+        required: scanEnabled,
+      },
+      {
+        name: "Reality Score",
+        passed:
+          results.scanResult.realityScore >= config.thresholds.minRealityScore,
+        required: scanEnabled,
+      },
+      {
+        name: "Perceived Performance",
+        passed:
+          results.scanResult.perceivedPerformance >=
+          config.thresholds.minPerceivedPerformance,
+        required: scanEnabled,
+      },
+      {
+        name: "Critical Findings",
+        passed: fc.critical <= config.thresholds.maxCriticalFindings,
+        required: scanEnabled,
+      },
+      {
+        name: "High Findings",
+        passed: fc.high <= config.thresholds.maxHighFindings,
+        required: scanEnabled,
+      },
+      {
+        name: "Medium Findings",
+        passed: fc.medium <= config.thresholds.maxMediumFindings,
+        required: scanEnabled,
+      },
+    );
+  }
+
+  const required = checks.filter((c) => c.required);
+  const passed = required.filter((c) => c.passed).length;
+  const decision = passed === required.length ? "LAUNCH" : "BLOCK";
+
+  return {
+    timestamp: new Date().toISOString(),
+    decision,
+    summary: `${passed}/${required.length} required checks passed`,
+    thresholds: config.thresholds,
+    findingCounts: fc,
+    scan: {
+      launchConfidence: results.scanResult?.launchConfidence ?? 0,
+      realityScore: results.scanResult?.realityScore ?? 0,
+      perceivedPerformance: results.scanResult?.perceivedPerformance ?? 0,
+      verdict:
+        results.scanResult?.verdict ?? (skipPeriderm ? "SKIPPED" : "UNKNOWN"),
+    },
+    review: results.reviewResult?.summary ?? "Not run",
+    checks,
+  };
 }
 
 function generateChecklist(report) {
@@ -173,16 +279,17 @@ function generateChecklist(report) {
   lines.push(
     `- Medium: ${report.findingCounts.medium} (max: ${report.thresholds.maxMediumFindings})`,
   );
-  return lines.join("\n");
+  return lines.join("\n") + "\n";
 }
 
 function printAiHandoff(report) {
+  if (JSON_MODE) return;
   log(
     `\n${COLORS.bold}${COLORS.magenta}═══ AI HANDOFF - LAUNCH DECISION REQUIRED ═══${COLORS.reset}\n`,
   );
-  const s = report.scan,
-    t = report.thresholds,
-    f = report.findingCounts;
+  const s = report.scan;
+  const t = report.thresholds;
+  const f = report.findingCounts;
   console.log(`## LAUNCH DECISION REQUIRED\n`);
   console.log(`Periderm Results:`);
   console.log(
@@ -207,34 +314,51 @@ function printAiHandoff(report) {
   console.log(
     `DECISION: ${report.decision === "LAUNCH" ? "LAUNCH" : "BLOCK"} / LAUNCH_WITH_CONDITIONS\n`,
   );
-  if (report.decision === "BLOCK")
+  if (report.decision === "BLOCK") {
     console.log("If BLOCK: List blocking issues and remediation steps.");
-  else
+  } else {
     console.log(
       "If LAUNCH_WITH_CONDITIONS: List conditions and monitoring plan.",
     );
+  }
 }
 
-function parseArgs() {
-  const args = process.argv.slice(2);
+function parseNumericThreshold(flag, rawVal) {
+  const n = Number(rawVal);
+  if (!Number.isFinite(n) || n < 0 || n > 100 || rawVal === "") {
+    throw new Error(
+      `Invalid value for ${flag}: "${rawVal}" (expected integer 0-100)`,
+    );
+  }
+  return Math.round(n);
+}
+
+function parseArgs(argv = process.argv.slice(2)) {
   const o = {
     skipInstall: false,
+    skipPeriderm: false,
+    dryRun: false,
     minLaunch: null,
     minReality: null,
     minPerf: null,
-    format: "text",
+    format: null,
     output: null,
   };
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
     const [flag, eqVal] = a.includes("=")
       ? [a.slice(0, a.indexOf("=")), a.slice(a.indexOf("=") + 1)]
       : [a, null];
-    const nextVal = () => (eqVal !== null ? eqVal : args[++i]);
+    const nextVal = () => (eqVal !== null ? eqVal : argv[++i]);
     if (flag === "--skip-install") o.skipInstall = true;
-    else if (flag === "--min-launch") o.minLaunch = parseInt(nextVal(), 10);
-    else if (flag === "--min-reality") o.minReality = parseInt(nextVal(), 10);
-    else if (flag === "--min-perf") o.minPerf = parseInt(nextVal(), 10);
+    else if (flag === "--skip-periderm") o.skipPeriderm = true;
+    else if (flag === "--dry-run") o.dryRun = true;
+    else if (flag === "--min-launch")
+      o.minLaunch = parseNumericThreshold(flag, nextVal());
+    else if (flag === "--min-reality")
+      o.minReality = parseNumericThreshold(flag, nextVal());
+    else if (flag === "--min-perf")
+      o.minPerf = parseNumericThreshold(flag, nextVal());
     else if (flag === "--format") o.format = nextVal();
     else if (flag === "--output") o.output = nextVal();
     else if (flag === "--help" || flag === "-h") {
@@ -247,31 +371,44 @@ function parseArgs() {
 
 function showHelp() {
   console.log(`
-${COLORS.bold}Launch Ready${COLORS.reset} - Pre-launch with Periderm CLI
+${COLORS.bold}Launch Ready${COLORS.reset} - Pre-launch verification gate
 
 Usage:
   node launch-ready.js [options]
 
 Options:
-  --skip-install          Skip periderm-cli install
-  --min-launch <n>        Min launch confidence (default: 60)
-  --min-reality <n>       Min reality score (default: 50)
-  --min-perf <n>          Min perceived performance (default: 70)
+  --skip-install          Skip periderm-cli global install
+  --skip-periderm         Run build & test gates only (offline)
+  --dry-run               Preview configured gates & thresholds without executing
+  --min-launch <n>        Min launch confidence 0-100 (default: 60)
+  --min-reality <n>       Min reality score 0-100 (default: 50)
+  --min-perf <n>          Min perceived performance 0-100 (default: 70)
   --format <fmt>          Output: text, json (default: text)
-  --output <file>         Write report to file
+  --output <file>         Write JSON report to file
   --help, -h              Show help
 
 Examples:
   node launch-ready.js
+  node launch-ready.js --dry-run --format=json
+  node launch-ready.js --skip-periderm --format=json
   node launch-ready.js --min-launch=70 --min-reality=60
   node launch-ready.js --format=json --output=launch-report.json
 `);
 }
 
-const config = loadConfig();
-
 async function main() {
-  const options = parseArgs();
+  let options;
+  try {
+    options = parseArgs();
+  } catch (err) {
+    error(err.message);
+    process.exit(1);
+  }
+
+  const config = loadConfig();
+  const format = options.format || config.outputFormat || "text";
+  JSON_MODE = format === "json";
+
   if (options.minLaunch !== null)
     config.thresholds.minLaunchConfidence = options.minLaunch;
   if (options.minReality !== null)
@@ -279,7 +416,26 @@ async function main() {
   if (options.minPerf !== null)
     config.thresholds.minPerceivedPerformance = options.minPerf;
 
-  section("LAUNCH READY - Pre-launch Verification (Periderm CLI)");
+  if (options.dryRun) {
+    const plan = {
+      dryRun: true,
+      skipInstall: options.skipInstall,
+      skipPeriderm: options.skipPeriderm,
+      thresholds: config.thresholds,
+      checks: config.checks,
+      buildCommand: config.buildCommand,
+      testCommand: config.testCommand,
+    };
+    if (format === "json") {
+      console.log(JSON.stringify(plan, null, 2));
+    } else {
+      section("LAUNCH READY [dry-run]");
+      console.log(JSON.stringify(plan, null, 2));
+    }
+    process.exit(0);
+  }
+
+  section("LAUNCH READY - Pre-launch Verification");
 
   const results = {
     peridermInstall: { passed: true },
@@ -290,89 +446,96 @@ async function main() {
       launchConfidence: 0,
       realityScore: 0,
       perceivedPerformance: 0,
-      verdict: "UNKNOWN",
+      verdict: options.skipPeriderm ? "SKIPPED" : "UNKNOWN",
       findings: [],
     },
     reviewResult: { passed: true, summary: "Not run" },
   };
 
-  // 1. Install periderm-cli
-  if (config.checks.peridermInstall && !options.skipInstall) {
-    section("1/7 Install Periderm CLI");
-    const r = runCmd("npm", ["i", "-g", "periderm-cli@latest"], {
-      timeout: 120000,
-    });
-    results.peridermInstall.passed = r.status === 0;
-    if (!results.peridermInstall.passed) {
-      error("Install failed");
-      console.error(r.stderr);
-    } else success("Periderm CLI installed");
-  } else {
-    info("Skipping periderm-cli install");
+  if (!options.skipPeriderm) {
+    if (config.checks.peridermInstall && !options.skipInstall) {
+      section("1/7 Install Periderm CLI");
+      const r = runCmd("npm", ["i", "-g", "periderm-cli@latest"], {
+        timeout: 120000,
+      });
+      results.peridermInstall.passed = r.status === 0;
+      if (!results.peridermInstall.passed) {
+        error("Install failed");
+        if (!JSON_MODE) console.error(r.stderr);
+      } else {
+        success("Periderm CLI installed");
+      }
+    } else {
+      info("Skipping periderm-cli install");
+    }
+
+    section("2/7 Verify Periderm CLI");
+    const help = runCmd("periderm", ["--help"]);
+    if (help.status !== 0) {
+      error("Periderm not working");
+      results.peridermInstall.passed = false;
+    } else {
+      success("Periderm CLI responsive");
+    }
+    const ver = runCmd("periderm", ["--version"]);
+    if (ver.status === 0) info(`Version: ${ver.stdout.trim()}`);
+
+    section("3/7 Check Authentication");
+    const auth = runCmd("periderm", ["auth", "status"]);
+    if (auth.status === 0) {
+      success("Authenticated");
+      if (!JSON_MODE) console.log(auth.stdout);
+    } else {
+      warn("Not authenticated (set PERIDERM_API_KEY for full scans)");
+    }
   }
 
-  // 2. Verify CLI
-  section("2/7 Verify Periderm CLI");
-  const help = runCmd("periderm", ["--help"]);
-  if (help.status !== 0) {
-    error("Periderm not working");
-    results.peridermInstall.passed = false;
-  } else success("Periderm CLI responsive");
-  const ver = runCmd("periderm", ["--version"]);
-  if (ver.status === 0) info(`Version: ${ver.stdout.trim()}`);
-
-  // 3. Auth status
-  section("3/7 Check Authentication");
-  const auth = runCmd("periderm", ["auth", "status"]);
-  if (auth.status === 0) {
-    success("Authenticated");
-    console.log(auth.stdout);
-  } else warn("Not authenticated (set PERIDERM_API_KEY for full scans)");
-
-  // 4. Build
+  // Build
   if (config.checks.buildVerification && config.buildCommand) {
-    section("4/7 Build Verification");
-    const cmd = config.buildCommand.split(" ");
+    section("Build Verification");
+    const cmd = config.buildCommand.trim().split(/\s+/);
     const r = runCmd(cmd[0], cmd.slice(1), { timeout: 180000 });
     results.buildCheck.passed = r.status === 0;
-    results.buildCheck.output = r.stdout.slice(-2000);
+    results.buildCheck.output = (r.stdout || "").slice(-2000);
     if (results.buildCheck.passed) success("Build passed");
     else {
-      error("Build failed");
-      console.error(r.stderr);
+      if (!JSON_MODE) {
+        error("Build failed");
+        console.error(r.stderr);
+      }
     }
   }
 
-  // 5. Tests
+  // Tests
   if (config.checks.testSuite && config.testCommand) {
-    section("5/7 Test Suite");
-    const cmd = config.testCommand.split(" ");
+    section("Test Suite");
+    const cmd = config.testCommand.trim().split(/\s+/);
     const r = runCmd(cmd[0], cmd.slice(1), { timeout: 300000 });
     results.testCheck.passed = r.status === 0;
-    results.testCheck.output = r.stdout.slice(-2000);
+    results.testCheck.output = (r.stdout || "").slice(-2000);
     if (results.testCheck.passed) success("Tests passed");
     else {
-      error("Tests failed");
-      console.error(r.stderr);
+      if (!JSON_MODE) {
+        error("Tests failed");
+        console.error(r.stderr);
+      }
     }
   }
 
-  // 6. Periderm Scan
-  if (config.checks.peridermScan) {
-    section("6/7 Periderm Security & Quality Scan");
+  if (!options.skipPeriderm && config.checks.peridermScan) {
+    section("Periderm Security & Quality Scan");
     const r = runCmd("periderm", ["scan", "--json"], { timeout: 300000 });
     results.scanResult = parseScanOutput(r.stdout);
     results.scanResult.passed = r.status === 0 || r.status === 1;
-    console.log(r.stdout);
+    if (!JSON_MODE) console.log(r.stdout);
     const fc = countSeverity(results.scanResult.findings);
     log(
       `Findings: Critical=${fc.critical}, High=${fc.high}, Medium=${fc.medium}, Low=${fc.low}`,
     );
   }
 
-  // 7. Periderm Deep Review
-  if (config.checks.peridermReview) {
-    section("7/7 Periderm Deep AI Review");
+  if (!options.skipPeriderm && config.checks.peridermReview) {
+    section("Periderm Deep AI Review");
     const r = runCmd("periderm", ["review", "--deep", "--json"], {
       timeout: 300000,
     });
@@ -383,137 +546,41 @@ async function main() {
     } catch {
       results.reviewResult.summary = "Review completed (text output)";
     }
-    console.log(r.stdout);
+    if (!JSON_MODE) console.log(r.stdout);
   }
 
-  // Generate Report
-  const fc = countSeverity(results.scanResult.findings);
-  const checks = [
-    {
-      name: "Periderm Install",
-      passed: results.peridermInstall.passed,
-      required: true,
-    },
-    {
-      name: "Build Verification",
-      passed: results.buildCheck.passed,
-      required: config.checks.buildVerification,
-    },
-    {
-      name: "Test Suite",
-      passed: results.testCheck.passed,
-      required: config.checks.testSuite,
-    },
-    {
-      name: "Periderm Scan",
-      passed: results.scanResult.passed,
-      required: true,
-    },
-    {
-      name: "Periderm Deep Review",
-      passed: results.reviewResult.passed,
-      required: true,
-    },
-    {
-      name: "Launch Confidence",
-      passed:
-        results.scanResult.launchConfidence >=
-        config.thresholds.minLaunchConfidence,
-      required: true,
-    },
-    {
-      name: "Reality Score",
-      passed:
-        results.scanResult.realityScore >= config.thresholds.minRealityScore,
-      required: true,
-    },
-    {
-      name: "Perceived Performance",
-      passed:
-        results.scanResult.perceivedPerformance >=
-        config.thresholds.minPerceivedPerformance,
-      required: true,
-    },
-    {
-      name: "Critical Findings",
-      passed: fc.critical <= config.thresholds.maxCriticalFindings,
-      required: true,
-    },
-    {
-      name: "High Findings",
-      passed: fc.high <= config.thresholds.maxHighFindings,
-      required: true,
-    },
-    {
-      name: "Medium Findings",
-      passed: fc.medium <= config.thresholds.maxMediumFindings,
-      required: true,
-    },
-  ];
+  const report = evaluateLaunchReadiness(results, config, {
+    skipPeriderm: options.skipPeriderm,
+  });
 
-  const required = checks.filter((c) => c.required);
-  const passed = required.filter((c) => c.passed).length;
-  const decision = passed === required.length ? "LAUNCH" : "BLOCK";
-
-  const report = {
-    timestamp: new Date().toISOString(),
-    decision,
-    summary: `${passed}/${required.length} required checks passed`,
-    thresholds: config.thresholds,
-    findingCounts: fc,
-    scan: {
-      launchConfidence: results.scanResult.launchConfidence,
-      realityScore: results.scanResult.realityScore,
-      perceivedPerformance: results.scanResult.perceivedPerformance,
-      verdict: results.scanResult.verdict,
-    },
-    review: results.reviewResult.summary,
-    checks,
-  };
-
-  // Output
-  if (options.format === "json") {
+  if (format === "json") {
     console.log(JSON.stringify(report, null, 2));
   } else {
+    const fc = report.findingCounts;
     log(
       `\n${COLORS.bold}${COLORS.cyan}═══ LAUNCH READINESS REPORT ═══${COLORS.reset}`,
     );
     log(`Time: ${report.timestamp}`);
     log(
-      `Decision: ${decision === "LAUNCH" ? COLORS.green + "LAUNCH ✓" : COLORS.red + "BLOCK ✗"}${COLORS.reset}`,
+      `Decision: ${report.decision === "LAUNCH" ? COLORS.green + "LAUNCH ✓" : COLORS.red + "BLOCK ✗"}${COLORS.reset}`,
     );
     log(`Summary: ${report.summary}\n`);
-    log(`${COLORS.bold}Thresholds:${COLORS.reset}`);
-    log(
-      `  Launch Confidence:     ${report.scan.launchConfidence}/100 (min: ${report.thresholds.minLaunchConfidence}) ${report.scan.launchConfidence >= report.thresholds.minLaunchConfidence ? COLORS.green + "✓" : COLORS.red + "✗"}${COLORS.reset}`,
-    );
-    log(
-      `  Reality Score:         ${report.scan.realityScore}/100 (min: ${report.thresholds.minRealityScore}) ${report.scan.realityScore >= report.thresholds.minRealityScore ? COLORS.green + "✓" : COLORS.red + "✗"}${COLORS.reset}`,
-    );
-    log(
-      `  Perceived Performance: ${report.scan.perceivedPerformance}/100 (min: ${report.thresholds.minPerceivedPerformance}) ${report.scan.perceivedPerformance >= report.thresholds.minPerceivedPerformance ? COLORS.green + "✓" : COLORS.red + "✗"}${COLORS.reset}`,
-    );
-    log(`\n${COLORS.bold}Findings:${COLORS.reset}`);
-    log(
-      `  Critical: ${fc.critical} (max: ${config.thresholds.maxCriticalFindings}) ${fc.critical <= config.thresholds.maxCriticalFindings ? COLORS.green + "✓" : COLORS.red + "✗"}${COLORS.reset}`,
-    );
-    log(
-      `  High:     ${fc.high} (max: ${config.thresholds.maxHighFindings}) ${fc.high <= config.thresholds.maxHighFindings ? COLORS.green + "✓" : COLORS.red + "✗"}${COLORS.reset}`,
-    );
-    log(
-      `  Medium:   ${fc.medium} (max: ${config.thresholds.maxMediumFindings}) ${fc.medium <= config.thresholds.maxMediumFindings ? COLORS.green + "✓" : COLORS.red + "✗"}${COLORS.reset}`,
-    );
-    log(`\n${COLORS.bold}Checks:${COLORS.reset}`);
-    for (const c of checks) {
+    log(`${COLORS.bold}Checks:${COLORS.reset}`);
+    for (const c of report.checks) {
       const icon = c.passed ? COLORS.green + "✓" : COLORS.red + "✗";
       log(
         `  ${icon}${COLORS.reset} ${c.name}${c.required ? "" : COLORS.dim + " (optional)" + COLORS.reset}`,
       );
     }
-    if (config.aiHandoff) printAiHandoff(report);
+    if (!options.skipPeriderm) {
+      log(`\n${COLORS.bold}Findings:${COLORS.reset}`);
+      log(
+        `  Critical: ${fc.critical} | High: ${fc.high} | Medium: ${fc.medium}`,
+      );
+      if (config.aiHandoff) printAiHandoff(report);
+    }
   }
 
-  // Write files
   if (options.output) {
     fs.writeFileSync(options.output, JSON.stringify(report, null, 2));
     success(`Report written to ${options.output}`);
@@ -521,11 +588,22 @@ async function main() {
   fs.writeFileSync("LAUNCH_CHECKLIST.md", generateChecklist(report));
   success("Checklist written to LAUNCH_CHECKLIST.md");
 
-  process.exit(decision === "LAUNCH" ? 0 : 1);
+  process.exit(report.decision === "LAUNCH" ? 0 : 1);
 }
 
-main().catch((e) => {
-  error(`Error: ${e.message}`);
-  console.error(e.stack);
-  process.exit(2);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    error(`Error: ${e.message}`);
+    console.error(e.stack);
+    process.exit(2);
+  });
+}
+
+module.exports = {
+  loadConfig,
+  parseArgs,
+  parseScanOutput,
+  countSeverity,
+  evaluateLaunchReadiness,
+  generateChecklist,
+};

@@ -862,8 +862,8 @@
       "quality-gates",
       "engineering-workflow"
     ],
-    "files": ["SKILL.md", "config", "scripts", "templates"],
-    "hash": "1df010038b35fbe9085cf4dd91fe81ff8bc0bd694f4e1f5145ebeebf4c0154f3"
+    "files": ["SKILL.md", "config", "scripts", "templates", "tests"],
+    "hash": "3a6f0ca9a857dc1c3c7430ab7a8ae4011951ae3d66505db30c34ced34bb28193"
   },
   {
     "name": "leak-spots",
