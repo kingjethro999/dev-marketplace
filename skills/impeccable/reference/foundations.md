@@ -36,7 +36,7 @@ Web items (`app-icons`, `not-found-page`, `social-previews`, `legal-pages`, `err
 - **design-tokens**: a project colour custom property is defined and used through `var()`, or there is a recognised tokens file or theme source. Unused definitions and third-party variables do not count. HTML entities are not hex colours.
 - **reduced-motion**: motion has a real reduced-motion guard. CSS animation, transitions, Web Animations, Svelte directives, Motion components and Tailwind `animate-*` count as motion; commented guards do not.
 - **real-packages**: not checked by the CLI (needs the network). Confirm each dependency exists on its registry and is the package you meant.
-- **dependency-scanning**: Dependabot (`.github/dependabot.yml`) or Renovate is configured for the project's package managers.
+- **dependency-scanning**: Dependency vulnerability auditing (e.g., `npm audit`, OSV-Scanner, or Renovate) is configured for the project's package managers.
 - **error-tracking**: an error-tracking SDK (Sentry, Bugsnag, Rollbar, Honeybadger, Highlight, LogRocket, Datadog RUM) is a dependency and initialised at the app's entry. The user creates the account; read the DSN from the environment.
 - **reversible-migrations**: every migration has a down step the tool can run: knex, Sequelize, TypeORM or umzug files export `down`, Rails uses `def change` or `def down`, Laravel has `down()`, golang-migrate has a `.down.sql` beside each `.up.sql`, dbmate and goose have a non-empty down section.
 - **no-giant-files**: no hand-written source file is over 1,000 lines. Split along the seams the file already has; change no behaviour while doing it.

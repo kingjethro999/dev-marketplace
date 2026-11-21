@@ -17,7 +17,6 @@ files:
   - SKILL.md
   - scripts/repo-sec.js
   - templates/security-policy.md
-  - templates/dependabot.yml
   - templates/codeowners
   - templates/.gitignore.security
   - config/repo-sec.json
@@ -101,12 +100,8 @@ Run `setup` and answer questions about:
 
 **Dependency Security**
 
-- Enable Dependabot alerts?
-- Enable Dependabot auto-fix PRs?
-- Schedule? (daily, weekly, monthly)
-- Allow auto-merge for patch/minor?
 - Pin dependencies to exact versions?
-- Audit for malicious packages? (npm audit, OSV, Snyk)
+- Audit for malicious/vulnerable packages? (npm audit, OSV, Snyk)
 
 **Supply Chain**
 
@@ -135,8 +130,7 @@ Run `setup` and answer questions about:
 | Status checks required | Branch protection rules         | API call                                  |
 | Secret scanning        | GitHub secret scanning settings | API call                                  |
 | Push protection        | GitHub secret scanning settings | API call                                  |
-| Dependabot alerts      | Repository settings             | API call                                  |
-| Dependabot auto-fix    | dependabot.yml                  | Create/update file                        |
+| Dependency audit       | `npm audit` / OSV / Snyk        | Report vulnerabilities                    |
 | Security policy        | SECURITY.md exists              | Create template                           |
 | CODEOWNERS             | CODEOWNERS exists               | Create template                           |
 | .gitignore secrets     | .gitignore has secret patterns  | Append patterns                           |
@@ -187,11 +181,7 @@ Create `repo-sec.json` in project root (or run `setup`):
     "usePeriderm": true
   },
   "dependencies": {
-    "dependabotAlerts": true,
-    "dependabotAutoFix": true,
-    "schedule": "weekly",
-    "autoMerge": ["patch", "minor"],
-    "pinVersions": false,
+    "pinVersions": true,
     "auditSources": ["npm", "osv", "snyk"]
   },
   "supplyChain": {
@@ -215,7 +205,6 @@ Create `repo-sec.json` in project root (or run `setup`):
 
 - `scripts/repo-sec.js` — Auditor, hardener, interactive setup
 - `templates/security-policy.md` — SECURITY.md template
-- `templates/dependabot.yml` — Dependabot configuration
 - `templates/codeowners` — CODEOWNERS template
 - `templates/.gitignore.security` — Security .gitignore patterns
 - `config/repo-sec.json` — Default configuration

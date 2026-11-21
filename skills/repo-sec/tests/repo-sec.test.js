@@ -36,9 +36,9 @@ test("audit --json --offline detects .github/CODEOWNERS and outputs pure valid J
       data.findings.some((f) => f.control === "Code owners"),
       false,
     );
-    // Missing dependabot.yml should be flagged
+    // Missing CONTRIBUTING.md should be flagged
     assert.equal(
-      data.findings.some((f) => f.control === "Dependabot config"),
+      data.findings.some((f) => f.control === "Contributing guidelines"),
       true,
     );
   } finally {
@@ -46,7 +46,7 @@ test("audit --json --offline detects .github/CODEOWNERS and outputs pure valid J
   }
 });
 
-test("harden --dry-run --json previews changes without writing files", () => {
+test("harden --dry-run --json previews changes without writing files or dependabot", () => {
   const cwd = makeTempDir("rsec-dry-");
   try {
     spawnSync("git", ["init"], { cwd });
@@ -56,6 +56,10 @@ test("harden --dry-run --json previews changes without writing files", () => {
     assert.equal(data.dryRun, true);
     assert.ok(Array.isArray(data.plannedControls));
     assert.ok(data.plannedControls.length > 0);
+    assert.equal(
+      data.plannedControls.some((c) => /dependabot/i.test(c)),
+      false,
+    );
     assert.equal(fs.existsSync(path.join(cwd, "SECURITY.md")), false);
     assert.equal(
       fs.existsSync(path.join(cwd, ".github", "dependabot.yml")),
@@ -66,50 +70,30 @@ test("harden --dry-run --json previews changes without writing files", () => {
   }
 });
 
-test("exported buildDependabotConfig, yamlStringify, and parseNpmAudit produce valid output", () => {
-  const {
-    buildDependabotConfig,
-    yamlStringify,
-    parseNpmAudit,
-    loadConfig,
-  } = require(SCRIPT_PATH);
+test("exported yamlStringify and parseNpmAudit produce valid output", () => {
+  const { yamlStringify, parseNpmAudit } = require(SCRIPT_PATH);
 
-  const cwd = makeTempDir("rsec-dep-");
-  try {
-    fs.writeFileSync(path.join(cwd, "package.json"), "{}");
-    fs.writeFileSync(path.join(cwd, "go.mod"), "module example.com/app\n");
-    fs.mkdirSync(path.join(cwd, ".github", "workflows"), { recursive: true });
+  const yaml = yamlStringify({
+    version: 2,
+    items: [{ name: "alpha", enabled: true }],
+  });
+  assert.match(yaml, /- name: 'alpha'/);
 
-    const cfg = loadConfig(cwd);
-    const dep = buildDependabotConfig(cfg, cwd);
-    const ecosystems = dep.updates.map((u) => u["package-ecosystem"]);
-    assert.ok(ecosystems.includes("npm"));
-    assert.ok(ecosystems.includes("gomod"));
-    assert.ok(ecosystems.includes("github-actions"));
-
-    const yaml = yamlStringify(dep);
-    assert.match(yaml, /- package-ecosystem:/);
-    // Dependabot v2 allow: does not accept update-type
-    assert.equal(yaml.includes("update-type"), false);
-
-    // parseNpmAudit must parse vulnerabilities even on non-zero exit code
-    const parsed = parseNpmAudit({
-      status: 1,
-      stdout: JSON.stringify({
-        metadata: {
-          vulnerabilities: { critical: 1, high: 2, moderate: 0, low: 0 },
-        },
-      }),
-    });
-    assert.equal(parsed.total, 3);
-    assert.equal(parsed.critical, 1);
-    assert.equal(parsed.high, 2);
-  } finally {
-    fs.rmSync(cwd, { recursive: true, force: true });
-  }
+  // parseNpmAudit must parse vulnerabilities even on non-zero exit code
+  const parsed = parseNpmAudit({
+    status: 1,
+    stdout: JSON.stringify({
+      metadata: {
+        vulnerabilities: { critical: 1, high: 2, moderate: 0, low: 0 },
+      },
+    }),
+  });
+  assert.equal(parsed.total, 3);
+  assert.equal(parsed.critical, 1);
+  assert.equal(parsed.high, 2);
 });
 
-test("repo-sec uses PATCH (not PUT) for GitHub repository security settings API", () => {
+test("repo-sec uses PATCH (not PUT) for GitHub repository security settings API and does not ship dependabot", () => {
   const src = fs.readFileSync(SCRIPT_PATH, "utf8");
   assert.equal(
     /["']PUT["'],\s*`repos\/\$\{repo\}`/.test(src),
@@ -117,4 +101,9 @@ test("repo-sec uses PATCH (not PUT) for GitHub repository security settings API"
     "GitHub Update Repository API requires PATCH, not PUT",
   );
   assert.equal(/["']PATCH["'],\s*`repos\/\$\{repo\}`/.test(src), true);
+  assert.equal(/dependabot/i.test(src), false);
+  assert.equal(
+    fs.existsSync(path.join(SKILL_DIR, "templates", "dependabot.yml")),
+    false,
+  );
 });

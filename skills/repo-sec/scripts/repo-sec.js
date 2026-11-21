@@ -181,11 +181,7 @@ function loadConfig(cwd = process.cwd()) {
       usePeriderm: true,
     },
     dependencies: {
-      dependabotAlerts: true,
-      dependabotAutoFix: true,
-      schedule: "weekly",
-      autoMerge: ["patch", "minor"],
-      pinVersions: false,
+      pinVersions: true,
       auditSources: ["npm", "osv", "snyk"],
     },
     supplyChain: {
@@ -477,59 +473,9 @@ async function cmdSetup() {
   // Dependencies
   section("Dependency Security");
 
-  config.dependencies.dependabotAlerts = await askYesNo(
-    "Enable Dependabot alerts?",
-    true,
-  );
-  config.dependencies.dependabotAutoFix = await askYesNo(
-    "Enable Dependabot auto-fix PRs?",
-    true,
-  );
-
-  const scheduleOptions = [
-    { value: "daily", label: "Daily", description: "Check daily" },
-    {
-      value: "weekly",
-      label: "Weekly",
-      description: "Check weekly (recommended)",
-    },
-    { value: "monthly", label: "Monthly", description: "Check monthly" },
-  ];
-  const sched = await askSelect(
-    "Dependabot schedule",
-    scheduleOptions,
-    "weekly",
-  );
-  config.dependencies.schedule = sched.value;
-
-  const autoMergeOptions = [
-    {
-      value: "patch",
-      label: "Patch",
-      description: "Auto-merge patch versions (x.y.Z)",
-    },
-    {
-      value: "minor",
-      label: "Minor",
-      description: "Auto-merge minor versions (x.Y.z)",
-    },
-    {
-      value: "major",
-      label: "Major",
-      description: "Auto-merge major versions (X.y.z)",
-    },
-    { value: "none", label: "None", description: "No auto-merge" },
-  ];
-  const am = await askMultiSelect(
-    "Auto-merge for which version bumps?",
-    autoMergeOptions,
-    ["patch", "minor"],
-  );
-  config.dependencies.autoMerge = am.map((a) => a.value);
-
   config.dependencies.pinVersions = await askYesNo(
     "Pin dependencies to exact versions in lockfile?",
-    false,
+    true,
   );
 
   const auditOptions = [
@@ -652,49 +598,6 @@ function parseNpmAudit(auditResult) {
 
 function isWildcardBranch(branch) {
   return /[*?\[]/.test(String(branch || ""));
-}
-
-function buildDependabotConfig(config, cwd = process.cwd()) {
-  const schedule = { interval: config.dependencies?.schedule || "weekly" };
-  const updates = [];
-
-  const addEcosystem = (ecosystem, labels) => {
-    updates.push({
-      "package-ecosystem": ecosystem,
-      directory: "/",
-      schedule,
-      allow: [{ "dependency-type": "direct" }],
-      "commit-message": {
-        prefix: ecosystem === "github-actions" ? "ci" : "deps",
-      },
-      labels,
-      "open-pull-requests-limit": 5,
-    });
-  };
-
-  if (fs.existsSync(path.join(cwd, "package.json"))) {
-    addEcosystem("npm", ["dependencies", "javascript"]);
-  }
-  if (
-    fs.existsSync(path.join(cwd, "requirements.txt")) ||
-    fs.existsSync(path.join(cwd, "pyproject.toml"))
-  ) {
-    addEcosystem("pip", ["dependencies", "python"]);
-  }
-  if (fs.existsSync(path.join(cwd, "go.mod"))) {
-    addEcosystem("gomod", ["dependencies", "go"]);
-  }
-  if (fs.existsSync(path.join(cwd, "Cargo.toml"))) {
-    addEcosystem("cargo", ["dependencies", "rust"]);
-  }
-  if (fs.existsSync(path.join(cwd, ".github", "workflows"))) {
-    addEcosystem("github-actions", ["dependencies", "github-actions"]);
-  }
-  if (updates.length === 0) {
-    addEcosystem("npm", ["dependencies"]);
-  }
-
-  return { version: 2, updates };
 }
 
 async function cmdAudit(configOverride = null, options = {}) {
@@ -887,12 +790,6 @@ async function cmdAudit(configOverride = null, options = {}) {
       enabled: config.governance.contributingSecurity,
       desc: "Contributing guidelines",
     },
-    {
-      file: ".github/dependabot.yml",
-      exists: fs.existsSync(path.join(cwd, ".github/dependabot.yml")),
-      enabled: config.dependencies.dependabotAutoFix,
-      desc: "Dependabot config",
-    },
   ];
 
   for (const gf of govFiles) {
@@ -998,8 +895,6 @@ async function cmdHarden(configOverride = null, options = {}) {
       plannedControls.push("git config merge.ff=only");
     if (config.gitConfig.followTags)
       plannedControls.push("git config push.followTags=true");
-    if (config.dependencies.dependabotAutoFix)
-      plannedControls.push("create .github/dependabot.yml");
     if (config.governance.securityPolicy)
       plannedControls.push("create SECURITY.md");
     if (config.governance.codeowners) plannedControls.push("create CODEOWNERS");
@@ -1011,7 +906,6 @@ async function cmdHarden(configOverride = null, options = {}) {
     const plan = {
       dryRun: true,
       plannedControls,
-      dependabot: buildDependabotConfig(config, cwd),
     };
     if (options.json) {
       console.log(JSON.stringify(plan, null, 2));
@@ -1194,23 +1088,6 @@ async function cmdHarden(configOverride = null, options = {}) {
     }
   }
 
-  // Dependabot
-  section("Dependabot Configuration");
-  if (config.dependencies.dependabotAutoFix) {
-    const dependabotDir = path.join(cwd, ".github");
-    if (!fs.existsSync(dependabotDir))
-      fs.mkdirSync(dependabotDir, { recursive: true });
-
-    const dependabotConfig = buildDependabotConfig(config, cwd);
-
-    fs.writeFileSync(
-      path.join(dependabotDir, "dependabot.yml"),
-      yamlStringify(dependabotConfig),
-    );
-    success("Created .github/dependabot.yml");
-    applied++;
-  }
-
   // Governance files
   section("Governance Files");
 
@@ -1234,7 +1111,7 @@ async function cmdHarden(configOverride = null, options = {}) {
     if (fs.existsSync(contributingPath)) {
       contributing = fs.readFileSync(contributingPath, "utf8");
     }
-    const securitySection = `\n## Security Guidelines\n\n- All security-related changes must include a Security footer in commit messages\n- Run \`periderm scan\` before pushing security changes\n- Report vulnerabilities via SECURITY.md process\n- Dependencies are audited weekly via Dependabot\n- Signed commits required for all contributions\n`;
+    const securitySection = `\n## Security Guidelines\n\n- All security-related changes must include a Security footer in commit messages\n- Run \`periderm scan\` before pushing security changes\n- Report vulnerabilities via SECURITY.md process\n- Dependencies are audited regularly via npm audit / OSV / Snyk\n- Signed commits required for all contributions\n`;
 
     if (!contributing.includes("Security Guidelines")) {
       fs.writeFileSync(contributingPath, contributing + securitySection);
@@ -1344,10 +1221,6 @@ function cmdStatus(options = {}) {
     {
       name: "CONTRIBUTING.md",
       exists: fs.existsSync(path.join(cwd, "CONTRIBUTING.md")),
-    },
-    {
-      name: ".github/dependabot.yml",
-      exists: fs.existsSync(path.join(cwd, ".github/dependabot.yml")),
     },
   ];
   for (const f of files) {
@@ -1467,6 +1340,5 @@ module.exports = {
   findCodeowners,
   parseNpmAudit,
   isWildcardBranch,
-  buildDependabotConfig,
   yamlStringify,
 };

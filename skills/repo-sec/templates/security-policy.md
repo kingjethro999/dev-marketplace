@@ -52,7 +52,7 @@ Instead, please report via:
 - Conventional commit format required
 - Security-related changes must include Security footer
 - Run `periderm scan` before pushing
-- Dependencies audited weekly via Dependabot
+- Dependencies audited regularly via `npm audit` / OSV / Snyk
 - Branch protection enforced on main and release branches
 
 ## Security Tooling
@@ -60,7 +60,6 @@ Instead, please report via:
 This repository uses:
 
 - **Periderm CLI** for secret scanning and deep review
-- **Dependabot** for dependency updates
 - **npm audit** / **OSV** / **Snyk** for vulnerability scanning
 - **Signed commits and tags** required
 - **SBOM generation** for releases

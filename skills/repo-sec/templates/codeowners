@@ -7,7 +7,6 @@
 
 # Security-sensitive files - require security team review
 SECURITY.md @security-team
-.github/dependabot.yml @security-team @devops-team
 .github/workflows/security.yml @security-team @devops-team
 .gitignore @security-team
 .gitmessage @security-team

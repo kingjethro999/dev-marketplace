@@ -30,11 +30,7 @@
     "usePeriderm": true
   },
   "dependencies": {
-    "dependabotAlerts": true,
-    "dependabotAutoFix": true,
-    "schedule": "weekly",
-    "autoMerge": ["patch", "minor"],
-    "pinVersions": false,
+    "pinVersions": true,
     "auditSources": ["npm", "osv", "snyk"]
   },
   "supplyChain": {

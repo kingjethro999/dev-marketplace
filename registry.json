@@ -763,7 +763,7 @@
     "path": "skills/impeccable",
     "tags": ["design-ui", "impeccable"],
     "files": ["SKILL.md", "agents", "reference", "scripts"],
-    "hash": "90e473d29a1ea1c8d1cef63ed94bbe98e4cc87ed1ef7a82887eff83e45385ee7"
+    "hash": "ba6f4e61842da814b4a9f7f089da3fe5f453876b56f3f4dc03760b45d852d10e"
   },
   {
     "name": "improve",
@@ -1482,7 +1482,7 @@
       "interactive-setup"
     ],
     "files": ["SKILL.md", "config", "scripts", "templates", "tests"],
-    "hash": "16d31dcd799c488ab45c271a613740112886c235aac6d5dacafdce77e2309d8d"
+    "hash": "12e5d5e363f9b23ebf23a50978f816894cdd5df65a5f1e57952cd87b60aade12"
   },
   {
     "name": "requesting-code-review",
