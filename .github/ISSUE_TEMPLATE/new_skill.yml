@@ -1,0 +1,40 @@
+name: New Skill Proposal
+description: Propose or submit a new AI agent skill for Dev Marketplace
+title: "[Skill]: "
+labels: ["enhancement", "new-skill"]
+body:
+  - type: input
+    id: skill_name
+    attributes:
+      label: Skill slug
+      description: Lowercase kebab-case directory name under skills/
+      placeholder: e.g., postgres-tuning
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Code Review & Quality
+        - Connectors & LSP
+        - Design & UI
+        - Developer Tools & AI
+        - Engineering & Workflow
+        - Video & Motion
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What does this skill do?
+      description: Summarize when agents should trigger it and what problem it solves.
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: Open-source license
+      placeholder: e.g., MIT, Apache-2.0
+    validations:
+      required: true

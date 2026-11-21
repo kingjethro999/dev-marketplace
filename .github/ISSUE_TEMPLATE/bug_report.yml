@@ -1,0 +1,35 @@
+name: Bug Report
+description: Report a bug in the CLI, registry, or a marketplace skill
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: input
+    id: component
+    attributes:
+      label: Affected CLI command or skill
+      placeholder: e.g., npx dev-marketplace upgrade, skills/branch-sec
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear description of the bug and the exact error output.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `npx dev-marketplace ...`
+        2. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: e.g., Node 22.x, Linux / macOS / Windows, Claude Code / Cursor / Antigravity
+    validations:
+      required: false

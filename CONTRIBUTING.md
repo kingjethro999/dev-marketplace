@@ -16,7 +16,7 @@ Thank you for your interest in contributing to Dev Marketplace! This project is 
 
 ## Code of Conduct
 
-This project adheres to the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). By participating, you are expected to uphold this code. Please report unacceptable behavior to conduct@dev-marketplace.org.
+This project adheres to the [Code of Conduct](CODE_OF_CONDUCT.md), adapted from the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). By participating, you are expected to uphold this code.
 
 ---
 
@@ -181,43 +181,11 @@ chore(ci-cd): refactor matrix generation logic
 
 1. **Create a feature branch** from `main`
 2. **Make your changes** following the guidelines above
-3. **Test your changes** thoroughly
-4. **Run linting**: `npm run lint` (if available)
-5. **Update documentation** if needed
-6. **Submit PR** with:
-   - Clear title and description
-   - Link to any related issues
-   - Screenshots/examples for UI changes
-   - Test results
-
-### PR Template
-
-```markdown
-## Description
-
-Brief description of changes
-
-## Type of Change
-
-- [ ] New skill
-- [ ] Bug fix
-- [ ] Documentation update
-- [ ] Feature enhancement
-- [ ] Translation
-
-## Testing
-
-- [ ] Tested locally
-- [ ] All existing tests pass
-- [ ] New tests added (if applicable)
-
-## Checklist
-
-- [ ] SKILL.md frontmatter is complete
-- [ ] Installation commands work
-- [ ] Documentation is clear
-- [ ] No breaking changes (or documented)
-```
+3. **Sync the registry** if skills changed: `npm run build-registry`
+4. **Run tests & validation**: `npm test && npm run validate && npm run check-registry`
+5. **Format files**: `npx prettier --write .` (and `black .` for Python changes)
+6. **Update documentation** if needed
+7. **Submit PR** using `.github/pull_request_template.md` with clear context and verification results
 
 ---
 
@@ -225,12 +193,12 @@ Brief description of changes
 
 ### Automated Checks
 
-All PRs must pass:
+All PRs run through `.github/workflows/ci.yml` and must pass:
 
-- Linting (ESLint, Prettier)
-- Type checking (TypeScript)
-- Unit tests
-- Integration tests (where applicable)
+- Unit and CLI tests (`npm test`) across Node 18, 20, and 22
+- Registry sync verification (`npm run check-registry`)
+- Skill manifest, JSON, and script validation (`npm run validate`)
+- Formatting checks (`npx prettier --check .` and `black --check .`)
 
 ### Manual Review
 
