@@ -1,0 +1,31 @@
+{
+  "periderm": {
+    "enabled": true,
+    "scanArgs": ["--json"],
+    "reviewDeep": true
+  },
+  "owasp": {
+    "enabled": true,
+    "categories": ["A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10"]
+  },
+  "headers": {
+    "enabled": true,
+    "required": {
+      "Content-Security-Policy": true,
+      "Strict-Transport-Security": true,
+      "X-Frame-Options": "DENY",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": true
+    }
+  },
+  "crypto": {
+    "enabled": true,
+    "forbidWeak": ["md5", "sha1", "des", "3des", "rc4", "ecb"],
+    "minKeySize": { "rsa": 2048, "ec": 256 }
+  },
+  "threatModel": {
+    "enabled": true,
+    "methodology": "STRIDE"
+  }
+}

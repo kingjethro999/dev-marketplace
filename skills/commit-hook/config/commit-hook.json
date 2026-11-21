@@ -1,0 +1,29 @@
+{
+  "preCommit": {
+    "enabled": true,
+    "peridermScan": true,
+    "peridermArgs": ["--staged", "--json"],
+    "failOn": ["critical", "high"],
+    "lint": true,
+    "typecheck": true,
+    "tests": ["unit"],
+    "timeout": 60000
+  },
+  "prePush": {
+    "enabled": true,
+    "peridermScan": true,
+    "peridermReview": true,
+    "peridermArgs": ["--json"],
+    "failOn": ["critical", "high"],
+    "tests": ["all"],
+    "build": true,
+    "timeout": 300000
+  },
+  "commitMsg": {
+    "enabled": true,
+    "requireConventional": true,
+    "requireSecurityFooter": true,
+    "securityFooterKeys": ["Security", "CVE", "GHSA", "Periderm"],
+    "maxLength": 72
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "scan": {
+    "args": ["--json"],
+    "failOn": ["critical", "high"],
+    "entropyThreshold": 4.5
+  },
+  "review": {
+    "deep": true
+  },
+  "allowList": [
+    "EXAMPLE_KEY",
+    "test-key-123",
+    "placeholder",
+    "dummy"
+  ],
+  "ignorePaths": [
+    "*.lock",
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "dist/",
+    "build/",
+    "node_modules/",
+    ".git/"
+  ],
+  "outputFormat": "text"
+}

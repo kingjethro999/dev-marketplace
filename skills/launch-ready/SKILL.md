@@ -1,7 +1,7 @@
 ---
 name: launch-ready
 title: Launch Ready
-description: Pre-launch checklist that runs periderm-cli scan, verifies quality gates, checks dependencies, validates environment, and produces a launch readiness report. Runs: npm i -g periderm-cli, periderm --help, periderm --version, periderm scan, periderm review --deep. AI takes over from results to decide launch/block. Use before every production release.
+description: Pre-launch verification that runs Periderm CLI through its full suite: npm i -g periderm-cli, periderm --help, periderm --version, periderm scan, periderm review --deep. AI analyzes all results and makes launch/block decision with remediation steps. Use before every production release.
 category: Engineering & Workflow
 tags:
   - launch-ready
@@ -18,15 +18,15 @@ files:
 
 ## Launch Ready
 
-Complete pre-launch verification that runs Periderm CLI through its full suite and produces an AI-actionable launch decision. Runs the exact commands you specified: `npm i -g periderm-cli`, `periderm --help`, `periderm --version`, `periderm scan`, `periderm review --deep`, then hands off to AI for final launch/block decision.
+Complete pre-launch verification using Periderm CLI. Runs the exact sequence you specified: `npm i -g periderm-cli`, `periderm --help`, `periderm --version`, `periderm scan`, `periderm review --deep`. Then AI takes over, analyzes all results, and gives you a clear LAUNCH / BLOCK / LAUNCH_WITH_CONDITIONS decision with specific remediation steps.
 
 ### When to Use
 
 - Before every production release
 - Release branch validation
-- Pre-merge checks for main branch
-- Automated release pipelines
+- Pre-merge to main branch
 - Manual launch verification
+- Automated release pipelines
 
 ### Installation
 
@@ -40,27 +40,27 @@ npx dev-marketplace add launch-ready
 # Full launch readiness check
 node .agents/skills/launch-ready/scripts/launch-ready.js
 
-# With custom thresholds
+# Custom thresholds
 node .agents/skills/launch-ready/scripts/launch-ready.js --min-launch=70 --min-reality=60
 
-# Output JSON for CI
+# JSON output for CI
 node .agents/skills/launch-ready/scripts/launch-ready.js --format=json
 
-# Skip periderm install (already installed)
+# Skip periderm install (already installed globally)
 node .agents/skills/launch-ready/scripts/launch-ready.js --skip-install
 ```
 
-### What It Runs
+### What It Runs (Exact Sequence)
 
 | Step | Command | Purpose |
 |------|---------|---------|
-| 1 | `npm i -g periderm-cli` | Ensure latest Periderm |
-| 2 | `periderm --help` | Verify CLI works |
-| 3 | `periderm --version` | Log version for audit |
+| 1 | `npm i -g periderm-cli` | Ensure latest Periderm CLI |
+| 2 | `periderm --help` | Verify CLI responsive |
+| 3 | `periderm --version` | Log version for audit trail |
 | 4 | `periderm auth status` | Check authentication |
 | 5 | `periderm scan --json` | Full security/quality scan |
 | 6 | `periderm review --deep --json` | Deep AI review |
-| 7 | **AI Decision** | Evaluate all results, decide launch/block |
+| 7 | **AI Decision** | Analyze all results, decide LAUNCH/BLOCK |
 
 ### Configuration
 
@@ -80,14 +80,9 @@ Create `launch-ready.json` in project root:
     "peridermInstall": true,
     "peridermScan": true,
     "peridermReview": true,
-    "dependencyAudit": true,
-    "envValidation": true,
-    "buildVerification": true
+    "buildVerification": true,
+    "testSuite": true
   },
-  "envRequired": [
-    "PERIDERM_API_KEY",
-    "NODE_ENV"
-  ],
   "buildCommand": "npm run build",
   "testCommand": "npm test",
   "aiHandoff": true,
@@ -97,15 +92,15 @@ Create `launch-ready.json` in project root:
 
 ### Output
 
-The skill produces:
-1. **Console report** — Human-readable launch decision
-2. **JSON report** — Machine-readable for CI (`launch-report.json`)
-3. **AI handoff prompt** — Structured prompt for AI to make final decision
-4. **Checklist** — Markdown checklist (`LAUNCH_CHECKLIST.md`)
+Produces three artifacts:
 
-### AI Handoff
+1. **Console report** — Human-readable with colored output
+2. **JSON report** — `launch-report.json` for CI/CD
+3. **Checklist** — `LAUNCH_CHECKLIST.md` for sign-off
 
-When `aiHandoff: true` (default), the skill outputs a structured prompt:
+### AI Handoff Decision
+
+When `aiHandoff: true` (default), outputs structured prompt:
 
 ```
 ## LAUNCH DECISION REQUIRED
@@ -119,10 +114,9 @@ Periderm Results:
 - Medium Findings: 3 (max: 5) ✓
 
 Review Summary:
-- 2 high-severity issues: [details]
-- 3 medium-severity issues: [details]
+- 2 high-severity issues: [details from periderm review]
 
-DECISION: BLOCK / LAUNCH / LAUNCH_WITH_CONDITIONS
+DECISION: BLOCK
 
 If BLOCK: List blocking issues and remediation steps.
 If LAUNCH_WITH_CONDITIONS: List conditions and monitoring plan.
@@ -155,6 +149,6 @@ jobs:
 
 ### Files
 
-- `scripts/launch-ready.js` — Main launcher (Node.js, zero deps)
+- `scripts/launch-ready.js` — Runs periderm-cli sequence, AI decides launch/block
 - `config/launch-ready.json` — Default configuration
-- `templates/launch-checklist.md` — Markdown checklist template
+- `templates/launch-checklist.md` — Sign-off checklist template

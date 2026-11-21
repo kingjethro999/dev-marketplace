@@ -1,0 +1,29 @@
+{
+  "branchProtection": {
+    "enabled": true,
+    "branches": ["main", "release/**", "production"],
+    "requireReviews": 2,
+    "requireStatusChecks": ["periderm-scan", "build", "test", "lint"],
+    "requireSignedCommits": true,
+    "requireLinearHistory": true,
+    "dismissStaleReviews": true,
+    "restrictPushes": true,
+    "requireConversationResolution": true
+  },
+  "peridermCheck": {
+    "enabled": true,
+    "contextName": "periderm-scan",
+    "failOnCritical": true,
+    "failOnHigh": true
+  },
+  "commitTemplate": {
+    "enabled": true,
+    "requireConventional": true,
+    "requireSecurityFooter": true,
+    "securityFooterKeys": ["Security", "CVE", "GHSA", "Periderm"]
+  },
+  "github": {
+    "owner": "",
+    "repo": ""
+  }
+}

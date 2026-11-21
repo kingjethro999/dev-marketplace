@@ -11,14 +11,9 @@
     "peridermInstall": true,
     "peridermScan": true,
     "peridermReview": true,
-    "dependencyAudit": true,
-    "envValidation": true,
-    "buildVerification": true
+    "buildVerification": true,
+    "testSuite": true
   },
-  "envRequired": [
-    "PERIDERM_API_KEY",
-    "NODE_ENV"
-  ],
   "buildCommand": "npm run build",
   "testCommand": "npm test",
   "aiHandoff": true,

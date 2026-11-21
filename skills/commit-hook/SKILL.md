@@ -1,34 +1,36 @@
 ---
 name: commit-hook
 title: Commit Hook
-description: Install and manage Git commit hooks that run tests, linting, type-checking, and custom commands before every commit. Prevents broken code from entering history. Use when you want to enforce quality gates locally, customize pre-commit/pre-push behavior, or automate checks that CI runs.
+description: Install Git hooks that run Periderm CLI scans, tests, linting, and custom commands before commit/push. Enforces conventional commits with security footers. Runs: periderm scan on staged files, periderm review --deep on push. AI analyzes results and blocks on critical findings. Use to prevent broken/insecure code from entering history.
 category: Engineering & Workflow
 tags:
   - commit-hook
   - git-hooks
   - pre-commit
+  - pre-push
+  - periderm
   - quality-gates
   - engineering-workflow
 files:
   - SKILL.md
-  - scripts/install-hooks.sh
-  - scripts/run-checks.js
-  - templates/.huskyrc
+  - scripts/commit-hook.js
   - templates/pre-commit
   - templates/pre-push
   - templates/commit-msg
+  - config/commit-hook.json
 ---
 
-## Commit Hook Skill
+## Commit Hook
 
-Automatically install and configure Git hooks that run your test suite, linter, type-checker, and any custom commands before commits or pushes. Keeps broken code out of history without waiting for CI.
+Git hooks powered by Periderm CLI. Runs security scans on staged changes before commit, full scans before push, and validates commit messages. Integrates with Periderm for automated quality gates.
 
 ### When to Use
 
-- You want local quality gates that match CI
-- You need custom pre-commit/pre-push logic (e.g., run only affected tests)
-- You want to enforce commit message conventions
-- You're tired of "fix CI" commits after pushing
+- Local quality gates matching CI
+- Prevent secrets in commits
+- Enforce conventional commits + security footers
+- Run Periderm on every push
+- Block pushes with critical findings
 
 ### Installation
 
@@ -36,70 +38,85 @@ Automatically install and configure Git hooks that run your test suite, linter, 
 npx dev-marketplace add commit-hook
 ```
 
-This copies the hook templates to your project and runs the installer.
-
 ### Quickstart
 
 ```bash
-# After installing, run the installer in your project root:
-./.agents/skills/commit-hook/scripts/install-hooks.sh
+# Install hooks
+node .agents/skills/commit-hook/scripts/commit-hook.js install
 
-# Or with bun/node directly:
-node .agents/skills/commit-hook/scripts/install-hooks.js
+# Uninstall hooks
+node .agents/skills/commit-hook/scripts/commit-hook.js uninstall
+
+# Test pre-commit manually
+node .agents/skills/commit-hook/scripts/commit-hook.js test-pre-commit
+
+# Test pre-push manually
+node .agents/skills/commit-hook/scripts/commit-hook.js test-pre-push
 ```
 
-### What Gets Installed
+### What It Installs
 
-| Hook | Runs |
-|------|------|
-| `pre-commit` | Lint, typecheck, format check, unit tests (fast) |
-| `pre-push` | Full test suite, build verification |
-| `commit-msg` | Conventional commits format validation |
+| Hook | Runs | Purpose |
+|------|------|---------|
+| `pre-commit` | `periderm scan --staged`, lint, typecheck, unit tests | Catch issues before commit |
+| `pre-push` | `periderm scan`, `periderm review --deep`, full test suite | Gate pushes to remote |
+| `commit-msg` | Conventional format + security footer | Enforce commit standards |
+
+### Periderm Integration
+
+**pre-commit** runs `periderm scan --staged --json` on only staged files (fast).
+**pre-push** runs full `periderm scan --json` + `periderm review --deep --json`.
+
+Both hooks:
+- Parse JSON output
+- Block on critical/high findings (configurable)
+- Show colored summary
+- Allow `--no-verify` bypass
 
 ### Configuration
 
-Create a `.hookrc.json` in your project root to customize:
+Create `commit-hook.json` in project root:
 
 ```json
 {
   "preCommit": {
-    "commands": [
-      "npm run lint",
-      "npm run typecheck",
-      "npm run test:unit -- --passWithNoTests"
-    ],
-    "timeout": 60000,
-    "skipOnNoChanges": true
+    "enabled": true,
+    "peridermScan": true,
+    "peridermArgs": ["--staged", "--json"],
+    "failOn": ["critical", "high"],
+    "lint": true,
+    "typecheck": true,
+    "tests": ["unit"],
+    "timeout": 60000
   },
   "prePush": {
-    "commands": [
-      "npm run test",
-      "npm run build"
-    ],
-    "timeout": 180000
+    "enabled": true,
+    "peridermScan": true,
+    "peridermReview": true,
+    "peridermArgs": ["--json"],
+    "failOn": ["critical", "high"],
+    "tests": ["all"],
+    "build": true,
+    "timeout": 300000
   },
   "commitMsg": {
-    "pattern": "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\\!.*)?: .+",
+    "enabled": true,
+    "requireConventional": true,
+    "requireSecurityFooter": true,
+    "securityFooterKeys": ["Security", "CVE", "GHSA", "Periderm"],
     "maxLength": 72
   }
 }
 ```
 
-### Custom Commands
+### Security Footer
 
-Add project-specific checks by extending the config:
+Commits with security changes must include footer:
 
-```json
-{
-  "preCommit": {
-    "commands": [
-      "npm run lint",
-      "npm run typecheck",
-      "node scripts/check-secrets.js",
-      "node scripts/verify-exports.js"
-    ]
-  }
-}
+```
+feat(auth): add rate limiting
+
+Security: CVE-2024-XXXX / Periderm: scan-abc123
 ```
 
 ### Skip Hooks (Emergency)
@@ -112,18 +129,10 @@ git commit --no-verify -m "fix: hotfix"
 git push --no-verify
 ```
 
-### Uninstall
-
-```bash
-./.agents/skills/commit-hook/scripts/uninstall-hooks.sh
-```
-
 ### Files
 
-- `scripts/install-hooks.js` — Main installer (Node.js, zero deps)
-- `scripts/uninstall-hooks.js` — Clean removal
-- `scripts/run-checks.js` — Runs configured commands with timeout, parallel execution, and colored output
-- `templates/.huskyrc` — Husky-compatible config template
+- `scripts/commit-hook.js` — Installer and test runner
 - `templates/pre-commit` — Pre-commit hook template
 - `templates/pre-push` — Pre-push hook template
-- `templates/commit-msg` — Commit message validation template
+- `templates/commit-msg` — Commit message validator
+- `config/commit-hook.json` — Default configuration
