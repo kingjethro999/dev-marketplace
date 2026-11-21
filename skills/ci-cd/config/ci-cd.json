@@ -1,0 +1,59 @@
+{
+  "provider": "github-actions",
+  "projectType": "node",
+  "mode": "create",
+  "pipeline": {
+    "name": "CI/CD",
+    "triggers": {
+      "push": ["main", "develop"],
+      "pullRequest": ["main"],
+      "schedule": "0 2 * * 1",
+      "tags": true,
+      "manual": true
+    },
+    "jobs": {
+      "lint": true,
+      "typecheck": true,
+      "test": {
+        "unit": true,
+        "integration": true,
+        "e2e": false
+      },
+      "build": true,
+      "security": {
+        "periderm": true,
+        "dependencyAudit": true,
+        "sast": false,
+        "containerScan": false
+      },
+      "deploy": {
+        "enabled": false,
+        "environments": ["staging", "production"],
+        "approvalRequired": ["production"],
+        "strategy": "rolling"
+      }
+    },
+    "matrix": {
+      "os": ["ubuntu-latest"],
+      "node": ["20", "22"],
+      "python": [],
+      "go": [],
+      "rust": []
+    },
+    "caching": {
+      "npm": true,
+      "pip": false,
+      "cargo": false,
+      "go": false,
+      "maven": false,
+      "gradle": false,
+      "docker": true
+    },
+    "notifications": {
+      "slack": false,
+      "discord": false,
+      "email": false,
+      "webhook": ""
+    }
+  }
+}
