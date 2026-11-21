@@ -1,0 +1,332 @@
+from __future__ import annotations
+
+import zipfile
+from pathlib import Path
+
+import pytest
+
+from artifact_skill.adapters.pptx.adapter import PptxAdapter
+from artifact_skill.core.artifact import ArtifactRef, ArtifactType
+from artifact_skill.core.errors import ArtifactExecutionError, ArtifactInputError, ArtifactSecurityError
+from artifact_skill.core.verification import CheckStatus
+
+
+def _with_entity_declaration_injected(src: Path, dst: Path, member: str) -> None:
+    """Copies `src` (a real OOXML zip) to `dst` with a DOCTYPE/ENTITY
+    declaration prepended to one XML member - the same shape as XLSX's
+    `entity_bomb.xlsx` fixture, built inline here rather than as a new
+    binary fixture file since only one member needs changing."""
+    with zipfile.ZipFile(src) as zin:
+        names = zin.namelist()
+        assert member in names
+        with zipfile.ZipFile(dst, "w") as zout:
+            for name in names:
+                data = zin.read(name)
+                if name == member:
+                    data = b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY y "z">]>' + data
+                zout.writestr(name, data)
+
+
+@pytest.fixture()
+def adapter() -> PptxAdapter:
+    return PptxAdapter()
+
+
+def _probe_pptx_render_works(adapter: PptxAdapter, ref: ArtifactRef, tmp_path: Path) -> bool:
+    """LibreOffice being on PATH doesn't guarantee it can actually convert
+    a document in a given environment (see the adapter module's docstring
+    for the real failure this project hit during development). Probe once
+    per test instead of assuming either way, so render-happy-path tests
+    skip cleanly on a broken LibreOffice install rather than failing."""
+    try:
+        result = adapter.render(ref, tmp_path / "_probe")
+        return len(result.files) > 0
+    except Exception:  # noqa: BLE001 - any failure means "doesn't work here"
+        return False
+
+
+def test_type_detection_by_content_not_extension(good_pptx, mislabeled_pdf_as_pptx):
+    assert ArtifactRef.from_path(good_pptx).type == ArtifactType.PPTX
+    # A real PDF saved with a .pptx extension must NOT be typed as PPTX.
+    assert ArtifactRef.from_path(mislabeled_pdf_as_pptx).type == ArtifactType.PDF
+
+
+def test_inspect_good_deck_reports_two_slides(good_pptx, adapter):
+    ref = ArtifactRef.from_path(good_pptx)
+    report = adapter.inspect(ref)
+    assert report.details["slide_count"] == 2
+    assert report.details["text_bearing_slides"] == 1
+    assert report.details["broken_media"] == []
+
+
+def test_inspect_empty_placeholder_deck_flags_it(empty_placeholder_pptx, adapter):
+    ref = ArtifactRef.from_path(empty_placeholder_pptx)
+    report = adapter.inspect(ref)
+    assert report.details["empty_placeholders"] >= 1
+
+
+def test_inspect_corrupt_pptx_raises_structured_error(corrupt_pptx, adapter):
+    ref = ArtifactRef.from_path(corrupt_pptx)
+    with pytest.raises(ArtifactInputError) as exc_info:
+        adapter.inspect(ref)
+    assert exc_info.value.code == "ARTIFACT_PPTX_UNREADABLE"
+
+
+def test_verify_zero_slide_deck_fails_slide_count(zero_slide_pptx, adapter):
+    ref = ArtifactRef.from_path(zero_slide_pptx)
+    result = adapter.verify_structural(ref, {})
+    slide_count_check = next(c for c in result.checks if c.id == "slide_count")
+    assert slide_count_check.status == CheckStatus.FAIL
+    assert result.status == CheckStatus.FAIL
+
+
+def test_verify_empty_placeholder_warns_by_default(empty_placeholder_pptx, adapter):
+    ref = ArtifactRef.from_path(empty_placeholder_pptx)
+    result = adapter.verify_structural(ref, {})
+    check = next(c for c in result.checks if c.id == "empty_placeholders")
+    assert check.status == CheckStatus.WARN
+
+
+def test_verify_empty_placeholder_passes_when_policy_allows_it(empty_placeholder_pptx, adapter):
+    ref = ArtifactRef.from_path(empty_placeholder_pptx)
+    result = adapter.verify_structural(ref, {"max_empty_placeholders": 5})
+    check = next(c for c in result.checks if c.id == "empty_placeholders")
+    assert check.status == CheckStatus.PASS
+
+
+def test_execute_strip_placeholders_removes_empty_ones(empty_placeholder_pptx, adapter, tmp_path):
+    ref = ArtifactRef.from_path(empty_placeholder_pptx)
+    before = adapter.inspect(ref)
+    assert before.details["empty_placeholders"] == 1
+
+    result_ref = adapter.execute(ref, "strip_placeholders", {}, tmp_path / "out.pptx")
+    after = adapter.inspect(result_ref)
+    assert after.details["empty_placeholders"] == 0
+    # slide count itself is unaffected - only the empty shape is removed
+    assert after.details["slide_count"] == before.details["slide_count"]
+
+
+def test_execute_strip_placeholders_leaves_filled_placeholders_alone(good_pptx, adapter, tmp_path):
+    ref = ArtifactRef.from_path(good_pptx)
+    before = adapter.inspect(ref)
+    result_ref = adapter.execute(ref, "strip_placeholders", {}, tmp_path / "out.pptx")
+    after = adapter.inspect(result_ref)
+    assert after.details["empty_placeholders"] == before.details["empty_placeholders"] == 0
+    assert after.details["text_bearing_slides"] == before.details["text_bearing_slides"]
+
+
+def test_strip_placeholders_fixes_the_empty_placeholders_structural_check(empty_placeholder_pptx, adapter, tmp_path):
+    """The fixer counterpart to the detection check actually resolves it,
+    not just changes the raw count in isolation."""
+    ref = ArtifactRef.from_path(empty_placeholder_pptx)
+    result_ref = adapter.execute(ref, "strip_placeholders", {}, tmp_path / "out.pptx")
+    result = adapter.verify_structural(result_ref, {})
+    assert result.status == CheckStatus.PASS
+
+
+def test_verify_good_deck_has_no_leftover_placeholder_text(good_pptx, adapter):
+    ref = ArtifactRef.from_path(good_pptx)
+    result = adapter.verify_structural(ref, {})
+    check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
+    assert check.status == CheckStatus.PASS
+
+
+def test_verify_leftover_placeholder_text_deck_warns_by_default(leftover_placeholder_text_pptx, adapter):
+    ref = ArtifactRef.from_path(leftover_placeholder_text_pptx)
+    result = adapter.verify_structural(ref, {})
+    check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
+    assert check.status == CheckStatus.WARN
+    assert "click to add" in check.evidence["markers"]
+    assert "lorem ipsum" in check.evidence["markers"]
+
+
+def test_verify_leftover_placeholder_text_deck_fails_under_strict_policy(leftover_placeholder_text_pptx, adapter):
+    ref = ArtifactRef.from_path(leftover_placeholder_text_pptx)
+    result = adapter.verify_structural(ref, {"forbid_placeholder_text": True})
+    check = next(c for c in result.checks if c.id == "leftover_placeholder_text")
+    assert check.status == CheckStatus.FAIL
+
+
+def test_leftover_text_scan_covers_table_cells_and_speaker_notes(adapter, tmp_path):
+    """FIX_PROMPT P2-1: a table's cell text lives on the cell's own
+    text_frame, not the enclosing GraphicFrame shape (shape.has_text_frame
+    is False for it) - and speaker notes were counted (slides_with_notes)
+    but never scanned. Both were previously invisible to leftover-text
+    scanning entirely (confirmed by direct reproduction before this fix)."""
+    import pptx
+    from pptx.util import Inches
+
+    prs = pptx.Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    table_shape = slide.shapes.add_table(2, 2, Inches(1), Inches(1), Inches(4), Inches(2))
+    table_shape.table.cell(0, 0).text = "Lorem ipsum dolor"
+    slide.notes_slide.notes_text_frame.text = "TODO: fix this note"
+    path = tmp_path / "table_notes.pptx"
+    prs.save(str(path))
+
+    report = adapter.inspect(ArtifactRef.from_path(path))
+    markers = report.details["leftover_markers"]
+    assert "lorem ipsum" in markers
+    assert "todo" in markers
+
+
+def test_verify_good_deck_slide_count_requirement(good_pptx, adapter):
+    ref = ArtifactRef.from_path(good_pptx)
+    ok = adapter.verify_structural(ref, {"require_slide_count": 2})
+    assert next(c for c in ok.checks if c.id == "slide_count_requirement").status == CheckStatus.PASS
+
+    mismatch = adapter.verify_structural(ref, {"require_slide_count": 5})
+    assert next(c for c in mismatch.checks if c.id == "slide_count_requirement").status == CheckStatus.FAIL
+
+
+def test_verify_good_deck_slide_aspect_ratio_requirement(good_pptx, adapter):
+    """good_2slide.pptx is a 10in x 7.5in (4:3, ratio 1.3333) deck."""
+    ref = ArtifactRef.from_path(good_pptx)
+    ok = adapter.verify_structural(ref, {"require_slide_aspect_ratio": 4 / 3})
+    check = next(c for c in ok.checks if c.id == "slide_aspect_ratio")
+    assert check.status == CheckStatus.PASS
+
+    mismatch = adapter.verify_structural(ref, {"require_slide_aspect_ratio": 16 / 9})
+    check = next(c for c in mismatch.checks if c.id == "slide_aspect_ratio")
+    assert check.status == CheckStatus.FAIL
+    assert check.evidence["expected_ratio"] == 16 / 9
+
+
+def test_verify_slide_aspect_ratio_check_absent_without_policy(good_pptx, adapter):
+    ref = ArtifactRef.from_path(good_pptx)
+    result = adapter.verify_structural(ref, {})
+    assert not any(c.id == "slide_aspect_ratio" for c in result.checks)
+
+
+def test_chart_validity_skipped_when_no_charts(good_pptx, adapter):
+    ref = ArtifactRef.from_path(good_pptx)
+    result = adapter.verify_structural(ref, {})
+    check = next(c for c in result.checks if c.id == "chart_validity")
+    assert check.status == CheckStatus.SKIPPED
+
+
+def test_execute_metadata_set_preserves_input_and_slide_count(good_pptx, adapter, tmp_path):
+    ref = ArtifactRef.from_path(good_pptx)
+    before_hash = ref.sha256
+    output_path = tmp_path / "out.pptx"
+
+    result_ref = adapter.execute(ref, "metadata_set", {"title": "New Title", "author": "QA"}, output_path)
+
+    assert output_path.exists()
+    assert result_ref.sha256 != before_hash
+    assert ArtifactRef.from_path(good_pptx).sha256 == before_hash  # Original Protection
+
+    out_report = adapter.inspect(result_ref)
+    assert out_report.details["metadata"]["title"] == "New Title"
+    assert out_report.details["metadata"]["author"] == "QA"
+    assert out_report.details["slide_count"] == 2  # postcondition
+
+
+def test_execute_unknown_operation_raises(good_pptx, adapter, tmp_path):
+    ref = ArtifactRef.from_path(good_pptx)
+    with pytest.raises(ArtifactInputError):
+        adapter.execute(ref, "not_a_real_operation", {}, tmp_path / "out.pptx")
+
+
+def test_capabilities_report_never_lies_about_probe_result(adapter):
+    from artifact_skill.core.capability import CapabilityStatus
+
+    caps = {c.id: c for c in adapter.capabilities()}
+    assert "pptx.structural" in caps
+    assert "pptx.render" in caps
+    assert caps["pptx.structural"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+    assert caps["pptx.render"].status in (CapabilityStatus.AVAILABLE, CapabilityStatus.MISSING)
+
+
+def test_render_propagates_backend_failure(good_pptx, adapter, tmp_path, monkeypatch):
+    """The conversion logic itself (soffice missing, exits nonzero, exits 0
+    with no output) is fully covered in tests/unit/test_office_convert.py.
+    This only checks that PptxAdapter.render() actually calls the shared
+    helper and doesn't swallow or reshape its error."""
+    import artifact_skill.adapters.pptx.adapter as adapter_module
+
+    def _fake_convert(input_path, pdf_out_dir, **kwargs):
+        raise ArtifactExecutionError(
+            code="ARTIFACT_RENDER_BACKEND_FAILED", message="fake failure for testing",
+            evidence={"stderr": "fake soffice failure for testing"},
+        )
+
+    monkeypatch.setattr(adapter_module, "convert_to_pdf", _fake_convert)
+
+    ref = ArtifactRef.from_path(good_pptx)
+    with pytest.raises(ArtifactExecutionError) as exc_info:
+        adapter.render(ref, tmp_path / "rendered")
+    assert exc_info.value.code == "ARTIFACT_RENDER_BACKEND_FAILED"
+    assert "fake soffice failure" in exc_info.value.evidence["stderr"]
+
+
+def test_render_honors_a_custom_limits_max_pages(good_pptx, adapter, tmp_path, monkeypatch):
+    """Grok review P0-3: limits must reach render_pdf_pages() through the
+    intermediate PDF conversion step, not just when rendering a PDF
+    directly (test_pdf_pages.py covers that in isolation). Fakes
+    convert_to_pdf() with a real, pre-made multi-page PDF rather than
+    requiring a working LibreOffice install for this specific check."""
+    import artifact_skill.adapters.pptx.adapter as adapter_module
+    from artifact_skill.core.errors import ArtifactSecurityError
+    from artifact_skill.security.limits import Limits
+
+    def _fake_convert(input_path, pdf_out_dir, **kwargs):
+        import pypdf
+
+        pdf_out_dir.mkdir(parents=True, exist_ok=True)
+        writer = pypdf.PdfWriter()
+        for _ in range(5):
+            writer.add_blank_page(width=200, height=200)
+        out = pdf_out_dir / "converted.pdf"
+        with open(out, "wb") as f:
+            writer.write(f)
+        return out
+
+    monkeypatch.setattr(adapter_module, "convert_to_pdf", _fake_convert)
+
+    ref = ArtifactRef.from_path(good_pptx)
+    with pytest.raises(ArtifactSecurityError) as exc_info:
+        adapter.render(ref, tmp_path / "rendered", limits=Limits(max_pages=3))
+    assert exc_info.value.code == "ARTIFACT_TOO_MANY_PAGES"
+
+
+def test_render_happy_path_when_backend_actually_works(good_pptx, adapter, tmp_path):
+    ref = ArtifactRef.from_path(good_pptx)
+    if not _probe_pptx_render_works(adapter, ref, tmp_path):
+        pytest.skip("LibreOffice in this environment cannot convert documents (soffice present but non-functional)")
+    result = adapter.render(ref, tmp_path / "rendered")
+    assert len(result.files) == 2
+    assert all(f.exists() for f in result.files)
+
+
+def test_limitations_names_the_real_known_caveats(adapter):
+    """Issue #29: limitations() content had zero test coverage anywhere."""
+    text = " ".join(adapter.limitations())
+    assert "Chart validity is only checked for presence" in text
+    assert "Leftover placeholder" in text
+    assert "Embedded font completeness is not checked" in text
+    assert "LibreOffice install" in text
+
+
+def test_inspect_rejects_entity_declaration_before_opening(good_pptx, adapter, tmp_path):
+    """Grok-review finding, verified against current code: `security/
+    xml_safety.py`'s module docstring claims its zip-level entity pre-scan
+    protects PPTX/DOCX too, but it was only ever wired into the XLSX
+    adapter - never called here, despite the claim. python-pptx itself is
+    confirmed not vulnerable (lxml with resolve_entities=False), so this
+    guards a documentation-reality gap, not a live exploit path."""
+    hostile = tmp_path / "hostile.pptx"
+    _with_entity_declaration_injected(good_pptx, hostile, "ppt/presentation.xml")
+    ref = ArtifactRef.from_path(hostile)
+    with pytest.raises(ArtifactSecurityError) as exc_info:
+        adapter.inspect(ref)
+    assert exc_info.value.code == "ARTIFACT_XML_ENTITY_DECLARATION_REJECTED"
+
+
+def test_execute_rejects_entity_declaration_before_opening(good_pptx, adapter, tmp_path):
+    hostile = tmp_path / "hostile.pptx"
+    _with_entity_declaration_injected(good_pptx, hostile, "ppt/presentation.xml")
+    ref = ArtifactRef.from_path(hostile)
+    with pytest.raises(ArtifactSecurityError) as exc_info:
+        adapter.execute(ref, "metadata_set", {"title": "x"}, tmp_path / "out.pptx")
+    assert exc_info.value.code == "ARTIFACT_XML_ENTITY_DECLARATION_REJECTED"

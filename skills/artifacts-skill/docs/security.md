@@ -1,0 +1,354 @@
+# Security model
+
+Office-family and PDF files are executable-adjacent (macros, JavaScript
+actions, zip-bomb-shaped archives, path-escaping archive members) even
+though they "look like documents." This project treats them that way from
+the start, not as an afterthought. "It runs locally" is not treated as a
+substitute for these controls — a local process that gets tricked into a
+zip bomb or a path escape is still a real incident.
+
+## Subprocess execution — `security/subprocess_exec.py`
+
+This module is the *only* place in the codebase allowed to call
+`subprocess`. Rules, all enforced in code (not just documented):
+
+- **argv array only.** `run(argv, ...)` rejects anything that isn't a list
+  of strings; `shell=True` is never used anywhere in this project.
+- **Explicit allowlist.** Every call site passes its own small `allowlist`
+  set of acceptable executable *names* (e.g. `{"soffice"}` for a future
+  LibreOffice-backed adapter). An executable not on that allowlist raises
+  `ARTIFACT_SUBPROCESS_NOT_ALLOWLISTED` before anything runs.
+- **Resolved, verified path.** The executable is resolved via `shutil.which`
+  and checked to exist before exec; a missing binary raises
+  `ARTIFACT_EXECUTABLE_NOT_FOUND` with a `doctor`-pointing remediation
+  instead of a raw `FileNotFoundError`.
+- **Timeout, always.** Every call has an effective timeout
+  (`Limits.subprocess_timeout_seconds`, default 120s); a timeout is reported
+  as a structured result (`timed_out=True`), not an uncaught exception.
+- **Isolated working directory** by default (a fresh `TemporaryDirectory`
+  unless the caller passes an explicit `cwd`).
+- **Minimal environment.** Only `PATH`, `HOME`, `TMPDIR`/`TEMP`/`TMP`,
+  `LANG`, `LC_ALL`, `SYSTEMROOT` are forwarded — not the caller's full
+  environment (proxies, tokens, unrelated config).
+
+**No orphaned children on interrupt (Issue #25).** A `soffice`/Chromium
+child killed mid-render must not outlive the parent CLI/MCP process.
+Verified directly against CPython's own `subprocess.py`, not assumed:
+`subprocess.run()` already kills its child on *any* Python-level exception
+escaping `communicate()` — including `KeyboardInterrupt`, which is exactly
+what SIGINT (a real Ctrl-C) raises by default, so that case was never
+actually broken. SIGTERM is different: its default disposition terminates
+the process immediately with no Python exception raised at all, so nothing
+downstream — no `finally`, no `except` clause anywhere in this codebase —
+ever gets a chance to run, silently orphaning the child. `cli/main.py`'s
+`main()` and `mcp/server.py`'s `serve()` — the two real process entry
+points — both call
+`security/subprocess_exec.py::treat_sigterm_as_interrupt()` on startup,
+which installs `signal.default_int_handler` for SIGTERM too, so it now
+raises the exact same `KeyboardInterrupt` SIGINT already did and gets the
+same, already-correct cleanup. `tests/security/test_subprocess_exec.py`
+proves both halves empirically (spawning a real child process and sending
+it a real SIGTERM), not just by reading the code: the bug is demonstrated
+first, then the fix is shown to prevent it.
+
+A `receipt.json` is the only evidence that verification actually ran to
+completion — an output *file* existing on disk after an interrupted
+`execute`/`receipt` call is not proof of anything: `execute`'s own atomic
+write (see "Filesystem" below) guarantees that file is never partially
+written, but says nothing about whether verification ever happened
+afterward. Treat a missing receipt exactly like a missing output: rerun.
+
+The PDF and Image adapters never need this module — `pypdf`, `pypdfium2`,
+and Pillow are pure-Python-callable. `rendering/office_convert.py` (used
+by PPTX/DOCX/XLSX for LibreOffice-backed rendering) is the module's actual
+consumer, going through `run()` with an explicit `{"soffice",
+"libreoffice"}` allowlist for every invocation. `rendering/ffmpeg_probe.py`
+(the media adapter's `ffprobe`/`ffmpeg` calls) follows the identical
+pattern with its own `{"ffmpeg", "ffprobe"}` allowlist.
+
+**Cross-platform allowlist matching.** Adapters write allowlists using
+platform-neutral executable names (`"soffice"`), but the resolved,
+absolute path `shutil.which()` returns on Windows carries an executable
+extension (`soffice.exe`) that a bare allowlist name never would —
+comparing the two directly would reject every resolved executable on
+Windows. Found by direct code audit for Issue #10's cross-platform
+verification, not by an actual Windows CI run (this project's CI only
+runs `ubuntu-latest`). `run()`'s `_executable_basename()` strips a known
+executable extension (`.exe`/`.bat`/`.cmd`/`.com`, case-insensitively)
+before the allowlist check, and does so by explicitly parsing a
+backslash-containing path with the stdlib's `ntpath` module regardless of
+which OS is actually running the code — `pathlib.Path` alone only
+understands `\` as a separator when Python itself is running on Windows,
+which would make the fix untestable on this Linux-only CI. Branching on
+`ntpath` when a backslash is present is what makes
+`tests/security/test_subprocess_exec.py`'s Windows-path-shaped cases
+genuinely pass here, rather than merely being asserted to work on a
+platform nothing in this repository ever runs on.
+
+**Documented exception: the HTML adapter's Playwright/Chromium process.**
+`adapters/html/adapter.py::render()` calls Playwright's Python API
+(`sync_playwright()`, `chromium.launch()`), which spawns and manages its
+own browser process internally — that process is not started through this
+module's `run()`. The rationale this module exists for — no shell strings,
+no attacker-influenced argv assembled by this project's own code — applies
+to argv *this project constructs*, like the `soffice` invocation in
+`rendering/office_convert.py`. It does not extend to a well-audited
+library (Playwright) managing its own child process through its own API,
+any more than it would require wrapping `pypdfium2`'s internal calls into
+PDFium. What this project *is* responsible for at that boundary — and
+does enforce — is what the browser process is allowed to do once running:
+`render()` installs a Playwright route handler that aborts every request
+that isn't `data:`/`about:`, or a `file://` reference that stays inside
+the source document's own directory (`rendering/chromium_render.py::
+_file_url_is_within()`), so navigating to an HTML page can never trigger
+a real network fetch, matching the network-off-by-default policy below in
+an actively-enforced way, not just a documented one. The directory
+restriction on `file://` itself closes a real local-file-disclosure path
+(external review, "P0-2"), not a hypothetical one: before it existed,
+*any* `file://` URL was allowed through unconditionally, so a hostile
+document referencing `file:///etc/passwd` (or anything else outside its
+own directory) would have that file's content end up in the rendered PNG
+evidence — reproduced directly against a real Chromium launch. A symlink
+placed inside the document's directory but pointing outside it is caught
+the same way, since the check resolves the requested path before
+comparing it.
+
+## Filesystem — `security/paths.py`
+
+- **`resolve_within(base_dir, candidate)`** — resolves a path and asserts
+  it stays inside `base_dir`. Raises `ARTIFACT_PATH_ESCAPE` on `..`, an
+  absolute escape, or a symlink that resolves outside the base. Its one
+  call site (Issue #30 — a prior version of this doc overclaimed "every
+  output path" too) is inside `safe_extract_zip()` below, guarding an
+  archive member's path — the untrusted-input case a hostile zip can
+  actually exploit. An output path supplied by the CLI/MCP caller
+  (`--output`/`output`) is not run through it: that path comes from the
+  tool's own invoker, a trusted boundary in this project's threat model,
+  not a hostile file being processed.
+- **`atomic_write_bytes` / `atomic_copy`** — write to a same-directory temp
+  file, `fsync`, then `os.replace`. No partial file is ever left at the
+  target path, including on a crash mid-write.
+- **`safe_extract_zip`** — a real, tested utility for extracting a zip
+  archive to disk with path-escape and zip-bomb protection. Originally
+  declared but not called from any production code path (self-audit
+  finding, FIX_PROMPT P1-1 — a prior version of this doc claimed it was
+  "used today by the OOXML content-type sniff," which was never true:
+  `core/artifact.py`'s `_sniff_zip_container()` reads directly via
+  `zipfile.ZipFile`/`zf.read()`, and PPTX/DOCX/XLSX's structural
+  read/write goes through python-pptx/python-docx/openpyxl's own
+  internal zip handling, neither of which calls this function). **Now
+  wired into one production path**: the EPUB adapter's `render()`
+  (`adapters/epub/adapter.py`, added in a later self-audit round) calls
+  it to safely extract the whole archive into a private staging
+  directory before rendering each spine document — the one adapter
+  operation that genuinely needs real files on disk (Chromium navigates
+  via `file://`), unlike `inspect()`, which still reimplements just the
+  decompression-bomb subset in memory (see that adapter's module
+  docstring for why `inspect()` specifically can't call this function:
+  its own contract says it must never write to disk). Rejects, before
+  extracting anything:
+  - more members than `Limits.max_zip_members` (default 20,000),
+  - any member with an absolute path or a `..` segment,
+  - any symlink member (these can point extraction output outside the
+    destination directory even when the *name* looks safe),
+  - total uncompressed size beyond `Limits.max_zip_uncompressed_bytes`
+    (default 2 GB),
+  - any single member whose uncompressed size exceeds its compressed size
+    by more than `Limits.max_zip_compression_ratio` (default 200x) when
+    that member is itself larger than 10 MB — the classic zip-bomb
+    signature, gated on absolute size so legitimately-compressible small
+    files (e.g. an empty XML part) don't false-positive.
+- **`check_input_size`** — rejects an input file above
+  `Limits.max_input_bytes` (default 500 MB) before any adapter opens it.
+
+## XML entity expansion — `security/xml_safety.py` (Issue #21)
+
+XML is XML regardless of what format wraps it, and `xml.etree.ElementTree`
+(like most `expat`-based parsers) is not hardened against entity-expansion
+DoS ("billion laughs") by default: a few bytes of nested `<!ENTITY>`
+definitions can expand to gigabytes in memory *during parsing*, before the
+existing `check_input_size` file-size cap gets a chance to matter.
+
+`security/xml_safety.py::reject_xml_entity_declaration()` scans the
+*entire* document (not a bounded prefix — see below) and refuses to parse
+anything that declares a `<!ENTITY` or a `<!DOCTYPE` with an internal
+subset (`[...]`), raising `ARTIFACT_XML_ENTITY_DECLARATION_REJECTED`
+before the file ever reaches `ElementTree`, lxml, or Chromium. Legitimate
+documents have no legitimate use for a DOCTYPE/ENTITY declaration, so
+this is a hard rejection, not a size-limited allowance.
+
+**Self-audit finding (FIX_PROMPT P1-2): this used to scan only a 64 KB
+prefix, and `reject_xml_entities_in_zip()` used to skip any zip member
+over 10 MB entirely.** Both confirmed directly as real bypasses — a
+DOCTYPE/ENTITY declaration pushed past 64 KB by a large-but-syntactically-
+legal leading XML comment, or placed inside a >10 MB zip member, went
+completely unscanned and reached the parser unguarded. Fixed by removing
+both limits: a substring search over the entire buffer this function is
+ever handed is cheap even at real-world scale (~0.2s measured directly
+for 200 MB), and the input is already bounded upstream by
+`check_input_size()`, so there was no real benefit to the bounded-prefix
+version, only a real gap. The EPUB adapter's own OPF/XHTML parser had the
+identical 10 MB-skip bypass independently (it calls this same function
+per zip member rather than through `reject_xml_entities_in_zip()`) and
+was fixed the same way. Two callers:
+
+- **`reject_xml_entities_in_file()`** — a single on-disk XML file. Used by
+  the SVG adapter (originally the only caller, before this module was
+  generalized out of `adapters/svg/adapter.py`) at the start of both
+  `inspect()` and `render()` — a rendered SVG goes through Chromium's own
+  XML parser too, so the same file must be rejected before either path.
+- **`reject_xml_entities_in_zip()`** — every `.xml` member of an OOXML zip
+  (`.pptx`/`.docx`/`.xlsx`), scanned before the format-specific library
+  opens the file at all.
+
+**Why the zip variant exists — an actual audit, not a hypothetical.**
+Tracker issue #2 had left open, since the first external review pass,
+whether PPTX/DOCX/XLSX's internal XML parsing (python-pptx/python-docx/
+openpyxl) shares this exposure. Checked directly, not assumed:
+
+- **python-pptx and python-docx: not exposed.** Both explicitly construct
+  their `lxml.etree.XMLParser` with `resolve_entities=False` at every XML
+  entry point (`pptx/oxml/__init__.py`, `docx/oxml/parser.py`,
+  `docx/opc/oxml.py`) — confirmed by reading their installed source *and*
+  by round-tripping a crafted `.pptx`/`.docx` with a DOCTYPE-declared
+  entity through `Presentation()`/`Document()`: the entity was dropped
+  from the extracted text entirely, neither resolved nor left as literal
+  text. `reject_xml_entities_in_zip()` is still wired into
+  `XlsxAdapter.inspect()`/`execute()` alone, not PPTX/DOCX's — adding it
+  there too would be a guard against a risk direct testing didn't find,
+  which this project's own "don't validate for scenarios that can't
+  happen" stance argues against.
+- **openpyxl: exposed, confirmed by direct testing.** `openpyxl.xml.
+  functions` only swaps in a hardened parser (`lxml` with
+  `resolve_entities=False`, or `defusedxml`) when one of those packages
+  happens to be importable — and this project's own `xlsx` extra
+  (`pyproject.toml`) pulls in neither. A `pip install -e ".[xlsx]"`-only
+  install — a real, documented, minimal install path — gets *zero*
+  entity-expansion protection from openpyxl by default. Verified
+  exploitable: a crafted `xl/worksheets/sheet1.xml` with a DOCTYPE-declared
+  entity had its value substituted directly into a cell
+  (`ws["A1"].value == "PWNED_VALUE"`), and a small nested-entity chain
+  amplified exactly as the classic "billion laughs" pattern predicts. A
+  `SYSTEM "file://..."` external entity was *not* resolved (expat's
+  default posture doesn't fetch external entities), so this is a DoS/
+  data-integrity risk, not full XXE file disclosure. Fixed:
+  `XlsxAdapter.inspect()`/`execute()` both call
+  `reject_xml_entities_in_zip()` before `openpyxl.load_workbook()` —
+  `tests/fixtures/xlsx/entity_bomb.xlsx` and
+  `tests/security/test_xml_safety.py` cover it, along with a direct
+  adapter-level regression test.
+
+The fix operates below the format-specific library entirely (a zip-level
+pre-scan) rather than trying to reconfigure or monkeypatch openpyxl's
+internal parser choice — that would be a fragile dependency on its exact
+import structure, liable to silently stop protecting anything on a future
+openpyxl version bump.
+
+## Resource limits — `security/limits.py`
+
+A single `Limits` dataclass (`DEFAULT_LIMITS`) is the only place any of
+these numbers live. No adapter hardcodes its own "too big" constant. A
+caller who genuinely needs to raise a limit does so by passing a different
+`Limits` instance explicitly (visible in code review), never by a hidden
+per-format exception. This claim used to be aspirational for one field:
+`render_timeout_seconds` was declared here but never actually read
+anywhere — `rendering/chromium_render.py` had its own separate, hardcoded
+30s module constant instead, completely disconnected from `Limits` (Issue
+#28). Fixed by threading `limits: Limits = DEFAULT_LIMITS` through
+`ArtifactAdapter.render()` and every override down to the two render
+backends that actually have a timeout to govern: `render_timeout_seconds`
+for the Chromium-backed path (HTML/SVG) and `subprocess_timeout_seconds`
+for the LibreOffice-backed one (PPTX/DOCX/XLSX, via
+`rendering/office_convert.py::convert_to_pdf()`). PDF and Image accept the
+same `limits` parameter for interface consistency (every `render()`
+override shares one real signature) but ignore it — neither backend
+(pypdfium2, Pillow) has a timeout-governed step to control.
+
+`max_pages` (default 2000) had the identical disconnected-field problem
+(Grok review "P0-3"): declared here, but the only other `max_pages`
+anywhere in this codebase was the PDF adapter's *policy* key — a
+caller-opt-in verification constraint, not a resource limit this project
+enforces on its own — so `rendering/pdf_pages.py::render_pdf_pages()`
+rendered every page of every PDF completely unconditionally. A 2000+ page
+PDF, or a LibreOffice-converted PPTX/DOCX/XLSX that happens to produce
+one, could burn unbounded disk and time with no cap at all. Fixed the
+same way as `render_timeout_seconds`: `render_pdf_pages()` now takes
+`limits: Limits = DEFAULT_LIMITS` and raises
+`ArtifactSecurityError(code="ARTIFACT_TOO_MANY_PAGES")` — rejecting
+outright, not silently truncating — before rendering a single page past
+the limit, threaded through from every one of the four adapters that call
+it (PDF directly; PPTX/DOCX/XLSX via their own already-`limits`-aware
+`render()`).
+
+`max_video_pixels` (default ~64 megapixels) is the Media adapter's
+equivalent of the zip-bomb ratio guard above, for pixels instead of bytes
+— a security-review finding, confirmed by direct reproduction: a video
+container can declare an enormous *decoded* frame size while compressing
+to almost nothing on disk (a solid-color frame is trivially compressible
+— a real 12000x12000 H.264 MP4 built this way is ~28KB on disk but made
+`ffprobe` alone peak at ~396MB RSS, and the adapter's full `render()`
+path peak at ~1.4GB RSS over ~16s). `check_input_size()` bounds the file
+on disk; nothing previously bounded the pixels ffmpeg/ffprobe would
+decode from it. `adapters/media/adapter.py::inspect()` now checks
+`width*height` against this limit immediately after `ffprobe` returns
+(before `render()`'s much more expensive frame decode ever runs),
+raising `ArtifactSecurityError(code="ARTIFACT_MEDIA_RESOLUTION_TOO_LARGE")`
+— which `verify_structural()` lets propagate uncaught, the same
+security-control-not-a-mere-Check precedent the SVG/XLSX/EPUB entity-bomb
+guards already established (see "XML entity expansion" above). The same
+review round also flipped `core/artifact.py`'s `ftyp`-brand check from a
+denylist of known non-media brands (fail-open: an unrecognized brand was
+routed to `ffprobe`/`ffmpeg` by default) to an allowlist of known media
+brands (fail-closed: an unrecognized brand is honestly `UNKNOWN` instead)
+— see `docs/adapters.md`'s Media section for the full account of both
+review rounds.
+
+## Network policy
+
+Off by default, everywhere, with no per-tool opt-out in the current MVP.
+Nothing in this codebase issues an HTTP request itself. The HTML adapter
+is the one place a *sub-process this project doesn't control* (Chromium)
+could otherwise do so on its own — `render()` actively blocks it via a
+Playwright route handler that aborts every non-`file://`/`data:`/`about:`
+request rather than merely documenting an intention (verified in
+`tests/unit/test_html_adapter.py::test_render_blocks_external_requests_
+when_backend_works`, which drives a real browser and confirms an external
+request is attempted-then-aborted, not fulfilled). `verify_structural()`'s
+`external_resources` check reports the same references as `WARN` (or
+`FAIL` under `policy.forbid_external_resources`) so the caller knows why a
+render might show broken images/missing styles, rather than being
+surprised by it. If a future capability needs to actually fetch remote
+assets to render faithfully, that will be an explicit, separately-gated
+capability (`html.fetch_remote_assets` or similar) that defaults to *off*
+— consistent with spec §27.
+
+## Original Protection
+
+`core/operation.py:default_output_path()` never returns the input path.
+Every `execute()` implementation writes only to the `output_path` it is
+given; the PDF adapter's `execute()` never opens `ref.path` in write mode.
+
+For most of this project's history that was the *entire* guarantee — a
+caller's own `--output` argument was never checked against the input path
+at all, so `--output` equal to (or resolving to, or a hard/symlink alias
+of) the input silently overwrote it. This was a real, reproduced bug
+(external review, "P0-1"), not a hypothetical: `execute --output
+report.pdf` on an input literally named `report.pdf` really did overwrite
+it. `security/paths.py::reject_output_overwrites_input()` — called from
+`core/engine.py::build_plan()`, the one chokepoint every `plan`/
+`execute`/`receipt` call goes through, CLI and MCP alike — now rejects
+with `ARTIFACT_OUTPUT_OVERWRITES_INPUT` *before* any adapter's `plan()` or
+`execute()` runs, checking both `.resolve()` equality (catches the
+literal-same-path, relative/absolute, and symlink-aliasing cases) and
+`(st_dev, st_ino)` equality when both paths already exist (catches a hard
+link, which `.resolve()` can't see). `tests/security/test_original_protection.py`
+proves this for every implemented format, not just PDF, and separately
+proves `plan` (not just `execute`) refuses too.
+
+## What's explicitly not handled yet (and why that's stated, not hidden)
+
+- **Macro execution**: out of scope entirely — this project never executes
+  embedded macros/scripts in any artifact, and has no code path that could.
+- **Malware/antivirus scanning**: out of scope. This project's guarantees
+  are about structural correctness and safe extraction, not content
+  safety classification.
