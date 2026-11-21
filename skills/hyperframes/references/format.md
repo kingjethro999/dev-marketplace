@@ -45,8 +45,19 @@ The detail behind the contract in `SKILL.md`. Full references: `npx hyperframes 
       inset: 0;
     }
   </style>
-  <div id="root" data-composition-id="intro" data-width="1920" data-height="1080">
-    <h1 id="headline" class="clip" data-start="0.4" data-duration="3" data-var-text="headline">
+  <div
+    id="root"
+    data-composition-id="intro"
+    data-width="1920"
+    data-height="1080"
+  >
+    <h1
+      id="headline"
+      class="clip"
+      data-start="0.4"
+      data-duration="3"
+      data-var-text="headline"
+    >
       …
     </h1>
   </div>

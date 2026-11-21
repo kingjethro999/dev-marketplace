@@ -193,48 +193,48 @@ flowchart LR
 
 **Inspect and verify**
 
-| Tool | What it does | sips |
-|---|---|---|
-| `probe.py` | Width, height, format, colorspace, alpha, GPS presence (read from the EXIF block itself) | ✓ |
-| `check.py` | Output opens, matches the promised width/height/format, and is not the input | ✓ |
-| `look.py` | Labelled preview sheet of one or more images, or `--pair` before/after, as a PNG to open | – |
-| `compare.py` | SSIM (pure Python, matches scikit-image), PSNR and changed-pixel share of two same-size images. `-o` writes a heatmap and `--fail-below` gates on SSIM | – |
+| Tool         | What it does                                                                                                                                           | sips |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- |
+| `probe.py`   | Width, height, format, colorspace, alpha, GPS presence (read from the EXIF block itself)                                                               | ✓    |
+| `check.py`   | Output opens, matches the promised width/height/format, and is not the input                                                                           | ✓    |
+| `look.py`    | Labelled preview sheet of one or more images, or `--pair` before/after, as a PNG to open                                                               | –    |
+| `compare.py` | SSIM (pure Python, matches scikit-image), PSNR and changed-pixel share of two same-size images. `-o` writes a heatmap and `--fail-below` gates on SSIM | –    |
 
 **Size and geometry**
 
-| Tool | What it does | sips |
-|---|---|---|
-| `convert.py` | Change format: HEIC→JPEG/PNG/WebP, PNG→WebP, … | ✓ |
-| `resize.py` | `fit` (default, no distortion), `fill` (cover, then centre-crop), `exact` (forced) | fit |
-| `thumb.py` | Thumbnail by the long edge, aspect kept, never upscales | ✓ |
-| `crop.py` | Exact rectangle, or the largest `--aspect W:H` region placed by `--gravity`. Never clips silently | centred aspect |
-| `pad.py` | Pad to an `--aspect` or exact canvas with a required `--color` (`none` = transparent). Never scales | centred, `#RRGGBB` |
-| `rotate.py` | Clockwise `--degrees`, mirror, or no flag to bake EXIF orientation into the pixels | one 90° step or flip |
-| `preset.py` | Named published sizes (`og`, `instagram-*`, `youtube-thumbnail`, `pinterest-pin`, …) with `--mode fill\|fit\|pad`. `--list` shows sizes and source URLs | fill, fit |
+| Tool         | What it does                                                                                                                                            | sips                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `convert.py` | Change format: HEIC→JPEG/PNG/WebP, PNG→WebP, …                                                                                                          | ✓                    |
+| `resize.py`  | `fit` (default, no distortion), `fill` (cover, then centre-crop), `exact` (forced)                                                                      | fit                  |
+| `thumb.py`   | Thumbnail by the long edge, aspect kept, never upscales                                                                                                 | ✓                    |
+| `crop.py`    | Exact rectangle, or the largest `--aspect W:H` region placed by `--gravity`. Never clips silently                                                       | centred aspect       |
+| `pad.py`     | Pad to an `--aspect` or exact canvas with a required `--color` (`none` = transparent). Never scales                                                     | centred, `#RRGGBB`   |
+| `rotate.py`  | Clockwise `--degrees`, mirror, or no flag to bake EXIF orientation into the pixels                                                                      | one 90° step or flip |
+| `preset.py`  | Named published sizes (`og`, `instagram-*`, `youtube-thumbnail`, `pinterest-pin`, …) with `--mode fill\|fit\|pad`. `--list` shows sizes and source URLs | fill, fit            |
 
 **Encode and metadata**
 
-| Tool | What it does | sips |
-|---|---|---|
+| Tool          | What it does                                                                                                           | sips       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------- |
 | `optimize.py` | Fit a file-size budget (`--max-kb`) by searching quality, at the same pixel size. Fails with the smallest size reached | JPEG, HEIC |
-| `strip.py` | Remove GPS/EXIF, baking orientation first. Refuses an output that still has GPS | – |
-| `trim.py` | Trim a solid border. Fails instead of over-trimming | – |
+| `strip.py`    | Remove GPS/EXIF, baking orientation first. Refuses an output that still has GPS                                        | –          |
+| `trim.py`     | Trim a solid border. Fails instead of over-trimming                                                                    | –          |
 
 **Compose**
 
-| Tool | What it does | sips |
-|---|---|---|
-| `overlay.py` | A logo (`--image`, `--scale`) or one line of literal text at a `--position`, with `--margin` and `--opacity`. Japanese text gets a CJK font | – |
-| `adjust.py` | Explicit levels, brightness, contrast, saturation, blur and sharpen. No "auto" | – |
-| `montage.py` | Row or `--cols` grid with a required `--background`, `--gap` and `--labels` | – |
-| `icons.py` | favicon.ico (16/32/48), PNG icons (32/192/512), apple-touch-icon.png, plus the `<link>` tags and manifest entries | – |
-| `brandkit.py` | Logo variants for a brand kit: color, mono, white and black versions and a `--clear-space` padded one, each at full size and every `--sizes` long edge (never upscaled), plus the `--palette` main colours with their share | – |
-| `alpha.py` | Alpha hygiene: `--mode report` says whether alpha is present and used; `premultiply`/`unpremultiply`; `defringe --matte white` takes a cut-out's white fringe back out of its edges; `key` writes the alpha as a grey matte and `fill` the colour, for key-and-fill deliveries | – |
+| Tool          | What it does                                                                                                                                                                                                                                                                   | sips |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- |
+| `overlay.py`  | A logo (`--image`, `--scale`) or one line of literal text at a `--position`, with `--margin` and `--opacity`. Japanese text gets a CJK font                                                                                                                                    | –    |
+| `adjust.py`   | Explicit levels, brightness, contrast, saturation, blur and sharpen. No "auto"                                                                                                                                                                                                 | –    |
+| `montage.py`  | Row or `--cols` grid with a required `--background`, `--gap` and `--labels`                                                                                                                                                                                                    | –    |
+| `icons.py`    | favicon.ico (16/32/48), PNG icons (32/192/512), apple-touch-icon.png, plus the `<link>` tags and manifest entries                                                                                                                                                              | –    |
+| `brandkit.py` | Logo variants for a brand kit: color, mono, white and black versions and a `--clear-space` padded one, each at full size and every `--sizes` long edge (never upscaled), plus the `--palette` main colours with their share                                                    | –    |
+| `alpha.py`    | Alpha hygiene: `--mode report` says whether alpha is present and used; `premultiply`/`unpremultiply`; `defringe --matte white` takes a cut-out's white fringe back out of its edges; `key` writes the alpha as a grey matte and `fill` the colour, for key-and-fill deliveries | –    |
 
 **Folders**
 
-| Tool | What it does | sips |
-|---|---|---|
+| Tool       | What it does                                                                                                                                                                                                      | sips        |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | `batch.py` | Run a tool over every image in a folder:<br>• per-file tools write one output each<br>• `look`/`montage` write one sheet<br>• `icons` writes one folder per image<br>• `compare` pairs files with `--against DIR` | as the tool |
 
 Not tools, but part of the surface: `scripts/_contract.py` (`contract --json`, `doctor`) and `mcp/server.py` (the MCP transport).
@@ -319,12 +319,12 @@ A Mac with only `sips` is `ok`, but `strip`'s `usable` is no. Whether a Homebrew
 
 Python 3.9+ standard library only, plus one of the builds below. On every pull request, CI runs the full suite against:
 
-| Backend | Where | Notes |
-|---|---|---|
+| Backend         | Where                                 | Notes                                                                                                                                         |
+| --------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | ImageMagick 6.9 | Ubuntu 24.04 apt, Python 3.9 and 3.13 | No `magick` command: the tools use IM6's own `convert`/`identify` (doctor reports `kind: imagemagick6`). HEIC comes from the libheif plugins. |
-| ImageMagick 7.1 | macOS, Homebrew | `magick`, HEIC and WebP |
-| sips | macOS, no ImageMagick | the reduced tool set in the table above |
-| none | Ubuntu, no image binary | Everything that needs no binary: contract, docs drift, installer, MCP protocol, argument errors |
+| ImageMagick 7.1 | macOS, Homebrew                       | `magick`, HEIC and WebP                                                                                                                       |
+| sips            | macOS, no ImageMagick                 | the reduced tool set in the table above                                                                                                       |
+| none            | Ubuntu, no image binary               | Everything that needs no binary: contract, docs drift, installer, MCP protocol, argument errors                                               |
 
 Differences between the builds that CI has already caught, and how the tools deal with them:
 
@@ -354,15 +354,15 @@ claude plugin install imagemagick-skill@imagemagick-skill
 
 Without Node or the plugin system, clone this repository and copy `SKILL.md`, `scripts/` and `mcp/` into your agent's skills folder.
 
-**Renamed from `image-skill`.** The npm package `image-skill` is an unrelated project by another author, and `npx image-skill` does not install this skill. Installing `imagemagick-skill` removes an old `image-skill` copy of *this* project from the same skills folder, but only when its contents prove it came from this repository. Anything else is left in place with a warning.
+**Renamed from `image-skill`.** The npm package `image-skill` is an unrelated project by another author, and `npx image-skill` does not install this skill. Installing `imagemagick-skill` removes an old `image-skill` copy of _this_ project from the same skills folder, but only when its contents prove it came from this repository. Anything else is left in place with a warning.
 
 ImageMagick itself:
 
-| OS | Command |
-|----|---------|
-| macOS | `brew install imagemagick` (without it, `sips` covers the reduced tool set) |
-| Ubuntu / Debian | `sudo apt install imagemagick libheif-plugin-libde265` (the second package is for HEIC input) |
-| Windows | the installer from [imagemagick.org](https://imagemagick.org/script/download.php#windows), with `magick` on PATH |
+| OS              | Command                                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| macOS           | `brew install imagemagick` (without it, `sips` covers the reduced tool set)                                      |
+| Ubuntu / Debian | `sudo apt install imagemagick libheif-plugin-libde265` (the second package is for HEIC input)                    |
+| Windows         | the installer from [imagemagick.org](https://imagemagick.org/script/download.php#windows), with `magick` on PATH |
 
 Ubuntu and Debian ship ImageMagick 6, which has no `magick` command. The tools then use its `convert` and `identify` directly, with no shim; `doctor --json` reports `backends.magick.kind: "imagemagick6"`. A `convert` that is not ImageMagick 6, and any `convert` on Windows, is never used.
 
@@ -399,13 +399,13 @@ node bin/install.js --dir /tmp/skills       # try the installer without touching
 
 **Releasing is automated.** When a PR merges to `main`, `.github/workflows/release.yml` works out the version from the labels of the PRs merged since the last tag:
 
-| Labels | Release |
-|---|---|
-| `feature`, `minor` or `enhancement` | minor |
-| `fix`, `patch` or `bug` | patch |
-| no label | patch |
-| only `chore`, `ci`, `docs`, `test`, `refactor` or `dependencies` | none |
-| `major` or `breaking` | refused (a major release is a deliberate hand-made bump) |
+| Labels                                                           | Release                                                  |
+| ---------------------------------------------------------------- | -------------------------------------------------------- |
+| `feature`, `minor` or `enhancement`                              | minor                                                    |
+| `fix`, `patch` or `bug`                                          | patch                                                    |
+| no label                                                         | patch                                                    |
+| only `chore`, `ci`, `docs`, `test`, `refactor` or `dependencies` | none                                                     |
+| `major` or `breaking`                                            | refused (a major release is a deliberate hand-made bump) |
 
 The workflow then:
 
@@ -418,27 +418,27 @@ The details are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Docs
 
-| | |
-|---|---|
-| [SKILL.md](SKILL.md) | what the agent reads: rules, request → tool map, report format |
-| [docs/contract.md](docs/contract.md) | the contract field by field, MCP mapping, every tool's arguments and output keys |
-| [docs/demos.md](docs/demos.md) | every demo GIF with the exact commands and their JSON results |
+|                                                      |                                                                                    |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [SKILL.md](SKILL.md)                                 | what the agent reads: rules, request → tool map, report format                     |
+| [docs/contract.md](docs/contract.md)                 | the contract field by field, MCP mapping, every tool's arguments and output keys   |
+| [docs/demos.md](docs/demos.md)                       | every demo GIF with the exact commands and their JSON results                      |
 | [docs/design-decisions.md](docs/design-decisions.md) | behaviour that looks like a bug but is a decision, each with the test that pins it |
-| [docs/roadmap.md](docs/roadmap.md) | what is done, planned and only an idea |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | scope, setup, tests, labels and releases |
-| [AGENTS.md](AGENTS.md) | notes for coding agents working on this repository |
-| [evals/README.md](evals/README.md) | agent prompts and how they are graded |
-| [CHANGELOG.md](CHANGELOG.md) | what changed in each release |
+| [docs/roadmap.md](docs/roadmap.md)                   | what is done, planned and only an idea                                             |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                   | scope, setup, tests, labels and releases                                           |
+| [AGENTS.md](AGENTS.md)                               | notes for coding agents working on this repository                                 |
+| [evals/README.md](evals/README.md)                   | agent prompts and how they are graded                                              |
+| [CHANGELOG.md](CHANGELOG.md)                         | what changed in each release                                                       |
 
 ## kajisho5 media skills
 
 The same approach (typed local tools, a JSON contract, originals kept, verify before "done") for other media:
 
-| Skill | For | Install |
-|---|---|---|
-| **imagemagick-skill** (this repo) | still images: convert, resize, optimize, metadata, icons, compare | `npx imagemagick-skill` |
-| [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) | video and audio: cut, captions, reframe, loudness, delivery checks | `npx ffmpeg-skill` |
-| [blender-skill](https://www.npmjs.com/package/blender-skill) | 3D: a Blender asset pipeline for coding agents | `npx blender-skill` |
+| Skill                                                        | For                                                                | Install                 |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ | ----------------------- |
+| **imagemagick-skill** (this repo)                            | still images: convert, resize, optimize, metadata, icons, compare  | `npx imagemagick-skill` |
+| [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill)     | video and audio: cut, captions, reframe, loudness, delivery checks | `npx ffmpeg-skill`      |
+| [blender-skill](https://www.npmjs.com/package/blender-skill) | 3D: a Blender asset pipeline for coding agents                     | `npx blender-skill`     |
 
 ## License
 

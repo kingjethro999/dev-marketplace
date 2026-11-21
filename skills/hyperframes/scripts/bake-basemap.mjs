@@ -45,8 +45,12 @@ const { default: puppeteer } = await import("puppeteer-core");
 
 // --- resolve Chrome dynamically (no hardcoded machine path) ---
 function resolveChrome() {
-  if (process.env.CHROME && existsSync(process.env.CHROME)) return process.env.CHROME;
-  const exe = process.platform === "win32" ? "chrome-headless-shell.exe" : "chrome-headless-shell";
+  if (process.env.CHROME && existsSync(process.env.CHROME))
+    return process.env.CHROME;
+  const exe =
+    process.platform === "win32"
+      ? "chrome-headless-shell.exe"
+      : "chrome-headless-shell";
   const base = join(homedir(), ".cache", "puppeteer", "chrome-headless-shell");
   if (existsSync(base)) {
     for (const v of readdirSync(base).sort().reverse()) {
@@ -137,13 +141,16 @@ mkdirSync(framesDir, { recursive: true });
 // A seeded star field behind the globe, so every bake of the same move is identical.
 let seed = 7;
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-const STARS = `<svg id="stars" width="1920" height="1080">${Array.from({ length: 260 }, () => {
-  const x = (rnd() * 1920).toFixed(0),
-    y = (rnd() * 1080).toFixed(0);
-  const r = (rnd() * 1.3 + 0.3).toFixed(2),
-    a = (rnd() * 0.6 + 0.2).toFixed(2);
-  return `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${a}"/>`;
-}).join("")}</svg>`;
+const STARS = `<svg id="stars" width="1920" height="1080">${Array.from(
+  { length: 260 },
+  () => {
+    const x = (rnd() * 1920).toFixed(0),
+      y = (rnd() * 1080).toFixed(0);
+    const r = (rnd() * 1.3 + 0.3).toFixed(2),
+      a = (rnd() * 0.6 + 0.2).toFixed(2);
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${a}"/>`;
+  },
+).join("")}</svg>`;
 
 // Deps PINNED exact (mutable @5/@2 majors would drift the bake over time).
 const PAGE = `<!doctype html><html><head>
@@ -246,7 +253,8 @@ try {
   await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
   await page.setContent(PAGE, { waitUntil: "load" });
   await page.evaluate(() => window.__ready);
-  for (const w of await page.evaluate(() => window.__warn)) console.warn(`[${NAME}] WARN: ${w}`);
+  for (const w of await page.evaluate(() => window.__warn))
+    console.warn(`[${NAME}] WARN: ${w}`);
   console.log(
     `[${NAME}] ready (${STYLE}, ${PROJECTION}); baking ${N} frames, zoom ${ZSTART}→${ZEND} hold@p=${HOLD}, ${COUNTRIES.length} border(s)`,
   );
@@ -259,7 +267,9 @@ try {
     const timedOut = await page.evaluate((ms) => window.__waitIdle(ms), 9000);
     if (timedOut) {
       timeouts.push(i);
-      console.warn(`[${NAME}] idle TIMEOUT at frame ${i} — tiles may be incomplete`);
+      console.warn(
+        `[${NAME}] idle TIMEOUT at frame ${i} — tiles may be incomplete`,
+      );
     }
     await page.screenshot({
       path: join(framesDir, `f${String(i).padStart(4, "0")}.png`),
@@ -318,7 +328,9 @@ try {
     );
     process.exitCode = 1;
   } else {
-    console.log(`[${NAME}] done — all ${N} frames reached map idle (complete tiles).`);
+    console.log(
+      `[${NAME}] done — all ${N} frames reached map idle (complete tiles).`,
+    );
   }
 } finally {
   await browser.close();

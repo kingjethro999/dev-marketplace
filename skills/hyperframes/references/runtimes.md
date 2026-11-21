@@ -38,7 +38,9 @@ the player, so rendering loads the SDK, WASM and animation from project files.
 <script type="module">
   import { DotLottie } from "./lib/dotlottie-web/index.js";
 
-  DotLottie.setWasmUrl(new URL("./lib/dotlottie-web/dotlottie-player.wasm", import.meta.url).href);
+  DotLottie.setWasmUrl(
+    new URL("./lib/dotlottie-web/dotlottie-player.wasm", import.meta.url).href,
+  );
   const player = new DotLottie({
     canvas: document.getElementById("anim"),
     src: "assets/hello.lottie",

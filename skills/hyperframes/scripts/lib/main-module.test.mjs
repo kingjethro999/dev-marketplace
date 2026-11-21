@@ -1,6 +1,12 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -15,10 +21,18 @@ test("skill CLIs run when invoked through a symlinked skills dir", () => {
   try {
     symlinkSync(SKILLS, join(dir, "skills"), "dir");
     for (const script of ["media-use/audio/scripts/heygen-voice.mjs"]) {
-      const run = spawnSync(process.execPath, [join(dir, "skills", script), "not-a-command"], {
-        encoding: "utf8",
-      });
-      assert.notEqual(run.status, 0, `${script} exited ${run.status} without running its CLI`);
+      const run = spawnSync(
+        process.execPath,
+        [join(dir, "skills", script), "not-a-command"],
+        {
+          encoding: "utf8",
+        },
+      );
+      assert.notEqual(
+        run.status,
+        0,
+        `${script} exited ${run.status} without running its CLI`,
+      );
       assert.match(run.stderr, /usage/, script);
     }
   } finally {
@@ -29,15 +43,22 @@ test("skill CLIs run when invoked through a symlinked skills dir", () => {
 function skillScripts(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) return entry.name === "node_modules" ? [] : skillScripts(path);
-    return /\.(mjs|js)$/.test(entry.name) && !/\.test\.mjs$/.test(entry.name) ? [path] : [];
+    if (entry.isDirectory())
+      return entry.name === "node_modules" ? [] : skillScripts(path);
+    return /\.(mjs|js)$/.test(entry.name) && !/\.test\.mjs$/.test(entry.name)
+      ? [path]
+      : [];
   });
 }
 
 test("skill scripts detect their CLI entry through lib/main-module.mjs only", () => {
-  const handRolled = [...skillScripts(SKILLS), ...skillScripts(CLI_MEDIA_USE)].filter(
+  const handRolled = [
+    ...skillScripts(SKILLS),
+    ...skillScripts(CLI_MEDIA_USE),
+  ].filter(
     (path) =>
-      !path.endsWith("main-module.mjs") && readFileSync(path, "utf8").includes("process.argv[1]"),
+      !path.endsWith("main-module.mjs") &&
+      readFileSync(path, "utf8").includes("process.argv[1]"),
   );
   assert.deepEqual(
     handRolled.map((path) => relative(SKILLS, path)),

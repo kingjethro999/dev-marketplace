@@ -90,7 +90,56 @@ python3 scripts/icons.py logo-1024.png -o icons --json
 <details><summary>JSON results</summary>
 
 ```json
-{"ok": true, "input": "logo-1024.png", "output_dir": "icons", "files": [{"path": "icons/favicon.ico", "purpose": "favicon", "sizes": [48, 32, 16], "format": "ICO"}, {"path": "icons/icon-512x512.png", "purpose": "png icon", "sizes": [512], "format": "PNG"}, {"path": "icons/icon-192x192.png", "purpose": "png icon", "sizes": [192], "format": "PNG"}, {"path": "icons/icon-32x32.png", "purpose": "png icon", "sizes": [32], "format": "PNG"}, {"path": "icons/apple-touch-icon.png", "purpose": "apple-touch-icon", "sizes": [180], "format": "PNG"}], "html": ["<link rel=\"icon\" href=\"/favicon.ico\" sizes=\"16x16 32x32 48x48\">", "<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/icon-32x32.png\">", "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">"], "manifest_icons": [{"src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png"}, {"src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png"}], "backend": "magick", "notes": ["apple-touch-icon.png keeps the source's transparency; iOS shows it on black - pass --apple-background to flatten it"]}
+{
+  "ok": true,
+  "input": "logo-1024.png",
+  "output_dir": "icons",
+  "files": [
+    {
+      "path": "icons/favicon.ico",
+      "purpose": "favicon",
+      "sizes": [48, 32, 16],
+      "format": "ICO"
+    },
+    {
+      "path": "icons/icon-512x512.png",
+      "purpose": "png icon",
+      "sizes": [512],
+      "format": "PNG"
+    },
+    {
+      "path": "icons/icon-192x192.png",
+      "purpose": "png icon",
+      "sizes": [192],
+      "format": "PNG"
+    },
+    {
+      "path": "icons/icon-32x32.png",
+      "purpose": "png icon",
+      "sizes": [32],
+      "format": "PNG"
+    },
+    {
+      "path": "icons/apple-touch-icon.png",
+      "purpose": "apple-touch-icon",
+      "sizes": [180],
+      "format": "PNG"
+    }
+  ],
+  "html": [
+    "<link rel=\"icon\" href=\"/favicon.ico\" sizes=\"16x16 32x32 48x48\">",
+    "<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/icon-32x32.png\">",
+    "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">"
+  ],
+  "manifest_icons": [
+    { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "backend": "magick",
+  "notes": [
+    "apple-touch-icon.png keeps the source's transparency; iOS shows it on black - pass --apple-background to flatten it"
+  ]
+}
 ```
 
 </details>

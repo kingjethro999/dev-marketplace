@@ -45,11 +45,21 @@ function targets(flags, cwd) {
   const home = os.homedir();
   if (flags.dir) {
     const parent = path.resolve(flags.dir);
-    return [{ dir: path.join(parent, SKILL_NAME), legacy: [path.join(parent, LEGACY_NAME)] }];
+    return [
+      {
+        dir: path.join(parent, SKILL_NAME),
+        legacy: [path.join(parent, LEGACY_NAME)],
+      },
+    ];
   }
   if (flags.project) {
     const parent = path.join(cwd, ".claude", "skills");
-    return [{ dir: path.join(parent, SKILL_NAME), legacy: [path.join(parent, LEGACY_NAME)] }];
+    return [
+      {
+        dir: path.join(parent, SKILL_NAME),
+        legacy: [path.join(parent, LEGACY_NAME)],
+      },
+    ];
   }
   const claude = {
     dir: path.join(home, ".claude", "skills", SKILL_NAME),
@@ -91,20 +101,29 @@ function legacyNotOursReason(dir) {
   if (!top.isDirectory()) return "it is not a directory";
 
   const extra = fs.readdirSync(dir).filter((e) => !LEGACY_TOP_LEVEL.has(e));
-  if (extra.length) return `it contains files this installer never wrote (${extra.join(", ")})`;
+  if (extra.length)
+    return `it contains files this installer never wrote (${extra.join(", ")})`;
 
   const skillMd = path.join(dir, "SKILL.md");
   if (!fs.existsSync(skillMd)) return "it has no SKILL.md";
-  if (frontmatterName(skillMd) !== LEGACY_NAME) return `its SKILL.md name is not "${LEGACY_NAME}"`;
+  if (frontmatterName(skillMd) !== LEGACY_NAME)
+    return `its SKILL.md name is not "${LEGACY_NAME}"`;
 
   const scriptsDir = path.join(dir, "scripts");
-  if (!fs.existsSync(scriptsDir) || !fs.lstatSync(scriptsDir).isDirectory()) return "it has no scripts/ directory";
+  if (!fs.existsSync(scriptsDir) || !fs.lstatSync(scriptsDir).isDirectory())
+    return "it has no scripts/ directory";
   for (const entry of fs.readdirSync(scriptsDir, { withFileTypes: true })) {
-    const ok = (entry.isFile() && entry.name.endsWith(".py")) || (entry.isDirectory() && entry.name === "__pycache__");
-    if (!ok) return `scripts/ contains ${entry.name}, which this project never shipped`;
+    const ok =
+      (entry.isFile() && entry.name.endsWith(".py")) ||
+      (entry.isDirectory() && entry.name === "__pycache__");
+    if (!ok)
+      return `scripts/ contains ${entry.name}, which this project never shipped`;
   }
   const contractPy = path.join(scriptsDir, "_contract.py");
-  if (!fs.existsSync(contractPy) || !fs.readFileSync(contractPy, "utf8").includes(LEGACY_CONTRACT_MARKER)) {
+  if (
+    !fs.existsSync(contractPy) ||
+    !fs.readFileSync(contractPy, "utf8").includes(LEGACY_CONTRACT_MARKER)
+  ) {
     return "scripts/_contract.py is not this project's";
   }
 
@@ -116,7 +135,10 @@ function legacyNotOursReason(dir) {
     } catch {
       return "its package.json is not valid JSON";
     }
-    const repo = typeof pkg.repository === "string" ? pkg.repository : (pkg.repository && pkg.repository.url) || "";
+    const repo =
+      typeof pkg.repository === "string"
+        ? pkg.repository
+        : (pkg.repository && pkg.repository.url) || "";
     if (pkg.name !== LEGACY_NAME || !repo.toLowerCase().includes(LEGACY_REPO)) {
       return `its package.json is not ${LEGACY_NAME} from ${LEGACY_REPO}`;
     }
@@ -140,7 +162,9 @@ function cleanLegacy(legacyDirs) {
       removed += 1;
     } else {
       console.warn(`warning: left ${dir} in place: ${reason}.`);
-      console.warn(`  If it is an old copy of this skill, delete it by hand; if another package owns it, keep it.`);
+      console.warn(
+        `  If it is an old copy of this skill, delete it by hand; if another package owns it, keep it.`,
+      );
     }
   }
   return removed;
@@ -182,7 +206,11 @@ function warnIfNoBackend() {
   const python = findPython3();
   if (!python.ok) return; // `doctor` reports the missing Python itself
   const doctorScript = path.join(SCRIPTS_SRC, "_contract.py");
-  const result = spawnSync(python.command, [...python.args, doctorScript, "doctor", "--json"], { encoding: "utf8" });
+  const result = spawnSync(
+    python.command,
+    [...python.args, doctorScript, "doctor", "--json"],
+    { encoding: "utf8" },
+  );
   if (result.error || result.status !== 0 || !result.stdout) {
     return; // doctor itself failed; `doctor` will surface the real error
   }
@@ -198,7 +226,9 @@ function warnIfNoBackend() {
   console.warn("warning: no usable image backend found (magick or sips).");
   console.warn("  macOS:          brew install imagemagick");
   console.warn("  Debian/Ubuntu:  sudo apt install imagemagick");
-  console.warn("  Windows:        https://imagemagick.org/script/download.php#windows");
+  console.warn(
+    "  Windows:        https://imagemagick.org/script/download.php#windows",
+  );
   console.warn("  Then check:     npx imagemagick-skill doctor");
   console.warn("");
 }
@@ -223,12 +253,17 @@ function python3Candidates(platform) {
 function findPython3() {
   const candidates = python3Candidates(process.platform);
   for (const c of candidates) {
-    const r = spawnSync(c.command, [...c.args, "-c", "import sys; print(sys.version_info[0])"], {
-      encoding: "utf8",
-      timeout: 30000,
-      windowsHide: true,
-    });
-    if (!r.error && r.status === 0 && (r.stdout || "").trim() === "3") return { ok: true, ...c };
+    const r = spawnSync(
+      c.command,
+      [...c.args, "-c", "import sys; print(sys.version_info[0])"],
+      {
+        encoding: "utf8",
+        timeout: 30000,
+        windowsHide: true,
+      },
+    );
+    if (!r.error && r.status === 0 && (r.stdout || "").trim() === "3")
+      return { ok: true, ...c };
   }
   const tried = candidates.map((c) => [c.command, ...c.args].join(" "));
   return {
@@ -251,7 +286,11 @@ function runContractOrDoctor(command, extraArgs) {
     process.exit(1);
   }
   const script = path.join(SCRIPTS_SRC, "_contract.py");
-  const result = spawnSync(python.command, [...python.args, script, command, ...extraArgs], { stdio: "inherit" });
+  const result = spawnSync(
+    python.command,
+    [...python.args, script, command, ...extraArgs],
+    { stdio: "inherit" },
+  );
   process.exit(result.status === null ? 1 : result.status);
 }
 
@@ -330,7 +369,8 @@ function main() {
       }
       if (cleanLegacy(t.legacy) > 0) removedAny = true;
     }
-    if (!removedAny) console.log(`no ${SKILL_NAME} install found at the selected target(s)`);
+    if (!removedAny)
+      console.log(`no ${SKILL_NAME} install found at the selected target(s)`);
     return;
   }
 
@@ -340,7 +380,9 @@ function main() {
     cleanLegacy(t.legacy);
   }
   console.log("");
-  console.log("Already installed? Re-running replaces the copy with whatever version you run.");
+  console.log(
+    "Already installed? Re-running replaces the copy with whatever version you run.",
+  );
   console.log("Next: npx imagemagick-skill doctor");
 
   warnIfNoBackend();

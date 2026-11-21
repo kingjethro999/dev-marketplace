@@ -19,14 +19,8 @@
     "binaries": [
       {
         "name": "magick",
-        "alternatives": [
-          "convert",
-          "sips"
-        ],
-        "check": [
-          "magick",
-          "-version"
-        ],
+        "alternatives": ["convert", "sips"],
+        "check": ["magick", "-version"],
         "version_regex": "ImageMagick (\\d+\\.\\d+\\.\\d+)"
       }
     ],
@@ -34,31 +28,19 @@
       {
         "name": "python3",
         "version": ">=3.9",
-        "check": [
-          "python3",
-          "--version"
-        ]
+        "check": ["python3", "--version"]
       }
     ]
   },
   "permissions": {
     "read": {
       "level": "scoped",
-      "scope": [
-        "$INPUT",
-        "$INPUT_DIR/**",
-        "$SKILL_DIR/**"
-      ],
+      "scope": ["$INPUT", "$INPUT_DIR/**", "$SKILL_DIR/**"],
       "why": "reads the media the user names (and sidecars next to it)"
     },
     "write": {
       "level": "scoped",
-      "scope": [
-        "$OUTPUT",
-        "$INPUT_DIR/**",
-        "$WORKDIR/**",
-        "$TMPDIR/**"
-      ],
+      "scope": ["$OUTPUT", "$INPUT_DIR/**", "$WORKDIR/**", "$TMPDIR/**"],
       "why": "writes new artifacts (default next to the input); never modifies the input; --overwrite required to replace",
       "confirm": "never"
     },
@@ -92,25 +74,16 @@
       "summary": "Report width, height, format, colorspace, alpha, and GPS presence as JSON.",
       "role": "analysis",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/probe.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/probe.py"],
         "mcp_tool": "probe"
       },
-      "effects": [
-        "read",
-        "exec"
-      ],
+      "effects": ["read", "exec"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read",
-          "exec"
-        ]
+        "effects": ["read", "exec"]
       },
       "inputs": {
         "type": "object",
@@ -124,31 +97,23 @@
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -167,50 +132,29 @@
             "description": "backend format name, e.g. JPEG, PNG, HEIC (sips reports lowercase)"
           },
           "colorspace": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "null on the sips backend"
           },
           "has_alpha": {
-            "type": [
-              "boolean",
-              "null"
-            ],
+            "type": ["boolean", "null"],
             "description": "null on the sips backend"
           },
           "has_gps": {
-            "type": [
-              "boolean",
-              "null"
-            ],
+            "type": ["boolean", "null"],
             "description": "GPS coordinates in the EXIF block (parsed by the tool for every format, HEIC included); null when an EXIF block can't be parsed, and on the sips backend"
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           },
           "note": {
             "type": "string",
             "description": "present when a field could not be measured"
           }
         },
-        "required": [
-          "ok",
-          "input",
-          "width",
-          "height",
-          "format",
-          "backend"
-        ]
+        "required": ["ok", "input", "width", "height", "format", "backend"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -236,25 +180,16 @@
       "summary": "Convert an image to a different format (e.g. HEIC to JPEG/PNG/WebP). Input is preserved.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/convert.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/convert.py"],
         "mcp_tool": "convert"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -268,53 +203,38 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "quality": {
             "type": "integer",
             "description": "0-100 encoder quality for lossy formats (JPEG/WebP)",
-            "x-cli": [
-              "--quality"
-            ]
+            "x-cli": ["--quality"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -327,22 +247,12 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           }
         },
-        "required": [
-          "ok",
-          "input",
-          "output",
-          "backend"
-        ]
+        "required": ["ok", "input", "output", "backend"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -368,25 +278,16 @@
       "summary": "Resize an image: fit (default, no distortion), fill (crop to cover), or exact (force size).",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/resize.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/resize.py"],
         "mcp_tool": "resize"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -400,80 +301,55 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "width": {
             "type": "integer",
             "description": "target width in pixels (the box width for fit)",
-            "x-cli": [
-              "--width"
-            ]
+            "x-cli": ["--width"]
           },
           "height": {
             "type": "integer",
             "description": "target height in pixels (the box height for fit)",
-            "x-cli": [
-              "--height"
-            ]
+            "x-cli": ["--height"]
           },
           "mode": {
             "type": "string",
             "description": "fit: inside the box, no distortion; fill: cover the box and center-crop; exact: force the size",
-            "enum": [
-              "fit",
-              "fill",
-              "exact"
-            ],
+            "enum": ["fit", "fill", "exact"],
             "default": "fit",
-            "x-cli": [
-              "--mode"
-            ]
+            "x-cli": ["--mode"]
           },
           "quality": {
             "type": "integer",
             "description": "0-100 encoder quality for lossy formats (JPEG/WebP)",
-            "x-cli": [
-              "--quality"
-            ]
+            "x-cli": ["--quality"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -486,11 +362,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "fit",
-              "fill",
-              "exact"
-            ]
+            "enum": ["fit", "fill", "exact"]
           },
           "requested": {
             "type": "object",
@@ -502,10 +374,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           }
         },
         "required": [
@@ -518,9 +387,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -546,25 +413,16 @@
       "summary": "Create a thumbnail sized by its longest edge, preserving aspect ratio.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/thumb.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/thumb.py"],
         "mcp_tool": "thumb"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -578,60 +436,43 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "long_edge": {
             "type": "integer",
             "description": "target size of the longer side, in pixels",
-            "x-cli": [
-              "--long-edge"
-            ]
+            "x-cli": ["--long-edge"]
           },
           "quality": {
             "type": "integer",
             "description": "0-100 encoder quality for lossy formats (JPEG/WebP)",
-            "x-cli": [
-              "--quality"
-            ]
+            "x-cli": ["--quality"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -651,24 +492,12 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           }
         },
-        "required": [
-          "ok",
-          "input",
-          "output",
-          "long_edge",
-          "actual",
-          "backend"
-        ]
+        "required": ["ok", "input", "output", "long_edge", "actual", "backend"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -694,25 +523,16 @@
       "summary": "Remove GPS/EXIF metadata. Applies orientation before stripping. Requires ImageMagick.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/strip.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/strip.py"],
         "mcp_tool": "strip"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -726,46 +546,33 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -782,22 +589,12 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
-        "required": [
-          "ok",
-          "input",
-          "output",
-          "has_gps",
-          "backend"
-        ]
+        "required": ["ok", "input", "output", "has_gps", "backend"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -823,25 +620,16 @@
       "summary": "Trim a solid-color border. Fails instead of over-trimming. Requires ImageMagick.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/trim.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/trim.py"],
         "mcp_tool": "trim"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -855,62 +643,45 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "fuzz": {
             "type": "number",
             "description": "color similarity tolerance, percent (default 2.0)",
             "default": 2.0,
-            "x-cli": [
-              "--fuzz"
-            ]
+            "x-cli": ["--fuzz"]
           },
           "max_trim_percent": {
             "type": "number",
             "description": "fail if more than this percent of the area is removed (default 90.0)",
             "default": 90.0,
-            "x-cli": [
-              "--max-trim-percent"
-            ]
+            "x-cli": ["--max-trim-percent"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -934,9 +705,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
         "required": [
@@ -949,9 +718,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -977,25 +744,16 @@
       "summary": "Verify an output file opens, matches promised dimensions/format, and didn't overwrite the input.",
       "role": "verification",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/check.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/check.py"],
         "mcp_tool": "check"
       },
-      "effects": [
-        "read",
-        "exec"
-      ],
+      "effects": ["read", "exec"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": false,
         "flag": "--dry-run",
-        "effects": [
-          "read",
-          "exec"
-        ]
+        "effects": ["read", "exec"]
       },
       "inputs": {
         "type": "object",
@@ -1009,66 +767,48 @@
           "input": {
             "type": "string",
             "description": "original input path; fails if output resolves to this same path",
-            "x-cli": [
-              "--input"
-            ]
+            "x-cli": ["--input"]
           },
           "expect_width": {
             "type": "integer",
             "description": "fail unless the width is exactly this",
-            "x-cli": [
-              "--expect-width"
-            ]
+            "x-cli": ["--expect-width"]
           },
           "expect_height": {
             "type": "integer",
             "description": "fail unless the height is exactly this",
-            "x-cli": [
-              "--expect-height"
-            ]
+            "x-cli": ["--expect-height"]
           },
           "expect_max_width": {
             "type": "integer",
             "description": "fail if width exceeds this (for fit-mode results)",
-            "x-cli": [
-              "--expect-max-width"
-            ]
+            "x-cli": ["--expect-max-width"]
           },
           "expect_max_height": {
             "type": "integer",
             "description": "fail if height exceeds this (for fit-mode results)",
-            "x-cli": [
-              "--expect-max-height"
-            ]
+            "x-cli": ["--expect-max-height"]
           },
           "expect_format": {
             "type": "string",
             "description": "expected format, e.g. WEBP, JPEG, PNG",
-            "x-cli": [
-              "--expect-format"
-            ]
+            "x-cli": ["--expect-format"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "output"
-        ]
+        "required": ["output"]
       },
       "outputs": {
         "type": "object",
@@ -1083,24 +823,13 @@
             "type": "integer"
           },
           "format": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "read only when --expect-format is given"
           }
         },
-        "required": [
-          "ok",
-          "output",
-          "width",
-          "height",
-          "format"
-        ]
+        "required": ["ok", "output", "width", "height", "format"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -1126,26 +855,16 @@
       "summary": "Make a labelled preview sheet (or a before/after pair) of images so the agent can look at them.",
       "role": "verification",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/look.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/look.py"],
         "mcp_tool": "look"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read",
-          "exec"
-        ]
+        "effects": ["read", "exec"]
       },
       "inputs": {
         "type": "object",
@@ -1162,75 +881,54 @@
           "output": {
             "type": "string",
             "description": "sheet to write (e.g. look.png); must not be one of the inputs",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "tile": {
             "type": "string",
             "description": "longest side of each preview tile in pixels (default 320)",
             "default": 320,
-            "x-cli": [
-              "--tile"
-            ]
+            "x-cli": ["--tile"]
           },
           "cols": {
             "type": "string",
             "description": "tiles per row (default: up to 4)",
-            "x-cli": [
-              "--cols"
-            ]
+            "x-cli": ["--cols"]
           },
           "pair": {
             "type": "boolean",
             "description": "exactly two inputs shown side by side as before / after",
-            "x-cli": [
-              "--pair"
-            ]
+            "x-cli": ["--pair"]
           },
           "no_labels": {
             "type": "boolean",
             "description": "omit the file name / size / format caption under each tile",
-            "x-cli": [
-              "--no-labels"
-            ]
+            "x-cli": ["--no-labels"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "inputs"
-        ]
+        "required": ["inputs"]
       },
       "outputs": {
         "type": "object",
@@ -1240,10 +938,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "grid",
-              "pair"
-            ]
+            "enum": ["grid", "pair"]
           },
           "inputs": {
             "type": "array",
@@ -1267,9 +962,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           },
           "note": {
             "type": "string",
@@ -1289,9 +982,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -1317,26 +1008,16 @@
       "summary": "Measure the difference between two same-size images (SSIM, PSNR, changed pixels), optionally write a heatmap, optionally fail below an SSIM threshold.",
       "role": "verification",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/compare.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/compare.py"],
         "mcp_tool": "compare"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read",
-          "exec"
-        ]
+        "effects": ["read", "exec"]
       },
       "inputs": {
         "type": "object",
@@ -1356,61 +1037,43 @@
           "output": {
             "type": "string",
             "description": "optional: write a difference heatmap here (dimmed first image, changes from blue to yellow)",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "fuzz": {
             "type": "number",
             "description": "percent of full scale a channel may differ by and still count as unchanged in diff_ratio (default 0: exact)",
-            "x-cli": [
-              "--fuzz"
-            ]
+            "x-cli": ["--fuzz"]
           },
           "fail_below": {
             "type": "number",
             "description": "report ok:false (exit 1) when SSIM is below this value (0-1), metrics still included",
-            "x-cli": [
-              "--fail-below"
-            ]
+            "x-cli": ["--fail-below"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "a",
-          "b"
-        ]
+        "required": ["a", "b"]
       },
       "outputs": {
         "type": "object",
@@ -1439,10 +1102,7 @@
             "description": "downsampling factor applied before SSIM (shorter side ~256)"
           },
           "psnr_db": {
-            "type": [
-              "number",
-              "null"
-            ],
+            "type": ["number", "null"],
             "description": "null when the images are identical"
           },
           "diff_ratio": {
@@ -1467,9 +1127,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
         "required": [
@@ -1488,9 +1146,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -1516,25 +1172,16 @@
       "summary": "Re-encode an image to fit a file-size budget (--max-kb) without changing its dimensions; fails with the smallest size reached when it cannot.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/optimize.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/optimize.py"],
         "mcp_tool": "optimize"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -1548,76 +1195,55 @@
           "output": {
             "type": "string",
             "description": "file to write; its extension picks the format (jpg, webp, avif, heic, png)",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "max_kb": {
             "type": "number",
             "description": "size budget in kilobytes (1 KB = 1000 bytes)",
-            "x-cli": [
-              "--max-kb"
-            ]
+            "x-cli": ["--max-kb"]
           },
           "min_quality": {
             "type": "integer",
             "description": "lowest quality the search may use, 1-100 (default 40)",
             "default": 40,
-            "x-cli": [
-              "--min-quality"
-            ]
+            "x-cli": ["--min-quality"]
           },
           "max_quality": {
             "type": "integer",
             "description": "highest quality the search may use, 1-100 (default 95)",
             "default": 95,
-            "x-cli": [
-              "--max-quality"
-            ]
+            "x-cli": ["--max-quality"]
           },
           "strip": {
             "type": "boolean",
             "description": "also drop metadata (EXIF/GPS/ICC comments) to save bytes; magick only",
-            "x-cli": [
-              "--strip"
-            ]
+            "x-cli": ["--strip"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -1644,19 +1270,12 @@
             "type": "integer"
           },
           "quality": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": ["integer", "null"],
             "description": "null for PNG and for webp:target-size"
           },
           "method": {
             "type": "string",
-            "enum": [
-              "quality-search",
-              "webp:target-size",
-              "lossless"
-            ]
+            "enum": ["quality-search", "webp:target-size", "lossless"]
           },
           "attempts": {
             "type": "array",
@@ -1671,10 +1290,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           }
         },
         "required": [
@@ -1694,9 +1310,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -1722,25 +1336,16 @@
       "summary": "Crop to an exact pixel rectangle, or to the largest region of an aspect ratio placed by gravity. Never clips a rectangle silently.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/crop.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/crop.py"],
         "mcp_tool": "crop"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -1754,75 +1359,54 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "x": {
             "type": "string",
             "description": "rectangle: left edge in pixels (with --y --width --height)",
-            "x-cli": [
-              "--x"
-            ]
+            "x-cli": ["--x"]
           },
           "y": {
             "type": "string",
             "description": "rectangle: top edge in pixels",
-            "x-cli": [
-              "--y"
-            ]
+            "x-cli": ["--y"]
           },
           "width": {
             "type": "string",
             "description": "rectangle: width in pixels",
-            "x-cli": [
-              "--width"
-            ]
+            "x-cli": ["--width"]
           },
           "height": {
             "type": "string",
             "description": "rectangle: height in pixels",
-            "x-cli": [
-              "--height"
-            ]
+            "x-cli": ["--height"]
           },
           "aspect": {
             "type": "string",
             "description": "crop the largest W:H region instead of a rectangle, e.g. 1:1 or 16:9",
-            "x-cli": [
-              "--aspect"
-            ]
+            "x-cli": ["--aspect"]
           },
           "gravity": {
             "type": "string",
@@ -1839,15 +1423,11 @@
               "southeast"
             ],
             "default": "center",
-            "x-cli": [
-              "--gravity"
-            ]
+            "x-cli": ["--gravity"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -1860,10 +1440,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "rect",
-              "aspect"
-            ]
+            "enum": ["rect", "aspect"]
           },
           "box": {
             "type": "object",
@@ -1879,10 +1456,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           }
         },
         "required": [
@@ -1896,9 +1470,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -1924,25 +1496,16 @@
       "summary": "Pad to an aspect ratio or exact canvas with a given colour (or transparency), never scaling or cropping the image.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/pad.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/pad.py"],
         "mcp_tool": "pad"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -1956,68 +1519,49 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "aspect": {
             "type": "string",
             "description": "pad to the smallest W:H canvas that holds the image, e.g. 1:1 or 16:9",
-            "x-cli": [
-              "--aspect"
-            ]
+            "x-cli": ["--aspect"]
           },
           "width": {
             "type": "string",
             "description": "exact canvas width in pixels (with --height)",
-            "x-cli": [
-              "--width"
-            ]
+            "x-cli": ["--width"]
           },
           "height": {
             "type": "string",
             "description": "exact canvas height in pixels (with --width)",
-            "x-cli": [
-              "--height"
-            ]
+            "x-cli": ["--height"]
           },
           "color": {
             "type": "string",
             "description": "fill colour: a name (white), #RRGGBB, #RRGGBBAA, rgb()/rgba(), or none for transparent",
-            "x-cli": [
-              "--color"
-            ]
+            "x-cli": ["--color"]
           },
           "gravity": {
             "type": "string",
@@ -2034,15 +1578,11 @@
               "southeast"
             ],
             "default": "center",
-            "x-cli": [
-              "--gravity"
-            ]
+            "x-cli": ["--gravity"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -2055,10 +1595,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "aspect",
-              "canvas"
-            ]
+            "enum": ["aspect", "canvas"]
           },
           "color": {
             "type": "string"
@@ -2068,10 +1605,7 @@
             "description": "{width, height} in pixels"
           },
           "offset": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": ["object", "null"],
             "description": "{x, y} of the image on the canvas; null on sips"
           },
           "actual": {
@@ -2080,10 +1614,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           }
         },
         "required": [
@@ -2098,9 +1629,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -2126,25 +1655,16 @@
       "summary": "Rotate clockwise, mirror, or just bake EXIF orientation into the pixels.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/rotate.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/rotate.py"],
         "mcp_tool": "rotate"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -2158,74 +1678,53 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "degrees": {
             "type": "number",
             "description": "clockwise rotation in degrees (default 0)",
-            "x-cli": [
-              "--degrees"
-            ]
+            "x-cli": ["--degrees"]
           },
           "flip_horizontal": {
             "type": "boolean",
             "description": "mirror left-right (after rotating)",
-            "x-cli": [
-              "--flip-horizontal"
-            ]
+            "x-cli": ["--flip-horizontal"]
           },
           "flip_vertical": {
             "type": "boolean",
             "description": "mirror top-bottom (after rotating)",
-            "x-cli": [
-              "--flip-vertical"
-            ]
+            "x-cli": ["--flip-vertical"]
           },
           "background": {
             "type": "string",
             "description": "fill for the corners a non-multiple-of-90 rotation exposes (required then), or none",
-            "x-cli": [
-              "--background"
-            ]
+            "x-cli": ["--background"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -2246,10 +1745,7 @@
             "type": "boolean"
           },
           "orientation_before": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "EXIF orientation of the input (magick), e.g. RightTop"
           },
           "original": {
@@ -2262,10 +1758,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           }
         },
         "required": [
@@ -2281,9 +1774,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -2309,25 +1800,16 @@
       "summary": "Levels, brightness, contrast, saturation, blur and sharpen with explicit values; never 'auto'.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/adjust.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/adjust.py"],
         "mcp_tool": "adjust"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -2341,88 +1823,63 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "levels": {
             "type": "string",
             "description": "BLACK,WHITE[,GAMMA]: input black and white points in percent (0-100) and optional gamma, e.g. 5,95 or 0,100,1.2",
-            "x-cli": [
-              "--levels"
-            ]
+            "x-cli": ["--levels"]
           },
           "brightness": {
             "type": "number",
             "description": "-100 to 100 (0 = unchanged)",
-            "x-cli": [
-              "--brightness"
-            ]
+            "x-cli": ["--brightness"]
           },
           "contrast": {
             "type": "number",
             "description": "-100 to 100 (0 = unchanged)",
-            "x-cli": [
-              "--contrast"
-            ]
+            "x-cli": ["--contrast"]
           },
           "saturation": {
             "type": "number",
             "description": "percent of the current saturation, 0-400 (100 = unchanged, 0 = grey)",
-            "x-cli": [
-              "--saturation"
-            ]
+            "x-cli": ["--saturation"]
           },
           "blur": {
             "type": "number",
             "description": "Gaussian blur sigma in pixels, 0.1-50",
-            "x-cli": [
-              "--blur"
-            ]
+            "x-cli": ["--blur"]
           },
           "sharpen": {
             "type": "number",
             "description": "unsharp-mask sigma in pixels, 0.1-10",
-            "x-cli": [
-              "--sharpen"
-            ]
+            "x-cli": ["--sharpen"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -2443,23 +1900,12 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
-        "required": [
-          "ok",
-          "input",
-          "output",
-          "operations",
-          "actual",
-          "backend"
-        ]
+        "required": ["ok", "input", "output", "operations", "actual", "backend"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -2485,25 +1931,16 @@
       "summary": "Overlay a logo image or a line of text at a position with margin and opacity; text is rendered literally with a script-appropriate font.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/overlay.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/overlay.py"],
         "mcp_tool": "overlay"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -2517,54 +1954,39 @@
           "output": {
             "type": "string",
             "description": "file to write; must differ from the input, extension picks the format",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "image": {
             "type": "string",
             "description": "overlay image, e.g. a logo PNG with transparency",
-            "x-cli": [
-              "--image"
-            ]
+            "x-cli": ["--image"]
           },
           "text": {
             "type": "string",
             "description": "overlay text (rendered literally, one line)",
-            "x-cli": [
-              "--text"
-            ]
+            "x-cli": ["--text"]
           },
           "position": {
             "type": "string",
@@ -2580,65 +2002,46 @@
               "south",
               "southeast"
             ],
-            "x-cli": [
-              "--position"
-            ]
+            "x-cli": ["--position"]
           },
           "margin": {
             "type": "string",
             "description": "distance from the edge(s) in pixels (default 0)",
-            "x-cli": [
-              "--margin"
-            ]
+            "x-cli": ["--margin"]
           },
           "opacity": {
             "type": "number",
             "description": "0-1 (default 1 = opaque)",
             "default": 1.0,
-            "x-cli": [
-              "--opacity"
-            ]
+            "x-cli": ["--opacity"]
           },
           "scale": {
             "type": "number",
             "description": "--image only: overlay width as a fraction of the base width, e.g. 0.2",
-            "x-cli": [
-              "--scale"
-            ]
+            "x-cli": ["--scale"]
           },
           "font_size": {
             "type": "number",
             "description": "--text only (required): point size",
-            "x-cli": [
-              "--font-size"
-            ]
+            "x-cli": ["--font-size"]
           },
           "color": {
             "type": "string",
             "description": "--text only (required): text colour",
-            "x-cli": [
-              "--color"
-            ]
+            "x-cli": ["--color"]
           },
           "font": {
             "type": "string",
             "description": "--text only: font file to use instead of the one doctor reports",
-            "x-cli": [
-              "--font"
-            ]
+            "x-cli": ["--font"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ],
+        "required": ["input"],
         "allOf": [
           {
             "not": {
-              "required": [
-                "image",
-                "text"
-              ]
+              "required": ["image", "text"]
             }
           }
         ]
@@ -2654,10 +2057,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "image",
-              "text"
-            ]
+            "enum": ["image", "text"]
           },
           "position": {
             "type": "string"
@@ -2673,10 +2073,7 @@
             "description": "{width, height} in pixels"
           },
           "font": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "font file used for text; null for an image overlay"
           },
           "actual": {
@@ -2685,9 +2082,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
         "required": [
@@ -2704,9 +2099,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -2732,25 +2125,16 @@
       "summary": "Compose several images into a row or grid with an explicit background, optional gap and captions.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/montage.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/montage.py"],
         "mcp_tool": "montage"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -2767,95 +2151,68 @@
           "output": {
             "type": "string",
             "description": "composite to write; must not be one of the inputs",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "cols": {
             "type": "string",
             "description": "images per row (default: all in one row)",
-            "x-cli": [
-              "--cols"
-            ]
+            "x-cli": ["--cols"]
           },
           "cell_width": {
             "type": "string",
             "description": "cell width in pixels (with --cell-height; default: widest input)",
-            "x-cli": [
-              "--cell-width"
-            ]
+            "x-cli": ["--cell-width"]
           },
           "cell_height": {
             "type": "string",
             "description": "cell height in pixels (with --cell-width; default: tallest input)",
-            "x-cli": [
-              "--cell-height"
-            ]
+            "x-cli": ["--cell-height"]
           },
           "gap": {
             "type": "string",
             "description": "space between cells in pixels (default 0)",
-            "x-cli": [
-              "--gap"
-            ]
+            "x-cli": ["--gap"]
           },
           "background": {
             "type": "string",
             "description": "colour for gaps and letterboxing, or none for transparent",
-            "x-cli": [
-              "--background"
-            ]
+            "x-cli": ["--background"]
           },
           "labels": {
             "type": "boolean",
             "description": "caption each cell with its file name",
-            "x-cli": [
-              "--labels"
-            ]
+            "x-cli": ["--labels"]
           },
           "font": {
             "type": "string",
             "description": "--labels only: font file instead of the one doctor reports",
-            "x-cli": [
-              "--font"
-            ]
+            "x-cli": ["--font"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "inputs"
-        ]
+        "required": ["inputs"]
       },
       "outputs": {
         "type": "object",
@@ -2887,10 +2244,7 @@
             "type": "boolean"
           },
           "font": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "actual": {
             "type": "object",
@@ -2898,9 +2252,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
         "required": [
@@ -2918,9 +2270,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -2946,25 +2296,16 @@
       "summary": "Make favicon.ico (several sizes), PNG icons and apple-touch-icon.png from one square image, plus the HTML and manifest entries.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/icons.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/icons.py"],
         "mcp_tool": "icons"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -2978,77 +2319,56 @@
           "output_dir": {
             "type": "string",
             "description": "folder to write the icon files into (created if missing)",
-            "x-cli": [
-              "-o",
-              "--output-dir"
-            ]
+            "x-cli": ["-o", "--output-dir"]
           },
           "ico_sizes": {
             "type": "string",
             "description": "sizes inside favicon.ico, max 256 (default 16,32,48)",
             "default": "16,32,48",
-            "x-cli": [
-              "--ico-sizes"
-            ]
+            "x-cli": ["--ico-sizes"]
           },
           "png_sizes": {
             "type": "string",
             "description": "PNG icons to write as icon-NxN.png (default 32,192,512)",
             "default": "32,192,512",
-            "x-cli": [
-              "--png-sizes"
-            ]
+            "x-cli": ["--png-sizes"]
           },
           "apple_size": {
             "type": "integer",
             "description": "apple-touch-icon.png size, 0 to skip (default 180)",
             "default": 180,
-            "x-cli": [
-              "--apple-size"
-            ]
+            "x-cli": ["--apple-size"]
           },
           "apple_background": {
             "type": "string",
             "description": "flatten apple-touch-icon.png onto this colour",
-            "x-cli": [
-              "--apple-background"
-            ]
+            "x-cli": ["--apple-background"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing existing icon files",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend commands that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -3077,9 +2397,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
         "required": [
@@ -3092,9 +2410,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -3120,25 +2436,16 @@
       "summary": "Report alpha present/used, convert straight <-> premultiplied, remove an edge fringe against a given matte colour, or write the key (matte) or fill of a still.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/alpha.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/alpha.py"],
         "mcp_tool": "alpha"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -3152,40 +2459,29 @@
           "output": {
             "type": "string",
             "description": "file to write (required unless --mode report); must differ from the input",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "mode": {
             "type": "string",
@@ -3198,22 +2494,16 @@
               "key",
               "fill"
             ],
-            "x-cli": [
-              "--mode"
-            ]
+            "x-cli": ["--mode"]
           },
           "matte": {
             "type": "string",
             "description": "defringe only: the opaque colour the edges were blended with, e.g. white or #FFFFFF",
-            "x-cli": [
-              "--matte"
-            ]
+            "x-cli": ["--matte"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -3226,13 +2516,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "premultiply",
-              "unpremultiply",
-              "defringe",
-              "key",
-              "fill"
-            ]
+            "enum": ["premultiply", "unpremultiply", "defringe", "key", "fill"]
           },
           "matte": {
             "type": "string",
@@ -3275,29 +2559,17 @@
             "description": "report only: highest alpha, 0..1"
           },
           "color_within_alpha": {
-            "type": [
-              "boolean",
-              "null"
-            ],
+            "type": ["boolean", "null"],
             "description": "report only: every colour channel is at most its alpha (+1/255). false means the colour is straight; true is what a premultiplied image must show (an image that is mostly dark or opaque shows it too); null without alpha"
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
-        "required": [
-          "ok",
-          "input",
-          "has_alpha",
-          "backend"
-        ]
+        "required": ["ok", "input", "has_alpha", "backend"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -3323,25 +2595,16 @@
       "summary": "Write color, mono, white, black and clear-space variants of a cut-out logo at given sizes, and report its main colours with their share.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/brandkit.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/brandkit.py"],
         "mcp_tool": "brandkit"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -3355,67 +2618,48 @@
           "output_dir": {
             "type": "string",
             "description": "folder to write the variants into (created if missing)",
-            "x-cli": [
-              "-o",
-              "--output-dir"
-            ]
+            "x-cli": ["-o", "--output-dir"]
           },
           "sizes": {
             "type": "string",
             "description": "long edges in pixels to write every variant at, e.g. 1024,512,256 (never above the logo's)",
-            "x-cli": [
-              "--sizes"
-            ]
+            "x-cli": ["--sizes"]
           },
           "clear_space": {
             "type": "string",
             "description": "transparent margin on every side of the clearspace variant, in pixels of the full-size logo",
-            "x-cli": [
-              "--clear-space"
-            ]
+            "x-cli": ["--clear-space"]
           },
           "palette": {
             "type": "string",
             "description": "report at most this many main colours, largest share first (2-32)",
-            "x-cli": [
-              "--palette"
-            ]
+            "x-cli": ["--palette"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing existing variant files",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend commands that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -3448,9 +2692,7 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick"
-            ]
+            "enum": ["magick"]
           }
         },
         "required": [
@@ -3465,9 +2707,7 @@
           "backend"
         ]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -3493,25 +2733,16 @@
       "summary": "Resize to a named published size (og, instagram-*, youtube-thumbnail, ...) with fill, fit or pad; --list shows sizes and their sources.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/preset.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/preset.py"],
         "mcp_tool": "preset"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -3525,40 +2756,29 @@
           "output": {
             "type": "string",
             "description": "file to write (required unless --list); must differ from the input",
-            "x-cli": [
-              "-o",
-              "--output"
-            ]
+            "x-cli": ["-o", "--output"]
           },
           "overwrite": {
             "type": "boolean",
             "description": "allow replacing an existing output file",
-            "x-cli": [
-              "--overwrite"
-            ]
+            "x-cli": ["--overwrite"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds the whole run may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "preset": {
             "type": "string",
@@ -3578,41 +2798,27 @@
               "youtube-shorts-thumbnail",
               "youtube-thumbnail"
             ],
-            "x-cli": [
-              "--preset"
-            ]
+            "x-cli": ["--preset"]
           },
           "mode": {
             "type": "string",
             "description": "fill: cover and centre-crop to the exact size; fit: inside the size, no crop (may be smaller); pad: fit inside, then pad to the exact size with --color",
-            "enum": [
-              "fill",
-              "fit",
-              "pad"
-            ],
-            "x-cli": [
-              "--mode"
-            ]
+            "enum": ["fill", "fit", "pad"],
+            "x-cli": ["--mode"]
           },
           "color": {
             "type": "string",
             "description": "pad mode only: fill colour (none = transparent)",
-            "x-cli": [
-              "--color"
-            ]
+            "x-cli": ["--color"]
           },
           "list": {
             "type": "boolean",
             "description": "print every preset with its size and source, write nothing",
-            "x-cli": [
-              "--list"
-            ]
+            "x-cli": ["--list"]
           }
         },
         "additionalProperties": false,
-        "required": [
-          "input"
-        ]
+        "required": ["input"]
       },
       "outputs": {
         "type": "object",
@@ -3635,11 +2841,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "fill",
-              "fit",
-              "pad"
-            ]
+            "enum": ["fill", "fit", "pad"]
           },
           "requested": {
             "type": "object",
@@ -3655,23 +2857,16 @@
           },
           "backend": {
             "type": "string",
-            "enum": [
-              "magick",
-              "sips"
-            ]
+            "enum": ["magick", "sips"]
           },
           "presets": {
             "type": "object",
             "description": "--list only: every preset with size, description, source, quote"
           }
         },
-        "required": [
-          "ok"
-        ]
+        "required": ["ok"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {
@@ -3697,25 +2892,16 @@
       "summary": "Run a tool over every image in a folder: per-file tools write one output each, look/montage one composite, icons one folder per image, compare pairs with --against.",
       "role": "execution",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/batch.py"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/batch.py"],
         "mcp_tool": "batch"
       },
-      "effects": [
-        "read",
-        "exec",
-        "write"
-      ],
+      "effects": ["read", "exec", "write"],
       "destructive": false,
       "idempotent": false,
       "dry_run": {
         "supported": true,
         "flag": "--dry-run",
-        "effects": [
-          "read"
-        ]
+        "effects": ["read"]
       },
       "inputs": {
         "type": "object",
@@ -3747,55 +2933,39 @@
           "input_dir": {
             "type": "string",
             "description": "folder of images to read (not recursive)",
-            "x-cli": [
-              "-i",
-              "--input-dir"
-            ]
+            "x-cli": ["-i", "--input-dir"]
           },
           "output_dir": {
             "type": "string",
             "description": "folder to write results into; must differ from --input-dir",
-            "x-cli": [
-              "-o",
-              "--output-dir"
-            ]
+            "x-cli": ["-o", "--output-dir"]
           },
           "ext": {
             "type": "string",
             "description": "output extension, e.g. webp: required for convert, optional for the other tools",
-            "x-cli": [
-              "--ext"
-            ]
+            "x-cli": ["--ext"]
           },
           "against": {
             "type": "string",
             "description": "compare only: folder holding the second image of each pair (matched by file name)",
-            "x-cli": [
-              "--against"
-            ]
+            "x-cli": ["--against"]
           },
           "json": {
             "type": "boolean",
             "description": "print one JSON object (ok:true/false) instead of text",
-            "x-cli": [
-              "--json"
-            ],
+            "x-cli": ["--json"],
             "x-cli-only": true
           },
           "dry_run": {
             "type": "boolean",
             "description": "print the backend command that would run, write nothing",
-            "x-cli": [
-              "--dry-run"
-            ]
+            "x-cli": ["--dry-run"]
           },
           "timeout": {
             "type": "number",
             "description": "seconds each file's run (forwarded to the tool; a --timeout after -- wins) may take (default 300); when it runs out, ImageMagick and everything it started are killed and the tool fails with code \"timeout\", exit 124",
             "default": 300,
-            "x-cli": [
-              "--timeout"
-            ]
+            "x-cli": ["--timeout"]
           },
           "tool_args": {
             "type": "array",
@@ -3807,9 +2977,7 @@
           }
         },
         "additionalProperties": false,
-        "required": [
-          "tool"
-        ]
+        "required": ["tool"]
       },
       "outputs": {
         "type": "object",
@@ -3828,17 +2996,9 @@
             "description": "one {file, output, ok, result|reason} per input file; a file whose --timeout ran out also has code \"timeout\" and timeout"
           }
         },
-        "required": [
-          "ok",
-          "tool",
-          "count",
-          "all_ok",
-          "results"
-        ]
+        "required": ["ok", "tool", "count", "all_ok", "results"]
       },
-      "requires": [
-        "python3"
-      ],
+      "requires": ["python3"],
       "requires_features": [],
       "optional_features": [],
       "x": {

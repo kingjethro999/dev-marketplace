@@ -60,24 +60,15 @@
   },
   "derived": {
     "frame_duration": {
-      "sub": [
-        "duration"
-      ],
+      "sub": ["duration"],
       "description": "duration on the frame grid: rounded to whole frames at 30 fps"
     },
     "cover_end": {
-      "add": [
-        "cut_point",
-        "hold"
-      ],
+      "add": ["cut_point", "hold"],
       "description": "the end of the cover window: cut_point + hold"
     },
     "exit": {
-      "sub": [
-        "duration",
-        "cut_point",
-        "hold"
-      ],
+      "sub": ["duration", "cut_point", "hold"],
       "description": "the exit after the cover window: duration - cut_point - hold"
     }
   },

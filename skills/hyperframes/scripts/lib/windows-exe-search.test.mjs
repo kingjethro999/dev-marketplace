@@ -19,15 +19,20 @@ import { afterEach, test } from "node:test";
 const VAR = "NoDefaultCurrentDirectoryInExePath";
 const here = dirname(fileURLToPath(import.meta.url));
 const skillsRoot = resolve(here, "../../..");
-const guards = ["hyperframes/scripts/lib", "media-use/scripts/lib", "figma/scripts/lib"].map(
-  (dir) => join(skillsRoot, dir, "windows-exe-search.mjs"),
-);
+const guards = [
+  "hyperframes/scripts/lib",
+  "media-use/scripts/lib",
+  "figma/scripts/lib",
+].map((dir) => join(skillsRoot, dir, "windows-exe-search.mjs"));
 const realPlatform = process.platform;
 const realValue = process.env[VAR];
 const realPath = process.env.PATH;
 
 afterEach(() => {
-  Object.defineProperty(process, "platform", { value: realPlatform, configurable: true });
+  Object.defineProperty(process, "platform", {
+    value: realPlatform,
+    configurable: true,
+  });
   if (realValue === undefined) delete process.env[VAR];
   else process.env[VAR] = realValue;
   if (realPath === undefined) delete process.env.PATH;
@@ -35,7 +40,10 @@ afterEach(() => {
 });
 
 async function loadAs(platform, value, path = realPath) {
-  Object.defineProperty(process, "platform", { value: platform, configurable: true });
+  Object.defineProperty(process, "platform", {
+    value: platform,
+    configurable: true,
+  });
   if (value === undefined) delete process.env[VAR];
   else process.env[VAR] = value;
   if (path === undefined) delete process.env.PATH;
@@ -91,16 +99,30 @@ test(
     const planted = join(project, "node_modules", ".bin", "ffprobe");
     writeFileSync(planted, `#!/bin/sh\ntouch "${marker}"\n`);
     chmodSync(planted, 0o755);
-    const script = 'require("node:child_process").spawnSync("ffprobe", ["-version"]);';
+    const script =
+      'require("node:child_process").spawnSync("ffprobe", ["-version"]);';
     const run = (guard) =>
       spawnSync(
         process.execPath,
-        [...(guard ? ["--import", pathToFileURL(guards[0]).href] : []), "-e", script],
-        { cwd: project, env: { ...process.env, PATH: `node_modules/.bin:${process.env.PATH}` } },
+        [
+          ...(guard ? ["--import", pathToFileURL(guards[0]).href] : []),
+          "-e",
+          script,
+        ],
+        {
+          cwd: project,
+          env: {
+            ...process.env,
+            PATH: `node_modules/.bin:${process.env.PATH}`,
+          },
+        },
       );
 
     run(false);
-    assert.ok(existsSync(marker), "the fixture must reach the planted program without the guard");
+    assert.ok(
+      existsSync(marker),
+      "the fixture must reach the planted program without the guard",
+    );
     rmSync(marker);
     run(true);
     assert.equal(existsSync(marker), false);
@@ -110,25 +132,36 @@ test(
 function readdirTree(dir, pattern) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) return entry.name === "node_modules" ? [] : readdirTree(path, pattern);
+    if (entry.isDirectory())
+      return entry.name === "node_modules" ? [] : readdirTree(path, pattern);
     return pattern.test(entry.name) ? [path] : [];
   });
 }
 
 function scripts(dir) {
-  return readdirTree(dir, /\.mjs$/).filter((file) => !/\.test\.mjs$/.test(file));
+  return readdirTree(dir, /\.mjs$/).filter(
+    (file) => !/\.test\.mjs$/.test(file),
+  );
 }
 
 test("every skill Python script that starts programs resolves them through trusted_program", () => {
   const starters = readdirTree(skillsRoot, /\.py$/).filter((file) =>
-    /^(import subprocess|from subprocess import)/m.test(readFileSync(file, "utf8")),
+    /^(import subprocess|from subprocess import)/m.test(
+      readFileSync(file, "utf8"),
+    ),
   );
-  assert.ok(starters.length > 0, "must inspect the Python scripts that start programs");
+  assert.ok(
+    starters.length > 0,
+    "must inspect the Python scripts that start programs",
+  );
   const missing = starters
     .filter((file) => {
       const source = readFileSync(file, "utf8");
       const resolver = join(dirname(file), "trusted_program.py");
-      return !/^from trusted_program import find_program$/m.test(source) || !existsSync(resolver);
+      return (
+        !/^from trusted_program import find_program$/m.test(source) ||
+        !existsSync(resolver)
+      );
     })
     .map((file) => relative(skillsRoot, file));
   assert.deepEqual(missing, []);
@@ -138,11 +171,17 @@ test("every skill script that starts programs loads the guard before its other i
   const starters = scripts(skillsRoot).filter((file) =>
     /from "(node:)?child_process"/.test(readFileSync(file, "utf8")),
   );
-  assert.ok(starters.length > 10, "must inspect the scripts that start programs");
+  assert.ok(
+    starters.length > 10,
+    "must inspect the scripts that start programs",
+  );
   const missing = starters
     .filter((file) => {
-      const firstImport = readFileSync(file, "utf8").match(/^import [^\n]*$/m)?.[0] ?? "";
-      return !/^import "[./]+(scripts\/)?(lib\/)?windows-exe-search\.mjs";$/.test(firstImport);
+      const firstImport =
+        readFileSync(file, "utf8").match(/^import [^\n]*$/m)?.[0] ?? "";
+      return !/^import "[./]+(scripts\/)?(lib\/)?windows-exe-search\.mjs";$/.test(
+        firstImport,
+      );
     })
     .map((file) => relative(skillsRoot, file));
   assert.deepEqual(missing, []);

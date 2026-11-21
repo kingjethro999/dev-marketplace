@@ -12,16 +12,34 @@ import { FIXTURES, fakeTools, listTree, tmp, tool } from "./helpers.mjs";
 function fakes() {
   const dir = tmp("hfs-fake-");
   const log = join(dir, "calls");
-  const f = fakeTools(["chrome", "ffmpeg", "ffprobe"].map((name) => ({ name, log, exit: 0 })), dir);
+  const f = fakeTools(
+    ["chrome", "ffmpeg", "ffprobe"].map((name) => ({ name, log, exit: 0 })),
+    dir,
+  );
   const at = Object.fromEntries(f.rules.map((r) => [r.name, r.path]));
-  return { dir, log, env: { ...f.env, HYPERFRAMES_BROWSER_PATH: at.chrome, HYPERFRAMES_SKILL_FFMPEG: at.ffmpeg, HYPERFRAMES_SKILL_FFPROBE: at.ffprobe } };
+  return {
+    dir,
+    log,
+    env: {
+      ...f.env,
+      HYPERFRAMES_BROWSER_PATH: at.chrome,
+      HYPERFRAMES_SKILL_FFMPEG: at.ffmpeg,
+      HYPERFRAMES_SKILL_FFPROBE: at.ffprobe,
+    },
+  };
 }
 
-const calls = (f) => (existsSync(f.log) ? readFileSync(f.log, "utf8").trim().split("\n") : []);
+const calls = (f) =>
+  existsSync(f.log) ? readFileSync(f.log, "utf8").trim().split("\n") : [];
 
 function sceneDir() {
   const dir = tmp();
-  const r = tool("scene", [join(FIXTURES, "two-line.json"), "-o", join(dir, "scene"), "--json"]);
+  const r = tool("scene", [
+    join(FIXTURES, "two-line.json"),
+    "-o",
+    join(dir, "scene"),
+    "--json",
+  ]);
   assert.equal(r.code, 0, r.stderr);
   return dir;
 }
@@ -29,7 +47,17 @@ function sceneDir() {
 test("scene --dry-run writes nothing and runs nothing", () => {
   const f = fakes();
   const dir = tmp();
-  const r = tool("scene", [join(FIXTURES, "two-line.json"), "-o", join(dir, "out"), "--dry-run", "--json"], { env: f.env });
+  const r = tool(
+    "scene",
+    [
+      join(FIXTURES, "two-line.json"),
+      "-o",
+      join(dir, "out"),
+      "--dry-run",
+      "--json",
+    ],
+    { env: f.env },
+  );
   assert.equal(r.code, 0, r.stderr);
   assert.equal(r.doc.dry_run, true);
   assert.equal(r.doc.verified, false);
@@ -44,7 +72,11 @@ for (const name of ["render", "preview"]) {
     const f = fakes();
     const dir = sceneDir();
     const before = listTree(dir);
-    const r = tool(name, [join(dir, "scene"), "-o", join(dir, "out.mp4"), "--dry-run", "--json"], { env: f.env });
+    const r = tool(
+      name,
+      [join(dir, "scene"), "-o", join(dir, "out.mp4"), "--dry-run", "--json"],
+      { env: f.env },
+    );
     assert.equal(r.code, 0, r.stderr);
     assert.equal(r.doc.dry_run, true);
     assert.equal(r.doc.verified, false);
@@ -59,7 +91,19 @@ for (const name of ["render", "preview"]) {
 test("template --dry-run writes nothing and runs nothing", () => {
   const f = fakes();
   const dir = tmp();
-  const r = tool("template", ["break", "--set", "message=Break", "-o", join(dir, "r.json"), "--dry-run", "--json"], { env: f.env });
+  const r = tool(
+    "template",
+    [
+      "break",
+      "--set",
+      "message=Break",
+      "-o",
+      join(dir, "r.json"),
+      "--dry-run",
+      "--json",
+    ],
+    { env: f.env },
+  );
   assert.equal(r.code, 0, r.stderr);
   assert.equal(r.doc.dry_run, true);
   assert.equal(r.doc.verified, false);
@@ -72,7 +116,19 @@ test("batch --dry-run launches neither Chrome nor ffmpeg and writes nothing", ()
   const f = fakes();
   const dir = tmp();
   writeFileSync(join(dir, "rows.csv"), "message,duration\nBreak,1\nLunch,1\n");
-  const r = tool("batch", [join(dir, "rows.csv"), "--template", "break", "-o", join(dir, "out"), "--dry-run", "--json"], { env: f.env });
+  const r = tool(
+    "batch",
+    [
+      join(dir, "rows.csv"),
+      "--template",
+      "break",
+      "-o",
+      join(dir, "out"),
+      "--dry-run",
+      "--json",
+    ],
+    { env: f.env },
+  );
   assert.equal(r.code, 0, r.stderr);
   assert.equal(r.doc.rows.length, 2);
   assert.deepEqual(r.doc.commands, []);
@@ -92,8 +148,15 @@ test("doctor --dry-run lists its probes and runs none", () => {
 test("probe --dry-run still runs ffprobe (read-only), as the contract states", () => {
   const f = fakes();
   const dir = sceneDir();
-  const r = tool("probe", [join(dir, "scene", "index.html"), "--dry-run", "--json"], { env: f.env });
-  assert.deepEqual(calls(f).map((l) => l.split(" ")[0]), ["ffprobe"]);
+  const r = tool(
+    "probe",
+    [join(dir, "scene", "index.html"), "--dry-run", "--json"],
+    { env: f.env },
+  );
+  assert.deepEqual(
+    calls(f).map((l) => l.split(" ")[0]),
+    ["ffprobe"],
+  );
   const spec = buildContract().tools.find((t) => t.name === "probe");
   assert.match(spec.dry_run, /ffprobe still runs/);
   assert.equal(r.doc.status, "failed"); // the fake ffprobe prints no JSON: refused, not reported as measured
@@ -101,7 +164,18 @@ test("probe --dry-run still runs ffprobe (read-only), as the contract states", (
 });
 
 test("every tool in the contract supports --dry-run and is covered above", () => {
-  const names = buildContract().tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["batch", "doctor", "preview", "probe", "render", "scene", "template"]);
-  for (const t of buildContract().tools) assert.equal(t.supports_dry_run, true, t.name);
+  const names = buildContract()
+    .tools.map((t) => t.name)
+    .sort();
+  assert.deepEqual(names, [
+    "batch",
+    "doctor",
+    "preview",
+    "probe",
+    "render",
+    "scene",
+    "template",
+  ]);
+  for (const t of buildContract().tools)
+    assert.equal(t.supports_dry_run, true, t.name);
 });

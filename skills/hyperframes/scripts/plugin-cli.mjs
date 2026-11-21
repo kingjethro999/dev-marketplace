@@ -5,7 +5,15 @@ import "./lib/windows-exe-search.mjs";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, isAbsolute, join, relative, resolve, sep, win32 } from "node:path";
+import {
+  basename,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+  win32,
+} from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMainModule } from "./lib/main-module.mjs";
 
@@ -41,7 +49,8 @@ const isOutside = (from, to) => {
 function isPluginBundle(pluginRoot, workDir) {
   const bundle = realOrResolved(pluginRoot);
   const work = realOrResolved(workDir);
-  if (basename(bundle).startsWith(".") || !isOutside(bundle, work)) return false;
+  if (basename(bundle).startsWith(".") || !isOutside(bundle, work))
+    return false;
   if (isOutside(work, bundle)) return true;
   return relative(work, bundle)
     .split(sep)
@@ -81,7 +90,9 @@ export function pluginVersion(pluginRoot = root, workDir = process.cwd()) {
 // folder such as the temp folder is no substitute, so there is no fallback.
 export function npmFolder(home = homedir(), pathExists = existsSync) {
   if (home && pathExists(home)) return home;
-  throw new Error("Cannot find your home folder. Set HOME (USERPROFILE on Windows) and retry.");
+  throw new Error(
+    "Cannot find your home folder. Set HOME (USERPROFILE on Windows) and retry.",
+  );
 }
 
 export function invocation(
@@ -116,12 +127,18 @@ export function invocation(
     const env = { ...childEnv, HYPERFRAMES_CLI_ENTRY: launcher };
     return { command: node, args: args.slice(1), env, cwd };
   }
-  const cliArgs = ["--yes", version ? `hyperframes@${version}` : STANDALONE_CLI, ...args];
+  const cliArgs = [
+    "--yes",
+    version ? `hyperframes@${version}` : STANDALONE_CLI,
+    ...args,
+  ];
   const cliEnv = { ...childEnv, HYPERFRAMES_PLUGIN_CWD: cwd };
   const npxCwd = npmCwd ?? npmFolder();
-  if (platform !== "win32") return { command: "npx", args: cliArgs, env: cliEnv, cwd: npxCwd };
+  if (platform !== "win32")
+    return { command: "npx", args: cliArgs, env: cliEnv, cwd: npxCwd };
   const candidates = [
-    env.npm_execpath && win32.join(win32.dirname(env.npm_execpath), "npx-cli.js"),
+    env.npm_execpath &&
+      win32.join(win32.dirname(env.npm_execpath), "npx-cli.js"),
     win32.join(win32.dirname(node), "node_modules", "npm", "bin", "npx-cli.js"),
   ].filter(Boolean);
   const npx = candidates.find(pathExists);

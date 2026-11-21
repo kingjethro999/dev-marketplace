@@ -11,9 +11,9 @@ v0.9.0. 21 tools (probe, convert, resize, thumb, strip, trim, check, look, compa
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 静止画編集 | done |  |
+| Owned job  | Status | Note |
+| ---------- | ------ | ---- |
+| 静止画編集 | done   |      |
 
 ## Wiring
 
@@ -37,4 +37,5 @@ The agent prepares overlay images with `strip` / `resize` / `pad` (step 4, video
   - Done when: a fixture with a white fringe loses it; the key image's pixels equal the alpha
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

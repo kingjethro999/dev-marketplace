@@ -33,11 +33,16 @@ const norm = (p) => {
 function match(file, args) {
   if (typeof file !== "string") return null;
   const f = norm(file);
-  return rules.find((r) => norm(r.path) === f && (!r.when || args.includes(r.when))) || null;
+  return (
+    rules.find(
+      (r) => norm(r.path) === f && (!r.when || args.includes(r.when)),
+    ) || null
+  );
 }
 
 function replacement(rule) {
-  const code = `process.stdin.on("data",()=>{});process.stdin.on("end",()=>{});process.stdin.resume();` +
+  const code =
+    `process.stdin.on("data",()=>{});process.stdin.on("end",()=>{});process.stdin.resume();` +
     `process.stderr.write(${JSON.stringify(rule.stderr ? rule.stderr + "\n" : "")});` +
     `setTimeout(()=>process.exit(${Number(rule.exit)}),50);`;
   return [process.execPath, ["-e", code]];
@@ -47,7 +52,8 @@ function handle(file, rest) {
   const args = Array.isArray(rest[0]) ? rest[0].map(String) : [];
   const rule = match(file, args);
   if (!rule) return null;
-  if (rule.log) fs.appendFileSync(rule.log, [rule.name, ...args].join(" ") + "\n");
+  if (rule.log)
+    fs.appendFileSync(rule.log, [rule.name, ...args].join(" ") + "\n");
   if (rule.exit === undefined || rule.exit === null) return null;
   const [exe, eargs] = replacement(rule);
   return [exe, eargs, ...(Array.isArray(rest[0]) ? rest.slice(1) : rest)];
@@ -59,7 +65,9 @@ if (rules.length && !globalThis.__hyperframesSkillTestFakes) {
     const original = cp[name];
     cp[name] = function wrapped(file, ...rest) {
       const swapped = handle(file, rest);
-      return swapped ? original.call(this, ...swapped) : original.call(this, file, ...rest);
+      return swapped
+        ? original.call(this, ...swapped)
+        : original.call(this, file, ...rest);
     };
   }
   syncBuiltinESMExports();

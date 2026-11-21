@@ -31,7 +31,7 @@ _Automated release: version and notes generated from pull requests merged since 
   image has an alpha channel and uses it (opaque / partial / transparent pixel counts,
   min and max alpha, and whether every colour is within its alpha); `premultiply` and
   `unpremultiply` convert between straight and premultiplied colour; `defringe --matte
-  COLOR` takes the colour a cut-out's edges were blended with back out, keeping the alpha
+COLOR` takes the colour a cut-out's edges were blended with back out, keeping the alpha
   as it was; `key` writes the alpha as a grey matte (checked pixel for pixel) and `fill`
   the colour channels, for key-and-fill deliveries. ImageMagick only. Additive contract
   change: one new tool, nothing else moved.
@@ -118,7 +118,7 @@ _Automated release: version and notes generated from pull requests merged since 
   command.
 - Roadmap rows marked `| done | main |` get the version of the release that ships them
   (`bump_roadmap_md.py`).
-(nothing yet)
+  (nothing yet)
 
 - feat: use ImageMagick 6 directly when there is no magick command (#21)
 
@@ -284,9 +284,9 @@ _Automated release: version and notes generated from pull requests merged since 
   anywhere rather than being validated by arithmetic/mocking alone. A
   separate job exercises every `bin/install.js` target end to end.
 - Fixed a real, verified correctness bug found by testing against an actual
-  HEIC photo: when the local `magick` build has no *encode* delegate for a
+  HEIC photo: when the local `magick` build has no _encode_ delegate for a
   target format (e.g. HEIC read-only, no libheif encoder), `magick` can exit
-  0 while silently writing the *input* format's bytes under the requested
+  0 while silently writing the _input_ format's bytes under the requested
   output name - a single stderr warning, no error. `convert`/`resize`/
   `thumb`/`strip`/`trim` now verify the output's actual format matches its
   extension right after writing it, and remove + fail (`ok:false`) instead of

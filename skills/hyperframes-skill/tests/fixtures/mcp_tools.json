@@ -16,17 +16,10 @@
       "timeout",
       "workers"
     ],
-    "required": [
-      "output",
-      "rows",
-      "template"
-    ]
+    "required": ["output", "rows", "template"]
   },
   "doctor": {
-    "properties": [
-      "chromiumProbe",
-      "dryRun"
-    ],
+    "properties": ["chromiumProbe", "dryRun"],
     "required": []
   },
   "preview": {
@@ -40,22 +33,11 @@
       "timeout",
       "workers"
     ],
-    "required": [
-      "output",
-      "scene_dir"
-    ]
+    "required": ["output", "scene_dir"]
   },
   "probe": {
-    "properties": [
-      "alpha",
-      "countFrames",
-      "dryRun",
-      "file",
-      "sample"
-    ],
-    "required": [
-      "file"
-    ]
+    "properties": ["alpha", "countFrames", "dryRun", "file", "sample"],
+    "required": ["file"]
   },
   "render": {
     "properties": [
@@ -71,22 +53,11 @@
       "timeout",
       "workers"
     ],
-    "required": [
-      "output",
-      "scene_dir"
-    ]
+    "required": ["output", "scene_dir"]
   },
   "scene": {
-    "properties": [
-      "dryRun",
-      "output",
-      "overwrite",
-      "request"
-    ],
-    "required": [
-      "output",
-      "request"
-    ]
+    "properties": ["dryRun", "output", "overwrite", "request"],
+    "required": ["output", "request"]
   },
   "template": {
     "properties": [

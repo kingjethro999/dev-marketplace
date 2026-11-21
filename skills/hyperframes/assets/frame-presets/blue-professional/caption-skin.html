@@ -69,8 +69,13 @@
   .caption-pill {
     max-width: 78%;
     padding: 20px 44px 24px;
-    background: color-mix(in srgb, var(--cap-accent, #1e2bfa) 4%, var(--cap-canvas, #fdfae7));
-    border: 1.5px solid color-mix(in srgb, var(--cap-accent, #1e2bfa) 20%, transparent);
+    background: color-mix(
+      in srgb,
+      var(--cap-accent, #1e2bfa) 4%,
+      var(--cap-canvas, #fdfae7)
+    );
+    border: 1.5px solid
+      color-mix(in srgb, var(--cap-accent, #1e2bfa) 20%, transparent);
     border-radius: 14px;
   }
   .caption-line {
@@ -90,7 +95,11 @@
     display: inline-block;
     padding: 0 0.18em;
     border-radius: 0.32em;
-    color: color-mix(in srgb, var(--cap-ink, #111111) 52%, var(--cap-canvas, #fdfae7));
+    color: color-mix(
+      in srgb,
+      var(--cap-ink, #111111) 52%,
+      var(--cap-canvas, #fdfae7)
+    );
   }
   /* current word — THE solid cobalt chip (the single-accent gesture; pill-rounded
      fill, NO shadow), cream reading on top */
@@ -188,7 +197,9 @@
       var next = GROUPS[g + 1];
       var isLast = g === GROUPS.length - 1;
       var start = Math.max(0, Number(group.start));
-      var end = isLast ? DURATION : Math.min(Number(next.start), Number(group.end) + 0.3);
+      var end = isLast
+        ? DURATION
+        : Math.min(Number(next.start), Number(group.end) + 0.3);
       if (end <= start) end = start + 0.01;
 
       // group on/off — exactly one group visible at a time
@@ -202,15 +213,25 @@
         var at = Math.max(start, Number(w.start));
         tl.set(el, { className: "caption-word" }, start); // upcoming (also resets on reverse-seek)
         tl.set(el, { className: "caption-word is-active" }, at); // current
-        tl.fromTo(el, { scale: 0.985 }, { scale: 1, duration: 0.18, ease: "power1.out" }, at);
+        tl.fromTo(
+          el,
+          { scale: 0.985 },
+          { scale: 1, duration: 0.18, ease: "power1.out" },
+          at,
+        );
         if (i + 1 < words.length) {
           var nextAt = Math.max(start, Number(words[i + 1].start));
           tl.set(el, { className: "caption-word is-spoken" }, nextAt); // demote when next activates
         }
       });
       if (words.length) {
-        var lastEl = document.getElementById("caption-word-" + g + "-" + (words.length - 1));
-        var lastSpoken = Math.min(end, Number(words[words.length - 1].end) + 0.1);
+        var lastEl = document.getElementById(
+          "caption-word-" + g + "-" + (words.length - 1),
+        );
+        var lastSpoken = Math.min(
+          end,
+          Number(words[words.length - 1].end) + 0.1,
+        );
         tl.set(lastEl, { className: "caption-word is-spoken" }, lastSpoken);
       }
     });

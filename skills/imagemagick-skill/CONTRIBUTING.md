@@ -80,7 +80,7 @@ changing a README command, and paste its summary into the PR.
 
 ## Pull requests
 
-- Keep PRs focused - one fix or one small feature per PR - and explain *why*.
+- Keep PRs focused - one fix or one small feature per PR - and explain _why_.
 - Run `npm test` locally before opening; CI must be green.
 - Titles follow Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `ci:`,
   `test:`, `refactor:`). The PR labeler turns them into labels, and labels decide the

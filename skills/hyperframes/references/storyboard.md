@@ -25,7 +25,9 @@ One `class="frame"` box per still, in film order, holding its image, a `class="t
   <img src="stills/frame-00-at-1.5s.png" alt="" />
   <div class="title">01: The hook</div>
   <div class="time">0.0 to 3.0s</div>
-  <p class="words">The cursor drops the photo on the timeline; the title lands on the drop.</p>
+  <p class="words">
+    The cursor drops the photo on the timeline; the title lands on the drop.
+  </p>
 </div>
 ```
 

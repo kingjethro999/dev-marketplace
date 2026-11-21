@@ -3,14 +3,14 @@
 `agent_prompts.json` holds natural-language requests an agent with this skill installed
 should handle, in the same format as ffmpeg-skill's evals:
 
-| Key | Meaning |
-| --- | --- |
-| `id` | stable name |
-| `prompt` | what the user says; `FIXTURES` and `OUTDIR` are placeholders for directories |
-| `expect` | scripts the agent should run, in order; `a.py\|b.py` means either is right |
+| Key       | Meaning                                                                                                                                      |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`      | stable name                                                                                                                                  |
+| `prompt`  | what the user says; `FIXTURES` and `OUTDIR` are placeholders for directories                                                                 |
+| `expect`  | scripts the agent should run, in order; `a.py\|b.py` means either is right                                                                   |
 | `decline` | `true`: out of scope - the agent says so (video, GIF animation, AI editing, face recognition, RAW) and runs no raw `magick`/`ffmpeg` instead |
-| `ask` | `true`: the request lacks something the skill never guesses (e.g. a size) - the agent asks |
-| `note` | what a grader should look for beyond the script list |
+| `ask`     | `true`: the request lacks something the skill never guesses (e.g. a size) - the agent asks                                                   |
+| `note`    | what a grader should look for beyond the script list                                                                                         |
 
 Every run is also graded on the rules in SKILL.md: no raw `magick`/`convert`/`mogrify`/
 `sips` command typed by the agent, no input file modified, `check.py` (or `probe.py`) on

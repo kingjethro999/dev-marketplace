@@ -13,17 +13,30 @@ import { delimiter, join } from "node:path";
 import { tmpdir } from "node:os";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
-import { invocation, npmFolder, pluginVersion, STANDALONE_CLI } from "./plugin-cli.mjs";
+import {
+  invocation,
+  npmFolder,
+  pluginVersion,
+  STANDALONE_CLI,
+} from "./plugin-cli.mjs";
 
 // The bundle is `<base>/<bundle>`; a test's project, home and tools go elsewhere under `<base>`.
-function fixture(t, manifest = "plugin.json", version = "1.2.3", bundle = "plugin") {
+function fixture(
+  t,
+  manifest = "plugin.json",
+  version = "1.2.3",
+  bundle = "plugin",
+) {
   const base = realpathSync(mkdtempSync(join(tmpdir(), "hf-plugin-")));
   t.after(() => rmSync(base, { recursive: true, force: true }));
   const root = join(base, bundle);
   mkdirSync(join(root, "skills/hyperframes/scripts/lib"), { recursive: true });
   if (manifest) {
     mkdirSync(join(root, manifest, ".."), { recursive: true });
-    writeFileSync(join(root, manifest), JSON.stringify({ name: "hyperframes", version }));
+    writeFileSync(
+      join(root, manifest),
+      JSON.stringify({ name: "hyperframes", version }),
+    );
   }
   const launcher = join(root, "skills/hyperframes/scripts/plugin-cli.mjs");
   copyFileSync(new URL("./plugin-cli.mjs", import.meta.url), launcher);
@@ -51,7 +64,10 @@ for (const manifest of [
 
 test("rejects a floating plugin version and reads no manifest as a standalone install", (t) => {
   const { root } = fixture(t, "plugin.json", "latest");
-  assert.throws(() => pluginVersion(root), /Invalid HyperFrames plugin release/);
+  assert.throws(
+    () => pluginVersion(root),
+    /Invalid HyperFrames plugin release/,
+  );
   rmSync(join(root, "plugin.json"));
   assert.equal(pluginVersion(root), undefined);
 });
@@ -68,17 +84,23 @@ test("a standalone install runs the newest CLI that moves into the project, and 
   assert.equal(result.command, "npx");
   assert.equal(result.cwd, "/home/person");
   assert.deepEqual(result.args, ["--yes", STANDALONE_CLI, "skills", "update"]);
-  assert.deepEqual(result.env, { PATH: "/bin", HYPERFRAMES_PLUGIN_CWD: "/work/project" });
+  assert.deepEqual(result.env, {
+    PATH: "/bin",
+    HYPERFRAMES_PLUGIN_CWD: "/work/project",
+  });
 });
 
 test("pins CLI, suppresses standalone refresh, preserves unrelated environment", () => {
-  const result = invocation(["init", "project with spaces", "--non-interactive"], {
-    version: "1.2.3",
-    platform: "darwin",
-    env: { PATH: "/bin", HYPERFRAMES_SKIP_SKILLS: "0" },
-    cwd: "/work/project",
-    npmCwd: "/home/person",
-  });
+  const result = invocation(
+    ["init", "project with spaces", "--non-interactive"],
+    {
+      version: "1.2.3",
+      platform: "darwin",
+      env: { PATH: "/bin", HYPERFRAMES_SKIP_SKILLS: "0" },
+      cwd: "/work/project",
+      npmCwd: "/home/person",
+    },
+  );
   assert.equal(result.command, "npx");
   assert.equal(result.cwd, "/home/person");
   assert.deepEqual(result.args, [
@@ -96,7 +118,10 @@ test("pins CLI, suppresses standalone refresh, preserves unrelated environment",
     HYPERFRAMES_NO_UPDATE_CHECK: "1",
     HYPERFRAMES_PLUGIN_CWD: "/work/project",
   });
-  assert.throws(() => invocation(["skills", "update"], { version: "1.2.3" }), /plugin manager/);
+  assert.throws(
+    () => invocation(["skills", "update"], { version: "1.2.3" }),
+    /plugin manager/,
+  );
 });
 
 test("Windows launches npx through Node without shell argument interpretation", () => {
@@ -104,8 +129,11 @@ test("Windows launches npx through Node without shell argument interpretation", 
     version: "1.2.3",
     platform: "win32",
     node: String.raw`C:\Program Files\nodejs\node.exe`,
-    env: { npm_execpath: String.raw`C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js` },
-    pathExists: (p) => p === String.raw`C:\Program Files\nodejs\node_modules\npm\bin\npx-cli.js`,
+    env: {
+      npm_execpath: String.raw`C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js`,
+    },
+    pathExists: (p) =>
+      p === String.raw`C:\Program Files\nodejs\node_modules\npm\bin\npx-cli.js`,
     npmCwd: String.raw`C:\Users\person`,
   });
   assert.equal(result.command, String.raw`C:\Program Files\nodejs\node.exe`);
@@ -118,7 +146,13 @@ test("Windows launches npx through Node without shell argument interpretation", 
     "a & b",
   ]);
   assert.throws(
-    () => invocation([], { version: "1.2.3", platform: "win32", env: {}, pathExists: () => false }),
+    () =>
+      invocation([], {
+        version: "1.2.3",
+        platform: "win32",
+        env: {},
+        pathExists: () => false,
+      }),
     /Cannot find npx/,
   );
 });
@@ -157,7 +191,10 @@ test("on Windows, a helper and the programs it starts skip the working-directory
     "console.log(JSON.stringify(process.env.NoDefaultCurrentDirectoryInExePath ?? null));",
   );
   const asWindows = join(root, "as-windows.mjs");
-  writeFileSync(asWindows, 'Object.defineProperty(process, "platform", { value: "win32" });');
+  writeFileSync(
+    asWindows,
+    'Object.defineProperty(process, "platform", { value: "win32" });',
+  );
   const run = (env) =>
     spawnSync(
       process.execPath,
@@ -171,7 +208,10 @@ test("on Windows, a helper and the programs it starts skip the working-directory
   const { NoDefaultCurrentDirectoryInExePath: _, ...env } = process.env;
 
   assert.equal(stdoutOf(run(env)), "1");
-  assert.equal(stdoutOf(run({ ...env, NoDefaultCurrentDirectoryInExePath: "yes" })), "yes");
+  assert.equal(
+    stdoutOf(run({ ...env, NoDefaultCurrentDirectoryInExePath: "yes" })),
+    "yes",
+  );
 });
 
 // fails without the fix: a standalone install had no launcher, so the skills ran `npx hyperframes`
@@ -195,8 +235,15 @@ for (const [install, manifest, spec] of [
         join(project, ".npmrc"),
         "registry=http://127.0.0.1:9/\nscript-shell=/bin/false\n",
       );
-      writeFileSync(join(project, "package.json"), '{"name":"hyperframes","bin":"x.js"}');
-      writeFileSync(join(project, "node_modules/.bin/hyperframes"), "#!/bin/sh\n", { mode: 0o755 });
+      writeFileSync(
+        join(project, "package.json"),
+        '{"name":"hyperframes","bin":"x.js"}',
+      );
+      writeFileSync(
+        join(project, "node_modules/.bin/hyperframes"),
+        "#!/bin/sh\n",
+        { mode: 0o755 },
+      );
       writeFileSync(
         join(bin, "npx"),
         `#!${process.execPath}\nconsole.log(JSON.stringify({cwd:process.cwd(),args:process.argv.slice(2),project:process.env.HYPERFRAMES_PLUGIN_CWD}));`,
@@ -205,7 +252,11 @@ for (const [install, manifest, spec] of [
       const result = spawnSync(process.execPath, [launcher, "--version"], {
         cwd: project,
         encoding: "utf8",
-        env: { ...process.env, HOME: home, PATH: `${bin}${delimiter}${process.env.PATH}` },
+        env: {
+          ...process.env,
+          HOME: home,
+          PATH: `${bin}${delimiter}${process.env.PATH}`,
+        },
       });
       assert.equal(result.status, 0, result.stderr);
       assert.deepEqual(JSON.parse(result.stdout), {
@@ -220,7 +271,10 @@ for (const [install, manifest, spec] of [
 test("rejects a plugin release older than the first one this launcher runs", (t) => {
   for (const version of ["0.9.33", "0.9.34-alpha.1", "0.8.99"]) {
     const { root } = fixture(t, "plugin.json", version);
-    assert.throws(() => pluginVersion(root), /this launcher runs 0\.9\.34 or newer/);
+    assert.throws(
+      () => pluginVersion(root),
+      /this launcher runs 0\.9\.34 or newer/,
+    );
   }
   for (const version of ["0.9.34", "0.10.0", "1.0.0-beta.1"]) {
     const { root } = fixture(t, "plugin.json", version);
@@ -254,10 +308,22 @@ for (const [layout, bundle, workDir] of [
   [".claude", "user project/.claude", "user project"],
   [".claude, run from a subfolder", "user project/.claude", "user project/sub"],
   ["the project's skills folder", "user project", "user project"],
-  ["the project's skills folder, run from a subfolder", "user project", "user project/sub"],
-  ["a monorepo package, run from the monorepo", "user project/packages/video", "user project"],
+  [
+    "the project's skills folder, run from a subfolder",
+    "user project",
+    "user project/sub",
+  ],
+  [
+    "a monorepo package, run from the monorepo",
+    "user project/packages/video",
+    "user project",
+  ],
 ]) {
-  for (const manifest of ["plugin.json", ".claude-plugin/plugin.json", "gemini-extension.json"]) {
+  for (const manifest of [
+    "plugin.json",
+    ".claude-plugin/plugin.json",
+    "gemini-extension.json",
+  ]) {
     test(
       `a ${manifest} beside skills in ${layout} leaves the call as it is without one`,
       { skip: process.platform === "win32" },
@@ -276,16 +342,25 @@ for (const [layout, bundle, workDir] of [
           const result = spawnSync(process.execPath, [launcher, ...args], {
             cwd,
             encoding: "utf8",
-            env: { ...process.env, HOME: home, PATH: `${bin}${delimiter}${process.env.PATH}` },
+            env: {
+              ...process.env,
+              HOME: home,
+              PATH: `${bin}${delimiter}${process.env.PATH}`,
+            },
           });
           assert.equal(result.status, 0, result.stderr);
           return JSON.parse(result.stdout);
         };
         const withManifest = [run("--version"), run("skills", "update")];
         assert.equal(pluginVersion(root, cwd), undefined);
-        assert.deepEqual(withManifest[0], { args: ["--yes", STANDALONE_CLI, "--version"] });
+        assert.deepEqual(withManifest[0], {
+          args: ["--yes", STANDALONE_CLI, "--version"],
+        });
         rmSync(join(root, manifest));
-        assert.deepEqual(withManifest, [run("--version"), run("skills", "update")]);
+        assert.deepEqual(withManifest, [
+          run("--version"),
+          run("skills", "update"),
+        ]);
       },
     );
   }
@@ -296,8 +371,14 @@ test("starts npx in the home folder and never falls back to a shared folder", ()
     npmFolder("/home/person", () => true),
     "/home/person",
   );
-  assert.throws(() => npmFolder("", () => true), /Cannot find your home folder/);
-  assert.throws(() => npmFolder("/home/gone", () => false), /Cannot find your home folder/);
+  assert.throws(
+    () => npmFolder("", () => true),
+    /Cannot find your home folder/,
+  );
+  assert.throws(
+    () => npmFolder("/home/gone", () => false),
+    /Cannot find your home folder/,
+  );
   // Helper scripts never start npx, so they run without a home folder.
   const script = invocation(["--script", "helper.mjs"], {
     version: "1.2.3",

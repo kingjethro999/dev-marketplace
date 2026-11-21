@@ -15,8 +15,10 @@ import { PKG, ROOT } from "../lib/deps.mjs";
 export const SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
 function jsonType(p) {
-  if (p.type === "integer|auto") return { anyOf: [{ type: "integer" }, { type: "string", enum: ["auto"] }] };
-  if (p.type === "string[]") return { type: "array", items: { type: "string" } };
+  if (p.type === "integer|auto")
+    return { anyOf: [{ type: "integer" }, { type: "string", enum: ["auto"] }] };
+  if (p.type === "string[]")
+    return { type: "array", items: { type: "string" } };
   return { type: p.type };
 }
 
@@ -36,8 +38,17 @@ export function mcpTools(contract = buildContract()) {
       name: t.name,
       title: t.id,
       description: `${t.description} Returns the tool's JSON result document (status, verified, verification, commands, error).`,
-      inputSchema: { type: "object", properties, required: t.input_schema.required, additionalProperties: false },
-      annotations: { readOnlyHint: !t.produces_artifact, destructiveHint: false, openWorldHint: false },
+      inputSchema: {
+        type: "object",
+        properties,
+        required: t.input_schema.required,
+        additionalProperties: false,
+      },
+      annotations: {
+        readOnlyHint: !t.produces_artifact,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
     };
   });
 }
@@ -46,9 +57,15 @@ export function mcpTools(contract = buildContract()) {
 export function toArgv(spec, args) {
   const schema = spec.input_schema;
   const argv = [];
-  const unknown = Object.keys(args).filter((k) => !(k in schema.properties) || k === "json");
-  if (unknown.length) throw new Error(`unknown argument(s) for ${spec.name}: ${unknown.join(", ")}`);
-  for (const k of schema.positional) if (args[k] !== undefined) argv.push(String(args[k]));
+  const unknown = Object.keys(args).filter(
+    (k) => !(k in schema.properties) || k === "json",
+  );
+  if (unknown.length)
+    throw new Error(
+      `unknown argument(s) for ${spec.name}: ${unknown.join(", ")}`,
+    );
+  for (const k of schema.positional)
+    if (args[k] !== undefined) argv.push(String(args[k]));
   for (const [k, p] of Object.entries(schema.properties)) {
     if (p.positional || k === "json" || args[k] === undefined) continue;
     const v = args[k];
@@ -58,7 +75,8 @@ export function toArgv(spec, args) {
         if (v === false) argv.push(p.cli);
       } else if (v) argv.push(p.cli);
     } else if (p.type === "string[]") {
-      if (!Array.isArray(v)) throw new Error(`${k} must be an array of strings`);
+      if (!Array.isArray(v))
+        throw new Error(`${k} must be an array of strings`);
       for (const item of v) argv.push(p.cli, String(item));
     } else {
       argv.push(p.cli, String(v));
@@ -70,7 +88,11 @@ export function toArgv(spec, args) {
 
 function runTool(name, argv) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [join(ROOT, "scripts", `${name}.mjs`), ...argv], { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(
+      process.execPath,
+      [join(ROOT, "scripts", `${name}.mjs`), ...argv],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
     let out = "";
     let err = "";
     child.stdout.setEncoding("utf8").on("data", (c) => (out += c));
@@ -82,15 +104,22 @@ function runTool(name, argv) {
 export async function handle(msg, contract) {
   const { id, method, params } = msg;
   const reply = (result) => ({ jsonrpc: "2.0", id, result });
-  const error = (code, message) => ({ jsonrpc: "2.0", id, error: { code, message } });
+  const error = (code, message) => ({
+    jsonrpc: "2.0",
+    id,
+    error: { code, message },
+  });
   if (id === undefined) return null; // a notification (e.g. notifications/initialized) is never answered
   if (method === "initialize") {
     const asked = params?.protocolVersion;
     return reply({
-      protocolVersion: SUPPORTED_PROTOCOLS.includes(asked) ? asked : SUPPORTED_PROTOCOLS[0],
+      protocolVersion: SUPPORTED_PROTOCOLS.includes(asked)
+        ? asked
+        : SUPPORTED_PROTOCOLS[0],
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: PKG.name, version: PKG.version },
-      instructions: "Local HyperFrames rendering. Decide the scene yourself; every tool returns a result document whose status/verified/error.kind are authoritative. See `contract` in the repository for the full contract.",
+      instructions:
+        "Local HyperFrames rendering. Decide the scene yourself; every tool returns a result document whose status/verified/error.kind are authoritative. See `contract` in the repository for the full contract.",
     });
   }
   if (method === "ping") return reply({});
@@ -102,16 +131,31 @@ export async function handle(msg, contract) {
     try {
       argv = toArgv(spec, params.arguments ?? {});
     } catch (e) {
-      return reply({ content: [{ type: "text", text: e.message }], isError: true });
+      return reply({
+        content: [{ type: "text", text: e.message }],
+        isError: true,
+      });
     }
     const r = await runTool(spec.name, argv);
     let doc;
     try {
       doc = JSON.parse(r.out);
     } catch {
-      return reply({ content: [{ type: "text", text: `${spec.name} printed no result document (exit ${r.code ?? r.signal}): ${r.err.trim().slice(-2000)}` }], isError: true });
+      return reply({
+        content: [
+          {
+            type: "text",
+            text: `${spec.name} printed no result document (exit ${r.code ?? r.signal}): ${r.err.trim().slice(-2000)}`,
+          },
+        ],
+        isError: true,
+      });
     }
-    return reply({ content: [{ type: "text", text: JSON.stringify(doc, null, 2) }], structuredContent: doc, isError: doc.status !== "completed" });
+    return reply({
+      content: [{ type: "text", text: JSON.stringify(doc, null, 2) }],
+      structuredContent: doc,
+      isError: doc.status !== "completed",
+    });
   }
   return error(-32601, `method not found: ${method}`);
 }
@@ -128,14 +172,23 @@ export function serve(input = process.stdin, output = process.stdout) {
     try {
       msg = JSON.parse(line);
     } catch {
-      return write({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } });
+      return write({
+        jsonrpc: "2.0",
+        id: null,
+        error: { code: -32700, message: "parse error" },
+      });
     }
     pending++;
     try {
       const res = await handle(msg, contract);
       if (res) write(res);
     } catch (e) {
-      if (msg.id !== undefined) write({ jsonrpc: "2.0", id: msg.id, error: { code: -32603, message: String(e?.message ?? e) } });
+      if (msg.id !== undefined)
+        write({
+          jsonrpc: "2.0",
+          id: msg.id,
+          error: { code: -32603, message: String(e?.message ?? e) },
+        });
     } finally {
       pending--;
       if (closed && pending === 0) process.exit(0);
@@ -149,7 +202,9 @@ export function serve(input = process.stdin, output = process.stdout) {
 
 const invokedDirectly = (() => {
   try {
-    return realpathSync(process.argv[1] ?? "") === fileURLToPath(import.meta.url);
+    return (
+      realpathSync(process.argv[1] ?? "") === fileURLToPath(import.meta.url)
+    );
   } catch {
     return false;
   }

@@ -33,7 +33,13 @@ Declared, pinned, and checked by `doctor` before anything claims it can run. Not
 present.
 
 ```json
-{"node":">=22","hyperframes":"0.8.61","chromium":"headless-capable Chrome/Chromium or chrome-headless-shell: bundled or system, detected","ffmpeg":">=5.0","ffprobe":">=5.0"}
+{
+  "node": ">=22",
+  "hyperframes": "0.8.61",
+  "chromium": "headless-capable Chrome/Chromium or chrome-headless-shell: bundled or system, detected",
+  "ffmpeg": ">=5.0",
+  "ffprobe": ">=5.0"
+}
 ```
 
 - **Node >= 22**: the pinned `hyperframes` package declares `engines.node >=22` (so this is not `>=20`).
@@ -121,15 +127,15 @@ As an agent skill, point the agent at `SKILL.md` (it names the scripts relative 
 
 ## Tools
 
-| Tool | Id | Role | What it does |
-|---|---|---|---|
-| `doctor` | `hyperframes-skill/doctor` | analysis | probes Node, hyperframes, ffmpeg/ffprobe + encoders, a headless Chromium launch, temp space |
-| `template` | `hyperframes-skill/template` | execution | fills a shipped template (titles: lower-third, title-card, session-slate, break; stingers: stinger-geometric, -glitch, -particles, -brush, -logo-reveal) with caller values → scene request |
-| `scene` | `hyperframes-skill/scene` | execution | structured scene request → HyperFrames scene directory (index.html + copied assets), linted |
-| `render` | `hyperframes-skill/render` | execution | scene directory → .mp4 (h264) / .webm (VP9 with alpha) / .mov (ProRes 4444) / a PNG sequence directory, probed and verified, alpha read back (`alpha.mode`: straight); cross-checked with ffmpeg-skill/probe when present; `--segments`: one file per IN / LOOP / OUT segment too, with the loop's seam measured |
-| `probe` | `hyperframes-skill/probe` | analysis | ffprobe read-back: duration, resolution, fps, frame count, codecs; PNG sequence directories; `--alpha` (and `--sample X,Y`) reads the first frame's alpha plane |
-| `batch` | `hyperframes-skill/batch` | execution | one verified render per row of a CSV/JSON through a template (every speaker's lower third from the programme sheet) |
-| `preview` | `hyperframes-skill/preview` | execution | fast proxy render: 10 fps, draft encoder preset, optionally the first N seconds |
+| Tool       | Id                           | Role      | What it does                                                                                                                                                                                                                                                                                                     |
+| ---------- | ---------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `doctor`   | `hyperframes-skill/doctor`   | analysis  | probes Node, hyperframes, ffmpeg/ffprobe + encoders, a headless Chromium launch, temp space                                                                                                                                                                                                                      |
+| `template` | `hyperframes-skill/template` | execution | fills a shipped template (titles: lower-third, title-card, session-slate, break; stingers: stinger-geometric, -glitch, -particles, -brush, -logo-reveal) with caller values → scene request                                                                                                                      |
+| `scene`    | `hyperframes-skill/scene`    | execution | structured scene request → HyperFrames scene directory (index.html + copied assets), linted                                                                                                                                                                                                                      |
+| `render`   | `hyperframes-skill/render`   | execution | scene directory → .mp4 (h264) / .webm (VP9 with alpha) / .mov (ProRes 4444) / a PNG sequence directory, probed and verified, alpha read back (`alpha.mode`: straight); cross-checked with ffmpeg-skill/probe when present; `--segments`: one file per IN / LOOP / OUT segment too, with the loop's seam measured |
+| `probe`    | `hyperframes-skill/probe`    | analysis  | ffprobe read-back: duration, resolution, fps, frame count, codecs; PNG sequence directories; `--alpha` (and `--sample X,Y`) reads the first frame's alpha plane                                                                                                                                                  |
+| `batch`    | `hyperframes-skill/batch`    | execution | one verified render per row of a CSV/JSON through a template (every speaker's lower third from the programme sheet)                                                                                                                                                                                              |
+| `preview`  | `hyperframes-skill/preview`  | execution | fast proxy render: 10 fps, draft encoder preset, optionally the first N seconds                                                                                                                                                                                                                                  |
 
 Every flag of every tool: [`references/scripts.md`](references/scripts.md). Every tool takes
 `--json` (one result document) and `--dry-run`.
@@ -138,11 +144,30 @@ Every flag of every tool: [`references/scripts.md`](references/scripts.md). Ever
 
 ```json
 {
-  "scene_version": 1, "id": "intro", "width": 1920, "height": 1080, "duration": 5, "fps": 30,
+  "scene_version": 1,
+  "id": "intro",
+  "width": 1920,
+  "height": 1080,
+  "duration": 5,
+  "fps": 30,
   "background": "#000000",
   "layers": [
-    {"type": "image", "id": "logo", "start": 0, "duration": 5, "src": "logo.png", "box": {"x": 1600, "y": 60, "width": 256, "height": 128}},
-    {"type": "text", "id": "title", "start": 1, "duration": 3, "text": "Annual Meeting 2026", "style": {"font_size": 96, "font_weight": 700}}
+    {
+      "type": "image",
+      "id": "logo",
+      "start": 0,
+      "duration": 5,
+      "src": "logo.png",
+      "box": { "x": 1600, "y": 60, "width": 256, "height": 128 }
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "start": 1,
+      "duration": 3,
+      "text": "Annual Meeting 2026",
+      "style": { "font_size": 96, "font_weight": 700 }
+    }
   ]
 }
 ```
@@ -182,14 +207,14 @@ optional capabilities, `input_schema` generated from the tool's own parser, dry-
 verification policy, repeatability. [`docs/contract.md`](docs/contract.md) explains it, with
 the stability guarantee and the deprecation policy.
 
-| Promise | |
-|---|---|
+| Promise         |                                                                                                                                                                                                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Result document | exactly one per run: `status` `completed`/`failed`, `verified` = conjunction of the checks actually run, `error.kind` + `retryable: false`, `commands` = argv of every process that actually ran (including the Chrome and ffmpeg processes HyperFrames started) |
-| Exit codes | 0 ok, 1 failure, 2 `doctor` undecidable, 124 timeout, 127 missing tool, 128+signal interrupted |
-| Error kinds | `input`, `render` (Chrome/capture), `encode` (ffmpeg, after capture), `missing_tool`, `timeout`, `verification`, `interrupted`, `internal` |
-| Input files | never written; `render` checks the scene directory is unchanged after every run |
-| Network | none: telemetry, update check and auto-install are off, Chromium is always given explicitly, URL sources are refused |
-| Determinism | same scene + flags on the same machine → byte-identical file (GPU capture off, SDR forced) |
+| Exit codes      | 0 ok, 1 failure, 2 `doctor` undecidable, 124 timeout, 127 missing tool, 128+signal interrupted                                                                                                                                                                   |
+| Error kinds     | `input`, `render` (Chrome/capture), `encode` (ffmpeg, after capture), `missing_tool`, `timeout`, `verification`, `interrupted`, `internal`                                                                                                                       |
+| Input files     | never written; `render` checks the scene directory is unchanged after every run                                                                                                                                                                                  |
+| Network         | none: telemetry, update check and auto-install are off, Chromium is always given explicitly, URL sources are refused                                                                                                                                             |
+| Determinism     | same scene + flags on the same machine → byte-identical file (GPU capture off, SDR forced)                                                                                                                                                                       |
 
 ## Cross-check with ffmpeg-skill
 
@@ -209,11 +234,11 @@ ffmpeg-skill checkout is present, `render` runs ffmpeg-skill's own probe on the 
 }
 ```
 
-| `status` | When | Effect on the result |
-|---|---|---|
-| `PASSED` | ffmpeg-skill/probe read the file and codec, resolution, fps, duration (and alpha for `--codec vp9`/`prores`) match what the scene asked for | adds `verification[]` step `ffmpeg_skill`, `ok: true` |
-| `FAILED` | ffmpeg-skill/probe refused the file (corrupt, empty, no video stream) or measured a mismatch | adds the step with `ok: false`; the render fails with `kind: verification` |
-| `UNCHECKED` | no checkout found, no Python, ffmpeg-skill gave no usable result, or a property it cannot measure (VP9 alpha) — `reason` says which | no step: never counted as a pass, never as a failure |
+| `status`    | When                                                                                                                                        | Effect on the result                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `PASSED`    | ffmpeg-skill/probe read the file and codec, resolution, fps, duration (and alpha for `--codec vp9`/`prores`) match what the scene asked for | adds `verification[]` step `ffmpeg_skill`, `ok: true`                      |
+| `FAILED`    | ffmpeg-skill/probe refused the file (corrupt, empty, no video stream) or measured a mismatch                                                | adds the step with `ok: false`; the render fails with `kind: verification` |
+| `UNCHECKED` | no checkout found, no Python, ffmpeg-skill gave no usable result, or a property it cannot measure (VP9 alpha) — `reason` says which         | no step: never counted as a pass, never as a failure                       |
 
 Where it is looked for, first hit wins: `--ffmpeg-skill DIR` (alone, never replaced by a
 fallback; not a checkout → `kind: input`), `HYPERFRAMES_SKILL_FFMPEG_SKILL_DIR`,
@@ -314,7 +339,14 @@ properties = the contract's `input_schema` names); `tools/call` runs the tool's 
 server's working directory. Example client entry (Claude Desktop `claude_desktop_config.json`):
 
 ```json
-{"mcpServers": {"hyperframes": {"command": "node", "args": ["/path/to/hyperframes-skill/bin/hyperframes-skill.mjs", "mcp"]}}}
+{
+  "mcpServers": {
+    "hyperframes": {
+      "command": "node",
+      "args": ["/path/to/hyperframes-skill/bin/hyperframes-skill.mjs", "mcp"]
+    }
+  }
+}
 ```
 
 The tool names and property names are frozen by `tests/fixtures/mcp_tools.json`, the same way

@@ -59,21 +59,21 @@ Call it "the HyperFrames desktop app", never "Studio"; offer it as the better wa
 
 ## What to read
 
-| The request | Read |
-| --- | --- |
-| A video to copy or remake | `/reverse-any-video` |
-| An episode in a proven style | `/style-sampling` |
-| Another film's style on a new topic | `references/look.md` |
-| Launch, promo, feature | `references/types/launch.md` |
-| Explainer, tutorial | `references/types/explainer.md` |
-| Music video | `references/types/music.md` |
-| Chart, numbers | `references/types/data.md` |
-| Vertical or social clip | `references/types/vertical.md` |
-| 3D, simulation, generative | `references/types/3d.md` |
-| Character, mascot, story short | `references/types/character.md` |
-| A real place or map; a website, PR or script; kinetic type | `references/film.md` |
-| Captions; cards over a talking head | `references/captions.md`; `references/overlays.md` |
-| Motion: eases, titles, cuts, punch-ins, speed, holds | `references/motion.md` |
-| Scenes, attributes, media, lint; GSAP, Lottie, 3D, canvas | `references/format.md`; `references/runtimes.md` |
+| The request                                                | Read                                               |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| A video to copy or remake                                  | `/reverse-any-video`                               |
+| An episode in a proven style                               | `/style-sampling`                                  |
+| Another film's style on a new topic                        | `references/look.md`                               |
+| Launch, promo, feature                                     | `references/types/launch.md`                       |
+| Explainer, tutorial                                        | `references/types/explainer.md`                    |
+| Music video                                                | `references/types/music.md`                        |
+| Chart, numbers                                             | `references/types/data.md`                         |
+| Vertical or social clip                                    | `references/types/vertical.md`                     |
+| 3D, simulation, generative                                 | `references/types/3d.md`                           |
+| Character, mascot, story short                             | `references/types/character.md`                    |
+| A real place or map; a website, PR or script; kinetic type | `references/film.md`                               |
+| Captions; cards over a talking head                        | `references/captions.md`; `references/overlays.md` |
+| Motion: eases, titles, cuts, punch-ins, speed, holds       | `references/motion.md`                             |
+| Scenes, attributes, media, lint; GSAP, Lottie, 3D, canvas  | `references/format.md`; `references/runtimes.md`   |
 
 Decks: `/slideshow`. Remotion source: `/remotion-to-hyperframes`. Figma: `/figma`. Skills and the pinned CLI: `references/skill-lifecycle.md`.

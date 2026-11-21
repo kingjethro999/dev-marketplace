@@ -91,30 +91,30 @@ python3 scripts/check.py hero-og-clean.jpg --input hero.heic \
 See `python3 scripts/_contract.py contract --json` for the full
 machine-readable spec (required/optional args per tool).
 
-| Script | Purpose |
-| --- | --- |
-| `probe.py` | Width, height, format, colorspace, alpha, GPS presence |
-| `convert.py` | Change format (HEIC->JPEG/PNG/WebP, PNG->WebP, ...) |
-| `resize.py` | `fit` (default, no distortion), `fill` (cover+crop), `exact` (forced) |
-| `thumb.py` | Thumbnail by long edge, aspect preserved, never upscales |
-| `crop.py` | Exact rectangle (`--x --y --width --height`) or largest `--aspect W:H` region by `--gravity`; never clips |
-| `pad.py` | Margins to an `--aspect` or exact canvas with a required `--color` (`none` = transparent); never shrinks |
-| `rotate.py` | Clockwise `--degrees`, `--flip-horizontal/--flip-vertical`, or no flag = bake EXIF orientation |
-| `optimize.py` | Fit a file-size budget (`--max-kb`) by searching quality; same dimensions; fails with the smallest size reached |
-| `strip.py` | Remove GPS/EXIF, applying orientation first (magick only) |
-| `trim.py` | Trim a solid-color border, fails instead of over-trimming (magick only) |
-| `check.py` | Verify an output: opens, matches size/format, didn't overwrite input |
-| `look.py` | Labelled preview sheet (or `--pair` before/after) to open and look at (magick only) |
-| `compare.py` | SSIM / PSNR / changed-pixel share of two same-size images, optional heatmap (`-o`), `--fail-below` gate (magick only) |
-| `overlay.py` | Logo (`--image`, `--scale`) or text (`--text`, `--font-size`, `--color`) at a `--position` with `--margin`/`--opacity`; Japanese text gets a CJK font (magick only) |
-| `adjust.py` | Explicit `--levels`, `--brightness`, `--contrast`, `--saturation`, `--blur`, `--sharpen`; no "auto" (magick only) |
-| `montage.py` | Row or `--cols` grid with a required `--background`, `--gap`, `--labels` - e.g. README comparisons (magick only) |
-| `icons.py` | favicon.ico (16/32/48) + PNG icons (32/192/512) + apple-touch-icon.png and the HTML/manifest entries, from one square image (magick only) |
-| `alpha.py` | `--mode report` (alpha present/used, opaque/partial/transparent counts), `premultiply` / `unpremultiply`, `defringe --matte white`, `key` (grey matte = alpha) or `fill` for key-and-fill stills (magick only) |
-| `brandkit.py` | From one cut-out logo: color, mono, white, black and `--clear-space` padded PNGs at full size and every `--sizes` long edge, plus the `--palette` main colours with their share (magick only) |
-| `preset.py` | Named published sizes with their source (`--list`), `--mode fill\|fit\|pad` |
-| `batch.py` | Run a tool over every image in a folder (`look`/`montage` make one sheet; `icons` one folder per image; `compare` pairs with `--against DIR`) |
-| `_contract.py` | `contract` (tool spec) / `doctor` (environment check) |
+| Script         | Purpose                                                                                                                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `probe.py`     | Width, height, format, colorspace, alpha, GPS presence                                                                                                                                                         |
+| `convert.py`   | Change format (HEIC->JPEG/PNG/WebP, PNG->WebP, ...)                                                                                                                                                            |
+| `resize.py`    | `fit` (default, no distortion), `fill` (cover+crop), `exact` (forced)                                                                                                                                          |
+| `thumb.py`     | Thumbnail by long edge, aspect preserved, never upscales                                                                                                                                                       |
+| `crop.py`      | Exact rectangle (`--x --y --width --height`) or largest `--aspect W:H` region by `--gravity`; never clips                                                                                                      |
+| `pad.py`       | Margins to an `--aspect` or exact canvas with a required `--color` (`none` = transparent); never shrinks                                                                                                       |
+| `rotate.py`    | Clockwise `--degrees`, `--flip-horizontal/--flip-vertical`, or no flag = bake EXIF orientation                                                                                                                 |
+| `optimize.py`  | Fit a file-size budget (`--max-kb`) by searching quality; same dimensions; fails with the smallest size reached                                                                                                |
+| `strip.py`     | Remove GPS/EXIF, applying orientation first (magick only)                                                                                                                                                      |
+| `trim.py`      | Trim a solid-color border, fails instead of over-trimming (magick only)                                                                                                                                        |
+| `check.py`     | Verify an output: opens, matches size/format, didn't overwrite input                                                                                                                                           |
+| `look.py`      | Labelled preview sheet (or `--pair` before/after) to open and look at (magick only)                                                                                                                            |
+| `compare.py`   | SSIM / PSNR / changed-pixel share of two same-size images, optional heatmap (`-o`), `--fail-below` gate (magick only)                                                                                          |
+| `overlay.py`   | Logo (`--image`, `--scale`) or text (`--text`, `--font-size`, `--color`) at a `--position` with `--margin`/`--opacity`; Japanese text gets a CJK font (magick only)                                            |
+| `adjust.py`    | Explicit `--levels`, `--brightness`, `--contrast`, `--saturation`, `--blur`, `--sharpen`; no "auto" (magick only)                                                                                              |
+| `montage.py`   | Row or `--cols` grid with a required `--background`, `--gap`, `--labels` - e.g. README comparisons (magick only)                                                                                               |
+| `icons.py`     | favicon.ico (16/32/48) + PNG icons (32/192/512) + apple-touch-icon.png and the HTML/manifest entries, from one square image (magick only)                                                                      |
+| `alpha.py`     | `--mode report` (alpha present/used, opaque/partial/transparent counts), `premultiply` / `unpremultiply`, `defringe --matte white`, `key` (grey matte = alpha) or `fill` for key-and-fill stills (magick only) |
+| `brandkit.py`  | From one cut-out logo: color, mono, white, black and `--clear-space` padded PNGs at full size and every `--sizes` long edge, plus the `--palette` main colours with their share (magick only)                  |
+| `preset.py`    | Named published sizes with their source (`--list`), `--mode fill\|fit\|pad`                                                                                                                                    |
+| `batch.py`     | Run a tool over every image in a folder (`look`/`montage` make one sheet; `icons` one folder per image; `compare` pairs with `--against DIR`)                                                                  |
+| `_contract.py` | `contract` (tool spec) / `doctor` (environment check)                                                                                                                                                          |
 
 The same tools are available over MCP (`mcp/server.py`, generated from the contract) for
 clients that don't load skills.

@@ -1,6 +1,6 @@
 ---
 name: hyperframes-skill
-description: 'Render video from HTML scenes with HyperFrames (headless Chrome captures every frame, local ffmpeg encodes them): turn an already-decided scene description (size, duration, fps, ordered text/image/video layers with in/out times) into HyperFrames markup, render it to MP4/WebM/MOV, make a fast proxy preview, and read the result back with ffprobe. Use when a job needs title cards, text slates, simple timed layouts of stills and clips rendered to a video file deterministically, or when asked to render an existing HyperFrames composition. Local only: Node >= 22, ffmpeg/ffprobe >= 5, a headless Chromium; no cloud, no API keys.'
+description: "Render video from HTML scenes with HyperFrames (headless Chrome captures every frame, local ffmpeg encodes them): turn an already-decided scene description (size, duration, fps, ordered text/image/video layers with in/out times) into HyperFrames markup, render it to MP4/WebM/MOV, make a fast proxy preview, and read the result back with ffprobe. Use when a job needs title cards, text slates, simple timed layouts of stills and clips rendered to a video file deterministically, or when asked to render an existing HyperFrames composition. Local only: Node >= 22, ffmpeg/ffprobe >= 5, a headless Chromium; no cloud, no API keys."
 ---
 
 # hyperframes-skill
@@ -25,15 +25,58 @@ Shared flags, on every tool: `--json` (one result document on stdout: `status`, 
 
 ```json
 {
-  "scene_version": 1, "id": "intro", "width": 1920, "height": 1080, "duration": 5, "fps": 30,
-  "background": "#000000", "lang": "en",
+  "scene_version": 1,
+  "id": "intro",
+  "width": 1920,
+  "height": 1080,
+  "duration": 5,
+  "fps": 30,
+  "background": "#000000",
+  "lang": "en",
   "layers": [
-    {"type": "video", "id": "bg", "start": 0, "duration": 5, "src": "clips/bg.mp4", "fit": "cover", "media_start": 2},
-    {"type": "image", "id": "logo", "start": 0.5, "duration": 4.5, "src": "logo.png", "box": {"x": 1600, "y": 60, "width": 256, "height": 128}, "fit": "contain"},
-    {"type": "text", "id": "title", "start": 1, "duration": 3, "text": "Annual Meeting 2026",
-     "style": {"font_family": "sans-serif", "font_size": 96, "font_weight": 700, "color": "#ffffff", "align": "center", "valign": "middle", "line_height": 1.2, "background": "transparent"},
-     "transition_in": {"type": "slide", "duration": 0.5, "direction": "down", "distance": 60, "easing": "ease_out"},
-     "transition_out": {"type": "fade", "duration": 0.5}}
+    {
+      "type": "video",
+      "id": "bg",
+      "start": 0,
+      "duration": 5,
+      "src": "clips/bg.mp4",
+      "fit": "cover",
+      "media_start": 2
+    },
+    {
+      "type": "image",
+      "id": "logo",
+      "start": 0.5,
+      "duration": 4.5,
+      "src": "logo.png",
+      "box": { "x": 1600, "y": 60, "width": 256, "height": 128 },
+      "fit": "contain"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "start": 1,
+      "duration": 3,
+      "text": "Annual Meeting 2026",
+      "style": {
+        "font_family": "sans-serif",
+        "font_size": 96,
+        "font_weight": 700,
+        "color": "#ffffff",
+        "align": "center",
+        "valign": "middle",
+        "line_height": 1.2,
+        "background": "transparent"
+      },
+      "transition_in": {
+        "type": "slide",
+        "duration": 0.5,
+        "direction": "down",
+        "distance": 60,
+        "easing": "ease_out"
+      },
+      "transition_out": { "type": "fade", "duration": 0.5 }
+    }
   ]
 }
 ```

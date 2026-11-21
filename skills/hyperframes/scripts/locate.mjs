@@ -75,7 +75,9 @@ function gridFilters(w, h, n, axis, fz) {
     fs = [];
   if (axis === "v" || axis === "both") {
     for (let i = 1; i < n; i++)
-      fs.push(`drawbox=x=${Math.round((i * w) / n)}:y=0:w=2:h=${h}:color=${GREEN}@0.8:t=fill`);
+      fs.push(
+        `drawbox=x=${Math.round((i * w) / n)}:y=0:w=2:h=${h}:color=${GREEN}@0.8:t=fill`,
+      );
     for (let i = 0; i < n; i++)
       fs.push(
         `drawtext=fontfile=${F}:text='${i + 1}':x=${Math.round(((i + 0.5) * w) / n - fz * 0.3)}:y=6:fontsize=${fz}:fontcolor=black:box=1:boxcolor=white@0.95:boxborderw=5`,
@@ -83,7 +85,9 @@ function gridFilters(w, h, n, axis, fz) {
   }
   if (axis === "h" || axis === "both") {
     for (let j = 1; j < n; j++)
-      fs.push(`drawbox=x=0:y=${Math.round((j * h) / n)}:w=${w}:h=2:color=${BLUE}@0.8:t=fill`);
+      fs.push(
+        `drawbox=x=0:y=${Math.round((j * h) / n)}:w=${w}:h=2:color=${BLUE}@0.8:t=fill`,
+      );
     for (let j = 0; j < n; j++)
       fs.push(
         `drawtext=fontfile=${F}:text='${j + 1}':x=6:y=${Math.round(((j + 0.5) * h) / n - fz * 0.5)}:fontsize=${fz}:fontcolor=black:box=1:boxcolor=white@0.95:boxborderw=5`,
@@ -115,15 +119,29 @@ if (cmd === "overlay") {
   const n = Number(opt.n || N1);
   const { w, h } = probe(img);
   const fz = Math.max(16, Math.round(Math.min(w, h) / 22));
-  ff(["-i", img, "-vf", gridFilters(w, h, n, "v", fz).join(","), `${dir}/gv.png`]);
-  ff(["-i", img, "-vf", gridFilters(w, h, n, "h", fz).join(","), `${dir}/gh.png`]);
+  ff([
+    "-i",
+    img,
+    "-vf",
+    gridFilters(w, h, n, "v", fz).join(","),
+    `${dir}/gv.png`,
+  ]);
+  ff([
+    "-i",
+    img,
+    "-vf",
+    gridFilters(w, h, n, "h", fz).join(","),
+    `${dir}/gh.png`,
+  ]);
   out({
     w,
     h,
     n,
     vertical: `${dir}/gv.png`,
     horizontal: `${dir}/gh.png`,
-    next: "READ gv.png + gh.png, then: locate.mjs region <img> --vids .. --hids .. --out " + dir,
+    next:
+      "READ gv.png + gh.png, then: locate.mjs region <img> --vids .. --hids .. --out " +
+      dir,
   });
 } else if (cmd === "region") {
   const dir = opt.out || ".";
@@ -183,7 +201,13 @@ if (cmd === "overlay") {
   const bw = Math.max(2, Math.round((box[2] - box[0]) * w)),
     bh = Math.max(2, Math.round((box[3] - box[1]) * h));
   const dst = opt.out || "./check.png";
-  ff(["-i", img, "-vf", `drawbox=x=${bx}:y=${by}:w=${bw}:h=${bh}:color=${RED}@1:t=6`, dst]);
+  ff([
+    "-i",
+    img,
+    "-vf",
+    `drawbox=x=${bx}:y=${by}:w=${bw}:h=${bh}:color=${RED}@1:t=6`,
+    dst,
+  ]);
   out({
     marked: dst,
     next: "READ it — red box on the target? If off, redo region/final with corrected strips.",
@@ -211,11 +235,18 @@ if (cmd === "overlay") {
         ],
       },
     ],
-    generationConfig: { temperature: 0, response_mime_type: "application/json" },
+    generationConfig: {
+      temperature: 0,
+      response_mime_type: "application/json",
+    },
   };
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
   );
   const t = (await res.json()).candidates[0].content.parts[0].text;
   let bb = JSON.parse(t.match(/\{[\s\S]*\}/)[0]).box_2d;
@@ -224,6 +255,8 @@ if (cmd === "overlay") {
   const box = [bb[1] / s, bb[0] / s, bb[3] / s, bb[2] / s].map(r4);
   out({ box, center: [r4((box[0] + box[2]) / 2), r4((box[1] + box[3]) / 2)] });
 } else {
-  console.error("usage: locate.mjs overlay|region|final|mark|auto … (see header comment)");
+  console.error(
+    "usage: locate.mjs overlay|region|final|mark|auto … (see header comment)",
+  );
   process.exit(1);
 }

@@ -9,11 +9,5 @@
   "homepage": "https://github.com/kajisho5/imagemagick-skill",
   "repository": "https://github.com/kajisho5/imagemagick-skill",
   "license": "MIT",
-  "keywords": [
-    "imagemagick",
-    "image",
-    "skill",
-    "agent",
-    "mcp"
-  ]
+  "keywords": ["imagemagick", "image", "skill", "agent", "mcp"]
 }

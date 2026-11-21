@@ -19,7 +19,7 @@ say which sentence here no longer holds.
 
 - **A written file whose real format differs from its extension is deleted and reported
   as `ok: false`.** ImageMagick exits 0 and only warns on stderr when it has no encoder
-  for the requested format (e.g. HEIC read-only builds), writing the *input's* format
+  for the requested format (e.g. HEIC read-only builds), writing the _input's_ format
   under the new name. Keeping that file would report success for a mislabeled image.
   Code: `_common.verify_output_format()`. Test: `test_flags_a_silently_wrong_format`.
 
@@ -84,7 +84,7 @@ say which sentence here no longer holds.
   `test_size_mismatch_is_refused`.
 
 - **Text given to ImageMagick is escaped.** `label:` text expands `%` escapes and
-  backslashes, and text starting with `@` is read from a *file* - so a caption
+  backslashes, and text starting with `@` is read from a _file_ - so a caption
   "@kajisho5" would otherwise read a file named kajisho5. Test:
   `test_leading_at_is_text_not_a_file`.
 

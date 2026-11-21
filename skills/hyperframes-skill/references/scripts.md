@@ -12,22 +12,22 @@ Render one video per row of a CSV or JSON file through a template (e.g. every sp
 
 Usage: `node scripts/batch.mjs <rows> [options]`
 
-| Flag | Type | Default | Meaning |
-|---|---|---|---|
-| `--json` | boolean |  | print one JSON result document on stdout |
-| `--dry-run` | boolean |  | validate and plan without launching Chrome or ffmpeg or writing files |
-| `--template` | string | required | template every row fills (see `template --list`); the columns are its value names |
-| `-o, --output` | string | required | output directory (created) |
-| `--name-field` | string |  | column whose value names each file (<row number>-<value>); default: the row number only |
-| `--font` | string |  | font file shipped with every row's scene and used first for all text (see template --font) |
-| `--kit` | string |  | brand kit for every row (see template --kit); a row's own value and --font win |
-| `--encoding` | utf-8 \| shift_jis | `utf-8` | text encoding of a CSV file |
-| `--codec` | h264 \| vp9 \| prores | `h264` | h264 (.mp4), vp9 (.webm) or prores (.mov, keeps alpha) |
-| `--quality` | integer |  | CRF, as render's --quality |
-| `--workers` | integer\|auto | `auto` | parallel capture workers per render: auto or 1-8 |
-| `--timeout` | number | `1800` | per-row render timeout; 0 disables |
-| `--fail-fast` | boolean |  | stop at the first row that fails (the rest are reported as skipped) |
-| `--overwrite` | boolean |  | replace this batch's own outputs and scene directories if they exist |
+| Flag           | Type                  | Default  | Meaning                                                                                    |
+| -------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------ |
+| `--json`       | boolean               |          | print one JSON result document on stdout                                                   |
+| `--dry-run`    | boolean               |          | validate and plan without launching Chrome or ffmpeg or writing files                      |
+| `--template`   | string                | required | template every row fills (see `template --list`); the columns are its value names          |
+| `-o, --output` | string                | required | output directory (created)                                                                 |
+| `--name-field` | string                |          | column whose value names each file (<row number>-<value>); default: the row number only    |
+| `--font`       | string                |          | font file shipped with every row's scene and used first for all text (see template --font) |
+| `--kit`        | string                |          | brand kit for every row (see template --kit); a row's own value and --font win             |
+| `--encoding`   | utf-8 \| shift_jis    | `utf-8`  | text encoding of a CSV file                                                                |
+| `--codec`      | h264 \| vp9 \| prores | `h264`   | h264 (.mp4), vp9 (.webm) or prores (.mov, keeps alpha)                                     |
+| `--quality`    | integer               |          | CRF, as render's --quality                                                                 |
+| `--workers`    | integer\|auto         | `auto`   | parallel capture workers per render: auto or 1-8                                           |
+| `--timeout`    | number                | `1800`   | per-row render timeout; 0 disables                                                         |
+| `--fail-fast`  | boolean               |          | stop at the first row that fails (the rest are reported as skipped)                        |
+| `--overwrite`  | boolean               |          | replace this batch's own outputs and scene directories if they exist                       |
 
 Dry run: reads and validates every row against the template and reports each planned output, its expected frame count and name; launches neither Chrome nor ffmpeg and writes nothing.
 
@@ -39,11 +39,11 @@ Probe this machine now: Node version, the pinned hyperframes package, ffmpeg/ffp
 
 Usage: `node scripts/doctor.mjs [options]`
 
-| Flag | Type | Default | Meaning |
-|---|---|---|---|
-| `--json` | boolean |  | print one JSON result document on stdout |
-| `--dry-run` | boolean |  | validate and plan without launching Chrome or ffmpeg or writing files |
-| `--no-chromium-probe` | boolean |  | skip launching Chromium (chromium:headless is then unknown, never available) |
+| Flag                  | Type    | Default | Meaning                                                                      |
+| --------------------- | ------- | ------- | ---------------------------------------------------------------------------- |
+| `--json`              | boolean |         | print one JSON result document on stdout                                     |
+| `--dry-run`           | boolean |         | validate and plan without launching Chrome or ffmpeg or writing files        |
+| `--no-chromium-probe` | boolean |         | skip launching Chromium (chromium:headless is then unknown, never available) |
 
 Dry run: lists the probes it would run (argv) and runs none of them.
 
@@ -55,16 +55,16 @@ Fast proxy render of a scene directory for checking layout and timing before the
 
 Usage: `node scripts/preview.mjs <scene_dir> [options]`
 
-| Flag | Type | Default | Meaning |
-|---|---|---|---|
-| `--json` | boolean |  | print one JSON result document on stdout |
-| `--dry-run` | boolean |  | validate and plan without launching Chrome or ffmpeg or writing files |
-| `-o, --output` | string | required | proxy .mp4 to write |
-| `--fps` | integer | `10` | proxy frame rate, integer 1-240 |
-| `--max-duration` | number |  | render only the first N seconds (a staged copy of the scene is shortened; the scene itself is untouched) |
-| `--workers` | integer\|auto | `auto` | parallel capture workers: auto or 1-8 |
-| `--timeout` | number | `1800` | kill the render after this long; 0 disables |
-| `--overwrite` | boolean |  | replace an existing output file |
+| Flag             | Type          | Default  | Meaning                                                                                                  |
+| ---------------- | ------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `--json`         | boolean       |          | print one JSON result document on stdout                                                                 |
+| `--dry-run`      | boolean       |          | validate and plan without launching Chrome or ffmpeg or writing files                                    |
+| `-o, --output`   | string        | required | proxy .mp4 to write                                                                                      |
+| `--fps`          | integer       | `10`     | proxy frame rate, integer 1-240                                                                          |
+| `--max-duration` | number        |          | render only the first N seconds (a staged copy of the scene is shortened; the scene itself is untouched) |
+| `--workers`      | integer\|auto | `auto`   | parallel capture workers: auto or 1-8                                                                    |
+| `--timeout`      | number        | `1800`   | kill the render after this long; 0 disables                                                              |
+| `--overwrite`    | boolean       |          | replace an existing output file                                                                          |
 
 Dry run: same as render: validates and reports the planned command and expected frame count; launches neither Chrome nor ffmpeg and writes nothing.
 
@@ -76,13 +76,13 @@ Read a media file (or a PNG sequence directory) back with ffprobe: duration, res
 
 Usage: `node scripts/probe.mjs <file> [options]`
 
-| Flag | Type | Default | Meaning |
-|---|---|---|---|
-| `--json` | boolean |  | print one JSON result document on stdout |
-| `--dry-run` | boolean |  | validate and plan without launching Chrome or ffmpeg or writing files |
-| `--no-count-frames` | boolean |  | do not decode to count frames when the container does not state them (frames is then null) |
-| `--alpha` | boolean |  | decode the first frame's alpha plane: min, max, corners (0 transparent, 255 opaque) and the alpha mode |
-| `--sample` | string[] |  | with --alpha: also read the alpha at this pixel of the first frame, e.g. --sample 10,20 (repeatable) |
+| Flag                | Type     | Default | Meaning                                                                                                |
+| ------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `--json`            | boolean  |         | print one JSON result document on stdout                                                               |
+| `--dry-run`         | boolean  |         | validate and plan without launching Chrome or ffmpeg or writing files                                  |
+| `--no-count-frames` | boolean  |         | do not decode to count frames when the container does not state them (frames is then null)             |
+| `--alpha`           | boolean  |         | decode the first frame's alpha plane: min, max, corners (0 transparent, 255 opaque) and the alpha mode |
+| `--sample`          | string[] |         | with --alpha: also read the alpha at this pixel of the first frame, e.g. --sample 10,20 (repeatable)   |
 
 Dry run: read-only: ffprobe still runs under --dry-run (measuring is the tool's whole job); nothing is written either way.
 
@@ -96,19 +96,19 @@ Render a HyperFrames scene directory to video: headless Chrome captures every fr
 
 Usage: `node scripts/render.mjs <scene_dir> [options]`
 
-| Flag | Type | Default | Meaning |
-|---|---|---|---|
-| `--json` | boolean |  | print one JSON result document on stdout |
-| `--dry-run` | boolean |  | validate and plan without launching Chrome or ffmpeg or writing files |
-| `-o, --output` | string | required | video file to write, its extension matching --codec; with --codec png, the directory to write the frames into |
-| `--codec` | h264 \| vp9 \| prores \| png | `h264` | h264 (.mp4), vp9 (.webm, with alpha), prores (.mov, ProRes 4444 with alpha) or png (a directory of RGBA PNG frames) |
-| `--quality` | integer |  | CRF, codec-neutral scale (lower is better): h264 0-51, vp9 0-63; not for prores. Default: HyperFrames' own default (CRF 16) |
-| `--fps` | integer |  | frame rate, integer 1-240 (default: the root's data-fps, else 30) |
-| `--workers` | integer\|auto | `auto` | parallel capture workers: auto or 1-8 |
-| `--timeout` | number | `1800` | kill the render (Chrome and ffmpeg included) after this long; 0 disables |
-| `--segments` | boolean |  | also render each segment the scene declares (request `segments`: in, loop, out) to <stem>.<segment><ext> next to the output, and measure the loop file's seam |
-| `--overwrite` | boolean |  | replace an existing output file (with --codec png: a directory that holds only frame_NNNNNN.png files) |
-| `--ffmpeg-skill` | string |  | ffmpeg-skill checkout to cross-check the output with (default: HYPERFRAMES_SKILL_FFMPEG_SKILL_DIR, VIDEO_AGENT_FFMPEG_SKILL_DIR, ~/.claude/skills/ffmpeg-skill, ./vendor/ffmpeg-skill, ../ffmpeg-skill next to this checkout; none found: ffmpeg_skill.status UNCHECKED) |
+| Flag             | Type                         | Default  | Meaning                                                                                                                                                                                                                                                                  |
+| ---------------- | ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--json`         | boolean                      |          | print one JSON result document on stdout                                                                                                                                                                                                                                 |
+| `--dry-run`      | boolean                      |          | validate and plan without launching Chrome or ffmpeg or writing files                                                                                                                                                                                                    |
+| `-o, --output`   | string                       | required | video file to write, its extension matching --codec; with --codec png, the directory to write the frames into                                                                                                                                                            |
+| `--codec`        | h264 \| vp9 \| prores \| png | `h264`   | h264 (.mp4), vp9 (.webm, with alpha), prores (.mov, ProRes 4444 with alpha) or png (a directory of RGBA PNG frames)                                                                                                                                                      |
+| `--quality`      | integer                      |          | CRF, codec-neutral scale (lower is better): h264 0-51, vp9 0-63; not for prores. Default: HyperFrames' own default (CRF 16)                                                                                                                                              |
+| `--fps`          | integer                      |          | frame rate, integer 1-240 (default: the root's data-fps, else 30)                                                                                                                                                                                                        |
+| `--workers`      | integer\|auto                | `auto`   | parallel capture workers: auto or 1-8                                                                                                                                                                                                                                    |
+| `--timeout`      | number                       | `1800`   | kill the render (Chrome and ffmpeg included) after this long; 0 disables                                                                                                                                                                                                 |
+| `--segments`     | boolean                      |          | also render each segment the scene declares (request `segments`: in, loop, out) to <stem>.<segment><ext> next to the output, and measure the loop file's seam                                                                                                            |
+| `--overwrite`    | boolean                      |          | replace an existing output file (with --codec png: a directory that holds only frame_NNNNNN.png files)                                                                                                                                                                   |
+| `--ffmpeg-skill` | string                       |          | ffmpeg-skill checkout to cross-check the output with (default: HYPERFRAMES_SKILL_FFMPEG_SKILL_DIR, VIDEO_AGENT_FFMPEG_SKILL_DIR, ~/.claude/skills/ffmpeg-skill, ./vendor/ffmpeg-skill, ../ffmpeg-skill next to this checkout; none found: ffmpeg_skill.status UNCHECKED) |
 
 Result: `ffmpeg_skill.status` is `PASSED` (ffmpeg-skill/probe read the file and codec, resolution, fps, duration and, for vp9/prores, alpha all match), `FAILED` (it refused the file or measured a mismatch; the render then fails with `kind: verification`) or `UNCHECKED` with a `reason` (no checkout, no Python, no usable result, or a property it cannot measure). UNCHECKED is never a pass.
 
@@ -124,12 +124,12 @@ Turn a structured scene request (JSON: size, duration, fps, ordered text/image/v
 
 Usage: `node scripts/scene.mjs <request> [options]`
 
-| Flag | Type | Default | Meaning |
-|---|---|---|---|
-| `--json` | boolean |  | print one JSON result document on stdout |
-| `--dry-run` | boolean |  | validate and plan without launching Chrome or ffmpeg or writing files |
-| `-o, --output` | string | required | scene directory to write (created; must be empty or absent) |
-| `--overwrite` | boolean |  | replace index.html, assets/ and segments/ in a directory an earlier `scene` run wrote |
+| Flag           | Type    | Default  | Meaning                                                                               |
+| -------------- | ------- | -------- | ------------------------------------------------------------------------------------- |
+| `--json`       | boolean |          | print one JSON result document on stdout                                              |
+| `--dry-run`    | boolean |          | validate and plan without launching Chrome or ffmpeg or writing files                 |
+| `-o, --output` | string  | required | scene directory to write (created; must be empty or absent)                           |
+| `--overwrite`  | boolean |          | replace index.html, assets/ and segments/ in a directory an earlier `scene` run wrote |
 
 Dry run: validates the request and every asset path and reports the files it would write; writes nothing and does not run hyperframes lint.
 
@@ -141,17 +141,17 @@ Fill one of the skill's scene templates (titles: lower-third, title-card, sessio
 
 Usage: `node scripts/template.mjs [name] [options]`
 
-| Flag | Type | Default | Meaning |
-|---|---|---|---|
-| `--json` | boolean |  | print one JSON result document on stdout |
-| `--dry-run` | boolean |  | validate and plan without launching Chrome or ffmpeg or writing files |
-| `-o, --output` | string |  | scene request JSON to write |
-| `--values` | string |  | JSON object of template values |
-| `--set` | string[] |  | one template value; repeatable; overrides --values |
-| `--font` | string |  | font file (.otf/.ttf/.woff2) shipped with the scene and used first for all text, e.g. a Japanese font for Japanese glyph forms |
-| `--kit` | string |  | brand kit (Velisa kit@1 or ffmpeg-skill brand.json): fills the values the template maps to it (colours, logo) and font_file as --font; explicit values and --font win; unused kit fields are reported |
-| `--list` | boolean |  | list the templates and the values each takes |
-| `--overwrite` | boolean |  | replace an existing output file |
+| Flag           | Type     | Default | Meaning                                                                                                                                                                                               |
+| -------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--json`       | boolean  |         | print one JSON result document on stdout                                                                                                                                                              |
+| `--dry-run`    | boolean  |         | validate and plan without launching Chrome or ffmpeg or writing files                                                                                                                                 |
+| `-o, --output` | string   |         | scene request JSON to write                                                                                                                                                                           |
+| `--values`     | string   |         | JSON object of template values                                                                                                                                                                        |
+| `--set`        | string[] |         | one template value; repeatable; overrides --values                                                                                                                                                    |
+| `--font`       | string   |         | font file (.otf/.ttf/.woff2) shipped with the scene and used first for all text, e.g. a Japanese font for Japanese glyph forms                                                                        |
+| `--kit`        | string   |         | brand kit (Velisa kit@1 or ffmpeg-skill brand.json): fills the values the template maps to it (colours, logo) and font_file as --font; explicit values and --font win; unused kit fields are reported |
+| `--list`       | boolean  |         | list the templates and the values each takes                                                                                                                                                          |
+| `--overwrite`  | boolean  |         | replace an existing output file                                                                                                                                                                       |
 
 Dry run: resolves and validates the values and the filled request and reports it; writes nothing.
 
@@ -164,13 +164,13 @@ meaning; an explicit value (`--values`, `--set`, a batch row) wins over the kit,
 `font_file` are paths relative to the kit file. `colours` is read like `colors`; a `schema` other than
 `velisa/kit@1` is refused.
 
-| Kit field | Template value |
-|---|---|
+| Kit field           | Template value                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------- |
 | `colors.background` | `background` (break, title-card, session-slate, stinger-particles, stinger-logo-reveal) |
-| `colors.accent` | `accent` (session-slate, stinger-glitch, stinger-particles) |
-| `colors.text` | `text_color` (stinger-logo-reveal) |
-| `logo` | `logo` (stinger-logo-reveal) |
-| `font_file` | `--font`, for a template whose text comes from the caller |
+| `colors.accent`     | `accent` (session-slate, stinger-glitch, stinger-particles)                             |
+| `colors.text`       | `text_color` (stinger-logo-reveal)                                                      |
+| `logo`              | `logo` (stinger-logo-reveal)                                                            |
+| `font_file`         | `--font`, for a template whose text comes from the caller                               |
 
 The result's `kit` says what happened to every field the kit has: `applied` (`field`, the value
 `to` it filled, the `value` used), `overridden` (an explicit value or `--font` won) and `unused`

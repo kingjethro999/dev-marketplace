@@ -1,13 +1,7 @@
 {
   "hyperframes-skill/batch": {
-    "positional": [
-      "rows"
-    ],
-    "required": [
-      "output",
-      "rows",
-      "template"
-    ],
+    "positional": ["rows"],
+    "required": ["output", "rows", "template"],
     "args": {
       "codec": {
         "cli": "--codec",
@@ -90,13 +84,8 @@
     }
   },
   "hyperframes-skill/preview": {
-    "positional": [
-      "scene_dir"
-    ],
-    "required": [
-      "output",
-      "scene_dir"
-    ],
+    "positional": ["scene_dir"],
+    "required": ["output", "scene_dir"],
     "args": {
       "dryRun": {
         "cli": "--dry-run",
@@ -137,12 +126,8 @@
     }
   },
   "hyperframes-skill/probe": {
-    "positional": [
-      "file"
-    ],
-    "required": [
-      "file"
-    ],
+    "positional": ["file"],
+    "required": ["file"],
     "args": {
       "alpha": {
         "cli": "--alpha",
@@ -171,13 +156,8 @@
     }
   },
   "hyperframes-skill/render": {
-    "positional": [
-      "scene_dir"
-    ],
-    "required": [
-      "output",
-      "scene_dir"
-    ],
+    "positional": ["scene_dir"],
+    "required": ["output", "scene_dir"],
     "args": {
       "codec": {
         "cli": "--codec",
@@ -230,13 +210,8 @@
     }
   },
   "hyperframes-skill/scene": {
-    "positional": [
-      "request"
-    ],
-    "required": [
-      "output",
-      "request"
-    ],
+    "positional": ["request"],
+    "required": ["output", "request"],
     "args": {
       "dryRun": {
         "cli": "--dry-run",
@@ -261,9 +236,7 @@
     }
   },
   "hyperframes-skill/template": {
-    "positional": [
-      "name"
-    ],
+    "positional": ["name"],
     "required": [],
     "args": {
       "dryRun": {
