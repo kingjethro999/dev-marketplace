@@ -238,8 +238,8 @@
       "interactive-setup",
       "devops"
     ],
-    "files": ["SKILL.md", "config", "scripts", "templates"],
-    "hash": "cc646f9e36fd4d8a91cfbf1e6bdca231bd16f9f82dcb0a0d4d2bd37569e67021"
+    "files": ["SKILL.md", "config", "scripts", "templates", "tests"],
+    "hash": "9e50f8be50ceb7bd85b803f311bfd63a581d1ffe2b2b79f150796f314abf246e"
   },
   {
     "name": "clangd-lsp",

@@ -374,9 +374,9 @@ async function cmdSetup() {
     );
 
     if (mode.value === "edit") {
-      return await cmdEdit(selected);
+      return await cmdEdit(selected.value);
     } else {
-      return await cmdExplain(selected);
+      return await cmdExplain(selected.value);
     }
   }
 
@@ -578,6 +578,7 @@ async function cmdSetup() {
 
   // Matrix
   section("Matrix Testing");
+  config.pipeline.matrix = {};
   const matrixOs = await askMultiSelect(
     "Operating systems:",
     [
@@ -814,9 +815,17 @@ on:`;
 
   // Triggers
   const triggers = [];
-  if (pipeline.triggers.push && pipeline.triggers.push.length > 0) {
-    triggers.push(`  push:
-    branches: [${pipeline.triggers.push.map((b) => `'${b}'`).join(", ")}]`);
+  const hasPushBranches =
+    pipeline.triggers.push && pipeline.triggers.push.length > 0;
+  if (hasPushBranches || pipeline.triggers.tags) {
+    let pushBlock = "  push:";
+    if (hasPushBranches) {
+      pushBlock += `\n    branches: [${pipeline.triggers.push.map((b) => `'${b}'`).join(", ")}]`;
+    }
+    if (pipeline.triggers.tags) {
+      pushBlock += `\n    tags: ['*']`;
+    }
+    triggers.push(pushBlock);
   }
   if (
     pipeline.triggers.pullRequest &&
@@ -824,10 +833,6 @@ on:`;
   ) {
     triggers.push(`  pull_request:
     branches: [${pipeline.triggers.pullRequest.map((b) => `'${b}'`).join(", ")}]`);
-  }
-  if (pipeline.triggers.tags) {
-    triggers.push(`  push:
-    tags: ['*']`);
   }
   if (pipeline.triggers.schedule) {
     triggers.push(`  schedule:
@@ -1161,6 +1166,16 @@ function generateSecurityJobs(pipeline, config) {
   }
 
   if (pipeline.jobs.security.sast) {
+    const codeqlLangMap = {
+      node: "javascript-typescript",
+      python: "python",
+      go: "go",
+      java: "java-kotlin",
+      dotnet: "csharp",
+      ruby: "ruby",
+    };
+    const codeqlLang =
+      codeqlLangMap[config.projectType] || "javascript-typescript";
     jobs += `
   security-sast:
     name: SAST (CodeQL)
@@ -1169,6 +1184,10 @@ function generateSecurityJobs(pipeline, config) {
       security-events: write
       actions: read
       contents: read
+    strategy:
+      matrix:
+        language: ['${codeqlLang}']
+      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -1179,7 +1198,7 @@ function generateSecurityJobs(pipeline, config) {
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: /language:\${{matrix.language}}`;
+          category: /language:\${{ matrix.language }}`;
   }
 
   if (pipeline.jobs.security.containerScan) {
@@ -1217,13 +1236,21 @@ function generateDeployJobs(pipeline, config) {
     const needsApproval =
       pipeline.jobs.deploy.approvalRequired?.includes(env) || false;
     const envName = env.charAt(0).toUpperCase() + env.slice(1);
+    const deps = [
+      ...(pipeline.jobs.build ? ["build"] : []),
+      ...(pipeline.jobs.security.periderm ? ["security-periderm"] : []),
+      ...(pipeline.jobs.security.dependencyAudit ? ["security-deps"] : []),
+    ];
+    const approvalComment = needsApproval
+      ? "\n    # Requires manual approval via GitHub Environment protection rules"
+      : "";
 
     jobs += `
   deploy-${env}:
     name: Deploy to ${envName}
     runs-on: ubuntu-latest
-    environment: ${env}
-    needs: [build${pipeline.jobs.security.periderm ? ", security-periderm" : ""}${pipeline.jobs.security.dependencyAudit ? ", security-deps" : ""}]
+    environment: ${env}${approvalComment}
+    needs: [${deps.join(", ")}]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -1231,13 +1258,6 @@ function generateDeployJobs(pipeline, config) {
         run: echo "Deploy to ${env} - implement your deployment here"
         env:
           ENVIRONMENT: ${env}`;
-
-    if (needsApproval) {
-      jobs = jobs.replace(
-        "needs: [",
-        "needs: [\n      # Requires manual approval via environment protection rules\n      ",
-      );
-    }
   }
 
   return jobs;
@@ -1472,7 +1492,7 @@ variables:
   GO_MODULE_CACHE: "$CI_PROJECT_DIR/.go/pkg/mod"
 
 cache:
-  key: ${CI_COMMIT_REF_SLUG}
+  key: \${CI_COMMIT_REF_SLUG}
   paths:
     - .npm/
     - .cache/pip/
@@ -1713,6 +1733,34 @@ async function cmdAnalyze() {
   }
 }
 
+function extractJobBlocks(content) {
+  const lines = content.split(/\r?\n/);
+  const blocks = [];
+  let inJobs = false;
+  let current = null;
+
+  for (const line of lines) {
+    if (!inJobs) {
+      if (/^jobs:\s*$/.test(line)) inJobs = true;
+      continue;
+    }
+    if (/^\S/.test(line) && !line.startsWith("#")) break;
+    const m = line.match(/^  ([A-Za-z0-9_-]+):\s*(?:#.*)?$/);
+    if (m) {
+      if (current) blocks.push(current);
+      current = { name: m[1], lines: [line] };
+    } else if (current) {
+      current.lines.push(line);
+    }
+  }
+  if (current) blocks.push(current);
+  return blocks.map((b) => ({ name: b.name, text: b.lines.join("\n") }));
+}
+
+function extractJobNames(content) {
+  return extractJobBlocks(content).map((b) => b.name);
+}
+
 function analyzeGitHubActions(fileName, content) {
   info(`\n  Workflow: ${fileName}`);
 
@@ -1721,7 +1769,7 @@ function analyzeGitHubActions(fileName, content) {
   if (nameMatch) info(`    Name: ${nameMatch[1].trim()}`);
 
   // Triggers
-  const onMatch = content.match(/on:\s*([\s\S]*?)(?:\n\w+:|\n$)/);
+  const onMatch = content.match(/^on:\s*([\s\S]*?)(?:\n\w+:|\n$)/m);
   if (onMatch) {
     info(
       `    Triggers: ${onMatch[1]
@@ -1734,12 +1782,9 @@ function analyzeGitHubActions(fileName, content) {
   }
 
   // Jobs
-  const jobsMatch = content.match(/jobs:\s*([\s\S]*?)(?:\n\w+:|\n$)/);
-  if (jobsMatch) {
-    const jobNames = jobsMatch[1].match(/^\s{2}(\w+):/gm);
-    if (jobNames) {
-      info(`    Jobs: ${jobNames.map((j) => j.trim()).join(", ")}`);
-    }
+  const jobNames = extractJobNames(content);
+  if (jobNames.length > 0) {
+    info(`    Jobs: ${jobNames.join(", ")}`);
   }
 
   // Check for common issues
@@ -1818,31 +1863,22 @@ async function cmdExplain(workflowPath) {
   if (content.includes("tags:")) console.log("  - Tag pushes");
 
   console.log("\nJobs:");
-  const jobMatches = content.match(/^\s{2}(\w+):/gm);
-  if (jobNames) {
-    for (const job of jobNames) {
-      const jobName = job.trim();
-      console.log(`  - ${jobName}`);
-
-      // Extract job details
-      const jobRegex = new RegExp(
-        `${jobName}:[\\s\\S]*?(?=\\n\\s{2}\\w+:|\\n\\w+:|$)`,
-        "m",
-      );
-      const jobContent = content.match(jobRegex);
-      if (jobContent) {
-        const jobText = jobContent[0];
-        if (jobText.includes("runs-on:")) {
-          const osMatch = jobText.match(/runs-on:\s*(.+)/);
-          if (osMatch) console.log(`    Runs on: ${osMatch[1].trim()}`);
-        }
-        if (jobText.includes("matrix:")) {
-          console.log(`    Uses matrix strategy`);
-        }
-        if (jobText.includes("needs:")) {
-          const needsMatch = jobText.match(/needs:\s*\[([^\]]+)\]/);
-          if (needsMatch) console.log(`    Depends on: ${needsMatch[1]}`);
-        }
+  const jobBlocks = extractJobBlocks(content);
+  for (const { name: jobName, text: jobText } of jobBlocks) {
+    console.log(`  - ${jobName}`);
+    if (jobText.includes("runs-on:")) {
+      const osMatch = jobText.match(/runs-on:\s*(.+)/);
+      if (osMatch) console.log(`    Runs on: ${osMatch[1].trim()}`);
+    }
+    if (jobText.includes("matrix:")) {
+      console.log(`    Uses matrix strategy`);
+    }
+    if (jobText.includes("needs:")) {
+      const needsMatch = jobText.match(/needs:\s*\[([^\]]+)\]/);
+      if (needsMatch) console.log(`    Depends on: ${needsMatch[1]}`);
+      else {
+        const singleNeed = jobText.match(/needs:\s*([A-Za-z0-9_-]+)/);
+        if (singleNeed) console.log(`    Depends on: ${singleNeed[1]}`);
       }
     }
   }
@@ -1881,39 +1917,45 @@ async function cmdValidate(workflowPath) {
   }
 
   const content = fs.readFileSync(fullPath, "utf8");
+  const validationErrors = [];
 
-  // Basic YAML validation
-  try {
-    // Try to parse as YAML (basic check)
-    const lines = content.split("\n");
-    let indent = 0;
-    let valid = true;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.trim() && !line.startsWith("#")) {
+  // Basic YAML syntax validation
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() && !line.trimStart().startsWith("#")) {
+      if (/^\s*\t/.test(line)) {
+        const msg = `Line ${i + 1}: Tab indentation is not allowed in YAML`;
+        error(msg);
+        validationErrors.push(msg);
+      } else {
         const currentIndent = line.match(/^(\s*)/)[1].length;
         if (currentIndent % 2 !== 0) {
           warn(`Line ${i + 1}: Odd indentation (${currentIndent} spaces)`);
-          valid = false;
         }
       }
     }
-    if (valid) {
-      success("YAML syntax appears valid");
-    }
-  } catch (e) {
-    error(`YAML parse error: ${e.message}`);
+  }
+  if (validationErrors.length === 0) {
+    success("YAML syntax appears valid");
   }
 
   // GitHub Actions specific validation
   if (workflowPath.includes(".github/workflows")) {
-    const required = ["name", "on", "jobs"];
+    const required = ["on", "jobs"];
     for (const req of required) {
-      if (!content.includes(`${req}:`)) {
-        warn(`Missing required field: ${req}`);
+      if (!new RegExp(`^${req}:`, "m").test(content)) {
+        const msg = `Missing required field: ${req}`;
+        error(msg);
+        validationErrors.push(msg);
       } else {
         success(`Has required field: ${req}`);
       }
+    }
+    if (!/^name:/m.test(content)) {
+      warn("Recommended field missing: name");
+    } else {
+      success("Has recommended field: name");
     }
 
     // Check for common best practices
@@ -1932,6 +1974,11 @@ async function cmdValidate(workflowPath) {
         warn(`Missing: ${check.msg}`);
       }
     }
+  }
+
+  if (validationErrors.length > 0) {
+    error(`\nValidation failed with ${validationErrors.length} error(s)`);
+    process.exit(1);
   }
 
   success("\nValidation complete");
@@ -2048,4 +2095,18 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  loadConfig,
+  detectProjectType,
+  detectExistingCI,
+  extractJobNames,
+  buildMatrix,
+  generateGitHubActions,
+  generateGitLabCI,
+  generateCircleCI,
+  generateAzurePipelines,
+};
