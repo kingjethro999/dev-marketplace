@@ -80,8 +80,16 @@
     "ArtifactType": {
       "type": "string",
       "enum": [
-        "video", "audio", "image", "subtitle_document", "project_ir", "qc_report",
-        "analysis_result", "thumbnail", "production_receipt", "timeline"
+        "video",
+        "audio",
+        "image",
+        "subtitle_document",
+        "project_ir",
+        "qc_report",
+        "analysis_result",
+        "thumbnail",
+        "production_receipt",
+        "timeline"
       ],
       "description": "docs/SPEC.md section 2."
     },
@@ -131,7 +139,10 @@
           "description": "Existing: ffmpeg-skill ToolSpec field.",
           "properties": {
             "required": { "type": "boolean" },
-            "tools": { "type": "array", "items": { "$ref": "#/$defs/CapabilityId" } }
+            "tools": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/CapabilityId" }
+            }
           }
         },
         "security": {

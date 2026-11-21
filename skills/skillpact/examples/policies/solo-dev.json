@@ -12,33 +12,19 @@
     {
       "id": "write-workdir",
       "effect": "write",
-      "scope": [
-        "$OUTPUT",
-        "$WORKDIR/**",
-        "$INPUT_DIR/**",
-        "$TMPDIR/**"
-      ],
+      "scope": ["$OUTPUT", "$WORKDIR/**", "$INPUT_DIR/**", "$TMPDIR/**"],
       "decision": "allow"
     },
     {
       "id": "exec-media",
       "effect": "exec",
-      "scope": [
-        "ffmpeg",
-        "ffprobe",
-        "python3",
-        "fc-match",
-        "node"
-      ],
+      "scope": ["ffmpeg", "ffprobe", "python3", "fc-match", "node"],
       "decision": "allow"
     },
     {
       "id": "net-docs",
       "effect": "network",
-      "scope": [
-        "*.github.com",
-        "api.github.com"
-      ],
+      "scope": ["*.github.com", "api.github.com"],
       "decision": "allow"
     }
   ],
@@ -52,9 +38,7 @@
   "sandbox": {
     "filesystem": "workdir",
     "network": "allowlist",
-    "egress_allowlist": [
-      "*.github.com"
-    ]
+    "egress_allowlist": ["*.github.com"]
   },
   "audit": {
     "otel_genai": true

@@ -1,7 +1,5 @@
 {
-  "required_top_level_commands": [
-    "status"
-  ],
+  "required_top_level_commands": ["status"],
   "deny_command_patterns": [
     "(^|\\s)--unsafe($|\\s)",
     "(^|\\s)debug-shell($|\\s)"

@@ -8,7 +8,7 @@ description: Establish a finding before you publish it, and correct it after —
 A report is a claim, and it is read by people who will not re-derive it. The cost
 of an overstated one is not embarrassment — it is a maintainer spending an
 afternoon on a premise that does not hold, or a "fix" landing for a failure mode
-that never occurred. The techniques for *finding* a defect live in
+that never occurred. The techniques for _finding_ a defect live in
 **verifying-external-behavior** (also in this repo's `.claude/skills/`). This
 skill is about the step between finding one and publishing it.
 
@@ -21,7 +21,7 @@ The common failure is not a fabricated bug. It is a genuine internal oddity
 promoted one layer too far.
 
 You notice that a helper returns a degenerate value for a small sample, trace it
-into a scoring path, and write the report as *"short inputs are wrongly flagged."*
+into a scoring path, and write the report as _"short inputs are wrongly flagged."_
 Then you run real short inputs through the public entry point and the flag never
 sets — a downstream threshold absorbs the degenerate value, and the only visible
 effect is noise in a secondary per-feature list. The internal oddity is worth
@@ -30,11 +30,11 @@ fixing; the headline was false, and a reviewer who tests it will say so.
 **Before writing the title, run the reproduction at the outermost layer the title
 names.** Then choose one of three honest framings:
 
-| what you measured                          | how to file it                              |
-| ------------------------------------------ | ------------------------------------------- |
-| reproduces end to end                      | file it as the user-visible symptom         |
+| what you measured                          | how to file it                                 |
+| ------------------------------------------ | ---------------------------------------------- |
+| reproduces end to end                      | file it as the user-visible symptom            |
 | reproduces internally, absorbed downstream | file the internal defect, state the absorption |
-| does not reproduce at all                  | do not file; record the probe and move on   |
+| does not reproduce at all                  | do not file; record the probe and move on      |
 
 The second row is a good report, not a weak one. "This helper returns a value it
 should not; today a threshold happens to mask it, so there is no user-visible
@@ -71,7 +71,7 @@ uncontroversial, rather than "the build is broken," which is wrong.
 ## Search the project's own records before filing a caveat
 
 The most avoidable report is the one the project already answered. Two measured
-figures that look inconsistent are usually inconsistent *definitions*, and the
+figures that look inconsistent are usually inconsistent _definitions_, and the
 definition is usually written down: a claim ledger row, a docstring, a design
 note, a closed issue.
 
@@ -80,7 +80,7 @@ same quantity." If a record pins the definition, cite it — the caveat you were
 about to publish reads as an open question the project already closed, and a
 maintainer has to re-close it.
 
-The same discipline applies to numbers you are *quoting*. Figures in an older
+The same discipline applies to numbers you are _quoting_. Figures in an older
 issue may not reproduce, because a dependency the value depends on is unpinned
 and the installed version has changed. Re-measure before restating, and record it
 with the command, output, and date — see **verifying-external-behavior** for why

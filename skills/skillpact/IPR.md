@@ -1,12 +1,14 @@
 # Intellectual property statement / 知的財産に関する声明
 
 ## Licenses
+
 - **Specification text** (`spec/`, `content/`, prose in `docs/`): Creative Commons Attribution 4.0 International (CC BY 4.0), see `LICENSE-spec-CC-BY-4.0.txt`.
 - **Schemas, conformance suite, reference and TypeScript implementations, tools, GitHub Action**: Apache License 2.0, see `LICENSE` (section 3 contains a patent license from each contributor for their contributions).
 - **Contributions** are accepted under the license of the files they change (inbound = outbound). A DCO sign-off (`git commit -s`) is appreciated.
 - Third-party standards referenced (RFC 8785, RFC 7493, Sigstore, JSON Schema, Agent Skills, MCP) remain under their own terms.
 
 ## SkillPact Patent Non-Assertion Covenant (2026-10-22)
+
 Modelled on the Microsoft Open Specification Promise and the Open Web Foundation Agreement (OWFa 1.0).
 
 1. **Covenant.** SEVENTHWELL and Shogo Kajiyama (together, "the Promisors") irrevocably covenant, free of charge, not to assert any Necessary Claims against any person or entity for making, having made, using, selling, offering for sale, importing or otherwise distributing a Covered Implementation, to the extent it is a Covered Implementation.
@@ -20,6 +22,7 @@ Modelled on the Microsoft Open Specification Promise and the Open Web Foundation
 6. **No warranty; no other rights.** The Specification is provided "as is". No license is granted under trademarks or copyrights other than as stated above, and no patents other than Necessary Claims are covered. The Promisors are not aware of any patent that is a Necessary Claim at the time of writing.
 
 ## SkillPact 特許不主張の誓約（日本語訳。英語版が正本）
+
 Microsoft Open Specification Promise と Open Web Foundation Agreement（OWFa 1.0）を参考にしています。
 
 1. **誓約。** SEVENTHWELL および Shogo Kajiyama（以下「誓約者」）は、取消不能かつ無償で、対象実装を製造し、製造させ、使用し、販売し、販売の申出をし、輸入し、その他の方法で頒布することについて、いかなる個人・団体に対しても必須クレームを行使しないことを誓約します。ただし対象実装である範囲に限ります。

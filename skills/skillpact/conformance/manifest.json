@@ -53,9 +53,7 @@
       "description": "知らない major 版は拒否",
       "expect": {
         "valid": false,
-        "errors": [
-          "CONTRACT_VERSION_UNSUPPORTED"
-        ],
+        "errors": ["CONTRACT_VERSION_UNSUPPORTED"],
         "warnings_include": []
       }
     },
@@ -64,9 +62,7 @@
       "description": "知らない 0.x 版は拒否",
       "expect": {
         "valid": false,
-        "errors": [
-          "CONTRACT_VERSION_UNSUPPORTED"
-        ],
+        "errors": ["CONTRACT_VERSION_UNSUPPORTED"],
         "warnings_include": []
       }
     },
@@ -76,9 +72,7 @@
       "expect": {
         "valid": false,
         "warnings_include": [],
-        "errors_any": [
-          "SCHEMA"
-        ]
+        "errors_any": ["SCHEMA"]
       }
     },
     {
@@ -96,9 +90,7 @@
       "expect": {
         "valid": false,
         "warnings_include": [],
-        "errors_any": [
-          "SCHEMA"
-        ]
+        "errors_any": ["SCHEMA"]
       }
     },
     {
@@ -107,10 +99,7 @@
       "expect": {
         "valid": false,
         "warnings_include": [],
-        "errors_any": [
-          "SCHEMA",
-          "SCOPE_EMPTY"
-        ]
+        "errors_any": ["SCHEMA", "SCOPE_EMPTY"]
       }
     },
     {
@@ -119,9 +108,7 @@
       "expect": {
         "valid": true,
         "errors": [],
-        "warnings_include": [
-          "UNKNOWN_VARIABLE"
-        ]
+        "warnings_include": ["UNKNOWN_VARIABLE"]
       }
     },
     {
@@ -129,9 +116,7 @@
       "description": "effects に none の区分",
       "expect": {
         "valid": false,
-        "errors": [
-          "UNDECLARED_EFFECT"
-        ],
+        "errors": ["UNDECLARED_EFFECT"],
         "warnings_include": []
       }
     },
@@ -140,9 +125,7 @@
       "description": "capability id の重複",
       "expect": {
         "valid": false,
-        "errors": [
-          "DUP_CAPABILITY"
-        ],
+        "errors": ["DUP_CAPABILITY"],
         "warnings_include": []
       }
     },
@@ -152,9 +135,7 @@
       "expect": {
         "valid": true,
         "errors": [],
-        "warnings_include": [
-          "HIGH_RISK"
-        ]
+        "warnings_include": ["HIGH_RISK"]
       }
     },
     {
@@ -162,9 +143,7 @@
       "description": "capability ごとの範囲が上限を超える",
       "expect": {
         "valid": false,
-        "errors": [
-          "SCOPE_WIDENED"
-        ],
+        "errors": ["SCOPE_WIDENED"],
         "warnings_include": []
       }
     },
@@ -173,9 +152,7 @@
       "description": "存在しない requirement",
       "expect": {
         "valid": false,
-        "errors": [
-          "UNKNOWN_REQUIREMENT"
-        ],
+        "errors": ["UNKNOWN_REQUIREMENT"],
         "warnings_include": []
       }
     },
@@ -184,9 +161,7 @@
       "description": "テストが未知の capability を参照",
       "expect": {
         "valid": false,
-        "errors": [
-          "TEST_UNKNOWN_CAPABILITY"
-        ],
+        "errors": ["TEST_UNKNOWN_CAPABILITY"],
         "warnings_include": []
       }
     },
@@ -195,9 +170,7 @@
       "description": "skill.name と SKILL.md の不一致",
       "expect": {
         "valid": false,
-        "errors": [
-          "NAME_MISMATCH"
-        ],
+        "errors": ["NAME_MISMATCH"],
         "warnings_include": []
       }
     },
@@ -215,9 +188,7 @@
       "description": "署名後に改ざん",
       "expect": {
         "valid": false,
-        "errors": [
-          "SIGNATURE_INVALID"
-        ],
+        "errors": ["SIGNATURE_INVALID"],
         "warnings_include": []
       }
     },
@@ -226,9 +197,7 @@
       "description": "ハッシュ不一致",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_MISMATCH"
-        ],
+        "errors": ["INTEGRITY_MISMATCH"],
         "warnings_include": []
       }
     },
@@ -237,9 +206,7 @@
       "description": "重複キーを含む JSON は拒否",
       "expect": {
         "valid": false,
-        "errors": [
-          "CONTRACT_JSON"
-        ]
+        "errors": ["CONTRACT_JSON"]
       }
     },
     {
@@ -256,9 +223,7 @@
       "description": "0.7 では name とフォルダ名の不一致はエラー",
       "expect": {
         "valid": false,
-        "errors": [
-          "FM_NAME_DIR"
-        ],
+        "errors": ["FM_NAME_DIR"],
         "warnings_include": []
       }
     },
@@ -268,9 +233,7 @@
       "expect": {
         "valid": true,
         "errors": [],
-        "warnings_include": [
-          "FM_NAME_DIR"
-        ]
+        "warnings_include": ["FM_NAME_DIR"]
       }
     },
     {
@@ -288,9 +251,7 @@
       "expect": {
         "valid": true,
         "errors": [],
-        "warnings_include": [
-          "UNKNOWN_SCOPE_TOKEN"
-        ]
+        "warnings_include": ["UNKNOWN_SCOPE_TOKEN"]
       }
     },
     {
@@ -307,9 +268,7 @@
       "description": "未定義の署名 role はスキーマ違反",
       "expect": {
         "valid": false,
-        "errors_any": [
-          "SCHEMA"
-        ]
+        "errors_any": ["SCHEMA"]
       }
     },
     {
@@ -326,9 +285,7 @@
       "description": "E1: a file in the skill directory is not in integrity.files",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_UNLISTED"
-        ],
+        "errors": ["INTEGRITY_UNLISTED"],
         "warnings_include": []
       }
     },
@@ -337,9 +294,7 @@
       "description": "E1b: empty integrity.files",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_EMPTY"
-        ],
+        "errors": ["INTEGRITY_EMPTY"],
         "warnings_include": []
       }
     },
@@ -348,9 +303,7 @@
       "description": "E1c: protected files cannot be excluded",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_UNLISTED"
-        ],
+        "errors": ["INTEGRITY_UNLISTED"],
         "warnings_include": []
       }
     },
@@ -368,9 +321,7 @@
       "description": "E2: reviewer signature relabelled as author",
       "expect": {
         "valid": false,
-        "errors": [
-          "SIGNATURE_INVALID"
-        ],
+        "errors": ["SIGNATURE_INVALID"],
         "warnings_include": []
       }
     },
@@ -379,9 +330,7 @@
       "description": "E3: '..' and absolute paths in integrity.files",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_PATH"
-        ],
+        "errors": ["INTEGRITY_PATH"],
         "warnings_include": []
       }
     },
@@ -390,9 +339,7 @@
       "description": "E4: symbolic link inside the skill directory",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_PATH"
-        ],
+        "errors": ["INTEGRITY_PATH"],
         "warnings_include": []
       }
     },
@@ -401,9 +348,7 @@
       "description": "E6: '..' in a path scope",
       "expect": {
         "valid": false,
-        "errors": [
-          "SCOPE_TRAVERSAL"
-        ],
+        "errors": ["SCOPE_TRAVERSAL"],
         "warnings_include": []
       }
     },
@@ -412,9 +357,7 @@
       "description": "H3: '*' stays in one segment, so '**' is wider",
       "expect": {
         "valid": false,
-        "errors": [
-          "SCOPE_WIDENED"
-        ],
+        "errors": ["SCOPE_WIDENED"],
         "warnings_include": []
       }
     },
@@ -423,10 +366,7 @@
       "description": "E7: same key signs twice, one entry invalid",
       "expect": {
         "valid": false,
-        "errors": [
-          "DUP_SIGNATURE",
-          "SIGNATURE_INVALID"
-        ],
+        "errors": ["DUP_SIGNATURE", "SIGNATURE_INVALID"],
         "warnings_include": []
       }
     },
@@ -435,9 +375,7 @@
       "description": "E9: network:true test without a network permission",
       "expect": {
         "valid": false,
-        "errors": [
-          "TEST_UNDECLARED_NETWORK"
-        ],
+        "errors": ["TEST_UNDECLARED_NETWORK"],
         "warnings_include": []
       }
     },
@@ -446,9 +384,7 @@
       "description": "M7: init draft cannot pass L1",
       "expect": {
         "valid": false,
-        "errors": [
-          "UNCONFIRMED_DRAFT"
-        ],
+        "errors": ["UNCONFIRMED_DRAFT"],
         "warnings_include": []
       }
     },
@@ -458,9 +394,7 @@
       "expect": {
         "valid": true,
         "errors": [],
-        "warnings_include": [
-          "INTEGRITY_UNLISTED"
-        ]
+        "warnings_include": ["INTEGRITY_UNLISTED"]
       }
     },
     {
@@ -468,9 +402,7 @@
       "description": "N1: bytecode is not excluded by default (an unchecked .pyc can shadow a signed .py)",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_UNLISTED"
-        ],
+        "errors": ["INTEGRITY_UNLISTED"],
         "warnings_include": []
       }
     },
@@ -479,9 +411,7 @@
       "description": "N2: code files cannot be excluded",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_UNLISTED"
-        ],
+        "errors": ["INTEGRITY_UNLISTED"],
         "warnings_include": []
       }
     },
@@ -490,9 +420,7 @@
       "description": "N4: start-up hooks (*.pth) cannot be excluded",
       "expect": {
         "valid": false,
-        "errors": [
-          "INTEGRITY_UNLISTED"
-        ],
+        "errors": ["INTEGRITY_UNLISTED"],
         "warnings_include": []
       }
     },
@@ -502,9 +430,7 @@
       "expect": {
         "valid": true,
         "errors": [],
-        "warnings_include": [
-          "SIGNATURE_ROLE_UNSIGNED"
-        ]
+        "warnings_include": ["SIGNATURE_ROLE_UNSIGNED"]
       }
     },
     {
@@ -524,9 +450,7 @@
       "description": "0.8.x: an error class outside input / environment / engine / policy / transient",
       "expect": {
         "valid": false,
-        "errors": [
-          "RUNTIME_DECL"
-        ],
+        "errors": ["RUNTIME_DECL"],
         "warnings_include": []
       }
     },
@@ -535,9 +459,7 @@
       "description": "0.8.x: progress stream must be stderr or stdout",
       "expect": {
         "valid": false,
-        "errors": [
-          "RUNTIME_DECL"
-        ],
+        "errors": ["RUNTIME_DECL"],
         "warnings_include": []
       }
     },
@@ -546,9 +468,7 @@
       "description": "0.8.x: one error code in two classes (contract and capability)",
       "expect": {
         "valid": false,
-        "errors": [
-          "RUNTIME_DECL"
-        ],
+        "errors": ["RUNTIME_DECL"],
         "warnings_include": []
       }
     },
@@ -561,9 +481,7 @@
         "warnings_include": [],
         "test": {
           "ok": false,
-          "failures_include": [
-            "PROGRESS_EVENT"
-          ]
+          "failures_include": ["PROGRESS_EVENT"]
         }
       }
     },
@@ -576,9 +494,7 @@
         "warnings_include": [],
         "test": {
           "ok": false,
-          "failures_include": [
-            "PROGRESS_MISSING"
-          ]
+          "failures_include": ["PROGRESS_MISSING"]
         }
       }
     },
@@ -591,9 +507,7 @@
         "warnings_include": [],
         "test": {
           "ok": false,
-          "failures_include": [
-            "ERROR_UNCLASSIFIED"
-          ]
+          "failures_include": ["ERROR_UNCLASSIFIED"]
         }
       }
     },
@@ -618,9 +532,7 @@
         "warnings_include": [],
         "test": {
           "ok": false,
-          "failures_include": [
-            "IDEMPOTENCY_DIFFERS"
-          ]
+          "failures_include": ["IDEMPOTENCY_DIFFERS"]
         }
       }
     },
@@ -641,9 +553,7 @@
       "description": "0.8.x: idempotency bit_exact with idempotent: false",
       "expect": {
         "valid": false,
-        "errors": [
-          "RUNTIME_DECL"
-        ],
+        "errors": ["RUNTIME_DECL"],
         "warnings_include": []
       }
     },
@@ -652,9 +562,7 @@
       "description": "0.8.x: idempotency must be bit_exact, content_equivalent or none",
       "expect": {
         "valid": false,
-        "errors": [
-          "RUNTIME_DECL"
-        ],
+        "errors": ["RUNTIME_DECL"],
         "warnings_include": []
       }
     },
@@ -663,9 +571,7 @@
       "description": "M2: integer outside +-(2^53-1) is not I-JSON",
       "expect": {
         "valid": false,
-        "errors": [
-          "CONTRACT_JSON"
-        ],
+        "errors": ["CONTRACT_JSON"],
         "warnings_include": []
       }
     }

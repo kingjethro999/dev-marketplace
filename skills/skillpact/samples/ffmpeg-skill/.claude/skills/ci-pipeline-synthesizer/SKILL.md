@@ -14,6 +14,7 @@ Generate production-ready GitHub Actions workflow files for library and package 
 ### 1. Identify Project Type
 
 Determine the package ecosystem by examining project files:
+
 - **Node.js/npm**: `package.json` present
 - **Python**: `setup.py`, `pyproject.toml`, or `requirements.txt` present
 - **Go**: `go.mod` present
@@ -22,6 +23,7 @@ Determine the package ecosystem by examining project files:
 ### 2. Select Template
 
 Use the appropriate template from `assets/` based on project type:
+
 - `github-actions-nodejs.yml` - Node.js/npm packages
 - `github-actions-python.yml` - Python packages
 - `github-actions-go.yml` - Go modules
@@ -32,24 +34,28 @@ Use the appropriate template from `assets/` based on project type:
 Adapt the template to project-specific needs:
 
 **Test commands**: Update test scripts to match project conventions
+
 - Node.js: `npm test`, `npm run test:coverage`
 - Python: `pytest`, `python -m unittest`
 - Go: `go test ./...`
 - Rust: `cargo test`
 
 **Build commands**: Adjust build steps if needed
+
 - Node.js: `npm run build` (if build step exists)
 - Python: `python -m build`
 - Go: `go build`
 - Rust: `cargo build --release`
 
 **Version matrix**: Modify tested versions based on support policy
+
 - Node.js: LTS versions (16.x, 18.x, 20.x)
 - Python: Active versions (3.9, 3.10, 3.11, 3.12)
 - Go: Recent versions (1.21, 1.22)
 - Rust: stable, beta (optional)
 
 **Trigger conditions**: Adjust when pipeline runs
+
 - Default: Push to main/master, all pull requests
 - Custom: Specific branches, paths, or schedules
 
@@ -60,6 +66,7 @@ Create the workflow file at `.github/workflows/ci.yml` in the project root. If `
 ### 5. Verify Configuration
 
 Check that the generated workflow:
+
 - Uses appropriate actions versions (e.g., `actions/checkout@v4`, `actions/setup-node@v4`)
 - Includes dependency caching for faster builds
 - Runs on appropriate triggers (push, pull_request)
@@ -69,6 +76,7 @@ Check that the generated workflow:
 ## Template Features
 
 All templates include:
+
 - **Dependency caching**: Speeds up builds by caching package managers
 - **Matrix testing**: Tests across multiple language/runtime versions
 - **Parallel execution**: Runs tests for different versions concurrently
@@ -78,6 +86,7 @@ All templates include:
 ## Customization Examples
 
 **Add code coverage reporting**:
+
 ```yaml
 - name: Upload coverage to Codecov
   uses: codecov/codecov-action@v3
@@ -86,12 +95,14 @@ All templates include:
 ```
 
 **Add linting step**:
+
 ```yaml
 - name: Run linter
-  run: npm run lint  # or: pylint, golangci-lint, cargo clippy
+  run: npm run lint # or: pylint, golangci-lint, cargo clippy
 ```
 
 **Restrict to specific branches**:
+
 ```yaml
 on:
   push:
@@ -101,10 +112,11 @@ on:
 ```
 
 **Add scheduled runs**:
+
 ```yaml
 on:
   schedule:
-    - cron: '0 0 * * 0'  # Weekly on Sunday
+    - cron: "0 0 * * 0" # Weekly on Sunday
 ```
 
 ## Tips

@@ -26,6 +26,7 @@ This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
 ## Scope
 
 This project intentionally does **not**:
+
 - add AI/LLM-based scene understanding, highlight detection, or content judgement
 - fall back to raw `ffmpeg`/`ffprobe` shell invocations outside `scripts/*.py`
 - depend on cloud services or require API keys
@@ -66,7 +67,7 @@ would have caught the original bug isn't done yet.
 - Keep PRs focused — one fix or one small feature per PR.
 - Run `npm test` locally before opening; CI runs on Linux, macOS, and Windows, and
   all three must pass.
-- Explain *why*, not just *what*, in the PR description — the reasoning is what
+- Explain _why_, not just _what_, in the PR description — the reasoning is what
   future maintainers (human or agent) need most.
 - A `feat` PR updates every place the feature is stated: `README.md` (the tool
   table, the contract table, gotchas), `SKILL.md`, `references/scripts.md`,

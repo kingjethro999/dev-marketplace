@@ -5,6 +5,7 @@ SkillPact v0.8 is open for a **30-day public review: 2026-10-22 – 2026-11-21 (
 - Give feedback: open an issue with the **Public review** template (one topic each). 日本語でもどうぞ。
 
 ### Status
+
 - [x] Review open (2026-10-22)
 - [ ] Weekly triage: every `public-review` issue gets accept / defer / decline with a reason
 - [ ] Accepted changes released as a further 0.x draft
@@ -12,4 +13,5 @@ SkillPact v0.8 is open for a **30-day public review: 2026-10-22 – 2026-11-21 (
 - [ ] v1.0 decision
 
 ### Issues
+
 (linked automatically by the `public-review` label)

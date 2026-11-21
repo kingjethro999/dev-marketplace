@@ -53,9 +53,9 @@ pytest -m "not browser and not slow and not load and not integration"
 ```
 
 **Env.** Config objects instantiated at import time (a settings singleton at
-module scope, an engine built when the module loads) make *collection* fail
+module scope, an engine built when the module loads) make _collection_ fail
 without the workflow's variables — a wall of "Field required" errors that looks
-like a broken suite. Mirror the `env:` block, including the *shape* of values:
+like a broken suite. Mirror the `env:` block, including the _shape_ of values:
 if CI passes a Postgres URL and the module builds a pooled engine, a local
 SQLite URL raises on arguments that dialect rejects before a single test runs.
 
@@ -70,10 +70,10 @@ pytest -m "not browser and not slow and not load and not integration"
 ## A short-circuiting gate hides the next failure
 
 Gate steps run in order and the job stops at the first red. So the CI log shows
-you *one* failure even when three are waiting:
+you _one_ failure even when three are waiting:
 
 ```yaml
-- run: ruff check .          # fails here …
+- run: ruff check . # fails here …
 - run: ruff format --check . # … so this never runs, and you never see it
 ```
 
@@ -98,7 +98,7 @@ downstream of X is unmeasured until you run it.
 
 An unpinned gating tool means the gate changes without a commit. A range like
 `ruff>=0.4.0` resolves to whatever shipped this morning, and a release that
-*widens file coverage* — a formatter that starts formatting code blocks inside
+_widens file coverage_ — a formatter that starts formatting code blocks inside
 Markdown, a linter that promotes a rule to default — turns every open PR red on
 files nobody touched.
 
@@ -127,10 +127,10 @@ Package managers will happily invent an environment for you, and the one they
 invent is not CI's.
 
 - **A fresh clone or worktree has no virtualenv.** `uv run <tool>` silently
-  creates a bare one *without* your dev extras, then fails with `Failed to
-  spawn: ruff` — which reads like a missing dependency rather than a missing
+  creates a bare one _without_ your dev extras, then fails with `Failed to
+spawn: ruff` — which reads like a missing dependency rather than a missing
   environment.
-- **`uv run` re-syncs from the lockfile** against your *host* interpreter. On a
+- **`uv run` re-syncs from the lockfile** against your _host_ interpreter. On a
   Python newer than CI's matrix, a pinned dependency with no wheel for that
   version gets built from source and fails on a compiler error that has nothing
   to do with your change.
@@ -161,7 +161,7 @@ Prefer the file both sides read:
 
 - Test-runner flags → `addopts` in `pyproject.toml`, not the workflow's `run:`.
   (Import-mode is the classic one: a source directory on `sys.path` shadowing an
-  installed compiled package is a *config* problem, and pinning
+  installed compiled package is a _config_ problem, and pinning
   `--import-mode=importlib` in `addopts` fixes local and CI together.)
 - Marker definitions, coverage thresholds, lint rules and target version → the
   project manifest.
@@ -184,7 +184,7 @@ gh api repos/OWNER/REPO/branches/main/protection --jq '.required_status_checks.c
 If CI runs the linter but not the type checker, then a pre-existing type error in
 an untouched module is not blocking your PR — don't fold a speculative fix for it
 into an unrelated change, and don't claim CI verifies types. The inverse matters
-too: a helper target like `make quality-check` that runs *more* than CI will show
+too: a helper target like `make quality-check` that runs _more_ than CI will show
 you reds that no one is gating on.
 
 ## Finish by confirming the run, not by explaining it
@@ -204,7 +204,7 @@ becomes permanently red.
 Two traps in the log itself:
 
 - A step gated on an event (`if: github.event.action == 'opened'`) is skipped
-  when you re-run by pushing a commit. Green-on-rerun can mean *not run*.
+  when you re-run by pushing a commit. Green-on-rerun can mean _not run_.
 - A permissions failure at the last step (an HTTP 403 posting a comment) shows
   every build/test step green with a red X on the job — read which step failed
   before concluding the code is broken.

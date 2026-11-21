@@ -39,18 +39,18 @@ read it at, and confirm the symbol still exists there.
 ## Check the claim at the layer the caller reads
 
 For every writing tool touched, trace the success document it prints and ask
-whether each field is something the tool *measured*.
+whether each field is something the tool _measured_.
 
-| field | the review question |
-| --- | --- |
-| `status` | can this be `completed` while the exit code is non-zero? (`die()` must set `failed`) |
-| `verified` | is it the conjunction of steps the tool actually ran, or an assumption? |
-| `reencodes_*` | was a copy fallback taken and reported, or silently assumed not taken? |
-| `dropped_non_av_streams` | did the timeline move (track must be dropped, `true`) or stay (kept, `false`)? |
-| `keyframe_snapped`, `duration_delta_seconds` | for `cut`: is the measured divergence reported, not rounded away? |
-| `mode` | does it name the path actually taken (`copy` vs re-encode)? |
-| `error.kind` | `input` / `ffmpeg` / `output` / `missing_tool` / `timeout` / `verification` / `interrupted` — is it the one that happened? |
-| `error.retryable` | must stay `false`; a `true` here invites a blind retry loop |
+| field                                        | the review question                                                                                                        |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `status`                                     | can this be `completed` while the exit code is non-zero? (`die()` must set `failed`)                                       |
+| `verified`                                   | is it the conjunction of steps the tool actually ran, or an assumption?                                                    |
+| `reencodes_*`                                | was a copy fallback taken and reported, or silently assumed not taken?                                                     |
+| `dropped_non_av_streams`                     | did the timeline move (track must be dropped, `true`) or stay (kept, `false`)?                                             |
+| `keyframe_snapped`, `duration_delta_seconds` | for `cut`: is the measured divergence reported, not rounded away?                                                          |
+| `mode`                                       | does it name the path actually taken (`copy` vs re-encode)?                                                                |
+| `error.kind`                                 | `input` / `ffmpeg` / `output` / `missing_tool` / `timeout` / `verification` / `interrupted` — is it the one that happened? |
+| `error.retryable`                            | must stay `false`; a `true` here invites a blind retry loop                                                                |
 
 `--dry-run` claims matter too: `info()` rewrites `wrote X` to `[dry-run] would
 write X`, and `analysis_only` tools (`probe`, `check`, `sync`, `multicam`,
@@ -64,7 +64,7 @@ that pin each of these.
 ## Refuse to report what the repo already decided
 
 Grep `docs/design-decisions.md` before writing any "this looks wrong" sentence.
-Each entry names the rationale *and* the test that pins it. If the change under
+Each entry names the rationale _and_ the test that pins it. If the change under
 review is about one of them, the report must say **which sentence there no longer
 holds** — otherwise it is a re-report and will be closed as one.
 
@@ -155,5 +155,5 @@ and claim-honesty.
 This skill is repo-local and intentionally duplicates none of
 **writing-defect-reports**, **verifying-external-behavior** or
 **reproducing-ci-locally** (all in `.claude/skills/`); it points at them instead.
-Its distinguishing subject is the review of a *claim* — the `emit()`/`die()`
+Its distinguishing subject is the review of a _claim_ — the `emit()`/`die()`
 document — which is where this codebase's shipped defects have actually come from.

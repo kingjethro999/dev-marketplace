@@ -11,9 +11,7 @@
     },
     "write": {
       "level": "scoped",
-      "scope": [
-        "$OUTPUT"
-      ]
+      "scope": ["$OUTPUT"]
     },
     "network": {
       "level": "none"
@@ -32,13 +30,9 @@
     {
       "id": "guide",
       "summary": "guidance only",
-      "effects": [
-        "write"
-      ],
+      "effects": ["write"],
       "effect_scopes": {
-        "write": [
-          "/etc/**"
-        ]
+        "write": ["/etc/**"]
       }
     }
   ]

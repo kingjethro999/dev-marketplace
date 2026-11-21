@@ -3,6 +3,7 @@
 Target: WCAG 2.2 level AA for kajisho5.github.io/skillpact (self-assessed, not audited).
 
 What the pages do:
+
 - `lang` set on every page (`en` / `ja`) and `hreflang` links between translations;
 - one `h1` per page, ordered headings, a table of contents on long pages;
 - tables with header cells; code in `pre`/`code`;

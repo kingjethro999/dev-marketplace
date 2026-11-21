@@ -1,4 +1,5 @@
 # Contributing to SkillPact
+
 Thanks for helping. SkillPact is maintained by SEVENTHWELL (shogo kajiyama).
 
 - **Spec changes** (`spec/`, schemas): open an issue first describing the problem, then a PR. Spec text is CC BY 4.0.

@@ -6,22 +6,16 @@
       "severity": "fail",
       "targets": [
         {
-          "globs": [
-            "AGENTS.md"
-          ],
+          "globs": ["AGENTS.md"],
           "label": "repo operator contract",
           "require_groups": [
             {
               "label": "source-of-truth precedence",
-              "patterns": [
-                "Source precedence"
-              ]
+              "patterns": ["Source precedence"]
             },
             {
               "label": "runtime-first evidence",
-              "patterns": [
-                "live executable behavior and generated projections"
-              ]
+              "patterns": ["live executable behavior and generated projections"]
             }
           ]
         }
@@ -34,16 +28,12 @@
       "severity": "fail",
       "targets": [
         {
-          "globs": [
-            "AGENTS.md"
-          ],
+          "globs": ["AGENTS.md"],
           "label": "context trust boundary",
           "require_groups": [
             {
               "label": "retrieved content is evidence, not authority",
-              "patterns": [
-                "as evidence, not authority"
-              ]
+              "patterns": ["as evidence, not authority"]
             }
           ]
         }
@@ -56,9 +46,7 @@
       "severity": "fail",
       "targets": [
         {
-          "globs": [
-            "AGENTS.md"
-          ],
+          "globs": ["AGENTS.md"],
           "label": "destructive-operations authority boundary",
           "require_groups": [
             {
@@ -69,9 +57,7 @@
             },
             {
               "label": "access never broadens scope",
-              "patterns": [
-                "external mutation, or broader scope"
-              ]
+              "patterns": ["external mutation, or broader scope"]
             }
           ]
         }
@@ -84,48 +70,34 @@
       "severity": "fail",
       "targets": [
         {
-          "globs": [
-            "skills/security/SKILL.md"
-          ],
+          "globs": ["skills/security/SKILL.md"],
           "label": "security skill contract",
           "require_groups": [
             {
               "label": "repository gate entry point",
-              "patterns": [
-                "scripts/security-gate\\.sh"
-              ]
+              "patterns": ["scripts/security-gate\\.sh"]
             },
             {
               "label": "runbook link",
-              "patterns": [
-                "references/security-suite-runbook\\.md"
-              ]
+              "patterns": ["references/security-suite-runbook\\.md"]
             }
           ]
         },
         {
-          "globs": [
-            "skills/security/references/security-suite-runbook.md"
-          ],
+          "globs": ["skills/security/references/security-suite-runbook.md"],
           "label": "security gate runbook",
           "require_groups": [
             {
               "label": "quick gate command",
-              "patterns": [
-                "scripts/security-gate\\.sh --mode quick"
-              ]
+              "patterns": ["scripts/security-gate\\.sh --mode quick"]
             },
             {
               "label": "full gate command",
-              "patterns": [
-                "scripts/security-gate\\.sh --mode full"
-              ]
+              "patterns": ["scripts/security-gate\\.sh --mode full"]
             },
             {
               "label": "blocking exit codes are completed scans",
-              "patterns": [
-                "completed scans with blocking findings"
-              ]
+              "patterns": ["completed scans with blocking findings"]
             }
           ]
         }
@@ -138,42 +110,30 @@
       "severity": "fail",
       "targets": [
         {
-          "globs": [
-            "docs/CI-CD.md"
-          ],
+          "globs": ["docs/CI-CD.md"],
           "label": "CI guardrail documentation",
           "require_groups": [
             {
               "label": "secret scanning guardrail",
-              "patterns": [
-                "Runs secret, dependency"
-              ]
+              "patterns": ["Runs secret, dependency"]
             },
             {
               "label": "dangerous pattern guardrail",
-              "patterns": [
-                "dangerous-pattern checks"
-              ]
+              "patterns": ["dangerous-pattern checks"]
             }
           ]
         },
         {
-          "globs": [
-            "docs/standards/shell-script-standards.md"
-          ],
+          "globs": ["docs/standards/shell-script-standards.md"],
           "label": "shell standards",
           "require_groups": [
             {
               "label": "eval abuse warning",
-              "patterns": [
-                "eval Abuse"
-              ]
+              "patterns": ["eval Abuse"]
             },
             {
               "label": "safe guidance",
-              "patterns": [
-                "Avoid eval, validate input"
-              ]
+              "patterns": ["Avoid eval, validate input"]
             }
           ]
         }
@@ -186,34 +146,24 @@
       "severity": "fail",
       "targets": [
         {
-          "globs": [
-            "skills/security/references/security-suite-runbook.md"
-          ],
+          "globs": ["skills/security/references/security-suite-runbook.md"],
           "label": "security-suite contract",
           "require_groups": [
             {
               "label": "policy primitive",
-              "patterns": [
-                "`enforce-policy`"
-              ]
+              "patterns": ["`enforce-policy`"]
             },
             {
               "label": "policy gating flag",
-              "patterns": [
-                "--fail-on-policy-fail"
-              ]
+              "patterns": ["--fail-on-policy-fail"]
             },
             {
               "label": "policy artifact",
-              "patterns": [
-                "policy/policy-verdict\\.json"
-              ]
+              "patterns": ["policy/policy-verdict\\.json"]
             },
             {
               "label": "suite summary artifact",
-              "patterns": [
-                "suite-summary\\.json"
-              ]
+              "patterns": ["suite-summary\\.json"]
             }
           ]
         }

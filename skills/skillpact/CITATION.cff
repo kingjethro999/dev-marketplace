@@ -11,4 +11,5 @@ date-released: "2026-10-22"
 license: CC-BY-4.0
 url: "https://kajisho5.github.io/skillpact/"
 repository-code: "https://github.com/kajisho5/skillpact"
-keywords: ["agent skills", "AI agents", "permissions", "supply chain", "specification"]
+keywords:
+  ["agent skills", "AI agents", "permissions", "supply chain", "specification"]

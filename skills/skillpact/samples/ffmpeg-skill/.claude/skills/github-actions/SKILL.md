@@ -16,11 +16,11 @@ away coverage.
 Minutes are billed **per job**, rounded up to the minute, times a **runner-OS
 multiplier**:
 
-| Runner | Multiplier |
-|--------|-----------|
-| Linux (`ubuntu-*`) | **1x** |
-| Windows (`windows-*`) | **2x** |
-| macOS (`macos-*`) | **10x** |
+| Runner                | Multiplier |
+| --------------------- | ---------- |
+| Linux (`ubuntu-*`)    | **1x**     |
+| Windows (`windows-*`) | **2x**     |
+| macOS (`macos-*`)     | **10x**    |
 
 A one-minute macOS job costs the same as ten Linux minutes. This single fact
 reorders every optimization: **a repo with a few macOS jobs can outspend a repo
@@ -33,7 +33,7 @@ and ask of each: does this step genuinely need macOS?
   move them to `ubuntu-latest` and cut that job's cost ~10x.
 
 Split the must-be-macOS work into its own job and push everything else to Linux.
-If a single macOS job does both (e.g. runs SwiftLint *and* an Xcode build), split
+If a single macOS job does both (e.g. runs SwiftLint _and_ an Xcode build), split
 it: a cheap Linux `lint` job plus the macOS `build` job. The tools only parse
 source, so the Linux job just checks out and runs them — no toolchain build.
 
@@ -41,21 +41,21 @@ SwiftLint and SwiftFormat both ship self-contained prebuilt Linux binaries, so
 "Swift means macOS" is a myth for the linting half of the pipeline:
 
 ```yaml
-  lint:
-    runs-on: ubuntu-latest        # 1x, not 10x
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install SwiftLint & SwiftFormat (Linux)
-        run: |
-          set -euxo pipefail
-          curl -fsSL -o /tmp/sl.zip https://github.com/realm/SwiftLint/releases/download/0.65.0/swiftlint_linux_amd64.zip
-          unzip -oq /tmp/sl.zip -d /tmp/sl
-          sudo install -m0755 /tmp/sl/swiftlint-static /usr/local/bin/swiftlint
-          curl -fsSL -o /tmp/sf.zip https://github.com/nicklockwood/SwiftFormat/releases/download/0.62.1/swiftformat_linux.zip
-          unzip -oq /tmp/sf.zip -d /tmp/sf
-          sudo install -m0755 /tmp/sf/swiftformat_linux /usr/local/bin/swiftformat
-      - run: swiftlint lint
-      - run: swiftformat . --lint
+lint:
+  runs-on: ubuntu-latest # 1x, not 10x
+  steps:
+    - uses: actions/checkout@v4
+    - name: Install SwiftLint & SwiftFormat (Linux)
+      run: |
+        set -euxo pipefail
+        curl -fsSL -o /tmp/sl.zip https://github.com/realm/SwiftLint/releases/download/0.65.0/swiftlint_linux_amd64.zip
+        unzip -oq /tmp/sl.zip -d /tmp/sl
+        sudo install -m0755 /tmp/sl/swiftlint-static /usr/local/bin/swiftlint
+        curl -fsSL -o /tmp/sf.zip https://github.com/nicklockwood/SwiftFormat/releases/download/0.62.1/swiftformat_linux.zip
+        unzip -oq /tmp/sf.zip -d /tmp/sf
+        sudo install -m0755 /tmp/sf/swiftformat_linux /usr/local/bin/swiftformat
+    - run: swiftlint lint
+    - run: swiftformat . --lint
 ```
 
 Use SwiftLint's **`swiftlint-static`** (not the dynamically linked `swiftlint`,
@@ -78,8 +78,8 @@ The most common silent waste is a workflow that runs **twice on every change**:
 
 ```yaml
 on:
-  push:            # ← no branch filter: fires on EVERY push to EVERY branch
-  pull_request:    # ← also fires for the PR built from those same commits
+  push: # ← no branch filter: fires on EVERY push to EVERY branch
+  pull_request: # ← also fires for the PR built from those same commits
 ```
 
 When you push a feature branch that has an open PR, the `push` event and the
@@ -91,8 +91,8 @@ runner that doubles the most expensive thing you have.
 ```yaml
 on:
   push:
-    branches: [main]   # only post-merge commits to main
-  pull_request:        # all pre-merge validation happens here
+    branches: [main] # only post-merge commits to main
+  pull_request: # all pre-merge validation happens here
 ```
 
 Now branch work is validated once (by the PR) and `main` is validated once
@@ -103,7 +103,7 @@ Add **path filters** so unrelated changes don't spin a runner at all:
 ```yaml
 on:
   pull_request:
-    paths-ignore: ['**.md', 'docs/**', '.github/ISSUE_TEMPLATE/**']
+    paths-ignore: ["**.md", "docs/**", ".github/ISSUE_TEMPLATE/**"]
 ```
 
 (Note: a required status check gated on `paths` can block PRs that legitimately
@@ -147,15 +147,15 @@ Most `setup-*` actions have caching built in — prefer it over hand-rolled
 
 # Python (pip)
 - uses: actions/setup-python@v5
-  with: { python-version: '3.12', cache: 'pip' }
+  with: { python-version: "3.12", cache: "pip" }
 
 # Node
 - uses: actions/setup-node@v4
-  with: { node-version: '20', cache: 'npm' }
+  with: { node-version: "20", cache: "npm" }
 
 # Go
 - uses: actions/setup-go@v5
-  with: { go-version: '1.22', cache: true }   # caches modules + build cache
+  with: { go-version: "1.22", cache: true } # caches modules + build cache
 ```
 
 For ecosystems without built-in caching, use `actions/cache` directly:
@@ -224,7 +224,7 @@ continuously, forever, and is the easiest thing to forget. Audit every one:
 ```yaml
 on:
   schedule:
-    - cron: '*/15 * * * *'   # every 15 min = ~2,880 runs/month. Almost never worth it on Actions.
+    - cron: "*/15 * * * *" # every 15 min = ~2,880 runs/month. Almost never worth it on Actions.
 ```
 
 - **Uptime / health checks** do not belong on Actions — a `*/5` or `*/15` cron is
@@ -234,7 +234,7 @@ on:
   `workflow_dispatch:` for manual rebuilds.
 - **DST/timezone hacks** that register two crons and gate one out still pay the
   runner spin-up (checkout + toolchain setup) for the run that no-ops. Gate
-  *before* the setup steps, or compute the schedule so only one fires.
+  _before_ the setup steps, or compute the schedule so only one fires.
 - Genuinely periodic jobs (a real nightly build) are fine — just right-size the
   frequency to how often the input actually changes.
 

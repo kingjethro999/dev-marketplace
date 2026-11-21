@@ -17,78 +17,50 @@
         "status": "expected"
       }
     },
-    "interfaces": [
-      "skill-md",
-      "cli"
-    ]
+    "interfaces": ["skill-md", "cli"]
   },
   "requirements": {
     "binaries": [
       {
         "name": "ffmpeg",
-        "check": [
-          "ffmpeg",
-          "--version"
-        ]
+        "check": ["ffmpeg", "--version"]
       },
       {
         "name": "ffprobe",
-        "check": [
-          "ffprobe",
-          "--version"
-        ]
+        "check": ["ffprobe", "--version"]
       },
       {
         "name": "git",
-        "check": [
-          "git",
-          "--version"
-        ]
+        "check": ["git", "--version"]
       }
     ],
     "runtimes": [
       {
         "name": "python3",
         "version": ">=3.9",
-        "check": [
-          "python3",
-          "--version"
-        ]
+        "check": ["python3", "--version"]
       }
     ]
   },
   "permissions": {
     "read": {
       "level": "scoped",
-      "scope": [
-        "$INPUT",
-        "$SKILL_DIR/**"
-      ],
+      "scope": ["$INPUT", "$SKILL_DIR/**"],
       "why": "TODO(init): confirm"
     },
     "write": {
       "level": "scoped",
-      "scope": [
-        "$OUTPUT",
-        "$WORKDIR/**"
-      ],
+      "scope": ["$OUTPUT", "$WORKDIR/**"],
       "why": "TODO(init): confirm: heuristic match in SKILL.md/scripts"
     },
     "network": {
       "level": "scoped",
-      "scope": [
-        "TODO.example"
-      ],
+      "scope": ["TODO.example"],
       "why": "TODO(init): confirm: heuristic match in SKILL.md/scripts"
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "ffmpeg",
-        "ffprobe",
-        "git",
-        "python3"
-      ],
+      "scope": ["ffmpeg", "ffprobe", "git", "python3"],
       "why": "TODO(init): confirm"
     },
     "spend": {
@@ -103,18 +75,9 @@
       "id": "cli.subtitle-skill",
       "summary": "TODO(init): confirm — console script subtitle-skill (subtitle_skill.cli:main)",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "subtitle_skill.cli"
-        ]
+        "cli": ["python3", "-m", "subtitle_skill.cli"]
       },
-      "effects": [
-        "read",
-        "write",
-        "network",
-        "exec"
-      ]
+      "effects": ["read", "write", "network", "exec"]
     }
   ],
   "tests": {
@@ -122,12 +85,7 @@
       {
         "id": "cli.subtitle-skill-help",
         "capability": "cli.subtitle-skill",
-        "run": [
-          "python3",
-          "-m",
-          "subtitle_skill.cli",
-          "--help"
-        ],
+        "run": ["python3", "-m", "subtitle_skill.cli", "--help"],
         "expect": {
           "exit_code": 0
         },

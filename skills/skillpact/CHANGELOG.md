@@ -1,11 +1,13 @@
 # Changelog
-All notable changes to the SkillPact spec and implementations. Drafts until 1.0.
 
+All notable changes to the SkillPact spec and implementations. Drafts until 1.0.
 
 ## Unreleased
 
 ## 0.8.1 packages (2026-11-12)
+
 Patch release of the reference implementation (PyPI `skillpact`) and the TypeScript verifier (npm `skillpact`). Additive only: every 0.8.0 contract keeps its level; `x.runtime` declarations are optional.
+
 - Idempotency conformance (ECOSYSTEM_ROADMAP.md step 6; spec §7.1, erratum 0.8.x, optional): `capabilities[].x.runtime.idempotency` is `bit_exact`, `content_equivalent` or `none` (schema revision `schema/runtime-v0.8-r1.json`; the published `runtime-v0.8.json` is unchanged). It must agree with the capability's `idempotent` (`RUNTIME_DECL` otherwise, Python and TypeScript). For a `bit_exact` capability the reference runner runs each passing, non-network case a second time in the same `$WORKDIR` after removing the files in `expect.files`, and fails it with `IDEMPOTENCY_DIFFERS` when a file's SHA-256 differs, a file is missing or the exit code changes; case results carry `idempotency` (`mode`, `enforced`, `compared`, `differs`, or `skipped` with the reason). Staged: `idempotent: true` alone is not checked by default; `skillpact test --check-idempotent` checks those cases too and only reports. On this repository's samples it compared 33 cases of ffmpeg-skill's 40 idempotent capabilities and found no difference (43 cases list no output file); subtitle, thumbnail and video-editing samples and kajisho5/imagemagick-skill declare no `idempotent: true`. `conformance` `declares.idempotency` lists the capabilities per mode, and the Action's summary counts `bit_exact` ones. Conformance: 4 new cases (61), among them `v08x-idempotency-nondeterministic`, a fixture skill whose output changes on every run, which the runner must fail. `ref/tests/test_idempotency.py`.
 - Runtime declarations (ECOSYSTEM_ROADMAP.md step 5; spec §7.1, erratum 0.8.x, optional): a contract may declare under `x.runtime`, and an op under `capabilities[].x.runtime`, the progress events it emits (`progress`: `stream`, `flag`, `steps`; one JSON line per event, `{"event": "progress", "step", "percent" 0-100 or null and never decreasing, "eta_s" >= 0 or null}`) and the class of every error code it returns (`errors.classes`: `input`, `environment`, `engine`, `policy` or `transient`; `code_path`, default `error.code`). Schema `schema/runtime-v0.8.json` (copies in `ref/` and `ts/`, CI compares them). No change to the contract schema: `x` is the extension space. The validators (Python and TypeScript) report a declaration that breaks the schema, or a code with two classes, as `RUNTIME_DECL` (error). The reference runner checks each case against its capability's declaration and fails it with `PROGRESS_EVENT` (bad event, undeclared step, decreasing percent), `PROGRESS_MISSING` (a case tagged `progress` emits none) or `ERROR_UNCLASSIFIED` (an error code without a class); case results carry `progress_events`, `error_code`, `error_class`. `conformance` reports `declares` (`capabilities`, `progress` ids, `error_classes`), and the Action has a `declares` output and a summary line, so a fleet run (the OS weekly run) can report which skills declare them. Staged: optional, no finding without `x.runtime`, so no existing contract changes level (checked on every sample and conformance case); proposed as recommended (a warning) for 0.9. Conformance: 8 new cases (57), runner expectations under `test`, run with `conformance/run.py --test-cmd` (CI runs both). `ref/tests/test_runtime.py`.
 - `init --from-native`: a tool whose native contract sets `writes_output` (kajisho5/imagemagick-skill) now gets the `write` effect, as `produces_artifact` already did; before, imagemagick-skill's writing tools came out read-only and the author had to add `write` by hand. `ref/tests/test_native_writes.py`.
@@ -15,10 +17,13 @@ Patch release of the reference implementation (PyPI `skillpact`) and the TypeScr
 - Reference implementation dependency floors (supply-chain audit, checked against OSV on 2026-10-30): `cryptography>=50.0.0` (was `>=42`, which allowed 9 advisories; 49.0.0 still has the HIGH PKCS#7 Bleichenbacher oracle GHSA-g6cj-pr64-35w5), the `sigstore` extra `>=4.4.0` (GHSA-hm8f-75xx-w2vr, OIDC CSRF while signing, is fixed in 4.2.0, but 4.2.0 and 4.3.0 cap `cryptography` below 47 and 49, so 4.4.0 is the first release installable next to `cryptography>=50`) and the `test` extra `pytest>=9.0.3` (GHSA-6w46-j5rx-g56g). All support Python 3.11, the oldest version `ref` declares. `samples/thumbnail-skill` keeps `Pillow>=10.0`: it is a signed snapshot of thumbnail-skill 0.1.0 and its `pyproject.toml` is covered by the SEVENTHWELL signature, so changing it needs the author to re-hash and re-sign; the live floor is fixed in thumbnail-skill itself.
 
 ## 0.8.0 packages (2026-10-23)
+
 - First registry release of the reference implementation (PyPI `skillpact`) and the TypeScript verifier (npm `skillpact`), version 0.8.0, built from `main` with the 0.8.x errata below. Pre-release `0.8.0b1` was published the same day. The spec stays in public review until 2026-11-21; later errata ship as 0.8.x packages.
 
 ## 0.8.x errata (public review, 2026-10-22; no version tag)
+
 From the second adversarial self-review (the editor's working notes, not published in this repository). Spec text marked "erratum 0.8.x".
+
 - Integrity: `__pycache__/` and `*.pyc` are no longer default excludes (unchecked-hash bytecode could run instead of signed source); code and bytecode files are protected and cannot be excluded; `hash` refuses bytecode; coverage is checked even with an external `--contract`.
 - Signatures: contracts before 0.8 (role not signed) get `SIGNATURE_ROLE_UNSIGNED` and never L3 / `require_signature` (breaking for signed 0.4–0.7 contracts).
 - Test sandbox (bwrap): home, `/tmp`, `/var/tmp`, `/run`, `/dev/shm` hidden; new session, IPC/UTS namespaces, stdin closed (blocks host-socket access, home reads and TIOCSTI). Seatbelt profile denies reads in home. Host variables for `skip_unless_env` only with `test --pass-env NAME`.
@@ -43,6 +48,7 @@ From the second adversarial self-review (the editor's working notes, not publish
 - Docs (review day 1, no normative change): spec Status states the review dates and that "erratum 0.8.x" text was added after the review opened; §13.2 marked unassigned; §15 and Status list the policy schema revisions r1 / r2; `SIGSTORE_UNVERIFIED` points to §11 (was the non-existent §16.4). README layout and test count corrected; showcase updated to 0.8 output (331 files, Codex `on-request`, worst-case compile) and translated to English (`spec/showcase.en.md`); `review/token_measure.py` added and the Why token table re-measured with it.
 
 ## Unreleased (0.8 follow-up)
+
 - Patent non-assertion covenant (EN/JA) in IPR.md and spec Status.
 - IANA media type: to be considered after 1.0.
 - Finding-code severity table (Appendix A).
@@ -50,7 +56,9 @@ From the second adversarial self-review (the editor's working notes, not publish
 - Published schema/v0.1.json and v0.2.json (aliases of v0.3); /ja/badges/.
 
 ## 0.8 (draft, 2026-10-22) — fixes from the v0.7 self-review
+
 Security (breaking for 0.8 contracts; older contracts keep their rules, see MIGRATION):
+
 - Integrity must list **every** file of the skill (protected files such as `CLAUDE.md`, `.claude/**`, `hooks/**`, entry scripts cannot be excluded); new `integrity.exclude`; `INTEGRITY_UNLISTED`, `INTEGRITY_EMPTY`, `INTEGRITY_PATH` (path traversal, absolute paths, symlinks, limits). L3 refused for any version with unlisted files.
 - Signer `role` is part of the signing input (`JCS({"contract", "role"})`); `DUP_SIGNATURE`.
 - Test runner: setup is sandboxed too; bubblewrap sandbox (no network, read-only FS, env allowlist); skill-dir changes detected by content hash; writes outside the skill reported. `TEST_UNDECLARED_NETWORK`; L2 needs at least one isolated case.
@@ -59,10 +67,11 @@ Security (breaking for 0.8 contracts; older contracts keep their rules, see MIGR
 - I-JSON parsing: big integers, non-finite numbers, lone surrogates, depth > 64 rejected (`CONTRACT_JSON`); legacy (0.1–0.3) signing supports integers only. Python and TypeScript agree on all fuzz cases.
 - `policy-compile`: Codex never emits `approval_policy: never` when anything is ask/deny; Cursor output without `vimMode`; Gemini prefixes end with a space; every target reports `lossy`; checked against harness docs as of 2026-10-22.
 - `init` drafts cannot pass L1 until confirmed (`UNCONFIRMED_DRAFT`).
-Docs: English normative spec + Japanese translation, Why / Rationale / Guides / About pages, SECURITY, CODE_OF_CONDUCT, IPR, TRADEMARKS, CITATION, ROADMAP, ACCESSIBILITY, STANDARDS_CHECKLIST; honest OWASP mapping; README install wording; Action pinning guidance.
-Conformance suite: 45 cases (15 new, one per exploit). Samples migrated to 0.8 and re-signed.
+  Docs: English normative spec + Japanese translation, Why / Rationale / Guides / About pages, SECURITY, CODE_OF_CONDUCT, IPR, TRADEMARKS, CITATION, ROADMAP, ACCESSIBILITY, STANDARDS_CHECKLIST; honest OWASP mapping; README install wording; Action pinning guidance.
+  Conformance suite: 45 cases (15 new, one per exploit). Samples migrated to 0.8 and re-signed.
 
 ## 0.7 (draft, 2026-10-22)
+
 - `@local` network scope token (maps to MDA `network: local`, expanded to concrete hosts for harness configs / HushSpec / Rego).
 - `SKILL.md` name MUST equal the directory name (error from contract_version 0.7, warning before) — aligned with Agent Skills.
 - Signature `role`: author / reviewer / scanner. L3 requires a trusted author signature; others are reported as attestations.
@@ -70,6 +79,7 @@ Conformance suite: 45 cases (15 new, one per exploit). Samples migrated to 0.8 a
 - Conformance suite: 30 cases. Samples migrated to 0.7 and re-signed.
 
 ## 0.6 (draft, 2026-10-22)
+
 - Second, independent implementation: TypeScript verify-only (`ts/`), passes the full conformance suite and verifies all signed samples.
 - Three more example skills (subtitle-skill, thumbnail-skill, video-editing-skill), all 0.6 and L3; ffmpeg-skill migrated to 0.6 and re-signed (JCS).
 - Reference `hash` now includes `src/**`, `pyproject.toml`, `package.json`.
@@ -77,25 +87,33 @@ Conformance suite: 45 cases (15 new, one per exploit). Samples migrated to 0.8 a
 - Packaging for one-command use (`pipx run skillpact`, `npx skillpact-verify`), a reusable GitHub Action, L1/L2/L3 badges, and a browser-only checker page.
 
 ## 0.5
+
 - Implementation-independent conformance suite (`conformance/`), `migrate` command, completed security considerations and threat model, duplicate JSON keys rejected (`CONTRACT_JSON`).
 - Prepared (not enabled) GitHub Actions workflow for Sigstore keyless signing.
 
 ## 0.4
+
 - Consolidated, normative (BCP 14) spec. Signing input switched to RFC 8785 (JCS) for contract_version ≥ 0.4; 0.1–0.3 verify with the legacy form. Known-answer vectors.
 - Unknown versions rejected (`CONTRACT_VERSION_UNSUPPORTED`), `SCOPE_EMPTY`, `UNKNOWN_VARIABLE`, L3 only with a trusted key, no L2 without network isolation.
 
 ## [0.3.0] - unreleased
+
 ### Added
+
 - Sigstore keyless signatures (`sign-sigstore`), alongside ed25519; `--trusted-key sigstore:<issuer>|<identity>`.
 - `convert`: import/export MDA Open Spec 1.0 `metadata.mda.requires` and AutoVault `capabilities` (lossy report + pointer back to the full contract).
 - `owasp`: per-skill OWASP Agentic Skills Top 10 assessment; `spec/owasp_mapping.md`.
 - `export --format aps|acs` in addition to hushspec / rego.
 - Canonical schema URLs under `https://kajisho5.github.io/skillpact/schema/`.
+
 ### Changed
+
 - README positioning: declare + test + sign before install; runtime enforcement delegated to APS / ACS / HushSpec.
 
 ## [0.2.0] - 2026-10-22 (local draft)
+
 - harness_policy 0.1, `policy-check`, `policy-compile` (Claude Code / Cursor / Codex / Gemini CLI), HushSpec / Rego export, conditional effects, binary feature checks, `mcp-check`.
 
 ## [0.1.0] - 2026-10-21 (local draft)
+
 - `skill.contract.json`: capabilities, 6 effect classes, requirements, conformance tests, integrity + ed25519.

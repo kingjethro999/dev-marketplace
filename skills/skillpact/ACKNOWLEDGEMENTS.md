@@ -1,6 +1,7 @@
 # Acknowledgements
 
 SkillPact builds on the work of others:
+
 - the Agent Skills specification (agentskills.io), which defines `SKILL.md`;
 - RFC 8785 (JCS), RFC 7493 (I-JSON), RFC 8032 (Ed25519) and their authors;
 - Sigstore, JSON Schema, the Model Context Protocol;

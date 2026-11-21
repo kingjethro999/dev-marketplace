@@ -17,10 +17,7 @@
         "status": "expected"
       }
     },
-    "interfaces": [
-      "skill-md",
-      "cli"
-    ]
+    "interfaces": ["skill-md", "cli"]
   },
   "requirements": {
     "binaries": [],
@@ -28,20 +25,14 @@
       {
         "name": "python3",
         "version": ">=3.9",
-        "check": [
-          "python3",
-          "--version"
-        ]
+        "check": ["python3", "--version"]
       }
     ]
   },
   "permissions": {
     "read": {
       "level": "scoped",
-      "scope": [
-        "$INPUT",
-        "$SKILL_DIR/**"
-      ],
+      "scope": ["$INPUT", "$SKILL_DIR/**"],
       "why": "TODO(init): confirm"
     },
     "write": {
@@ -52,9 +43,7 @@
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "python3"
-      ],
+      "scope": ["python3"],
       "why": "TODO(init): confirm"
     },
     "spend": {
@@ -69,16 +58,9 @@
       "id": "cli.video-editing",
       "summary": "TODO(init): confirm — console script video-editing (video_editing_skill.cli:main)",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "video_editing_skill.cli"
-        ]
+        "cli": ["python3", "-m", "video_editing_skill.cli"]
       },
-      "effects": [
-        "read",
-        "exec"
-      ]
+      "effects": ["read", "exec"]
     }
   ],
   "tests": {
@@ -86,12 +68,7 @@
       {
         "id": "cli.video-editing-help",
         "capability": "cli.video-editing",
-        "run": [
-          "python3",
-          "-m",
-          "video_editing_skill.cli",
-          "--help"
-        ],
+        "run": ["python3", "-m", "video_editing_skill.cli", "--help"],
         "expect": {
           "exit_code": 0
         },
@@ -105,10 +82,7 @@
     "init": {
       "source": "heuristic",
       "version_from": "pyproject.toml",
-      "uncertain": [
-        "/capabilities",
-        "/permissions/read"
-      ]
+      "uncertain": ["/capabilities", "/permissions/read"]
     }
   }
 }

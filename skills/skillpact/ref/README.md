@@ -10,5 +10,6 @@ python3 -m skillpact.cli policy-check <skill_dir> policies/solo-dev.json      # 
 python3 -m skillpact.cli policy-compile <skill_dir> policies/solo-dev.json --target claude-code|cursor|codex|gemini-cli
 python3 -m pytest -q tests                                   # 19 tests
 ```
+
 Exit code 0 = ok / not denied, 1 = failure / denied. Output is JSON.
 Sample: `../samples/ffmpeg-skill/skill.contract.json` (copy of kajisho5/ffmpeg-skill @4334225, SKILL.md untouched).

@@ -17,68 +17,44 @@
         "status": "expected"
       }
     },
-    "interfaces": [
-      "skill-md",
-      "cli"
-    ]
+    "interfaces": ["skill-md", "cli"]
   },
   "requirements": {
     "binaries": [
       {
         "name": "ffmpeg",
-        "check": [
-          "ffmpeg",
-          "--version"
-        ]
+        "check": ["ffmpeg", "--version"]
       },
       {
         "name": "ffprobe",
-        "check": [
-          "ffprobe",
-          "--version"
-        ]
+        "check": ["ffprobe", "--version"]
       },
       {
         "name": "git",
-        "check": [
-          "git",
-          "--version"
-        ]
+        "check": ["git", "--version"]
       },
       {
         "name": "curl",
-        "check": [
-          "curl",
-          "--version"
-        ]
+        "check": ["curl", "--version"]
       }
     ],
     "runtimes": [
       {
         "name": "python3",
         "version": ">=3.9",
-        "check": [
-          "python3",
-          "--version"
-        ]
+        "check": ["python3", "--version"]
       }
     ]
   },
   "permissions": {
     "read": {
       "level": "scoped",
-      "scope": [
-        "$INPUT",
-        "$SKILL_DIR/**"
-      ],
+      "scope": ["$INPUT", "$SKILL_DIR/**"],
       "why": "TODO(init): confirm"
     },
     "write": {
       "level": "scoped",
-      "scope": [
-        "$OUTPUT",
-        "$WORKDIR/**"
-      ],
+      "scope": ["$OUTPUT", "$WORKDIR/**"],
       "why": "TODO(init): confirm: heuristic match in SKILL.md/scripts"
     },
     "network": {
@@ -86,13 +62,7 @@
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "curl",
-        "ffmpeg",
-        "ffprobe",
-        "git",
-        "python3"
-      ],
+      "scope": ["curl", "ffmpeg", "ffprobe", "git", "python3"],
       "why": "TODO(init): confirm"
     },
     "spend": {
@@ -109,18 +79,9 @@
       "id": "cli.qc",
       "summary": "TODO(init): confirm — console script qc (qc_skill.cli:main)",
       "entry": {
-        "cli": [
-          "python3",
-          "-m",
-          "qc_skill.cli"
-        ]
+        "cli": ["python3", "-m", "qc_skill.cli"]
       },
-      "effects": [
-        "read",
-        "write",
-        "exec",
-        "send"
-      ]
+      "effects": ["read", "write", "exec", "send"]
     }
   ],
   "tests": {
@@ -128,12 +89,7 @@
       {
         "id": "cli.qc-help",
         "capability": "cli.qc",
-        "run": [
-          "python3",
-          "-m",
-          "qc_skill.cli",
-          "--help"
-        ],
+        "run": ["python3", "-m", "qc_skill.cli", "--help"],
         "expect": {
           "exit_code": 0
         },

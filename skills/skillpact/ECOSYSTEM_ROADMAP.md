@@ -11,9 +11,9 @@ v0.8.1 (spec in public review until 2026-11-21). Python ref + TS verifier; 19 te
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| スキル契約・署名 | done | first adopter: imagemagick-skill (contract, unsigned) |
+| Owned job        | Status  | Note                                                                                                                                                                                  |
+| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| スキル契約・署名 | done    | first adopter: imagemagick-skill (contract, unsigned)                                                                                                                                 |
 | スキル適合性検査 | partial | imagemagick-skill CI runs it (L2) through the Action; the OS runs it weekly, non-blocking, on every Skill with a contract ([Velisa#127](https://github.com/kajisho5/Velisa/pull/127)) |
 
 ## Wiring
@@ -43,4 +43,5 @@ Not related to execution. SkillPact contracts and the OS capability contract are
 Contract checks have one role each ([Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md)): side effects, signatures and isolation tests are this repository's; the OS contract shape is system-intelligence's (Velisa CI calls it); runtime version gates are video-production-agent's; Velisa `registry/` is the reference definition of the collision policy.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (42 tools, treated as complete). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

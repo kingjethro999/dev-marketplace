@@ -36,9 +36,7 @@
       "id": "measure.audio.loudness",
       "lifecycle": "EXPERIMENTAL",
       "tool_id": "qc/run",
-      "checks": [
-        "audio.integrated_loudness_within_tolerance"
-      ]
+      "checks": ["audio.integrated_loudness_within_tolerance"]
     },
     {
       "id": "measure.audio.silence",
@@ -82,9 +80,7 @@
       "id": "measure.video.black_frame",
       "lifecycle": "EXPERIMENTAL",
       "tool_id": "qc/run",
-      "checks": [
-        "video.black_frames_within_tolerance"
-      ]
+      "checks": ["video.black_frames_within_tolerance"]
     },
     {
       "id": "measure.video.format",
@@ -102,9 +98,7 @@
       "id": "measure.video.freeze",
       "lifecycle": "EXPERIMENTAL",
       "tool_id": "qc/run",
-      "checks": [
-        "video.freeze_frames_within_tolerance"
-      ]
+      "checks": ["video.freeze_frames_within_tolerance"]
     }
   ]
 }

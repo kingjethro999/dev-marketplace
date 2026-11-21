@@ -8,9 +8,7 @@
   "permissions": {
     "read": {
       "level": "scoped",
-      "scope": [
-        "$HOME/**"
-      ]
+      "scope": ["$HOME/**"]
     },
     "write": {
       "level": "none"
@@ -32,9 +30,7 @@
     {
       "id": "guide",
       "summary": "guidance only",
-      "effects": [
-        "read"
-      ]
+      "effects": ["read"]
     }
   ]
 }

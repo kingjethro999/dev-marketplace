@@ -1,20 +1,20 @@
 ---
 name: security
-description: 'Review code for security problems; scan for vulnerabilities, secrets, dependency and prompt risks. Use when: asked whether code is safe to ship, even one small handler.'
+description: "Review code for security problems; scan for vulnerabilities, secrets, dependency and prompt risks. Use when: asked whether code is safe to ship, even one small handler."
 practices:
-- supply-chain-integrity
-- design-by-contract
-- sre
+  - supply-chain-integrity
+  - design-by-contract
+  - sre
 hexagonal_role: driven-adapter
 consumes:
-- repo-context
+  - repo-context
 produces:
-- security-gate-summary.json
-- suite-summary.json
-- redteam-results.json
+  - security-gate-summary.json
+  - suite-summary.json
+  - redteam-results.json
 context_rel:
-- kind: supplier-to
-  with: validate
+  - kind: supplier-to
+    with: validate
 skill_api_version: 1
 user-invocable: true
 metadata:
@@ -25,8 +25,9 @@ metadata:
   graph_root: true
   tier: product
   dependencies: []
-output_contract: 'stdout: security scan report'
+output_contract: "stdout: security scan report"
 ---
+
 # Security Skill
 
 > **Purpose:** Find and report security weaknesses in code, scripts, authorized binaries, and repo-managed prompt surfaces, with honest coverage.
@@ -137,11 +138,11 @@ a path or run a same-named script from the current repository; say the bundled
 script is unavailable and run the scanners the project already uses, record the
 suite or redteam scan as a coverage gap, and do the manual hunt.
 
-| Surface | Entry point | Location |
-|---|---|---|
-| Repository gate (quick or full) | `bash scripts/security-gate.sh` | AgentOps repository root only |
-| Composable suite for authorized binaries | `python3 "<skill-dir>/scripts/security_suite.py"` | bundled with this skill |
-| Offline prompt-surface redteam | `python3 "<skill-dir>/scripts/prompt_redteam.py"` | bundled with this skill |
+| Surface                                  | Entry point                                       | Location                      |
+| ---------------------------------------- | ------------------------------------------------- | ----------------------------- |
+| Repository gate (quick or full)          | `bash scripts/security-gate.sh`                   | AgentOps repository root only |
+| Composable suite for authorized binaries | `python3 "<skill-dir>/scripts/security_suite.py"` | bundled with this skill       |
+| Offline prompt-surface redteam           | `python3 "<skill-dir>/scripts/prompt_redteam.py"` | bundled with this skill       |
 
 - **No gate script** (any other repository): run the scanners the project
   already uses, such as a dependency audit, secret scan, or static analyzer,

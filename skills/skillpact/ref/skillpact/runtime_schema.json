@@ -35,27 +35,18 @@
           "$ref": "#/$defs/errors"
         },
         "idempotency": {
-          "enum": [
-            "bit_exact",
-            "content_equivalent",
-            "none"
-          ],
+          "enum": ["bit_exact", "content_equivalent", "none"],
           "description": "bit_exact: the same inputs give byte-identical output files, checked by running a case twice and comparing hashes; content_equivalent: the same content, not the same bytes (not hash-checked); none: a rerun may differ"
         }
       }
     },
     "progress": {
       "type": "object",
-      "required": [
-        "stream"
-      ],
+      "required": ["stream"],
       "additionalProperties": false,
       "properties": {
         "stream": {
-          "enum": [
-            "stderr",
-            "stdout"
-          ],
+          "enum": ["stderr", "stdout"],
           "description": "where the JSON lines go"
         },
         "flag": {
@@ -77,9 +68,7 @@
     },
     "errors": {
       "type": "object",
-      "required": [
-        "classes"
-      ],
+      "required": ["classes"],
       "additionalProperties": false,
       "properties": {
         "code_path": {
@@ -100,23 +89,12 @@
       }
     },
     "class": {
-      "enum": [
-        "input",
-        "environment",
-        "engine",
-        "policy",
-        "transient"
-      ],
+      "enum": ["input", "environment", "engine", "policy", "transient"],
       "description": "input: fix the request; environment: install or configure something; engine: the tool or model failed; policy: refused by a rule or permission; transient: retry later"
     },
     "event": {
       "type": "object",
-      "required": [
-        "event",
-        "step",
-        "percent",
-        "eta_s"
-      ],
+      "required": ["event", "step", "percent", "eta_s"],
       "properties": {
         "event": {
           "const": "progress"
@@ -126,19 +104,13 @@
           "minLength": 1
         },
         "percent": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "minimum": 0,
           "maximum": 100,
           "description": "of the whole op; never decreases; null when unknown"
         },
         "eta_s": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "minimum": 0,
           "description": "seconds left; null when unknown"
         }

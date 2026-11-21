@@ -16,7 +16,10 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "progress": { "oneOf": [{ "$ref": "#/$defs/progress" }, { "const": false }], "description": "false: this op emits no progress events" },
+        "progress": {
+          "oneOf": [{ "$ref": "#/$defs/progress" }, { "const": false }],
+          "description": "false: this op emits no progress events"
+        },
         "errors": { "$ref": "#/$defs/errors" }
       }
     },
@@ -25,9 +28,22 @@
       "required": ["stream"],
       "additionalProperties": false,
       "properties": {
-        "stream": { "enum": ["stderr", "stdout"], "description": "where the JSON lines go" },
-        "flag": { "type": "string", "pattern": "^-", "description": "the flag that turns the events on, when they are not always emitted" },
-        "steps": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 }, "description": "every step name an event may carry" }
+        "stream": {
+          "enum": ["stderr", "stdout"],
+          "description": "where the JSON lines go"
+        },
+        "flag": {
+          "type": "string",
+          "pattern": "^-",
+          "description": "the flag that turns the events on, when they are not always emitted"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "every step name an event may carry"
+        }
       }
     },
     "errors": {
@@ -35,7 +51,11 @@
       "required": ["classes"],
       "additionalProperties": false,
       "properties": {
-        "code_path": { "type": "string", "minLength": 1, "description": "dotted path of the error code in the JSON result on stdout (default error.code)" },
+        "code_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "dotted path of the error code in the JSON result on stdout (default error.code)"
+        },
         "classes": {
           "type": "object",
           "minProperties": 1,
@@ -54,8 +74,17 @@
       "properties": {
         "event": { "const": "progress" },
         "step": { "type": "string", "minLength": 1 },
-        "percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "of the whole op; never decreases; null when unknown" },
-        "eta_s": { "type": ["number", "null"], "minimum": 0, "description": "seconds left; null when unknown" }
+        "percent": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "of the whole op; never decreases; null when unknown"
+        },
+        "eta_s": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "seconds left; null when unknown"
+        }
       }
     }
   }

@@ -83,7 +83,7 @@ git show origin/main:manifest.json | jq -r '.metadata.version'   # -> 2.18.0
 # your branch takes 2.19.0, regardless of what your branch said before
 ```
 
-Do this as the *last* step before pushing, not during the merge. If another
+Do this as the _last_ step before pushing, not during the merge. If another
 branch lands while you resolve, you redo only one line.
 
 ## Generated artifacts: rebuild, never merge
@@ -130,7 +130,7 @@ records = [to_record(k, v) for k, v in index.items()]
 records = sorted((to_record(k, v) for k, v in index.items()), key=lambda r: r["date"])
 ```
 
-This applies to *any* code path that rebuilds a committed file from an unordered
+This applies to _any_ code path that rebuilds a committed file from an unordered
 collection, including the ones added later. Once one path forgets, the file is
 churny again.
 

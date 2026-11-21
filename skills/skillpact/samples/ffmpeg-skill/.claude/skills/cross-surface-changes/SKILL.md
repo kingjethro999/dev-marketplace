@@ -46,7 +46,7 @@ The surfaces above are drudgery precisely because they're copies. Delete the cop
 where you can:
 
 - An API reference rendered from the live schema self-syncs and needs no hand
-  edit when the API changes. That page is *free* forever.
+  edit when the API changes. That page is _free_ forever.
 - A version badge repeated across forty pages belongs in a template/partial or a
   build-time injection, not in forty files.
 - A "supported features" list is better derived from the registry it describes
@@ -61,7 +61,7 @@ def test_readme_documents_every_registered_tool():
     assert documented == registered   # fails on add, remove, and rename
 ```
 
-Compare against the *live* registry, not a second hand-written list — a test that
+Compare against the _live_ registry, not a second hand-written list — a test that
 compares two hand-maintained lists only proves you updated both copies of the
 same mistake. The same rule covers duplicated dependency metadata and committed
 build outputs; see **build-artifacts** (also in this repo's `.claude/skills/`).
@@ -113,7 +113,7 @@ current values into a constant and check against it.
 KNOWN_TOOLS = {"search", "create", "archive"}   # correct until they ship
 ```
 
-It is stale the moment the owner ships, and the staleness surfaces as *your*
+It is stale the moment the owner ships, and the staleness surfaces as _your_
 validator rejecting valid input. Worse, nothing in your repo can detect it: you
 have no reference to compare against.
 
@@ -137,21 +137,21 @@ repos, and half a contract is an outage.
 
 - Open the paired PR in the consumer repo at the same time, proactively. Don't
   land the producer side and file an issue for the other end.
-- Version the payload so an old decoder can *detect* a new format instead of
+- Version the payload so an old decoder can _detect_ a new format instead of
   misparsing it into plausible garbage.
 - Where the two are on different release cadences (an app store review vs. a
   static site deploy), ship the decoder first and the encoder second.
 
 If the counterpart repo is private and this one is public, refer to it by what it
 does — "the site that serves the share links" — never by slug, path, or URL.
-Naming the public product a piece of content is *about* is expected; leaking the
+Naming the public product a piece of content is _about_ is expected; leaking the
 name of a private repository is not. That distinction is worth a CI check in any
 public repo that has a private counterpart.
 
 ## Keep overloaded words apart
 
 Products accumulate words that name two different things. One system may have a
-per-feed, unsigned POST configured on a resource *and* an account-wide, signed,
+per-feed, unsigned POST configured on a resource _and_ an account-wide, signed,
 retried event stream with a delivery log — and call both a "webhook." Once copy
 uses the bare word, every sentence about either becomes ambiguous and support
 questions stop being answerable.

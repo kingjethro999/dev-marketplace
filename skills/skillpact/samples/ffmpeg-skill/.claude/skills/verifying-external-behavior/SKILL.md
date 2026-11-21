@@ -44,12 +44,12 @@ Two rules make probes worth the minute they cost:
 
 ## Permissive clients don't reject wrong arguments — they ignore them
 
-This is the highest-severity class, because the failure returns *plausible data*.
+This is the highest-severity class, because the failure returns _plausible data_.
 Many HTTP client wrappers forward keyword arguments verbatim into the query
 string without validating them against their own documented parameter list. The
 remote service then drops the unknown parameter and applies its default — often
 "the authenticated user". A misspelled selector (`owner=` for `owner_screen_name=`,
-`id_=` for `id=`) does not raise; it silently returns *someone else's* records.
+`id_=` for `id=`) does not raise; it silently returns _someone else's_ records.
 
 Never infer "the library would have rejected that" from the library's declared
 parameter list. Read the bytes that leave the process:
@@ -96,7 +96,7 @@ whatever the generic handler does.
 
 Probe the exact URL before writing a tolerated-status branch. If you keep a
 defensive branch for a status you could not reproduce, label it as defensive and
-name the path you *did* observe, so the next reader does not mistake it for
+name the path you _did_ observe, so the next reader does not mistake it for
 verified behaviour.
 
 ```python
@@ -106,7 +106,7 @@ if resp.status_code == 410:
     return []
 ```
 
-## The response *shape* is part of the contract
+## The response _shape_ is part of the contract
 
 List endpoints commonly embed a **summary** object — a handful of identity fields —
 rather than the full entity. A "we already have the data" fast path written
@@ -154,7 +154,7 @@ changes that a prose regex does not.
 
 ## Dry-runs skip the step that fails
 
-Resolve-only and plan-only modes are not verification of anything the *real* run
+Resolve-only and plan-only modes are not verification of anything the _real_ run
 does after resolution. A dependency resolver's `--dry-run` reports success for a
 requirement whose presence makes the actual build hard-fail, because the dry run
 never builds. A build script's `--check` may never invoke the platform-specific

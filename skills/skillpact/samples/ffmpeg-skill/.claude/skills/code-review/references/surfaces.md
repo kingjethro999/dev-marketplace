@@ -6,18 +6,18 @@ appears on.
 
 ## The inventory
 
-| surface | what it must say | checked by |
-| --- | --- | --- |
-| `scripts/*.py` + `scripts/_contract.py` | the behaviour and the tool/flag schema | the generator |
-| `python3 scripts/_contract.py --json` | canonical tool names, flags, dry-run semantics, error kinds | `tests/test_contract.py` |
-| `README.md` | tool table, contract table, gotchas | tested against the contract |
-| `SKILL.md` | runtime guidance for the calling agent | tested against the contract; < 30,000 bytes |
-| `references/scripts.md` | per-tool detail | docs consistency tests |
-| `docs/contract.md` | the contract restated for humans | `tests/test_contract.py` |
-| `CHANGELOG.md` | the entry for the change | `test_changelog_mentions_every_closed_issue_since_last_tag` |
-| `demos/build.py` → `docs/demos.md` | a before/after demo per feature | a test asserts every `scripts/*.py` appears in some demo |
-| `mcp/` | MCP tools derived from the contract | MCP derivation tests |
-| `bin/install.js` `PAYLOAD`, `package.json` `files` | what ships in npm | `tests/release_check.sh` |
+| surface                                            | what it must say                                            | checked by                                                  |
+| -------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
+| `scripts/*.py` + `scripts/_contract.py`            | the behaviour and the tool/flag schema                      | the generator                                               |
+| `python3 scripts/_contract.py --json`              | canonical tool names, flags, dry-run semantics, error kinds | `tests/test_contract.py`                                    |
+| `README.md`                                        | tool table, contract table, gotchas                         | tested against the contract                                 |
+| `SKILL.md`                                         | runtime guidance for the calling agent                      | tested against the contract; < 30,000 bytes                 |
+| `references/scripts.md`                            | per-tool detail                                             | docs consistency tests                                      |
+| `docs/contract.md`                                 | the contract restated for humans                            | `tests/test_contract.py`                                    |
+| `CHANGELOG.md`                                     | the entry for the change                                    | `test_changelog_mentions_every_closed_issue_since_last_tag` |
+| `demos/build.py` → `docs/demos.md`                 | a before/after demo per feature                             | a test asserts every `scripts/*.py` appears in some demo    |
+| `mcp/`                                             | MCP tools derived from the contract                         | MCP derivation tests                                        |
+| `bin/install.js` `PAYLOAD`, `package.json` `files` | what ships in npm                                           | `tests/release_check.sh`                                    |
 
 ## Rules a review enforces
 
@@ -37,7 +37,7 @@ appears on.
   in the same PR as the version bump**, so the roadmap never describes a shipped
   version as planned.
 - **Packaging exceptions:** `references/process-pitfalls.md` is a maintainer diary
-  and is deliberately *not* in the npm package; `scripts.md`, `devices.md`,
+  and is deliberately _not_ in the npm package; `scripts.md`, `devices.md`,
   `ci-platform-pitfalls.md` and `docs/contract.md` are. Check `package.json`
   `files` and `bin/install.js` `PAYLOAD`, not this note.
 - **Never quote the release bump's skip-CI marker in a PR body.** A squash merge

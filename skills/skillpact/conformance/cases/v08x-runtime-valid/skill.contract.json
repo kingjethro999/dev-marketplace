@@ -17,9 +17,7 @@
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "sh"
-      ]
+      "scope": ["sh"]
     },
     "spend": {
       "level": "none"
@@ -33,14 +31,9 @@
       "id": "hello",
       "summary": "print",
       "entry": {
-        "cli": [
-          "sh",
-          "$SKILL_DIR/scripts/run.sh"
-        ]
+        "cli": ["sh", "$SKILL_DIR/scripts/run.sh"]
       },
-      "effects": [
-        "exec"
-      ],
+      "effects": ["exec"],
       "x": {
         "runtime": {
           "errors": {
@@ -57,16 +50,11 @@
       {
         "id": "t1",
         "capability": "hello",
-        "run": [
-          "sh",
-          "$SKILL_DIR/scripts/run.sh"
-        ],
+        "run": ["sh", "$SKILL_DIR/scripts/run.sh"],
         "expect": {
           "exit_code": 0
         },
-        "tags": [
-          "progress"
-        ]
+        "tags": ["progress"]
       }
     ]
   },
@@ -75,10 +63,7 @@
       "progress": {
         "stream": "stderr",
         "flag": "--progress",
-        "steps": [
-          "read",
-          "write"
-        ]
+        "steps": ["read", "write"]
       },
       "errors": {
         "classes": {

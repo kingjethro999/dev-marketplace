@@ -3,35 +3,18 @@
   "$id": "https://kajisho5.github.io/skillpact/schema/v0.8.json",
   "title": "SkillPact contract 0.3 (skill.contract.json, next to SKILL.md)",
   "type": "object",
-  "required": [
-    "contract_version",
-    "skill",
-    "permissions",
-    "capabilities"
-  ],
+  "required": ["contract_version", "skill", "permissions", "capabilities"],
   "additionalProperties": false,
   "properties": {
     "$schema": {
       "type": "string"
     },
     "contract_version": {
-      "enum": [
-        "0.1",
-        "0.2",
-        "0.3",
-        "0.4",
-        "0.5",
-        "0.6",
-        "0.7",
-        "0.8"
-      ]
+      "enum": ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8"]
     },
     "skill": {
       "type": "object",
-      "required": [
-        "name",
-        "version"
-      ],
+      "required": ["name", "version"],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -88,24 +71,13 @@
         "os": {
           "type": "array",
           "items": {
-            "enum": [
-              "linux",
-              "macos",
-              "windows",
-              "ios",
-              "android"
-            ]
+            "enum": ["linux", "macos", "windows", "ios", "android"]
           }
         },
         "interfaces": {
           "type": "array",
           "items": {
-            "enum": [
-              "skill-md",
-              "cli",
-              "mcp-stdio",
-              "mcp-http"
-            ]
+            "enum": ["skill-md", "cli", "mcp-stdio", "mcp-http"]
           }
         }
       }
@@ -130,9 +102,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "name"
-            ],
+            "required": ["name"],
             "properties": {
               "name": {
                 "type": "string"
@@ -154,9 +124,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "name"
-            ],
+            "required": ["name"],
             "additionalProperties": false,
             "properties": {
               "name": {
@@ -182,20 +150,11 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "ecosystem",
-              "name"
-            ],
+            "required": ["ecosystem", "name"],
             "additionalProperties": false,
             "properties": {
               "ecosystem": {
-                "enum": [
-                  "pypi",
-                  "npm",
-                  "cargo",
-                  "go",
-                  "gem"
-                ]
+                "enum": ["pypi", "npm", "cargo", "go", "gem"]
               },
               "name": {
                 "type": "string"
@@ -261,15 +220,10 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "type"
-            ],
+            "required": ["type"],
             "properties": {
               "type": {
-                "enum": [
-                  "ed25519",
-                  "sigstore"
-                ]
+                "enum": ["ed25519", "sigstore"]
               },
               "key": {
                 "type": "string"
@@ -290,18 +244,11 @@
                 "type": "object"
               },
               "instance": {
-                "enum": [
-                  "production",
-                  "staging"
-                ],
+                "enum": ["production", "staging"],
                 "description": "Sigstore instance; staging signatures are for testing and never satisfy a production trust entry"
               },
               "role": {
-                "enum": [
-                  "author",
-                  "reviewer",
-                  "scanner"
-                ],
+                "enum": ["author", "reviewer", "scanner"],
                 "description": "author (default) makes L3 possible; reviewer / scanner are attestations by others. From 0.8 the role is part of the signed bytes (spec s11.1)."
               }
             },
@@ -315,10 +262,7 @@
                   }
                 },
                 "then": {
-                  "required": [
-                    "key",
-                    "sig"
-                  ]
+                  "required": ["key", "sig"]
                 }
               },
               {
@@ -330,11 +274,7 @@
                   }
                 },
                 "then": {
-                  "required": [
-                    "identity",
-                    "issuer",
-                    "bundle"
-                  ]
+                  "required": ["identity", "issuer", "bundle"]
                 }
               }
             ],
@@ -342,10 +282,7 @@
           }
         },
         "canonicalization": {
-          "enum": [
-            "jcs",
-            "legacy-sorted"
-          ],
+          "enum": ["jcs", "legacy-sorted"],
           "description": "informative; verifiers derive it from contract_version (>=0.4: jcs, RFC 8785)"
         },
         "exclude": {
@@ -366,10 +303,7 @@
       }
     },
     "kind": {
-      "enum": [
-        "tool",
-        "instructions"
-      ],
+      "enum": ["tool", "instructions"],
       "description": "instructions = SKILL.md-only skill with no executable entry"
     }
   },
@@ -379,11 +313,7 @@
       "additionalProperties": false,
       "properties": {
         "status": {
-          "enum": [
-            "tested",
-            "expected",
-            "unsupported"
-          ]
+          "enum": ["tested", "expected", "unsupported"]
         },
         "version": {
           "type": "string"
@@ -398,9 +328,7 @@
     },
     "binary": {
       "type": "object",
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -438,22 +366,11 @@
       }
     },
     "level": {
-      "enum": [
-        "none",
-        "scoped",
-        "any"
-      ]
+      "enum": ["none", "scoped", "any"]
     },
     "permissions": {
       "type": "object",
-      "required": [
-        "read",
-        "write",
-        "network",
-        "exec",
-        "spend",
-        "send"
-      ],
+      "required": ["read", "write", "network", "exec", "spend", "send"],
       "additionalProperties": false,
       "properties": {
         "read": {
@@ -478,9 +395,7 @@
     },
     "permEntry": {
       "type": "object",
-      "required": [
-        "level"
-      ],
+      "required": ["level"],
       "additionalProperties": false,
       "properties": {
         "level": {
@@ -497,11 +412,7 @@
           "type": "string"
         },
         "confirm": {
-          "enum": [
-            "never",
-            "each",
-            "session"
-          ]
+          "enum": ["never", "each", "session"]
         }
       },
       "allOf": [
@@ -514,9 +425,7 @@
             }
           },
           "then": {
-            "required": [
-              "scope"
-            ],
+            "required": ["scope"],
             "properties": {
               "scope": {
                 "minItems": 1
@@ -528,11 +437,7 @@
     },
     "capability": {
       "type": "object",
-      "required": [
-        "id",
-        "summary",
-        "effects"
-      ],
+      "required": ["id", "summary", "effects"],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -561,14 +466,7 @@
         "effects": {
           "type": "array",
           "items": {
-            "enum": [
-              "read",
-              "write",
-              "network",
-              "exec",
-              "spend",
-              "send"
-            ]
+            "enum": ["read", "write", "network", "exec", "spend", "send"]
           },
           "uniqueItems": true
         },
@@ -621,9 +519,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "feature"
-            ],
+            "required": ["feature"],
             "properties": {
               "feature": {
                 "type": "string"
@@ -638,21 +534,11 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "effect",
-              "when"
-            ],
+            "required": ["effect", "when"],
             "additionalProperties": false,
             "properties": {
               "effect": {
-                "enum": [
-                  "read",
-                  "write",
-                  "network",
-                  "exec",
-                  "spend",
-                  "send"
-                ]
+                "enum": ["read", "write", "network", "exec", "spend", "send"]
               },
               "when": {
                 "type": "string"
@@ -693,14 +579,7 @@
         "effect_scopes": {
           "type": "object",
           "propertyNames": {
-            "enum": [
-              "read",
-              "write",
-              "network",
-              "exec",
-              "spend",
-              "send"
-            ]
+            "enum": ["read", "write", "network", "exec", "spend", "send"]
           },
           "additionalProperties": {
             "type": "array",
@@ -721,11 +600,7 @@
     },
     "testCase": {
       "type": "object",
-      "required": [
-        "id",
-        "run",
-        "expect"
-      ],
+      "required": ["id", "run", "expect"],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -758,9 +633,7 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": [
-                  "path"
-                ],
+                "required": ["path"],
                 "properties": {
                   "path": {
                     "type": "string"
@@ -785,9 +658,7 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": [
-                  "path"
-                ],
+                "required": ["path"],
                 "properties": {
                   "path": {
                     "type": "string"
@@ -815,10 +686,7 @@
               "description": "validate stdout JSON against the capability's outputs schema"
             },
             "stdout_json_mode": {
-              "enum": [
-                "strict",
-                "last"
-              ],
+              "enum": ["strict", "last"],
               "description": "last = parse the last top-level JSON value in stdout (tolerates leading log lines); strict is the default and the conformant behaviour"
             }
           }

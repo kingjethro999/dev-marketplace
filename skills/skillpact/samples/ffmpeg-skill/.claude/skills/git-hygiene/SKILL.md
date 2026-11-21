@@ -12,7 +12,7 @@ history is forever and public repos publish everything.
 ## The one rule everyone forgets
 
 **`.gitignore` does NOT untrack files that are already committed.** Adding a path
-to `.gitignore` only prevents *future untracked* files from being staged. A file
+to `.gitignore` only prevents _future untracked_ files from being staged. A file
 git is already tracking keeps getting committed regardless. This bites repeatedly:
 a `.env` is listed in `.gitignore` but was committed before the rule existed, so
 it keeps shipping.
@@ -94,10 +94,10 @@ Block secrets at commit time with a pre-commit hook so they never reach history:
 repos:
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.0
-    hooks: [{id: gitleaks}]
+    hooks: [{ id: gitleaks }]
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
-    hooks: [{id: detect-secrets, args: ["--baseline", ".secrets.baseline"]}]
+    hooks: [{ id: detect-secrets, args: ["--baseline", ".secrets.baseline"] }]
 ```
 
 A starter project `.gitignore` (commit this):
@@ -196,7 +196,7 @@ Prevent:
 - [ ] Verification bracketed by `git status --short`; only reviewed paths staged
 ```
 
-For scanning source code for vulnerabilities and hardcoded-secret *patterns*
+For scanning source code for vulnerabilities and hardcoded-secret _patterns_
 rather than what git tracks, use the `/security-review` skill already available
 in this session.
 

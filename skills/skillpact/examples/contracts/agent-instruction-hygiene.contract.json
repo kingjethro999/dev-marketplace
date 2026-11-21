@@ -17,9 +17,7 @@
         "status": "expected"
       }
     },
-    "interfaces": [
-      "skill-md"
-    ]
+    "interfaces": ["skill-md"]
   },
   "requirements": {
     "binaries": [],
@@ -62,10 +60,7 @@
     "init": {
       "source": "heuristic",
       "version_from": "package.json",
-      "uncertain": [
-        "/capabilities",
-        "/permissions/read"
-      ]
+      "uncertain": ["/capabilities", "/permissions/read"]
     }
   }
 }

@@ -7,8 +7,8 @@ description: Add and review preconditions on operations that delete, overwrite, 
 
 Some operations have no undo: an orphan-branch rewrite, a recursive delete of
 every tracked file, an overwrite of a stored artifact, a `DROP`/`purge` path. The
-implementation is usually short and usually correct *for the setup its author had
-in mind*. The bug is never the deletion itself — it is that nothing checked
+implementation is usually short and usually correct _for the setup its author had
+in mind_. The bug is never the deletion itself — it is that nothing checked
 whether the target was the thing the author imagined.
 
 Two shapes recur, and they take the same fix:
@@ -46,7 +46,7 @@ this one.
 ## Put the guard ahead of the first mutation
 
 "Refuses" is only true if the refusal happens before anything has changed.
-Walk the function and find the *first* statement with an effect — it is often not
+Walk the function and find the _first_ statement with an effect — it is often not
 the obvious deletion. In-memory state clearing, a branch checkout, and a
 read-then-rewrite of the very files you are preserving all count.
 
@@ -64,7 +64,7 @@ Steps 3-6 are all mutations of something (3 is not, but it is where the "what to
 preserve" snapshot is taken, and a guard after it has already committed you to a
 shape). Land the guard at 2 and a rejected run leaves the working tree byte-identical.
 
-Also refuse *ambiguous* state before rewriting it. A history rewrite that assumes
+Also refuse _ambiguous_ state before rewriting it. A history rewrite that assumes
 a named branch should reject detached HEAD up front rather than silently
 recreating the wrong ref.
 
@@ -113,7 +113,7 @@ def _resolve(name: str, base: Path) -> Path:
 
 The containment half is **not** redundant with the regex. The regex stops `..`
 segments and absolute paths; only the `resolve()` + containment check stops a
-*symlink placed inside the directory* that points out of it — a name matching
+_symlink placed inside the directory_ that points out of it — a name matching
 `^[A-Za-z0-9]` all the way through can still resolve anywhere. Route every entry
 point through both: the loader, the saver, and any path-building helper a public
 method still calls directly. A single unrouted helper reinstates the whole hole.
@@ -130,7 +130,7 @@ explicit about it:
 
 - The preview will show a full rebuild in a repository where the rebuild is
   forbidden. Only the real invocation errors.
-- Anything meant to warn the operator *earlier* has to live in the preview stage
+- Anything meant to warn the operator _earlier_ has to live in the preview stage
   or the CLI argument-validation layer, duplicated deliberately, not moved.
 
 Say which one you chose in the PR description; a reviewer cannot tell from the
@@ -149,7 +149,7 @@ except Exception as e:                       # already there, catches your Value
     return {"error": f"Analysis failed: {e}", "features": {}, "flags": {...}}
 ```
 
-This is often *fine* — an API boundary that never raises is a real contract, and
+This is often _fine_ — an API boundary that never raises is a real contract, and
 the refusal surfaces as a normal error-shaped response rather than a protocol
 error. But check it deliberately: if that shape is what your caller sees, the
 integration test asserts on `result["error"]`, not on `pytest.raises`.
@@ -157,7 +157,7 @@ integration test asserts on `result["error"]`, not on `pytest.raises`.
 ## Testing
 
 - **Mutate each half separately.** Neuter only the regex and confirm a `..`
-  fixture fails; neuter only the containment check and confirm a *symlink*
+  fixture fails; neuter only the containment check and confirm a _symlink_
   fixture fails. One combined test passes with either half deleted and proves
   neither.
 - **Write the sibling-name fixture explicitly.** A test whose repository tracks
@@ -172,7 +172,7 @@ integration test asserts on `result["error"]`, not on `pytest.raises`.
   alongside the state directory, because nothing cared. After the guard, such a
   test no longer reaches the code it was written to cover; it now exercises the
   refusal. Tighten those fixtures to the allowed shape and add the refusal case
-  as a *new* test, or you silently lose coverage of the destructive path.
+  as a _new_ test, or you silently lose coverage of the destructive path.
 - **Reproduce the failure with the narrowest hook.** When you need one specific
   operation to fail in order to test the recovery path, target it precisely — a
   blanket hook that rejects every operation of that kind aborts the run earlier
@@ -185,7 +185,7 @@ integration test asserts on `result["error"]`, not on `pytest.raises`.
 - [ ] The guard runs before the first statement with an effect
 - [ ] Ambiguous state (detached HEAD, missing target, multiple candidates) rejected up front
 - [ ] Path/ownership classification is structural, never a bare string prefix
-- [ ] Caller-supplied names are validated *and* resolved-path contained
+- [ ] Caller-supplied names are validated _and_ resolved-path contained
 - [ ] Every entry point routes through both checks, including internal helpers
 - [ ] The dry-run/preview gap is intentional and stated
 - [ ] Tests mutate each half of the guard independently

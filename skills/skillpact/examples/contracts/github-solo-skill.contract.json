@@ -19,29 +19,19 @@
         "status": "expected"
       }
     },
-    "interfaces": [
-      "skill-md",
-      "cli",
-      "mcp-stdio"
-    ]
+    "interfaces": ["skill-md", "cli", "mcp-stdio"]
   },
   "requirements": {
     "binaries": [
       {
         "name": "gh",
-        "check": [
-          "gh",
-          "--version"
-        ],
+        "check": ["gh", "--version"],
         "optional": true,
         "when": "token fallback: gh auth token"
       },
       {
         "name": "git",
-        "check": [
-          "git",
-          "--version"
-        ],
+        "check": ["git", "--version"],
         "optional": true
       }
     ],
@@ -49,10 +39,7 @@
       {
         "name": "python3",
         "version": ">=3.9",
-        "check": [
-          "python3",
-          "--version"
-        ]
+        "check": ["python3", "--version"]
       }
     ],
     "env": [
@@ -90,19 +77,12 @@
     },
     "network": {
       "level": "scoped",
-      "scope": [
-        "api.github.com",
-        "github.com"
-      ],
+      "scope": ["api.github.com", "github.com"],
       "why": "GitHub REST API only"
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "python3",
-        "gh",
-        "git"
-      ]
+      "scope": ["python3", "gh", "git"]
     },
     "spend": {
       "level": "none",
@@ -117,91 +97,50 @@
       "id": "repo.audit",
       "summary": "Diagnose a repo's settings for a solo developer",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/solo.py",
-          "audit"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/solo.py", "audit"],
         "mcp_tool": "solo_audit"
       },
-      "effects": [
-        "read",
-        "network",
-        "exec"
-      ],
+      "effects": ["read", "network", "exec"],
       "idempotent": true,
       "effect_scopes": {
-        "exec": [
-          "python3"
-        ]
+        "exec": ["python3"]
       }
     },
     {
       "id": "repo.apply",
       "summary": "Apply missing settings (dry run unless --yes)",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/solo.py",
-          "apply"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/solo.py", "apply"],
         "mcp_tool": "solo_apply"
       },
-      "effects": [
-        "read",
-        "write",
-        "network",
-        "exec"
-      ],
+      "effects": ["read", "write", "network", "exec"],
       "destructive": false,
       "idempotent": true,
       "dry_run": {
         "supported": true,
         "flag": "(default; --yes to execute)",
-        "effects": [
-          "read",
-          "network"
-        ]
+        "effects": ["read", "network"]
       }
     },
     {
       "id": "repo.restore",
       "summary": "Undo applied settings from a saved snapshot",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/solo.py",
-          "restore"
-        ],
+        "cli": ["python3", "$SKILL_DIR/scripts/solo.py", "restore"],
         "mcp_tool": "solo_restore"
       },
-      "effects": [
-        "read",
-        "write",
-        "network",
-        "exec"
-      ],
+      "effects": ["read", "write", "network", "exec"],
       "destructive": true
     },
     {
       "id": "repo.dependabot",
       "summary": "Print a generated dependabot.yml (reads the repo's languages via the GitHub API)",
       "entry": {
-        "cli": [
-          "python3",
-          "$SKILL_DIR/scripts/solo.py",
-          "dependabot"
-        ]
+        "cli": ["python3", "$SKILL_DIR/scripts/solo.py", "dependabot"]
       },
-      "effects": [
-        "read",
-        "network",
-        "exec"
-      ],
+      "effects": ["read", "network", "exec"],
       "effect_scopes": {
-        "exec": [
-          "python3"
-        ]
+        "exec": ["python3"]
       }
     }
   ],
@@ -210,11 +149,7 @@
       {
         "id": "help",
         "capability": "repo.audit",
-        "run": [
-          "python3",
-          "$SKILL_DIR/scripts/solo.py",
-          "--help"
-        ],
+        "run": ["python3", "$SKILL_DIR/scripts/solo.py", "--help"],
         "expect": {
           "exit_code": 0,
           "stdout_contains": "audit"
@@ -253,9 +188,7 @@
         "id": "audit-live",
         "capability": "repo.audit",
         "network": true,
-        "skip_unless_env": [
-          "GH_TOKEN"
-        ],
+        "skip_unless_env": ["GH_TOKEN"],
         "run": [
           "python3",
           "$SKILL_DIR/scripts/solo.py",

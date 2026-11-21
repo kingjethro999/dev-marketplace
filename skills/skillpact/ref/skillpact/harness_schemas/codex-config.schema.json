@@ -33,11 +33,7 @@
     },
     "AgentsOverviewGrouping": {
       "description": "Last selected grouping in Agent Command Center.",
-      "enum": [
-        "project",
-        "status",
-        "model"
-      ],
+      "enum": ["project", "status", "model"],
       "type": "string"
     },
     "AgentsToml": {
@@ -80,10 +76,7 @@
       "type": "object"
     },
     "AllowDenyRequirementToml": {
-      "enum": [
-        "allow",
-        "deny"
-      ],
+      "enum": ["allow", "deny"],
       "type": "string"
     },
     "AltScreenMode": {
@@ -91,23 +84,17 @@
       "oneOf": [
         {
           "description": "Use alternate screen mode.",
-          "enum": [
-            "auto"
-          ],
+          "enum": ["auto"],
           "type": "string"
         },
         {
           "description": "Always use alternate screen mode.",
-          "enum": [
-            "always"
-          ],
+          "enum": ["always"],
           "type": "string"
         },
         {
           "description": "Never use alternate screen (inline mode only).",
-          "enum": [
-            "never"
-          ],
+          "enum": ["never"],
           "type": "string"
         }
       ]
@@ -217,12 +204,7 @@
       "type": "object"
     },
     "AppToolApproval": {
-      "enum": [
-        "auto",
-        "prompt",
-        "writes",
-        "approve"
-      ],
+      "enum": ["auto", "prompt", "writes", "approve"],
       "type": "string"
     },
     "AppToolConfig": {
@@ -253,11 +235,7 @@
     },
     "ApprovalsReviewer": {
       "description": "Configures who approval requests are routed to for review. Examples include sandbox escapes, blocked network access, MCP approval prompts, and ARC escalations. Defaults to `user`. `auto_review` uses a carefully prompted subagent to gather relevant context and apply a risk-based decision framework before approving or denying the request. The legacy value `guardian_subagent` is accepted for compatibility.",
-      "enum": [
-        "user",
-        "auto_review",
-        "guardian_subagent"
-      ],
+      "enum": ["user", "auto_review", "guardian_subagent"],
       "type": "string"
     },
     "AppsConfigToml": {
@@ -318,9 +296,7 @@
       "oneOf": [
         {
           "description": "The model decides when to ask the user for approval.",
-          "enum": [
-            "on-request"
-          ],
+          "enum": ["on-request"],
           "type": "string"
         },
         {
@@ -331,26 +307,19 @@
               "$ref": "#/definitions/GranularApprovalConfig"
             }
           },
-          "required": [
-            "granular"
-          ],
+          "required": ["granular"],
           "type": "object"
         },
         {
           "description": "Never ask the user to approve commands. Failures are immediately returned to the model, and never escalated to the user for approval.",
-          "enum": [
-            "never"
-          ],
+          "enum": ["never"],
           "type": "string"
         }
       ]
     },
     "AsyncClassifierMode": {
       "description": "Async classifier experiment, resolved once for each parent task.",
-      "enum": [
-        "snapshot",
-        "conversation"
-      ],
+      "enum": ["snapshot", "conversation"],
       "type": "string"
     },
     "AsyncCompactionConfigToml": {
@@ -375,30 +344,22 @@
       "oneOf": [
         {
           "description": "Persist credentials in CODEX_HOME/auth.json.",
-          "enum": [
-            "file"
-          ],
+          "enum": ["file"],
           "type": "string"
         },
         {
           "description": "Persist credentials in the keyring. Fail if unavailable.",
-          "enum": [
-            "keyring"
-          ],
+          "enum": ["keyring"],
           "type": "string"
         },
         {
           "description": "Use keyring when available; otherwise, fall back to a file in CODEX_HOME.",
-          "enum": [
-            "auto"
-          ],
+          "enum": ["auto"],
           "type": "string"
         },
         {
           "description": "Store credentials in memory only for the current process.",
-          "enum": [
-            "ephemeral"
-          ],
+          "enum": ["ephemeral"],
           "type": "string"
         }
       ]
@@ -408,16 +369,12 @@
       "oneOf": [
         {
           "description": "Count the full active context against the limit.",
-          "enum": [
-            "total"
-          ],
+          "enum": ["total"],
           "type": "string"
         },
         {
           "description": "Count sampled output and later growth after the carried window prefix.",
-          "enum": [
-            "body_after_prefix"
-          ],
+          "enum": ["body_after_prefix"],
           "type": "string"
         }
       ]
@@ -481,9 +438,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "command"
-      ],
+      "required": ["command"],
       "type": "object"
     },
     "AwsCredentialExportConfig": {
@@ -510,9 +465,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "command"
-      ],
+      "required": ["command"],
       "type": "object"
     },
     "BrowserUseConfigToml": {
@@ -565,16 +518,12 @@
       "oneOf": [
         {
           "description": "Emit the warning and interrupt without structured error details.",
-          "enum": [
-            "default"
-          ],
+          "enum": ["default"],
           "type": "string"
         },
         {
           "description": "Emit the same warning and interruption, with structured error details.",
-          "enum": [
-            "strict"
-          ],
+          "enum": ["strict"],
           "type": "string"
         }
       ]
@@ -707,11 +656,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "access",
-        "product_name",
-        "publisher_name"
-      ],
+      "required": ["access", "product_name", "publisher_name"],
       "type": "object"
     },
     "ConfigProfile": {
@@ -1421,35 +1366,24 @@
       "oneOf": [
         {
           "description": "Use the terminal-specific default.",
-          "enum": [
-            "auto"
-          ],
+          "enum": ["auto"],
           "type": "string"
         },
         {
           "description": "Copy every nonempty transcript or footer mouse selection on release.",
-          "enum": [
-            "always"
-          ],
+          "enum": ["always"],
           "type": "string"
         },
         {
           "description": "Require an explicit copy action.",
-          "enum": [
-            "never"
-          ],
+          "enum": ["never"],
           "type": "string"
         }
       ]
     },
     "CredentialAuthMethod": {
       "description": "Authentication formats supported by declarative credential providers.",
-      "enum": [
-        "bearer",
-        "token",
-        "basic",
-        "header"
-      ],
+      "enum": ["bearer", "token", "basic", "header"],
       "type": "string"
     },
     "CredentialProviderConfig": {
@@ -1527,25 +1461,18 @@
       "oneOf": [
         {
           "description": "Allow a reminder before any inference request once the interval is due.",
-          "enum": [
-            "any_inference"
-          ],
+          "enum": ["any_inference"],
           "type": "string"
         },
         {
           "description": "Allow reminders after user input or tool output; new context windows still force one.",
-          "enum": [
-            "after_user_or_tool_output"
-          ],
+          "enum": ["after_user_or_tool_output"],
           "type": "string"
         }
       ]
     },
     "CurrentTimeSource": {
-      "enum": [
-        "system",
-        "external"
-      ],
+      "enum": ["system", "external"],
       "type": "string"
     },
     "ExperimentalRequestUserInput": {
@@ -1735,17 +1662,12 @@
       "description": "Access mode for a filesystem entry.\n\nWhen two equally specific entries target the same path, we compare these by conflict precedence rather than by capability breadth: `deny` beats `write`, and `write` beats `read`.",
       "oneOf": [
         {
-          "enum": [
-            "read",
-            "write"
-          ],
+          "enum": ["read", "write"],
           "type": "string"
         },
         {
           "description": "`none` is a legacy input alias retained temporarily for compatibility.",
-          "enum": [
-            "deny"
-          ],
+          "enum": ["deny"],
           "type": "string"
         }
       ]
@@ -1789,10 +1711,7 @@
       "description": "Backward-compatible shape for ChatGPT workspace login restrictions in config.toml."
     },
     "ForcedLoginMethod": {
-      "enum": [
-        "chatgpt",
-        "api"
-      ],
+      "enum": ["chatgpt", "api"],
       "type": "string"
     },
     "GatewayOAuthConfig": {
@@ -1826,12 +1745,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "authorization_url",
-        "client_id",
-        "delivery",
-        "token_url"
-      ],
+      "required": ["authorization_url", "client_id", "delivery", "token_url"],
       "type": "object"
     },
     "GatewayOAuthDelivery": {
@@ -1840,9 +1754,7 @@
           "additionalProperties": false,
           "properties": {
             "kind": {
-              "enum": [
-                "header"
-              ],
+              "enum": ["header"],
               "type": "string"
             },
             "name": {
@@ -1853,29 +1765,21 @@
               "type": "string"
             }
           },
-          "required": [
-            "kind",
-            "name"
-          ],
+          "required": ["kind", "name"],
           "type": "object"
         },
         {
           "additionalProperties": false,
           "properties": {
             "kind": {
-              "enum": [
-                "cookie"
-              ],
+              "enum": ["cookie"],
               "type": "string"
             },
             "name": {
               "type": "string"
             }
           },
-          "required": [
-            "kind",
-            "name"
-          ],
+          "required": ["kind", "name"],
           "type": "object"
         }
       ]
@@ -1937,11 +1841,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "mcp_elicitations",
-        "rules",
-        "sandbox_approval"
-      ],
+      "required": ["mcp_elicitations", "rules", "sandbox_approval"],
       "type": "object"
     },
     "GuardianV2ConfigToml": {
@@ -2095,11 +1995,7 @@
     },
     "GuardianV2TranscriptSource": {
       "description": "Optional conversation sources available to the Guardian v2 classifier.",
-      "enum": [
-        "tool_calls",
-        "tool_outputs",
-        "reasoning"
-      ],
+      "enum": ["tool_calls", "tool_outputs", "reasoning"],
       "type": "string"
     },
     "History": {
@@ -2129,16 +2025,12 @@
       "oneOf": [
         {
           "description": "Save all history entries to disk.",
-          "enum": [
-            "save-all"
-          ],
+          "enum": ["save-all"],
           "type": "string"
         },
         {
           "description": "Do not write history to disk.",
-          "enum": [
-            "none"
-          ],
+          "enum": ["none"],
           "type": "string"
         }
       ]
@@ -2175,16 +2067,11 @@
               "type": "integer"
             },
             "type": {
-              "enum": [
-                "command"
-              ],
+              "enum": ["command"],
               "type": "string"
             }
           },
-          "required": [
-            "command",
-            "type"
-          ],
+          "required": ["command", "type"],
           "type": "object"
         },
         {
@@ -2211,45 +2098,31 @@
               "type": "string"
             },
             "type": {
-              "enum": [
-                "mcp_tool"
-              ],
+              "enum": ["mcp_tool"],
               "type": "string"
             }
           },
-          "required": [
-            "server",
-            "tool",
-            "type"
-          ],
+          "required": ["server", "tool", "type"],
           "type": "object"
         },
         {
           "properties": {
             "type": {
-              "enum": [
-                "prompt"
-              ],
+              "enum": ["prompt"],
               "type": "string"
             }
           },
-          "required": [
-            "type"
-          ],
+          "required": ["type"],
           "type": "object"
         },
         {
           "properties": {
             "type": {
-              "enum": [
-                "agent"
-              ],
+              "enum": ["agent"],
               "type": "string"
             }
           },
-          "required": [
-            "type"
-          ],
+          "required": ["type"],
           "type": "object"
         }
       ]
@@ -2421,10 +2294,7 @@
       "type": "object"
     },
     "MarketplaceSourceType": {
-      "enum": [
-        "git",
-        "local"
-      ],
+      "enum": ["git", "local"],
       "type": "string"
     },
     "MatcherGroup": {
@@ -2455,9 +2325,7 @@
           "description": "Shared enterprise authorization, independent of Codex account credentials."
         }
       },
-      "required": [
-        "idp"
-      ],
+      "required": ["idp"],
       "type": "object"
     },
     "McpServerAuth": {
@@ -2465,23 +2333,17 @@
       "oneOf": [
         {
           "description": "Use stored MCP OAuth credentials when available. Starting an OAuth login is a separate operation.",
-          "enum": [
-            "oauth"
-          ],
+          "enum": ["oauth"],
           "type": "string"
         },
         {
           "description": "Use the current ChatGPT session for servers on the trusted first-party ChatGPT origin. If no ChatGPT session provider is available, startup can still fall back to stored OAuth credentials.",
-          "enum": [
-            "chatgpt"
-          ],
+          "enum": ["chatgpt"],
           "type": "string"
         },
         {
           "description": "Exchange an enterprise IdP refresh token for resource-specific authorization. Alternate credentials and ordinary OAuth fallback are not permitted.",
-          "enum": [
-            "ema_auth"
-          ],
+          "enum": ["ema_auth"],
           "type": "string"
         }
       ]
@@ -2501,9 +2363,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "name"
-          ],
+          "required": ["name"],
           "type": "object"
         }
       ]
@@ -2520,10 +2380,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "client_id",
-        "issuer"
-      ],
+      "required": ["client_id", "issuer"],
       "type": "object"
     },
     "McpServerOAuthConfig": {
@@ -2581,16 +2438,12 @@
       "oneOf": [
         {
           "description": "Use the live connection to determine startup readiness.",
-          "enum": [
-            "connection"
-          ],
+          "enum": ["connection"],
           "type": "string"
         },
         {
           "description": "Allow a valid cached tool catalog while the live connection starts. Tool execution still requires the current connection.",
-          "enum": [
-            "catalog"
-          ],
+          "enum": ["catalog"],
           "type": "string"
         }
       ]
@@ -2675,10 +2528,7 @@
       "type": "object"
     },
     "MemoryVersion": {
-      "enum": [
-        "v1",
-        "v2"
-      ],
+      "enum": ["v1", "v2"],
       "type": "string"
     },
     "MicrophoneChannels": {
@@ -2746,9 +2596,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "command"
-      ],
+      "required": ["command"],
       "type": "object"
     },
     "ModelProviderAwsAuthInfo": {
@@ -3031,10 +2879,7 @@
       "type": "object"
     },
     "NetworkDomainPermissionToml": {
-      "enum": [
-        "allow",
-        "deny"
-      ],
+      "enum": ["allow", "deny"],
       "type": "string"
     },
     "NetworkDomainPermissionsToml": {
@@ -3105,12 +2950,7 @@
           "type": "object"
         }
       },
-      "required": [
-        "action",
-        "host",
-        "methods",
-        "path_prefixes"
-      ],
+      "required": ["action", "host", "methods", "path_prefixes"],
       "type": "object"
     },
     "NetworkMitmInjectedHeaderToml": {
@@ -3153,10 +2993,7 @@
       "type": "object"
     },
     "NetworkModeSchema": {
-      "enum": [
-        "limited",
-        "full"
-      ],
+      "enum": ["limited", "full"],
       "type": "string"
     },
     "NetworkProxyConfigToml": {
@@ -3218,24 +3055,15 @@
       "type": "object"
     },
     "NetworkProxyDomainPermissionToml": {
-      "enum": [
-        "allow",
-        "deny"
-      ],
+      "enum": ["allow", "deny"],
       "type": "string"
     },
     "NetworkProxyModeToml": {
-      "enum": [
-        "limited",
-        "full"
-      ],
+      "enum": ["limited", "full"],
       "type": "string"
     },
     "NetworkProxyUnixSocketPermissionToml": {
-      "enum": [
-        "allow",
-        "deny"
-      ],
+      "enum": ["allow", "deny"],
       "type": "string"
     },
     "NetworkToml": {
@@ -3285,10 +3113,7 @@
       "type": "object"
     },
     "NetworkUnixSocketPermissionToml": {
-      "enum": [
-        "allow",
-        "deny"
-      ],
+      "enum": ["allow", "deny"],
       "type": "string"
     },
     "NetworkUnixSocketPermissionsToml": {
@@ -3370,26 +3195,18 @@
       "oneOf": [
         {
           "description": "Emit TUI notifications only while the terminal is unfocused.",
-          "enum": [
-            "unfocused"
-          ],
+          "enum": ["unfocused"],
           "type": "string"
         },
         {
           "description": "Emit TUI notifications regardless of terminal focus.",
-          "enum": [
-            "always"
-          ],
+          "enum": ["always"],
           "type": "string"
         }
       ]
     },
     "NotificationMethod": {
-      "enum": [
-        "auto",
-        "osc9",
-        "bel"
-      ],
+      "enum": ["auto", "osc9", "bel"],
       "type": "string"
     },
     "Notifications": {
@@ -3410,23 +3227,17 @@
       "oneOf": [
         {
           "description": "Prefer `Keyring` and use `File` when keyring storage is unavailable. Once an MCP client loads credentials from one store, that client keeps the resolved store for its lifetime so refreshes cannot switch to a possibly stale credential source. Credentials stored in the keyring will only be readable by Codex unless the user explicitly grants access via OS-level keyring access.",
-          "enum": [
-            "auto"
-          ],
+          "enum": ["auto"],
           "type": "string"
         },
         {
           "description": "CODEX_HOME/.credentials.json This file will be readable to Codex and other applications running as the same user.",
-          "enum": [
-            "file"
-          ],
+          "enum": ["file"],
           "type": "string"
         },
         {
           "description": "Keyring when available, otherwise fail.",
-          "enum": [
-            "keyring"
-          ],
+          "enum": ["keyring"],
           "type": "string"
         }
       ]
@@ -3528,10 +3339,7 @@
       "description": "Which OTEL exporter to use.",
       "oneOf": [
         {
-          "enum": [
-            "none",
-            "statsig"
-          ],
+          "enum": ["none", "statsig"],
           "type": "string"
         },
         {
@@ -3562,16 +3370,11 @@
                   "default": null
                 }
               },
-              "required": [
-                "endpoint",
-                "protocol"
-              ],
+              "required": ["endpoint", "protocol"],
               "type": "object"
             }
           },
-          "required": [
-            "otlp-http"
-          ],
+          "required": ["otlp-http"],
           "type": "object"
         },
         {
@@ -3599,15 +3402,11 @@
                   "default": null
                 }
               },
-              "required": [
-                "endpoint"
-              ],
+              "required": ["endpoint"],
               "type": "object"
             }
           },
-          "required": [
-            "otlp-grpc"
-          ],
+          "required": ["otlp-grpc"],
           "type": "object"
         }
       ]
@@ -3616,16 +3415,12 @@
       "oneOf": [
         {
           "description": "Binary payload",
-          "enum": [
-            "binary"
-          ],
+          "enum": ["binary"],
           "type": "string"
         },
         {
           "description": "JSON payload",
-          "enum": [
-            "json"
-          ],
+          "enum": ["json"],
           "type": "string"
         }
       ]
@@ -3671,11 +3466,7 @@
     },
     "Personality": {
       "description": "Deprecated: `friendly` and `pragmatic` no longer select a style.",
-      "enum": [
-        "none",
-        "friendly",
-        "pragmatic"
-      ],
+      "enum": ["none", "friendly", "pragmatic"],
       "type": "string"
     },
     "PluginConfig": {
@@ -3987,11 +3778,7 @@
       "type": "object"
     },
     "RealtimeConversationVersion": {
-      "enum": [
-        "v1",
-        "v2",
-        "v3"
-      ],
+      "enum": ["v1", "v2", "v3"],
       "type": "string"
     },
     "RealtimeToml": {
@@ -4013,10 +3800,7 @@
       "type": "object"
     },
     "RealtimeTransport": {
-      "enum": [
-        "webrtc",
-        "websocket"
-      ],
+      "enum": ["webrtc", "websocket"],
       "type": "string"
     },
     "RealtimeVoice": {
@@ -4060,10 +3844,7 @@
       "type": "string"
     },
     "RealtimeWsMode": {
-      "enum": [
-        "conversational",
-        "transcription"
-      ],
+      "enum": ["conversational", "transcription"],
       "type": "string"
     },
     "ReasoningEffort": {
@@ -4075,18 +3856,12 @@
       "description": "A summary of the reasoning performed by the model. This can be useful for debugging and understanding the model's reasoning process. See https://platform.openai.com/docs/guides/reasoning?api-mode=responses#reasoning-summaries",
       "oneOf": [
         {
-          "enum": [
-            "auto",
-            "concise",
-            "detailed"
-          ],
+          "enum": ["auto", "concise", "detailed"],
           "type": "string"
         },
         {
           "description": "Option to disable reasoning summaries.",
-          "enum": [
-            "none"
-          ],
+          "enum": ["none"],
           "type": "string"
         }
       ]
@@ -4096,16 +3871,12 @@
       "oneOf": [
         {
           "description": "Use local compaction instead of a provider compaction protocol.",
-          "enum": [
-            "unsupported"
-          ],
+          "enum": ["unsupported"],
           "type": "string"
         },
         {
           "description": "Send `compaction_trigger` items over the Responses endpoint.",
-          "enum": [
-            "v2"
-          ],
+          "enum": ["v2"],
           "type": "string"
         }
       ]
@@ -4126,9 +3897,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "url"
-      ],
+      "required": ["url"],
       "type": "object"
     },
     "ResumeCwdMode": {
@@ -4136,16 +3905,12 @@
       "oneOf": [
         {
           "description": "Use the directory where Codex was launched.",
-          "enum": [
-            "current"
-          ],
+          "enum": ["current"],
           "type": "string"
         },
         {
           "description": "Use the latest working directory recorded in the selected session.",
-          "enum": [
-            "session"
-          ],
+          "enum": ["session"],
           "type": "string"
         }
       ]
@@ -4155,23 +3920,17 @@
       "oneOf": [
         {
           "description": "Enable on Windows/WSL/Linux, except recognized terminal-owned paste paths.",
-          "enum": [
-            "auto"
-          ],
+          "enum": ["auto"],
           "type": "string"
         },
         {
           "description": "Enable on supported local platforms; selection and terminal-owned paste still win.",
-          "enum": [
-            "on"
-          ],
+          "enum": ["on"],
           "type": "string"
         },
         {
           "description": "Leave right-click paste to the terminal.",
-          "enum": [
-            "off"
-          ],
+          "enum": ["off"],
           "type": "string"
         }
       ]
@@ -4209,11 +3968,7 @@
       "type": "object"
     },
     "SandboxMode": {
-      "enum": [
-        "read-only",
-        "workspace-write",
-        "danger-full-access"
-      ],
+      "enum": ["read-only", "workspace-write", "danger-full-access"],
       "type": "string"
     },
     "SandboxWorkspaceWrite": {
@@ -4243,41 +3998,29 @@
     },
     "SessionPickerViewMode": {
       "description": "Preferred layout for the resume/fork session picker.",
-      "enum": [
-        "comfortable",
-        "dense"
-      ],
+      "enum": ["comfortable", "dense"],
       "type": "string"
     },
     "ShellEnvironmentPolicyFilter": {
       "description": "Assigns a shell environment variable pattern to the include-only or exclude set. Includes do not re-add variables removed by another exclude pattern.",
-      "enum": [
-        "include",
-        "exclude"
-      ],
+      "enum": ["include", "exclude"],
       "type": "string"
     },
     "ShellEnvironmentPolicyInherit": {
       "oneOf": [
         {
           "description": "\"Core\" environment variables for the platform. On UNIX, this would include HOME, LOGNAME, PATH, SHELL, and USER, among others.",
-          "enum": [
-            "core"
-          ],
+          "enum": ["core"],
           "type": "string"
         },
         {
           "description": "Inherits the full environment from the parent process.",
-          "enum": [
-            "all"
-          ],
+          "enum": ["all"],
           "type": "string"
         },
         {
           "description": "Do not inherit any environment variables from the parent process.",
-          "enum": [
-            "none"
-          ],
+          "enum": ["none"],
           "type": "string"
         }
       ]
@@ -4287,18 +4030,12 @@
       "allOf": [
         {
           "not": {
-            "required": [
-              "exclude",
-              "filters"
-            ]
+            "required": ["exclude", "filters"]
           }
         },
         {
           "not": {
-            "required": [
-              "filters",
-              "include_only"
-            ]
+            "required": ["filters", "include_only"]
           }
         }
       ],
@@ -4362,9 +4099,7 @@
           "description": "Path-based selector."
         }
       },
-      "required": [
-        "enabled"
-      ],
+      "required": ["enabled"],
       "type": "object"
     },
     "SkillsConfig": {
@@ -4409,16 +4144,12 @@
       "oneOf": [
         {
           "description": "Preserve the existing model and legacy clock configuration defaults.",
-          "enum": [
-            "model_driven"
-          ],
+          "enum": ["model_driven"],
           "type": "string"
         },
         {
           "description": "Register sleep regardless of the model or legacy clock configuration.",
-          "enum": [
-            "always_on"
-          ],
+          "enum": ["always_on"],
           "type": "string"
         }
       ]
@@ -4428,15 +4159,11 @@
         {
           "properties": {
             "type": {
-              "enum": [
-                "local"
-              ],
+              "enum": ["local"],
               "type": "string"
             }
           },
-          "required": [
-            "type"
-          ],
+          "required": ["type"],
           "type": "object"
         }
       ]
@@ -4487,23 +4214,17 @@
       "oneOf": [
         {
           "description": "Nested tools available to Code Mode scripts.",
-          "enum": [
-            "code_mode"
-          ],
+          "enum": ["code_mode"],
           "type": "string"
         },
         {
           "description": "Tools discovered later through tool search.",
-          "enum": [
-            "deferred"
-          ],
+          "enum": ["deferred"],
           "type": "string"
         },
         {
           "description": "Tools present in the model's initial tool list.",
-          "enum": [
-            "direct"
-          ],
+          "enum": ["direct"],
           "type": "string"
         }
       ]
@@ -4565,10 +4286,7 @@
           "$ref": "#/definitions/ToolSuggestDiscoverableType"
         }
       },
-      "required": [
-        "id",
-        "type"
-      ],
+      "required": ["id", "type"],
       "type": "object"
     },
     "ToolSuggestDiscoverable": {
@@ -4581,17 +4299,11 @@
           "$ref": "#/definitions/ToolSuggestDiscoverableType"
         }
       },
-      "required": [
-        "id",
-        "type"
-      ],
+      "required": ["id", "type"],
       "type": "object"
     },
     "ToolSuggestDiscoverableType": {
-      "enum": [
-        "connector",
-        "plugin"
-      ],
+      "enum": ["connector", "plugin"],
       "type": "string"
     },
     "ToolsToml": {
@@ -4619,26 +4331,19 @@
       "oneOf": [
         {
           "description": "Numbered entries with a role prefix and unescaped text.",
-          "enum": [
-            "line"
-          ],
+          "enum": ["line"],
           "type": "string"
         },
         {
           "description": "Host-owned metadata with message text escaped as a JSON string.",
-          "enum": [
-            "json"
-          ],
+          "enum": ["json"],
           "type": "string"
         }
       ]
     },
     "TrustLevel": {
       "description": "Represents the trust level for a project directory. This determines the approval policy and sandbox mode applied.",
-      "enum": [
-        "trusted",
-        "untrusted"
-      ],
+      "enum": ["trusted", "untrusted"],
       "type": "string"
     },
     "Tui": {
@@ -6139,16 +5844,12 @@
       "oneOf": [
         {
           "description": "Anchor the pet to the bottom of the current TUI composer viewport.",
-          "enum": [
-            "composer"
-          ],
+          "enum": ["composer"],
           "type": "string"
         },
         {
           "description": "Anchor the pet to the physical bottom of the terminal screen.",
-          "enum": [
-            "screen-bottom"
-          ],
+          "enum": ["screen-bottom"],
           "type": "string"
         }
       ]
@@ -6773,38 +6474,23 @@
     "UriBasedFileOpener": {
       "oneOf": [
         {
-          "enum": [
-            "vscode",
-            "vscode-insiders",
-            "windsurf",
-            "cursor"
-          ],
+          "enum": ["vscode", "vscode-insiders", "windsurf", "cursor"],
           "type": "string"
         },
         {
           "description": "Option to disable the URI-based file opener.",
-          "enum": [
-            "none"
-          ],
+          "enum": ["none"],
           "type": "string"
         }
       ]
     },
     "Verbosity": {
       "description": "Controls output length/detail on GPT-5 models via the Responses API. Serialized with lowercase values to match the OpenAI API.",
-      "enum": [
-        "low",
-        "medium",
-        "high"
-      ],
+      "enum": ["low", "medium", "high"],
       "type": "string"
     },
     "WebSearchContextSize": {
-      "enum": [
-        "low",
-        "medium",
-        "high"
-      ],
+      "enum": ["low", "medium", "high"],
       "type": "string"
     },
     "WebSearchLocation": {
@@ -6826,12 +6512,7 @@
       "type": "object"
     },
     "WebSearchMode": {
-      "enum": [
-        "disabled",
-        "cached",
-        "indexed",
-        "live"
-      ],
+      "enum": ["disabled", "cached", "indexed", "live"],
       "type": "string"
     },
     "WebSearchToolConfig": {
@@ -6853,11 +6534,7 @@
       "type": "object"
     },
     "WindowsSandboxModeToml": {
-      "enum": [
-        "elevated",
-        "unelevated",
-        "mxc"
-      ],
+      "enum": ["elevated", "unelevated", "mxc"],
       "type": "string"
     },
     "WindowsToml": {
@@ -6878,9 +6555,7 @@
       "oneOf": [
         {
           "description": "The Responses API exposed by OpenAI at `/v1/responses`.",
-          "enum": [
-            "responses"
-          ],
+          "enum": ["responses"],
           "type": "string"
         }
       ]

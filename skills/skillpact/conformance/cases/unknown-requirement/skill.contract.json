@@ -30,9 +30,7 @@
       "id": "guide",
       "summary": "guidance only",
       "effects": [],
-      "requires": [
-        "nope"
-      ]
+      "requires": ["nope"]
     }
   ]
 }

@@ -6,7 +6,7 @@ description: Make the build step a real gate on what you actually distribute —
 # Shipping Build Artifacts
 
 Lint, type-check, and tests run against the source tree. What users install is a
-*different* set of bytes — assembled by a script that most gates never look at,
+_different_ set of bytes — assembled by a script that most gates never look at,
 then uploaded by a workflow that trusts whatever the script left behind. Every
 failure below ships a broken or stale artifact under fully green CI.
 
@@ -18,7 +18,7 @@ warning when one is missing.
 ```js
 for (const f of DIST_FILES) {
   if (!fs.existsSync(f)) {
-    console.warn(`Warning: ${f} not found, skipping`);   // build "succeeds"
+    console.warn(`Warning: ${f} not found, skipping`); // build "succeeds"
     continue;
   }
   fs.copyFileSync(f, path.join("dist", f));
@@ -43,11 +43,11 @@ The rule: inside a build script, `warn` may only describe something the artifact
 survives without. If you cannot say what still works when that file is absent, it
 is an error and the process must exit non-zero.
 
-## Bound the artifact size on *both* sides
+## Bound the artifact size on _both_ sides
 
 A packaging check with only a ceiling — "fail if the zip exceeds 500 KB" — is a
 cost guard, not a correctness one. A build that silently dropped half its files
-is *smaller*, so it passes the only check that exists.
+is _smaller_, so it passes the only check that exists.
 
 ```js
 assert(bytes < 500 * 1024, "package too large");
@@ -61,7 +61,7 @@ and compare against the set the entrypoints require.
 ## Derive the file list, or check it against the entrypoints
 
 `DIST_FILES` — like a build backend's `only-include`, or a hand-written
-`package_data` — is a *second* copy of "what this app is made of." The first copy
+`package_data` — is a _second_ copy of "what this app is made of." The first copy
 is the manifest, the entry HTML, and the import graph. They drift in one
 direction: someone adds `utils.js`, references it from the popup, and forgets the
 copy list. The build stays green and the feature is dead in the packaged app.
@@ -79,8 +79,8 @@ instead of at a user's install.
 
 ## Committed build outputs go stale silently
 
-When a compiled or minified bundle is committed and served directly, *the bundle
-is the program* and its source is a comment until someone rebuilds. Editing only
+When a compiled or minified bundle is committed and served directly, _the bundle
+is the program_ and its source is a comment until someone rebuilds. Editing only
 the source ships nothing; the page keeps serving the previous bundle, and no test
 or linter says a word.
 

@@ -7,9 +7,7 @@
     "version": "0.1.0",
     "license": "Apache-2.0",
     "source": "https://github.com/kajisho5/thumbnail-skill",
-    "authors": [
-      "SEVENTHWELL"
-    ]
+    "authors": ["SEVENTHWELL"]
   },
   "compat": {
     "agents": {
@@ -23,20 +21,14 @@
         "status": "expected"
       }
     },
-    "interfaces": [
-      "skill-md",
-      "cli"
-    ]
+    "interfaces": ["skill-md", "cli"]
   },
   "requirements": {
     "runtimes": [
       {
         "name": "python3",
         "version": ">=3.9",
-        "check": [
-          "python3",
-          "--version"
-        ]
+        "check": ["python3", "--version"]
       }
     ],
     "skills": [
@@ -59,17 +51,12 @@
   "permissions": {
     "read": {
       "level": "scoped",
-      "scope": [
-        "$INPUT",
-        "$SKILL_DIR/**"
-      ],
+      "scope": ["$INPUT", "$SKILL_DIR/**"],
       "why": "thumbnail document, image assets, fonts, and (extract-frame) the source video"
     },
     "write": {
       "level": "scoped",
-      "scope": [
-        "$OUTPUT"
-      ],
+      "scope": ["$OUTPUT"],
       "why": "writes the rendered PNG/JPEG"
     },
     "network": {
@@ -77,10 +64,7 @@
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "python3",
-        "ffmpeg"
-      ],
+      "scope": ["python3", "ffmpeg"],
       "why": "extract-frame delegates to ffmpeg-skill, which runs ffmpeg"
     },
     "spend": {
@@ -104,9 +88,7 @@
         ]
       },
       "effects": [],
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "validate",
@@ -120,9 +102,7 @@
         ]
       },
       "effects": [],
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "render",
@@ -135,14 +115,9 @@
           "render"
         ]
       },
-      "effects": [
-        "read",
-        "write"
-      ],
+      "effects": ["read", "write"],
       "destructive": false,
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "extract-frame",
@@ -155,15 +130,9 @@
           "extract-frame"
         ]
       },
-      "effects": [
-        "read",
-        "write",
-        "exec"
-      ],
+      "effects": ["read", "write", "exec"],
       "destructive": false,
-      "requires": [
-        "python3"
-      ]
+      "requires": ["python3"]
     },
     {
       "id": "doctor",
@@ -176,13 +145,8 @@
           "doctor"
         ]
       },
-      "effects": [
-        "read",
-        "exec"
-      ],
-      "requires": [
-        "python3"
-      ]
+      "effects": ["read", "exec"],
+      "requires": ["python3"]
     }
   ],
   "tests": {

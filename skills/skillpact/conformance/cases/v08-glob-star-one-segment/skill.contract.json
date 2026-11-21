@@ -11,18 +11,14 @@
     },
     "write": {
       "level": "scoped",
-      "scope": [
-        "$WORKDIR/*"
-      ]
+      "scope": ["$WORKDIR/*"]
     },
     "network": {
       "level": "none"
     },
     "exec": {
       "level": "scoped",
-      "scope": [
-        "sh"
-      ]
+      "scope": ["sh"]
     },
     "spend": {
       "level": "none"
@@ -36,19 +32,11 @@
       "id": "hello",
       "summary": "print",
       "entry": {
-        "cli": [
-          "sh",
-          "$SKILL_DIR/scripts/run.sh"
-        ]
+        "cli": ["sh", "$SKILL_DIR/scripts/run.sh"]
       },
-      "effects": [
-        "exec",
-        "write"
-      ],
+      "effects": ["exec", "write"],
       "effect_scopes": {
-        "write": [
-          "$WORKDIR/**"
-        ]
+        "write": ["$WORKDIR/**"]
       }
     }
   ],
@@ -57,10 +45,7 @@
       {
         "id": "t1",
         "capability": "hello",
-        "run": [
-          "sh",
-          "$SKILL_DIR/scripts/run.sh"
-        ],
+        "run": ["sh", "$SKILL_DIR/scripts/run.sh"],
         "expect": {
           "exit_code": 0,
           "stdout_contains": "hi"

@@ -21,17 +21,23 @@ MAJOR: Breaking changes
 # Changelog
 
 ## [Unreleased]
+
 ### Added
+
 - New `batch_encode()` function
 
 ## [1.2.0] - 2024-03-15
+
 ### Added
+
 - Support for custom formats (#123)
 
 ### Fixed
+
 - Edge case at -180 longitude (#145)
 
 ### Deprecated
+
 - `old_function()` - use `new_function()` instead
 
 [Unreleased]: https://github.com/user/repo/compare/v1.2.0...HEAD
@@ -61,14 +67,14 @@ whatever registry the project actually uses (PyPI, npm, crates.io, ...):
 # .github/workflows/release.yml
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write      # create the GitHub release
-      id-token: write      # trusted publishing (no token)
+      contents: write # create the GitHub release
+      id-token: write # trusted publishing (no token)
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

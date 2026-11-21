@@ -14,9 +14,7 @@
     },
     "network": {
       "level": "scoped",
-      "scope": [
-        "@local"
-      ]
+      "scope": ["@local"]
     },
     "exec": {
       "level": "none"
@@ -32,13 +30,9 @@
     {
       "id": "guide",
       "summary": "guidance only",
-      "effects": [
-        "network"
-      ],
+      "effects": ["network"],
       "entry": {
-        "cli": [
-          "true"
-        ]
+        "cli": ["true"]
       }
     }
   ]

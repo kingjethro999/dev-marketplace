@@ -19,15 +19,15 @@ the candidate path. Do not turn an untraced alternative into a demonstrated bypa
 
 ## Keep evidence claims separate
 
-| Evidence | What it supports |
-|---|---|
-| Static source trace | A code-reasoned path and its assumptions; the finding stays suspected. |
-| Actual reproduction | The exact input run and observed boundary violation and impact; this supports proven for that behavior only. |
-| Legitimate-access control | Intended access or behavior works for the tested case. |
-| Protective-control result | Whether the named guard blocks the stated path; distinguish source reasoning from an observed outcome. |
-| Authorized repair check | The recorded check passes on the identified repair candidate; it does not retroactively prove the original finding. |
-| Runner/assertion completion | The identified runner reached and completed the intended assertion; keep this distinct from a successful command exit. |
-| Externally trustworthy evidence | A witness outside the target's control supports the exact observation it recorded, within its stated limits. |
+| Evidence                        | What it supports                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Static source trace             | A code-reasoned path and its assumptions; the finding stays suspected.                                                 |
+| Actual reproduction             | The exact input run and observed boundary violation and impact; this supports proven for that behavior only.           |
+| Legitimate-access control       | Intended access or behavior works for the tested case.                                                                 |
+| Protective-control result       | Whether the named guard blocks the stated path; distinguish source reasoning from an observed outcome.                 |
+| Authorized repair check         | The recorded check passes on the identified repair candidate; it does not retroactively prove the original finding.    |
+| Runner/assertion completion     | The identified runner reached and completed the intended assertion; keep this distinct from a successful command exit. |
+| Externally trustworthy evidence | A witness outside the target's control supports the exact observation it recorded, within its stated limits.           |
 
 A code-reasoned finding remains suspected even with a plausible candidate input.
 Keep the existing per-class coverage ledger. A blocked path can inform coverage

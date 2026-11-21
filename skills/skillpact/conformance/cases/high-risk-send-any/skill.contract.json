@@ -29,9 +29,7 @@
     {
       "id": "guide",
       "summary": "guidance only",
-      "effects": [
-        "send"
-      ]
+      "effects": ["send"]
     }
   ]
 }

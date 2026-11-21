@@ -75,7 +75,7 @@ _Automated release: version and notes generated from pull requests merged since 
 
 ### Fixed
 
-- **An RGB picture, a JPEG still and every `grid.py` cell are converted to the BT.709 their output is tagged with.** 2.10.1 converted a BT.601-tagged video source; everything else was still made YUV by FFmpeg's own default, BT.601, under a BT.709 tag, so pure red came out (255,24,0) and pure green (0,216,0) to any player that honours the tag (mean ΔRGB 8.8, max 38.9 on FFmpeg 5.1.1, 6.1, 7.1 and 8.1). Now converted explicitly (`scale=out_color_matrix=bt709`): a PNG/JPEG still (`insert.py`), a PNG sequence (`sequence.py`), an RGB clip (qtrle, PNG-in-MOV) through any re-encode, the logo or image of `overlay.py --image` (and `render.py`'s image/logo layers: there the RGBA logo also made `overlay=format=auto` composite in RGB, so the *whole video* came back BT.601, 9.04 mean / 40.6 max ΔRGB on a BT.709 source with 6.1; it now composites in YUV and leaves the video's pixels alone), `waveform.py --image` (the audiogram template) and the emoji PNGs of `graphics.py`/`caption.py`; a palette PNG is expanded first (swscale converts a palette with fixed BT.601). `grid.py` converts each cell by its own tags: it relabelled them on 5.1/6.1, and on 7.1+ `xstack` converted the cells to one another's matrix. Where a converted picture meets an untagged one (an untagged main under a logo, an untagged grid cell beside a converted one), the untagged one is labelled BT.709 (`setparams`, tags only), because FFmpeg 7.1+ otherwise converts one to the other taking "unknown" as BT.601 (the untagged main shifted by 7.08 mean / 25 max ΔRGB on 7.1.1 and 8.1.3). After the fix every measured patch is within 1.6 of its colour (2.6 for a dithered palette PNG). An untagged or BT.709 video source re-encoded alone, and a grid of untagged/BT.709 clips, plan the commands they did.
+- **An RGB picture, a JPEG still and every `grid.py` cell are converted to the BT.709 their output is tagged with.** 2.10.1 converted a BT.601-tagged video source; everything else was still made YUV by FFmpeg's own default, BT.601, under a BT.709 tag, so pure red came out (255,24,0) and pure green (0,216,0) to any player that honours the tag (mean ΔRGB 8.8, max 38.9 on FFmpeg 5.1.1, 6.1, 7.1 and 8.1). Now converted explicitly (`scale=out_color_matrix=bt709`): a PNG/JPEG still (`insert.py`), a PNG sequence (`sequence.py`), an RGB clip (qtrle, PNG-in-MOV) through any re-encode, the logo or image of `overlay.py --image` (and `render.py`'s image/logo layers: there the RGBA logo also made `overlay=format=auto` composite in RGB, so the _whole video_ came back BT.601, 9.04 mean / 40.6 max ΔRGB on a BT.709 source with 6.1; it now composites in YUV and leaves the video's pixels alone), `waveform.py --image` (the audiogram template) and the emoji PNGs of `graphics.py`/`caption.py`; a palette PNG is expanded first (swscale converts a palette with fixed BT.601). `grid.py` converts each cell by its own tags: it relabelled them on 5.1/6.1, and on 7.1+ `xstack` converted the cells to one another's matrix. Where a converted picture meets an untagged one (an untagged main under a logo, an untagged grid cell beside a converted one), the untagged one is labelled BT.709 (`setparams`, tags only), because FFmpeg 7.1+ otherwise converts one to the other taking "unknown" as BT.601 (the untagged main shifted by 7.08 mean / 25 max ΔRGB on 7.1.1 and 8.1.3). After the fix every measured patch is within 1.6 of its colour (2.6 for a dithered palette PNG). An untagged or BT.709 video source re-encoded alone, and a grid of untagged/BT.709 clips, plan the commands they did.
 - fix(color): convert RGB pictures, JPEG stills and grid cells to BT.709 (#333)
 
 ## 2.10.1
@@ -240,7 +240,7 @@ _Automated release: version and notes generated from pull requests merged since 
 
 _Automated release: version and notes generated from pull requests merged since 2.4.0._
 
-- fix(join): a plain cut (`--transition none`) no longer leaves a hole in the video where a clip's sound runs past its picture. The concat filter starts each clip after the *longer* stream of the one before, so a music bed padded to the container left 0.3 s of missing video (an odd average rate downstream), and even a 20 ms AAC tail left a one-frame gap; the run succeeded with `verified` false. Every clip now gets the crossfade path's one length for both streams: the last frame held when the sound runs more than a frame past the picture, the sound trimmed when it runs less. `expected_duration` counts those lengths, not container durations.
+- fix(join): a plain cut (`--transition none`) no longer leaves a hole in the video where a clip's sound runs past its picture. The concat filter starts each clip after the _longer_ stream of the one before, so a music bed padded to the container left 0.3 s of missing video (an odd average rate downstream), and even a 20 ms AAC tail left a one-frame gap; the run succeeded with `verified` false. Every clip now gets the crossfade path's one length for both streams: the last frame held when the sound runs more than a frame past the picture, the sound trimmed when it runs less. `expected_duration` counts those lengths, not container durations.
 - fix(join): a plain cut leaves no hole where a clip's sound outruns its picture (#302)
 - chore(deps): Bump github/codeql-action from 3 to 4 (#307)
 
@@ -249,7 +249,7 @@ _Automated release: version and notes generated from pull requests merged since 
 _Automated release: version and notes generated from pull requests merged since 2.3.2._
 
 - feat(join): each `silent` entry carries `at`/`end`, where that input sits in the output (seconds, transition overlap included), and `--allow-silent N[,N]` (1-based) marks a planned pause: always joined, listed with `intended: true`, no warning or note, whatever `--on-silent` says.
-(nothing yet)
+  (nothing yet)
 - feat(join): silent entries carry at/end; --allow-silent marks a planned pause (#300)
 
 ## 2.3.2
@@ -674,7 +674,7 @@ _Automated release: version and notes generated from pull requests merged since 
 - **Caption side margins are the horizontal safe zone, not the vertical one** (eval 19 headline,
   present since 1.14). `caption.py`'s generated ASS (`--animate`, `--karaoke`, the emoji overlay
   route) wrote `--margin` into the Style's `MarginL` and `MarginR` as well as `MarginV`. But
-  `--margin` is the *vertical* safe margin: `--platform tiktok` makes it 22 % of the frame height
+  `--margin` is the _vertical_ safe margin: `--platform tiktok` makes it 22 % of the frame height
   = 63 ASS units = **420 px** on a 1080x1920 frame, so libass was given a 1080 - 840 = **240 px**
   text column and broke "Hello world" into "Hello" over "world", one word per line — while the
   fitter and the wrapper measured against the horizontal safe width, reported `split: 0` and put
@@ -726,7 +726,7 @@ _Automated release: version and notes generated from pull requests merged since 
   `probe.py` printed `?s | no video | no audio` and exited 0 — an unmeasured file reported as
   measured. Every child capture in `scripts/` (ffmpeg, ffprobe, fc-list/fc-match, whisper, the
   sibling tools render.py and batch.py run) now passes `encoding="utf-8", errors="replace"` --
-  including `run_analysis()`, the capture every ffmpeg *measurement* goes through, and the two
+  including `run_analysis()`, the capture every ffmpeg _measurement_ goes through, and the two
   captures in `evals/` -- and
   a probe whose ffprobe printed nothing refuses with `kind: input` naming the unreadable output
   instead of returning a document of nulls.
@@ -746,7 +746,7 @@ workflow turns this heading into the version number._
 ### Added
 
 - **`caption.py --fit-size auto|on|off`, `--min-size N`, `--fit-size-scope file|cue`.** The caption
-  size is fitted to the cue *before* the cue is split. At a platform caption size (24 ASS units,
+  size is fitted to the cue _before_ the cue is split. At a platform caption size (24 ASS units,
   about six em per line at 1080x1920) an ordinary sentence needs four lines, so `--max-lines 2`
   cut it into consecutive cues and half of it arrived late — the size, not the breaker, was what
   did not fit. `--min-size` defaults to `ass_units(0.045) = 13`, the 4.5 %-of-frame-height
@@ -794,7 +794,7 @@ workflow turns this heading into the version number._
   default size — the defect eval 17 measured.
 - The optional local speech-to-text bridge and the SRT reader/writer moved from `caption.py` into
   `scripts/_common/asr.py` and are re-exported through the `_common` facade, so `silence.py
-  --filler --transcribe` shares one engine probe and one "no engine found" message.
+--filler --transcribe` shares one engine probe and one "no engine found" message.
   `caption.parse_srt`, `caption.transcribe` and `caption.whisper_word_timings` are unchanged as
   names; `caption.py --help` is byte-identical.
 
@@ -831,7 +831,7 @@ _Automated release: version and notes generated from pull requests merged since 
 - **Audiogram: `waveform.py --image` and `render.py --template audiogram`.** The visualisation
   over a still plate, which is what turns a podcast episode into something postable.
   `--image PATH` (a local file), `--image-fit cover|contain|blur`, `--position
-  bottom|centre|top|strip`, `--vis-height FRAC`, `--opacity`, `--platform NAME` (the frame from
+bottom|centre|top|strip`, `--vis-height FRAC`, `--opacity`, `--platform NAME` (the frame from
   the delivery table; a destination with no frame is refused), `--title TEXT` (drawn through
   `graphics.py`) and `--srt`/`--text` (burnt by `caption.py` afterwards, so neither code path is
   re-implemented). Result key `audiogram`. Nothing is fetched and no cover art is ever invented:
@@ -874,7 +874,7 @@ _Automated release: version and notes generated from pull requests merged since 
   flag promises, and `tracks[].default` then described a file that did not exist. Every
   disposition is stated explicitly now (`default` for the chosen track, `0` for the rest).
   MPEG-4 cannot express "no default subtitle track" at all — it always enables its first one —
-  so there the track is *reported* `default: true` with a note, because the result document
+  so there the track is _reported_ `default: true` with a note, because the result document
   describes the file, not the request.
 - **`audiogram.verified` was `true` under `--dry-run`**, where nothing had been rendered to
   verify, while the common top-level `verified` said `false` for the same run.
@@ -883,7 +883,7 @@ _Automated release: version and notes generated from pull requests merged since 
 - **A malformed `:lang` suffix** (`--srt en.srt:zzzz`) is reported as a bad language code naming
   the token, not as a missing file called `en.srt:zzzz`.
 - **`から`, `まで` and `より` are matched as whole words.** They had been left in the
-  *character* table of Japanese particles, which made `か`, `ら`, `ま`, `で`, `よ` and `り`
+  _character_ table of Japanese particles, which made `か`, `ら`, `ま`, `で`, `よ` and `り`
   one-character particles of their own — none of them is — so a break before `か` was forbidden
   and a break after it preferred.
 - **MPEG-4 subtitle track titles are no longer claimed.** `-metadata:s:s:N title=` is dropped by
@@ -902,7 +902,7 @@ _Automated release: version and notes generated from pull requests merged since 
   no line that is a lone digit, one or two punctuation characters or a single kana, checked at
   every boundary rather than only the last; Japanese/Chinese breaks preferred after `。、！？」』）`
   and after a particle — a particle is enclitic, so kinsoku keeps it with the word before it and a
-  break *before* one is forbidden — discouraged between a kanji stem and its okurigana and
+  break _before_ one is forbidden — discouraged between a kanji stem and its okurigana and
   forbidden before a small kana; and an article or preposition kept with the phrase it governs, by
   preferring the break before it and penalising the break after it. **The `rebalanced` count in
   the `cues:` line can differ for an unchanged input**, and a cue whose break moves is the point
@@ -953,7 +953,7 @@ _Automated release: version and notes generated from pull requests merged since 
   Proof of no behaviour change: `scripts/_contract.py --json`, the MCP `tools/list` response and
   `--help` for all 42 tools are **byte-identical** to 1.15.0. The tool count stays 42 — a package
   directory is not a tool, and every `scripts/*.py` enumeration (the contract, the MCP server,
-  `demos/build.py`, the every-script tests) skips it unchanged; the source *scans* that must not
+  `demos/build.py`, the every-script tests) skips it unchanged; the source _scans_ that must not
   stop covering the helpers (`shell=True` and friends) now read `scripts/_common/*.py` too.
 - refactor: split _common.py into a package and tests by tool group (no behaviour change) (#230)
 - docs: eval 16 at 1.15.0 (82 prompts, focused Opus grader, trigger 40/40) (#229)
@@ -972,7 +972,7 @@ _Automated release: version and notes generated from pull requests merged since 
 
 - **Emoji in captions and titles.** `caption.py`, `graphics.py` and `overlay.py` gain `--emoji auto|color|png|mono|none`, `--emoji-assets DIR`, `--emoji-scale FLOAT` and `--emoji-max N`. The colour route is a **PNG overlay**, not a font: drawtext cannot load a CBDT/sbix emoji face at all (it fails filter initialisation — `Could not set font size to 48 pixels: invalid library handle`, and at the font's own strike `Monocromatic (1bpp) fonts are not supported.` — and writes no file), and an installed colour emoji family proves nothing either (Noto Color Emoji installs cleanly on builds whose libass still draws a monochrome outline). `--emoji-assets DIR` is a directory of PNGs named by code point in the Twemoji/Noto convention (`1f389.png`, `1f1ef-1f1f5.png`, `1f469-200d-1f4bb.png`), also read from `brand.json` (`styles.caption.emoji_assets`) and `FFMPEG_SKILL_EMOJI_ASSETS`. **Nothing is ever downloaded**: a missing directory is `kind: input` naming the two sets people already have, never a fetch. In a caption the text keeps its place in the generated ASS with an invisible placeholder reserving exactly the emoji's box (measured: U+2588 FULL BLOCK is 0.66–0.83 em depending on the face, so the gap is reserved with alpha-hidden `\fsp` spacing instead, which is exact in every face this repo resolves — including inside a `\kf` karaoke run, where the placeholder is its own zero-duration segment), and each PNG is composited after the `ass=` filter. `caption.py`/`graphics.py --json` gain an `emoji` block (`mode`, `count`, `clusters`, `assets`, `missing`, `overlays`); `--json-brief` carries `mode` and `count`. Emoji also count as a full em in the wrap, so an emoji-heavy line no longer overflows the safe area, and a wrap never breaks inside a ZWJ sequence, a flag pair or a skin-tone modifier.
 - **`doctor` answers what this machine can do with emoji**: `doctor --json` → `.fonts.emoji` (`mode`, `color_font`, `color_font_file`, `libass_color`, `assets`, `detail`, `fix`), where `libass_color` comes from a ~80 ms **render probe** (one 64×64 frame with an emoji cue through `subtitles=`, chroma-tested) rather than a font listing. `contract --json --static` and every other static/JSON-only path skip the probe and report `libass_color: null` (`doctor` itself always probes -- it has no `--static`). Informational like the rest of `fonts`: it never moves `ok` or a tool's `usable`. The plain-text `doctor` gains one clause on its existing `fonts:` line.
-- **`graphics.py --text-render auto|ass|drawtext` and `--write-ass PATH`.** drawtext does bidi and Arabic joining correctly on a build with `--enable-libfribidi`, so Arabic and Hebrew were already right; what it cannot do on **any** build is reorder and re-cluster — Devanagari matras, Thai/Lao mark stacking — because it does not use harfbuzz even in an `--enable-libharfbuzz` build. `auto` (the default) therefore renders a shaping script (`hi bn ta te kn ml gu pa si th lo km my`) through libass, writing `<output>_gfx.ass` from the geometry the templates already computed (new private module `scripts/_ass_overlay.py` — the public tool count is unchanged at 42) and reporting `text_renderer`, `script` and `ass` in the JSON. Latin, CJK and Arabic frames are pixel-identical to 1.14.0 (the *command* is not: every drawn label now goes through `textfile=…:expansion=none` instead of `text=…`, which is what makes `'` and `%` survive). `--text-render drawtext` with such a script is a refusal naming the script, never a wrongly shaped frame.
+- **`graphics.py --text-render auto|ass|drawtext` and `--write-ass PATH`.** drawtext does bidi and Arabic joining correctly on a build with `--enable-libfribidi`, so Arabic and Hebrew were already right; what it cannot do on **any** build is reorder and re-cluster — Devanagari matras, Thai/Lao mark stacking — because it does not use harfbuzz even in an `--enable-libharfbuzz` build. `auto` (the default) therefore renders a shaping script (`hi bn ta te kn ml gu pa si th lo km my`) through libass, writing `<output>_gfx.ass` from the geometry the templates already computed (new private module `scripts/_ass_overlay.py` — the public tool count is unchanged at 42) and reporting `text_renderer`, `script` and `ass` in the JSON. Latin, CJK and Arabic frames are pixel-identical to 1.14.0 (the _command_ is not: every drawn label now goes through `textfile=…:expansion=none` instead of `text=…`, which is what makes `'` and `%` survive). `--text-render drawtext` with such a script is a refusal naming the script, never a wrongly shaped frame.
 - **`bn` (Bengali), `ta` (Tamil) and `lo` (Lao)** join the scripts the tools detect and resolve fonts for: `doctor --json` `.fonts.scripts` has three more entries.
 
 ### Fixed
@@ -981,7 +981,7 @@ _Automated release: version and notes generated from pull requests merged since 
 - **No one-character orphan lines, and better breaks** (eval 14: `th1`, `dl3`, `dl1`). `caption.py`'s wrap gains two post-passes: a last line that is a single atom narrower than 1.1 em pulls the previous line's last atom down (the stranded Thai `ล` and Japanese `行`), and for spaced scripts the break is moved to the one that minimises the widest line instead of filling greedily (`"A third line the tool times for me"` now breaks between phrases). The line count never changes, non-spaced scripts keep greedy wrapping, and `report_layout()`'s one `cues:` line reports `rebalanced`.
 - **`overlay.py --text` refuses a shaping script** instead of drawing it wrongly, naming `caption.py` and `graphics.py`. The ASS route for `overlay.py` is 1.16.0.
 - **Every emoji PNG stayed on screen for one frame.** The overlay chain carried `eof_action=pass`, which switches off overlay's default "hold the last frame of the secondary input" — and a PNG input is a single frame at pts 0, so the asset was composited on frame 0 and vanished for the rest of the cue (the first `docs/demos/captions_emoji.gif` shipped an empty reserved gap as the feature's own advertisement). The chain now uses the default `eof_action=repeat` and lets `enable='between(t,start,end)'` confine the asset to its cue. The regression test renders a cue and samples the planned pixel in the **middle** of it and again after it ends.
-- **A ZWJ no longer starts an emoji cluster.** U+200D ZWJ and U+200C ZWNJ are ordinary Indic/Persian orthography, so `क्‍ष` (ka + virama + ZWJ + ssa) was detected as the emoji cluster `94d-200d`: a Hindi cue was reported as containing emoji, warned about as monochrome, and on the PNG route had a real letter replaced by an invisible gap. A cluster may now only *start* at an emoji base (pictograph, regional indicator, or a `0-9 # *` that is actually followed by U+20E3); joiners, VS16 and skin-tone modifiers bind rightwards only. U+FE0E (VS15, text presentation) now means "not an emoji", so `❤︎` is drawn as a character.
+- **A ZWJ no longer starts an emoji cluster.** U+200D ZWJ and U+200C ZWNJ are ordinary Indic/Persian orthography, so `क्‍ष` (ka + virama + ZWJ + ssa) was detected as the emoji cluster `94d-200d`: a Hindi cue was reported as containing emoji, warned about as monochrome, and on the PNG route had a real letter replaced by an invisible gap. A cluster may now only _start_ at an emoji base (pictograph, regional indicator, or a `0-9 # *` that is actually followed by U+20E3); joiners, VS16 and skin-tone modifiers bind rightwards only. U+FE0E (VS15, text presentation) now means "not an emoji", so `❤︎` is drawn as a character.
 - **Emoji in an RTL caption land in the reserved gap.** libass lays Arabic and Hebrew out right-to-left, so measuring the logical prefix from the left edge put the PNG on top of the text. The position is now measured from the rendered end of the line for `BIDI_SCRIPTS`, in `caption.py` and `graphics.py` alike.
 - **`graphics.py` no longer claims `mode: mono` while drawing tofu, and `--emoji none` actually strips.** drawtext loads exactly one font file and has no fallback chain, so a monochrome emoji there is an empty box; an `auto` run with monochrome emoji is routed through libass (which does have a fallback chain) and a run pinned to `--text-render drawtext` degrades to `none` and says so. `--emoji none` now removes the clusters from `--name/--title/--subtitle/--text/--top/--bottom` the way `caption.py` does.
 - **Drawn text goes to a private, cleaned-up temp file.** 1.15.0's first shape wrote every label into a world-shared, predictable `/tmp/ffmpeg-skill-text` created with `makedirs(exist_ok=True)` — an attacker-creatable directory with content-addressed names (a planted symlink was an arbitrary-file overwrite), a `PermissionError` out of filter construction for the second user of a shared box, and a directory that was never cleaned. The directory is now `tempfile.mkdtemp()` (0700, unguessable, removed at exit), the file is opened `O_NOFOLLOW` at 0600, and it is written only when the command naming it actually runs — so `--dry-run` writes nothing (the plan names the intended path) and the ASS route, which never reads the file, writes nothing either.
@@ -1024,6 +1024,7 @@ _Automated release: version and notes generated from pull requests merged since 
 - `render.py` projects may carry `"template"` (the template they were filled from) and audio-only deliveries now carry their intermediates through the audio container instead of `.mp4`, which is what makes the podcast template render end to end from a `.wav`.
 
 ### Docs
+
 - SKILL.md gains the delivery-template rows and the safe-zone gotcha, `references/scripts.md` a templates section with the safe-zone table, `docs/contract.md` the delivery-table shape, what is derived from it and the new arguments, `references/gotchas.md` a "Platform safe zones" section (the target of SKILL.md's safe-zone pointer), and the README a "Deliver to a platform" example. `demos/build.py` and `docs/demos.md` gain two demos: `fit_blur` and `template_tiktok`. `docs/roadmap.md` marks 1.14.0 done and renumbers the remaining themes.
 - `tests/fixtures/mcp_tools.json` regenerated: `render` gains `template`, `list_templates`, `cues`, `srt`, `logo`, `title`, `brand`, `chapters`, `fit`, `output` and `write_project`; `caption`, `graphics` and `overlay` gain `platform` (and `graphics` also `margin`, `text`, `top`, `bottom`, `duration`); `look` gains `safe`; `report` gains `pack`. Nothing was removed, renamed or made required.
 - feat: delivery templates (render.py --template, safe zones, platform presets, blurred fit, social pack, sticker/hook/meme) (#224)
@@ -1047,6 +1048,7 @@ _Automated release: version and notes generated from pull requests merged since 
 - `tests/fixtures/mcp_tools.json` regenerated: `audio` gains `duck_threshold`, `duck_attack`, `duck_release`, `stereo_widen`, `effects` and `effects_volume` and `voice` becomes a `light|medium|strong` enum. A client still sending the 1.12 boolean `{"voice": true}` keeps working: `true` is the bare flag, which is `medium`; `docs/contract.md` and `audio.py --help` say so.
 
 ### Docs
+
 - **Not shipped: a `loudness.py --dialogue` speech gate.** `loudnorm`'s EBU R128 integrated measurement already applies the −70 LUFS absolute and −10 LU relative gates, so gating the measurement on speech spans moved the result by at most 0.6 LU on every fixture (including one that is half digital silence) — inside `check.py`'s own ±1 LU tolerance — for the cost of a second decode pass. `references/gotchas.md#loudness-and-ambience` records it.
 - `docs/roadmap.md` marks 1.13.0 done and records the decision **not** to add `audio.py --chapters`: `metadata.py episode.mp4 --chapters chapters.txt` already writes chapter markers with every stream copied, and a second spelling inside a tool that re-encodes the audio would be the worse one. `render.py`'s `chapters` key is the project-level answer instead.
 - feat: the audio bed — voice levels, stereo widen, duck parameters, effects stem, loudness --dialogue, podcast rows, project chapters (#221)
@@ -1075,6 +1077,7 @@ _Automated release: version and notes generated from pull requests merged since 
 - `tests/fixtures/mcp_tools.json` regenerated: `caption` gains `language` (spelled `--lang` too), `offset`, `max_lines`, `min_duration`; `graphics` gains `lang`.
 
 ### Docs
+
 - Correction to the 1.11.1 entry: iteration 11's agents did not read `references/gotchas.md` or `references/scripts.md` (0 of 36 and 2 of 36 actual reads; the earlier counts matched the file names inside SKILL.md's own text). What 1.11.1 changed in practice, measured in iteration 12: `doctor` before a job 23 of 36 runs → 0, `--json-brief` on a writing step 4 of 36 → 23. Tokens per run are flat (72.2k → 71.8k) because about 64k of every run is the harness's own context, not the skill.
 - feat: fonts by script (ja zh ko ar he hi th ru el), doctor per-language fonts, captions that wrap and fit (#218)
 - evals: 14 multilingual prompts (zh ko es pt fr de ar), 7 trigger queries, per-language grader rules (#217)
@@ -1085,6 +1088,7 @@ _Automated release: version and notes generated from pull requests merged since 
 _Automated release: version and notes generated from pull requests merged since 1.11.0._
 
 ### Changed
+
 - SKILL.md tells the agent that the file is enough to do a job and that `references/scripts.md` / `references/gotchas.md` cost as much to read as SKILL.md itself, so they are opened only for a question the file leaves open; step 0 no longer suggests `doctor` before the first job of a session, only after a failure or when the user asks. Eval iteration 11 measured why: at 1.11.0 agents read `gotchas.md` in 31 of 36 runs (0 of 106 at 1.10.0), `scripts.md` in 36 of 36 (73 of 106) and ran `doctor` in 31 of 36 (41 of 106), so the mean run cost 72.2k tokens against 68.7k at 1.10.0 despite the smaller SKILL.md.
 - fix: SKILL.md stops sending agents to the reference files and doctor on every job (#215)
 - docs: eval iteration 11 at 1.11.0 (36 prompts, tokens per run measured) (#214)
@@ -1226,7 +1230,7 @@ _Automated release: version and notes generated from pull requests merged since 
 
 _Automated release: version and notes generated from pull requests merged since 1.5.0._
 
-- Fifth review. `render.py` refused nothing when `output` named one of its own clip sources and overwrote the source (now `kind: input`); `fit.py --method trim` stream-copied a subtitle track through the `-ss` cut, so the file came out at twice the requested length with cues from the wrong part (dropped and reported like `pad --start`); `caption.py --transcribe` ran the speech engine and wrote the `.srt` under `--dry-run`, and put that sidecar next to the *input*, silently replacing a hand-written one (now planned only, written next to the output, with a warning before replacing); `color.py --correct --dry-run` ran two real signalstats passes; `multicam.py --audio N` out of range was a traceback; `check.py`'s fix for a broadcast codec failure named a preset that does not exist (`prores` now); `sequence.py` had `import re` above its shebang, so its docstring never reached `--help` or the contract; `batch.py --watch` could not be stopped with Ctrl-C without an "interrupted, nothing written" exit; `render.py --dry-run` said "copied"; `join.py`'s audio path probed its output as an input; `references/scripts.md` described karaoke timing as even when the default follows speech energy (`--karaoke-timing`).
+- Fifth review. `render.py` refused nothing when `output` named one of its own clip sources and overwrote the source (now `kind: input`); `fit.py --method trim` stream-copied a subtitle track through the `-ss` cut, so the file came out at twice the requested length with cues from the wrong part (dropped and reported like `pad --start`); `caption.py --transcribe` ran the speech engine and wrote the `.srt` under `--dry-run`, and put that sidecar next to the _input_, silently replacing a hand-written one (now planned only, written next to the output, with a warning before replacing); `color.py --correct --dry-run` ran two real signalstats passes; `multicam.py --audio N` out of range was a traceback; `check.py`'s fix for a broadcast codec failure named a preset that does not exist (`prores` now); `sequence.py` had `import re` above its shebang, so its docstring never reached `--help` or the contract; `batch.py --watch` could not be stopped with Ctrl-C without an "interrupted, nothing written" exit; `render.py --dry-run` said "copied"; `join.py`'s audio path probed its output as an input; `references/scripts.md` described karaoke timing as even when the default follows speech energy (`--karaoke-timing`).
 - fix: fifth review -- render self-overwrite, fit trim subtitles, caption transcribe under dry-run, and nine smaller items (#194)
 
 ## 1.5.0
@@ -1234,7 +1238,7 @@ _Automated release: version and notes generated from pull requests merged since 
 _Automated release: version and notes generated from pull requests merged since 1.4.15._
 
 - `FFMPEG_SKILL_RESULT_V2=1` adds a `result_v2` key to every writing tool's `--json` success document: the uniform shape planned for 2.0 (`output`, `probe`, `commands`, `metrics`, `notes`, `dropped`, `details`), built in `emit()` from the keys tools already report (#189). Nothing moves without it.
-(nothing yet)
+  (nothing yet)
 - feat: opt-in result_v2 key previews the 2.0 success-document shape (#193)
 - docs: record eval iteration 6 (1.4.15) (#192)
 
@@ -1558,7 +1562,7 @@ Continuing the same external audit report's architecture/data-integrity/reliabil
   script name against the real, non-underscore-prefixed scripts in
   `scripts/` before running it.
 - `fit.py` with only `--aspect` given (no `--width`/`--height`) bounded a
-  narrower/taller target by the source's *width* instead of its height --
+  narrower/taller target by the source's _width_ instead of its height --
   a 1280x720 source asked for `--aspect 9:16` came out 1280x2276, a ~3.16x
   unrequested upscale, in both `--fit pad` and `--fit crop`. Fixed by
   bounding by whichever of the source's dimensions the new aspect actually
@@ -1574,7 +1578,7 @@ Continuing the same external audit report's architecture/data-integrity/reliabil
   itself is refused) and `seed` to a fixed value.
 - `caption.py`'s cue parser could match a line's `-->`/text structure while
   one of its two timestamps still failed to parse (e.g. a malformed
-  `00:00:03.15.999`); the fallback then used the *entire raw line*,
+  `00:00:03.15.999`); the fallback then used the _entire raw line_,
   broken timestamp included, as the caption text instead of the text
   already captured after the arrow. Fixed to fall back to just the parsed
   text.
@@ -1616,7 +1620,7 @@ parsed JSON value that isn't a dict before the `"id" not in req` check.
   path, which already handled `height` correctly.
 - `multicam.py --fix-drift` computed its audio trim start (`a_start`) in
   the source's own pre-correction time axis, but applied it via `atrim=
-  start=` *after* the `asetrate`/`aresample` drift-correction filters had
+start=` _after_ the `asetrate`/`aresample` drift-correction filters had
   already rescaled that axis in the same filter chain -- so the trim
   landed on the wrong point once the timeline had been stretched or
   compressed by the drift ratio. `sync.py` already avoids this by seeking
@@ -1648,7 +1652,7 @@ A deep line-by-line pass over the most-used editing tools:
   front in all seven scripts, matching the guard `fit.py`/`proxy.py`/
   `background.py`/`grid.py`/`insert.py`/`sequence.py` already had.
 - `color.py --lut-strength` (documented "blend LUT result with the
-  original, 0..1") only branched into its blend logic for the *open*
+  original, 0..1") only branched into its blend logic for the _open_
   interval `(0, 1)` -- so `--lut-strength 0`, meant to mean "no LUT at
   all", instead fell into the "apply at full strength" fallback and
   silently graded the picture at 100%, the opposite of what was asked.
@@ -1874,7 +1878,7 @@ Found and fixed while auditing the tools added across 0.13.0-0.15.0:
 - `loop.py`: re-encoded with a hardcoded `libx264`/no `cfr_args`, unlike
   every other re-encoding tool -- an HDR source silently became SDR mislabelled
   BT.709, and VFR sources weren't conformed. Switched to `video_args(meta,
-  ...)` and `cfr_args(meta)`, and added the `--crf`/`--preset` flags every
+...)` and `cfr_args(meta)`, and added the `--crf`/`--preset` flags every
   other tool exposes (previously `--fast` silently had no effect).
 - `_contract.py`: `cropdetect.py` always runs a real `cropdetect` measurement
   regardless of `--dry-run` (like `scenes.py`/`sync.py`/`multicam.py`/
@@ -1893,10 +1897,10 @@ Five more mechanical, typed-flag FFmpeg capabilities:
 
 - `straighten.py` — rotates by an arbitrary angle for horizon correction
   (`rotate` filter), `--fit crop` (scale to fill, no visible gap) or `--fit
-  pad` (keep the full picture, fill the corners). Distinct from `fit.py
-  --rotate`'s exact 90-degree turns.
+pad` (keep the full picture, fill the corners). Distinct from `fit.py
+--rotate`'s exact 90-degree turns.
 - `freeze.py` — holds a frame for N seconds (`tpad`/`concat`), `--mode
-  insert` (pushes the rest of the clip later) or `--mode extend` (only at
+insert` (pushes the rest of the clip later) or `--mode extend` (only at
   the clip's end, no push).
 - `pad.py` — adds black/silent padding at the start and/or end of the
   timeline (`tpad`/`apad`). Distinct from `fit.py --fit pad`'s per-frame
@@ -1928,7 +1932,7 @@ Five mechanical, typed-flag FFmpeg capabilities that had no wrapper yet:
 - `deinterlace.py` — deinterlaces old interlaced source footage (`yadif`),
   `--mode frame` (keeps fps) or `--mode field` (doubles fps), `--parity`.
 - `denoise.py` — video noise/grain reduction (`hqdn3d`), `--strength low/
-  medium/high` or individual spatial/temporal luma/chroma overrides. Distinct
+medium/high` or individual spatial/temporal luma/chroma overrides. Distinct
   from `audio.py --denoise`, which only touches audio.
 - `redact.py` — blurs or pixelates an exact caller-given pixel rectangle for
   the whole clip (privacy/compliance redaction: faces, plates). Same
@@ -2054,7 +2058,7 @@ accepted from the caller:
   11th choice, `none`, is omitted from `--curves`'s choices since leaving the flag unset already
   gets that identity result without adding a filter term for it).
 - Contract: `color`'s optional capabilities gain `filter:colorlevels` (`when: "--correct with any
-  --levels-*"`) and `filter:curves` (`when: "--correct --curves"`). No change to any existing flag,
+--levels-*"`) and `filter:curves` (`when: "--correct --curves"`). No change to any existing flag,
   contract field, MCP schema or tool semantics.
 - Tests: 5 real-media tests in `tests/test_all.py` mirroring the existing `--correct` style —
   gamma/lift/gain run and measurably change signalstats luma, levels narrows the measured dynamic
@@ -2101,7 +2105,7 @@ narrower existing fixture (video + audio + two subtitle tracks, no chapters).
   needed), matching the field name `--retag` already introduced.
 - **Deliberately left as-is, tracked in [#91](https://github.com/kajisho5/ffmpeg-skill/issues/91):**
   `caption.py`'s burn mode (whether a pre-existing embedded subtitle should coexist with a newly
-  *burned-in* one is a real design question, not a clear-cut preservation fix); `audio.py` when
+  _burned-in_ one is a real design question, not a clear-cut preservation fix); `audio.py` when
   its output is a video container; `join.py`/`multicam.py`/`sync.py`, which combine multiple
   separate input files or replace the audio track outright — "which input's subtitle survives"
   has no single correct answer the way a single-input picture/colour edit does, matching the
@@ -2195,7 +2199,7 @@ field addition here is additive.
     text-over-faces as part of its own job, directly contradicting "What this skill does and does
     not decide"'s statement that this belongs to the calling agent. Split into a mechanical tier
     this skill verifies directly and a judgement tier reported to the calling agent — explicitly
-    *not* flagging `fit.py --fit pad`'s letterboxing as a defect, since that's that mode's correct
+    _not_ flagging `fit.py --fit pad`'s letterboxing as a defect, since that's that mode's correct
     output. Also formalized `Look: PATH (pixels not inspected; agent has no image view)` for an
     execution environment that can't actually view images.
   - `bin/install.js`'s `contract`/`doctor` subcommand hardcoded `python3`; Windows Python
@@ -2210,7 +2214,7 @@ field addition here is additive.
     policy stated elsewhere. Replaced with a genuinely unsupported case and a normal `reverse.py`
     success case; `evals/results/exec-1.json`'s historical record is left unedited with a note
     explaining the old grading was wrong.
-- **Cross-platform: end-to-end non-ASCII filename coverage.** Filter-graph *string* escaping for
+- **Cross-platform: end-to-end non-ASCII filename coverage.** Filter-graph _string_ escaping for
   Unicode paths was already tested; nothing exercised a non-ASCII filename as the actual `-i`/
   output argument through `subprocess` argv. Added a test copying a fixture to a CJK/accented
   filename and running `probe`/`cut` against it both directions — passes on all 3 CI platforms.
@@ -2238,7 +2242,7 @@ field addition here is additive.
 - **`caption.py --audio-stream N`: explicit multi-audio-track selection.** Confirmed `caption.py` did silently pick a track on a multi-audio-track input (dubbed languages, M&E stems): burn mode had no `-map` at all (ffmpeg's own automatic stream-selection heuristic, not necessarily index 0, decided), mux mode and the karaoke energy-timing/`--transcribe` audio extraction both hardcoded `0:a:0`. `--audio-stream N` (default 0, matching `audio.py`'s existing flag and unchanged prior behaviour) now threads the same explicit track index through all four: burn's re-encoded audio, mux's stream-copied audio, `--transcribe`'s speech-to-text source, and karaoke's energy-timing analysis, refusing an out-of-range index the same way `audio.py --audio-stream` already does. Closes [#55](https://github.com/kajisho5/ffmpeg-skill/issues/55).
 - **`caption.py --text`: SMPTE non-drop-frame timecode cues.** Cues were positioned by decimal seconds only; broadcast-style deliverables often supply cue timing as `hh:mm:ss:ff` frame timecode instead. `--text` cue lines now also accept that format (e.g. `00:00:03:15 --> 00:00:06:00 ...`) — the frame count is converted to seconds with `--fps`, or the input video's own probed fps when `--input` is given and `--fps` is not. A cue that is shaped like a timecode but has no fps available (no `--fps`, no `--input`) is refused with a clear error naming the missing `--fps`, rather than silently misread as a plain text line the way an ordinary unparseable cue line already is. `_common.py` gains the reusable pieces other tools can build on later: `parse_time()` takes an optional `fps` argument for the `hh:mm:ss:ff` case (raising the new `MissingFpsError`, a `ValueError` subclass, when fps is needed but absent), and `fmt_smpte_time()` formats seconds back to `hh:mm:ss:ff` — used here to echo the interpreted cue range in the `wrote ... .srt` report line so a caller can confirm the timecode was read correctly. The written `.srt` itself stays decimal-millisecond SRT timing, since that is the only timing SRT/mux subtitle codecs actually carry; nothing claims frame-exact precision it can't hold. Drop-frame (29.97/59.94 fps) counting is out of scope. Closes [#54](https://github.com/kajisho5/ffmpeg-skill/issues/54).
 - **`references/process-pitfalls.md`: development-process mistakes already made once.** Distinct from `references/ci-platform-pitfalls.md` (ffmpeg/CI behaviour differences): this is about the process of making a change safely, not FFmpeg itself. Three entries to start: narrowing a `TOOL_META[...]["required"]` capability list without first grepping `tests/test_contract.py`'s `DoctorDetectionTests` for the fixture-pinned `usable` outcome it protects (nearly broken twice, in #51 and #52, caught before landing both times); retrying a git tag push or GitHub Release creation in this environment, where both are scoped out (branch pushes work, tag pushes 403 at the git-receive-pack level; no `create_release`/`create_tag` MCP tool exists; the outbound proxy itself blocks a raw REST API call to the releases endpoint) rather than accepting it after one confirmation; and redesigning a test fixture a third time instead of recognising, after two independently-redesigned fixtures failed differently on the same platform, that the platform's real behaviour (not the fixture) is the actual cause (`stabilize.py`'s macOS libvidstab test). A living document — add to it whenever one of these recurs. Docs-only; no behaviour changed.
-- **`doctor --json`: `gpu_encoders`.** No tool here uses GPU-accelerated encoding — every tool assumes CPU x264/x265 — but `doctor` had no way to answer "is GPU encoding available on this machine" at all, unlike every other capability it already reports `yes`/`no`/`unknown` for. `gpu_encoders` reports GPU-backed encoders (`nvenc`, `videotoolbox`, `qsv`, `vaapi`, `amf`) present in this ffmpeg *build*, read from the same `-encoders` listing `doctor` already parses — `{"status": "parsed"|"unparsed"|"failed"|"missing", "present": [...]}`. Deliberately build-presence only: proving a real GPU/driver will accept a job would need an actual encode, which `doctor`'s introspection never runs (matching its existing 10s-timeout, listing-only philosophy). Purely informational — no tool declares or requires a GPU encoder, so this field never affects `ok` or any tool's `usable`. The human-readable `doctor` output gets one line naming what's present (or "none"). Closes [#52](https://github.com/kajisho5/ffmpeg-skill/issues/52).
+- **`doctor --json`: `gpu_encoders`.** No tool here uses GPU-accelerated encoding — every tool assumes CPU x264/x265 — but `doctor` had no way to answer "is GPU encoding available on this machine" at all, unlike every other capability it already reports `yes`/`no`/`unknown` for. `gpu_encoders` reports GPU-backed encoders (`nvenc`, `videotoolbox`, `qsv`, `vaapi`, `amf`) present in this ffmpeg _build_, read from the same `-encoders` listing `doctor` already parses — `{"status": "parsed"|"unparsed"|"failed"|"missing", "present": [...]}`. Deliberately build-presence only: proving a real GPU/driver will accept a job would need an actual encode, which `doctor`'s introspection never runs (matching its existing 10s-timeout, listing-only philosophy). Purely informational — no tool declares or requires a GPU encoder, so this field never affects `ok` or any tool's `usable`. The human-readable `doctor` output gets one line naming what's present (or "none"). Closes [#52](https://github.com/kajisho5/ffmpeg-skill/issues/52).
 - **`caption.py --mode mux`: soft subtitle stream instead of burn-in.** Every caption call previously re-encoded both streams to render pixels (`reencodes_video`/`reencodes_audio`: `"always"`) even when the caller only wanted a subtitle track added, not the picture changed. `--mode mux` (new; `--mode burn` stays the default) copies video and audio untouched (`-c:v copy -c:a copy`) and adds the SRT as a separate, player-toggleable subtitle stream — `reencodes_video`/`reencodes_audio` are now `"conditional"` with a note explaining the split. Only takes a plain SRT (`--srt`/`--text`/`--transcribe`), not `--ass`, `--animate` or `--karaoke`: styling and animation render pixels, so they have no soft-subtitle equivalent and are refused with a pointer to `--mode burn`. The subtitle codec is picked from the output container (`mov_text` for `.mp4`/`.m4v`/`.mov`, `srt` for `.mkv`, `webvtt` for `.webm`); an unrecognized container is refused rather than guessed at. `contract --json` gains three new optional capabilities (`encoder:mov_text`/`encoder:webvtt`/`encoder:srt`, each `"when"`-gated to the matching output container) so `doctor` can report them honestly; the existing required capabilities (`encoder:libx264`, `encoder:aac`, `filter:subtitles`) are unchanged, since `--mode burn` is still the default and doctor's usability model doesn't vary by flag. Closes [#51](https://github.com/kajisho5/ffmpeg-skill/issues/51) — timecode-aware cue timing and explicit multi-audio-track selection were split out to [#54](https://github.com/kajisho5/ffmpeg-skill/issues/54) and [#55](https://github.com/kajisho5/ffmpeg-skill/issues/55) to keep this change reviewable.
 - **Test: the prose tool count in README/`docs/contract.md`/`package.json` is now checked against the real tool list.** 0.11.0 was cut to fix exactly this drift (README said 28 twice and 22 once; `package.json` said 21) by hand, with nothing to stop it recurring. `tests/test_contract.py`'s `test_docs_tool_count_matches_the_real_tool_list` scans all three for `"<N> tools"` wording and fails if any number doesn't match `scripts/`'s actual public-tool count, so the next tool added/removed without updating every mention fails CI instead of drifting silently. `contract_version`/`skill.version` were already split (0.9.0) and already documented as "additive keeps `contract_version`, breaking bumps it" — `docs/contract.md` now also repeats the tagged-version pin guidance next to that table, since `capability_map` makes this the most cross-repo-facing part of the contract. Closes [#50](https://github.com/kajisho5/ffmpeg-skill/issues/50).
 - **Tests: `overlay.py --image` on an audio-less video is now covered.** Every existing overlay test used a
@@ -2257,10 +2261,10 @@ Closes the video-editing-skill ADR-002/ADR-003 gap investigation (11 confirmed g
 - **`proxy.py`: low-bitrate proxy for downstream AI analysis, preview and editing decisions.** No tool here served a "cheap for a machine to decode" output distinct from `export.py`'s delivery presets, which all target near-visually-lossless platform delivery (CRF 18-24) rather than size/speed. `proxy.py` resizes to `--width` (default 640) or by `--scale` factor, re-encodes at a proxy-grade `--crf` (default 30) with the fastest x264/x265 preset, supports `--fps` and `--no-audio`, and keeps the source's own dynamic range (an HDR source proxies to HEVC10, same as every other re-encoding tool here — run `color.py --to-sdr` first if SDR is wanted). Pure mechanical resize+re-encode, same primitives `fit.py`/`export.py` already use: no new dependency, no GPU requirement, works identically regardless of source resolution (1080p/4K/6K/8K) or codec (H.264/H.265/ProRes, since ffmpeg's own decoders are already codec-agnostic everywhere in this repo). This tool only executes the spec it is given — it does not decide which asset should be proxied or what the proxy will be used for; that stays with the calling agent. `capability_map` gains `media.proxy` -> `proxy` (see below). Tests cover default width/CRF, `--scale`/`--no-audio`, forcing CFR on a VFR source, HDR passthrough, and dry-run.
 - **`contract --json`: `capability_map`.** `provides` re-indexes each tool by an id shaped like its own name (`ffmpeg-skill.cut`); it doesn't let a planner that only knows an abstract goal ("I need to trim a video") find the right tool. `capability_map` is a new, small, hand-authored table: `[{"capability": "<domain>.<verb>", "tool_id": "ffmpeg-skill/<tool>", "params": {...}}, ...]`, covering `video.trim`, `video.reframe` (pins `fit` to `fit=crop`, since `fit.py` also duration-fits and pads), `audio.loudness`, `subtitle.burn`, `media.stream.inspect`, `media.frames.extract` and `media.proxy`. It is purely descriptive — a caller still builds and runs the named tool's own CLI/MCP call from its `input_schema`; this skill never picks a capability or executes on the caller's behalf. Deliberately excludes anything that would require judgment to resolve (no `video.highlight`, since `scenes.py --highlights` ranks by a measured proxy, not understood content). `docs/contract.md` documents the table and why it stays short; `tests/test_contract.py` verifies every entry resolves to a real tool and real params. Additive; no existing field changed.
 - **`doctor`: this installed copy's own `version`.** `doctor --json` and the human-readable `doctor` now report the version of the copy answering, read locally from its own `package.json` (same value `contract --json`'s `skill.version` reports) — never fetched from the network, never compared against the latest published release. A copy installed with `npx ffmpeg-skill` is not updated automatically; the human-readable output and the installer `--help`/README Quick start now say to re-run the installer to refresh it. Additive; every existing `doctor` key is unchanged.
-- **`doctor`: `ok` vs. per-tool `usable` clarified.** The human-readable `doctor` output now adds one line when `ok` is true but at least one tool's `usable` isn't `"yes"` (e.g. a plain Homebrew `ffmpeg` on macOS: overall `ok` since nothing required by *every* tool is missing, while `caption.py` specifically can't run). README Quick start says the same. No field changed, no behaviour changed — a caller reading `doctor` no longer has to already know to check `tools` separately from `ok`.
+- **`doctor`: `ok` vs. per-tool `usable` clarified.** The human-readable `doctor` output now adds one line when `ok` is true but at least one tool's `usable` isn't `"yes"` (e.g. a plain Homebrew `ffmpeg` on macOS: overall `ok` since nothing required by _every_ tool is missing, while `caption.py` specifically can't run). README Quick start says the same. No field changed, no behaviour changed — a caller reading `doctor` no longer has to already know to check `tools` separately from `ok`.
 - **`doctor`'s Windows fix hint for a missing subtitles/drawtext/zscale filter** now names the same remedy README documents for that platform (`winget install Gyan.FFmpeg`, since the gyan.dev full build carries them and a plain choco package can lack them) instead of falling through to a generic "install/build it" message — matching the existing macOS `brew install ffmpeg-full` hint. No change on any other platform.
 - **`doctor`'s own introspection calls get a 10s timeout.** `ffmpeg -filters`/`-encoders`/`-bsfs`/`-version` are meant to be fast, bounded, non-media operations; a hang here would silently freeze the one tool meant to report whether the machine is broken. They now time out and report `failed` rather than blocking forever. Deliberately NOT applied to any tool's actual media-processing ffmpeg invocation (cut, fit, caption, ...): a legitimate long re-encode must not be killed by an arbitrary ceiling. `-nostdin` was already passed everywhere (0.9.0), so a hang waiting on stdin was not possible; this closes the other silent-hang path. See README, "Requirements", for what remains the caller's own responsibility.
-- **`tests/test_contract.py` now runs on Windows CI.** Only two spots (`test_dry_run_never_runs_ffmpeg_and_writes_nothing` and the whole `DoctorDetectionTests` class) actually depend on a POSIX `#!/bin/sh` PATH shim to force specific FFmpeg fixture layouts; everything else in the file — contract schema, `reencodes_*`, `doctor.tools`, MCP derivation, and every tool exercised through the contract including `cut.py`'s provenance fields — already ran against the real `ffmpeg` on whichever OS the test ran on, but CI skipped the *entire file* on Windows regardless. The two shim-dependent spots are now `skipIf`'d individually (visible as `skipped` in the Windows job's log, not silently absent) and CI runs the rest of the file on all three OSes. Doing this surfaced a real, previously-invisible bug: `test_contract_from_installed_copy` redirects the installer's target directory by overriding `HOME`, which Node's `os.homedir()` ignores on Windows (it reads `USERPROFILE`), so the test silently installed into the runner's real home directory instead of its temp one and then failed to find the file it expected — fixed by setting both. See README, "Development".
+- **`tests/test_contract.py` now runs on Windows CI.** Only two spots (`test_dry_run_never_runs_ffmpeg_and_writes_nothing` and the whole `DoctorDetectionTests` class) actually depend on a POSIX `#!/bin/sh` PATH shim to force specific FFmpeg fixture layouts; everything else in the file — contract schema, `reencodes_*`, `doctor.tools`, MCP derivation, and every tool exercised through the contract including `cut.py`'s provenance fields — already ran against the real `ffmpeg` on whichever OS the test ran on, but CI skipped the _entire file_ on Windows regardless. The two shim-dependent spots are now `skipIf`'d individually (visible as `skipped` in the Windows job's log, not silently absent) and CI runs the rest of the file on all three OSes. Doing this surfaced a real, previously-invisible bug: `test_contract_from_installed_copy` redirects the installer's target directory by overriding `HOME`, which Node's `os.homedir()` ignores on Windows (it reads `USERPROFILE`), so the test silently installed into the runner's real home directory instead of its temp one and then failed to find the file it expected — fixed by setting both. See README, "Development".
 - **Test: `cut.py`'s copy-mode keyframe snap can genuinely change the output's duration, not just its precision label.** A non-keyframe-aligned `--start`/`--end` within `--tolerance` stays in fast stream-copy mode (`mode: "copy"`), but the underlying `-ss` seek still snaps to an earlier keyframe and pulls in extra content — `output_duration` and `requested_duration` can diverge by more than a rounding error while `keyframe_snapped` stays `true`. This was already reported in `cut.py --json` (0.10.0); a new test in `tests/test_all.py` pins a real, measured, non-trivial divergence so a regression that silently reports `duration_delta_seconds: 0.0` in this scenario would be caught. No field or behaviour changed.
 - **Fail loudly: `verify_output()` is now the single success criterion for every writing tool.**
   Audit of the execution chain (natural language → script → real ffmpeg → exit status → output
@@ -2285,13 +2289,13 @@ Closes the video-editing-skill ADR-002/ADR-003 gap investigation (11 confirmed g
     execution (an ffprobe-readable output exists) and honest failure (no `Done:` and no output
     when the tool failed).
 - **`fit.py --rotate`/`--flip`.** New rotate 90/180/270 (clockwise; 90/270 swap width and
-  height) and horizontal/vertical flip flags -- distinct from the rotation *metadata* fit.py
+  height) and horizontal/vertical flip flags -- distinct from the rotation _metadata_ fit.py
   already reads to size a source correctly, which is never altered by these. Verified against
   a real red/left, blue/right test fixture: `--flip h` swaps the two halves and `--rotate 90`
   rotates the left column into the top row, both confirmed pixel-exact, not just by output
   dimensions.
 - **`overlay.py --video`: video-on-video picture-in-picture.** `overlay.py` could only
-  composite a still image or text onto a video; there was no way to place a second *video* as
+  composite a still image or text onto a video; there was no way to place a second _video_ as
   a layer. `--video CLIP` composites it with the same `--position`/`--scale`/`--opacity`/
   `--start`/`--end` knobs `--image` already has (`scale2ref`-style scale + `format=yuva420p` +
   `colorchannelmixer` for opacity + `overlay` with a timeline `enable`). Only the main input's
@@ -2346,8 +2350,8 @@ Closes the video-editing-skill ADR-002/ADR-003 gap investigation (11 confirmed g
   Added a symmetric `--height` that mirrors `join.py`'s existing width/height resolution: give
   one and the other follows the aspect (the source aspect, or `--aspect` if also given); give
   both for an exact frame. `--width` alone still behaves exactly as before.
-- **`crop.py`: crop to an exact pixel rectangle.** `fit.py --fit crop` crops to a target *aspect
-  ratio*, computing the rectangle itself; there was no way to crop to a rectangle the caller
+- **`crop.py`: crop to an exact pixel rectangle.** `fit.py --fit crop` crops to a target _aspect
+  ratio_, computing the rectangle itself; there was no way to crop to a rectangle the caller
   already knows (a face-detection box, a saved crop, a hand-picked region). New tool takes
   `--x --y --width --height` in source pixels, validated before ffmpeg runs: refuses negative
   offsets, non-positive or odd width/height (4:2:0 chroma, this codebase's even-size convention
@@ -2375,7 +2379,7 @@ Closes the video-editing-skill ADR-002/ADR-003 gap investigation (11 confirmed g
 
 ## 0.10.0 — 2026-09-06 — FFmpeg 8+/Windows compatibility, per-tool doctor/contract usability, provenance and honesty fixes
 
-- **`doctor --json`: per-tool `usable`.** `doctor` reported capability-level `available`/`missing`/`unknown`, but a caller had to cross-reference each tool's own required capabilities by hand to answer "can I run `caption.py` on this machine today" -- a plain Homebrew `ffmpeg` on macOS is `ok` overall (nothing *required by every tool* is missing) while `caption.py` specifically cannot run at all. The new `tools` field folds the same per-capability state into `{"<tool>": {"usable": "yes"|"no"|"unknown", "missing": [...], "fix": "one-line remedy", "unknown": [...]}}` per tool, following the same "unknown is not missing" rule doctor already uses. Additive; every existing `doctor` key is unchanged.
+- **`doctor --json`: per-tool `usable`.** `doctor` reported capability-level `available`/`missing`/`unknown`, but a caller had to cross-reference each tool's own required capabilities by hand to answer "can I run `caption.py` on this machine today" -- a plain Homebrew `ffmpeg` on macOS is `ok` overall (nothing _required by every tool_ is missing) while `caption.py` specifically cannot run at all. The new `tools` field folds the same per-capability state into `{"<tool>": {"usable": "yes"|"no"|"unknown", "missing": [...], "fix": "one-line remedy", "unknown": [...]}}` per tool, following the same "unknown is not missing" rule doctor already uses. Additive; every existing `doctor` key is unchanged.
 - **`contract --json`: `reencodes_video`/`reencodes_audio` per tool.** Each of the 21 tools now declares, per stream type, `"always"` / `"never"` / `"conditional"` (with a `reencode_note` for the conditional ones), read from what each script's own encode/copy args actually do. Surfaces a fact that wasn't documented anywhere: `fit`, `caption`, `overlay`, `graphics`, `color`, `join`, `multicam` and `silence` always transcode audio to AAC alongside a video filter — there is no `-c:a copy` path in this codebase for a tool that also re-encodes video, so a caller cannot assume the original audio codec survives a picture-only edit. `caption.py`'s docstring now says plainly that burn-in is the only mode (no soft-subtitle mux) and always re-encodes both streams. Additive contract field; no tool's behaviour changed.
 - **SKILL.md: explicit "what this skill does and does not decide".** Added a section naming what belongs to a production agent (approval, which cut is right), another skill (thumbnail composition), or nobody in this skill (content understanding, judging a highlight's interest beyond a measured proxy) -- and an explicit rule against ever falling back to a raw `ffmpeg`/`filter_complex` invocation when a request needs something none of the 21 scripts expose. The trigger description (frontmatter) is intentionally left as-is: it stays broad on purpose (any video/audio file touch), since narrowing it risks under-triggering on requests that do belong here; what changed is what the skill does once triggered. `evals/agent_prompts_24.json` gains one refusal case (`r05-no-raw-ffmpeg`) asking directly for a raw `-filter_complex` command.
 - **`check.py`: plain-language `reason` on the less obvious FAILs.** Every row already had `fix` (the command that resolves it); video codec, pixel format, HDR colour and loudness FAILs now also carry `reason` ("QuickTime and iOS commonly reject video that isn't 8-bit 4:2:0") for a caller reporting the result to someone who doesn't already know why the spec value matters. Empty on PASS rows and every other check. Additive, no existing field changed.
@@ -2389,7 +2393,7 @@ Closes the video-editing-skill ADR-002/ADR-003 gap investigation (11 confirmed g
   keep the source resolution). A caller with nothing to change — the deliverable already matches
   the source, no platform target — had no way to get a real, delivered file out of `export.py`
   without paying for and risking a needless re-encode. `copy` is a genuine stream copy (`-c:v
-  copy -c:a copy`, no `-an` unless the source truly has no audio track): same codecs, same
+copy -c:a copy`, no `-an` unless the source truly has no audio track): same codecs, same
   container (keeps the source's own extension unless `-o` names one), same colour tags — it
   skips the CFR-conforming (`-r`/`-fps_mode cfr`) and BT.709-retagging steps every re-encoding
   preset applies, since neither is meaningful (or safe) without decoding the picture, and it
@@ -2397,7 +2401,7 @@ Closes the video-editing-skill ADR-002/ADR-003 gap investigation (11 confirmed g
   touch colour at all. `-movflags +faststart` still applies when the resolved output is `.mp4`
   (a real optimisation a copy can do for free). Verified codec/resolution/frame-count/HDR-tags
   stay byte-for-byte the source's, not just nominally unchanged (frame count via `ffprobe
-  -count_frames`, which a re-encode could silently drop or duplicate).
+-count_frames`, which a re-encode could silently drop or duplicate).
 
 - **`scenes.py --rank-by`.** `--highlights` ranked candidate scenes by audio energy only, and the docstring falsely claimed motion was also used (it never was — dead documentation). `--rank-by {audio,duration}` (default audio, unchanged) makes the criterion explicit and adds a real second option (longest scene first); the result JSON now reports `highlights_rank_by`.
 - **`fit.py --crop-x` / `--crop-y`.** `--fit crop` always cropped from the centre, so reframing a wide shot to 9:16 could cut off a subject held to one side (a product, a person off-centre). `--crop-x`/`--crop-y` (0=left/top, 0.5=centre default, 1=right/bottom) pick which edge to keep instead; range-checked before ffmpeg runs. No change to the default (centre) behaviour.

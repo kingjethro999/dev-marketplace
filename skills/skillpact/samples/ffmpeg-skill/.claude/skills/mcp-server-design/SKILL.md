@@ -67,8 +67,8 @@ def validate_dir(path: str) -> dict:
 
 A huge share of MCP servers shell out to another tool. Three failures recur:
 
-**1. Don't discard stdout on a non-zero exit.** Many CLIs exit non-zero *by
-design* (a linter/mutation-tester reporting findings) and write their real
+**1. Don't discard stdout on a non-zero exit.** Many CLIs exit non-zero _by
+design_ (a linter/mutation-tester reporting findings) and write their real
 output to **stdout** with an empty stderr. A wrapper that returns
 `f"Error: {result.stderr}"` whenever `returncode != 0` reports a successful run
 to the LLM as an empty `"Error: "`.
@@ -86,7 +86,7 @@ def run_tool(args: list[str]) -> dict:
 **2. Pin to the version you actually wrap, and verify subcommands exist.** A
 server written against a tool's 2.x CLI while the project pins 3.x will call
 subcommands and flags that no longer exist — every wrapped tool breaks at
-runtime. Check the *installed* version's `--help`, not your memory of it.
+runtime. Check the _installed_ version's `--help`, not your memory of it.
 
 **3. Parse args safely.** Splitting an extra-args string with `str.split()`
 breaks quoted, space-containing arguments — use `shlex.split()`. Never
@@ -114,7 +114,7 @@ def build_server(config: Config) -> FastMCP:
 ```
 
 This also avoids **double registration**: a module-level "create all tools" loop
-*plus* the same loop inside `main()` registers every tool twice when the file is
+_plus_ the same loop inside `main()` registers every tool twice when the file is
 run directly (`uv run server.py`, as Claude Desktop does) versus via a console
 entry point. Register in exactly one place.
 
@@ -194,7 +194,7 @@ sampling response if the tool promises an empty-string or other fallback.
 MCP servers are often launched as a single file (`uv run server.py`), so two
 packaging traps are easy to ship without noticing:
 
-- **Module/package name collision.** Having both a top-level `server.py` *and* a
+- **Module/package name collision.** Having both a top-level `server.py` _and_ a
   `server/` package directory means `import server` resolves to the package
   (shadowing the module), so a console entry point like `server:main` finds no
   `main` and fails. Only running the file directly works. Pick one name.
@@ -219,7 +219,7 @@ the server works.
 - Keep at least one **integration test that invokes the real wrapped tool** (or
   a real sample file) end to end.
 - A bare `import server` smoke test is meaningless under a name collision (it can
-  import an empty package). Assert a tool *runs and returns expected output*.
+  import an empty package). Assert a tool _runs and returns expected output_.
 - Test the error contract: malformed input returns your `"error"` shape, batch
   tools populate `skipped`.
 
@@ -262,12 +262,12 @@ Distribution & tests:
 
 `mcp/server.py` here is a hand-rolled stdio JSON-RPC server, NOT FastMCP — the
 `@mcp.tool()` decorator examples above don't apply directly. But most of the
-*principles* transfer almost exactly, because this server's entire job is
+_principles_ transfer almost exactly, because this server's entire job is
 wrapping 22 subprocess-based CLI tools:
 
 - The subprocess-wrapping section (stdout/stderr handling, argv-list-only, no
   `shell=True`) matches `mcp/server.py`'s actual design: `execution.shell:
-  false` and `arbitrary_executables: false` are load-bearing guarantees in
+false` and `arbitrary_executables: false` are load-bearing guarantees in
   `contract --json`, not just documentation.
 - "No module-level global state" and "tools registered in exactly one place"
   are already true by construction here: `tools/list` is derived from

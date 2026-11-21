@@ -3,10 +3,7 @@
   "$id": "https://kajisho5.github.io/skillpact/schema/policy-v0.8.json",
   "title": "Harness policy 0.1",
   "type": "object",
-  "required": [
-    "policy_version",
-    "defaults"
-  ],
+  "required": ["policy_version", "defaults"],
   "additionalProperties": false,
   "properties": {
     "policy_version": {
@@ -14,14 +11,7 @@
     },
     "defaults": {
       "type": "object",
-      "required": [
-        "read",
-        "write",
-        "network",
-        "exec",
-        "spend",
-        "send"
-      ],
+      "required": ["read", "write", "network", "exec", "spend", "send"],
       "additionalProperties": false,
       "properties": {
         "read": {
@@ -48,24 +38,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "effect",
-          "decision"
-        ],
+        "required": ["effect", "decision"],
         "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string"
           },
           "effect": {
-            "enum": [
-              "read",
-              "write",
-              "network",
-              "exec",
-              "spend",
-              "send"
-            ]
+            "enum": ["read", "write", "network", "exec", "spend", "send"]
           },
           "scope": {
             "type": "array",
@@ -145,19 +125,10 @@
       "additionalProperties": false,
       "properties": {
         "filesystem": {
-          "enum": [
-            "read-only",
-            "workdir",
-            "repo",
-            "any"
-          ]
+          "enum": ["read-only", "workdir", "repo", "any"]
         },
         "network": {
-          "enum": [
-            "off",
-            "allowlist",
-            "on"
-          ]
+          "enum": ["off", "allowlist", "on"]
         },
         "egress_allowlist": {
           "type": "array",
@@ -213,11 +184,7 @@
   },
   "$defs": {
     "d": {
-      "enum": [
-        "allow",
-        "ask",
-        "deny"
-      ]
+      "enum": ["allow", "ask", "deny"]
     }
   }
 }

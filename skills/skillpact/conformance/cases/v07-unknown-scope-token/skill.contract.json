@@ -14,9 +14,7 @@
     },
     "network": {
       "level": "scoped",
-      "scope": [
-        "@intranet"
-      ]
+      "scope": ["@intranet"]
     },
     "exec": {
       "level": "none"
@@ -32,9 +30,7 @@
     {
       "id": "guide",
       "summary": "guidance only",
-      "effects": [
-        "network"
-      ]
+      "effects": ["network"]
     }
   ]
 }
