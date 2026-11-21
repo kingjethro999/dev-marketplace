@@ -1,0 +1,13 @@
+# Dependencies & build output
+node_modules/
+dist/
+.tmp/
+.periderm/
+
+# Vendored & minified third-party bundles
+vendor/
+*.min.js
+*.min.css
+
+# Negative & exact-byte test fixtures (e.g., mislabeled_pdf.html, binary_garbage.html)
+**/tests/fixtures/**
