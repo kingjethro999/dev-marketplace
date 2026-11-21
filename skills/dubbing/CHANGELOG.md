@@ -1,0 +1,166 @@
+# Changelog
+
+## 0.2.1 - 2026-11-13
+
+First release: the tag `v0.2.1` and its GitHub Release (roadmap step 16, ADR-019). From now on a pushed `v*` tag makes the GitHub Release from its CHANGELOG.md section (`.github/workflows/release.yml`); nothing is published to a package index. It also carries 0.2.0 and 0.1.0 below, which were never tagged.
+
+The pronunciation dictionary checked by transcription-skill on the output (roadmap step 12, ADR-015).
+
+- `dubbing terms <script> --pronunciation <dict.json> --lang <lang> --transcript <transcript.json>`: checks transcription-skill's Transcript of the output. `heard` gives, for each dictionary term the script uses, how often the transcript has its reading, against how often the script uses the term. The reading counts as kana, or as a homophone: another written form whose characters read as the reading, such as 航空 for コウクウ. The term itself written back is counted apart (`written`), because it does not show which reading was spoken. `summary.not_heard` and `summary.written_only` are also warned about. Additive: `[--transcript <transcript.json>]` on the `dubbing/terms` tool.
+- Homophones are read with SudachiPy and SudachiDict core (Apache-2.0), the optional extra `readings`. This extra is the package's first, and it is not an engine. Without it the result and a warning say homophones were not read.
+- CI (`voicevox` job): the three-term medical fixture is narrated through the real VOICEVOX twice, once with the dictionary and once without it as a control. transcription-skill transcribes both outputs with faster-whisper base and small, with no prompt. A term counts as heard when either model hears it. The run with the dictionary must have every term heard. In the control, neither model may hear 口腔 or 腹腔.
+
+## 0.2.0 - not tagged (first released in 0.2.1)
+
+Qwen3-TTS, an optional and experimental engine (ADR-018).
+
+- `qwen3_tts`: Qwen3-TTS-12Hz Base through `qwen-tts` 0.1.1 in the worker, under its own interpreter (`DUBBING_QWEN3_TTS_PYTHON`, Python >= 3.10). It is not a pip extra, like the other engines. Code and weights Apache-2.0, ten languages including Japanese, 24 kHz, no watermark, no credit.
+  - `DUBBING_QWEN3_TTS_MODEL` picks the 1.7B checkpoint (the default) or the 0.6B one, each pinned to a Hugging Face revision. The checkpoint's `config.json` must be the 12 Hz Base model of that size.
+  - Missing weights are `MODEL_NOT_FOUND` with `details.download`, the `hf download <repo> --revision <rev>` line.
+- The Base checkpoints have no built-in voice: every line is cloned from `--reference` (the speaker embedding; no transcript needed) and needs the voice owner's consent record, checked in the op and again in the worker (ADR-009, unchanged). `--voice` is refused.
+- One speaker-embedding prompt per reference clip, `torch.manual_seed(--seed)` before each line, and at most 2048 codec frames (about 164 s) per line.
+- Experimental, never a default: a published human-preference ranking placed it low while the vendor's own metrics are strong, so judge it by listening. `EngineSpec.experimental` and `experimental_reason`, `engines.experimental` in the contract, a warning in every result that used it, and `engine.experimental` in the provenance.
+- Provenance: `engine.revision` (new, for every engine; null where none is reported), the model id, the licences, the clone mode, the dtype and the checkpoint's sampling settings.
+- Tests: a fake `qwen_tts` runtime through the real worker (`tests/test_qwen3_tts.py`). A manual `heavy tests` workflow (`.github/workflows/heavy-tests.yml`) runs the real 0.6B checkpoint on CPU for one English sentence in a synthetic reference voice.
+
+## 0.1.0 - not tagged (first released in 0.2.1)
+
+AI voice disclosure (roadmap step 14, ADR-017).
+
+- Every op result carries `disclosure` (`dubbing/disclosure@1`): AI-generated speech, what, engine, voices, voice profile, the consent record of a cloned voice, the watermark check, `labels`, a neutral English `line` and `publish.append` (the line and the credits) for publish-skill's description. `obligations.disclosure` and `provenance.synthetic_speech` in every clip.
+- `dubbing watermark <media>`: Chatterbox's Perth mark read back from any file through ffmpeg-skill/audio and resemble-perth's own detector in the worker.
+- Tests: the fake resemble-perth; the real publish-skill `plan` receiving the line (integration); in the `engines` job, the real Perth mark detected on a Chatterbox narration file and the line handed to publish-skill's plan. CI checks publish-skill out in the integration, engines and voicevox jobs.
+
+One voice per channel or series (roadmap step 13, ADR-016).
+
+- `--profile <profile.json>` on `narrate`, `dub` and `describe`: a `dubbing/voice-profile@1` file (id, engine, voice or consented reference, languages, speed, pitch, loudness target, seed). Flags that say otherwise are refused; a reference voice in a profile goes through the consent gate.
+- Engines publish their `controls`: VOICEVOX speed and pitch (`speedScale`, `pitchScale`), Kokoro speed; other engines refuse a non-neutral value. VOICEVOX is marked deterministic.
+- NARRATE normalises its timeline to the profile's loudness target through ffmpeg-skill/loudness. DUB and AUDIO_DESCRIPTION record it.
+- `voice_profile` (id, file hash, settings) in every result and provenance. Tests: two runs with one profile give the same audio on the fake and, in the `voicevox` CI job, on the real VOICEVOX with the real ffmpeg-skill/loudness.
+
+Pronunciation dictionary for terms (roadmap step 12, ADR-015).
+
+- `--pronunciation <dict.json>` on `narrate`, `dub` and `describe`: a per-project `dubbing/pronunciation@1` dictionary (term, lang, reading, optional accent and IPA), used only for the op's `--lang`; none is built in.
+- Each engine takes it its own way (`EngineSpec.pronunciation`): VOICEVOX through its user dictionary (`POST /user_dict_word` for the run, removed after it; the engine's own reading of each line is recorded and each term checked against it), Kokoro as misaki inline phonemes for English entries with `ipa`, Chatterbox and Style-Bert-VITS2 by respelling. The cue text and its hash are unchanged; the spoken text's hash is added to the provenance.
+- `dubbing terms <script> --pronunciation <dict.json> --lang <lang>`: the dictionary terms each line contains, the unused ones, and the dictionary as transcription-skill's `--vocabulary`.
+- Tests: the dictionary checks, matching per script, each engine's method on the fakes, and in the `voicevox` CI job the real engine reading three medical terms (口腔, 腹腔, 貼付) as the dictionary says and leaving its user dictionary as it was.
+
+Localise in one run: translate → dub → subtitles, speech rate fitted (roadmap step 11, ADR-014).
+
+- `dubbing fit --rate --lang <lang>`: each line's length in the target language (spoken characters; morae for Japanese, kana exact, kanji / digits / Latin letters estimated), the voice's speaking rate measured on the clips (overhead + seconds per unit), and for each line that does not fit, a length budget at `--max-tempo` and at tempo 1.0. Unfit entries and `TIMING_OVERFLOW` details carry the budget.
+- DUB reports the same budget at tempo 1.0 for every line it cannot place (`fit.rate`, `fit.unfit[].budget`), so one run with `--on-unfit keep` tells the caller which lines to re-ask from subtitle-skill `translate`, and how short.
+- `doctor`: `operations.dub.tempo` says DUB renders at tempo 1.0 and whether ffmpeg-skill declares an audio-only tempo change (it does not, up to 3.1.7).
+- Tests: the en→ja chain through the real subtitle-skill `translate` and `mux`; the ja soft track read back with the cue list's times. CI checks subtitle-skill out in the integration, engines and voicevox jobs.
+
+ffmpeg-skill 3.0.0 (ADR-013).
+
+- ffmpeg-skill 3.x declares `contract_version` 2.0; it is read like 1.0, with no warning. Every tool and flag this skill uses is unchanged. Its `cut` calls always pass `--accurate`, so 3.0's new `cut.py` defaults do not reach it. 3.0.0 still has no audio-only tempo change and no audio-only `pad`, so the timed-cue and tempo limits stand. The CI integration job also runs against 3.0.0, pinned by commit.
+
+SKILL.md, CI and the agent handoff (roadmap step 9, ADR-012).
+
+- `SKILL.md`: workflow, request → command, consent, report format, pitfalls and boundaries. `tests/test_skill_md.py` keeps it true to the CLI (commands, flags, error codes, the consent rule).
+- CI:
+  - `unit` checks that the contract publishes all three ops `EXPERIMENTAL` and the consent record with no bypass.
+  - `integration` checks that doctor sees all ops implemented and gap detection usable against the real ffmpeg-skill.
+  - `engines` must pass `test_real_chatterbox_dubs_a_video`, and `voicevox` must pass `test_real_voicevox_describes_a_video`.
+- ADR-012 lists the contract changes of steps 5 to 8 for video-production-agent's adapter (not changed here): commands, inputs, the new error code, results, provenance, the ffmpeg-skill tools, and engines.
+
+Style-Bert-VITS2 and Kokoro synthesis (roadmap step 8, ADR-011).
+
+- Style-Bert-VITS2 (AGPL-3.0) speaks through your own API server on loopback: `POST /voice`, query parameters only, as read from `server_fastapi.py`. It is never imported, bundled or installed.
+  - `--voice MODEL[:SPEAKER[:STYLE]]`.
+  - The published JVNV models carry their CC BY-SA 4.0 credit and the ShareAlike condition per clip.
+  - Any other model is treated as cloning. It needs `--reference <model .safetensors>` and the voice owner's consent record (`CONSENT_REQUIRED` otherwise; no flag).
+  - Usable in NARRATE, DUB and AUDIO_DESCRIPTION.
+- Kokoro-82M runs in the worker from local files only: `KModel(config=, model=)`, and voices as local `.pt` paths. The lookup now needs `config.json` next to `kokoro-v1_0.pth`.
+  - Each line is one call at 24 kHz. Voices like `jf_alpha` must match the language.
+  - The four CC BY 3.0-trained Japanese voices carry their credit per clip. No cloning.
+  - Usable in NARRATE and AUDIO_DESCRIPTION.
+- `EngineSpec.reference_kind` (`audio` or `model`).
+- Absent engines fail with `ENGINE_UNAVAILABLE` or `MODEL_NOT_FOUND` and their install line. Nothing is downloaded.
+- Tests: 17 new (`tests/test_sbv2_kokoro.py`: a fake Kokoro package, a fake Style-Bert-VITS2 server, licence isolation). There is no real-engine CI job for these two engines: no weights are downloaded here.
+
+AUDIO_DESCRIPTION (roadmap step 7, ADR-010).
+
+- `dubbing describe <programme> <descriptions> --lang L -o <out> (--gaps gaps.json | --detect-gaps)` (tool `dubbing/audio-description`, schema `dubbing/describe@1`). `speech.audio_description` is `EXPERIMENTAL`.
+- Descriptions are spoken only inside gaps: the caller's, or the programme's quiet stretches found by ffmpeg-skill/silence `--list` (an optional tool; `--silence-threshold`, `--min-gap`).
+  - Each description is spoken from its cue's start and must end by its cue's end and its gap's end.
+  - A description starting outside every gap is refused before the engine runs. One that is too long fails with `TIMING_OVERFLOW`, or is left out with `--on-unfit skip`.
+- The mix is DUB's renderer: the programme is ducked under each description and untouched elsewhere, then put back into the video with audio and picture checked to match.
+- Engines: Chatterbox, VOICEVOX (credit per character), Kokoro and Style-Bert-VITS2 (step 8). A reference voice needs its consent record.
+- Tests: 13 new (`tests/test_describe.py`, including the placement test) and 2 integration tests on a real video with a silent stretch.
+
+Consent gate for voice cloning (roadmap step 6, ADR-009).
+
+- A reference voice is used only with a consent record (`dubbing/consent@1`).
+  - The record names who consented, when and for what (ops, engines, languages), with evidence files and the reference clip's SHA-256.
+  - Every field is checked. Evidence files must match their hashes, and so must the clip.
+  - Any problem is the new error `CONSENT_REQUIRED` (exit 2), listing every problem. No flag, option or environment variable skips it.
+- The record is checked before the clip is read, in the op before any engine work, and again in the worker. A record revoked between the two checks is refused before synthesis.
+- NARRATE: `--reference --consent`. DUB: `--reference --consent` and `--speaker-reference / --speaker-consent SPEAKER=PATH`. Chatterbox speaks in the reference voice (`audio_prompt_path`). VOICEVOX and Kokoro refuse a reference.
+- The verified record (who, when, scope, evidence and clip hashes) goes into each clip's provenance (`consent`). The contract publishes the record's fields under `policy.consent_record`.
+- Tests: 24 new security tests (`tests/test_consent.py`) and an integration test with the reference probed through the real ffmpeg-skill. The NARRATE consent tests now expect `CONSENT_REQUIRED` instead of `NOT_IMPLEMENTED`.
+
+DUB (roadmap step 5, ADR-008).
+
+- `dubbing dub <programme> <translated cues> --lang L -o <out.mp4|.mov|.mkv|.wav>` (tool `dubbing/dub`, schema `dubbing/dub@1`). `speech.dub` is `EXPERIMENTAL`.
+  - One clip per translated cue, by Chatterbox (default) in the worker.
+  - Each clip is fitted to its source segment with the timing fit at tempo 1.0. `--max-overrun` is bounded by the next cue and the programme's end.
+  - Each line is spoken over the programme's own audio, which is lowered by `--duck` dB (default 12) for exactly as long as the line lasts, and put back into the video.
+- Every media step goes through ffmpeg-skill. `audio` extracts the programme audio, `cut --accurate` makes the pieces, `audio --music --music-volume --gain` mixes, `join` joins and `audio --replace` muxes. No silence is made, so DUB needs no audio-only pad.
+- The output lasts as long as the programme, and its audio as long as its picture (the roadmap's "A/V duration match", `output.av_delta`).
+- `--source-cues`: the translated cues must be the same segments as the source (count, times within 0.1 s), and the source text hash is recorded per line. Translation stays a caller input (ADR-003).
+- `--speaker-voice SPEAKER=VOICE` per cue speaker. `--on-unfit fail` (`TIMING_OVERFLOW`) or `keep` (the original dialogue stays there).
+- ffmpeg-skill adapter: `cut` joins the required tools, and `audio` gains `--music-volume` and `--gain` (capability detection).
+- Tests: 20 new without FFmpeg (`tests/test_dub.py`, sample-exact checks of the mix) and 3 integration tests on a real H.264/AAC video through the real ffmpeg-skill.
+
+Timing fit (roadmap step 4, ADR-007).
+
+- `dubbing fit <cues> <clip>... --json` (tool `dubbing/fit`, schema `dubbing/fit@1`): one clip per cue is measured through ffmpeg-skill/probe against its cue window, and a plan is returned. No media is written.
+- Per line:
+  - `fit` (tempo 1.0, silence after it).
+  - `tempo` (the smallest speed-up within `--max-tempo`, default 1.25, range 1.0 to 2.0, rounded up to 1/1000).
+  - `unfit` (`over_limit`, `empty_slot`, `empty_clip`, `not_measured`, with the needed tempo and the excess; never cut, never placed).
+  - Lines are never slowed down. `--max-overrun` (default 0) lets a line run past its cue end, never past the next cue's start, and only when speed-up alone cannot fit it.
+- Lead and tail silence per placed line, in the shape ffmpeg-skill/pad takes. `--on-unfit fail` (default: `TIMING_OVERFLOW` with the plan in the details) or `report`.
+- Rendering the plan waits on an audio-only tempo change and pad in ffmpeg-skill (2.23.1 has neither). The plan says so under `render`. NARRATE's overrun warning now points at `dubbing fit`.
+- Tests: 31 new (`tests/test_timing.py`), the end-to-end ones through the real ffmpeg-skill/probe in the integration job.
+
+VOICEVOX engine (roadmap step 3, ADR-006).
+
+- `dubbing narrate ... --engine voicevox`: the VOICEVOX app on loopback synthesises each line with its own API (`POST /audio_query`, then `POST /synthesis`, as read from voicevox_engine 0.26.0 and checked against 0.14.0). The client is in `engines/lookup.py` (`loopback_request`), which refuses any non-loopback host before connecting and caps answer sizes. `--voice` is a style id, default 3 (ずんだもん ノーマル).
+- Credit per character: each clip's provenance has `credits` (speaker, character, uuid, style, `VOICEVOX:<character>`, whether the terms were verified). `obligations.credit` / `obligations.credits` list each distinct credit once.
+- Terms gate: only ずんだもん and 四国めたん (terms verified in ADR-001, matched by uuid and name) are allowed by default. Any other character is refused with the new error code `TERMS_UNVERIFIED` (exit 2) unless `--accept-unverified-voice-terms` is given. Its credit is then recorded as unverified, with a warning. The contract publishes the rule under `policy.voice_terms`.
+- Tests: a fake VOICEVOX server on 127.0.0.1 in the test process. It checks the request shapes and returns WAVs of a known length. CI: a new `voicevox` job runs the real engine (official CPU image 0.26.0, pinned by digest, on 127.0.0.1 only).
+
+NARRATE (roadmap step 2, ADR-005).
+
+- `dubbing narrate <script> --lang <lang> -o <out.wav>`: plain text (`.txt`) or cues (`.json`, `.srt`, `.vtt`), one clip per line, laid on a mono timeline WAV through ffmpeg-skill (`join --transition none --sample-rate --channels`). `speech.narrate` is `EXPERIMENTAL`.
+- Engine run:
+  - Chatterbox synthesises in the worker only, under `DUBBING_CHATTERBOX_PYTHON`. The model is loaded once per script.
+  - The seed is recorded.
+  - The Perth watermark is read back from every clip, and a clip without it is refused.
+- Every check runs before any work. Each clip and the timeline are validated through ffmpeg-skill/probe, with the duration within max(0.1 s, 1 %). The output is renamed into place from a private run directory.
+- Receipt: a provenance block per clip and for the timeline (engine, version, model, licences, credit, declared and observed watermark, seed, translation note), plus `obligations`.
+- Timed cues need `ffmpeg-skill/pad` on audio-only input (optional tool, capability-detected). ffmpeg-skill 2.23.0 cannot, so cue scripts are refused with `FFMPEG_SKILL_UNAVAILABLE` before the engine runs, and doctor reports it.
+- Overflow into the next cue: `TIMING_OVERFLOW` (new error code), or `--on-overflow shift`.
+- A reference voice (`--reference` / `--consent`) is refused with `NOT_IMPLEMENTED` until the consent gate (step 6). Every engine also refuses `reference_audio` in the worker.
+- Chatterbox lookup fixed: chatterbox-tts 0.1.7 loads `t3_mtl23ls_v2.safetensors` (not V3). Doctor now requires the six files it loads, in one snapshot, plus `pykakasi`.
+- CI: a new `engines` job runs the real Chatterbox 0.1.7 (own venv, CPU torch, checkpoint pinned by revision and SHA-256) on Japanese and English fixtures.
+
+Package skeleton (roadmap step 1).
+
+- ADR-001: engines. The licences of the four OS ADR-012 engines were checked from primary sources (code and weights separately):
+  - Chatterbox Multilingual V3: default; MIT code and weights; Perth watermark; its Japanese path depends on pykakasi (GPL-3.0-or-later), so it gets its own venv.
+  - VOICEVOX: ENGINE LGPL-3.0, CORE MIT, per-voice terms, credit `VOICEVOX:<character>`.
+  - Style-Bert-VITS2: AGPL-3.0; models AGPL-3.0 / CC BY-SA 4.0; separate process.
+  - Kokoro-82M: Apache-2.0 code and weights; weak Japanese.
+  - Also checked and not chosen: OpenVoice V2, CosyVoice 3, GPT-SoVITS, MeloTTS, RVC, Seed-VC. Rejected: F5-TTS (NC weights), XTTS-v2 (CPML), Fish Audio (revenue-capped).
+- ADR-002: skeleton.
+  - Commands: `dubbing contract` / `skill`, `doctor` (`--offline`, `--ffmpeg-skill`), `engines`.
+  - Engine registry with an `EngineSpec` per engine (licences, credit, watermark, Japanese grade, isolation, sources) and `OK` / `MISSING` / `INCOMPATIBLE` checks that never import an engine (package metadata, Hugging Face cache, loopback-only HTTP).
+  - Worker subprocess in its own process group, under the engine's own interpreter when configured; `process` raises `NOT_IMPLEMENTED`.
+  - Typed errors; provenance block with credit and watermark; ffmpeg-skill adapter by capability detection (`probe`, `join`, `audio`, `loudness`).
+- ADR-003: translation is a caller input. No translation engine is chosen; the contract and doctor report it as `CALLER_SUPPLIED`.
+- ADR-004: JSON output is ASCII (`ensure_ascii`), human output uses `backslashreplace`, so Windows code pages neither crash the CLI nor its consumers (as audio-production-skill ADR-20).
+- The three ops (`speech.narrate`, `speech.dub`, `speech.audio_description`) are declared with lifecycle `PROPOSED` and are not implemented yet.
