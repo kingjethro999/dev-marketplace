@@ -1,0 +1,329 @@
+[
+ {
+  "id": "og-webp",
+  "prompt": "Make FIXTURES/hero.jpg into a 1200x630 WebP for an Open Graph card, remove the GPS location, and keep the original untouched. Save it in OUTDIR and tell me what you did.",
+  "expect": [
+   "probe.py",
+   "resize.py",
+   "strip.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "og-webp-ja",
+  "prompt": "FIXTURES/hero.jpg を 1200x630 の OG 用 WebP にして、位置情報(GPS)を消して。元の写真は残すこと。出力は OUTDIR に。",
+  "expect": [
+   "probe.py",
+   "resize.py",
+   "strip.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "thumb-256",
+  "prompt": "I need a 256px thumbnail (longest side) of FIXTURES/hero.jpg in OUTDIR.",
+  "expect": [
+   "probe.py",
+   "thumb.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "strip-gps",
+  "prompt": "Before I post FIXTURES/hero.jpg online, make a copy with the location data removed. Save to OUTDIR.",
+  "expect": [
+   "probe.py",
+   "strip.py",
+   "check.py|probe.py"
+  ]
+ },
+ {
+  "id": "inspect-only",
+  "prompt": "What are the pixel dimensions and format of FIXTURES/hero.jpg, and does it contain GPS data? Don't change anything.",
+  "expect": [
+   "probe.py"
+  ]
+ },
+ {
+  "id": "trim-screenshot",
+  "prompt": "FIXTURES/screenshot.png has a big white border around it. Crop the border off and save the result in OUTDIR.",
+  "expect": [
+   "probe.py",
+   "trim.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "batch-webp",
+  "prompt": "Convert every image in FIXTURES/photos to WebP. Put the results in OUTDIR/webp and leave the originals alone.",
+  "expect": [
+   "_contract.py|probe.py",
+   "batch.py"
+  ]
+ },
+ {
+  "id": "batch-thumbs-ja",
+  "prompt": "FIXTURES/photos の中の画像を全部、長辺 400px のサムネイルにして OUTDIR/thumbs に保存して。",
+  "expect": [
+   "batch.py"
+  ]
+ },
+ {
+  "id": "readme-fit",
+  "prompt": "Shrink FIXTURES/screenshot.png so it fits inside 800x600 for our README without distorting it. Save to OUTDIR.",
+  "expect": [
+   "probe.py",
+   "resize.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "square-fill",
+  "prompt": "Make a 1080x1080 square version of FIXTURES/hero.jpg for Instagram - fill the square, cropping whatever doesn't fit. Save in OUTDIR.",
+  "expect": [
+   "probe.py",
+   "resize.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "exact-stretch",
+  "prompt": "Resize FIXTURES/logo.png to exactly 512x512 even if that stretches it. Save in OUTDIR.",
+  "expect": [
+   "probe.py",
+   "resize.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "jpeg-quality",
+  "prompt": "Convert FIXTURES/screenshot.png to a JPEG at quality 85 in OUTDIR.",
+  "expect": [
+   "probe.py",
+   "convert.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "png-to-webp-ja",
+  "prompt": "FIXTURES/logo.png を WebP に変換して OUTDIR に置いて。",
+  "expect": [
+   "convert.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "verify-result",
+  "prompt": "I already made OUTDIR/og.jpg from FIXTURES/hero.jpg and it is supposed to be exactly 1200x630 JPEG. Verify it and tell me if it's right.",
+  "expect": [
+   "check.py"
+  ]
+ },
+ {
+  "id": "capability-question",
+  "prompt": "Can this machine write WebP and read HEIC? Answer from what is actually installed.",
+  "expect": [
+   "_contract.py"
+  ]
+ },
+ {
+  "id": "no-size-given",
+  "prompt": "Make FIXTURES/hero.jpg smaller.",
+  "expect": [],
+  "ask": true,
+  "note": "SKILL.md rule 4: no size was given, so the agent asks for one instead of choosing."
+ },
+ {
+  "id": "overwrite-request",
+  "prompt": "Resize FIXTURES/hero.jpg to fit in 1024x1024 and just overwrite the original file.",
+  "expect": [
+   "probe.py",
+   "resize.py",
+   "check.py"
+  ],
+  "note": "The agent writes a new file and explains that the skill never overwrites an original."
+ },
+ {
+  "id": "decline-video-frames",
+  "prompt": "Extract one frame per second from FIXTURES/clip.mp4 as PNGs into OUTDIR.",
+  "expect": [],
+  "decline": true,
+  "note": "Out of scope (video): decline and point to a video skill; no raw ffmpeg or magick."
+ },
+ {
+  "id": "decline-gif-animation",
+  "prompt": "Turn the images in FIXTURES/photos into an animated GIF slideshow.",
+  "expect": [],
+  "decline": true,
+  "note": "Out of scope (GIF animation): decline; no raw magick."
+ },
+ {
+  "id": "decline-background-removal",
+  "prompt": "Remove the background from FIXTURES/hero.jpg so only the person is left.",
+  "expect": [],
+  "decline": true,
+  "note": "Out of scope (AI background removal): decline."
+ },
+ {
+  "id": "decline-face-blur-ja",
+  "prompt": "FIXTURES/hero.jpg に写っている人の顔を自動で見つけてぼかして。",
+  "expect": [],
+  "decline": true,
+  "note": "Out of scope (face recognition): decline, in Japanese."
+ },
+ {
+  "id": "decline-raw",
+  "prompt": "Develop FIXTURES/DSC0001.ARW (a Sony RAW file) into a JPEG with nice colours.",
+  "expect": [],
+  "decline": true,
+  "note": "Out of scope (RAW development): decline."
+ },
+ {
+  "id": "look-before-say-done",
+  "prompt": "Crop FIXTURES/hero.jpg to a 1:1 square centred on the middle, save it to OUTDIR, and show me what it looks like before you say it's done.",
+  "expect": [
+   "probe.py",
+   "crop.py",
+   "check.py",
+   "look.py"
+  ]
+ },
+ {
+  "id": "crop-rect",
+  "prompt": "Cut the region x=100, y=50, 400 wide and 300 tall out of FIXTURES/hero.jpg into OUTDIR.",
+  "expect": [
+   "probe.py",
+   "crop.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "pad-square-transparent",
+  "prompt": "Make FIXTURES/logo.png square by adding transparent margins (don't scale it). Save to OUTDIR.",
+  "expect": [
+   "probe.py",
+   "pad.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "pad-no-colour",
+  "prompt": "Pad FIXTURES/logo.png to 16:9.",
+  "expect": [],
+  "ask": true,
+  "note": "No fill colour was given; the agent asks instead of choosing one (pad.py requires --color)."
+ },
+ {
+  "id": "rotate-90-ja",
+  "prompt": "FIXTURES/screenshot.png を時計回りに90度回転して OUTDIR に保存して。",
+  "expect": [
+   "rotate.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "optimize-200kb",
+  "prompt": "Make a JPEG version of FIXTURES/hero.jpg that is under 200 KB without changing its dimensions. Save to OUTDIR.",
+  "expect": [
+   "probe.py",
+   "optimize.py",
+   "check.py"
+  ]
+ },
+ {
+  "id": "optimize-impossible-ja",
+  "prompt": "FIXTURES/hero.jpg を寸法を変えずに 2KB 以下の JPEG にして OUTDIR に保存して。",
+  "expect": [
+   "probe.py",
+   "optimize.py"
+  ],
+  "note": "The budget is unreachable; the agent reports optimize's ok:false and smallest size honestly and suggests resizing, without shrinking the image on its own."
+ },
+ {
+  "id": "compare-before-after",
+  "prompt": "I edited FIXTURES/hero.jpg into OUTDIR/edited.jpg (same size). How different are they? Give me the numbers and a difference image in OUTDIR.",
+  "expect": [
+   "compare.py",
+   "look.py"
+  ]
+ },
+ {
+  "id": "preview-folder",
+  "prompt": "Show me all the photos in FIXTURES/photos on one sheet so I can pick one.",
+  "expect": [
+   "look.py|batch.py"
+  ]
+ },
+ {
+  "id": "watermark-text-ja",
+  "prompt": "FIXTURES/hero.jpg の右下に白文字で「© 2026 kajisho5」と入れて。文字サイズは 48、余白 30px。OUTDIR に保存して、仕上がりも見せて。",
+  "expect": [
+   "probe.py",
+   "overlay.py",
+   "check.py",
+   "look.py"
+  ]
+ },
+ {
+  "id": "logo-overlay",
+  "prompt": "Put FIXTURES/logo.png in the top-right corner of FIXTURES/hero.jpg at 20% of the photo's width, 70% opacity, 24px margin. Save to OUTDIR.",
+  "expect": [
+   "probe.py",
+   "overlay.py",
+   "check.py",
+   "look.py"
+  ]
+ },
+ {
+  "id": "adjust-explicit",
+  "prompt": "Raise the brightness of FIXTURES/hero.jpg by 15 and the contrast by 10, then save it to OUTDIR.",
+  "expect": [
+   "adjust.py",
+   "check.py",
+   "look.py"
+  ]
+ },
+ {
+  "id": "adjust-vague",
+  "prompt": "Make FIXTURES/hero.jpg look better.",
+  "expect": [],
+  "ask": true,
+  "note": "No values were given; adjust.py has no auto mode, so the agent asks what to change and by how much."
+ },
+ {
+  "id": "readme-strip",
+  "prompt": "Put FIXTURES/screenshot.png and FIXTURES/logo.png side by side on a white background with a 16px gap and their file names underneath, for our README. Save to OUTDIR.",
+  "expect": [
+   "montage.py",
+   "check.py|look.py"
+  ]
+ },
+ {
+  "id": "favicons",
+  "prompt": "Make a favicon.ico and the usual web icons from our logo. The source is FIXTURES/logo.png. Put them in OUTDIR/icons and tell me the HTML to add.",
+  "expect": [
+   "probe.py",
+   "crop.py|pad.py",
+   "icons.py"
+  ],
+  "note": "logo.png is not square, so icons.py refuses it; the agent squares it with crop or pad first (asking which, and the pad colour, if the user didn't say)."
+ },
+ {
+  "id": "preset-og",
+  "prompt": "Make an Open Graph image from FIXTURES/hero.jpg at the size Facebook documents, cropping to fill. Save to OUTDIR.",
+  "expect": [
+   "probe.py",
+   "preset.py",
+   "check.py",
+   "look.py"
+  ]
+ },
+ {
+  "id": "preset-x-undocumented",
+  "prompt": "Resize FIXTURES/hero.jpg to the official X (Twitter) card size.",
+  "expect": [
+   "preset.py"
+  ],
+  "note": "There is no X preset because X no longer documents a size; the agent says so (preset.py --list shows what exists) and asks for dimensions instead of inventing them."
+ }
+]
