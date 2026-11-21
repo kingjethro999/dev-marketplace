@@ -6,6 +6,7 @@
  */
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 const readline = require("readline");
@@ -202,7 +203,11 @@ async function cmdSetup() {
     "I'll ask you a series of questions to configure hooks for your project.\n",
   );
 
-  const config = { preCommit: {}, prePush: {}, commitMsg: {} };
+  const config = {
+    preCommit: { peridermArgs: ["--staged", "--json"] },
+    prePush: { peridermArgs: ["--json"] },
+    commitMsg: {},
+  };
 
   // Check periderm CLI
   const ver = spawnSync("periderm", ["--version"], { encoding: "utf8" });
@@ -225,7 +230,8 @@ async function cmdSetup() {
 
   const hasLint = hasPackageJson && (scripts.lint || scripts["lint:fix"]);
   const hasTypecheck =
-    hasPackageJson && (scripts.typecheck || scripts["typecheck"]);
+    hasPackageJson &&
+    (scripts.typecheck || scripts["type-check"] || scripts.tsc);
   const hasTest =
     hasPackageJson &&
     (scripts.test || scripts["test:unit"] || scripts["test:integration"]);
@@ -458,6 +464,54 @@ async function cmdSetup() {
   }
 }
 
+function renderHook(name, config) {
+  if (name === "pre-commit") {
+    const c = config.preCommit;
+    return readTemplate("pre-commit")
+      .replace("{{PERIDERM_SCAN}}", c.peridermScan ? "true" : "false")
+      .replace(
+        "{{PERIDERM_ARGS}}",
+        (c.peridermArgs || ["--staged", "--json"]).join(" "),
+      )
+      .replace("{{FAIL_ON}}", (c.failOn || ["critical", "high"]).join(","))
+      .replace("{{LINT}}", c.lint ? "true" : "false")
+      .replace("{{TYPECHECK}}", c.typecheck ? "true" : "false")
+      .replace("{{TESTS}}", (c.tests || []).join(","))
+      .replace("{{TIMEOUT}}", String(c.timeout || 60000));
+  }
+  if (name === "pre-push") {
+    const c = config.prePush;
+    return readTemplate("pre-push")
+      .replace("{{PERIDERM_SCAN}}", c.peridermScan ? "true" : "false")
+      .replace("{{PERIDERM_REVIEW}}", c.peridermReview ? "true" : "false")
+      .replace("{{PERIDERM_ARGS}}", (c.peridermArgs || ["--json"]).join(" "))
+      .replace("{{FAIL_ON}}", (c.failOn || ["critical", "high"]).join(","))
+      .replace("{{TESTS}}", (c.tests || []).join(","))
+      .replace("{{BUILD}}", c.build ? "true" : "false")
+      .replace("{{TIMEOUT}}", String(c.timeout || 300000));
+  }
+  if (name === "commit-msg") {
+    const c = config.commitMsg;
+    return readTemplate("commit-msg")
+      .replace(
+        "{{REQUIRE_CONVENTIONAL}}",
+        c.requireConventional ? "true" : "false",
+      )
+      .replace(
+        "{{REQUIRE_SECURITY_FOOTER}}",
+        c.requireSecurityFooter ? "true" : "false",
+      )
+      .replace(
+        "{{SECURITY_KEYS}}",
+        (c.securityFooterKeys || ["Security", "CVE", "GHSA", "Periderm"]).join(
+          "|",
+        ),
+      )
+      .replace("{{MAX_LENGTH}}", String(c.maxLength || 72));
+  }
+  throw new Error(`Unknown hook: ${name}`);
+}
+
 async function cmdInstall(configOverride = null) {
   section("Installing Git Hooks");
 
@@ -476,58 +530,14 @@ async function cmdInstall(configOverride = null) {
     info(`Found Periderm ${ver.stdout.trim()}`);
   }
 
-  // Pre-commit
   if (config.preCommit.enabled) {
-    const template = readTemplate("pre-commit")
-      .replace(
-        "{{PERIDERM_SCAN}}",
-        config.preCommit.peridermScan ? "true" : "false",
-      )
-      .replace("{{PERIDERM_ARGS}}", config.preCommit.peridermArgs.join(" "))
-      .replace("{{FAIL_ON}}", config.preCommit.failOn.join(","))
-      .replace("{{LINT}}", config.preCommit.lint ? "true" : "false")
-      .replace("{{TYPECHECK}}", config.preCommit.typecheck ? "true" : "false")
-      .replace("{{TESTS}}", config.preCommit.tests.join(","))
-      .replace("{{TIMEOUT}}", config.preCommit.timeout);
-    writeHook("pre-commit", template);
+    writeHook("pre-commit", renderHook("pre-commit", config));
   }
-
-  // Pre-push
   if (config.prePush.enabled) {
-    const template = readTemplate("pre-push")
-      .replace(
-        "{{PERIDERM_SCAN}}",
-        config.prePush.peridermScan ? "true" : "false",
-      )
-      .replace(
-        "{{PERIDERM_REVIEW}}",
-        config.prePush.peridermReview ? "true" : "false",
-      )
-      .replace("{{PERIDERM_ARGS}}", config.prePush.peridermArgs.join(" "))
-      .replace("{{FAIL_ON}}", config.prePush.failOn.join(","))
-      .replace("{{TESTS}}", config.prePush.tests.join(","))
-      .replace("{{BUILD}}", config.prePush.build ? "true" : "false")
-      .replace("{{TIMEOUT}}", config.prePush.timeout);
-    writeHook("pre-push", template);
+    writeHook("pre-push", renderHook("pre-push", config));
   }
-
-  // Commit-msg
   if (config.commitMsg.enabled) {
-    const template = readTemplate("commit-msg")
-      .replace(
-        "{{REQUIRE_CONVENTIONAL}}",
-        config.commitMsg.requireConventional ? "true" : "false",
-      )
-      .replace(
-        "{{REQUIRE_SECURITY_FOOTER}}",
-        config.commitMsg.requireSecurityFooter ? "true" : "false",
-      )
-      .replace(
-        "{{SECURITY_KEYS}}",
-        config.commitMsg.securityFooterKeys.join("|"),
-      )
-      .replace("{{MAX_LENGTH}}", config.commitMsg.maxLength);
-    writeHook("commit-msg", template);
+    writeHook("commit-msg", renderHook("commit-msg", config));
   }
 
   success("\nAll hooks installed!");
@@ -537,53 +547,74 @@ async function cmdInstall(configOverride = null) {
 function cmdUninstall() {
   section("Uninstalling Git Hooks");
 
+  const hookDir = path.join(process.cwd(), ".git", "hooks");
+  if (!fs.existsSync(hookDir)) {
+    warn("No .git/hooks directory found");
+    return;
+  }
+
   const hooks = ["pre-commit", "pre-push", "commit-msg"];
   for (const hook of hooks) {
-    const hookPath = path.join(process.cwd(), ".git", "hooks", hook);
+    const hookPath = path.join(hookDir, hook);
     if (fs.existsSync(hookPath)) {
       fs.unlinkSync(hookPath);
       success(`Removed ${hook}`);
     }
-    // Restore latest backup
     const backups = fs
-      .readdirSync(path.dirname(hookPath))
+      .readdirSync(hookDir)
       .filter((f) => f.startsWith(`${hook}.backup-`))
       .sort()
       .reverse();
     if (backups.length > 0) {
-      fs.copyFileSync(path.join(path.dirname(hookPath), backups[0]), hookPath);
-      fs.unlinkSync(path.join(path.dirname(hookPath), backups[0]));
+      fs.copyFileSync(path.join(hookDir, backups[0]), hookPath);
+      fs.unlinkSync(path.join(hookDir, backups[0]));
       info(`Restored previous ${hook}`);
     }
   }
   success("Hooks uninstalled");
 }
 
-function cmdTest(hookType) {
+function cmdTest(hookType, extraArg = null) {
   section(`Testing ${hookType} Hook`);
 
   const config = loadConfig();
-  const hookConfig =
-    config[hookType === "pre-commit" ? "preCommit" : "prePush"];
+  const keyMap = {
+    "pre-commit": "preCommit",
+    "pre-push": "prePush",
+    "commit-msg": "commitMsg",
+  };
+  const hookConfig = config[keyMap[hookType]];
 
-  if (!hookConfig.enabled) {
+  if (!hookConfig || !hookConfig.enabled) {
     warn(`${hookType} is disabled in config`);
     return;
   }
 
-  const scriptPath = path.join(SKILL_DIR, "scripts", `run-${hookType}.js`);
-  if (!fs.existsSync(scriptPath)) {
-    error(`Runner not found: ${scriptPath}`);
-    process.exit(1);
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "commit-hook-test-"));
+  try {
+    const tmpHook = path.join(tmpDir, hookType);
+    fs.writeFileSync(tmpHook, renderHook(hookType, config), { mode: 0o755 });
+
+    const shArgs = [tmpHook];
+    if (hookType === "commit-msg") {
+      const msgFile = path.join(tmpDir, "COMMIT_EDITMSG");
+      fs.writeFileSync(
+        msgFile,
+        extraArg || "feat(core): test commit message\n",
+      );
+      shArgs.push(msgFile);
+    }
+
+    const result = spawnSync("sh", shArgs, {
+      cwd: process.cwd(),
+      stdio: "inherit",
+      timeout: hookConfig.timeout || 60000,
+    });
+
+    process.exit(result.status ?? 1);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
-
-  const result = spawnSync("node", [scriptPath], {
-    stdio: "inherit",
-    env: { ...process.env, HOOK_CONFIG: JSON.stringify(hookConfig) },
-    timeout: hookConfig.timeout,
-  });
-
-  process.exit(result.status);
 }
 
 function cmdStatus() {
@@ -662,6 +693,9 @@ async function main() {
     case "test-pre-push":
       cmdTest("pre-push");
       break;
+    case "test-commit-msg":
+      cmdTest("commit-msg", process.argv[3]);
+      break;
     case "status":
       cmdStatus();
       break;
@@ -677,4 +711,14 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  loadConfig,
+  renderHook,
+  cmdInstall,
+  cmdUninstall,
+  cmdStatus,
+};

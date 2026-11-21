@@ -368,8 +368,8 @@
       "engineering-workflow",
       "interactive-setup"
     ],
-    "files": ["SKILL.md", "config", "scripts", "templates"],
-    "hash": "5d9bca65fcaa0a1ce65e5505a7dc384714563075fc9a84fa22f8ef8328c86f8a"
+    "files": ["SKILL.md", "config", "scripts", "templates", "tests"],
+    "hash": "e132f8b5d8882ba2b053f6a5bb8107fd7b963dd10fc384ca9069cd5ec9d85ede"
   },
   {
     "name": "context7-mcp",
