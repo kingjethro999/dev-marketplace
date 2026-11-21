@@ -1,0 +1,57 @@
+# Changelog
+
+## 0.1.0 - 2026-11-13
+
+First release: the tag `v0.1.0` and its GitHub Release (roadmap step 12, ADR-010). From now on a pushed `v*` tag makes the GitHub Release from its CHANGELOG.md section (`.github/workflows/release.yml`); nothing is published to a package index.
+
+Long inputs in blocks, resumable (roadmap step 11).
+
+- ADR-009: `isolate`, `dereverb` and `bleed-reduce` process an input longer than `--block-seconds` (default 600, 15-3600) in blocks that overlap by 4 s, joined with a raised-cosine crossfade over the middle half of each overlap. Each block's output is cached (`.voice-enhance-blocks` next to the output, or `--cache-dir`) under the SHA-256 of its input samples, the engine and its parameters, so a run that stops resumes at the first missing block. The cache is emptied on success. `--timeout` applies to each block. An input no longer than one block runs exactly as before.
+- New result sections `blocks` (count, starts, processed, cached, resumed_from, cache_dir) and `timing` (engine seconds, audio seconds, `realtime_factor`); new contract section `long_inputs`. Additive: the result schemas stay `@1`.
+- Joined outputs become RF64 above 4 GiB; `WavReader` reads RF64.
+- Tests: a 1 h fixture stopped after 3 of 7 blocks resumes, and its output equals an uninterrupted run (bit-identical, far below -90 dB).
+
+ffmpeg-skill 3.0.0 (ADR-008).
+
+- ffmpeg-skill 3.x declares `contract_version` 2.0; it is read like 1.0, with no warning. Only `probe` and `audio` are used, and nothing they take changed. The CI integration job also runs against 3.0.0, pinned by commit. Python 3.9 stays supported here: the unit jobs never run ffmpeg-skill, and its integration jobs run Python 3.12.
+
+SKILL.md and CI with the real engines (roadmap step 7).
+
+- ADR-007: `SKILL.md` for agents (commands with examples, when to use which op, `EXPERIMENTAL`, the 48 kHz rule of `isolate`, engine install lines, every error code with its exit code), held to the code by unit tests.
+- CI: a Linux `engines` job installs `deep-filter` 0.5.6 and `DeepFilterNet3_onnx.tar.gz` (pinned SHA-256, no PyTorch) and nara_wpe, and runs the whole suite with the real-engine tests required to run and pass. It measures both engines on the synthetic fixtures (ISOLATE SNR 0 → 18.2 dB; DEREVERB SRR -0.8 → 19.0 dB at 48 kHz).
+- The `deep-filter` flags of ADR-003 (`-D`, `-m`, `-o`, `--atten-lim-db`) are confirmed on the real 0.5.6 binary, and the stem is confirmed sample-aligned (it ends 1440 samples early). The install hint now points to the model tarball in the repository's `models/` directory, which is not a release asset.
+- DEREVERB: the real `wpe_v8` diverged on dual mono (SRR -0.8 → -48.4 dB). The engine now runs WPE on the independent components of the channels (eigenvectors of the channel covariance above -60 dB) and passes the rest through, so dual mono gets the mono result on both channels. New `parameters.independent_channels` and a warning when it is below the channel count.
+
+Remux helper (roadmap step 6).
+
+- ADR-006: `voice-enhance remux <video> <stem> -o <out>` puts a stem back into its video through one ffmpeg-skill `audio --replace` call. The video stream is copied packet for packet, and the stem becomes the only audio stream (AAC for `.mp4` / `.mov` / `.mkv`), padded with silence or trimmed to the video's length. The output keeps the input's container. Optional `--drop-other-audio`, `--timeout`, `--overwrite`, `--ffmpeg-skill`, `--offline`. Result schema `voice-enhance/remux@1`. It is a helper tool in the contract (`voice-enhance/remux`, no engine), not a capability, and `doctor` reports it under `checks.helpers`.
+- Refused before any media is written where `audio --replace` would lose a stream: no video stream (`INVALID_ARGUMENT`), a second video stream (`FFMPEG_SKILL_UNAVAILABLE`), or other audio streams unless `--drop-other-audio` (`FFMPEG_SKILL_UNAVAILABLE`, with that flag as the workaround). The output is checked through ffmpeg-skill/probe (one video and one audio stream; the video's codec, profile, size, pixel format, frame rate, frame count and length unchanged) and renamed into place from a private run directory.
+- `overwrite` is no longer among the ffmpeg-skill `audio` flags this skill requires: every ffmpeg-skill output is a fresh file in a run directory. Provenance accepts `engine: null` for an op that runs no engine.
+- Tests: the video packets (pts and MD5) are byte-identical in input and output through the real ffmpeg-skill, on a Matroska / FFV1 file with two audio streams (ISOLATE's stem of stream 1 put back) and on an MP4 / MPEG-4 file through the CLI. Unit tests use a stub whose videos carry a picture payload.
+
+BLEED_REDUCE op (roadmap step 5).
+
+- ADR-005: `voice-enhance bleed-reduce <media>... -o <out_dir>` reduces microphone cross-talk in 2-8 time-aligned tracks: the audio streams of one file, or one stream per file (`--audio-streams`). It writes one mono 32-bit float WAV per track, `<input name>_a<stream>.wav`, each with its own length and sample-aligned with its input. Optional `--engine`, `--dominance-db` (default 3), `--timeout`, `--overwrite`, `--ffmpeg-skill`, `--offline`. Result schema `voice-enhance/bleed-reduce@1` with per-track `outputs`, `inputs` and `steps`, and the measured `coupling_db` matrix. `voice.bleed_reduce` is `EXPERIMENTAL`.
+- New engine `crosstalk`, this repository's own signal processing on NumPy (`pip install 'voice-enhance-skill[bleed]'`), with no model and no weights. It runs in the worker. It estimates a least-squares coupling per frequency, only from bins where the other track dominates, then demixes per bin with `(I + H)^-1`. That is linear: nothing is gated or generated.
+- Tracks are prepared through ffmpeg-skill `audio` like ISOLATE's input (fold-down in a second pass) at the first track's rate. Mixed rates need `audio --sample-rate` and are refused with `FFMPEG_SKILL_UNAVAILABLE` before any work without it. Every stem is validated through ffmpeg-skill/probe before any is placed, and a new output directory is renamed into place whole.
+- The WAV I/O, STFT and overlap-add move to `engines/wavio.py`, shared by DEREVERB and BLEED_REDUCE. `EngineRequest` / `EngineResult` carry several paths, and provenance lists `inputs` / `outputs` for several files.
+- Tests: on a synthetic two-microphone fixture (-8 dB leak, 4 ms), cross-talk energy falls by more than 10 dB (about 17-20 dB measured) while each track's own speech stays within 1 dB, through the stub and through the real ffmpeg-skill (two audio streams of a video).
+
+DEREVERB op (roadmap step 4).
+
+- ADR-004: `voice-enhance dereverb <media> -o <out.wav>` removes late reverberation from one audio stream with WPE (`nara_wpe.wpe.wpe_v8`, statistics mode `full`) in the worker. The result keeps the stream's own sample rate and channels (multi-channel WPE), is written as 32-bit float WAV and is sample-aligned with the input. Optional `--audio-stream`, `--taps`, `--delay`, `--iterations` (nara_wpe's defaults 10 / 3 / 3), `--timeout`, `--overwrite`, `--ffmpeg-skill`, `--offline`. Result schema `voice-enhance/dereverb@1`. `voice.dereverb` is `EXPERIMENTAL`.
+- The input is prepared with a single ffmpeg-skill `audio --audio-stream N` pass. WPE needs no particular rate or layout, so there is no fold-down and no `audio --sample-rate`. The stem is validated through ffmpeg-skill/probe against the prepared input's rate, channels and duration.
+- The engine does its own STFT (Hann, 32 ms / 8 ms at the file's rate) instead of `nara_wpe.utils`, which needs SciPy. It streams the file in 30 s blocks, so memory does not grow with the input's length.
+- Tests: a fake `nara_wpe` package (a minimal WPE on NumPy) raises the signal-to-reverberation ratio of a synthetic reverberant fixture by more than 6 dB, through the stub and through the real ffmpeg-skill. The CI integration job installs NumPy for it.
+
+ISOLATE op (roadmap step 3).
+
+- ADR-003: `voice-enhance isolate <media> -o <out.wav>` gives the voice stem of one audio stream as a 48 kHz mono WAV, using DeepFilterNet3 (`deep-filter -D -m <model>`) in the worker. Optional `--audio-stream`, `--atten-lim-db`, `--timeout`, `--overwrite`, `--ffmpeg-skill`, `--offline`. Result schema `voice-enhance/isolate@1` with steps, warnings and provenance (now including the model's SHA-256). `voice.isolate` is `EXPERIMENTAL`.
+- The input is prepared with ffmpeg-skill `audio` (`--audio-stream`, then `--mono` in a second pass) instead of `join`, which refuses a single clip. A sample rate other than 48 kHz needs `audio --sample-rate` from ffmpeg-skill (capability-detected); without it the op is refused before any work with `FFMPEG_SKILL_UNAVAILABLE`.
+- The engine binary runs in the worker's process group, so `--timeout` kills it too. The stem is validated through ffmpeg-skill/probe (rate, channels, duration) and renamed into place from a private run directory.
+
+Package skeleton (roadmap steps 1-2).
+
+- ADR-001: engine selection. DeepFilterNet3 (`deep-filter` binary, MIT OR Apache-2.0 code and weights) for ISOLATE, nara_wpe (MIT, no weights) for DEREVERB, no AI engine for BLEED_REDUCE. Demucs, Resemble-Enhance and VoiceFixer were checked and not chosen (licence of code and weights, CPU, generative re-synthesis).
+- ADR-002: skeleton. `voice-enhance contract` / `skill`, `doctor` (`--offline`, `--ffmpeg-skill`), `engines`; engine registry with `OK` / `MISSING` / `INCOMPATIBLE` availability checks; worker subprocess in its own process group with a timeout; typed errors with exit codes and `retryable`; provenance block; ffmpeg-skill adapter by capability detection.
+- The three ops are declared with lifecycle `PROPOSED` and are not implemented yet.
