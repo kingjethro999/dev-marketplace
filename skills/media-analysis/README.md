@@ -78,23 +78,23 @@ branch on. Details below and in [docs/](docs/).
 
 ## Why a measurement Skill
 
-| | |
-|---|---|
-| **Deterministic** | same file content + analyzer + algorithm version + parameters → same identity, same Observation id, same data |
-| **Observations, not opinions** | `silence 0.0–3.0 s exists` is the whole statement; `trim it` is the agent's job. No confidence-of-action, no recommendations |
-| **Verifiable** | every Observation records the analyzer, its version, the effective parameters and the file's sha256; every response is checked against the published schemas before it leaves |
-| **Honest** | what could not be measured is `null` / `not_performed`, never PASS; a failed analyzer run still reports its cost |
-| **Safe to call from an agent** | structured JSON in and out, no shell, no command or argv fields, no executable override, workspace-confined writes, process-group timeouts |
-| **Cheap to repeat** | content-addressed cache: a second question about the same file starts zero processes |
+|                                |                                                                                                                                                                               |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deterministic**              | same file content + analyzer + algorithm version + parameters → same identity, same Observation id, same data                                                                 |
+| **Observations, not opinions** | `silence 0.0–3.0 s exists` is the whole statement; `trim it` is the agent's job. No confidence-of-action, no recommendations                                                  |
+| **Verifiable**                 | every Observation records the analyzer, its version, the effective parameters and the file's sha256; every response is checked against the published schemas before it leaves |
+| **Honest**                     | what could not be measured is `null` / `not_performed`, never PASS; a failed analyzer run still reports its cost                                                              |
+| **Safe to call from an agent** | structured JSON in and out, no shell, no command or argv fields, no executable override, workspace-confined writes, process-group timeouts                                    |
+| **Cheap to repeat**            | content-addressed cache: a second question about the same file starts zero processes                                                                                          |
 
 ## Ecosystem and responsibilities
 
-| | [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) | **media-analysis-skill** | [video-production-agent](https://github.com/kajisho5/video-production-agent) |
-|---|---|---|---|
-| Role | Deterministic media **processing** (hands) | Deterministic media **observation / analysis** (eyes / meters) | AI **orchestration** (brain) |
-| Does | cut, render, overlay, captions, audio processing, loudness normalisation, export, compliance check | probe, stream layout, video / audio format, silence, loudness measurement, scene cuts, integrity, timing | interprets Observations, derives Inferences and Decisions, chooses Skills / Tools, asks for approval, plans and executes production |
-| Never | decides what to produce | interprets, decides, edits, writes media | runs ffmpeg directly |
-| Output | media artifacts (+ `--json` result) | Observation JSON (`source: media-analysis/<tool>@<version>`) | Project IR, plans, provenance |
+|        | [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill)                                           | **media-analysis-skill**                                                                                 | [video-production-agent](https://github.com/kajisho5/video-production-agent)                                                        |
+| ------ | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Role   | Deterministic media **processing** (hands)                                                         | Deterministic media **observation / analysis** (eyes / meters)                                           | AI **orchestration** (brain)                                                                                                        |
+| Does   | cut, render, overlay, captions, audio processing, loudness normalisation, export, compliance check | probe, stream layout, video / audio format, silence, loudness measurement, scene cuts, integrity, timing | interprets Observations, derives Inferences and Decisions, chooses Skills / Tools, asks for approval, plans and executes production |
+| Never  | decides what to produce                                                                            | interprets, decides, edits, writes media                                                                 | runs ffmpeg directly                                                                                                                |
+| Output | media artifacts (+ `--json` result)                                                                | Observation JSON (`source: media-analysis/<tool>@<version>`)                                             | Project IR, plans, provenance                                                                                                       |
 
 ```text
 media file ──▶ media-analysis-skill ──▶ Observations (measured facts, provenance OBSERVED)
@@ -119,30 +119,82 @@ on failure alike; stderr carries diagnostics only.
 ```json
 {
   "schema": "media-analysis/response@1",
-  "skill": {"id": "media-analysis", "version": "<version>"},
+  "skill": { "id": "media-analysis", "version": "<version>" },
   "status": "ok",
   "dry_run": false,
-  "results": [{
-    "analysis_id": "analysis-001", "asset_id": "asset-001", "kind": "media_probe", "status": "ok",
-    "observation": {
-      "id": "obs_5d07f00595dfc668",
+  "results": [
+    {
+      "analysis_id": "analysis-001",
       "asset_id": "asset-001",
       "kind": "media_probe",
-      "data": { "container": {"format": "mov,mp4,m4a,3gp,3g2,mj2", "duration": 6.0, "size": 208685, "bitrate": 278246, "start_time": 0.0},
-                "video": {"codec": "h264", "width": 320, "height": 180, "fps": 25.0, "pixel_format": "yuv420p"},
-                "audio": {"codec": "aac", "sample_rate": 48000, "channels": 1, "channel_layout": "mono", "sample_format": "fltp"} },
-      "source": "media-analysis/probe@<version>",
-      "analysis_id": "analysis-001",
-      "observed_at": "2026-09-04T10:00:00Z",
-      "analysis": {"identity": "<sha256>", "analyzer": "media-analysis/probe", "analyzer_version": "<version>", "algorithm_version": "1", "parameters": {}, "seconds": 0.05},
-      "asset": {"path": "/abs/sample.mp4", "fingerprint": "<sha256 of file>", "size": 208685}
-    },
-    "cache": {"status": "miss", "policy": "use", "key": "<sha256>"},
-    "usage": {"analyzer_calls": 1, "seconds": 0.05, "operations": [{"executable": "ffprobe", "purpose": "format and stream metadata"}]}
-  }],
-  "observations": [ "...the observations of the ok results, in request order..." ],
-  "usage": {"analyzer_calls": 1, "cache_hits": 0, "seconds": 0.05},
-  "budget": {"calls": 1, "seconds": 0.05, "budget": {"max_analysis_calls": null, "timeout": 600.0, "max_total_seconds": null}},
+      "status": "ok",
+      "observation": {
+        "id": "obs_5d07f00595dfc668",
+        "asset_id": "asset-001",
+        "kind": "media_probe",
+        "data": {
+          "container": {
+            "format": "mov,mp4,m4a,3gp,3g2,mj2",
+            "duration": 6.0,
+            "size": 208685,
+            "bitrate": 278246,
+            "start_time": 0.0
+          },
+          "video": {
+            "codec": "h264",
+            "width": 320,
+            "height": 180,
+            "fps": 25.0,
+            "pixel_format": "yuv420p"
+          },
+          "audio": {
+            "codec": "aac",
+            "sample_rate": 48000,
+            "channels": 1,
+            "channel_layout": "mono",
+            "sample_format": "fltp"
+          }
+        },
+        "source": "media-analysis/probe@<version>",
+        "analysis_id": "analysis-001",
+        "observed_at": "2026-09-04T10:00:00Z",
+        "analysis": {
+          "identity": "<sha256>",
+          "analyzer": "media-analysis/probe",
+          "analyzer_version": "<version>",
+          "algorithm_version": "1",
+          "parameters": {},
+          "seconds": 0.05
+        },
+        "asset": {
+          "path": "/abs/sample.mp4",
+          "fingerprint": "<sha256 of file>",
+          "size": 208685
+        }
+      },
+      "cache": { "status": "miss", "policy": "use", "key": "<sha256>" },
+      "usage": {
+        "analyzer_calls": 1,
+        "seconds": 0.05,
+        "operations": [
+          { "executable": "ffprobe", "purpose": "format and stream metadata" }
+        ]
+      }
+    }
+  ],
+  "observations": [
+    "...the observations of the ok results, in request order..."
+  ],
+  "usage": { "analyzer_calls": 1, "cache_hits": 0, "seconds": 0.05 },
+  "budget": {
+    "calls": 1,
+    "seconds": 0.05,
+    "budget": {
+      "max_analysis_calls": null,
+      "timeout": 600.0,
+      "max_total_seconds": null
+    }
+  },
   "warnings": []
 }
 ```
@@ -152,23 +204,23 @@ observation; `status` of the response is `ok`, `partial` or `error`. Full refere
 
 ## Analysis kinds
 
-| kind | tool | needs | measures |
-|---|---|---|---|
-| `media_probe` | `media-analysis/probe` | ffprobe | container + first video / audio stream summary |
-| `stream_layout` | `media-analysis/streams` | ffprobe | every stream: index, type, ordinal, codec, language, disposition, dimensions, rate, channels |
-| `video_format` | `media-analysis/video` | ffprobe | resolution, fps, frame count, pixel format, colour, SAR / DAR, CFR / VFR (measured from packet timestamps) |
-| `audio_format` | `media-analysis/audio` | ffprobe | sample rate, channels, layout, codec, sample format, bitrate, duration |
-| `duration` | `media-analysis/timing` | ffprobe | container / stream durations and start times |
-| `silence` | `media-analysis/silence` | ffmpeg `silencedetect` | segments with leading / internal / trailing classification, parameters recorded |
-| `loudness` | `media-analysis/loudness` | ffmpeg `ebur128` | integrated LUFS, loudness range, true peak (EBU R128) |
-| `integrity` | `media-analysis/integrity` | ffmpeg + ffprobe | full decode error count, decoded vs declared frames, timestamp monotonicity → PASS / WARN / FAIL |
-| `scene_detection` | `media-analysis/scenes` | ffmpeg `scdet` | visual cuts with score; intervals between them. Not semantic scenes |
-| `timing` | `media-analysis/timing` | ffprobe | per-stream packet timestamps, gaps, A/V duration mismatch, A/V start offset |
-| `noise_floor` | `media-analysis/noise` | ffmpeg `astats` | short-window RMS → noise floor (p10), signal level (p95), no-reference SNR estimate; one channel or all |
-| `edit_style` | `media-analysis/style` | ffmpeg `scdet`, `ebur128`, `silencedetect` | editing-style profile: cuts per minute, shot-length distribution (frames and seconds), soft and burned-in subtitle frequency / coverage / position (burned-in: also text height, band / outline; ffmpeg `edgedetect`, no OCR), loudness, silence share; `media-analysis style diff` compares two profiles |
-| `speech_regions` | `media-analysis/vad` | voice-activity model (silero-vad, optional extra `vad`) | where someone speaks: time ranges with a probability, speech share, longest pause; `UNKNOWN` without `pip install 'media-analysis-skill[vad]'` (model shipped in the package, nothing downloaded) |
-| `audio_events` | `media-analysis/events` | audio-event classifier (YAMNet, optional extra `events`) | applause and laughter as time ranges with a score; `UNKNOWN` without `pip install 'media-analysis-skill[events]'` (model shipped in the package, nothing downloaded) |
-| `highlight_signals` | `media-analysis/signals` | ffmpeg `astats`, `scdet` | highlight signals, measured not judged: speech-energy peaks (dB over the median), speaking-rate changes (syllable-nucleus rate vs the median), screen-change bursts (runs of cuts), each as time ranges with a score |
+| kind                | tool                       | needs                                                    | measures                                                                                                                                                                                                                                                                                                  |
+| ------------------- | -------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `media_probe`       | `media-analysis/probe`     | ffprobe                                                  | container + first video / audio stream summary                                                                                                                                                                                                                                                            |
+| `stream_layout`     | `media-analysis/streams`   | ffprobe                                                  | every stream: index, type, ordinal, codec, language, disposition, dimensions, rate, channels                                                                                                                                                                                                              |
+| `video_format`      | `media-analysis/video`     | ffprobe                                                  | resolution, fps, frame count, pixel format, colour, SAR / DAR, CFR / VFR (measured from packet timestamps)                                                                                                                                                                                                |
+| `audio_format`      | `media-analysis/audio`     | ffprobe                                                  | sample rate, channels, layout, codec, sample format, bitrate, duration                                                                                                                                                                                                                                    |
+| `duration`          | `media-analysis/timing`    | ffprobe                                                  | container / stream durations and start times                                                                                                                                                                                                                                                              |
+| `silence`           | `media-analysis/silence`   | ffmpeg `silencedetect`                                   | segments with leading / internal / trailing classification, parameters recorded                                                                                                                                                                                                                           |
+| `loudness`          | `media-analysis/loudness`  | ffmpeg `ebur128`                                         | integrated LUFS, loudness range, true peak (EBU R128)                                                                                                                                                                                                                                                     |
+| `integrity`         | `media-analysis/integrity` | ffmpeg + ffprobe                                         | full decode error count, decoded vs declared frames, timestamp monotonicity → PASS / WARN / FAIL                                                                                                                                                                                                          |
+| `scene_detection`   | `media-analysis/scenes`    | ffmpeg `scdet`                                           | visual cuts with score; intervals between them. Not semantic scenes                                                                                                                                                                                                                                       |
+| `timing`            | `media-analysis/timing`    | ffprobe                                                  | per-stream packet timestamps, gaps, A/V duration mismatch, A/V start offset                                                                                                                                                                                                                               |
+| `noise_floor`       | `media-analysis/noise`     | ffmpeg `astats`                                          | short-window RMS → noise floor (p10), signal level (p95), no-reference SNR estimate; one channel or all                                                                                                                                                                                                   |
+| `edit_style`        | `media-analysis/style`     | ffmpeg `scdet`, `ebur128`, `silencedetect`               | editing-style profile: cuts per minute, shot-length distribution (frames and seconds), soft and burned-in subtitle frequency / coverage / position (burned-in: also text height, band / outline; ffmpeg `edgedetect`, no OCR), loudness, silence share; `media-analysis style diff` compares two profiles |
+| `speech_regions`    | `media-analysis/vad`       | voice-activity model (silero-vad, optional extra `vad`)  | where someone speaks: time ranges with a probability, speech share, longest pause; `UNKNOWN` without `pip install 'media-analysis-skill[vad]'` (model shipped in the package, nothing downloaded)                                                                                                         |
+| `audio_events`      | `media-analysis/events`    | audio-event classifier (YAMNet, optional extra `events`) | applause and laughter as time ranges with a score; `UNKNOWN` without `pip install 'media-analysis-skill[events]'` (model shipped in the package, nothing downloaded)                                                                                                                                      |
+| `highlight_signals` | `media-analysis/signals`   | ffmpeg `astats`, `scdet`                                 | highlight signals, measured not judged: speech-energy peaks (dB over the median), speaking-rate changes (syllable-nucleus rate vs the median), screen-change bursts (runs of cuts), each as time ranges with a score                                                                                      |
 
 Workflow commands built on these kinds (CLI only, not analysis kinds: they read a folder and write an index, which one
 request cannot express):
@@ -227,15 +279,15 @@ Step-by-step adapter recipe: [docs/architecture.md](docs/architecture.md#connect
 
 ## Structured errors
 
-| exit | code | exit | code |
-|---|---|---|---|
-| 0 | success (every result ok) | 8 | `ANALYSIS_FAILED` |
-| 2 | `INVALID_INPUT` | 9 | `INVALID_RESULT` |
-| 3 | `FILE_NOT_FOUND` | 10 | `BUDGET_EXCEEDED` |
-| 4 | `PATH_NOT_ALLOWED` | 11 | `CACHE_INVALID` |
-| 5 | `UNSUPPORTED_FORMAT` | 12 | `VERIFICATION_FAILED` |
-| 6 | `ANALYZER_UNAVAILABLE` | 13 | `CACHE_MISS` (cache_policy `only`) |
-| 7 | `ANALYZER_TIMEOUT` | | |
+| exit | code                      | exit | code                               |
+| ---- | ------------------------- | ---- | ---------------------------------- |
+| 0    | success (every result ok) | 8    | `ANALYSIS_FAILED`                  |
+| 2    | `INVALID_INPUT`           | 9    | `INVALID_RESULT`                   |
+| 3    | `FILE_NOT_FOUND`          | 10   | `BUDGET_EXCEEDED`                  |
+| 4    | `PATH_NOT_ALLOWED`        | 11   | `CACHE_INVALID`                    |
+| 5    | `UNSUPPORTED_FORMAT`      | 12   | `VERIFICATION_FAILED`              |
+| 6    | `ANALYZER_UNAVAILABLE`    | 13   | `CACHE_MISS` (cache_policy `only`) |
+| 7    | `ANALYZER_TIMEOUT`        |      |                                    |
 
 With `--json` every error is inside the response document (per result, or `error` / `error_kind` at the top when the
 document itself was rejected); without `--json`, one line on stderr. Every error also carries a class for the

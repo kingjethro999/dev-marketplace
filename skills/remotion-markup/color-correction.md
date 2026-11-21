@@ -27,14 +27,14 @@ It performs them in one WebGL pass and exposes controls in the Studio.
 | `vibrance`              | From `-1` to `1`; positive values emphasize muted colors                  | `0`           |
 
 ```tsx
-import {colorCorrection} from '@remotion/effects/color-correction';
-import {Video} from '@remotion/media';
-import {staticFile} from 'remotion';
+import { colorCorrection } from "@remotion/effects/color-correction";
+import { Video } from "@remotion/media";
+import { staticFile } from "remotion";
 
 export const CorrectedVideo = () => {
   return (
     <Video
-      src={staticFile('footage.mp4')}
+      src={staticFile("footage.mp4")}
       effects={[
         colorCorrection({
           exposure: 0.25,
@@ -89,15 +89,15 @@ and their graphical Studio editors are available from Remotion `4.0.537`.
 Keep the effect calls and point arrays inline so Studio can edit them:
 
 ```tsx
-import {curves} from '@remotion/effects/curves';
-import {levels} from '@remotion/effects/levels';
-import {Video} from '@remotion/media';
-import {staticFile} from 'remotion';
+import { curves } from "@remotion/effects/curves";
+import { levels } from "@remotion/effects/levels";
+import { Video } from "@remotion/media";
+import { staticFile } from "remotion";
 
 export const ToneAdjustedVideo = () => {
   return (
     <Video
-      src={staticFile('footage.mp4')}
+      src={staticFile("footage.mp4")}
       effects={[
         levels({
           blackPoint: 0.03,
@@ -107,8 +107,12 @@ export const ToneAdjustedVideo = () => {
           outputWhite: 0.98,
         }),
         curves({
-          channel: 'red',
-          points: [[0, 0], [0.5, 0.55], [1, 1]],
+          channel: "red",
+          points: [
+            [0, 0],
+            [0.5, 0.55],
+            [1, 1],
+          ],
           amount: 0.8,
         }),
       ]}
@@ -130,17 +134,17 @@ Its `content` parameter takes the complete file contents as a string.
 This example uses a small warm LUT inline:
 
 ```tsx
-import {colorCorrection} from '@remotion/effects/color-correction';
-import {lut} from '@remotion/effects/lut';
-import {Video} from '@remotion/media';
-import {staticFile} from 'remotion';
+import { colorCorrection } from "@remotion/effects/color-correction";
+import { lut } from "@remotion/effects/lut";
+import { Video } from "@remotion/media";
+import { staticFile } from "remotion";
 
 export const GradedVideo = () => {
   return (
     <Video
-      src={staticFile('footage.mp4')}
+      src={staticFile("footage.mp4")}
       effects={[
-        colorCorrection({exposure: 0.25, contrast: 1.1}),
+        colorCorrection({ exposure: 0.25, contrast: 1.1 }),
         lut({
           content: `TITLE "Warm"
 LUT_3D_SIZE 2

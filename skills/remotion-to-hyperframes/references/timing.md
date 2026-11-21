@@ -23,7 +23,9 @@ Do this conversion once when translating, not at runtime.
 ## interpolate — linear
 
 ```tsx
-const opacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: "clamp" });
+const opacity = interpolate(frame, [0, 30], [0, 1], {
+  extrapolateRight: "clamp",
+});
 ```
 
 Translates to:
@@ -31,7 +33,12 @@ Translates to:
 ```js
 gsap.to(target, { opacity: 1, duration: 1.0, ease: "none" }, 0);
 // fromTo if the property starts at 0 and CSS doesn't already set it
-gsap.fromTo(target, { opacity: 0 }, { opacity: 1, duration: 1.0, ease: "none" }, 0);
+gsap.fromTo(
+  target,
+  { opacity: 0 },
+  { opacity: 1, duration: 1.0, ease: "none" },
+  0,
+);
 ```
 
 `ease: "none"` matches Remotion's default linear interpolation. CSS sets the

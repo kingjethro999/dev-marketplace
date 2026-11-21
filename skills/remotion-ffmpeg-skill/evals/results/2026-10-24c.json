@@ -25,10 +25,7 @@
       {
         "check": {
           "type": "reply_mentions",
-          "any": [
-            "sheet.png",
-            "Look:"
-          ]
+          "any": ["sheet.png", "Look:"]
         },
         "ok": true,
         "detail": "found ['sheet.png', 'Look:']"
@@ -66,14 +63,7 @@
               "checks": [
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "クロップ",
-                    "切り抜",
-                    "crop",
-                    "端",
-                    "blur",
-                    "ぼかし"
-                  ]
+                  "any": ["クロップ", "切り抜", "crop", "端", "blur", "ぼかし"]
                 }
               ]
             }
@@ -104,11 +94,7 @@
       {
         "check": {
           "type": "reply_mentions",
-          "any": [
-            "sheet.png",
-            "Look:",
-            "コマ"
-          ]
+          "any": ["sheet.png", "Look:", "コマ"]
         },
         "ok": true,
         "detail": "found ['sheet.png', 'Look:']"
@@ -146,12 +132,7 @@
       {
         "check": {
           "type": "reply_mentions",
-          "any": [
-            "name",
-            "名前",
-            "?",
-            "？"
-          ]
+          "any": ["name", "名前", "?", "？"]
         },
         "ok": true,
         "detail": "found ['name']"
@@ -160,11 +141,7 @@
         "check": {
           "type": "no_file",
           "glob": "*Titled*.mp4",
-          "unless_reply_has": [
-            "Sample",
-            "placeholder",
-            "仮"
-          ]
+          "unless_reply_has": ["Sample", "placeholder", "仮"]
         },
         "ok": true,
         "detail": "0 match(es) for *Titled*.mp4"
@@ -272,9 +249,7 @@
               "checks": [
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "Part 1"
-                  ]
+                  "any": ["Part 1"]
                 }
               ]
             }
@@ -317,10 +292,7 @@
               "checks": [
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "talk_words.json",
-                    "words.json"
-                  ]
+                  "any": ["talk_words.json", "words.json"]
                 }
               ]
             }

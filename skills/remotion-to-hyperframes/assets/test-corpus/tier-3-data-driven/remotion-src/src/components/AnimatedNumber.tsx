@@ -10,7 +10,11 @@ interface Props {
  * Counts from `from` to `to` over `durationInFrames` with easeOut.
  * Driven entirely by useCurrentFrame — deterministic.
  */
-export const AnimatedNumber: React.FC<Props> = ({ from, to, durationInFrames }) => {
+export const AnimatedNumber: React.FC<Props> = ({
+  from,
+  to,
+  durationInFrames,
+}) => {
   const frame = useCurrentFrame();
   const t = interpolate(frame, [0, durationInFrames], [0, 1], {
     extrapolateLeft: "clamp",

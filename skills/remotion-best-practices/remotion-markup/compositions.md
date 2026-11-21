@@ -22,12 +22,12 @@ type Props = {
   readonly title: string;
 };
 
-export const MyComposition = ({title}: Props) => <h1>{title}</h1>;
+export const MyComposition = ({ title }: Props) => <h1>{title}</h1>;
 ```
 
 ```tsx title="src/Root.tsx"
-import {Composition} from 'remotion';
-import {MyComposition} from './MyComposition';
+import { Composition } from "remotion";
+import { MyComposition } from "./MyComposition";
 
 export const RemotionRoot = () => {
   return (
@@ -39,7 +39,7 @@ export const RemotionRoot = () => {
         fps={30}
         width={1920}
         height={1080}
-        defaultProps={{title: 'Launch'}}
+        defaultProps={{ title: "Launch" }}
       />
       <Composition
         id="Recap"
@@ -48,7 +48,7 @@ export const RemotionRoot = () => {
         fps={30}
         width={1920}
         height={1080}
-        defaultProps={{title: 'Recap'}}
+        defaultProps={{ title: "Recap" }}
       />
     </>
   );
@@ -75,8 +75,8 @@ Do not store it in a variable, import it, spread it, create it with a helper, or
 Use `type` declarations for props rather than `interface` to ensure `defaultProps` type safety.
 
 ```tsx title="src/Root.tsx"
-import {Composition} from 'remotion';
-import {MyComposition} from './MyComposition';
+import { Composition } from "remotion";
+import { MyComposition } from "./MyComposition";
 
 const defaultProps = { title: "Hello World" };
 
@@ -145,12 +145,7 @@ import { Thumbnail } from "./Thumbnail";
 
 export const RemotionRoot = () => {
   return (
-    <Still
-      id="Thumbnail"
-      component={Thumbnail}
-      width={1280}
-      height={720}
-    />
+    <Still id="Thumbnail" component={Thumbnail} width={1280} height={720} />
   );
 };
 ```
@@ -168,10 +163,7 @@ When the nested scene should have its own editable Studio timeline, use the [con
 ```tsx
 <>
   <Video src="https://remotion.media/video.mp4" />
-  <Sequence
-    width={1920}
-    height={1080}
-  >
+  <Sequence width={1920} height={1080}>
     <OverlayComponent />
   </Sequence>
 </>

@@ -61,12 +61,17 @@ try {
         `froze recipe ${frozen.slug} (v${frozen.version}, ${frozen.workflow}) → ${frozen.dir}`,
       );
       if (frozen.workflowOverridden)
-        console.log(`  (BRIEF.md says "${frozen.workflow}" — the --workflow flag was ignored)`);
+        console.log(
+          `  (BRIEF.md says "${frozen.workflow}" — the --workflow flag was ignored)`,
+        );
       if (!frozen.briefSkeleton)
         console.log("  (no BRIEF.md in the project — brief skeleton skipped)");
     }
   } else if (verb === "list") {
-    const list = listRecipes({ projectDir: args.hyperframes, workflow: args.workflow });
+    const list = listRecipes({
+      projectDir: args.hyperframes,
+      workflow: args.workflow,
+    });
     if (args.json) console.log(JSON.stringify(list));
     else if (list.length === 0) console.log("no recipes yet");
     else {
@@ -86,8 +91,15 @@ try {
       );
       console.log(`  frame spec → ${used.frameSpecPath} (copied over)`);
       console.log(`  storyboard skeleton → ${used.skeletonPath}`);
-      if (used.briefSkeletonPath) console.log(`  brief skeleton → ${used.briefSkeletonPath}`);
-      for (const key of ["destination", "aspect", "language", "voice", "style_preset"]) {
+      if (used.briefSkeletonPath)
+        console.log(`  brief skeleton → ${used.briefSkeletonPath}`);
+      for (const key of [
+        "destination",
+        "aspect",
+        "language",
+        "voice",
+        "style_preset",
+      ]) {
         if (used.recipe[key]) console.log(`  ${key}: ${used.recipe[key]}`);
       }
     }

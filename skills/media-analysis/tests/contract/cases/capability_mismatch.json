@@ -6,13 +6,8 @@
       "op": "set_tool_field",
       "tool_id": "media-analysis/loudness",
       "field": "required_capabilities",
-      "value": [
-        "ffprobe",
-        "ffmpeg"
-      ]
+      "value": ["ffprobe", "ffmpeg"]
     }
   ],
-  "expect_problems": [
-    "tools[media-analysis/loudness].required_capabilities"
-  ]
+  "expect_problems": ["tools[media-analysis/loudness].required_capabilities"]
 }

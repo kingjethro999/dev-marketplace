@@ -7,20 +7,20 @@ description: Offload camera cards and recorders safely - copy a card folder to o
 
 Run `ingest <command> ... --json` (installed by `pip install -e .`). Every command prints one JSON document.
 
-| Task | Command |
-|---|---|
-| Copy a card to two drives | `ingest offload /Volumes/CARD_A --dest /Volumes/SSD1/Footage --dest /Volumes/SSD2/Footage --project 2026-10-30_event --json` |
-| See what would be copied | add `--dry-run` (writes nothing) |
-| Use xxHash64 instead of sha256 | add `--hash xxh64` (needs `pip install -e ".[xxhash]"`; check with `ingest doctor --json`) |
-| Make editing proxies during the offload | add `--proxy` (needs ffmpeg-skill; check `ffmpeg-skill` in `ingest doctor --json`) |
-| Show progress, speed and time left | add `--progress` to offload (JSON lines on stderr: `bytes_done` / `bytes_total`, `eta_s`, `destinations[].mb_s`; a `slow_destination` event names a slow drive) |
-| Offload a recording still being written | add `--follow` (sealed once unchanged for `--settle` seconds, default 30; `--follow-for 60` to stop after a minute and leave partial copies) |
-| Re-check a backup | `ingest verify /Volumes/SSD1/Footage/2026-10-30_event/CARD_A --json` |
-| Clip list | `ingest inventory /Volumes/SSD1/Footage/2026-10-30_event/CARD_A --json` |
-| Group cameras and a recorder for multicam | `ingest inventory /Volumes/SSD1/Footage/ev/CAM_A /Volumes/SSD1/Footage/ev/CAM_B /Volumes/SSD1/Footage/ev/REC --json` (`sync_groups`) |
-| Name the copy after the card's reel | add `--name-by reel` to offload (`--reel B007` to set it yourself) |
-| Download a video URL as footage | `ingest fetch "<url>" --dest /Volumes/SSD1/Footage --project 2026-10-30_event --json` (needs `pip install -e ".[fetch]"`; check `yt-dlp` in `ingest doctor --json`) |
-| What this skill declares | `ingest contract --json`, `ingest doctor --json` |
+| Task                                      | Command                                                                                                                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Copy a card to two drives                 | `ingest offload /Volumes/CARD_A --dest /Volumes/SSD1/Footage --dest /Volumes/SSD2/Footage --project 2026-10-30_event --json`                                        |
+| See what would be copied                  | add `--dry-run` (writes nothing)                                                                                                                                    |
+| Use xxHash64 instead of sha256            | add `--hash xxh64` (needs `pip install -e ".[xxhash]"`; check with `ingest doctor --json`)                                                                          |
+| Make editing proxies during the offload   | add `--proxy` (needs ffmpeg-skill; check `ffmpeg-skill` in `ingest doctor --json`)                                                                                  |
+| Show progress, speed and time left        | add `--progress` to offload (JSON lines on stderr: `bytes_done` / `bytes_total`, `eta_s`, `destinations[].mb_s`; a `slow_destination` event names a slow drive)     |
+| Offload a recording still being written   | add `--follow` (sealed once unchanged for `--settle` seconds, default 30; `--follow-for 60` to stop after a minute and leave partial copies)                        |
+| Re-check a backup                         | `ingest verify /Volumes/SSD1/Footage/2026-10-30_event/CARD_A --json`                                                                                                |
+| Clip list                                 | `ingest inventory /Volumes/SSD1/Footage/2026-10-30_event/CARD_A --json`                                                                                             |
+| Group cameras and a recorder for multicam | `ingest inventory /Volumes/SSD1/Footage/ev/CAM_A /Volumes/SSD1/Footage/ev/CAM_B /Volumes/SSD1/Footage/ev/REC --json` (`sync_groups`)                                |
+| Name the copy after the card's reel       | add `--name-by reel` to offload (`--reel B007` to set it yourself)                                                                                                  |
+| Download a video URL as footage           | `ingest fetch "<url>" --dest /Volumes/SSD1/Footage --project 2026-10-30_event --json` (needs `pip install -e ".[fetch]"`; check `yt-dlp` in `ingest doctor --json`) |
+| What this skill declares                  | `ingest contract --json`, `ingest doctor --json`                                                                                                                    |
 
 ## What it guarantees
 

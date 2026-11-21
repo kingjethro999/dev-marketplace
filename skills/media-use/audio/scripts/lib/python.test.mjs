@@ -1,11 +1,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolve } from "node:path";
-import { defaultProbe, resolvePythonCommand, pythonInvocation } from "./python.mjs";
+import {
+  defaultProbe,
+  resolvePythonCommand,
+  pythonInvocation,
+} from "./python.mjs";
 
 // Regression: on Windows a standard python.org install has no `python3.exe`
 // (only `python.exe` + the `py` launcher), so `spawn("python3", …)` ENOENTs and
@@ -20,17 +30,26 @@ function probeFor(...names) {
 }
 
 test("non-win32 uses python3 when it runs", () => {
-  assert.deepEqual(resolvePythonCommand("linux", probeFor("python3")), ["python3"]);
-  assert.deepEqual(resolvePythonCommand("darwin", probeFor("python3")), ["python3"]);
+  assert.deepEqual(resolvePythonCommand("linux", probeFor("python3")), [
+    "python3",
+  ]);
+  assert.deepEqual(resolvePythonCommand("darwin", probeFor("python3")), [
+    "python3",
+  ]);
 });
 
 test("win32 prefers python3 when the Microsoft Store build provides it", () => {
-  assert.deepEqual(resolvePythonCommand("win32", probeFor("python3", "python", "py")), ["python3"]);
+  assert.deepEqual(
+    resolvePythonCommand("win32", probeFor("python3", "python", "py")),
+    ["python3"],
+  );
 });
 
 test("win32 falls back to python.exe when python3 is absent (python.org install)", () => {
   // The exact reported scenario: no python3, but `python` exists.
-  assert.deepEqual(resolvePythonCommand("win32", probeFor("python", "py")), ["python"]);
+  assert.deepEqual(resolvePythonCommand("win32", probeFor("python", "py")), [
+    "python",
+  ]);
 });
 
 test("win32 falls back to the py launcher with -3 when only py exists", () => {
@@ -67,13 +86,21 @@ const VENV = "/home/u/.venvs/hf/bin/python";
 
 test("HYPERFRAMES_PYTHON wins over python3 on PATH when it runs", () => {
   const env = { HYPERFRAMES_PYTHON: VENV };
-  assert.deepEqual(resolvePythonCommand("darwin", probeFor(VENV, "python3"), env), [VENV]);
-  assert.deepEqual(resolvePythonCommand("win32", probeFor(VENV, "python", "py"), env), [VENV]);
+  assert.deepEqual(
+    resolvePythonCommand("darwin", probeFor(VENV, "python3"), env),
+    [VENV],
+  );
+  assert.deepEqual(
+    resolvePythonCommand("win32", probeFor(VENV, "python", "py"), env),
+    [VENV],
+  );
 });
 
 test("a HYPERFRAMES_PYTHON that doesn't run falls through to the PATH probe", () => {
   const env = { HYPERFRAMES_PYTHON: "/nope/python" };
-  assert.deepEqual(resolvePythonCommand("linux", probeFor("python3"), env), ["python3"]);
+  assert.deepEqual(resolvePythonCommand("linux", probeFor("python3"), env), [
+    "python3",
+  ]);
 });
 
 test("an empty HYPERFRAMES_PYTHON is ignored without being probed", () => {
@@ -82,7 +109,10 @@ test("an empty HYPERFRAMES_PYTHON is ignored without being probed", () => {
     seen.push(cmd);
     return cmd === "python3";
   };
-  assert.deepEqual(resolvePythonCommand("linux", probe, { HYPERFRAMES_PYTHON: "" }), ["python3"]);
+  assert.deepEqual(
+    resolvePythonCommand("linux", probe, { HYPERFRAMES_PYTHON: "" }),
+    ["python3"],
+  );
   assert.deepEqual(seen, ["python3"]);
 });
 
@@ -101,23 +131,37 @@ function withStub(script, fn) {
   }
 }
 
-const posixOnly = { skip: process.platform === "win32" && "stub scripts need a POSIX shell" };
+const posixOnly = {
+  skip: process.platform === "win32" && "stub scripts need a POSIX shell",
+};
 
-test("defaultProbe accepts an interpreter reporting Python 3", posixOnly, () => {
-  withStub('echo "Python 3.12.4"', (stub) => assert.equal(defaultProbe(stub, ["--version"]), true));
-});
+test(
+  "defaultProbe accepts an interpreter reporting Python 3",
+  posixOnly,
+  () => {
+    withStub('echo "Python 3.12.4"', (stub) =>
+      assert.equal(defaultProbe(stub, ["--version"]), true),
+    );
+  },
+);
 
-test("defaultProbe rejects Python 2, which prints its version to stderr", posixOnly, () => {
-  withStub('echo "Python 2.7.18" >&2', (stub) =>
-    assert.equal(defaultProbe(stub, ["--version"]), false),
-  );
-});
+test(
+  "defaultProbe rejects Python 2, which prints its version to stderr",
+  posixOnly,
+  () => {
+    withStub('echo "Python 2.7.18" >&2', (stub) =>
+      assert.equal(defaultProbe(stub, ["--version"]), false),
+    );
+  },
+);
 
 test(
   "defaultProbe rejects an executable that exits 0 without a Python 3 version",
   posixOnly,
   () => {
-    withStub("exit 0", (stub) => assert.equal(defaultProbe(stub, ["--version"]), false));
+    withStub("exit 0", (stub) =>
+      assert.equal(defaultProbe(stub, ["--version"]), false),
+    );
   },
 );
 
@@ -125,7 +169,8 @@ test("defaultProbe rejects a command that doesn't exist", () => {
   assert.equal(defaultProbe("/nonexistent/hf-python", ["--version"]), false);
 });
 
-const DROP_CWD = "import sys\nif sys.path and sys.path[0] == '': del sys.path[0]\n";
+const DROP_CWD =
+  "import sys\nif sys.path and sys.path[0] == '': del sys.path[0]\n";
 
 test("pythonInvocation prepends the resolved prefix ahead of caller args", () => {
   assert.deepEqual(pythonInvocation(["-c", "import x"], ["python"]), {
@@ -144,7 +189,10 @@ test("pythonInvocation prepends the resolved prefix ahead of caller args", () =>
 });
 
 test("pythonInvocation runs modules without the working directory on sys.path", () => {
-  const { args } = pythonInvocation(["-m", "pip", "install", "-q", "numpy"], ["python"]);
+  const { args } = pythonInvocation(
+    ["-m", "pip", "install", "-q", "numpy"],
+    ["python"],
+  );
   assert.deepEqual(args.slice(2), ["install", "-q", "numpy"]);
   assert.equal(args[0], "-c");
   assert.match(
@@ -154,33 +202,51 @@ test("pythonInvocation runs modules without the working directory on sys.path", 
 });
 
 function hasPython3() {
-  return spawnSync("python3", ["--version"], { encoding: "utf-8" }).status === 0;
+  return (
+    spawnSync("python3", ["--version"], { encoding: "utf-8" }).status === 0
+  );
 }
 
-test("a module planted in the working directory is never imported", { skip: !hasPython3() }, () => {
-  const project = mkdtempSync(join(tmpdir(), "hf-py-cwd-"));
-  try {
-    const marker = join(project, "ran");
-    writeFileSync(
-      join(project, "hf_probe_module.py"),
-      `open(${JSON.stringify(marker)}, "w").write("x")\n`,
-    );
-    writeFileSync(
-      join(project, "hf_probe_main.py"),
-      `open(${JSON.stringify(marker)}, "w").write("x")\n`,
-    );
-    const env = { ...process.env, PYTHONSAFEPATH: "" };
-    const inline = pythonInvocation(["-c", "import hf_probe_module"], ["python3"]);
-    assert.notEqual(spawnSync(inline.cmd, inline.args, { cwd: project, env }).status, 0);
-    const module = pythonInvocation(["-m", "hf_probe_main"], ["python3"]);
-    assert.notEqual(spawnSync(module.cmd, module.args, { cwd: project, env }).status, 0);
-    assert.equal(existsSync(marker), false);
-    const pip = pythonInvocation(["-m", "json.tool", "--help"], ["python3"]);
-    assert.equal(spawnSync(pip.cmd, pip.args, { cwd: project, env }).status, 0);
-  } finally {
-    rmSync(project, { recursive: true, force: true });
-  }
-});
+test(
+  "a module planted in the working directory is never imported",
+  { skip: !hasPython3() },
+  () => {
+    const project = mkdtempSync(join(tmpdir(), "hf-py-cwd-"));
+    try {
+      const marker = join(project, "ran");
+      writeFileSync(
+        join(project, "hf_probe_module.py"),
+        `open(${JSON.stringify(marker)}, "w").write("x")\n`,
+      );
+      writeFileSync(
+        join(project, "hf_probe_main.py"),
+        `open(${JSON.stringify(marker)}, "w").write("x")\n`,
+      );
+      const env = { ...process.env, PYTHONSAFEPATH: "" };
+      const inline = pythonInvocation(
+        ["-c", "import hf_probe_module"],
+        ["python3"],
+      );
+      assert.notEqual(
+        spawnSync(inline.cmd, inline.args, { cwd: project, env }).status,
+        0,
+      );
+      const module = pythonInvocation(["-m", "hf_probe_main"], ["python3"]);
+      assert.notEqual(
+        spawnSync(module.cmd, module.args, { cwd: project, env }).status,
+        0,
+      );
+      assert.equal(existsSync(marker), false);
+      const pip = pythonInvocation(["-m", "json.tool", "--help"], ["python3"]);
+      assert.equal(
+        spawnSync(pip.cmd, pip.args, { cwd: project, env }).status,
+        0,
+      );
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  },
+);
 
 // fails without the fix: a relative HYPERFRAMES_PYTHON was probed in the caller's folder but run
 // from wherever the child started, so MusicGen, which starts in the home folder, could not find it.
@@ -188,11 +254,14 @@ test("a HYPERFRAMES_PYTHON with a folder in it means the caller's folder; a bare
   const probed = [];
   const probe = (cmd) => (probed.push(cmd), true);
   assert.deepEqual(
-    resolvePythonCommand("linux", probe, { HYPERFRAMES_PYTHON: "./venv/bin/python" }),
+    resolvePythonCommand("linux", probe, {
+      HYPERFRAMES_PYTHON: "./venv/bin/python",
+    }),
     [resolve("venv/bin/python")],
   );
   assert.deepEqual(probed, [resolve("venv/bin/python")]);
-  assert.deepEqual(resolvePythonCommand("linux", probe, { HYPERFRAMES_PYTHON: "python3.12" }), [
-    "python3.12",
-  ]);
+  assert.deepEqual(
+    resolvePythonCommand("linux", probe, { HYPERFRAMES_PYTHON: "python3.12" }),
+    ["python3.12"],
+  );
 });

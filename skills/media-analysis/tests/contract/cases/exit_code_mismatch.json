@@ -11,7 +11,5 @@
       }
     }
   ],
-  "expect_problems": [
-    "errors.exit_codes"
-  ]
+  "expect_problems": ["errors.exit_codes"]
 }

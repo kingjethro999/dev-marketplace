@@ -8,7 +8,12 @@ interface Props {
   delayInFrames: number;
 }
 
-export const StatCard: React.FC<Props> = ({ label, value, color, delayInFrames }) => {
+export const StatCard: React.FC<Props> = ({
+  label,
+  value,
+  color,
+  delayInFrames,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const local = frame - delayInFrames;
@@ -40,7 +45,11 @@ export const StatCard: React.FC<Props> = ({ label, value, color, delayInFrames }
       }}
     >
       <div style={{ fontSize: 72, fontWeight: 800, color, lineHeight: 1 }}>
-        {local >= 0 ? <AnimatedNumber from={0} to={value} durationInFrames={45} /> : 0}
+        {local >= 0 ? (
+          <AnimatedNumber from={0} to={value} durationInFrames={45} />
+        ) : (
+          0
+        )}
       </div>
       <div
         style={{

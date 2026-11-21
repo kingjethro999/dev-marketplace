@@ -32,16 +32,16 @@ In this workflow reliability matters more than speed. Three rules follow from th
    - Chain updates are written to a temporary file, synced to disk, then renamed into place. A manifest file is never replaced (§5.2: "immutable and shall not be altered").
 2. **The MHL hash format follows `--hash`.**
 
-   | `--hash` | Read-back and `ingest-manifest.json` | Recorded in the ASC MHL | Needs |
-   |---|---|---|---|
-   | `sha256` (default) | sha256 | **c4** | standard library only |
-   | `xxh64` | xxh64 | xxh64 | the `xxhash` extra |
-
+   | `--hash`           | Read-back and `ingest-manifest.json` | Recorded in the ASC MHL | Needs                 |
+   | ------------------ | ------------------------------------ | ----------------------- | --------------------- |
+   | `sha256` (default) | sha256                               | **c4**                  | standard library only |
+   | `xxh64`            | xxh64                                | xxh64                   | the `xxhash` extra    |
    - ASC MHL has no sha256 (Appendix D lists only md5, sha1, c4, xxh64, xxh3 and xxh128). The default therefore records **c4**.
    - c4 is SMPTE ST 2114: SHA-512 encoded in base58, padded to 90 characters. It is cryptographic, needs only the standard library, and is the format ASC MHL itself uses to reference manifests.
    - md5 and sha1 were rejected for the default. They are weaker, and choosing one would mean picking a broken algorithm on purpose.
    - The c4 digest is computed in the same read pass as sha256 and is compared again at read-back. Every copy is still checked at least as strongly as before.
    - xxh64 uses seed 0 and the canonical big-endian hex digest, as Appendix D requires.
+
 3. **xxHash is an optional extra, not a dependency.** The repository was "Python 3.9+, standard library only" (README), with `dependencies = []`, so that stays true for the default path.
    - `pip install 'ingest-skill[xxhash]'` adds [`xxhash`](https://pypi.org/project/xxhash/) `>=3.0`. It provides xxh64, and also xxh3 / xxh128 for reading other tools' histories.
    - A pure-Python XXH64 was rejected. It is too slow for camera cards, and a hand-written hash is exactly the kind of code that should not guard footage.

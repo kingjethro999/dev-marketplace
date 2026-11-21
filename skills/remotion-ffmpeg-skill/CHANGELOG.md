@@ -8,7 +8,6 @@ _Automated release: version and notes from what was merged since the previous ta
 
 - state the determinism guarantee in the contract (roadmap step 13) (#21)
 
-
 ## 0.13.0 — 2026-11-12
 
 _Automated release: version and notes from what was merged since the previous tag._
@@ -16,7 +15,6 @@ _Automated release: version and notes from what was merged since the previous ta
 ### Added
 
 - Emphasis captions (YouTube style) (#18)
-
 
 ## 0.12.1 — 2026-10-31
 
@@ -26,7 +24,6 @@ _Automated release: version and notes from what was merged since the previous ta
 
 - accept ffmpeg-skill 3.0.0 (range >=2.0.0 <4.0.0); CI also against 3.0.0 (#12)
 
-
 ## 0.12.0 — 2026-10-30
 
 _Automated release: version and notes from what was merged since the previous tag._
@@ -34,7 +31,6 @@ _Automated release: version and notes from what was merged since the previous ta
 ### Added
 
 - conform a VFR or HDR source instead of only warning (--conform) (#10)
-
 
 ## 0.11.0 — 2026-10-30
 
@@ -44,7 +40,6 @@ _Automated release: version and notes from what was merged since the previous ta
 
 - captions from a transcription-skill transcript (--words) (#9)
 
-
 ## 0.10.2 — 2026-10-30
 
 _Automated release: version and notes from what was merged since the previous tag._
@@ -52,7 +47,6 @@ _Automated release: version and notes from what was merged since the previous ta
 ### Fixed
 
 - contract in the OS registry shape (#8)
-
 
 ## 0.10.1 — 2026-10-26
 
@@ -62,7 +56,6 @@ _Automated release: version and notes from what was merged since the previous ta
 
 - plugin installs on claude.ai -- installer moves from bin/ to cli/; listing name and links
 
-
 ## 0.10.0 — 2026-10-24
 
 _Automated release: version and notes from what was merged since the previous tag._
@@ -70,7 +63,6 @@ _Automated release: version and notes from what was merged since the previous ta
 ### Added
 
 - Pip -- a camera in a corner, synced from the audio
-
 
 ## 0.9.0 — 2026-10-24
 
@@ -80,7 +72,6 @@ _Automated release: version and notes from what was merged since the previous ta
 
 - --brand reads ffmpeg-skill's brand.json
 
-
 ## 0.8.1 — 2026-10-24
 
 _Automated release: version and notes from what was merged since the previous tag._
@@ -88,7 +79,6 @@ _Automated release: version and notes from what was merged since the previous ta
 ### Fixed
 
 - deliver.py crashed without --chapters (0.8.0)
-
 
 ## 0.8.0 — 2026-10-24
 
@@ -98,7 +88,6 @@ _Automated release: version and notes from what was merged since the previous ta
 
 - chapters -- cards in Titled, markers and description block on delivery
 
-
 ## 0.7.0 — 2026-10-24
 
 _Automated release: version and notes from what was merged since the previous tag._
@@ -106,7 +95,6 @@ _Automated release: version and notes from what was merged since the previous ta
 ### Added
 
 - --sparse for Titled (lower thirds and scene titles)
-
 
 ## 0.6.0 — 2026-10-24
 
@@ -116,7 +104,6 @@ _Automated release: version and notes from what was merged since the previous ta
 
 - --sparse draws only the captioned stretches of long footage
 
-
 ## 0.5.0 — 2026-10-24
 
 _Automated release: version and notes from what was merged since the previous tag._
@@ -124,7 +111,6 @@ _Automated release: version and notes from what was merged since the previous ta
 ### Added
 
 - the contract states each tool's --json result and dry-run shapes
-
 
 ## 0.4.0 — 2026-10-24
 

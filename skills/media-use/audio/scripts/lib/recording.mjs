@@ -54,18 +54,24 @@ const INDIRECT_FORMATS = new Set([
 function probeFormat(src) {
   const r = spawnSync(
     "ffprobe",
-    ["-v", "error", "-protocol_whitelist", "file", "-show_entries", "format=format_name"].concat([
-      "-of",
-      "default=nw=1:nk=1",
-      "--",
-      src,
-    ]),
+    [
+      "-v",
+      "error",
+      "-protocol_whitelist",
+      "file",
+      "-show_entries",
+      "format=format_name",
+    ].concat(["-of", "default=nw=1:nk=1", "--", src]),
     { encoding: "utf8" },
   );
   if (r.error?.code === "ENOENT") {
-    const banner = spawnSync("ffmpeg", ["-hide_banner", "-protocol_whitelist", "file", "-i", src], {
-      encoding: "utf8",
-    });
+    const banner = spawnSync(
+      "ffmpeg",
+      ["-hide_banner", "-protocol_whitelist", "file", "-i", src],
+      {
+        encoding: "utf8",
+      },
+    );
     return /^Input #0, (.+?), from /m.exec(banner.stderr ?? "")?.[1] ?? null;
   }
   const name = r.status === 0 ? String(r.stdout).trim() : "";
@@ -76,9 +82,11 @@ function probeFormat(src) {
 export function stretchToWav(src, wavAbs, speed = 1) {
   const stat = statSync(src, { throwIfNoEntry: false });
   if (!stat) return { ok: false, error: `recording not found: ${src}` };
-  if (!stat.isFile()) return { ok: false, error: `recording is not a file: ${src}` };
+  if (!stat.isFile())
+    return { ok: false, error: `recording is not a file: ${src}` };
   const format = probeFormat(src);
-  if (!format) return { ok: false, error: `ffmpeg cannot read ${src} as audio` };
+  if (!format)
+    return { ok: false, error: `ffmpeg cannot read ${src} as audio` };
   if (format.split(",").some((name) => INDIRECT_FORMATS.has(name))) {
     return {
       ok: false,
@@ -88,14 +96,35 @@ export function stretchToWav(src, wavAbs, speed = 1) {
   mkdirSync(dirname(wavAbs), { recursive: true });
   const filter = speed === 1 ? [] : ["-af", atempoChain(speed)];
   // The probed format pins the input: ffmpeg opens only that one local file, with no nested inputs.
-  const input = ["-format_whitelist", format, "-protocol_whitelist", "file", "-i", src];
+  const input = [
+    "-format_whitelist",
+    format,
+    "-protocol_whitelist",
+    "file",
+    "-i",
+    src,
+  ];
   const r = spawnSync(
     "ffmpeg",
-    ["-y", "-loglevel", "error", ...input, ...filter, "-ar", "44100", "-ac", "1", wavAbs],
+    [
+      "-y",
+      "-loglevel",
+      "error",
+      ...input,
+      ...filter,
+      "-ar",
+      "44100",
+      "-ac",
+      "1",
+      wavAbs,
+    ],
     { encoding: "utf8" },
   );
   if (r.error || r.status !== 0 || !existsSync(wavAbs)) {
-    return { ok: false, error: `ffmpeg could not convert ${src}: ${r.error?.message ?? r.stderr}` };
+    return {
+      ok: false,
+      error: `ffmpeg could not convert ${src}: ${r.error?.message ?? r.stderr}`,
+    };
   }
   return { ok: true };
 }
@@ -105,8 +134,14 @@ export function parseWords(words) {
   if (!Array.isArray(words) || words.length === 0) return null;
   return words.map((w, i) => {
     const text = w?.text ?? w?.word;
-    if (typeof text !== "string" || !Number.isFinite(w.start) || !Number.isFinite(w.end)) {
-      throw new Error(`words[${i}] needs text (or word), start and end in seconds`);
+    if (
+      typeof text !== "string" ||
+      !Number.isFinite(w.start) ||
+      !Number.isFinite(w.end)
+    ) {
+      throw new Error(
+        `words[${i}] needs text (or word), start and end in seconds`,
+      );
     }
     return { text, start: w.start, end: w.end };
   });

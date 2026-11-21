@@ -10,14 +10,14 @@ not the host's.
 
 ## Problem → fix table
 
-| Symptom | Root cause | Fix |
-|---|---|---|
-| Widget renders as blank rectangle, no error | CSP `script-src` blocks esm.sh fetching transitive `@modelcontextprotocol/sdk` deps | Inline the `ext-apps/app-with-deps` bundle into the HTML |
-| `window.open()` does nothing | Sandbox lacks `allow-popups` | Use `app.openLink({ url })` |
-| `<a target="_blank">` does nothing | Same | `e.preventDefault()` + `app.openLink({ url })` on click |
-| External `<img src>` broken | CSP `img-src` + referrer hotlink blocking | Fetch server-side, ship as `data:` URL in the tool result payload |
-| Widget edits don't appear after server restart | Host caches UI resources | Fully quit the host (⌘Q / Alt+F4) and relaunch |
-| Top-level `await` throws | Older iframe contexts | Wrap module body in an async IIFE |
+| Symptom                                        | Root cause                                                                          | Fix                                                               |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Widget renders as blank rectangle, no error    | CSP `script-src` blocks esm.sh fetching transitive `@modelcontextprotocol/sdk` deps | Inline the `ext-apps/app-with-deps` bundle into the HTML          |
+| `window.open()` does nothing                   | Sandbox lacks `allow-popups`                                                        | Use `app.openLink({ url })`                                       |
+| `<a target="_blank">` does nothing             | Same                                                                                | `e.preventDefault()` + `app.openLink({ url })` on click           |
+| External `<img src>` broken                    | CSP `img-src` + referrer hotlink blocking                                           | Fetch server-side, ship as `data:` URL in the tool result payload |
+| Widget edits don't appear after server restart | Host caches UI resources                                                            | Fully quit the host (⌘Q / Alt+F4) and relaunch                    |
+| Top-level `await` throws                       | Older iframe contexts                                                               | Wrap module body in an async IIFE                                 |
 
 ---
 
@@ -36,28 +36,36 @@ const require = createRequire(import.meta.url);
 const bundle = readFileSync(
   require.resolve("@modelcontextprotocol/ext-apps/app-with-deps"),
   "utf8",
-).replace(/export\{([^}]+)\};?\s*$/, (_, body) =>
-  "globalThis.ExtApps={" +
-  body.split(",").map((pair) => {
-    const [local, exported] = pair.split(" as ").map((s) => s.trim());
-    return `${exported ?? local}:${local}`;
-  }).join(",") + "};",
+).replace(
+  /export\{([^}]+)\};?\s*$/,
+  (_, body) =>
+    "globalThis.ExtApps={" +
+    body
+      .split(",")
+      .map((pair) => {
+        const [local, exported] = pair.split(" as ").map((s) => s.trim());
+        return `${exported ?? local}:${local}`;
+      })
+      .join(",") +
+    "};",
 );
 
-const widgetHtml = readFileSync("./widgets/widget.html", "utf8")
-  .replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
+const widgetHtml = readFileSync("./widgets/widget.html", "utf8").replace(
+  "/*__EXT_APPS_BUNDLE__*/",
+  () => bundle,
+);
 ```
 
 Widget side:
 
 ```html
 <script type="module">
-/*__EXT_APPS_BUNDLE__*/
-const { App } = globalThis.ExtApps;
-(async () => {
-  const app = new App({ name: "…", version: "…" }, {});
-  // …
-})();
+  /*__EXT_APPS_BUNDLE__*/
+  const { App } = globalThis.ExtApps;
+  (async () => {
+    const app = new App({ name: "…", version: "…" }, {});
+    // …
+  })();
 </script>
 ```
 
@@ -73,7 +81,9 @@ minified bundle is full of them.
 // ✗ blocked
 window.open(url, "_blank");
 // ✗ blocked
-<a href="…" target="_blank">…</a>
+<a href="…" target="_blank">
+  …
+</a>;
 
 // ✓ host-mediated
 await app.openLink({ url });
@@ -112,7 +122,7 @@ async function toDataUrl(url: string): Promise<string | undefined> {
 // in the tool handler
 const inlined = await Promise.all(
   items.map(async (it) =>
-    it.thumb ? { ...it, thumb: await toDataUrl(it.thumb) ?? it.thumb } : it,
+    it.thumb ? { ...it, thumb: (await toDataUrl(it.thumb)) ?? it.thumb } : it,
   ),
 );
 ```
@@ -132,12 +142,18 @@ The host renders the iframe inside its own card chrome — paint a **transparent
 
 ```css
 :root {
-  --ink:  var(--color-text-primary,   #0f1111);
-  --sub:  var(--color-text-secondary, #5a6270);
+  --ink: var(--color-text-primary, #0f1111);
+  --sub: var(--color-text-secondary, #5a6270);
   --line: var(--color-border-default, #e3e6ea);
 }
-html, body { background: transparent; color: var(--ink); }
-:root.dark .thumb { mix-blend-mode: normal; } /* multiply → images vanish in dark */
+html,
+body {
+  background: transparent;
+  color: var(--ink);
+}
+:root.dark .thumb {
+  mix-blend-mode: normal;
+} /* multiply → images vanish in dark */
 ```
 
 ```js

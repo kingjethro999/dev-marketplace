@@ -66,12 +66,14 @@ node .agents/skills/repo-sec/scripts/repo-sec.js policy
 Run `setup` and answer questions about:
 
 **Threat Model & Scope**
+
 - What type of project? (open source, private, internal tool, compliance)
 - Who has push access? (core team, many contributors, bots)
 - What's the blast radius if compromised? (low, medium, high, critical)
 - Any compliance requirements? (SOC2, HIPAA, PCI, GDPR, none)
 
 **Git Configuration Hardening**
+
 - Require signed commits? (GPG/SSH)
 - Require signed tags?
 - Enforce commit message format?
@@ -80,6 +82,7 @@ Run `setup` and answer questions about:
 - Enable `push --follow-tags`?
 
 **Branch Protection**
+
 - Which branches to protect? (main, release/*, etc.)
 - Require PR reviews? (how many?)
 - Require status checks? (which CI jobs?)
@@ -89,6 +92,7 @@ Run `setup` and answer questions about:
 - Lock branches from force push?
 
 **Secret Scanning**
+
 - Enable GitHub secret scanning?
 - Enable push protection?
 - Custom patterns? (API keys, internal tokens)
@@ -96,6 +100,7 @@ Run `setup` and answer questions about:
 - Use Periderm CLI for deep scans?
 
 **Dependency Security**
+
 - Enable Dependabot alerts?
 - Enable Dependabot auto-fix PRs?
 - Schedule? (daily, weekly, monthly)
@@ -104,6 +109,7 @@ Run `setup` and answer questions about:
 - Audit for malicious packages? (npm audit, OSV, Snyk)
 
 **Supply Chain**
+
 - Verify commit signatures on merge?
 - Require SBOM generation?
 - Sign releases/artifacts?
@@ -111,6 +117,7 @@ Run `setup` and answer questions about:
 - Reproducible builds?
 
 **Security Policy & Governance**
+
 - Create SECURITY.md with vulnerability disclosure?
 - Add CODEOWNERS for security-sensitive paths?
 - Create CONTRIBUTING.md with security guidelines?
@@ -119,24 +126,25 @@ Run `setup` and answer questions about:
 
 ### What It Audits
 
-| Control | Check | Auto-Fix |
-|---------|-------|----------|
-| Signed commits | `git config commit.gpgSign` | `git config --global commit.gpgSign true` |
-| Signed tags | `git config tag.gpgSign` | `git config --global tag.gpgSign true` |
-| Force push protection | Branch protection rules | API call to GitHub/GitLab |
-| PR reviews required | Branch protection rules | API call |
-| Status checks required | Branch protection rules | API call |
-| Secret scanning | GitHub secret scanning settings | API call |
-| Push protection | GitHub secret scanning settings | API call |
-| Dependabot alerts | Repository settings | API call |
-| Dependabot auto-fix | dependabot.yml | Create/update file |
-| Security policy | SECURITY.md exists | Create template |
-| CODEOWNERS | CODEOWNERS exists | Create template |
-| .gitignore secrets | .gitignore has secret patterns | Append patterns |
+| Control                | Check                           | Auto-Fix                                  |
+| ---------------------- | ------------------------------- | ----------------------------------------- |
+| Signed commits         | `git config commit.gpgSign`     | `git config --global commit.gpgSign true` |
+| Signed tags            | `git config tag.gpgSign`        | `git config --global tag.gpgSign true`    |
+| Force push protection  | Branch protection rules         | API call to GitHub/GitLab                 |
+| PR reviews required    | Branch protection rules         | API call                                  |
+| Status checks required | Branch protection rules         | API call                                  |
+| Secret scanning        | GitHub secret scanning settings | API call                                  |
+| Push protection        | GitHub secret scanning settings | API call                                  |
+| Dependabot alerts      | Repository settings             | API call                                  |
+| Dependabot auto-fix    | dependabot.yml                  | Create/update file                        |
+| Security policy        | SECURITY.md exists              | Create template                           |
+| CODEOWNERS             | CODEOWNERS exists               | Create template                           |
+| .gitignore secrets     | .gitignore has secret patterns  | Append patterns                           |
 
 ### Periderm Integration
 
 If Periderm CLI is installed, repo-sec can:
+
 - Run `periderm scan` on full history during audit
 - Run `periderm review --deep` before releases
 - Integrate Periderm findings into CI

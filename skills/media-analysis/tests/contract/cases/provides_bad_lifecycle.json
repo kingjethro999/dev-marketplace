@@ -9,7 +9,5 @@
       "value": "BETA"
     }
   ],
-  "expect_problems": [
-    "provides: malformed entry"
-  ]
+  "expect_problems": ["provides: malformed entry"]
 }

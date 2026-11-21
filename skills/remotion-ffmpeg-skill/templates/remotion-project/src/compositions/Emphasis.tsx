@@ -1,5 +1,12 @@
 import React from "react";
-import { AbsoluteFill, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Sequence,
+  interpolate,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { SourceVideo } from "../lib/SourceVideo";
 import { useStagedFont } from "../lib/useStagedFont";
 import { captionMarginPx } from "./Captioned";
@@ -32,19 +39,35 @@ export const Emphasis: React.FC<Props> = (props) => {
   // Cards showing at once stack downwards: each takes the lowest slot no earlier overlapping card holds.
   const slots: number[] = [];
   o.comments.forEach((c, i) => {
-    const busy = new Set(o.comments.slice(0, i).flatMap((p, j) => (p.start < c.end && p.end > c.start ? [slots[j]] : [])));
+    const busy = new Set(
+      o.comments
+        .slice(0, i)
+        .flatMap((p, j) =>
+          p.start < c.end && p.end > c.start ? [slots[j]] : [],
+        ),
+    );
     let s = 0;
     while (busy.has(s)) s += 1;
     slots.push(s);
   });
   return (
-    <AbsoluteFill style={{ backgroundColor: overlay ? "transparent" : "black" }}>
-      {overlay ? null : <SourceVideo source={timeline.source} fit={outputFrame(props).fit} />}
+    <AbsoluteFill
+      style={{ backgroundColor: overlay ? "transparent" : "black" }}
+    >
+      {overlay ? null : (
+        <SourceVideo source={timeline.source} fit={outputFrame(props).fit} />
+      )}
       {timeline.captions.map((c, i) => {
         const from = secToFrames(c.start, fps);
         const dur = Math.max(1, secToFrames(c.end, fps) - from);
         return (
-          <Sequence key={`c${i}`} from={from} durationInFrames={dur} name={`cue ${i + 1}`} layout="none">
+          <Sequence
+            key={`c${i}`}
+            from={from}
+            durationInFrames={dur}
+            name={`cue ${i + 1}`}
+            layout="none"
+          >
             <EmphasisCue
               cue={c}
               from={from}
@@ -60,7 +83,13 @@ export const Emphasis: React.FC<Props> = (props) => {
         const from = secToFrames(b.start, fps);
         const dur = Math.max(1, secToFrames(b.end, fps) - from);
         return (
-          <Sequence key={`b${i}`} from={from} durationInFrames={dur} name={`bubble ${i + 1}`} layout="none">
+          <Sequence
+            key={`b${i}`}
+            from={from}
+            durationInFrames={dur}
+            name={`bubble ${i + 1}`}
+            layout="none"
+          >
             <SpeechBubble bubble={b} len={dur} o={o} fontFamily={family} />
           </Sequence>
         );
@@ -70,7 +99,13 @@ export const Emphasis: React.FC<Props> = (props) => {
         const dur = Math.max(1, secToFrames(c.end, fps) - from);
         const slot = slots[i];
         return (
-          <Sequence key={`m${i}`} from={from} durationInFrames={dur} name={`comment ${i + 1}`} layout="none">
+          <Sequence
+            key={`m${i}`}
+            from={from}
+            durationInFrames={dur}
+            name={`comment ${i + 1}`}
+            layout="none"
+          >
             <Comment card={c} slot={slot} len={dur} o={o} fontFamily={family} />
           </Sequence>
         );
@@ -85,9 +120,19 @@ const langOf = (text: string): string | undefined =>
 const useInOut = (len: number) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const enter = spring({ frame, fps, config: { damping: 14, stiffness: 180, mass: 0.6 } });
+  const enter = spring({
+    frame,
+    fps,
+    config: { damping: 14, stiffness: 180, mass: 0.6 },
+  });
   const fade = Math.min(6, Math.floor(len / 3));
-  const exit = fade > 0 ? interpolate(frame, [len - fade, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
+  const exit =
+    fade > 0
+      ? interpolate(frame, [len - fade, len], [1, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        })
+      : 1;
   return { frame, enter, exit };
 };
 
@@ -109,17 +154,32 @@ const EmphasisCue: React.FC<{
   const chars = Array.from(cue.text);
   const parts: React.ReactNode[] = [];
   let at = 0;
-  for (const [k, e] of [...emphasis].sort((x, y) => x.span[0] - y.span[0]).entries()) {
+  for (const [k, e] of [...emphasis]
+    .sort((x, y) => x.span[0] - y.span[0])
+    .entries()) {
     if (e.span[0] < at) continue;
     parts.push(chars.slice(at, e.span[0]).join(""));
     parts.push(
-      <Emphasised key={k} text={chars.slice(e.span[0], e.span[1]).join("")} style={e.style ?? o.emphasisStyle} at={e.start} now={now} o={o} />,
+      <Emphasised
+        key={k}
+        text={chars.slice(e.span[0], e.span[1]).join("")}
+        style={e.style ?? o.emphasisStyle}
+        at={e.start}
+        now={now}
+        o={o}
+      />,
     );
     at = e.span[1];
   }
   parts.push(chars.slice(at).join(""));
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: captionMarginPx(o, width, height) }}>
+    <AbsoluteFill
+      style={{
+        justifyContent: "flex-end",
+        alignItems: "center",
+        paddingBottom: captionMarginPx(o, width, height),
+      }}
+    >
       <div
         lang={langOf(cue.text)}
         style={{
@@ -146,20 +206,24 @@ const EmphasisCue: React.FC<{
 };
 
 /** One emphasised word: plain until it is spoken, then popped, coloured or boxed until the cue ends. */
-const Emphasised: React.FC<{ text: string; style: "pop" | "color" | "box"; at: number; now: number; o: Options }> = ({
-  text,
-  style,
-  at,
-  now,
-  o,
-}) => {
+const Emphasised: React.FC<{
+  text: string;
+  style: "pop" | "color" | "box";
+  at: number;
+  now: number;
+  o: Options;
+}> = ({ text, style, at, now, o }) => {
   const on = now >= at;
   const t = now - at;
   const scale = !on
     ? 1
     : style === "pop"
-      ? interpolate(t, [0, 0.08, 0.25], [1, 1.35, 1.15], { extrapolateRight: "clamp" })
-      : interpolate(t, [0, 0.06, 0.18], [1, 1.12, 1], { extrapolateRight: "clamp" });
+      ? interpolate(t, [0, 0.08, 0.25], [1, 1.35, 1.15], {
+          extrapolateRight: "clamp",
+        })
+      : interpolate(t, [0, 0.06, 0.18], [1, 1.12, 1], {
+          extrapolateRight: "clamp",
+        });
   const boxed = on && style === "box";
   return (
     <span
@@ -172,7 +236,8 @@ const Emphasised: React.FC<{ text: string; style: "pop" | "color" | "box"; at: n
         borderRadius: "0.18em",
         padding: "0 0.12em",
         margin: "0 -0.12em",
-        textShadow: on && style === "pop" ? "0 0.06em 0 rgba(0,0,0,0.65)" : "none",
+        textShadow:
+          on && style === "pop" ? "0 0.06em 0 rgba(0,0,0,0.65)" : "none",
       }}
     >
       {text}
@@ -181,7 +246,12 @@ const Emphasised: React.FC<{ text: string; style: "pop" | "color" | "box"; at: n
 };
 
 /** A speech bubble in the upper part of the frame, its tail pointing down-left or down-right. */
-const SpeechBubble: React.FC<{ bubble: Bubble; len: number; o: Options; fontFamily: string }> = ({ bubble, len, o, fontFamily }) => {
+const SpeechBubble: React.FC<{
+  bubble: Bubble;
+  len: number;
+  o: Options;
+  fontFamily: string;
+}> = ({ bubble, len, o, fontFamily }) => {
   const { width, height } = useVideoConfig();
   const { enter, exit } = useInOut(len);
   const size = Math.round(Math.min(width, height) * o.captionSize);
@@ -189,7 +259,11 @@ const SpeechBubble: React.FC<{ bubble: Bubble; len: number; o: Options; fontFami
   const tail = size * 0.6;
   return (
     <AbsoluteFill
-      style={{ justifyContent: "flex-start", alignItems: right ? "flex-end" : "flex-start", padding: `${height * 0.1}px ${width * 0.08}px` }}
+      style={{
+        justifyContent: "flex-start",
+        alignItems: right ? "flex-end" : "flex-start",
+        padding: `${height * 0.1}px ${width * 0.08}px`,
+      }}
     >
       <div
         lang={langOf(bubble.text)}
@@ -231,19 +305,25 @@ const SpeechBubble: React.FC<{ bubble: Bubble; len: number; o: Options; fontFami
 };
 
 /** A comment-style card sliding in at the top left (a live-chat / comment look), cards at once stacked. */
-const Comment: React.FC<{ card: CommentCard; slot: number; len: number; o: Options; fontFamily: string }> = ({
-  card,
-  slot,
-  len,
-  o,
-  fontFamily,
-}) => {
+const Comment: React.FC<{
+  card: CommentCard;
+  slot: number;
+  len: number;
+  o: Options;
+  fontFamily: string;
+}> = ({ card, slot, len, o, fontFamily }) => {
   const { width, height } = useVideoConfig();
   const { enter, exit } = useInOut(len);
   const size = Math.round(Math.min(width, height) * o.captionSize * 0.7);
   const avatar = size * 2;
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "flex-start", padding: `${height * 0.06}px ${width * 0.04}px` }}>
+    <AbsoluteFill
+      style={{
+        justifyContent: "flex-start",
+        alignItems: "flex-start",
+        padding: `${height * 0.06}px ${width * 0.04}px`,
+      }}
+    >
       <div
         lang={langOf(card.text)}
         style={{
@@ -279,10 +359,16 @@ const Comment: React.FC<{ card: CommentCard; slot: number; len: number; o: Optio
             justifyContent: "center",
           }}
         >
-          {card.author ? Array.from(card.author.trim())[0] ?? "" : ""}
+          {card.author ? (Array.from(card.author.trim())[0] ?? "") : ""}
         </div>
         <div style={{ whiteSpace: "pre-wrap" }}>
-          {card.author ? <div style={{ fontWeight: 800, fontSize: size * 0.85, opacity: 0.7 }}>{card.author}</div> : null}
+          {card.author ? (
+            <div
+              style={{ fontWeight: 800, fontSize: size * 0.85, opacity: 0.7 }}
+            >
+              {card.author}
+            </div>
+          ) : null}
           <div style={{ fontWeight: 600 }}>{card.text}</div>
         </div>
       </div>

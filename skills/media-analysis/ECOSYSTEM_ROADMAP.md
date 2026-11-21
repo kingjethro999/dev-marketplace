@@ -11,10 +11,10 @@ Version single-sourced from `pyproject.toml` (#17): `contract --json` → `versi
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| メディア計測 | done |  |
-| 発話区間 | done | `speech_regions` (step 4); transcription-skill takes it as an input; added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md) |
+| Owned job    | Status | Note                                                                                                                                                                                                   |
+| ------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| メディア計測 | done   |                                                                                                                                                                                                        |
+| 発話区間     | done   | `speech_regions` (step 4); transcription-skill takes it as an input; added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md) |
 
 ## Wiring
 
@@ -57,4 +57,5 @@ The agent pins this contract at 0.1.16 (first pinned at 0.1.7 in video-productio
 Cut detection is layered, not a collision ([Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/blob/main/docs/ecosystem/DECISION_LOG.md)): ffmpeg-skill `scenes` is the fast list, this repository's `scene_detection` is the observation, detection-skill `shots` is the frame-accurate shot table, qc-skill only judges, and slide-sync-skill handles slides. Speech regions (`発話区間`) are measured here; transcription-skill receives them.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

@@ -18,10 +18,7 @@
         },
         {
           "type": "reply_mentions",
-          "any": [
-            "sheet.png",
-            "Look:"
-          ]
+          "any": ["sheet.png", "Look:"]
         },
         {
           "type": "source_untouched",
@@ -51,14 +48,7 @@
               "checks": [
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "クロップ",
-                    "切り抜",
-                    "crop",
-                    "端",
-                    "blur",
-                    "ぼかし"
-                  ]
+                  "any": ["クロップ", "切り抜", "crop", "端", "blur", "ぼかし"]
                 }
               ]
             }
@@ -77,11 +67,7 @@
         },
         {
           "type": "reply_mentions",
-          "any": [
-            "sheet.png",
-            "Look:",
-            "コマ"
-          ]
+          "any": ["sheet.png", "Look:", "コマ"]
         }
       ],
       "note": "ffmpeg-skill's Reels template alone is valid if the reply says the 16:9 sides were cropped."
@@ -108,21 +94,12 @@
       "checks": [
         {
           "type": "reply_mentions",
-          "any": [
-            "name",
-            "名前",
-            "?",
-            "？"
-          ]
+          "any": ["name", "名前", "?", "？"]
         },
         {
           "type": "no_file",
           "glob": "*Titled*.mp4",
-          "unless_reply_has": [
-            "Sample",
-            "placeholder",
-            "仮"
-          ]
+          "unless_reply_has": ["Sample", "placeholder", "仮"]
         }
       ],
       "note": "The name is not given: the skill must ask (or clearly mark a placeholder), never invent a person."
@@ -200,9 +177,7 @@
               "checks": [
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "Part 1"
-                  ]
+                  "any": ["Part 1"]
                 }
               ]
             }
@@ -238,10 +213,7 @@
               "checks": [
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "talk_words.json",
-                    "words.json"
-                  ]
+                  "any": ["talk_words.json", "words.json"]
                 }
               ]
             }
@@ -284,14 +256,7 @@
               "checks": [
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "ぼかし",
-                    "blur",
-                    "余白",
-                    "上下",
-                    "pad",
-                    "黒帯"
-                  ]
+                  "any": ["ぼかし", "blur", "余白", "上下", "pad", "黒帯"]
                 }
               ]
             }
@@ -326,10 +291,7 @@
                 },
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "sparse",
-                    "stretch"
-                  ]
+                  "any": ["sparse", "stretch"]
                 }
               ]
             },
@@ -342,10 +304,7 @@
                 },
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "caption.py",
-                    "ffmpeg-skill"
-                  ]
+                  "any": ["caption.py", "ffmpeg-skill"]
                 }
               ]
             }
@@ -377,10 +336,7 @@
                 },
                 {
                   "type": "options_file",
-                  "keys": [
-                    "accent",
-                    "captionSize"
-                  ]
+                  "keys": ["accent", "captionSize"]
                 }
               ]
             },
@@ -393,10 +349,7 @@
                 },
                 {
                   "type": "reply_mentions",
-                  "any": [
-                    "red",
-                    "赤"
-                  ]
+                  "any": ["red", "赤"]
                 }
               ]
             }

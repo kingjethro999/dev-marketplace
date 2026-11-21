@@ -31,7 +31,10 @@ const npxCliPath = "/opt/node/lib/node_modules/npm/bin/npx-cli.js";
 const pathExists = (path) => path === npxCliPath;
 
 test("resolveNpxCliFromNpmExecPath finds npx-cli next to npm-cli", () => {
-  assert.equal(resolveNpxCliFromNpmExecPath(envWithNpxCli.npm_execpath, pathExists), npxCliPath);
+  assert.equal(
+    resolveNpxCliFromNpmExecPath(envWithNpxCli.npm_execpath, pathExists),
+    npxCliPath,
+  );
 });
 
 test("resolveNpxCliPath finds npx-cli beside node when npm_execpath is unset", () => {
@@ -46,7 +49,13 @@ test("resolveNpxCliPath finds npx-cli beside node when npm_execpath is unset", (
 test("resolveSpawnCommand routes npx through node+npx-cli on win32 without shell:true", () => {
   const resolved = resolveSpawnCommand(
     "npx",
-    ["example-tool", "tts", "C:\\Users\\Test User\\line.txt", "--voice", "am_michael"],
+    [
+      "example-tool",
+      "tts",
+      "C:\\Users\\Test User\\line.txt",
+      "--voice",
+      "am_michael",
+    ],
     {},
     "win32",
     envWithNpxCli,
@@ -75,7 +84,12 @@ test("resolveSpawnCommand preserves Windows npx shell metacharacters as argv dat
     pathExists,
   );
   assert.ok(resolved);
-  assert.deepEqual(resolved.args, [npxCliPath, "example-tool", "tts", "hello & calc"]);
+  assert.deepEqual(resolved.args, [
+    npxCliPath,
+    "example-tool",
+    "tts",
+    "hello & calc",
+  ]);
 });
 
 test("spawnP uses the resolved node+npx-cli command for npx on win32", async () => {
@@ -97,7 +111,13 @@ test("spawnP uses the resolved node+npx-cli command for npx on win32", async () 
 
 test("spawnP does not enable shell for npx on darwin/linux", async () => {
   const captured = [];
-  await spawnP("npx", ["example-tool", "tts"], {}, "darwin", fakeSpawn(captured));
+  await spawnP(
+    "npx",
+    ["example-tool", "tts"],
+    {},
+    "darwin",
+    fakeSpawn(captured),
+  );
   assert.equal(captured[0].cmd, "npx");
   assert.deepEqual(captured[0].args, ["example-tool", "tts"]);
   assert.equal(captured[0].opts.shell, undefined);
@@ -137,16 +157,37 @@ test("spawnP warns once with an accurate diagnostic when neither npx path exists
   const originalError = console.error;
   console.error = (message) => errors.push(String(message));
   try {
-    const env = { npm_execpath: "C:/missing/npm-cli.js", npm_node_execpath: "C:/node/node.exe" };
+    const env = {
+      npm_execpath: "C:/missing/npm-cli.js",
+      npm_node_execpath: "C:/node/node.exe",
+    };
     const missing = () => false;
     assert.equal(
-      (await spawnP("npx", ["example-tool", "tts"], {}, "win32", fakeSpawn([]), env, missing))
-        .status,
+      (
+        await spawnP(
+          "npx",
+          ["example-tool", "tts"],
+          {},
+          "win32",
+          fakeSpawn([]),
+          env,
+          missing,
+        )
+      ).status,
       -1,
     );
     assert.equal(
-      (await spawnP("npx", ["example-tool", "tts"], {}, "win32", fakeSpawn([]), env, missing))
-        .status,
+      (
+        await spawnP(
+          "npx",
+          ["example-tool", "tts"],
+          {},
+          "win32",
+          fakeSpawn([]),
+          env,
+          missing,
+        )
+      ).status,
       -1,
     );
   } finally {
@@ -159,7 +200,10 @@ test("spawnP warns once with an accurate diagnostic when neither npx path exists
 
 test("npx hyperframes runs the CLI handed over in HYPERFRAMES_CLI_ENTRY on every platform", () => {
   for (const platform of ["darwin", "linux", "win32"]) {
-    const env = { ...envWithNpxCli, HYPERFRAMES_CLI_ENTRY: "/opt/hf/bin/hyperframes.mjs" };
+    const env = {
+      ...envWithNpxCli,
+      HYPERFRAMES_CLI_ENTRY: "/opt/hf/bin/hyperframes.mjs",
+    };
     const resolved = resolveSpawnCommand(
       "npx",
       ["hyperframes", "tts", "a & b"],
@@ -169,14 +213,26 @@ test("npx hyperframes runs the CLI handed over in HYPERFRAMES_CLI_ENTRY on every
       pathExists,
     );
     assert.equal(resolved.cmd, process.execPath);
-    assert.deepEqual(resolved.args, ["/opt/hf/bin/hyperframes.mjs", "tts", "a & b"]);
+    assert.deepEqual(resolved.args, [
+      "/opt/hf/bin/hyperframes.mjs",
+      "tts",
+      "a & b",
+    ]);
   }
 });
 
 test("npx hyperframes without a handed-over CLI throws the fix instead of resolving it", () => {
   for (const env of [{}, { HYPERFRAMES_CLI_ENTRY: "bin/hyperframes.mjs" }]) {
     assert.throws(
-      () => resolveSpawnCommand("npx", ["hyperframes", "tts"], {}, "darwin", env, pathExists),
+      () =>
+        resolveSpawnCommand(
+          "npx",
+          ["hyperframes", "tts"],
+          {},
+          "darwin",
+          env,
+          pathExists,
+        ),
       /HYPERFRAMES_CLI_ENTRY/,
     );
   }

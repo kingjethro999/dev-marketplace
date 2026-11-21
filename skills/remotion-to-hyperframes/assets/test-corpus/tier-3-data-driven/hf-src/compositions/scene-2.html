@@ -1,5 +1,10 @@
 <template id="scene-2-template">
-  <div data-composition-id="scene-2" data-width="1280" data-height="720" data-duration="4">
+  <div
+    data-composition-id="scene-2"
+    data-width="1280"
+    data-height="720"
+    data-duration="4"
+  >
     <style>
       .scene {
         position: absolute;
@@ -58,7 +63,12 @@
         <div class="number">0</div>
         <div class="label">Forks</div>
       </div>
-      <div class="stat-card" data-stat-index="2" data-stat-value="48" style="--card-color: #f87171">
+      <div
+        class="stat-card"
+        data-stat-index="2"
+        data-stat-value="48"
+        style="--card-color: #f87171"
+      >
         <div class="number">0</div>
         <div class="label">Issues</div>
       </div>
@@ -73,7 +83,12 @@
         const value = Number(card.dataset.statValue);
         const numberEl = card.querySelector(".number");
         // spring({damping:14, stiffness:90, mass:1}) -> back.out(1.2) ~0.7s; opacity 0..0.4s linear
-        tl.fromTo(card, { scale: 0 }, { scale: 1, duration: 0.7, ease: "back.out(1.2)" }, start);
+        tl.fromTo(
+          card,
+          { scale: 0 },
+          { scale: 1, duration: 0.7, ease: "back.out(1.2)" },
+          start,
+        );
         tl.to(card, { opacity: 1, duration: 0.4, ease: "none" }, start);
         // AnimatedNumber: easeOutCubic over 45 frames (1.5s) is GSAP power2.out on a counter.
         const counter = { v: 0 };

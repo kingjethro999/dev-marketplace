@@ -81,7 +81,10 @@ function cutVideo(t, rate, keep = UNALIGNED_KEEP) {
   ]);
 
   const transcriptPath = join(dir, "transcript.json");
-  writeFileSync(transcriptPath, JSON.stringify({ words: [{ text: "tone", start: 0, end: 6 }] }));
+  writeFileSync(
+    transcriptPath,
+    JSON.stringify({ words: [{ text: "tone", start: 0, end: 6 }] }),
+  );
 
   const output = join(dir, "out.mp4");
   const result = run([
@@ -120,7 +123,9 @@ function readVideoTimestamps(filePath) {
   );
   const [tickNum, tickDen] = probe.streams[0].time_base.split("/").map(Number);
   // Packets come in decode order; B-frames put that out of presentation order.
-  const pts = probe.packets.map((packet) => Number(packet.pts)).sort((a, b) => a - b);
+  const pts = probe.packets
+    .map((packet) => Number(packet.pts))
+    .sort((a, b) => a - b);
   return { tickNum, tickDen, pts };
 }
 
@@ -131,12 +136,16 @@ for (const rate of ["30", "30000/1001", "60"]) {
     (t) => {
       const [rateNum, rateDen = 1] = rate.split("/").map(Number);
       const { tickNum, tickDen, pts } = readVideoTimestamps(cutVideo(t, rate));
-      assert.ok(pts.length > rateNum / rateDen, "expected several seconds of video");
+      assert.ok(
+        pts.length > rateNum / rateDen,
+        "expected several seconds of video",
+      );
 
       // Frame i belongs at exactly i / rate seconds. Compared as integers, so a
       // timestamp rounded to the millisecond (0.067 for 2/30) cannot pass.
       const offGrid = pts.filter(
-        (value, index) => value * tickNum * rateNum !== index * rateDen * tickDen,
+        (value, index) =>
+          value * tickNum * rateNum !== index * rateDen * tickDen,
       );
       assert.equal(
         offGrid.length,
@@ -175,7 +184,9 @@ test(
       .filter((packet) => packet.flags.startsWith("K"))
       .map((packet) => Number(packet.pts_time))
       .sort((a, b) => a - b);
-    const gaps = keyframes.slice(1).map((time, index) => time - keyframes[index]);
+    const gaps = keyframes
+      .slice(1)
+      .map((time, index) => time - keyframes[index]);
     const widest = Math.max(...gaps);
     // A frame of slack: the forced keyframe is the first frame at or after each second.
     assert.ok(widest < 1.05, `keyframes are up to ${widest.toFixed(3)}s apart`);
@@ -217,7 +228,10 @@ test(
     ]);
 
     const transcriptPath = join(dir, "transcript.json");
-    writeFileSync(transcriptPath, JSON.stringify({ words: [{ text: "tone", start: 0, end: 6 }] }));
+    writeFileSync(
+      transcriptPath,
+      JSON.stringify({ words: [{ text: "tone", start: 0, end: 6 }] }),
+    );
 
     const output = join(dir, "out.wav");
     // Two "ugly" removal ranges: neither aligned to the 440Hz period, so the kept
@@ -238,7 +252,10 @@ test(
     assert.equal(result.status, 0, result.stderr || result.stdout);
 
     const samples = readPcm(output);
-    assert.ok(samples.length > SAMPLE_RATE, "expected several seconds of audio");
+    assert.ok(
+      samples.length > SAMPLE_RATE,
+      "expected several seconds of audio",
+    );
 
     let maxStep = 0;
     let zeroRun = 0;
@@ -270,72 +287,79 @@ test(
 // out a frame short from the join on.
 const THIRTY_FPS_FRAME_32 = 32 / 30;
 
-test("a kept range starting on a 30 fps frame keeps that frame", { skip: !HAS_FFMPEG }, (t) => {
-  const { dir, cleanup } = fixture();
-  t.after(cleanup);
+test(
+  "a kept range starting on a 30 fps frame keeps that frame",
+  { skip: !HAS_FFMPEG },
+  (t) => {
+    const { dir, cleanup } = fixture();
+    t.after(cleanup);
 
-  const source = join(dir, "src.mp4");
-  execFileSync("ffmpeg", [
-    "-y",
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-f",
-    "lavfi",
-    "-i",
-    "testsrc2=size=320x180:rate=30",
-    "-f",
-    "lavfi",
-    "-i",
-    `sine=frequency=440:sample_rate=${SAMPLE_RATE}`,
-    "-t",
-    "4",
-    "-c:v",
-    "libx264",
-    "-pix_fmt",
-    "yuv420p",
-    "-c:a",
-    "aac",
-    source,
-  ]);
+    const source = join(dir, "src.mp4");
+    execFileSync("ffmpeg", [
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=size=320x180:rate=30",
+      "-f",
+      "lavfi",
+      "-i",
+      `sine=frequency=440:sample_rate=${SAMPLE_RATE}`,
+      "-t",
+      "4",
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      source,
+    ]);
 
-  const transcriptPath = join(dir, "transcript.json");
-  writeFileSync(transcriptPath, JSON.stringify([{ text: "a", start: 0.1, end: 3.9 }]));
+    const transcriptPath = join(dir, "transcript.json");
+    writeFileSync(
+      transcriptPath,
+      JSON.stringify([{ text: "a", start: 0.1, end: 3.9 }]),
+    );
 
-  const output = join(dir, "out.mp4");
-  const result = run([
-    "--input",
-    source,
-    "--transcript",
-    transcriptPath,
-    "--keep",
-    `0-1,${THIRTY_FPS_FRAME_32}-3`,
-    "--out",
-    output,
-    "--json",
-  ]);
-  assert.equal(result.status, 0, result.stderr || result.stdout);
+    const output = join(dir, "out.mp4");
+    const result = run([
+      "--input",
+      source,
+      "--transcript",
+      transcriptPath,
+      "--keep",
+      `0-1,${THIRTY_FPS_FRAME_32}-3`,
+      "--out",
+      output,
+      "--json",
+    ]);
+    assert.equal(result.status, 0, result.stderr || result.stdout);
 
-  // Frames 0-29 for 0-1s, then frames 32-89 for the second segment. Rounding
-  // -ss to the millisecond drops frame 32 and yields 87.
-  const frames = Number(
-    execFileSync(
-      "ffprobe",
-      [
-        "-v",
-        "error",
-        "-select_streams",
-        "v",
-        "-count_packets",
-        "-show_entries",
-        "stream=nb_read_packets",
-        "-of",
-        "csv=p=0",
-        "--",
-        output,
-      ],
-      { encoding: "utf8" },
-    ).trim(),
-  );
-  assert.equal(frames, 88, `expected 88 frames, got ${frames}`);
-});
+    // Frames 0-29 for 0-1s, then frames 32-89 for the second segment. Rounding
+    // -ss to the millisecond drops frame 32 and yields 87.
+    const frames = Number(
+      execFileSync(
+        "ffprobe",
+        [
+          "-v",
+          "error",
+          "-select_streams",
+          "v",
+          "-count_packets",
+          "-show_entries",
+          "stream=nb_read_packets",
+          "-of",
+          "csv=p=0",
+          "--",
+          output,
+        ],
+        { encoding: "utf8" },
+      ).trim(),
+    );
+    assert.equal(frames, 88, `expected 88 frames, got ${frames}`);
+  },
+);

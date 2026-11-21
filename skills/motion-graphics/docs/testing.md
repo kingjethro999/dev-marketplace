@@ -41,14 +41,14 @@ commit) on Linux; to reproduce the old end locally, clone ffmpeg-skill and `git 
 - the output file exists and is non-empty
 - its sha256 is stable across two identical runs when nothing changed (determinism)
 - `ffprobe` (via `ffmpeg-skill/probe`) reports a video stream, the source resolution, and the expected duration
-- for `image_overlay`/`video_overlay`: comparing pixel statistics (luma) between a region sampled *with* the
+- for `image_overlay`/`video_overlay`: comparing pixel statistics (luma) between a region sampled _with_ the
   overlay and the same region on an unmodified render (frame sampling / pixel-statistics check, not a subjective
   "looks right" judgement) — `video_overlay`'s chroma-key test compares an opaque PiP layer against a keyed one
   the same way, proving the keyed-out region reveals the base video's own content rather than just asserting no
   exception was raised
 - for `document.options.audio_stream`: rendering against a fixture with two distinguishable audio tracks (one
-  silent, one an audible tone) and comparing `mean_volume` (ffmpeg's own `volumedetect` filter) on the *rendered
-  output* between the two selections — the only way to tell which source track actually survived, since `ffprobe`
+  silent, one an audible tone) and comparing `mean_volume` (ffmpeg's own `volumedetect` filter) on the _rendered
+  output_ between the two selections — the only way to tell which source track actually survived, since `ffprobe`
   on the output alone only ever shows the one audio stream the tool mapped
 - reuse: a second run with an unchanged specification hits the intermediate cache (`status: "reused"`) for every
   non-final stage; corrupting a cached intermediate's bytes forces a re-render (tamper detection)
@@ -61,5 +61,5 @@ evidence that the pixels actually changed where and when the specification said 
 `test_security.py` sends shell/command/argv/filter-injection **payloads as element `text` content** (e.g.
 `"; rm -rf / #"`, `"$(reboot)"`, `"<script>alert(1)</script>"`) and asserts the render still succeeds and produces
 a video — because these are just characters ffmpeg-skill's `drawtext` will escape and draw, not something that
-should be rejected as unsafe. It separately asserts that the *field names* that could carry an actual command
+should be rejected as unsafe. It separately asserts that the _field names_ that could carry an actual command
 (`FORBIDDEN_KEYS`) are rejected regardless of where they appear in the document.

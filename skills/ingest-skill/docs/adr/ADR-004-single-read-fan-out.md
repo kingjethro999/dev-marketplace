@@ -45,7 +45,7 @@ What must not change:
    - The run is not ok, and exits 3, when any destination failed (unchanged).
    - **When the source fails, the file fails everywhere.** This covers a read error (a card pulled out) and a source that changed while it was read. Every temporary file of that file is removed, and no destination keeps a partial or torn copy.
 5. **Each destination's manifest and ASC MHL list what that destination has** (a deliberate behaviour change).
-   - Before, a file's overall status decided what went into the records: `failed` or `conflict` on any destination took the file out of *every* destination's `ingest-manifest.json` and ASC MHL generation, even where it had been copied and verified. Those good copies then showed up as `unlisted` in `verify`.
+   - Before, a file's overall status decided what went into the records: `failed` or `conflict` on any destination took the file out of _every_ destination's `ingest-manifest.json` and ASC MHL generation, even where it had been copied and verified. Those good copies then showed up as `unlisted` in `verify`.
    - Now the status is kept per destination:
      - a destination lists, in its manifest and its MHL generation, every file it copied or found identical (verified);
      - a file that failed on a destination is not listed there as present.
@@ -79,12 +79,12 @@ What must not change:
 
 `benchmarks/fanout.py` offloads a synthetic 268 MB card (4 files) to 3 destinations. It reports the wall time and the bytes read from the source. `--reader-mbps` throttles reads of the source only, to model a card reader that is slower than the drives. The run here was one 4-core container, with every "drive" on the same virtual disk and a warm page cache. Real drives will differ; only the ratio of source bytes read is exact.
 
-| `--hash` | Reader | Before: time, source read | After: time, source read |
-|---|---|---|---|
-| sha256 | unthrottled | 15.0 s, 3.00× | 4.2 s, 1.00× |
-| sha256 | 160 MB/s | 17.9 s, 3.00× | 6.1 s, 1.00× |
-| xxh64 | unthrottled | 2.8 s, 3.00× | 1.6 s, 1.00× |
-| xxh64 | 160 MB/s | 9.7 s, 3.00× | 3.0 s, 1.00× |
+| `--hash` | Reader      | Before: time, source read | After: time, source read |
+| -------- | ----------- | ------------------------- | ------------------------ |
+| sha256   | unthrottled | 15.0 s, 3.00×             | 4.2 s, 1.00×             |
+| sha256   | 160 MB/s    | 17.9 s, 3.00×             | 6.1 s, 1.00×             |
+| xxh64    | unthrottled | 2.8 s, 3.00×              | 1.6 s, 1.00×             |
+| xxh64    | 160 MB/s    | 9.7 s, 3.00×              | 3.0 s, 1.00×             |
 
 With the throttled reader, the xxh64 run comes close to its floor: 268 MB at 160 MB/s is 1.7 s for one read, against 5.0 s for three. With sha256, the run is bound by hashing (SHA-256 and SHA-512 of every byte, ADR-001) and by the read-backs, which now run in parallel.
 

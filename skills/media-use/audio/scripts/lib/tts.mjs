@@ -17,10 +17,22 @@ import { refuseUnderLimit } from "../../../scripts/lib/credit-limit.mjs";
 // by the CLI — see the note above.
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
-import { heygenAuthHeaders, heygenCredential, heygenJSON, heygenMessage } from "./heygen.mjs";
+import {
+  heygenAuthHeaders,
+  heygenCredential,
+  heygenJSON,
+  heygenMessage,
+} from "./heygen.mjs";
 import { pythonInvocation } from "./python.mjs";
 import { synthesizeGemini } from "./gemini-tts.mjs";
 import { geminiConfigured } from "./gemini-auth.mjs";
@@ -42,7 +54,9 @@ export function elevenlabsAvailable() {
 export function pickProvider(userProvider) {
   if (userProvider) {
     if (!["heygen", "elevenlabs", "kokoro", "gemini"].includes(userProvider))
-      throw new Error(`invalid provider "${userProvider}" (heygen | elevenlabs | kokoro | gemini)`);
+      throw new Error(
+        `invalid provider "${userProvider}" (heygen | elevenlabs | kokoro | gemini)`,
+      );
     if (userProvider === "gemini" && !geminiConfigured())
       throw new Error(
         "provider=gemini needs GEMINI_API_KEY or GOOGLE_API_KEY, or service-account credentials (GOOGLE_APPLICATION_CREDENTIALS or GCS_CREDS)",
@@ -53,7 +67,11 @@ export function pickProvider(userProvider) {
       throw new Error("provider=elevenlabs but $ELEVENLABS_API_KEY is not set");
     return userProvider;
   }
-  return heygenAvailable() ? "heygen" : elevenlabsAvailable() ? "elevenlabs" : "kokoro";
+  return heygenAvailable()
+    ? "heygen"
+    : elevenlabsAvailable()
+      ? "elevenlabs"
+      : "kokoro";
 }
 
 // ── voice resolution ──────────────────────────────────────────────────────────
@@ -66,19 +84,25 @@ export async function resolveVoiceId({ provider, userVoice, lang = "en" }) {
   if (provider === "elevenlabs") return "21m00Tcm4TlvDq8ikWAM"; // Rachel
   if (provider === "kokoro") {
     if (lang === "en") return "am_michael";
-    throw new Error("Kokoro non-English needs an explicit --voice (see references/tts.md)");
+    throw new Error(
+      "Kokoro non-English needs an explicit --voice (see references/tts.md)",
+    );
   }
   // heygen — pin a fixed English default so the choice is deterministic. The old
   // "first English voice the API returns" drifts whenever HeyGen re-sorts the
   // public catalog. Marcia (mature, low female). Override with --voice / request.voice.
   if (lang === "en") return "05f19352e8f74b0392a8f411eba40de1"; // Marcia · English · female
   // Non-English: no fixed default — fall back to the first matching catalog voice.
-  const payload = await heygenJSON(`/voices?engine=starfish&type=public&limit=50`, {
-    headers: heygenAuthHeaders(),
-  });
+  const payload = await heygenJSON(
+    `/voices?engine=starfish&type=public&limit=50`,
+    {
+      headers: heygenAuthHeaders(),
+    },
+  );
   const voices = payload.data ?? payload.voices ?? [];
   const pick = voices.find((v) => v.language === "English") ?? voices[0];
-  if (!pick) throw new Error("no public starfish voice to default to — pass --voice");
+  if (!pick)
+    throw new Error("no public starfish voice to default to — pass --voice");
   return pick.voice_id;
 }
 
@@ -98,7 +122,9 @@ export function withWordIds(words) {
 // depending on whether ffprobe/ffmpeg are actually installed on the
 // machine running the tests.
 export function parseFfmpegDurationBanner(stderrText) {
-  const match = /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(stderrText ?? "");
+  const match = /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(
+    stderrText ?? "",
+  );
   if (!match) return NaN;
   const [, hours, minutes, seconds] = match;
   return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
@@ -117,7 +143,16 @@ function ffmpegDurationFallback(absPath) {
 export function ffprobeDuration(absPath) {
   const r = spawnSync(
     "ffprobe",
-    ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", "--", absPath],
+    [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=nw=1:nk=1",
+      "--",
+      absPath,
+    ],
     { encoding: "utf8" },
   );
   if (r.error?.code === "ENOENT") return ffmpegDurationFallback(absPath);
@@ -130,9 +165,15 @@ export function resolveNpxCliFromNpmExecPath(
   pathExists = existsSync,
 ) {
   if (!npmExecPath) return null;
-  const fileName = npmExecPath.replace(/\\/g, "/").split("/").pop()?.toLowerCase();
+  const fileName = npmExecPath
+    .replace(/\\/g, "/")
+    .split("/")
+    .pop()
+    ?.toLowerCase();
   const npxCliPath =
-    fileName === "npx-cli.js" ? npmExecPath : join(dirname(npmExecPath), "npx-cli.js");
+    fileName === "npx-cli.js"
+      ? npmExecPath
+      : join(dirname(npmExecPath), "npx-cli.js");
   return pathExists(npxCliPath) ? npxCliPath : null;
 }
 
@@ -143,7 +184,13 @@ export function resolveNpxCliPath(
 ) {
   const fromNpm = resolveNpxCliFromNpmExecPath(npmExecPath, pathExists);
   if (fromNpm) return fromNpm;
-  const besideNode = join(dirname(nodeExecPath), "node_modules", "npm", "bin", "npx-cli.js");
+  const besideNode = join(
+    dirname(nodeExecPath),
+    "node_modules",
+    "npm",
+    "bin",
+    "npx-cli.js",
+  );
   return pathExists(besideNode) ? besideNode : null;
 }
 
@@ -159,7 +206,10 @@ function launchingCliCommand(cmd, args, env = process.env) {
   if (cmd !== "npx" || args[0] !== "hyperframes") return null;
   const entry = env.HYPERFRAMES_CLI_ENTRY;
   if (!entry || !isAbsolute(entry)) throw new Error(MISSING_CLI_MESSAGE);
-  return { cmd: process.execPath, args: [entry, ...args.slice(1).map((arg) => String(arg))] };
+  return {
+    cmd: process.execPath,
+    args: [entry, ...args.slice(1).map((arg) => String(arg))],
+  };
 }
 
 export function resolveSpawnCommand(
@@ -171,7 +221,8 @@ export function resolveSpawnCommand(
   pathExists = existsSync,
 ) {
   const cli = launchingCliCommand(cmd, args, env);
-  if (cli) return { ...cli, opts: { stdio: "ignore", windowsHide: true, ...opts } };
+  if (cli)
+    return { ...cli, opts: { stdio: "ignore", windowsHide: true, ...opts } };
   if (cmd !== "npx" || platform !== "win32") {
     return { cmd, args, opts: { stdio: "ignore", ...opts } };
   }
@@ -180,7 +231,11 @@ export function resolveSpawnCommand(
   // Avoid `shell:true` and the .cmd shim entirely by invoking npm's JS CLI with
   // node, preserving request-provided values as argv data instead of shell text.
   const nodeExecPath = env.npm_node_execpath || process.execPath;
-  const npxCliPath = resolveNpxCliPath(env.npm_execpath, nodeExecPath, pathExists);
+  const npxCliPath = resolveNpxCliPath(
+    env.npm_execpath,
+    nodeExecPath,
+    pathExists,
+  );
   if (!npxCliPath) return null;
   return {
     cmd: nodeExecPath,
@@ -252,7 +307,18 @@ function transcodeToWav(bytes, destWav) {
   mkdirSync(dirname(destWav), { recursive: true });
   const ff = spawnSync(
     "ffmpeg",
-    ["-y", "-loglevel", "error", "-i", tmp, "-ar", "44100", "-ac", "1", destWav],
+    [
+      "-y",
+      "-loglevel",
+      "error",
+      "-i",
+      tmp,
+      "-ar",
+      "44100",
+      "-ac",
+      "1",
+      destWav,
+    ],
     { stdio: "ignore" },
   );
   rmSync(td, { recursive: true, force: true });
@@ -288,7 +354,8 @@ export async function synthesizeOne({
   wavAbs,
   hyperframesDir,
 }) {
-  if (provider === "heygen") return synthesizeHeygen({ text, voiceId, lang, speed, wavAbs });
+  if (provider === "heygen")
+    return synthesizeHeygen({ text, voiceId, lang, speed, wavAbs });
   if (provider === "gemini")
     return synthesizeGemini({ text, voiceId, model, style, speed, wavAbs });
   if (provider === "elevenlabs") {
@@ -305,7 +372,13 @@ export async function synthesizeOne({
       return { ok: false, words: null };
     }
     return withTmpText(text, async (textPath) => {
-      const { cmd, args } = pythonInvocation(["-c", ELEVENLABS_PY, textPath, voiceId, wavAbs]);
+      const { cmd, args } = pythonInvocation([
+        "-c",
+        ELEVENLABS_PY,
+        textPath,
+        voiceId,
+        wavAbs,
+      ]);
       const r = await spawnP(cmd, args, {});
       return synthResult(r, wavAbs, "elevenlabs (python)");
     });
@@ -313,7 +386,15 @@ export async function synthesizeOne({
   // kokoro — via the published CLI; --output is relative to the project dir.
   const wavRel = relTo(hyperframesDir, wavAbs);
   return withTmpText(text, async (textPath) => {
-    const args = ["hyperframes", "tts", textPath, "--voice", voiceId, "--output", wavRel];
+    const args = [
+      "hyperframes",
+      "tts",
+      textPath,
+      "--voice",
+      voiceId,
+      "--output",
+      wavRel,
+    ];
     if (lang !== "en") args.push("--lang", lang);
     if (speed !== 1) args.push("--speed", String(speed));
     const r = await spawnP("npx", args, { cwd: hyperframesDir });
@@ -327,7 +408,9 @@ export function synthResult(r, wavAbs, label) {
   if (r.status === 0 && existsSync(wavAbs)) return { ok: true, words: null };
   const why =
     r.error ??
-    (r.status !== 0 ? `${label} exited with status ${r.status}` : `${label} produced no wav file`);
+    (r.status !== 0
+      ? `${label} exited with status ${r.status}`
+      : `${label} produced no wav file`);
   return { ok: false, words: null, error: why };
 }
 
@@ -335,13 +418,20 @@ export function synthResult(r, wavAbs, label) {
 // Every failure path returns an `error` string so the caller can surface WHY a
 // line was dropped instead of the bare "TTS failed" that hid the real cause
 // (e.g. an HTTP 402 plan_upgrade_required thrown by heygenJSON was swallowed).
-export async function synthesizeHeygen({ text, voiceId, lang, speed, wavAbs }, deps = {}) {
+export async function synthesizeHeygen(
+  { text, voiceId, lang, speed, wavAbs },
+  deps = {},
+) {
   const requestJSON = deps.heygenJSON ?? heygenJSON;
   const authHeaders = deps.heygenAuthHeaders ?? heygenAuthHeaders;
   const fetchImpl = deps.fetch ?? fetch;
   const transcode = deps.transcodeToWav ?? transcodeToWav;
   try {
-    refuseUnderLimit(deps.projectDir ?? process.cwd(), "a HeyGen voice", "voice");
+    refuseUnderLimit(
+      deps.projectDir ?? process.cwd(),
+      "a HeyGen voice",
+      "voice",
+    );
     const body = { text, voice_id: voiceId, speed };
     if (lang !== "en") body.language = lang;
     const payload = await requestJSON(`/voices/speech`, {
@@ -351,11 +441,19 @@ export async function synthesizeHeygen({ text, voiceId, lang, speed, wavAbs }, d
     });
     const inner = payload.data ?? payload;
     if (!inner.audio_url) {
-      return { ok: false, words: null, error: "HeyGen /voices/speech returned no audio_url" };
+      return {
+        ok: false,
+        words: null,
+        error: "HeyGen /voices/speech returned no audio_url",
+      };
     }
     const res = await fetchMedia(inner.audio_url, { fetchImpl });
     if (!res.ok) {
-      return { ok: false, words: null, error: `audio_url fetch failed: HTTP ${res.status}` };
+      return {
+        ok: false,
+        words: null,
+        error: `audio_url fetch failed: HTTP ${res.status}`,
+      };
     }
     const bytes = Buffer.from(await res.arrayBuffer());
     // .wav output → transcode to 44.1k mono; .mp3 → raw bytes (no ffmpeg). The
@@ -374,7 +472,13 @@ export async function synthesizeHeygen({ text, voiceId, lang, speed, wavAbs }, d
     }
     const words = Array.isArray(inner.word_timestamps)
       ? inner.word_timestamps
-          .filter((w) => w && typeof w.word === "string" && isFinite(w.start) && isFinite(w.end))
+          .filter(
+            (w) =>
+              w &&
+              typeof w.word === "string" &&
+              isFinite(w.start) &&
+              isFinite(w.end),
+          )
           .filter((w) => !/^<.*>$/.test(w.word.trim())) // drop <start>/<end> sentinels
           .map((w) => ({ text: w.word, start: w.start, end: w.end }))
       : [];
@@ -390,7 +494,15 @@ export async function synthesizeHeygen({ text, voiceId, lang, speed, wavAbs }, d
 export async function transcribeWav({ wavRel, lang = "en", hyperframesDir }) {
   const model = lang === "en" ? "small.en" : "small";
   const td = mkdtempSync(join(tmpdir(), "hf-trans-"));
-  const args = ["hyperframes", "transcribe", wavRel, "--model", model, "--dir", td];
+  const args = [
+    "hyperframes",
+    "transcribe",
+    wavRel,
+    "--model",
+    model,
+    "--dir",
+    td,
+  ];
   if (lang !== "en") args.push("--language", lang);
   const r = await spawnP("npx", args, { cwd: hyperframesDir });
   let words = null;

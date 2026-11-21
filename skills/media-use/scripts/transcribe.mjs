@@ -65,7 +65,8 @@ if (!existsSync(inputPath)) {
   process.exit(2);
 }
 const outPath = resolve(
-  args.out || `${inputPath.slice(0, -extname(inputPath).length)}.transcribe.json`,
+  args.out ||
+    `${inputPath.slice(0, -extname(inputPath).length)}.transcribe.json`,
 );
 
 // Locate the parakeet-mlx runner the same way the CLI does: env override, then
@@ -101,7 +102,10 @@ function atomicWrite(target, data) {
 }
 
 function report(engine, wordCount) {
-  if (args.json) console.log(JSON.stringify({ ok: true, out: outPath, engine, words: wordCount }));
+  if (args.json)
+    console.log(
+      JSON.stringify({ ok: true, out: outPath, engine, words: wordCount }),
+    );
   else
     console.log(
       `transcribed ${basename(inputPath)} -> ${outPath}${wordCount != null ? ` (${wordCount} words,` : " ("}${engine})`,
@@ -130,9 +134,14 @@ function runParakeet(runner) {
       ],
       { cwd: homedir(), stdio: ["ignore", "pipe", "pipe"], timeout: 1_800_000 },
     );
-    const jsonPath = join(workDir, `${basename(inputPath, extname(inputPath))}.json`);
+    const jsonPath = join(
+      workDir,
+      `${basename(inputPath, extname(inputPath))}.json`,
+    );
     if (!existsSync(jsonPath)) throw new Error("parakeet produced no JSON");
-    const merged = mergeTokensToWords(JSON.parse(readFileSync(jsonPath, "utf8")));
+    const merged = mergeTokensToWords(
+      JSON.parse(readFileSync(jsonPath, "utf8")),
+    );
     atomicWrite(outPath, JSON.stringify(merged, null, 2));
     report("parakeet", merged.words.length);
   } finally {
@@ -151,7 +160,16 @@ function runCli(cliEngine) {
     // mechanism as the audio engine's TTS spawns.
     // Under auto or parakeet the CLI may run its own Parakeet; --json says which engine ran.
     const resolved = resolveNpxInvocation(
-      ["hyperframes", "transcribe", inputPath, "--dir", workDir, "--engine", cliEngine, "--json"],
+      [
+        "hyperframes",
+        "transcribe",
+        inputPath,
+        "--dir",
+        workDir,
+        "--engine",
+        cliEngine,
+        "--json",
+      ],
       { stdio: ["ignore", "pipe", "pipe"], timeout: 1_800_000 },
     );
     let stdout;
@@ -159,7 +177,9 @@ function runCli(cliEngine) {
       stdout = String(execFileSync(resolved.cmd, resolved.args, resolved.opts));
     } catch (e) {
       // stderr holds spinner redraws and --json prints the reason on stdout, so keep the last lines.
-      const tail = stripVTControlCharacters(`${e.stderr ?? ""}\n${e.stdout ?? ""}`)
+      const tail = stripVTControlCharacters(
+        `${e.stderr ?? ""}\n${e.stdout ?? ""}`,
+      )
         .split(/[\r\n]+/)
         .map((l) => l.trim())
         .filter((l) => l && l !== "│")
@@ -185,7 +205,10 @@ function runCli(cliEngine) {
     }
     let ran = "whisper";
     try {
-      ran = JSON.parse(stdout.trim().split("\n").at(-1)).engine === "parakeet" ? "parakeet" : ran;
+      ran =
+        JSON.parse(stdout.trim().split("\n").at(-1)).engine === "parakeet"
+          ? "parakeet"
+          : ran;
     } catch {
       /* no JSON line: keep whisper */
     }
@@ -198,7 +221,10 @@ function runCli(cliEngine) {
 
 try {
   const parakeetBin = resolveParakeet();
-  const asked = args.engine === "parakeet" || args.engine === "whisper" ? args.engine : "auto";
+  const asked =
+    args.engine === "parakeet" || args.engine === "whisper"
+      ? args.engine
+      : "auto";
   // Without parakeet-mlx, the CLI's own Parakeet (any OS, `hyperframes models install parakeet`).
   let engine = "parakeet";
   if (asked !== "whisper" && parakeetBin) runParakeet(parakeetBin);

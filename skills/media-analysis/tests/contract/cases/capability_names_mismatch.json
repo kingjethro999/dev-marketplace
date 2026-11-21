@@ -5,14 +5,8 @@
     {
       "op": "set",
       "path": "capability_names",
-      "value": [
-        "ffmpeg",
-        "ffprobe",
-        "gpu:cuda"
-      ]
+      "value": ["ffmpeg", "ffprobe", "gpu:cuda"]
     }
   ],
-  "expect_problems": [
-    "capability_names"
-  ]
+  "expect_problems": ["capability_names"]
 }

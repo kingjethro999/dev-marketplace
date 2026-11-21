@@ -38,7 +38,7 @@ additive; see "Known limitations" for when a version bump would actually be requ
 - **Release automation is live** (`.github/workflows/release.yml`, one job on every push to `main`: version, `pyproject.toml`,
   `CHANGELOG.md`, tag, GitHub Release, optional PyPI). Do not hand-edit `CHANGELOG.md` or the version. The autolabeler never assigns
   `major`/`breaking` from PR text, on purpose (a PR body that merely quotes "BREAKING CHANGE" made ffmpeg-skill publish 1.0.0-1.0.2 with no breaking change); a human applies that label when a major release is really meant.
-  Dependabot applies `major` on its own when a *dependency* moved a major version, so before release-drafter runs,
+  Dependabot applies `major` on its own when a _dependency_ moved a major version, so before release-drafter runs,
   `.github/scripts/dependabot_release_labels.py` removes `major`/`breaking`/`minor`/`feature`/`enhancement` from Dependabot PRs
   unless a person applied the label (`tests/test_release_labels.py`).
 - **`video-production-agent`** (`kajisho5/video-production-agent`, the downstream consumer) pins `contract_0.1.0.json` and gates on
@@ -46,7 +46,7 @@ additive; see "Known limitations" for when a version bump would actually be requ
   drift gains exactly `element_types hook/meme/sticker: installed but not pinned`. Its `tests/test_adapter_motion_graphics.py` has two
   failures that are **not** from this repository's changes and also occur on unmodified `main`: `SecurityTests::test_argv_and_request_hygiene`
   (only when `VIDEO_AGENT_MOTION_GRAPHICS_DIR` is set; passes without it) and `RealSkillTests::test_real`, which asserts zero
-  `contract_drift()` and has 3 older entries (`tools`, `ffmpeg_skill`, `request`) since ADR-18. Judge a change by the *difference* in drift and
+  `contract_drift()` and has 3 older entries (`tools`, `ffmpeg_skill`, `request`) since ADR-18. Judge a change by the _difference_ in drift and
   by `check_contract()`, not by that test's pass/fail, until the agent re-pins.
 - **`kajisho5/AI-video-production-OS`**: its architecture is on `main` now (v0.1.1, 2026-10-25: `docs/CAPABILITY_MATRIX.md`,
   `registry/contract.py`); the earlier note that only a placeholder README existed is obsolete. Its matrix section 5 lists only
@@ -146,7 +146,7 @@ type, a new top-level key), before merging.
 1. ~~Decide `shape`~~: done (ADR-22). video-production-agent must re-pin before it uses it: the `execution`, `provenance` and `colors`
    sections changed, which its adapter treats as fatal drift.
 2. **Re-check ffmpeg-skill's templates and flags after each of its releases**: the daily `main` job in CI will fail on a breaking change, but
-   it will not announce a *new* template or flag. Diff `graphics.py --help` against `adapter.TEMPLATE_FLAGS` and `ELEMENT_TYPES`.
+   it will not announce a _new_ template or flag. Diff `graphics.py --help` against `adapter.TEMPLATE_FLAGS` and `ELEMENT_TYPES`.
 3. **Unwired capabilities above**, starting with whichever the downstream agent (or the user) actually needs; `--lang` first if Japanese
    text is in scope, since it may be a correctness issue rather than a feature.
 4. Reconcile the nine provisional Capability ids with the OS matrix once it assigns them; do not invent OS integration machinery beyond what

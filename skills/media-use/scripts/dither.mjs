@@ -13,7 +13,15 @@ import {
   errorDiffusionBufferLength,
 } from "./lib/error-diffusion.mjs";
 
-const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"]);
+const IMAGE_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".bmp",
+  ".tif",
+  ".tiff",
+]);
 const OUTPUT_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 
 const { values: args } = parseArgs({
@@ -59,7 +67,9 @@ try {
   const result = await run();
   if (args.json) console.log(JSON.stringify({ ok: true, ...result }));
   else {
-    console.log(`dithered ${result.input} -> ${result.out} (${result.algorithm})`);
+    console.log(
+      `dithered ${result.input} -> ${result.out} (${result.algorithm})`,
+    );
     console.log(`next: resolve --from ${result.out} --type ${result.type}`);
   }
 } catch (error) {
@@ -70,14 +80,19 @@ try {
 }
 
 async function run() {
-  if (!args.input || !args.out) throw new Error("--input and --out are required");
+  if (!args.input || !args.out)
+    throw new Error("--input and --out are required");
   const inputPath = resolve(args.input);
   const outPath = resolve(args.out);
-  if (!existsSync(inputPath)) throw new Error(`input file not found: ${inputPath}`);
+  if (!existsSync(inputPath))
+    throw new Error(`input file not found: ${inputPath}`);
   if (inputPath === outPath) throw new Error("--out must differ from --input");
 
   const metadata = probe(inputPath);
-  if (metadata.colorTransfer === "smpte2084" || metadata.colorTransfer === "arib-std-b67") {
+  if (
+    metadata.colorTransfer === "smpte2084" ||
+    metadata.colorTransfer === "arib-std-b67"
+  ) {
     throw new Error(
       `HDR ${metadata.colorTransfer} input is not supported by the 8-bit SDR dither processor; tone-map to Rec.709 first`,
     );
@@ -91,7 +106,13 @@ async function run() {
     detail: Number(args.detail),
   };
   // Validate before starting FFmpeg or creating an output file.
-  applyErrorDiffusionRgba(new Uint8ClampedArray(4), 1, 1, options, new Float32Array(3));
+  applyErrorDiffusionRgba(
+    new Uint8ClampedArray(4),
+    1,
+    1,
+    options,
+    new Float32Array(3),
+  );
 
   mkdirSync(dirname(outPath), { recursive: true });
   const inputIsImage = IMAGE_EXTENSIONS.has(extname(inputPath).toLowerCase());
@@ -101,7 +122,8 @@ async function run() {
     }
     processImage(inputPath, outPath, metadata, options);
   } else {
-    if (extname(outPath).toLowerCase() !== ".mp4") throw new Error("video output must use .mp4");
+    if (extname(outPath).toLowerCase() !== ".mp4")
+      throw new Error("video output must use .mp4");
     await processVideo(inputPath, outPath, metadata, options);
   }
 
@@ -121,14 +143,26 @@ async function run() {
 function probe(filePath) {
   const raw = execFileSync(
     "ffprobe",
-    ["-v", "error", "-print_format", "json", "-show_streams", "-show_format", "--", filePath],
+    [
+      "-v",
+      "error",
+      "-print_format",
+      "json",
+      "-show_streams",
+      "-show_format",
+      "--",
+      filePath,
+    ],
     { encoding: "utf8", timeout: 10_000 },
   );
   const parsed = JSON.parse(raw);
   const video = parsed.streams?.find((stream) => stream.codec_type === "video");
   if (!video?.width || !video?.height)
     throw new Error(`no readable video/image stream: ${filePath}`);
-  const fps = usableFrameRate(video.avg_frame_rate) ?? usableFrameRate(video.r_frame_rate) ?? "30";
+  const fps =
+    usableFrameRate(video.avg_frame_rate) ??
+    usableFrameRate(video.r_frame_rate) ??
+    "30";
   return {
     width: video.width,
     height: video.height,
@@ -194,9 +228,15 @@ function processImage(inputPath, outPath, metadata, options) {
 async function processVideo(inputPath, outPath, metadata, options) {
   const temporary = temporaryOutput(outPath);
   const frameBytes = metadata.width * metadata.height * 4;
-  const keyframeInterval = String(Math.max(1, Math.round(frameRateNumber(metadata.fps))));
+  const keyframeInterval = String(
+    Math.max(1, Math.round(frameRateNumber(metadata.fps))),
+  );
   const errors = new Float32Array(
-    errorDiffusionBufferLength(metadata.width, metadata.height, options.pointSize),
+    errorDiffusionBufferLength(
+      metadata.width,
+      metadata.height,
+      options.pointSize,
+    ),
   );
   const decoder = spawn("ffmpeg", [
     "-hide_banner",
@@ -280,22 +320,38 @@ async function processVideo(inputPath, outPath, metadata, options) {
     for await (const chunk of decoder.stdout) {
       let chunkOffset = 0;
       while (chunkOffset < chunk.length) {
-        const length = Math.min(frameBytes - frameOffset, chunk.length - chunkOffset);
+        const length = Math.min(
+          frameBytes - frameOffset,
+          chunk.length - chunkOffset,
+        );
         chunk.copy(frame, frameOffset, chunkOffset, chunkOffset + length);
         chunkOffset += length;
         frameOffset += length;
         if (frameOffset !== frameBytes) continue;
-        applyErrorDiffusionRgba(frame, metadata.width, metadata.height, options, errors);
+        applyErrorDiffusionRgba(
+          frame,
+          metadata.width,
+          metadata.height,
+          options,
+          errors,
+        );
         await writeFrame(encoder.stdin, frame);
         frameOffset = 0;
       }
     }
     if (frameOffset)
-      throw new Error(`decoder returned a partial RGBA frame (${frameOffset} bytes)`);
+      throw new Error(
+        `decoder returned a partial RGBA frame (${frameOffset} bytes)`,
+      );
     encoder.stdin.end();
-    const [decoderCode, encoderCode] = await Promise.all([decoderDone, encoderDone]);
-    if (decoderCode !== 0) throw new Error(`FFmpeg decode failed: ${(await decoderError).trim()}`);
-    if (encoderCode !== 0) throw new Error(`FFmpeg encode failed: ${(await encoderError).trim()}`);
+    const [decoderCode, encoderCode] = await Promise.all([
+      decoderDone,
+      encoderDone,
+    ]);
+    if (decoderCode !== 0)
+      throw new Error(`FFmpeg decode failed: ${(await decoderError).trim()}`);
+    if (encoderCode !== 0)
+      throw new Error(`FFmpeg encode failed: ${(await encoderError).trim()}`);
     renameSync(temporary, outPath);
   } catch (error) {
     decoder.kill("SIGKILL");

@@ -11,7 +11,13 @@
 // use-effect-deps blocker.
 
 import React, { useCallback, useMemo } from "react";
-import { AbsoluteFill, delayRender, continueRender, useCurrentFrame, interpolate } from "remotion";
+import {
+  AbsoluteFill,
+  delayRender,
+  continueRender,
+  useCurrentFrame,
+  interpolate,
+} from "remotion";
 
 const handle = delayRender();
 // Resolve the handle once at module load — no per-frame side effects.

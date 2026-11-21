@@ -22,14 +22,21 @@ import { fileURLToPath } from "node:url";
 // mlx-community/parakeet-tdt-0.6b-v3 as a folder when the working directory has one.
 test(
   "parakeet-mlx starts in the home folder; a ./ model path still means the caller's folder",
-  { skip: process.platform === "win32" ? "the stand-in runner is an sh script" : false },
+  {
+    skip:
+      process.platform === "win32"
+        ? "the stand-in runner is an sh script"
+        : false,
+  },
   () => {
     const root = mkdtempSync(join(tmpdir(), "media-use-parakeet-cwd-"));
     try {
       const home = join(root, "home");
       const project = join(root, "project");
       mkdirSync(home);
-      mkdirSync(join(project, "mlx-community", "parakeet-tdt-0.6b-v3"), { recursive: true });
+      mkdirSync(join(project, "mlx-community", "parakeet-tdt-0.6b-v3"), {
+        recursive: true,
+      });
       const runner = join(root, "parakeet-mlx");
       const record = join(root, "record");
       writeFileSync(
@@ -39,7 +46,9 @@ test(
       );
       chmodSync(runner, 0o755);
       writeFileSync(join(project, "in.wav"), "");
-      const script = fileURLToPath(new URL("./transcribe.mjs", import.meta.url));
+      const script = fileURLToPath(
+        new URL("./transcribe.mjs", import.meta.url),
+      );
       const run = (extra = [], parakeet = runner) => {
         execFileSync(
           process.execPath,
@@ -58,7 +67,10 @@ test(
         );
         return readFileSync(record, "utf8").trimEnd().split("\n");
       };
-      assert.deepEqual(run(), [realpathSync(home), "mlx-community/parakeet-tdt-0.6b-v3"]);
+      assert.deepEqual(run(), [
+        realpathSync(home),
+        "mlx-community/parakeet-tdt-0.6b-v3",
+      ]);
       assert.deepEqual(run(["--model", "./models/mine"]), [
         realpathSync(home),
         join(realpathSync(project), "models", "mine"),
@@ -99,10 +111,17 @@ function runScript(engine, cliEngine) {
       [script, "--input", input, "--engine", engine, "--json"],
       {
         encoding: "utf8",
-        env: { ...env, HYPERFRAMES_MEDIA_HOME: join(root, "home"), HYPERFRAMES_NO_TELEMETRY: "1" },
+        env: {
+          ...env,
+          HYPERFRAMES_MEDIA_HOME: join(root, "home"),
+          HYPERFRAMES_NO_TELEMETRY: "1",
+        },
       },
     );
-    return { result: JSON.parse(out.trim()), args: readFileSync(join(root, "args"), "utf8") };
+    return {
+      result: JSON.parse(out.trim()),
+      args: readFileSync(join(root, "args"), "utf8"),
+    };
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -150,10 +169,15 @@ test(
       const reason =
         "Parakeet is not installed. Install it with: hyperframes models install parakeet";
       const cli = join(bin, "cli.mjs");
-      writeFileSync(cli, `console.log('{"ok":false,"error":"${reason}"}');\nprocess.exit(1);\n`);
+      writeFileSync(
+        cli,
+        `console.log('{"ok":false,"error":"${reason}"}');\nprocess.exit(1);\n`,
+      );
       const input = join(root, "in.wav");
       writeFileSync(input, "");
-      const script = fileURLToPath(new URL("./transcribe.mjs", import.meta.url));
+      const script = fileURLToPath(
+        new URL("./transcribe.mjs", import.meta.url),
+      );
       const res = spawnSync(
         process.execPath,
         [script, "--input", input, "--engine", "parakeet", "--json"],
@@ -170,7 +194,10 @@ test(
         },
       );
       assert.equal(res.status, 1);
-      assert.match(JSON.parse(res.stdout.trim()).error, /hyperframes models install parakeet/);
+      assert.match(
+        JSON.parse(res.stdout.trim()).error,
+        /hyperframes models install parakeet/,
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -190,7 +217,9 @@ test(
       chmodSync(join(bin, "npx"), 0o755);
       const input = join(root, "in.wav");
       writeFileSync(input, "");
-      const script = fileURLToPath(new URL("./transcribe.mjs", import.meta.url));
+      const script = fileURLToPath(
+        new URL("./transcribe.mjs", import.meta.url),
+      );
       const env = {
         ...process.env,
         PATH: `${bin}:${process.env.PATH}`,
@@ -206,7 +235,10 @@ test(
         { cwd: root, encoding: "utf8", env },
       );
       assert.equal(res.status, 1);
-      assert.match(JSON.parse(res.stdout.trim()).error, /HYPERFRAMES_CLI_ENTRY/);
+      assert.match(
+        JSON.parse(res.stdout.trim()).error,
+        /HYPERFRAMES_CLI_ENTRY/,
+      );
       assert.equal(existsSync(marker), false);
     } finally {
       rmSync(root, { recursive: true, force: true });

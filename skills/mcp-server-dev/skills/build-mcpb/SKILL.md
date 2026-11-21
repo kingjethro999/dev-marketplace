@@ -87,7 +87,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 
 // ROOT_DIR comes from what you put in manifest's server.mcp_config.env — no auto-prefix
-const ROOT = (process.env.ROOT_DIR ?? join(homedir(), "Documents"));
+const ROOT = process.env.ROOT_DIR ?? join(homedir(), "Documents");
 
 const server = new McpServer({ name: "local-files", version: "0.1.0" });
 
@@ -100,7 +100,7 @@ server.registerTool(
   },
   async ({ path }) => {
     const entries = await readdir(join(ROOT, path), { withFileTypes: true });
-    const list = entries.map(e => ({ name: e.name, dir: e.isDirectory() }));
+    const list = entries.map((e) => ({ name: e.name, dir: e.isDirectory() }));
     return { content: [{ type: "text", text: JSON.stringify(list, null, 2) }] };
   },
 );
@@ -108,7 +108,8 @@ server.registerTool(
 server.registerTool(
   "read_file",
   {
-    description: "Read a file's contents. Path is relative to the configured root.",
+    description:
+      "Read a file's contents. Path is relative to the configured root.",
     inputSchema: { path: z.string() },
     annotations: { readOnlyHint: true },
   },

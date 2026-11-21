@@ -21,11 +21,16 @@ const oneLine = (text) =>
     .trim()
     .slice(0, 300);
 // Openverse's audio providers (api.openverse.org/v1/audio/stats/); a new provider's link is dropped until listed.
-const SOURCE_HOSTS = new Set(["freesound.org", "www.jamendo.com", "commons.wikimedia.org"]);
+const SOURCE_HOSTS = new Set([
+  "freesound.org",
+  "www.jamendo.com",
+  "commons.wikimedia.org",
+]);
 function httpsUrl(url, hosts) {
   try {
     const parsed = new URL(url);
-    return parsed.protocol === "https:" && (!hosts || hosts.has(parsed.hostname))
+    return parsed.protocol === "https:" &&
+      (!hosts || hosts.has(parsed.hostname))
       ? oneLine(parsed.href)
       : "";
   } catch {
@@ -97,11 +102,16 @@ export async function searchOpenverseSfx(query, { fetchImpl = fetch } = {}) {
       signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new OpenverseUnavailableError(`Openverse unreachable (${error.message})`);
+    throw new OpenverseUnavailableError(
+      `Openverse unreachable (${error.message})`,
+    );
   }
   if (response.status === 429)
-    throw new OpenverseUnavailableError("Openverse rate limit reached (HTTP 429)");
-  if (!response.ok) throw new OpenverseUnavailableError(`Openverse HTTP ${response.status}`);
+    throw new OpenverseUnavailableError(
+      "Openverse rate limit reached (HTTP 429)",
+    );
+  if (!response.ok)
+    throw new OpenverseUnavailableError(`Openverse HTTP ${response.status}`);
   let body;
   try {
     body = await response.json();

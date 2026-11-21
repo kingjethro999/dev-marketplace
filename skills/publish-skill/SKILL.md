@@ -7,24 +7,24 @@ description: Upload a finished, QC-passed deliverable to a delivery platform (Yo
 
 Run `publish <command> ... --json` (installed by `pip install -e .`). Every command prints one JSON document. `publish doctor --json` says which platforms are implemented and whether their credentials are present (never their values).
 
-| Task | Command |
-|---|---|
-| Is publishing set up? | `publish doctor --json` |
-| Platforms and their credential variables | `publish platforms --json` |
-| Credentials present / absent (environment and OS keychain) | `publish auth status --json` |
-| Store credentials in the OS keychain (the user types them) | `publish auth login --platform youtube` |
-| Remove them from the OS keychain | `publish auth logout --platform youtube` |
-| Check the file and its metadata against the platform's limits (offline) | `publish plan final.mp4 --platform youtube --title "..." --privacy unlisted --thumbnail thumb.jpg --json` |
-| What would be uploaded (dry run, no network) | `publish upload final.mp4 --platform youtube --title "..." --privacy unlisted --thumbnail thumb.jpg --json` |
-| Upload, after QC and a human's approval | the same command plus `--confirm <confirm_token from the dry run>` |
-| The same for Vimeo (title, description, privacy only) | `--platform vimeo` on `plan` and `upload` |
-| The same for TikTok (title and privacy only; private or public) | `--platform tiktok` on `plan` and `upload` |
-| The same for X (title as the post's text; `--privacy public` required) | `--platform x` on `plan` and `upload` |
-| The same for LinkedIn (title as the commentary; `--privacy public` required; .mp4 only) | `--platform linkedin` on `plan` and `upload` |
-| The same for a Facebook Page (title, description; `--privacy public` or `unlisted`; .mp4 only) | `--platform facebook` on `plan` and `upload` |
-| The same for Instagram Reels (title as the caption; `--privacy public` required; .mp4 or .mov) | `--platform reels` on `plan` and `upload` |
+| Task                                                                                              | Command                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Is publishing set up?                                                                             | `publish doctor --json`                                                                                                                            |
+| Platforms and their credential variables                                                          | `publish platforms --json`                                                                                                                         |
+| Credentials present / absent (environment and OS keychain)                                        | `publish auth status --json`                                                                                                                       |
+| Store credentials in the OS keychain (the user types them)                                        | `publish auth login --platform youtube`                                                                                                            |
+| Remove them from the OS keychain                                                                  | `publish auth logout --platform youtube`                                                                                                           |
+| Check the file and its metadata against the platform's limits (offline)                           | `publish plan final.mp4 --platform youtube --title "..." --privacy unlisted --thumbnail thumb.jpg --json`                                          |
+| What would be uploaded (dry run, no network)                                                      | `publish upload final.mp4 --platform youtube --title "..." --privacy unlisted --thumbnail thumb.jpg --json`                                        |
+| Upload, after QC and a human's approval                                                           | the same command plus `--confirm <confirm_token from the dry run>`                                                                                 |
+| The same for Vimeo (title, description, privacy only)                                             | `--platform vimeo` on `plan` and `upload`                                                                                                          |
+| The same for TikTok (title and privacy only; private or public)                                   | `--platform tiktok` on `plan` and `upload`                                                                                                         |
+| The same for X (title as the post's text; `--privacy public` required)                            | `--platform x` on `plan` and `upload`                                                                                                              |
+| The same for LinkedIn (title as the commentary; `--privacy public` required; .mp4 only)           | `--platform linkedin` on `plan` and `upload`                                                                                                       |
+| The same for a Facebook Page (title, description; `--privacy public` or `unlisted`; .mp4 only)    | `--platform facebook` on `plan` and `upload`                                                                                                       |
+| The same for Instagram Reels (title as the caption; `--privacy public` required; .mp4 or .mov)    | `--platform reels` on `plan` and `upload`                                                                                                          |
 | Several clips (Shorts / Reels) from one source, in order, each with a link back to the full video | `publish series clips.json --platform youtube --json` (dry run: one token per clip), then the same plus `--confirm <token>` for each approved clip |
-| What this skill declares | `publish contract --json` |
+| What this skill declares                                                                          | `publish contract --json`                                                                                                                          |
 
 Metadata flags, identical on `plan` and `upload`: `--title`, `--description` or `--description-file`, `--tag` (repeat), `--privacy private|unlisted|public` (default `private`), `--thumbnail`, `--caption` (repeat) with `--caption-language` (its BCP-47 tag, e.g. `en`, one per `--caption`, in order). YouTube only: `--language` (the BCP-47 language of the title and description), `--localizations FILE` (translated titles and descriptions: `{"ja": {"title": "...", "description": "..."}}`; needs `--language`) and `--publish-at 2026-12-01T09:00:00Z` (a scheduled publish time, RFC 3339 with an offset; needs `--privacy private`). One `--caption` per language. Chapters in the description must follow YouTube's rules (first `0:00`, at least three, ascending, each at least 10 s): `plan` FAILs them otherwise.
 

@@ -52,7 +52,7 @@ Do not guess. If placement depends on props, conditionals or data that is fetche
 Every time value is a `RationalTime` with `rate` set to the composition `fps` and `value` set to a frame count:
 
 ```json
-{"OTIO_SCHEMA": "RationalTime.1", "value": 90, "rate": 30}
+{ "OTIO_SCHEMA": "RationalTime.1", "value": 90, "rate": 30 }
 ```
 
 For each clip:

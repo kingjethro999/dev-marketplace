@@ -12,14 +12,18 @@ export function creditLimit(projectDir) {
   if (!text) return undefined;
   const credits = Number(JSON.parse(text)?.credits);
   if (!Number.isFinite(credits) || credits < 0)
-    throw new Error(`${projectDir}/.hyperframes/credit-limit.json needs {"credits": <number>}`);
+    throw new Error(
+      `${projectDir}/.hyperframes/credit-limit.json needs {"credits": <number>}`,
+    );
   return credits;
 }
 
 /** Credits already committed by jobs in this project, and the job keys behind them. */
 export function creditsSpent(projectDir) {
   const charged = new Map();
-  for (const row of read(join(projectDir, ".hyperframes", "heygen-jobs.jsonl")).split("\n")) {
+  for (const row of read(
+    join(projectDir, ".hyperframes", "heygen-jobs.jsonl"),
+  ).split("\n")) {
     if (!row) continue;
     const { key, credits } = JSON.parse(row);
     if (key && typeof credits === "number") charged.set(key, credits);

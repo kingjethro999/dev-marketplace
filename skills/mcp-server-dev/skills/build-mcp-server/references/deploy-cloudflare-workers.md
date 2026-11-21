@@ -30,7 +30,10 @@ import { z } from "zod";
 export class MyMCP extends McpAgent {
   server = new McpServer(
     { name: "my-service", version: "0.1.0" },
-    { instructions: "Prefer search_items before get_item — IDs aren't guessable." },
+    {
+      instructions:
+        "Prefer search_items before get_item — IDs aren't guessable.",
+    },
   );
 
   async init() {
@@ -46,7 +49,9 @@ export class MyMCP extends McpAgent {
       },
       async ({ query, limit }) => {
         const results = await upstreamApi.search(query, limit);
-        return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+        return {
+          content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
+        };
       },
     );
   }
@@ -79,8 +84,8 @@ The template ships this. The Durable Objects block is **boilerplate** — `McpAg
   "compatibility_flags": ["nodejs_compat"],
   "migrations": [{ "new_sqlite_classes": ["MyMCP"], "tag": "v1" }],
   "durable_objects": {
-    "bindings": [{ "class_name": "MyMCP", "name": "MCP_OBJECT" }]
-  }
+    "bindings": [{ "class_name": "MyMCP", "name": "MCP_OBJECT" }],
+  },
 }
 ```
 

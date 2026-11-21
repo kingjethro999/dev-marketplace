@@ -11,8 +11,8 @@ Written on 2026-10-31 from Velisa's ROADMAP ("Premiere Pro and DaVinci Resolve")
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
+| Owned job                     | Status  | Note                                                                                                                                                                                                                           |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | NLE連携(タイムライン受け渡し) | partial | Files both ways ([#1](https://github.com/kajisho5/nle-bridge-skill/pull/1)); live NLE control is reuse of two pinned community MCP servers ([docs/live-control.md](docs/live-control.md)), real-NLE import unverified (step 8) |
 
 ## Wiring
@@ -68,4 +68,5 @@ Reads video-production-agent's project IR (`delivery.timelines[]`, captions, the
 Rendering, FCPXML and plain cut-list export are ffmpeg-skill's (the NLE round trip is this repository's); captions are subtitle-skill's; music and its beat measurement are sound-design-skill's and ffmpeg-skill's; planning is video-production-agent's.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

@@ -26,7 +26,9 @@ import { resolve } from "node:path";
 export function defaultProbe(cmd, args) {
   try {
     const result = spawnSync(cmd, args, { encoding: "utf-8", timeout: 5000 });
-    return result.status === 0 && /Python 3/.test(`${result.stdout}${result.stderr}`);
+    return (
+      result.status === 0 && /Python 3/.test(`${result.stdout}${result.stderr}`)
+    );
   } catch {
     return false;
   }
@@ -51,7 +53,9 @@ export function resolvePythonCommand(
   const override = env.HYPERFRAMES_PYTHON && withFolder(env.HYPERFRAMES_PYTHON);
   if (override && probe(override, ["--version"])) return [override];
   const candidates =
-    platform === "win32" ? [["python3"], ["python"], ["py", "-3"]] : [["python3"], ["python"]];
+    platform === "win32"
+      ? [["python3"], ["python"], ["py", "-3"]]
+      : [["python3"], ["python"]];
   for (const prefix of candidates) {
     if (probe(prefix[0], [...prefix.slice(1), "--version"])) return prefix;
   }
@@ -92,7 +96,10 @@ function withoutWorkingDirectory(extraArgs) {
  * import only installed packages, never files in the working directory.
  */
 export function pythonInvocation(extraArgs, prefix = pythonCommand()) {
-  return { cmd: prefix[0], args: [...prefix.slice(1), ...withoutWorkingDirectory(extraArgs)] };
+  return {
+    cmd: prefix[0],
+    args: [...prefix.slice(1), ...withoutWorkingDirectory(extraArgs)],
+  };
 }
 
 /** Test-only: clear the cached resolution so a test can re-probe. */

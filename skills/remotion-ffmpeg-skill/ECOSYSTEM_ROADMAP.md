@@ -11,11 +11,11 @@ v0.13.0. analyze, init, still, render, deliver, pipeline, doctor; compositions B
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 計測連動モーショングラフィックス(Remotion) | done | titles (`Titled`) stay inside this skill's own compositions; burned-in titles are motion-graphics-skill's and title material files hyperframes-skill's |
-| 語の時刻に合わせた字幕演出 | done | added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O11): `Captioned` with `--words`, `Karaoke`, `Emphasis`. Animated captions made from subtitle cues alone are subtitle-skill's |
-| オーディオビジュアライザー | partly | added by the same decisions (O17): `PeakPulse` and `BeatMontage` from measured peaks and beats ship; bars / spectrum / radial are step 8 |
+| Owned job                                  | Status | Note                                                                                                                                                                                                                             |
+| ------------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 計測連動モーショングラフィックス(Remotion) | done   | titles (`Titled`) stay inside this skill's own compositions; burned-in titles are motion-graphics-skill's and title material files hyperframes-skill's                                                                           |
+| 語の時刻に合わせた字幕演出                 | done   | added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O11): `Captioned` with `--words`, `Karaoke`, `Emphasis`. Animated captions made from subtitle cues alone are subtitle-skill's |
+| オーディオビジュアライザー                 | partly | added by the same decisions (O17): `PeakPulse` and `BeatMontage` from measured peaks and beats ship; bars / spectrum / radial are step 8                                                                                         |
 
 ## Wiring
 
@@ -68,4 +68,5 @@ Under the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Ve
 Terms of use: Remotion itself is free for individuals and for companies with up to 3 employees; larger companies need a Remotion company licence (README, "Licence"). That is a condition of using Remotion, separate from this skill's MIT licence, and applies to every render the agent plans through this skill.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

@@ -9,7 +9,7 @@ path in the same command (`stage_input`, `stage_output`, `--image`) stays a full
 `cwd` change, and `load_brand(None)` (the only other thing these scripts might read relative to `cwd`) never
 touches the file system when `--brand` is not given, which this skill never passes.
 
-**Why**: `ffmpeg-skill/graphics` and `ffmpeg-skill/overlay` embed `--font-file` into a `fontfile=...` *filter*
+**Why**: `ffmpeg-skill/graphics` and `ffmpeg-skill/overlay` embed `--font-file` into a `fontfile=...` _filter_
 option (drawtext), escaping it themselves (backslash-escape the colon, forward-slash the separators). On some
 Windows ffmpeg builds this still fails to parse a drive-letter path there ("No option name near ...", "Invalid
 argument") -- confirmed by reproducing the exact same failure regardless of which slash convention or escaping
@@ -88,10 +88,10 @@ enter an identity.
 that machine-specific data not leak into artifact identity. Two workspaces with the same video content and the
 same specification, but different absolute paths, must produce the same identity and the same cache hits.
 
-**Scope note**: `document_id` (the `.motion-graphics/<document_id>/` folder name) is hashed from the *raw* request
+**Scope note**: `document_id` (the `.motion-graphics/<document_id>/` folder name) is hashed from the _raw_ request
 (unresolved asset paths, no `crf`/`preset`) -- it only needs to be a stable folder name, not a trust boundary, so
 two unrelated documents sharing one by coincidence is harmless: every file inside is still named by its own full
-per-stage identity (which *does* include the resolved sha256, font, `crf`, and `preset`, per stage above), and
+per-stage identity (which _does_ include the resolved sha256, font, `crf`, and `preset`, per stage above), and
 `_reusable()` re-verifies that file's actual sha256 against its manifest before ever trusting it as a cache hit.
 
 ## ADR-7: Unknown font / missing asset is a hard failure, never a silent substitution
@@ -170,7 +170,7 @@ gap STEP 19/20's "verify, don't assume" principle warns against letting through 
 **Why not a new parameter type**: the obvious fix looked like a new `corner_position` parameter type, but
 `video-production-agent`'s pinned `MotionGraphicsAdapter.check_contract()` hard-rejects any parameter whose
 `type` is not in its own fixed `PARAMETER_TYPES` tuple (`string`, `integer`, `number`, `boolean`, `color`,
-`position`, `font`, `path`) — introducing a new type would have made the *entire* contract incompatible with the
+`position`, `font`, `path`) — introducing a new type would have made the _entire_ contract incompatible with the
 already-shipped agent-side integration (confirmed by actually running that repository's pinned compatibility
 checks against a live contract with a `corner_position` type: `check_contract()` produced errors where before, and
 after this ADR's approach, it produces none — see `CLAUDE.md`'s reproduction recipe). Instead, `position` here is
@@ -191,7 +191,7 @@ provisional for the same reason `motion_graphics.bug` is -- ADR-11).
 
 **Why `primary_color`, not `text_color`, and why default position differs from `bug`**: reading
 `ffmpeg-skill/graphics.py`'s shared `chapter`/`bug` branch line by line (not assumed to mirror `bug` by analogy)
-shows the two templates are *not* symmetric in which color each accepts:
+shows the two templates are _not_ symmetric in which color each accepts:
 
 ```python
 pos = args.position or ("bottom-left" if args.template == "chapter" else "top-right")
@@ -199,11 +199,11 @@ box_color = ff_color(primary if args.template == "chapter" else bg, ...)
 txt_color = ff_color(bg if args.template == "chapter" else text_c)
 ```
 
-For `chapter`: the default position is `bottom-left` (not `bug`'s `top-right`); the chip's *box* color comes from
-`--primary`/brand primary (`args.primary`); the chip's *text* color is always the brand background color,
+For `chapter`: the default position is `bottom-left` (not `bug`'s `top-right`); the chip's _box_ color comes from
+`--primary`/brand primary (`args.primary`); the chip's _text_ color is always the brand background color,
 completely unaffected by `--text-color` -- `args.text_color` is read into `text_c`, but `text_c` is only used in
 the `else` (i.e. `bug`) branch. So `chapter`'s typed parameters are `title`/`position`/`primary_color`, deliberately
-*not* `text_color` -- exposing a `text_color` parameter that silently has zero effect on the rendered output would
+_not_ `text_color` -- exposing a `text_color` parameter that silently has zero effect on the rendered output would
 be exactly the kind of dishonest metadata this Skill's contract is designed never to publish (`model.py` module
 docstring: "never guess, never silently repair, never claim support that isn't backed by a real renderer").
 `test_chapter_has_no_text_color_parameter` in `tests/test_unit.py` pins this down as a regression test (a
@@ -329,7 +329,7 @@ instance, but `required_capabilities` is the union of everything any parameter c
 `opacity < 1`), not "always exercised". Unlike `filter:overlay`/`filter:scale`/`filter:colorchannelmixer`
 (never named by any `ffmpeg-skill` tool's own required/optional capability list, so `doctor` can only ever report
 them `"unknown"` — see the regression test for this in `test_unit.py`), `ffmpeg-skill/overlay`'s own contract
-*does* declare `filter:chromakey` as an optional capability (`"when": "--chromakey"`), so `ffmpeg-skill doctor`
+_does_ declare `filter:chromakey` as an optional capability (`"when": "--chromakey"`), so `ffmpeg-skill doctor`
 actually probes for it — `doctor.CORE_CAPABILITIES` gained `filter:chromakey` so this Skill's own `doctor` reports
 real `supported`/`unsupported` for it instead of falling through to `"unknown"` by omission.
 
@@ -347,13 +347,13 @@ Skill delegates to, but neither `FLAGS_USED` nor `executor._argv()` ever emitted
 **Why a document-level option, not a per-element parameter**: there is only ever one source video per document
 (`document.video.path`) — every stage in the pipeline reads from either that source or the previous stage's own
 output, and `ffmpeg-skill/graphics`/`overlay` both apply `--audio-stream` against whatever their own `-i` input
-actually is. A per-element `audio_stream` would let a caller ask for two different tracks of the *same* source
+actually is. A per-element `audio_stream` would let a caller ask for two different tracks of the _same_ source
 across two elements, which has no coherent meaning (the final output has exactly one audio track); a single,
 document-wide choice matches `crf`/`preset`'s existing shape and the real constraint.
 
 **Why bounded `[0, 63]` here and not validated against the actual track count**: unlike `crf`/`preset` (whose
 valid range is fixed and known in advance), whether a given value is valid depends on how many audio streams the
-*real* input actually has — knowable only by probing it, which `model.parse_request()` deliberately never does
+_real_ input actually has — knowable only by probing it, which `model.parse_request()` deliberately never does
 (no file-system access at the request-parsing layer). The bound here only catches an integer typo structurally;
 `ffmpeg-skill/{graphics,overlay}` both already `die` with a clear message when `--audio-stream` exceeds the real
 input's track count, so an out-of-range value for the real input surfaces as a real `TOOL_ERROR` from the delegate
@@ -374,7 +374,7 @@ video+audio-only re-encode for that invocation, silently losing the source's sub
 stage. `adapter.FfmpegSkill.run_tool()` already captured the full response dict, but `executor.py` only ever read
 `run.commands` from it — the signal reached this process and was then thrown away. Contradicts this Skill's own
 stated philosophy (ADR-12: "never guess, never silently repair, never claim support that isn't backed by a real
-renderer") in the specific direction of never claiming a *loss* did not happen, just as much as never claiming a
+renderer") in the specific direction of never claiming a _loss_ did not happen, just as much as never claiming a
 capability exists that doesn't.
 
 **Why per-operation AND top-level, not just one or the other**: `operations[].dropped_non_av_streams` answers
@@ -458,14 +458,14 @@ materialised, so existing documents keep their parameters and identities. Observ
 zone. That is upstream behaviour and is stated in the contract (`platforms.effect`) rather than hidden or pinned by a test.
 
 **These need ffmpeg-skill newer than 0.12.5** (they arrived together in ffmpeg-skill's delivery-templates change, #224), and 0.12.5 is the
-oldest checkout this skill is verified against, so they are *detected*, as ADR-18 does for `--quality` and `--overwrite`:
+oldest checkout this skill is verified against, so they are _detected_, as ADR-18 does for `--quality` and `--overwrite`:
 
 - `adapter.TEMPLATE_FLAGS` names the extra flags each template needs (`text`; `duration`; `top`+`bottom`).
   `check_tools()` records `template_support[name]`: `True` when the name is in the checkout's `--template` choices and its flags
   exist, `False` when either is missing, `None` when the choices cannot be read. The choices come from the contract's `enum`, or
   from `--help` (`flags_from_help` now reads `--template {a,b}` and `--platform {a,b}`).
 - `--platform` is an `OPTIONAL_FLAGS` entry; `check_tools()` records `platform_flag` and `platforms` per tool.
-- None of this is a compatibility *problem*: an old checkout stays usable for every other element type, so `info.supported` is unchanged.
+- None of this is a compatibility _problem_: an old checkout stays usable for every other element type, so `info.supported` is unchanged.
 - Each new element type lists a `graphics-template:<name>` required capability, which `doctor` derives from `template_support`, so on an
   old checkout `doctor` reports `sticker`/`hook`/`meme` `unsupported` and the overall status `degraded`.
 - `Executor._check_checkout()` runs for `run`, `plan` and `run --dry-run`, before anything renders. A request for an element type whose
@@ -486,9 +486,8 @@ if the OS registry assigns others.
 - Full suite 397 passed against ffmpeg-skill 2.10.8 and against 0.12.5 (`87c84f2`); on 0.12.5 `doctor` reports `hook`, `meme`, `sticker`
   unsupported and `degraded`.
 - `video-production-agent`'s pinned `check_contract()`: `[]`. `contract_drift()` gains exactly `element_types hook/meme/sticker: installed
-  but not pinned`, additive. (Its `RealSkillTests::test_real` asserts zero drift and already failed on unmodified `main` for three older
+but not pinned`, additive. (Its `RealSkillTests::test_real` asserts zero drift and already failed on unmodified `main` for three older
   drift entries, `tools`, `ffmpeg_skill` and `request`; this change does not add a failure.)
-
 
 ## ADR-20: template colours are converted to RRGGBB before ffmpeg-skill, `@alpha` on them is refused, and the contract says so per parameter
 
@@ -558,7 +557,7 @@ parameter's schema says `alpha: false` rather than by engine tool name. That is 
 
 **Problem**: #28 made `motion_graphics.VERSION` read this checkout's `pyproject.toml` (the only file `release.yml` bumps) instead
 of a hard-coded `"0.1.0"`, but the installed-copy fallback globbed `motion_graphics_skill-*.dist-info/METADATA` over `sys.path`
-itself. That takes the first match in path order and, inside one directory, in *lexicographic* order, so two leftover
+itself. That takes the first match in path order and, inside one directory, in _lexicographic_ order, so two leftover
 dist-info directories report the wrong one (`0.10.0` sorts before `0.9.0`), and it does not see metadata importers other than plain
 directories. Nothing asserted that the contract equals `pyproject.toml`, only that it equals `VERSION`, and nothing proved that the
 release workflow's bump moves every reported version.
@@ -591,20 +590,21 @@ exact-size, solid-colour clip lasting until the element's `end`. `ffmpeg-skill/o
 clip in the element's window, with the element's `position`, `margin` and `opacity`, exactly as it composites a
 `video_overlay` layer. Both are typed calls, so no filter string is built (ADR-1). The clip is a **derived input**,
 not a stage:
-- *Identity:* `stable_hash` of the skill version, the tool versions, the generator name, the clip parameters (width,
+
+- _Identity:_ `stable_hash` of the skill version, the tool versions, the generator name, the clip parameters (width,
   height, colour as RRGGBB, duration) and the encoder settings (`crf`, `preset`). It contains no path and no element id,
   so the same rectangle placed elsewhere has the same clip identity (ADR-6).
-- *Stage identity:* the stage's `parameters` carry `clip: <clip identity>`. A change to the rectangle changes the
+- _Stage identity:_ the stage's `parameters` carry `clip: <clip identity>`. A change to the rectangle changes the
   stage identity and invalidates every later stage, as any parameter change does. The clip identity is computed
   before the clip exists, so a reused stage never renders its clip.
-- *Cache:* the clip lives in the document's work dir (`.motion-graphics/<document_id>/shape-<identity16>.<ext>`) with a
+- _Cache:_ the clip lives in the document's work dir (`.motion-graphics/<document_id>/shape-<identity16>.<ext>`) with a
   manifest, and is reused when the manifest and sha256 match, like a non-final stage (ADR-5). A document with a shape
   gets the work dir even when it has one element. The requested output itself is still always rendered and
   re-validated (ADR-5).
-- *Provenance:* the stage's `StageResult` keeps `tool: ffmpeg-skill/overlay` and gains `derived`: `[{tool:
-  ffmpeg-skill/background, operation_id, status (rendered|reused), output_hash, parameters, seconds,
-  tool_commands_observed}]`. A reused stage has no `derived`, because nothing ran.
-- *Validation:* the clip is probed after the call. It must be exactly the requested width x height, and at least as
+- _Provenance:_ the stage's `StageResult` keeps `tool: ffmpeg-skill/overlay` and gains `derived`: `[{tool:
+ffmpeg-skill/background, operation_id, status (rendered|reused), output_hash, parameters, seconds,
+tool_commands_observed}]`. A reused stage has no `derived`, because nothing ran.
+- _Validation:_ the clip is probed after the call. It must be exactly the requested width x height, and at least as
   long as the element's end (within the duration tolerance). Otherwise it is `VALIDATION_ERROR` and the partial clip
   is removed.
 
@@ -685,18 +685,19 @@ elements already have, resolved from a brand kit when one is given, with no new 
 `margin` and `fade` (seconds or none). `styles.STYLE_TARGETS` maps, per element type, the parameters a preset may fill to a
 role or a setting. Every target is an existing optional parameter of that type, and `animation` (a fade) is a target only for
 `text_overlay` / `image_overlay`, the two types with a configurable fade. `meme` maps nothing: its look is fixed by the template.
-- *Request:* `element.style` (a preset name), `document.options.style` (the preset for every element without its own), and
+
+- _Request:_ `element.style` (a preset name), `document.options.style` (the preset for every element without its own), and
   `document.options.brand_kit` `{primary?, secondary?, background?, text?}` (RRGGBB or a colour name, no `@alpha`, because the
   graphics templates draw these colours opaque, ADR-20). Unknown names and fields are `INVALID_REQUEST`.
-- *Precedence:* an explicit parameter > a brand kit role > the preset's role. A preset fills only the optional parameters the
+- _Precedence:_ an explicit parameter > a brand kit role > the preset's role. A preset fills only the optional parameters the
   request left out. The filled values pass through the same validation as the caller's own, in `model._element`.
-- *Safe zone:* with `options.platform`, a preset supplies no `margin`, because an omitted margin there is the destination's
+- _Safe zone:_ with `options.platform`, a preset supplies no `margin`, because an omitted margin there is the destination's
   safe zone (ADR-19).
-- *Fade:* a preset fade is added only when the element has no animation. A preset fade longer than half the element's window
+- _Fade:_ a preset fade is added only when the element has no animation. A preset fade longer than half the element's window
   is left out and listed in `style.skipped`. Otherwise the caller could only avoid an error by writing an animation of their own.
-- *Text box:* `box_color` is the background role at the preset's `box_opacity`, sent to ffmpeg-skill/overlay with `@alpha`,
+- _Text box:_ `box_color` is the background role at the preset's `box_opacity`, sent to ffmpeg-skill/overlay with `@alpha`,
   which it accepts. With `box: false` no box colour is filled.
-- *Reporting:* each styled element carries `style {preset, brand_kit, applied: {parameter: preset|brand_kit}, skipped?}` in
+- _Reporting:_ each styled element carries `style {preset, brand_kit, applied: {parameter: preset|brand_kit}, skipped?}` in
   validate/plan output and in the run response's `timeline`. Identity is unchanged in kind: it hashes the resolved parameters.
 
 **Why fill parameters rather than add new ones.** Nothing new reaches ffmpeg-skill, and nothing about an element type changes, so
@@ -720,25 +721,26 @@ same timeline as the other elements, with its IN / LOOP / OUT segments, the loop
 **Decision.** A `rendered_layer` element type, one stage, one ffmpeg-skill/overlay call: `--video <clip>` plus one
 `--place SRC_START-SRC_END@AT` per piece. `--place` (ffmpeg-skill 2.x) shows only that range of the layer from AT on the main
 timeline and leaves the picture untouched elsewhere; it cannot be combined with `--start`/`--end`/`--fade`, so none of those is sent.
-- *Segments:* `in_duration` (default 0) is the clip's first part, played at the element's start; `out_duration` (default 0) is
+
+- _Segments:_ `in_duration` (default 0) is the clip's first part, played at the element's start; `out_duration` (default 0) is
   its last part, ending at the element's end; the part between is the loop. With `loop: true` (default) the loop is repeated to
   fill the window, the last repeat cut short; with `loop: false` it plays once and is cut, and a window longer than it is
   `INVALID_TIME_RANGE`. No segments and `loop: true` loops the whole clip.
-- *Arithmetic:* `layers.layer_placements` works in whole milliseconds, with the clip's probed duration floored, so consecutive
+- _Arithmetic:_ `layers.layer_placements` works in whole milliseconds, with the clip's probed duration floored, so consecutive
   pieces touch exactly (overlay refuses overlapping pieces) and no piece asks for a picture past the clip's end. In + out longer
   than the clip is `INVALID_REQUEST`, longer than the window `INVALID_TIME_RANGE`; a fill with no loop segment is `INVALID_REQUEST`.
   The number of pieces is bounded (`MAX_LAYER_PIECES` = 120), like `countdown.count_from` (ADR-14), because each is one trim and
   one overlay in the tool's filter graph.
-- *Alpha:* the clip is probed before anything renders. Its pixel format must carry alpha (`yuva*`, `rgba`, `argb`, `gbrap`, ...);
+- _Alpha:_ the clip is probed before anything renders. Its pixel format must carry alpha (`yuva*`, `rgba`, `argb`, `gbrap`, ...);
   otherwise `INVALID_INPUT` (`layer_without_alpha`). A VP9 alpha WebM probes as `yuv420p`: its alpha is in side data that the
   decoder ffmpeg-skill/overlay uses drops (checked: it composites opaque), so it is refused, with ProRes 4444 / QuickTime Animation /
   PNG-in-MOV named as what works. An opaque clip is a `video_overlay`.
-- *Checkout:* `--place` is an optional overlay flag (`OPTIONAL_FLAGS`), detected like the others (ADR-18). doctor reports
+- _Checkout:_ `--place` is an optional overlay flag (`OPTIONAL_FLAGS`), detected like the others (ADR-18). doctor reports
   `ffmpeg-skill-flag:overlay.place`; without it `rendered_layer` is unsupported and refused before rendering (`TOOL_ERROR`,
   `ffmpeg_skill_lacks_flag`, not retryable). 0.12.5 lacks it; 2.24.1, 3.0.0 and main have it.
-- *Reporting and identity:* the stage's `parameters` carry `segments` {in, loop {source, repeats, last_cut}, out, pieces,
+- _Reporting and identity:_ the stage's `parameters` carry `segments` {in, loop {source, repeats, last_cut}, out, pieces,
   layer_duration}; the plan entry carries the same. They are part of the stage identity together with the clip's sha256.
-- *Other parameters:* `position` (default `center`), `margin` (platform safe zone as on the other overlays), `scale_width`,
+- _Other parameters:_ `position` (default `center`), `margin` (platform safe zone as on the other overlays), `scale_width`,
   `scale_percent`, `opacity`. `animation` is `"none"`: the motion is the clip's.
 
 **Not here.** A stinger between two clips is cut by video-editing-skill, not placed here.
@@ -754,15 +756,16 @@ checkout without `--place` the same test asserts the up-front refusal. Run again
 
 ## ADR-26: layer export is not built: no ffmpeg-skill tool can draw an element onto a transparent picture
 
-*Superseded by ADR-30* (2026-11-07): ffmpeg-skill 3.2.3 has what this ADR asked for, and the layer export is built there.
+_Superseded by ADR-30_ (2026-11-07): ffmpeg-skill 3.2.3 has what this ADR asked for, and the layer export is built there.
 
 **Context.** Roadmap step 8 asks for each element rendered alone on transparent, with the same timing, one file per element and a
 manifest (element id, type, start, end, box), so the graphics can be rebuilt in an NLE, and checks it by compositing the layers over the
 clean programme and comparing with the burned one within a stated PSNR. It needs alpha masters from ffmpeg-skill.
 
 **What was checked** (ffmpeg-skill 3.2.0, `main` on 2026-11-06):
+
 - `export.py` now has alpha masters (`--preset prores4444|prores4444xq|qtrle|vp9-alpha|hap-alpha`, `--alpha-mode`, and `key-fill`).
-  They keep an alpha the *source* already has and refuse a source without one. They write masters; they do not make an alpha.
+  They keep an alpha the _source_ already has and refuse a source without one. They write masters; they do not make an alpha.
 - `graphics.py`, `overlay.py` and `background.py` (the tools this skill draws with) take `--codec h264|hevc|av1|prores`, and `prores`
   there is 422 HQ. Each writes a picture with no alpha channel: they draw onto an input video, or (`background.py`) make an opaque colour
   or gradient clip. None takes a transparent canvas or keeps an alpha through to its output.
@@ -788,29 +791,30 @@ language, never cutting the text, with regional line rules opt-in.
 template's text, with its inner padding, must stay within; required), `max_lines` (per text, default 2), `min_scale` (default
 0.6), `profile` (opt-in, `ja-kinsoku`) and `lang` (a language tag, passed to ffmpeg-skill/graphics `--lang`). It is a separate
 object, not new parameters, so the element types' parameter schemas are unchanged.
-- *Search* (`textfit.fit`): scales from 1.0 down to `min_scale` in steps of 0.05 (graphics `--scale`), first one line per text,
+
+- _Search_ (`textfit.fit`): scales from 1.0 down to `min_scale` in steps of 0.05 (graphics `--scale`), first one line per text,
   then up to `max_lines`; the first fit wins, so a text is shrunk before it is broken. If nothing fits, the smallest scale with as
   many lines as it takes is used, `fits: false` and a warning. A run with no break opportunity that is wider than the box at the
   smallest size is broken between characters (`forced_break`, warning). The text is never cut.
-- *Width:* a per-character advance table in em, rounded up against common sans-serif and CJK faces (wide CJK/kana/Hangul 1.0,
+- _Width:_ a per-character advance table in em, rounded up against common sans-serif and CJK faces (wide CJK/kana/Hangul 1.0,
   M/W/m/w 1.0, upper case and digits 0.8, Arabic/Hebrew 0.8, other letters 0.65, spaces 0.35, unknown scripts 1.0), plus the
   renderer's possible outline. A drawn line can be narrower than the estimate, not wider. The sizes are the template's
   (`TEMPLATE_LAYOUT`: lower third name 0.055, title line 0.038, padding 0.035 of the short side; title 0.11 and subtitle 0.045),
   the same in every checkout the fit is offered on (0.12.5's graphics.py through 3.2.0).
-- *Breaks* (UAX #14, simplified): after spaces, hyphens and slashes; before and after ideographs, kana and Hangul; never before
+- _Breaks_ (UAX #14, simplified): after spaces, hyphens and slashes; before and after ideographs, kana and Hangul; never before
   closing punctuation, a full stop, comma or iteration mark; never after opening punctuation; never inside a run of an alphabetic
   script. `ja-kinsoku` also makes small kana, the prolonged sound mark and the middle dot non-starters (UAX #14 does so only
   under strict breaking).
-- *Direction:* from the first strong character; Arabic and Hebrew lines are reported `rtl`. Lines are passed in logical order and
+- _Direction:_ from the first strong character; Arabic and Hebrew lines are reported `rtl`. Lines are passed in logical order and
   ffmpeg-skill's text renderer lays each out by its direction.
-- *Execution:* the fit needs the frame size, so the executor computes it after probing, before anything renders. The fitted lines
+- _Execution:_ the fit needs the frame size, so the executor computes it after probing, before anything renders. The fitted lines
   replace the texts in the argv (joined with line breaks) and `--scale` is sent. It needs graphics `--scale` and `--wrap` (1.16's
   multi-line label layout; on newer checkouts a label that already fits each line is left untouched by ffmpeg-skill's own wrap), and
   `--lang` when `fit.lang` is given; these are optional flags detected in the checkout, and a fit is refused before rendering without
   them (`TOOL_ERROR`, `ffmpeg_skill_lacks_flag`). 0.12.5 lacks `--wrap`.
-- *Report:* `operations[].parameters.fit` (part of the identity) and the plan's `timeline[].fit_result`: scale, per text {lines,
+- _Report:_ `operations[].parameters.fit` (part of the identity) and the plan's `timeline[].fit_result`: scale, per text {lines,
   font_size, direction, widest_px}, pad, fits, overflow, forced_break, box_width, profile, lang.
-- *CSV:* `motion-graphics lower-thirds <file.csv> --video V --output O --fit-width N` prints a validated request with one fitted
+- _CSV:_ `motion-graphics lower-thirds <file.csv> --video V --output O --fit-width N` prints a validated request with one fitted
   lower third per row (columns `name`, `title`, `start`, `end`, `id`, `lang`, `profile`; rows without times are laid out one after
   another). It renders nothing.
 
@@ -836,6 +840,7 @@ video, where the editor puts them in YouTube Studio. A title or a lower third un
 regions as an input, every other element kept out of them at those times, and an overlapping graphic reported.
 
 **Decision.** `document.options.reserved_regions` `{end_screen?, cards?, on_overlap?}`:
+
 - `end_screen` `{duration? (5..20 s, default 20; the last seconds of the video), elements? | layout?}`. `elements` are the positions
   the editor sets (`{id?, x, y, width, height}` px, 1 to 4, YouTube's limit). Without them the stated default layout for the
   frame's aspect is used (`regions.DEFAULT_END_SCREENS`: 16:9 two videos and a subscribe element; 9:16 and 1:1 one video and a
@@ -878,29 +883,30 @@ spacing kept in one theme file (JSON) and applied at once to lower thirds, title
 a warning for colour pairs with too little contrast.
 
 **Decision.**
-- *File* (`themes.parse_theme`, schema `motion-graphics/theme@1`): `colors` with all four roles (RRGGBB or a colour name, opaque);
+
+- _File_ (`themes.parse_theme`, schema `motion-graphics/theme@1`): `colors` with all four roles (RRGGBB or a colour name, opaque);
   optional `font` (`font_id` or `font_file`), `logo` (`path`, `position`, `margin`, `scale_width`, `opacity`), `spacing.margin`,
   `base_style` (a style preset, ADR-24) and `name`. Relative paths are relative to the theme file; every path goes through PathPolicy.
   Unknown fields and the forbidden field names are refused (`INVALID_INPUT`, `bad_theme`).
-- *Request:* `options.themes` maps names to theme files (1 to 16) and `options.theme` names the one to use (optional when there is
+- _Request:_ `options.themes` maps names to theme files (1 to 16) and `options.theme` names the one to use (optional when there is
   one). Switching theme is changing that name; nothing else in the document changes. A theme gives the colours and the base style, so
   `options.style` and `options.brand_kit` are refused together with it. `validate` touches no files: it checks these two fields
   structurally and applies no theme. `plan` and `run` read the chosen file and parse the document again with it applied.
-- *What it fills* (the preset targets, ADR-24): the role colours on every element type, `spacing.margin` on every margin target (not
+- _What it fills_ (the preset targets, ADR-24): the role colours on every element type, `spacing.margin` on every margin target (not
   under `options.platform`), the font as `text_overlay`'s `font` and as the font of every graphics template (ffmpeg-skill/graphics
   `--font` / `--font-file`, which every checkout this skill runs against has; a font file is passed by name with the call's working
   directory set to its folder, as for text_overlay), and `base_style` for the settings the theme does not give. Precedence: an explicit
   parameter > the theme > its base style. Each element reports what came from where (`style.applied`: `theme` | `preset`).
-- *Logo:* a new `logo` element type draws the active theme's logo through ffmpeg-skill/overlay `--image`; its position, margin, width
+- _Logo:_ a new `logo` element type draws the active theme's logo through ffmpeg-skill/overlay `--image`; its position, margin, width
   and opacity default to the theme's logo settings. With no theme, or a theme without a logo, it is `INVALID_REQUEST`
   (`theme_without_logo`) before anything renders. It has no configurable fade: listing one would change the contract's `animations`
   block, which consumers pin; an `image_overlay` of the same file can fade. An end card is a title (or hook) plus a logo element.
-- *Contrast:* every theme is checked with the relative-luminance contrast ratio, (L1 + 0.05) / (L2 + 0.05) of the sRGB colours, for the
+- _Contrast:_ every theme is checked with the relative-luminance contrast ratio, (L1 + 0.05) / (L2 + 0.05) of the sRGB colours, for the
   pairs the templates draw: text on the theme background (4.5:1), primary on the theme background (3:1), and text and primary on the
   lower third's fixed dark plate `101418` (4.5:1 each; its second line is drawn in primary). Each pair under its minimum is a warning
   and `ok: false` in `response.theme.contrast`. Colours are never changed. `motion-graphics theme-check <file> --json` prints the same
   report for a file alone.
-- *Reporting:* `response.theme` (label, name, the file's sha256 and size, colours, font by id or file name, logo settings, margin, base
+- _Reporting:_ `response.theme` (label, name, the file's sha256 and size, colours, font by id or file name, logo settings, margin, base
   style, contrast) in plan and run. Each graphics/overlay stage reports the font ffmpeg-skill says it drew with (`font_used`: family,
   file name, how it was found) when the checkout reports one (2.x and later). The theme's font and logo are part of each stage's
   identity through their sha256 / font id, as any font or asset is.
@@ -925,23 +931,24 @@ added what ADR-26 asked for: `background.py --transparent` (a canvas whose every
 `--alpha-mode straight|premultiplied`, with an `alpha` verification step and `verified`).
 
 **Decision.**
-- *Request:* `options.layer_export {directory, alpha_codec? (prores4444), alpha_mode? (straight)}`; one option for the whole document,
+
+- _Request:_ `options.layer_export {directory, alpha_codec? (prores4444), alpha_mode? (straight)}`; one option for the whole document,
   like `platform`. Every element gets a layer; there is no per-element switch (a caller that wants fewer layers sends fewer elements).
   Element ids that differ only in letter case are refused with the option (`layer_name_collision`): their files would be one file on a
   case-insensitive file system.
-- *Files:* `<directory>/<element id>.mov` (`.webm` for vp9) and `<directory>/manifest.json`, all through PathPolicy (inside the workspace,
+- _Files:_ `<directory>/<element id>.mov` (`.webm` for vp9) and `<directory>/manifest.json`, all through PathPolicy (inside the workspace,
   safe names: an id that is a Windows device name is refused there), none the input or the programme, an existing one replaced only with
   `document.output.overwrite`; all checked before anything renders.
-- *Timing:* each layer has the programme's size, frame rate and length and starts at 0 s, the element showing at its own start..end.
+- _Timing:_ each layer has the programme's size, frame rate and length and starts at 0 s, the element showing at its own start..end.
   Not a clip of the element's window: a `video_overlay` / `shape` shows the frames of its clip at the programme's own times (overlay
   `--video` without `--place` does not re-time the clip), so only a full-length canvas gives the same frames without re-timing anything
   here. A layer laid at 0 s on an upper track needs no offsets.
-- *How:* one canvas, `ffmpeg-skill/background --transparent` at the source's width, height, frame rate (as probed, a decimal) and
+- _How:_ one canvas, `ffmpeg-skill/background --transparent` at the source's width, height, frame rate (as probed, a decimal) and
   duration, in ProRes 4444 (ffmpeg-skill's default alpha line: a YUV picture with alpha, like the video each element is burned into; the
   layers are in the requested codec), then `ffmpeg-skill/color --retag` (a stream copy) gives it the programme's colour tags (`bt709` for
   an SDR programme; `bt2020-pq` / `bt2020-hlg` / `bt601` when the programme says so; none when it names none of these). It is a derived
   input in the work dir with its own identity (tags included) and manifest, reused like a shape clip.
-- *Colour tags:* graphics / overlay `--keep-alpha` keep the tags of the picture they draw on, so every layer carries the canvas's. An
+- _Colour tags:_ graphics / overlay `--keep-alpha` keep the tags of the picture they draw on, so every layer carries the canvas's. An
   untagged layer is not harmless: a compositor that negotiates colour (FFmpeg 7.1 and later, which ffmpeg-skill/overlay uses there)
   read it as "unknown" and converted the BT.709 picture under it, everywhere, on every pass (each pass lost ~32 dB of PSNR where the
   layer was transparent; CI on FFmpeg 8.0 and 9.0 measured 20 dB for the stack). Retagged, a pass changes the picture under a transparent
@@ -951,15 +958,15 @@ added what ADR-26 asked for: `background.py --transparent` (a canvas whose every
   position, margin, `--platform`, text fit, timing and fade; `--keep-alpha --alpha-codec C --alpha-mode M` take the place of the x264
   `--quality`/`--preset`, and `--audio-stream` is left out (the canvas has no audio). A shape's rectangle clip is the one the programme
   used. Layers are written after the programme, in render order.
-- *Verification and reporting:* each layer is probed (size, length; a mismatch is `VALIDATION_ERROR`, like a stage); ffmpeg-skill's own
+- _Verification and reporting:_ each layer is probed (size, length; a mismatch is `VALIDATION_ERROR`, like a stage); ffmpeg-skill's own
   result gives `alpha_codec`, `alpha_mode`, the `alpha` step (stored alpha plane, alpha at or above the canvas's in every frame) and
   `verified`, recorded per layer in `response.layer_export.layers[]` and the manifest. A layer ffmpeg-skill does not report verified is a
   warning and makes `layer_export.verified` false; it does not fail the run, whose programme is already checked. The plan
   (`plan`/`run --dry-run`) lists the files, the canvas and each layer's call and box, and writes nothing.
-- *Box:* the element's box at rest from `regions.element_boxes` (the reserved-regions arithmetic, ADR-28), with its precision: exact for a
+- _Box:_ the element's box at rest from `regions.element_boxes` (the reserved-regions arithmetic, ADR-28), with its precision: exact for a
   shape and a sized image / video / layer, estimated for templates. This skill reads no pixels of its own (ADR-1), so a template's box is
   not measured from the layer. The theme `logo` element now gets the image's box there too (it fell through to the full frame before).
-- *Checkout:* the flags are detected like any optional flag (ADR-18, `layerexport.LAYER_EXPORT_FLAGS`, choices of `--alpha-codec`
+- _Checkout:_ the flags are detected like any optional flag (ADR-18, `layerexport.LAYER_EXPORT_FLAGS`, choices of `--alpha-codec`
   from the contract or `--help`). Without all of them the option is `TOOL_ERROR` before anything renders (`ffmpeg_skill_lacks_flag`,
   `details.flags`; `color --retag` is among them), and a codec the checkout does not offer is `ffmpeg_skill_lacks_alpha_codec`; doctor reports capability
   `ffmpeg-skill-feature:layer_export` and `checks.layer_export`. 3.2.3 and later have them; 3.0.0, 2.24.1 and 0.12.5 do not.
@@ -997,26 +1004,27 @@ Velisa spec (`docs/specs/kit.md`, `velisa/kit@1`) is a superset of ffmpeg-skill 
 skill's two existing inputs. `theme@1` refuses unknown fields (`bad_theme`), so a kit is converted, not passed as a theme.
 
 **Decision.**
-- *Request:* `options.kit` is the kit file's path (PathPolicy, at most 256 KiB, UTF-8 JSON, the same reader as a theme file). It is
+
+- _Request:_ `options.kit` is the kit file's path (PathPolicy, at most 256 KiB, UTF-8 JSON, the same reader as a theme file). It is
   refused together with `options.themes` / `options.theme` / `options.brand_kit` (two brand inputs would compete). `options.style`
   may go with it and is the preset under it: an explicit parameter > the kit > the preset. `validate` touches no files: it checks
   the path structurally and applies nothing; `plan` and `run` read the file (`kit.load_kit`).
-- *Mapping* (`kit.map_kit`, exactly the spec's table): `colors.primary` / `secondary` / `background` / `text` → the four roles;
+- _Mapping_ (`kit.map_kit`, exactly the spec's table): `colors.primary` / `secondary` / `background` / `text` → the four roles;
   `font_file` → `font.font_file`; `logo` → `logo.path`; `logo_position` → `logo.position`; `logo_scale` → `logo.scale_width`;
   `logo_opacity` → `logo.opacity`; `safe_margin` → `spacing.margin` and `logo.margin`; `name` → `name`. `colours` (the remotion
   spelling) is read as `colors`. Relative paths stay relative to the kit file. The result is checked by `themes.parse_theme` like a
   theme file and then applied as a theme is (ADR-29), labelled `kit`.
-- *Without all four roles* a theme cannot be made (the spec's rule): the kit becomes `options.brand_kit` with the roles it has, and
+- _Without all four roles_ a theme cannot be made (the spec's rule): the kit becomes `options.brand_kit` with the roles it has, and
   the theme-only keys (`name`, `font_file`, `logo*`, `safe_margin`) are reported unmapped. `colors.accent` is not used as
   `secondary`; the spec leaves that a choice to state. A kit with none of the four roles is refused (`kit_without_colors`).
-- *Only what the kit states is passed on.* ffmpeg-skill's `brand.json` defaults (logo scale 160, opacity 0.9, margin 48, ...) are not
+- _Only what the kit states is passed on._ ffmpeg-skill's `brand.json` defaults (logo scale 160, opacity 0.9, margin 48, ...) are not
   filled in; a key the kit leaves out stays out of the theme.
-- *Unmapped keys are reported, not dropped:* every key with no `theme@1` / `brand_kit` counterpart (`font` as a family name — the theme
+- _Unmapped keys are reported, not dropped:_ every key with no `theme@1` / `brand_kit` counterpart (`font` as a family name — the theme
   takes `font_id` or `font_file` —, `colors.outline` / `accent`, `lang`, `styles`, `caption`, `loudness`, `fonts`, `logo_variants`,
   `contrast`, a `name` that is not a short identifier, logo settings without a logo, and keys kit@1 does not define) is listed in
   `response.kit.unmapped` with the reason, and each gives a warning. A value that maps but is out of range (a `logo_position` outside
   the nine names, a `logo_scale` over 8192, ...) is refused (`INVALID_INPUT`, `bad_kit`) rather than left out.
-- *Reporting:* `response.kit {schema, file {sha256, size}, mapped_to, theme | brand_kit, unmapped, contrast?}` in plan and run; the
+- _Reporting:_ `response.kit {schema, file {sha256, size}, mapped_to, theme | brand_kit, unmapped, contrast?}` in plan and run; the
   mapped `theme@1` document is written there as the mapping gave it. With a theme, `response.theme` carries the contrast report on the
   kit's colours; with a brand kit, `response.kit.contrast` has the pairs whose two colours are known, and low pairs warn.
 
@@ -1040,6 +1048,7 @@ PiP and chroma key had no stated owner although `video_overlay` does them (ADR-1
 D21) settled it.
 
 **Decision.**
+
 - This skill owns `ロゴ・PiP・クロマキー合成` and `動くグラフィックの配置`: logos, images treated as graphics (fade, theme, safe
   zones), picture-in-picture, chroma key, and the placement of moving graphics (`image_overlay`, `logo`, `video_overlay`,
   `rendered_layer`).
@@ -1061,24 +1070,25 @@ to be copied by hand from the `title.json` hyperframes-skill writes beside the c
 `docs/specs/title-and-stinger.md`, `velisa/title@1`).
 
 **Decision.**
-- *The refusal names the way.* Every `unsupported_animations` reason (`slide`, `move`, `scale`, `opacity_keyframes`) ends with
+
+- _The refusal names the way._ Every `unsupported_animations` reason (`slide`, `move`, `scale`, `opacity_keyframes`) ends with
   "render the motion as a clip with alpha ... and place it with the rendered_layer element", and so does the refusal of an
   animation on a template element when its kind is one of them. SKILL.md and the `rendered_layer` description say the same.
-- *`title_json`* is a new optional `rendered_layer` parameter (a path). `plan` and `run` read it (PathPolicy, at most 256 KiB,
+- _`title_json`_ is a new optional `rendered_layer` parameter (a path). `plan` and `run` read it (PathPolicy, at most 256 KiB,
   UTF-8 JSON); `validate` touches no files and leaves the parameters it would fill out of the element.
-- *Mapping*, the spec's table: `segments.in` → `in_duration`, `segments.out` → `out_duration`, `segments.loop > 0` →
+- _Mapping_, the spec's table: `segments.in` → `in_duration`, `segments.out` → `out_duration`, `segments.loop > 0` →
   `loop: true` (0 → `false`). A value the request states wins (a warning when it differs); a value it leaves out comes from the
   file, never the parameter's default. Nothing else in the file is used.
-- *The file must describe the clip.* Its `sha256`, when present, is the clip's (else `title_json_stale`); without it, its
+- _The file must describe the clip._ Its `sha256`, when present, is the clip's (else `title_json_stale`); without it, its
   `file`, when present, is the clip's name (else `title_json_other_file`); with neither, a warning. Its segments add up to the
   clip's probed length within one frame (else `title_json_segments_mismatch`). `alpha`, when present, must be `straight`:
   ffmpeg-skill/overlay composites straight alpha, so `premultiplied` is refused (`title_json_premultiplied_alpha`) rather than drawn
   with dark fringes. A `schema` other than `velisa/title@1` (a `stinger.json`, say) is `not_title_json`. All `INVALID_INPUT`, before
   anything renders.
-- *Identity.* The stage identity holds the values used and the sidecar's `{sha256, size}`, not its path, so the same clip placed
+- _Identity._ The stage identity holds the values used and the sidecar's `{sha256, size}`, not its path, so the same clip placed
   from its file and by hand renders the same pieces.
-- *Reporting.* `response.title_json {<element id>: {schema, file {sha256, size}, layer_matched_by, segments, alpha?, values,
-  sources}}` in plan and run.
+- _Reporting._ `response.title_json {<element id>: {schema, file {sha256, size}, layer_matched_by, segments, alpha?, values,
+sources}}` in plan and run.
 
 **Consumers.** Additive. A new optional parameter on `rendered_layer` (the pinned parameters are unchanged; video-production-agent
 reads a changed `parameters` block of a pinned element type as drift until it re-pins), new `unsupported_animations` reasons

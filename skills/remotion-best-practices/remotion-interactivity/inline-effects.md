@@ -19,7 +19,7 @@ The same rules for setting keyframes as `interpolate()` apply too here: All valu
       rotation: interpolate(frame, [0, 120], [0, 180]),
     }),
   ]}
-/>
+/>;
 
 const center = [0.5, 0.5] as const;
 const rotation = frame * 1.5;
@@ -29,14 +29,18 @@ const rotation = frame * 1.5;
   width={1280}
   height={720}
   // ❌ Conditional effect is not animateable
-  effects={enabled ? [
-    radialProgressiveBlur({
-      // ❌ Not inline
-      center,
-      rotation,
-    }),
-  ] : []}
-/>
+  effects={
+    enabled
+      ? [
+          radialProgressiveBlur({
+            // ❌ Not inline
+            center,
+            rotation,
+          }),
+        ]
+      : []
+  }
+/>;
 ```
 
 Render separate elements if one version should have effects and another should not.

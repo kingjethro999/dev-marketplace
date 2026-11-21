@@ -9,15 +9,24 @@ versions). The same documents are what a future MCP transport would carry (trans
 ```json
 {
   "schema": "media-analysis/response@1",
-  "skill": {"id": "media-analysis", "version": "<package version>"},
+  "skill": { "id": "media-analysis", "version": "<package version>" },
   "status": "ok | partial | error",
   "dry_run": false,
-  "results": [ "...one result per request, in request order..." ],
-  "observations": [ "...observations of the ok results, in request order..." ],
-  "usage": {"analyzer_calls": 1, "cache_hits": 0, "seconds": 0.3},
-  "budget": {"calls": 1, "seconds": 0.3, "budget": {"max_analysis_calls": null, "timeout": 600.0, "max_total_seconds": null}},
+  "results": ["...one result per request, in request order..."],
+  "observations": ["...observations of the ok results, in request order..."],
+  "usage": { "analyzer_calls": 1, "cache_hits": 0, "seconds": 0.3 },
+  "budget": {
+    "calls": 1,
+    "seconds": 0.3,
+    "budget": {
+      "max_analysis_calls": null,
+      "timeout": 600.0,
+      "max_total_seconds": null
+    }
+  },
   "warnings": [],
-  "error": {"code": "...", "message": "...", "details": {}},   "error_kind": "..."     // only when the document itself was rejected
+  "error": { "code": "...", "message": "...", "details": {} },
+  "error_kind": "..." // only when the document itself was rejected
 }
 ```
 
@@ -62,19 +71,19 @@ A failed result: `"status": "error"`, `"error": {"code", "message", "details", "
 
 ## Field rules
 
-| field | rule |
-|---|---|
-| `id` | derived from the analysis identity; identical for identical analyses |
-| `asset_id` | echoed from the request (`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`); a label, not part of the identity |
-| `kind` | one of the declared `ANALYSIS_KINDS`; verified against the request |
-| `data` | only measured values; numbers are finite; times are within `[0, duration + 1 s]`; no `command` / `argv` / `cmd` / `shell` keys; no secret-looking keys |
-| `source` | `media-analysis/<tool>@<semver>`; provenance is always OBSERVED, never INFERRED / AI_GENERATED / USER / DECISION; matches video-production-agent `Observation.source = "<package>/<tool>@<version>"` (PR #7 boundary, ADR-001) and its validator (`"@" in source and not source.startswith("ai")`) |
-| `analysis_id` | request value or derived |
-| `observed_at` | UTC, second precision; on a cache hit the original measurement time is kept |
-| `analysis.analyzer_version` | the package version that measured this Observation (== the version in `source`); provenance only, not part of the identity |
-| `analysis.algorithm_version` | the analyzer's measurement version; part of the identity and the cache key (ADR-028) |
-| `analysis.parameters` | the effective parameters (defaults applied); same input + tool + algorithm version + parameters → same `identity` |
-| `asset.fingerprint` | sha256 of the file content; the path is informational |
+| field                        | rule                                                                                                                                                                                                                                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                         | derived from the analysis identity; identical for identical analyses                                                                                                                                                                                                                               |
+| `asset_id`                   | echoed from the request (`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`); a label, not part of the identity                                                                                                                                                                                                 |
+| `kind`                       | one of the declared `ANALYSIS_KINDS`; verified against the request                                                                                                                                                                                                                                 |
+| `data`                       | only measured values; numbers are finite; times are within `[0, duration + 1 s]`; no `command` / `argv` / `cmd` / `shell` keys; no secret-looking keys                                                                                                                                             |
+| `source`                     | `media-analysis/<tool>@<semver>`; provenance is always OBSERVED, never INFERRED / AI_GENERATED / USER / DECISION; matches video-production-agent `Observation.source = "<package>/<tool>@<version>"` (PR #7 boundary, ADR-001) and its validator (`"@" in source and not source.startswith("ai")`) |
+| `analysis_id`                | request value or derived                                                                                                                                                                                                                                                                           |
+| `observed_at`                | UTC, second precision; on a cache hit the original measurement time is kept                                                                                                                                                                                                                        |
+| `analysis.analyzer_version`  | the package version that measured this Observation (== the version in `source`); provenance only, not part of the identity                                                                                                                                                                         |
+| `analysis.algorithm_version` | the analyzer's measurement version; part of the identity and the cache key (ADR-028)                                                                                                                                                                                                               |
+| `analysis.parameters`        | the effective parameters (defaults applied); same input + tool + algorithm version + parameters → same `identity`                                                                                                                                                                                  |
+| `asset.fingerprint`          | sha256 of the file content; the path is informational                                                                                                                                                                                                                                              |
 
 `output_policy.round` (default 3) rounds floats in the returned document; it does not affect the identity or the
 cached Observation.
@@ -111,9 +120,20 @@ An error is never an Observation. It is a result with `status: "error"` (or a to
 was rejected):
 
 ```json
-{"analysis_id": null, "asset_id": "asset-1", "kind": "loudness", "status": "error",
- "error": {"code": "BUDGET_EXCEEDED", "message": "max_analysis_calls=1 reached", "details": {"calls": 1, "seconds": 0.05, "budget": {"...": "..."}}},
- "error_kind": "BUDGET_EXCEEDED", "cache": {"status": "disabled", "policy": "use", "key": null}, "usage": {"analyzer_calls": 0, "seconds": 0.0, "operations": []}}
+{
+  "analysis_id": null,
+  "asset_id": "asset-1",
+  "kind": "loudness",
+  "status": "error",
+  "error": {
+    "code": "BUDGET_EXCEEDED",
+    "message": "max_analysis_calls=1 reached",
+    "details": { "calls": 1, "seconds": 0.05, "budget": { "...": "..." } }
+  },
+  "error_kind": "BUDGET_EXCEEDED",
+  "cache": { "status": "disabled", "policy": "use", "key": null },
+  "usage": { "analyzer_calls": 0, "seconds": 0.0, "operations": [] }
+}
 ```
 
 Process exit code: 0 when every result is ok; otherwise the code of the first error, `2 + index` in the table
@@ -123,17 +143,17 @@ that tells a caller's retry policy what to do, following AI-video-production-OS 
 same request may succeed), `BLOCKED` (the environment or the caller's budget must change first). The class never
 changes a code's meaning or exit number.
 
-| exit | code | when |
-|---|---|---|
-| 2 | `INVALID_INPUT` (FATAL) | request / kind / parameter / stream ordinal / cache_policy / budget field invalid, command-style or unknown fields present, request document not JSON |
-| 3 | `FILE_NOT_FOUND` (FATAL) | input missing or not a regular file |
-| 4 | `PATH_NOT_ALLOWED` (FATAL) | input outside `--allowed-input` roots, or a write outside the workspace |
-| 5 | `UNSUPPORTED_FORMAT` (FATAL) | ffprobe cannot open the input, or the needed stream type is absent |
-| 6 | `ANALYZER_UNAVAILABLE` (BLOCKED) | ffmpeg / ffprobe / filter missing |
-| 7 | `ANALYZER_TIMEOUT` (RETRYABLE) | analyzer exceeded the effective timeout (process group killed) |
-| 8 | `ANALYSIS_FAILED` (RETRYABLE) | ffmpeg / ffprobe ran but failed or produced unparsable output |
-| 9 | `INVALID_RESULT` (FATAL) | analyzer returned something that is not an object |
-| 10 | `BUDGET_EXCEEDED` (BLOCKED) | call or total-seconds budget exhausted before running |
-| 11 | `CACHE_INVALID` (FATAL) | malformed cache key |
-| 12 | `VERIFICATION_FAILED` (FATAL) | Observation failed the checks above |
-| 13 | `CACHE_MISS` (FATAL) | `cache_policy: only` and no valid cache entry (no analyzer was run) |
+| exit | code                             | when                                                                                                                                                  |
+| ---- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2    | `INVALID_INPUT` (FATAL)          | request / kind / parameter / stream ordinal / cache_policy / budget field invalid, command-style or unknown fields present, request document not JSON |
+| 3    | `FILE_NOT_FOUND` (FATAL)         | input missing or not a regular file                                                                                                                   |
+| 4    | `PATH_NOT_ALLOWED` (FATAL)       | input outside `--allowed-input` roots, or a write outside the workspace                                                                               |
+| 5    | `UNSUPPORTED_FORMAT` (FATAL)     | ffprobe cannot open the input, or the needed stream type is absent                                                                                    |
+| 6    | `ANALYZER_UNAVAILABLE` (BLOCKED) | ffmpeg / ffprobe / filter missing                                                                                                                     |
+| 7    | `ANALYZER_TIMEOUT` (RETRYABLE)   | analyzer exceeded the effective timeout (process group killed)                                                                                        |
+| 8    | `ANALYSIS_FAILED` (RETRYABLE)    | ffmpeg / ffprobe ran but failed or produced unparsable output                                                                                         |
+| 9    | `INVALID_RESULT` (FATAL)         | analyzer returned something that is not an object                                                                                                     |
+| 10   | `BUDGET_EXCEEDED` (BLOCKED)      | call or total-seconds budget exhausted before running                                                                                                 |
+| 11   | `CACHE_INVALID` (FATAL)          | malformed cache key                                                                                                                                   |
+| 12   | `VERIFICATION_FAILED` (FATAL)    | Observation failed the checks above                                                                                                                   |
+| 13   | `CACHE_MISS` (FATAL)             | `cache_policy: only` and no valid cache entry (no analyzer was run)                                                                                   |

@@ -19,17 +19,17 @@ It prints one line, `resolved <id> → <path> (<type>, <metadata>)`. List reusab
 
 ## Where it comes from
 
-| Need | Free | HyperFrames credits | Local or the person's own key (only when they ask) |
-| --- | --- | --- | --- |
-| Music (`bgm`) | HeyGen catalog of 10k+ tracks (signed in) | Generated track | Local MusicGen |
-| Sound effects (`sfx`) | HeyGen (signed in); Openverse (credit CC BY); bundled | | |
-| Images, icons | HeyGen asset search, 75k+ (signed in) | Generated images | Local FLUX (mflux), if installed |
-| Logos (`logo`) | theSVG, GitHub avatar, favicon; never redrawn | | |
-| Voiceover (`voice`) | Voice Turbo, Free plan: 3 min a month | Voice Turbo on a paid plan, other HeyGen voices, cloning | `npx hyperframes tts` (Kokoro on device) |
-| A presenter speaking | | Avatar video (`--type video`) | Local LTX for generic clips, if installed |
-| Transcripts | `npx hyperframes transcribe` (Parakeet or whisper) | | |
-| Cutouts | | Video: `--type cutout` | `npx hyperframes remove-background` |
-| Grades, LUTs, looks | `npx hyperframes media-treatment` | | |
+| Need                  | Free                                                  | HyperFrames credits                                      | Local or the person's own key (only when they ask) |
+| --------------------- | ----------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------- |
+| Music (`bgm`)         | HeyGen catalog of 10k+ tracks (signed in)             | Generated track                                          | Local MusicGen                                     |
+| Sound effects (`sfx`) | HeyGen (signed in); Openverse (credit CC BY); bundled |                                                          |                                                    |
+| Images, icons         | HeyGen asset search, 75k+ (signed in)                 | Generated images                                         | Local FLUX (mflux), if installed                   |
+| Logos (`logo`)        | theSVG, GitHub avatar, favicon; never redrawn         |                                                          |                                                    |
+| Voiceover (`voice`)   | Voice Turbo, Free plan: 3 min a month                 | Voice Turbo on a paid plan, other HeyGen voices, cloning | `npx hyperframes tts` (Kokoro on device)           |
+| A presenter speaking  |                                                       | Avatar video (`--type video`)                            | Local LTX for generic clips, if installed          |
+| Transcripts           | `npx hyperframes transcribe` (Parakeet or whisper)    |                                                          |                                                    |
+| Cutouts               |                                                       | Video: `--type cutout`                                   | `npx hyperframes remove-background`                |
+| Grades, LUTs, looks   | `npx hyperframes media-treatment`                     |                                                          |                                                    |
 
 **Sign in.** Every time a request needs a HeyGen model or the catalog, run `npx hyperframes auth status` first. Not signed in: tell the person in one line that sign-in is free and gives the music catalog, asset search and 3 min of Voice Turbo a month on the Free plan, ask them to type an exclamation mark and `npx hyperframes auth login` in the prompt, and wait until they say it is done. Use local tools only when the person asks, not as a fallback.
 
@@ -49,15 +49,15 @@ Scan a piece you build or review once for concrete gaps (on-screen text with no 
 
 ## Where to look
 
-| Task | Read |
-| --- | --- |
-| Resolve, reuse, adopt, ingest, flags | `references/resolve.md` |
-| Grading, LUTs, `grade-compare` | `references/grading.md` |
-| Voiceover, music, sound effects, captions, transcription | `references/audio.md` |
-| Cut, reframe or transform media; direct `heygen` recipes | `references/operations.md` |
-| Treatments, realtime effects, overlays, reveals | `references/media-treatments.md` |
-| Install, sign-in, credentials, `--provider`, `--local-only`, RAM ladders | `references/setup-providers.md` |
-| `media-use generate`, HeyGen transcription, prices | `references/heygen.md` |
-| Fades, gain, ducking, automation, effects, buses on placed tracks | `references/mixing.md` |
-| Local commands: grade, cutout, loudness, beats | `references/local.md` |
-| Remembered preferences | `references/memory.md` |
+| Task                                                                     | Read                             |
+| ------------------------------------------------------------------------ | -------------------------------- |
+| Resolve, reuse, adopt, ingest, flags                                     | `references/resolve.md`          |
+| Grading, LUTs, `grade-compare`                                           | `references/grading.md`          |
+| Voiceover, music, sound effects, captions, transcription                 | `references/audio.md`            |
+| Cut, reframe or transform media; direct `heygen` recipes                 | `references/operations.md`       |
+| Treatments, realtime effects, overlays, reveals                          | `references/media-treatments.md` |
+| Install, sign-in, credentials, `--provider`, `--local-only`, RAM ladders | `references/setup-providers.md`  |
+| `media-use generate`, HeyGen transcription, prices                       | `references/heygen.md`           |
+| Fades, gain, ducking, automation, effects, buses on placed tracks        | `references/mixing.md`           |
+| Local commands: grade, cutout, loudness, beats                           | `references/local.md`            |
+| Remembered preferences                                                   | `references/memory.md`           |

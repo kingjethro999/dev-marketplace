@@ -9,7 +9,5 @@
       "value": "2"
     }
   ],
-  "expect_problems": [
-    "schema_versions"
-  ]
+  "expect_problems": ["schema_versions"]
 }

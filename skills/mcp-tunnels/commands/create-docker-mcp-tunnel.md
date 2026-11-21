@@ -33,7 +33,7 @@ A container stack on the user's machine:
   a certificate the user controls, validates upstream IPs, routes by hostname.
 - **cloudflared** — the tunnel agent. Outbound-only connection to the Anthropic
   tunnel edge; shares the proxy's network namespace.
-- **hello-mcp** *(optional)* — a sample FastMCP server, only if the user has no
+- **hello-mcp** _(optional)_ — a sample FastMCP server, only if the user has no
   MCP server of their own to expose yet.
 
 When it's up, the routed server is reachable from Claude at
@@ -211,7 +211,7 @@ if __name__ == "__main__":
 
 Write `$DIR/config/mcp-proxy.yaml`. `tunnel_domain` is **required** (the
 proxy strips it from the incoming hostname to find the subdomain in `routes`).
-`routes` is a **flat map** subdomain → upstream URL, *not* a list:
+`routes` is a **flat map** subdomain → upstream URL, _not_ a list:
 
 ```yaml
 listen_addr: ":8080"
@@ -260,16 +260,16 @@ the variable through from `.env`.
 If the sample server was chosen, append the service:
 
 ```yaml
-  hello-mcp:
-    image: python:3.13-slim
-    working_dir: /app
-    volumes:
-      - ./hello_server.py:/app/hello_server.py:ro
-    command: sh -c "pip install --quiet mcp && python hello_server.py"
-    restart: unless-stopped
+hello-mcp:
+  image: python:3.13-slim
+  working_dir: /app
+  volumes:
+    - ./hello_server.py:/app/hello_server.py:ro
+  command: sh -c "pip install --quiet mcp && python hello_server.py"
+  restart: unless-stopped
 ```
 
-If the user brought their own server *and* it's containerized, add its service
+If the user brought their own server _and_ it's containerized, add its service
 here too so it shares the Compose network with the proxy.
 
 (For a hardened single-host deployment — non-root user, read-only rootfs,
@@ -298,8 +298,8 @@ Tell the user both options:
 **Managed Agents (Console):** **Managed Agents → Sessions** → new session →
 agent picker **Create new agent** → **+ MCP Server** → select the tunnel →
 **Subdomain** = the route (`echo`), **Path** = `mcp` (FastMCP
-`streamable-http` serves at `/mcp`). Then ask: *"Use the hello tool to greet
-tunnel."* — expect a tool call and its result.
+`streamable-http` serves at `/mcp`). Then ask: _"Use the hello tool to greet
+tunnel."_ — expect a tool call and its result.
 
 **Messages API:** the host is `<subdomain>.<tunnel-domain>`; the path is
 whatever the upstream serves (`/mcp` for FastMCP). Use an API key for the
@@ -326,20 +326,20 @@ it the same as for any other MCP server.
 
 ## Troubleshooting (diagnose in this order)
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| Caller sees HTTP 500; cloudflared logs `No ingress rules were defined` | cloudflared has no local target | Ensure `--url http://localhost:8080` and `network_mode: "service:mcp-proxy"` are both present, then `docker compose up -d` |
-| Proxy exits `cannot unmarshal !!seq into map[string]string` | `routes` written as a YAML list | Use `routes: { name: http://host:port }`, not a list of objects |
-| Proxy exits `open /data/tls.key: permission denied` | key is `0600`, proxy runs non-root | `chmod 644 data/tls.key` |
-| Proxy logs `no route for host` (caller gets `502 No route configured for host`) | `tunnel_domain` missing or wrong | Set it to the exact domain on the tunnel detail page; then **restart the proxy** (next row) |
-| Edited config but nothing changed | proxy does **not** hot-reload `config.yaml` (only `tls.cert_file`) | `docker compose restart mcp-proxy` — `up -d` alone won't recreate it on a file-content change |
-| `tls handshake failed ... unknown certificate authority` | CA not registered/revoked on this tunnel | Re-upload `data/ca.crt` in the Console (Step 5) |
-| `tls handshake failed ... bad certificate` | server cert SAN ≠ `*.<tunnel-domain>`, or expired | Regenerate the server cert (Step 4) with the correct `TUNNEL_DOMAIN` |
-| `IP validation failed: <ip> is not a private address` | upstream resolves outside RFC1918 (e.g. `127.0.0.1`, public IP) | Run the upstream as a Compose service on the proxy's network; or narrow `upstream.allowed_ips` deliberately (avoid `0.0.0.0/0` outside local testing) |
-| `dial tcp ...: connect: connection refused` for `host.docker.internal` | rootless Docker can't reach the host netns | Run the MCP server as a Compose service instead of a host process |
-| HTTP 502, no `request started` in proxy log | cloudflared hadn't finished registering, or rolling update | Wait for ×4 `Registered tunnel connection` and retry |
-| Tunnel missing from agent **+ MCP Server** picker | no active certificate, or wrong workspace | Register a CA cert (Step 5); open the session in the tunnel's workspace |
-| `curl https://<proxy>:8080` fails `wrong version number` | expected — listener is plaintext WS, TLS is inside the WS stream | Don't curl the proxy directly; verify via Managed Agent or Messages API |
+| Symptom                                                                         | Cause                                                              | Fix                                                                                                                                                   |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Caller sees HTTP 500; cloudflared logs `No ingress rules were defined`          | cloudflared has no local target                                    | Ensure `--url http://localhost:8080` and `network_mode: "service:mcp-proxy"` are both present, then `docker compose up -d`                            |
+| Proxy exits `cannot unmarshal !!seq into map[string]string`                     | `routes` written as a YAML list                                    | Use `routes: { name: http://host:port }`, not a list of objects                                                                                       |
+| Proxy exits `open /data/tls.key: permission denied`                             | key is `0600`, proxy runs non-root                                 | `chmod 644 data/tls.key`                                                                                                                              |
+| Proxy logs `no route for host` (caller gets `502 No route configured for host`) | `tunnel_domain` missing or wrong                                   | Set it to the exact domain on the tunnel detail page; then **restart the proxy** (next row)                                                           |
+| Edited config but nothing changed                                               | proxy does **not** hot-reload `config.yaml` (only `tls.cert_file`) | `docker compose restart mcp-proxy` — `up -d` alone won't recreate it on a file-content change                                                         |
+| `tls handshake failed ... unknown certificate authority`                        | CA not registered/revoked on this tunnel                           | Re-upload `data/ca.crt` in the Console (Step 5)                                                                                                       |
+| `tls handshake failed ... bad certificate`                                      | server cert SAN ≠ `*.<tunnel-domain>`, or expired                  | Regenerate the server cert (Step 4) with the correct `TUNNEL_DOMAIN`                                                                                  |
+| `IP validation failed: <ip> is not a private address`                           | upstream resolves outside RFC1918 (e.g. `127.0.0.1`, public IP)    | Run the upstream as a Compose service on the proxy's network; or narrow `upstream.allowed_ips` deliberately (avoid `0.0.0.0/0` outside local testing) |
+| `dial tcp ...: connect: connection refused` for `host.docker.internal`          | rootless Docker can't reach the host netns                         | Run the MCP server as a Compose service instead of a host process                                                                                     |
+| HTTP 502, no `request started` in proxy log                                     | cloudflared hadn't finished registering, or rolling update         | Wait for ×4 `Registered tunnel connection` and retry                                                                                                  |
+| Tunnel missing from agent **+ MCP Server** picker                               | no active certificate, or wrong workspace                          | Register a CA cert (Step 5); open the session in the tunnel's workspace                                                                               |
+| `curl https://<proxy>:8080` fails `wrong version number`                        | expected — listener is plaintext WS, TLS is inside the WS stream   | Don't curl the proxy directly; verify via Managed Agent or Messages API                                                                               |
 
 `docker compose logs cloudflared` (token/edge reachability) and
 `docker compose logs mcp-proxy` (config/cert/routing) are the two primary

@@ -1,4 +1,9 @@
-import { currentRecords, indexPath, ownMediaDir, replaceFile } from "./manifest.mjs";
+import {
+  currentRecords,
+  indexPath,
+  ownMediaDir,
+  replaceFile,
+} from "./manifest.mjs";
 
 // One table cell: a line break in a record would start a new line of the index, so it becomes a space.
 function cell(value) {

@@ -115,8 +115,19 @@ export function errorDiffusionBufferLength(width, height, pointSize) {
   return Math.ceil(width / pointSize) * Math.ceil(height / pointSize) * 3;
 }
 
-export function applyErrorDiffusionRgba(data, width, height, options = {}, errorBuffer) {
-  if (!Number.isInteger(width) || width < 1 || !Number.isInteger(height) || height < 1) {
+export function applyErrorDiffusionRgba(
+  data,
+  width,
+  height,
+  options = {},
+  errorBuffer,
+) {
+  if (
+    !Number.isInteger(width) ||
+    width < 1 ||
+    !Number.isInteger(height) ||
+    height < 1
+  ) {
     throw new Error("width and height must be positive integers");
   }
   if (!data || data.length !== width * height * 4) {
@@ -125,19 +136,42 @@ export function applyErrorDiffusionRgba(data, width, height, options = {}, error
 
   const algorithm = options.algorithm ?? DEFAULTS.algorithm;
   const diffusion = ERROR_DIFFUSION_ALGORITHMS[algorithm];
-  if (!diffusion) throw new Error(`unknown error-diffusion algorithm: ${algorithm}`);
+  if (!diffusion)
+    throw new Error(`unknown error-diffusion algorithm: ${algorithm}`);
 
-  const pointSize = integerInRange(options.pointSize ?? DEFAULTS.pointSize, 1, 20, "pointSize");
-  const brightness = numberInRange(options.brightness ?? DEFAULTS.brightness, 0.5, 2, "brightness");
-  const contrast = numberInRange(options.contrast ?? DEFAULTS.contrast, 0.5, 2, "contrast");
-  const detail = numberInRange(options.detail ?? DEFAULTS.detail, 0.1, 1, "detail");
+  const pointSize = integerInRange(
+    options.pointSize ?? DEFAULTS.pointSize,
+    1,
+    20,
+    "pointSize",
+  );
+  const brightness = numberInRange(
+    options.brightness ?? DEFAULTS.brightness,
+    0.5,
+    2,
+    "brightness",
+  );
+  const contrast = numberInRange(
+    options.contrast ?? DEFAULTS.contrast,
+    0.5,
+    2,
+    "contrast",
+  );
+  const detail = numberInRange(
+    options.detail ?? DEFAULTS.detail,
+    0.1,
+    1,
+    "detail",
+  );
   const palette = parsePalette(options.palette ?? DEFAULTS.palette);
   const blockColumns = Math.ceil(width / pointSize);
   const blockRows = Math.ceil(height / pointSize);
   const errorLength = errorDiffusionBufferLength(width, height, pointSize);
   const errors = errorBuffer ?? new Float32Array(errorLength);
   if (!(errors instanceof Float32Array) || errors.length !== errorLength) {
-    throw new Error(`errorBuffer must be a Float32Array of length ${errorLength}`);
+    throw new Error(
+      `errorBuffer must be a Float32Array of length ${errorLength}`,
+    );
   }
   errors.fill(0);
 
@@ -150,7 +184,12 @@ export function applyErrorDiffusionRgba(data, width, height, options = {}, error
       const centerY = Math.min(blockY + centerOffset, height - 1);
       const rgbaIndex = (centerY * width + centerX) * 4;
       const errorIndex = (blockRow * blockColumns + blockColumn) * 3;
-      const red = correctedChannel(data[rgbaIndex], errors[errorIndex], brightness, contrast);
+      const red = correctedChannel(
+        data[rgbaIndex],
+        errors[errorIndex],
+        brightness,
+        contrast,
+      );
       const green = correctedChannel(
         data[rgbaIndex + 1],
         errors[errorIndex + 1],
@@ -164,7 +203,10 @@ export function applyErrorDiffusionRgba(data, width, height, options = {}, error
         contrast,
       );
       const luminance = 0.299 * red + 0.587 * green + 0.114 * blue;
-      const output = palette[Math.min(palette.length - 1, Math.floor(luminance * palette.length))];
+      const output =
+        palette[
+          Math.min(palette.length - 1, Math.floor(luminance * palette.length))
+        ];
 
       for (let y = blockY; y < Math.min(blockY + pointSize, height); y++) {
         for (let x = blockX; x < Math.min(blockX + pointSize, width); x++) {
@@ -198,7 +240,10 @@ export function applyErrorDiffusionRgba(data, width, height, options = {}, error
 }
 
 function correctedChannel(byte, error, brightness, contrast) {
-  return Math.min(1, Math.max(0, ((byte / 255 - 0.5) * contrast + 0.5) * brightness + error));
+  return Math.min(
+    1,
+    Math.max(0, ((byte / 255 - 0.5) * contrast + 0.5) * brightness + error),
+  );
 }
 
 function parsePalette(colors) {
@@ -209,7 +254,11 @@ function parsePalette(colors) {
     const match = /^#([0-9a-f]{6})$/i.exec(color);
     if (!match) throw new Error(`palette color must use #rrggbb: ${color}`);
     const value = Number.parseInt(match[1], 16);
-    return [(value >> 16) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
+    return [
+      (value >> 16) / 255,
+      ((value >> 8) & 255) / 255,
+      (value & 255) / 255,
+    ];
   });
 }
 

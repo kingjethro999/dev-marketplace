@@ -1,4 +1,10 @@
-import { closeSync, ftruncateSync, openSync, readFileSync, writeSync } from "node:fs";
+import {
+  closeSync,
+  ftruncateSync,
+  openSync,
+  readFileSync,
+  writeSync,
+} from "node:fs";
 
 // Keep the merge base and output on the same file even if its pathname changes
 // while audio generation runs. The CLI owns this handle until write or exit.

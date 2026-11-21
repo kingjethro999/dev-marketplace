@@ -5,11 +5,11 @@
 `[sys.executable, <dir>/scripts/<tool>.py, <typed argv...>, --json]` (never a shell, never a request-supplied
 string as a flag):
 
-| Tool | Used for |
-|---|---|
-| `probe` | Source video facts (resolution, duration, presence of a video stream) and output validation after every render. |
+| Tool       | Used for                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `probe`    | Source video facts (resolution, duration, presence of a video stream) and output validation after every render.                                                                                                                                                                                                                                                                                                              |
 | `graphics` | `TITLE` (`--template title`), `LOWER_THIRD` (`--template lower-third`), `BUG`, `CHAPTER`, `PROGRESS`, `COUNTDOWN`, and — only when the checkout has them — `STICKER` (`--template sticker`, `--text`), `HOOK` (`--template hook`, `--duration`) and `MEME` (`--template meme`, `--top`/`--bottom`). Built-in animation, brand-free (colours passed explicitly via `--text-color`/`--primary`, never through a `brand.json`). |
-| `overlay` | `TEXT_OVERLAY` (`--text`), `IMAGE_OVERLAY` (`--image`), and `VIDEO_OVERLAY` (`--video`, with optional `--chromakey`/`--chromakey-similarity`/`--chromakey-blend` green-screen removal) — position, margin, static scale, opacity, and (text/image only) a configurable `--fade`.; `RENDERED_LAYER` (`--video` with one `--place SRC_START-SRC_END@AT` per IN / LOOP / OUT piece, when the checkout has `--place`: ADR-25). |
+| `overlay`  | `TEXT_OVERLAY` (`--text`), `IMAGE_OVERLAY` (`--image`), and `VIDEO_OVERLAY` (`--video`, with optional `--chromakey`/`--chromakey-similarity`/`--chromakey-blend` green-screen removal) — position, margin, static scale, opacity, and (text/image only) a configurable `--fade`.; `RENDERED_LAYER` (`--video` with one `--place SRC_START-SRC_END@AT` per IN / LOOP / OUT piece, when the checkout has `--place`: ADR-25).   |
 
 Every `graphics`/`overlay` invocation may also carry `--audio-stream` (`document.options.audio_stream`) to select
 which audio track of the source survives, and `--platform` (`document.options.platform`) to put each element's margin in a

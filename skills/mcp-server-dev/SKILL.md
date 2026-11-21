@@ -9,7 +9,9 @@ category: Connectors & LSP
 Skills for designing and building MCP servers that work seamlessly with Claude.
 
 ## Overview
+
 This connector provides seamless integration and agent capabilities for `mcp-server-dev`.
 
 ## Usage
+
 Refer to the included documentation and configuration files in this directory.

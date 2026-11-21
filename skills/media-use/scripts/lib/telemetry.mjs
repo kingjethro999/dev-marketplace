@@ -3,7 +3,13 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import * as fs from "node:fs";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { withFileLock } from "./config-lock.mjs";
@@ -64,7 +70,8 @@ function readSharedConfig() {
     const file = sharedConfigPath();
     if (existsSync(file)) {
       const parsed = JSON.parse(readFileSync(file, "utf8"));
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+        return parsed;
     }
   } catch {
     // unreadable config → treat as empty; never throw
@@ -84,9 +91,14 @@ function updateSharedConfig(patch) {
       } catch (error) {
         if (error.code !== "ENOENT") return;
       }
-      if (!config || typeof config !== "object" || Array.isArray(config)) return;
+      if (!config || typeof config !== "object" || Array.isArray(config))
+        return;
       const tmp = `${file}.${process.pid}.tmp`;
-      writeFileSync(tmp, JSON.stringify({ ...config, ...patch }, null, 2) + "\n", { mode: 0o600 });
+      writeFileSync(
+        tmp,
+        JSON.stringify({ ...config, ...patch }, null, 2) + "\n",
+        { mode: 0o600 },
+      );
       renameSync(tmp, file);
     });
   } catch {}
@@ -126,7 +138,8 @@ function anonymousId() {
 
 // The HyperFrames user id for a HeyGen username: the same sha256-derived UUID
 // the CLI (auth/telemetryIdentity.ts), web app and Desktop key PostHog on.
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function heygenUserId(username) {
   if (UUID_PATTERN.test(username)) return username;
@@ -148,21 +161,31 @@ export function heygenUserId(username) {
 // casing never splits one person). `heygen_username` is the cross-project join
 // column for the Snowflake event table.
 function heygenAccount() {
-  const root = process.env.HYPERFRAMES_CONFIG_DIR || join(homedir(), ".hyperframes");
-  const file = join(root, ...(process.env.HYPERFRAMES_ENV === "dev" ? ["dev"] : []), "credentials");
+  const root =
+    process.env.HYPERFRAMES_CONFIG_DIR || join(homedir(), ".hyperframes");
+  const file = join(
+    root,
+    ...(process.env.HYPERFRAMES_ENV === "dev" ? ["dev"] : []),
+    "credentials",
+  );
   try {
     if (!existsSync(file)) return null;
     const raw = readFileSync(file, "utf8").trim();
     if (!raw.startsWith("{")) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return null;
     if (!parsed.api_key && !parsed.oauth) return null;
     const user = parsed.user;
     if (!user || typeof user !== "object" || Array.isArray(user)) return null;
     const email =
-      typeof user.email === "string" && user.email.trim() ? user.email.trim().toLowerCase() : null;
+      typeof user.email === "string" && user.email.trim()
+        ? user.email.trim().toLowerCase()
+        : null;
     const username =
-      typeof user.username === "string" && user.username.trim() ? user.username : null;
+      typeof user.username === "string" && user.username.trim()
+        ? user.username
+        : null;
     const traits = {};
     if (email) traits.email = email;
     if (username) traits.heygen_username = username;
@@ -240,7 +263,11 @@ export async function track(event, properties = {}) {
   await identifyAccount(anonId, account);
   const username = account?.traits.heygen_username;
   if (!username) return postEvent(event, properties, anonId);
-  await postEvent(event, { ...properties, heygen_username: username }, heygenUserId(username));
+  await postEvent(
+    event,
+    { ...properties, heygen_username: username },
+    heygenUserId(username),
+  );
 }
 
 export function __anonymousIdForTest() {

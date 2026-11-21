@@ -48,11 +48,15 @@ playback; missing it triggers a lint warning).
 ## `<AbsoluteFill>` → positioned div
 
 ```tsx
-<AbsoluteFill style={{ backgroundColor: "#0a0a0a" }}>...children...</AbsoluteFill>
+<AbsoluteFill style={{ backgroundColor: "#0a0a0a" }}>
+  ...children...
+</AbsoluteFill>
 ```
 
 ```html
-<div style="position:absolute;inset:0;background-color:#0a0a0a;">...children...</div>
+<div style="position:absolute;inset:0;background-color:#0a0a0a;">
+  ...children...
+</div>
 ```
 
 `AbsoluteFill` is just a styled div in Remotion. Translate to a div with
@@ -86,7 +90,12 @@ gets one readable row per scene and the lint has no nested structure to flag.
 ```html
 <!-- compositions/scene-1.html: TitleCard children inlined, timeline keyed "scene-1", local time starts at 0 -->
 <template id="scene-1-template">
-  <div data-composition-id="scene-1" data-width="1280" data-height="720" data-duration="3">
+  <div
+    data-composition-id="scene-1"
+    data-width="1280"
+    data-height="720"
+    data-duration="3"
+  >
     <!-- TitleCard children -->
     <script>
       const tl = gsap.timeline({ paused: true });

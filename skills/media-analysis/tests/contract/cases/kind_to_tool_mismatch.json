@@ -9,7 +9,5 @@
       "value": "media-analysis/loudness"
     }
   ],
-  "expect_problems": [
-    "kind_to_tool"
-  ]
+  "expect_problems": ["kind_to_tool"]
 }

@@ -15,7 +15,9 @@ import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
 // Custom hook — pure derivation from frame, no state. Translates fine.
 function useFadeIn(durationInFrames: number) {
   const frame = useCurrentFrame();
-  return interpolate(frame, [0, durationInFrames], [0, 1], { extrapolateRight: "clamp" });
+  return interpolate(frame, [0, durationInFrames], [0, 1], {
+    extrapolateRight: "clamp",
+  });
 }
 
 export const CustomHookDriven: React.FC = () => {

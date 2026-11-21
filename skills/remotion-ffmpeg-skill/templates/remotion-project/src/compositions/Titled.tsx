@@ -1,8 +1,23 @@
 import React from "react";
-import { AbsoluteFill, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Sequence,
+  interpolate,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { SourceVideo } from "../lib/SourceVideo";
 import { useStagedFont } from "../lib/useStagedFont";
-import { Props, chapterCardFrames, fontStack, outputFrame, resolveOptions, secToFrames, type Options } from "../timeline";
+import {
+  Props,
+  chapterCardFrames,
+  fontStack,
+  outputFrame,
+  resolveOptions,
+  secToFrames,
+  type Options,
+} from "../timeline";
 
 /**
  * Titled: the source, full length, with lower thirds the user wrote (options.lowerThirds), a
@@ -18,15 +33,31 @@ export const Titled: React.FC<Props> = (props) => {
   const { fps } = useVideoConfig();
   const sceneCards = timeline.scenes
     .map((sc, i) => ({ sc, text: o.sceneTitles[i] }))
-    .filter((x): x is { sc: { start: number; end: number }; text: string } => Boolean(x.text));
+    .filter((x): x is { sc: { start: number; end: number }; text: string } =>
+      Boolean(x.text),
+    );
   return (
-    <AbsoluteFill style={{ backgroundColor: overlay ? "transparent" : "black" }}>
-      {overlay ? null : <SourceVideo source={timeline.source} fit={outputFrame(props).fit} />}
+    <AbsoluteFill
+      style={{ backgroundColor: overlay ? "transparent" : "black" }}
+    >
+      {overlay ? null : (
+        <SourceVideo source={timeline.source} fit={outputFrame(props).fit} />
+      )}
       {sceneCards.map(({ sc, text }, i) => {
         const from = secToFrames(sc.start, fps);
-        const dur = Math.max(1, Math.min(secToFrames(sc.end, fps), from + Math.round(fps * 2.5)) - from);
+        const dur = Math.max(
+          1,
+          Math.min(secToFrames(sc.end, fps), from + Math.round(fps * 2.5)) -
+            from,
+        );
         return (
-          <Sequence key={`s${i}`} from={from} durationInFrames={dur} name={`scene title ${i + 1}`} layout="none">
+          <Sequence
+            key={`s${i}`}
+            from={from}
+            durationInFrames={dur}
+            name={`scene title ${i + 1}`}
+            layout="none"
+          >
             <SceneCard text={text} len={dur} o={o} fontFamily={family} />
           </Sequence>
         );
@@ -35,8 +66,21 @@ export const Titled: React.FC<Props> = (props) => {
         ? (timeline.chapters ?? []).map((ch, i, all) => {
             const [from, dur] = chapterCardFrames(ch, fps, o.chapterSeconds);
             return (
-              <Sequence key={`c${i}`} from={from} durationInFrames={dur} name={`chapter ${i + 1}`} layout="none">
-                <ChapterCard title={ch.title} n={i + 1} of={all.length} len={dur} o={o} fontFamily={family} />
+              <Sequence
+                key={`c${i}`}
+                from={from}
+                durationInFrames={dur}
+                name={`chapter ${i + 1}`}
+                layout="none"
+              >
+                <ChapterCard
+                  title={ch.title}
+                  n={i + 1}
+                  of={all.length}
+                  len={dur}
+                  o={o}
+                  fontFamily={family}
+                />
               </Sequence>
             );
           })
@@ -45,8 +89,20 @@ export const Titled: React.FC<Props> = (props) => {
         const from = secToFrames(lt.start, fps);
         const dur = Math.max(1, secToFrames(lt.end, fps) - from);
         return (
-          <Sequence key={`l${i}`} from={from} durationInFrames={dur} name={`lower third ${i + 1}`} layout="none">
-            <LowerThirdCard text={lt.text} sub={lt.sub} len={dur} o={o} fontFamily={family} />
+          <Sequence
+            key={`l${i}`}
+            from={from}
+            durationInFrames={dur}
+            name={`lower third ${i + 1}`}
+            layout="none"
+          >
+            <LowerThirdCard
+              text={lt.text}
+              sub={lt.sub}
+              len={dur}
+              o={o}
+              fontFamily={family}
+            />
           </Sequence>
         );
       })}
@@ -59,17 +115,23 @@ const useInOut = (len: number) => {
   const { fps } = useVideoConfig();
   const enter = spring({ frame, fps, config: { damping: 16, stiffness: 160 } });
   const fade = Math.min(8, Math.floor(len / 3));
-  const exit = fade > 0 ? interpolate(frame, [len - fade, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
+  const exit =
+    fade > 0
+      ? interpolate(frame, [len - fade, len], [1, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        })
+      : 1;
   return { enter, exit };
 };
 
-const LowerThirdCard: React.FC<{ text: string; sub?: string; len: number; o: Options; fontFamily: string }> = ({
-  text,
-  sub,
-  len,
-  o,
-  fontFamily,
-}) => {
+const LowerThirdCard: React.FC<{
+  text: string;
+  sub?: string;
+  len: number;
+  o: Options;
+  fontFamily: string;
+}> = ({ text, sub, len, o, fontFamily }) => {
   const { width, height } = useVideoConfig();
   const { enter, exit } = useInOut(len);
   const short = Math.min(width, height);
@@ -83,7 +145,12 @@ const LowerThirdCard: React.FC<{ text: string; sub?: string; len: number; o: Opt
         padding: `0 0 ${height * (portrait ? 0.26 : 0.1)}px ${width * 0.06}px`,
       }}
     >
-      <div style={{ opacity: exit, transform: `translateX(${(1 - enter) * -width * 0.08}px)` }}>
+      <div
+        style={{
+          opacity: exit,
+          transform: `translateX(${(1 - enter) * -width * 0.08}px)`,
+        }}
+      >
         <div
           style={{
             display: "inline-block",
@@ -109,7 +176,9 @@ const LowerThirdCard: React.FC<{ text: string; sub?: string; len: number; o: Opt
               padding: `${size * 0.16}px ${size * 0.45}px`,
               whiteSpace: "pre-wrap",
               width: "fit-content",
-              opacity: interpolate(enter, [0.4, 1], [0, 1], { extrapolateLeft: "clamp" }),
+              opacity: interpolate(enter, [0.4, 1], [0, 1], {
+                extrapolateLeft: "clamp",
+              }),
             }}
           >
             {sub}
@@ -121,14 +190,14 @@ const LowerThirdCard: React.FC<{ text: string; sub?: string; len: number; o: Opt
 };
 
 /** Top-left chip: the chapter's place in the list and its title, as written. */
-const ChapterCard: React.FC<{ title: string; n: number; of: number; len: number; o: Options; fontFamily: string }> = ({
-  title,
-  n,
-  of,
-  len,
-  o,
-  fontFamily,
-}) => {
+const ChapterCard: React.FC<{
+  title: string;
+  n: number;
+  of: number;
+  len: number;
+  o: Options;
+  fontFamily: string;
+}> = ({ title, n, of, len, o, fontFamily }) => {
   const { width, height } = useVideoConfig();
   const { enter, exit } = useInOut(len);
   const short = Math.min(width, height);
@@ -184,12 +253,23 @@ const ChapterCard: React.FC<{ title: string; n: number; of: number; len: number;
   );
 };
 
-const SceneCard: React.FC<{ text: string; len: number; o: Options; fontFamily: string }> = ({ text, len, o, fontFamily }) => {
+const SceneCard: React.FC<{
+  text: string;
+  len: number;
+  o: Options;
+  fontFamily: string;
+}> = ({ text, len, o, fontFamily }) => {
   const { width, height } = useVideoConfig();
   const { enter, exit } = useInOut(len);
   const size = Math.round(Math.min(width, height) * 0.08);
   return (
-    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", background: `rgba(0,0,0,${0.35 * exit})` }}>
+    <AbsoluteFill
+      style={{
+        justifyContent: "center",
+        alignItems: "center",
+        background: `rgba(0,0,0,${0.35 * exit})`,
+      }}
+    >
       <div
         style={{
           color: o.textColor,
@@ -206,7 +286,14 @@ const SceneCard: React.FC<{ text: string; len: number; o: Options; fontFamily: s
         }}
       >
         {text}
-        <div style={{ height: Math.max(3, size * 0.06), background: o.accent, marginTop: size * 0.2, transform: `scaleX(${enter})` }} />
+        <div
+          style={{
+            height: Math.max(3, size * 0.06),
+            background: o.accent,
+            marginTop: size * 0.2,
+            transform: `scaleX(${enter})`,
+          }}
+        />
       </div>
     </AbsoluteFill>
   );

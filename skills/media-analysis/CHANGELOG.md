@@ -96,4 +96,3 @@
 - Harden the Skill contract for video-production-agent integration (0c03298)
 - Implement media-analysis-skill 0.1.0: deterministic media observation Skill (253fab7)
 - Initial commit (d5c6c13)
-

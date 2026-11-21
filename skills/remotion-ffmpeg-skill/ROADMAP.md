@@ -3,6 +3,7 @@
 Status: ✅ done · 🔜 next · 💡 idea. Order inside a section is priority order.
 
 ## Done
+
 - ✅ Timeline from ffmpeg-skill measurements (probe, scenes, silence, peaks, beats, highlights) + captions
 - ✅ Captioned, Jumpcut, PeakPulse, Titled, Highlights, BeatMontage
 - ✅ Verified renders (exact frame count, fps, size, audio) + contact sheet
@@ -26,11 +27,13 @@ Status: ✅ done · 🔜 next · 💡 idea. Order inside a section is priority o
 Tick a box when it ships (with its test and docs). Order inside a group is priority order.
 
 ### Release prep
+
 - [ ] Japanese README (`README.ja.md`), linked from the top of `README.md`
 - [ ] Demo GIFs in the README for Pip, chapter cards and `--sparse` (before / after timing), fictional footage only
 - [ ] Agent evals for the new features: Pip (camera + screen), chapters to YouTube, a brand file
 
 ### With ffmpeg-skill
+
 - [ ] Proposed chapters: ffmpeg-skill `metadata.py --auto-chapters` finds the breaks (silence / scene cuts), the user writes the titles, then chapter cards + markers + description block
 - [ ] Captions from speech: transcription-skill word timings -> `--words` -> Karaoke / Captioned, so a bare recording goes to a captioned video in one run
 - [ ] External mic first: ffmpeg-skill `sync.py --replace-audio` puts the lav / recorder audio on the picture before measuring and drawing
@@ -43,6 +46,7 @@ Tick a box when it ships (with its test and docs). Order inside a group is prior
 - [ ] One-run shorts: highlights -> 9:16 with captions -> Reels, TikTok and Shorts exports and checks in a single pipeline call
 
 ### On its own
+
 - [ ] Thumbnails: candidate frames from measured scene cuts / highlights, the user's title on top, 1280×720 checked
 - [ ] YouTube end screen: an end card that keeps the end-screen element areas clear for the last 20 s
 - [ ] Chapter progress bar: a progress bar split at the chapters, like the YouTube player
@@ -51,4 +55,5 @@ Tick a box when it ships (with its test and docs). Order inside a group is prior
 - [ ] Speaker colours: captions coloured per speaker (needs speaker detection from a local engine)
 
 ## Ideas
+
 - 💡 Remotion Lambda rendering for long jobs (opt-in, needs the user's AWS)

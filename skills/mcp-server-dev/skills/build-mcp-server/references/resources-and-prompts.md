@@ -11,14 +11,16 @@ Most servers only need tools. Reach for these when the shape of your integration
 
 ## Resources
 
-A resource is data identified by a URI. Unlike a tool, it's not *called* — it's *read*. The host browses available resources and decides which to load into context.
+A resource is data identified by a URI. Unlike a tool, it's not _called_ — it's _read_. The host browses available resources and decides which to load into context.
 
 **When a resource beats a tool:**
+
 - Large reference data (docs, schemas, configs) that Claude should be able to browse
 - Content that changes independently of conversation (log files, live data)
 - Anything where "Claude decides to fetch" is the wrong mental model
 
 **When a tool is better:**
+
 - The operation has side effects
 - The result depends on parameters Claude chooses
 - You want Claude (not the host UI) to decide when to pull it in
@@ -30,9 +32,19 @@ A resource is data identified by a URI. Unlike a tool, it's not *called* — it'
 server.registerResource(
   "config",
   "config://app/settings",
-  { name: "App Settings", description: "Current configuration", mimeType: "application/json" },
+  {
+    name: "App Settings",
+    description: "Current configuration",
+    mimeType: "application/json",
+  },
   async (uri) => ({
-    contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(config) }],
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "application/json",
+        text: JSON.stringify(config),
+      },
+    ],
   }),
 );
 ```
@@ -89,10 +101,15 @@ server.registerPrompt(
     argsSchema: { text: z.string(), max_words: z.string().optional() },
   },
   ({ text, max_words }) => ({
-    messages: [{
-      role: "user",
-      content: { type: "text", text: `Summarize in ${max_words ?? "100"} words:\n\n${text}` },
-    }],
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `Summarize in ${max_words ?? "100"} words:\n\n${text}`,
+        },
+      },
+    ],
   }),
 );
 ```
@@ -105,18 +122,19 @@ def summarize(text: str, max_words: str = "100") -> str:
 ```
 
 **Constraints:**
+
 - Arguments are **string-only** (no numbers, booleans, objects) — convert inside the handler
 - Returns a `messages[]` array — can include embedded resources/images, not just text
-- No side effects — the handler just builds a message, it doesn't *do* anything
+- No side effects — the handler just builds a message, it doesn't _do_ anything
 
 ---
 
 ## Quick decision table
 
-| You want to... | Use |
-|---|---|
-| Let Claude fetch something on demand, with parameters | **Tool** |
-| Expose browsable context (files, docs, schemas) | **Resource** |
-| Expose a dynamic family of things (`db://{table}`) | **Resource template** |
-| Give users a one-click workflow | **Prompt** |
-| Ask the user something mid-tool | **Elicitation** (see `elicitation.md`) |
+| You want to...                                        | Use                                    |
+| ----------------------------------------------------- | -------------------------------------- |
+| Let Claude fetch something on demand, with parameters | **Tool**                               |
+| Expose browsable context (files, docs, schemas)       | **Resource**                           |
+| Expose a dynamic family of things (`db://{table}`)    | **Resource template**                  |
+| Give users a one-click workflow                       | **Prompt**                             |
+| Ask the user something mid-tool                       | **Elicitation** (see `elicitation.md`) |

@@ -1,6 +1,13 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { engineBgmLog, projectPath } from "./project-path.mjs";
@@ -21,7 +28,10 @@ test("a path in the project resolves there, made or not", (t) => {
   writeFileSync(join(dir, "take.wav"), "take");
   assert.equal(projectPath(dir, "take.wav"), join(dir, "take.wav"));
   assert.equal(projectPath(dir, "sub/../take.wav"), join(dir, "take.wav"));
-  assert.equal(projectPath(dir, "assets/voice/new.wav"), join(dir, "assets/voice/new.wav"));
+  assert.equal(
+    projectPath(dir, "assets/voice/new.wav"),
+    join(dir, "assets/voice/new.wav"),
+  );
 });
 
 test("an absolute path, a climb out, or a link out of the project resolves to nothing", (t) => {

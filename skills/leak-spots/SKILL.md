@@ -55,11 +55,11 @@ node .agents/skills/leak-spots/scripts/leak-spots.js scan --fail-on-leak
 
 ### What It Runs
 
-| Step | Command | Purpose |
-|------|---------|---------|
-| 1 | `periderm scan --json` | Full secret scan with structured output |
-| 2 | `periderm review --deep --json` | Deep AI analysis of findings |
-| 3 | **AI Analysis** | Classify, prioritize, give remediation |
+| Step | Command                         | Purpose                                 |
+| ---- | ------------------------------- | --------------------------------------- |
+| 1    | `periderm scan --json`          | Full secret scan with structured output |
+| 2    | `periderm review --deep --json` | Deep AI analysis of findings            |
+| 3    | **AI Analysis**                 | Classify, prioritize, give remediation  |
 
 ### Configuration
 
@@ -75,12 +75,7 @@ Create `leak-spots.json` in project root:
   "review": {
     "deep": true
   },
-  "allowList": [
-    "EXAMPLE_KEY",
-    "test-key-123",
-    "placeholder",
-    "dummy"
-  ],
+  "allowList": ["EXAMPLE_KEY", "test-key-123", "placeholder", "dummy"],
   "ignorePaths": [
     "*.lock",
     "package-lock.json",

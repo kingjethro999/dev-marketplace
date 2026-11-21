@@ -6,27 +6,27 @@ Validated against `github.com/anthropics/mcpb/schemas/mcpb-manifest-v0.4.schema.
 
 ## Top-level fields
 
-| Field | Required | Description |
-|---|---|---|
-| `manifest_version` | ✅ | Schema version. Use `"0.4"`. |
-| `name` | ✅ | Package identifier (lowercase, hyphens). Must be unique. |
-| `version` | ✅ | Semver version of YOUR package. |
-| `description` | ✅ | One-line summary. Shown in marketplace. |
-| `author` | ✅ | `{name, email?, url?}` |
-| `server` | ✅ | Entry point and launch config. See below. |
-| `display_name` | | Human-friendly name. Falls back to `name`. |
-| `long_description` | | Markdown. Shown on detail page. |
-| `icon` / `icons` | | Path(s) to icon file(s) in the bundle. |
-| `homepage` / `repository` / `documentation` / `support` | | URLs. |
-| `license` | | SPDX identifier. |
-| `keywords` | | String array for search. |
-| `user_config` | | Install-time config fields. See below. |
-| `compatibility` | | Host/platform/runtime requirements. See below. |
-| `tools` / `prompts` | | Optional declarative list for marketplace display. Not enforced at runtime. |
-| `tools_generated` / `prompts_generated` | | `true` if tools/prompts are dynamic (can't list statically). |
-| `screenshots` | | Array of image paths. |
-| `localization` | | i18n bundles. |
-| `privacy_policies` | | URLs. |
+| Field                                                   | Required | Description                                                                 |
+| ------------------------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `manifest_version`                                      | ✅       | Schema version. Use `"0.4"`.                                                |
+| `name`                                                  | ✅       | Package identifier (lowercase, hyphens). Must be unique.                    |
+| `version`                                               | ✅       | Semver version of YOUR package.                                             |
+| `description`                                           | ✅       | One-line summary. Shown in marketplace.                                     |
+| `author`                                                | ✅       | `{name, email?, url?}`                                                      |
+| `server`                                                | ✅       | Entry point and launch config. See below.                                   |
+| `display_name`                                          |          | Human-friendly name. Falls back to `name`.                                  |
+| `long_description`                                      |          | Markdown. Shown on detail page.                                             |
+| `icon` / `icons`                                        |          | Path(s) to icon file(s) in the bundle.                                      |
+| `homepage` / `repository` / `documentation` / `support` |          | URLs.                                                                       |
+| `license`                                               |          | SPDX identifier.                                                            |
+| `keywords`                                              |          | String array for search.                                                    |
+| `user_config`                                           |          | Install-time config fields. See below.                                      |
+| `compatibility`                                         |          | Host/platform/runtime requirements. See below.                              |
+| `tools` / `prompts`                                     |          | Optional declarative list for marketplace display. Not enforced at runtime. |
+| `tools_generated` / `prompts_generated`                 |          | `true` if tools/prompts are dynamic (can't list statically).                |
+| `screenshots`                                           |          | Array of image paths.                                                       |
+| `localization`                                          |          | i18n bundles.                                                               |
+| `privacy_policies`                                      |          | URLs.                                                                       |
 
 ---
 
@@ -47,15 +47,16 @@ Validated against `github.com/anthropics/mcpb/schemas/mcpb-manifest-v0.4.schema.
 }
 ```
 
-| Field | Description |
-|---|---|
-| `type` | `"node"`, `"python"`, or `"binary"` |
-| `entry_point` | Relative path to main file. Informational. |
-| `mcp_config.command` | Executable to launch. |
-| `mcp_config.args` | Argv array. Use `${__dirname}` for bundle-relative paths. |
-| `mcp_config.env` | Environment variables. Use `${user_config.KEY}` to substitute user config. |
+| Field                | Description                                                                |
+| -------------------- | -------------------------------------------------------------------------- |
+| `type`               | `"node"`, `"python"`, or `"binary"`                                        |
+| `entry_point`        | Relative path to main file. Informational.                                 |
+| `mcp_config.command` | Executable to launch.                                                      |
+| `mcp_config.args`    | Argv array. Use `${__dirname}` for bundle-relative paths.                  |
+| `mcp_config.env`     | Environment variables. Use `${user_config.KEY}` to substitute user config. |
 
 **Substitution variables** (in `args` and `env` only):
+
 - `${__dirname}` — absolute path to the unpacked bundle directory
 - `${user_config.<key>}` — value the user entered at install time
 - `${HOME}` — user's home directory
@@ -92,16 +93,16 @@ Validated against `github.com/anthropics/mcpb/schemas/mcpb-manifest-v0.4.schema.
 }
 ```
 
-| Field | Required | Description |
-|---|---|---|
-| `type` | ✅ | `"string"`, `"number"`, `"boolean"`, `"directory"`, `"file"` |
-| `title` | ✅ | Form label. |
-| `description` | ✅ | Help text under the input. |
-| `default` | | Pre-filled value. Supports `${HOME}`. |
-| `required` | | If `true`, install blocks until filled. |
-| `sensitive` | | If `true`, stored in OS keychain + masked in UI. **NOT `secret`** — that field doesn't exist. |
-| `multiple` | | If `true`, user can enter multiple values (array). |
-| `min` / `max` | | Numeric bounds (for `type: "number"`). |
+| Field         | Required | Description                                                                                   |
+| ------------- | -------- | --------------------------------------------------------------------------------------------- |
+| `type`        | ✅       | `"string"`, `"number"`, `"boolean"`, `"directory"`, `"file"`                                  |
+| `title`       | ✅       | Form label.                                                                                   |
+| `description` | ✅       | Help text under the input.                                                                    |
+| `default`     |          | Pre-filled value. Supports `${HOME}`.                                                         |
+| `required`    |          | If `true`, install blocks until filled.                                                       |
+| `sensitive`   |          | If `true`, stored in OS keychain + masked in UI. **NOT `secret`** — that field doesn't exist. |
+| `multiple`    |          | If `true`, user can enter multiple values (array).                                            |
+| `min` / `max` |          | Numeric bounds (for `type: "number"`).                                                        |
 
 `directory` and `file` types render native OS pickers — prefer these over free-text paths for UX and validation.
 
@@ -117,11 +118,11 @@ Validated against `github.com/anthropics/mcpb/schemas/mcpb-manifest-v0.4.schema.
 }
 ```
 
-| Field | Description |
-|---|---|
-| `claude_desktop` | Semver range. Install blocked if host is older. |
-| `platforms` | OS allowlist. Subset of `["darwin", "win32", "linux"]`. |
-| `runtimes` | Required runtime versions, e.g. `{"node": ">=20"}` or `{"python": ">=3.11"}`. |
+| Field            | Description                                                                   |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `claude_desktop` | Semver range. Install blocked if host is older.                               |
+| `platforms`      | OS allowlist. Subset of `["darwin", "win32", "linux"]`.                       |
+| `runtimes`       | Required runtime versions, e.g. `{"node": ">=20"}` or `{"python": ">=3.11"}`. |
 
 ---
 

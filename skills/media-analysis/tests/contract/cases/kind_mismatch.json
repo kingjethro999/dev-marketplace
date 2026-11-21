@@ -8,7 +8,5 @@
       "value": "APPEND:speaker_detection"
     }
   ],
-  "expect_problems": [
-    "analysis_kinds"
-  ]
+  "expect_problems": ["analysis_kinds"]
 }

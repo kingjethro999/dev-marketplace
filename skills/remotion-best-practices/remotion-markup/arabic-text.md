@@ -20,7 +20,7 @@ const RTL = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 const isRtl = (words: string[]) =>
   words.filter((w) => RTL.test(w)).length > words.length / 2;
 
-<div dir={isRtl(words) ? 'rtl' : 'ltr'}>{/* word spans */}</div>
+<div dir={isRtl(words) ? "rtl" : "ltr"}>{/* word spans */}</div>;
 ```
 
 ## Animate words, not letters
@@ -39,17 +39,18 @@ Split into units that the browser can still join:
 - add a zero-width joiner (`\u200D`) on each side of a unit that connects to its neighbour, so each unit is drawn in its connected form
 
 ```tsx
-const ZWJ = '\u200D';
-const RIGHT_JOINING = /[\u0622-\u0625\u0627\u0629\u062F-\u0632\u0648\u0671-\u0673\u0675-\u0677\u0688-\u0699\u06C0\u06C3-\u06CB\u06CD\u06CF\u06D2\u06D3\u06D5]/;
+const ZWJ = "\u200D";
+const RIGHT_JOINING =
+  /[\u0622-\u0625\u0627\u0629\u062F-\u0632\u0648\u0671-\u0673\u0675-\u0677\u0688-\u0699\u06C0\u06C3-\u06CB\u06CD\u06CF\u06D2\u06D3\u06D5]/;
 const LETTER = /[\u0620-\u064A\u066E-\u06D3\u06D5\u06FA-\u06FC\u06FF]/;
 const LTR_RUN = /^[0-9\u0660-\u0669\u06F0-\u06F9A-Za-z\u066B\u066C.,:%]+$/;
 const MARK = /[\u064B-\u065F\u0670\u06D6-\u06ED]/;
 const MARKS = /[\u064B-\u065F\u0670\u06D6-\u06ED\u200D]/g;
-const first = (u: string) => u.replace(MARKS, '')[0] ?? '';
-const last = (u: string) => u.replace(MARKS, '').slice(-1);
-const joinsPrev = (u: string) => LETTER.test(first(u)) && first(u) !== '\u0621';
+const first = (u: string) => u.replace(MARKS, "")[0] ?? "";
+const last = (u: string) => u.replace(MARKS, "").slice(-1);
+const joinsPrev = (u: string) => LETTER.test(first(u)) && first(u) !== "\u0621";
 const joinsNext = (u: string) =>
-  LETTER.test(last(u)) && last(u) !== '\u0621' && !RIGHT_JOINING.test(last(u));
+  LETTER.test(last(u)) && last(u) !== "\u0621" && !RIGHT_JOINING.test(last(u));
 
 export const splitArabicLetters = (text: string): string[] => {
   const g: string[] = [];
@@ -63,15 +64,21 @@ export const splitArabicLetters = (text: string): string[] => {
       let run = g[i];
       while (g[i + 1] && LTR_RUN.test(g[i + 1])) run += g[++i];
       units.push(run);
-    } else if (first(g[i]) === '\u0644' && /[\u0622\u0623\u0625\u0627]/.test(first(g[i + 1] ?? ''))) {
+    } else if (
+      first(g[i]) === "\u0644" &&
+      /[\u0622\u0623\u0625\u0627]/.test(first(g[i + 1] ?? ""))
+    ) {
       units.push(g[i] + g[++i]);
     } else {
       units.push(g[i]);
     }
   }
   return units.map((u, i) => {
-    const before = i > 0 && joinsNext(units[i - 1]) && joinsPrev(u) ? ZWJ : '';
-    const after = i < units.length - 1 && joinsNext(u) && joinsPrev(units[i + 1]) ? ZWJ : '';
+    const before = i > 0 && joinsNext(units[i - 1]) && joinsPrev(u) ? ZWJ : "";
+    const after =
+      i < units.length - 1 && joinsNext(u) && joinsPrev(units[i + 1])
+        ? ZWJ
+        : "";
     return before + u + after;
   });
 };

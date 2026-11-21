@@ -13,7 +13,7 @@
 
 **ffmpeg-skill measures the footage. Remotion draws from those measurements. ffmpeg-skill checks and delivers the result.**
 
-An [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview) for Claude Code, Cursor and Codex that puts Remotion motion graphics on *real recordings* — and never guesses a number. Composition length, fps and frame size come from the probe; cuts come from measured silences; pulses hit on measured audio peaks; captions keep the timing of your SRT. Every render is verified frame-for-frame against its timeline and inspected with a contact sheet before it ships.
+An [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview) for Claude Code, Cursor and Codex that puts Remotion motion graphics on _real recordings_ — and never guesses a number. Composition length, fps and frame size come from the probe; cuts come from measured silences; pulses hit on measured audio peaks; captions keep the timing of your SRT. Every render is verified frame-for-frame against its timeline and inspected with a contact sheet before it ships.
 
 Built on [**ffmpeg-skill**](https://github.com/kajisho5/ffmpeg-skill). Unofficial — not affiliated with Remotion.
 
@@ -30,16 +30,16 @@ Built on [**ffmpeg-skill**](https://github.com/kajisho5/ffmpeg-skill). Unofficia
 
 ## Why this and not just Remotion's own skills?
 
-[Remotion's official Agent Skills](https://www.remotion.dev/docs/ai/skills) teach an agent to *write* good Remotion code. This skill closes the loop around it:
+[Remotion's official Agent Skills](https://www.remotion.dev/docs/ai/skills) teach an agent to _write_ good Remotion code. This skill closes the loop around it:
 
-| | Remotion skills | remotion-ffmpeg-skill |
-|---|---|---|
-| Writes Remotion compositions | ✅ | ✅ (three ready-made, timeline-driven) |
-| Knows the source's real duration / fps / size / silences / scene cuts / audio peaks | — | ✅ measured by ffmpeg-skill |
-| Never draws on VFR or HDR footage as is: refuses it, or (`--conform`) draws on a CFR, SDR BT.709 copy ffmpeg-skill made, original untouched | — | ✅ |
-| Verifies the render (exact frame count, fps, size, audio) | — | ✅ non-zero exit on mismatch |
-| Looks at the result (contact sheet) | — | ✅ |
-| Delivers for YouTube / Reels / TikTok / Shorts / X with loudness and compliance checks | — | ✅ ffmpeg-skill templates + `check.py` |
+|                                                                                                                                             | Remotion skills | remotion-ffmpeg-skill                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | -------------------------------------- |
+| Writes Remotion compositions                                                                                                                | ✅              | ✅ (three ready-made, timeline-driven) |
+| Knows the source's real duration / fps / size / silences / scene cuts / audio peaks                                                         | —               | ✅ measured by ffmpeg-skill            |
+| Never draws on VFR or HDR footage as is: refuses it, or (`--conform`) draws on a CFR, SDR BT.709 copy ffmpeg-skill made, original untouched | —               | ✅                                     |
+| Verifies the render (exact frame count, fps, size, audio)                                                                                   | —               | ✅ non-zero exit on mismatch           |
+| Looks at the result (contact sheet)                                                                                                         | —               | ✅                                     |
+| Delivers for YouTube / Reels / TikTok / Shorts / X with loudness and compliance checks                                                      | —               | ✅ ffmpeg-skill templates + `check.py` |
 
 They work well together: install both if you write custom compositions.
 
@@ -88,17 +88,17 @@ Tool names and input schemas come from the machine-readable contract (`npx remot
 
 ### Compositions
 
-| Id | Length | What it draws |
-|---|---|---|
-| `Captioned` | source duration | caption cards that spring in on each cue (text exactly as written) |
-| `Jumpcut` | sum of measured speech ranges | silences removed, punch-in on every other cut, captions re-timed |
-| `PeakPulse` | source duration | edge glow + zoom on measured audio peaks or beats, flash on scene cuts, progress bar |
-| `Titled` | source duration | your lower thirds, a title card at each measured scene change, a card at each chapter start |
-| `Highlights` | sum of ranked highlights | ffmpeg-skill's audio-energy highlights back to back, counter, title |
-| `BeatMontage` | source duration | audio unbroken, picture cuts on the measured beat grid |
-| `Karaoke` | source duration | words light up at the times a local speech engine measured |
-| `Emphasis` | source duration | YouTube-style captions: the words you name (or the captions' own numbers / names) pop, change colour or get a box when spoken; speech bubbles and comment cards |
-| `Pip` | source duration | a second recording (camera) in a corner, synced by the offset measured between the two audio tracks; captions on top |
+| Id            | Length                        | What it draws                                                                                                                                                   |
+| ------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Captioned`   | source duration               | caption cards that spring in on each cue (text exactly as written)                                                                                              |
+| `Jumpcut`     | sum of measured speech ranges | silences removed, punch-in on every other cut, captions re-timed                                                                                                |
+| `PeakPulse`   | source duration               | edge glow + zoom on measured audio peaks or beats, flash on scene cuts, progress bar                                                                            |
+| `Titled`      | source duration               | your lower thirds, a title card at each measured scene change, a card at each chapter start                                                                     |
+| `Highlights`  | sum of ranked highlights      | ffmpeg-skill's audio-energy highlights back to back, counter, title                                                                                             |
+| `BeatMontage` | source duration               | audio unbroken, picture cuts on the measured beat grid                                                                                                          |
+| `Karaoke`     | source duration               | words light up at the times a local speech engine measured                                                                                                      |
+| `Emphasis`    | source duration               | YouTube-style captions: the words you name (or the captions' own numbers / names) pop, change colour or get a box when spoken; speech bubbles and comment cards |
+| `Pip`         | source duration               | a second recording (camera) in a corner, synced by the offset measured between the two audio tracks; captions on top                                            |
 
 **Any shape:** `--aspect 9:16 | 1:1 | 4:5 | 16:9` with `--fit blur | contain | cover`; `pipeline.py --platform reels` picks 9:16 from ffmpeg-skill's own template so nothing gets cropped on delivery.
 
@@ -135,18 +135,18 @@ Remotion renders in a headless browser. Measured on a 2-core Linux machine: a 30
 
 **`--sparse`** (Captioned, Karaoke, Titled): only the frames that show a caption, lower third or scene title are drawn; ffmpeg-skill places each stretch back at its time over the untouched source. Same picture frame for frame (checked by an integration test). How much it saves depends on how much of the footage shows graphics — measured on the same 2-core Linux machine, 1280×720, 30 fps:
 
-| Footage | Frames drawn | Full layer | `--sparse` |
-|---|---|---|---|
-| 60 s, captions on 7 s | 211 / 1800 (12 %) | 152 s | 46 s |
-| 40 s, two scene titles + one lower third | 272 / 1200 (23 %) | 104 s | 39 s |
-| 60 s, captions on half of it | 909 / 1800 (50 %) | 155 s | 100 s |
-| captions on all of it | — | — | nothing to skip: draws the full layer and says so |
+| Footage                                  | Frames drawn      | Full layer | `--sparse`                                        |
+| ---------------------------------------- | ----------------- | ---------- | ------------------------------------------------- |
+| 60 s, captions on 7 s                    | 211 / 1800 (12 %) | 152 s      | 46 s                                              |
+| 40 s, two scene titles + one lower third | 272 / 1200 (23 %) | 104 s      | 39 s                                              |
+| 60 s, captions on half of it             | 909 / 1800 (50 %) | 155 s      | 100 s                                             |
+| captions on all of it                    | —                 | —          | nothing to skip: draws the full layer and says so |
 
 Browser start-up and the final composite cost the same either way, so the gain is smaller than the share of frames skipped. Needs an ffmpeg-skill whose `overlay.py` has `--place`; otherwise it draws the full layer and says why.
 
 ## Agent evals
 
-Plain requests ("captions for YouTube", a Japanese Reels jump cut, "cut to the beat", a lower third without a name, a plain trim that is *not* this skill's job, a square highlight reel), run by an agent that only has the skill files, graded on what it leaves behind — plus a transparent layer for an editor, joining clips with titles, and karaoke from word timings: **9 / 9** ([run 1](evals/results/2026-10-24.md), [run 2](evals/results/2026-10-24b.md), [how to run](evals/README.md)). A third run with a neutral prompt (both skills installed, no hint) went to ffmpeg-skill alone for three requests it can finish by itself — 6 / 9 by the original checks, 9 / 9 once that route is accepted ([run 3](evals/results/2026-10-24c.md)).
+Plain requests ("captions for YouTube", a Japanese Reels jump cut, "cut to the beat", a lower third without a name, a plain trim that is _not_ this skill's job, a square highlight reel), run by an agent that only has the skill files, graded on what it leaves behind — plus a transparent layer for an editor, joining clips with titles, and karaoke from word timings: **9 / 9** ([run 1](evals/results/2026-10-24.md), [run 2](evals/results/2026-10-24b.md), [how to run](evals/README.md)). A third run with a neutral prompt (both skills installed, no hint) went to ffmpeg-skill alone for three requests it can finish by itself — 6 / 9 by the original checks, 9 / 9 once that route is accepted ([run 3](evals/results/2026-10-24c.md)).
 
 ## Status
 

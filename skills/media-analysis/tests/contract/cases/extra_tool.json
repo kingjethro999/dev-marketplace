@@ -5,9 +5,7 @@
     {
       "op": "add_tool",
       "tool_id": "media-analysis/speaker",
-      "kinds": [
-        "speaker_detection"
-      ]
+      "kinds": ["speaker_detection"]
     }
   ],
   "expect_problems": [

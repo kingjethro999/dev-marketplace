@@ -18,6 +18,7 @@ Step 2 (`publish plan`) was not folded into this PR. It needs the ffmpeg-skill a
   - `publish plan FILE --platform ID --json` (NOT_IMPLEMENTED until step 2)
 
   With `--json`, stdout holds exactly one JSON document, on success and failure alike.
+
 - **Contract in the OS registry shape**: `skill_id`, `version`, `contract_version`, `provides`, `dependencies` with `version_range`, and `not_provided`. `skill` is an object (`id`, `version`, `package`), because the OS schema types `skill` as an object; a test validates the contract against `registry/capability_contract.schema.json`.
   - `publish.plan` and `publish.upload` are published with lifecycle `PROPOSED`, and their tools with `implemented: false`. Each moves to `EXPERIMENTAL` in the PR that makes it work.
   - `execution.network` is `true`, and `network_tools` lists `publish/upload` alone. `network_requires` is `--confirm <token>`, and `network_in_this_release` is `false`.
@@ -551,7 +552,7 @@ Roadmap step 8 (field review 2026-11-05): a talk or a long-form video is deliver
 
 ### Context
 
-Roadmap step 9 (field review 2026-11-05): several Shorts or Reels cut from one long video (a talk, a recorded event) go out one after another, each with its own title and a link back to the full video. Each must be its own CONFIRM, and a retry after a failure must neither skip a clip nor post one twice. Done when a mock run of five clips with a failure on clip 3 resumes at clip 3 and uploads each once. ADR-004 decided that an interrupted *upload* is not resumed by a later run (that would put a session URI, an upload credential, on disk); a series is resumed between clips, never inside one, so that rule stands. No real upload was made.
+Roadmap step 9 (field review 2026-11-05): several Shorts or Reels cut from one long video (a talk, a recorded event) go out one after another, each with its own title and a link back to the full video. Each must be its own CONFIRM, and a retry after a failure must neither skip a clip nor post one twice. Done when a mock run of five clips with a failure on clip 3 resumes at clip 3 and uploads each once. ADR-004 decided that an interrupted _upload_ is not resumed by a later run (that would put a session URI, an upload credential, on disk); a series is resumed between clips, never inside one, so that rule stands. No real upload was made.
 
 ### Decision
 

@@ -6,14 +6,14 @@ Status: Accepted
 
 A supply-chain audit (Trail of Bits supply-chain-risk-auditor, checked against OSV on 2026-10-30) found that the `fetch` extra's floor, `yt-dlp>=2024.8.6` (ADR-005), allows releases with six published advisories, five of them HIGH:
 
-| Advisory | Severity | Fixed in |
-|---|---|---|
-| GHSA-g3gw-q23r-pgqm (`--netrc-cmd` command injection) | HIGH | 2026.02.21 |
-| GHSA-69qj-pvh9-c5wg (`--exec` command injection) | HIGH | 2026.6.9 |
-| GHSA-c6mh-fpjc-4pr3 (dangerous file type via filename sanitization) | HIGH | 2026.6.9 |
-| GHSA-vx4q-3cr2-7cg2 (code execution via manifest downloads with aria2c) | HIGH | 2026.6.9 |
-| GHSA-f7j3-774f-rfhj (cookie leak with the curl downloader) | MODERATE | 2026.6.9 |
-| GHSA-6v4j-43gg-vj32 (downstream command injection via output sanitization) | HIGH | 2026.7.4 |
+| Advisory                                                                   | Severity | Fixed in   |
+| -------------------------------------------------------------------------- | -------- | ---------- |
+| GHSA-g3gw-q23r-pgqm (`--netrc-cmd` command injection)                      | HIGH     | 2026.02.21 |
+| GHSA-69qj-pvh9-c5wg (`--exec` command injection)                           | HIGH     | 2026.6.9   |
+| GHSA-c6mh-fpjc-4pr3 (dangerous file type via filename sanitization)        | HIGH     | 2026.6.9   |
+| GHSA-vx4q-3cr2-7cg2 (code execution via manifest downloads with aria2c)    | HIGH     | 2026.6.9   |
+| GHSA-f7j3-774f-rfhj (cookie leak with the curl downloader)                 | MODERATE | 2026.6.9   |
+| GHSA-6v4j-43gg-vj32 (downstream command injection via output sanitization) | HIGH     | 2026.7.4   |
 
 `fetch` never sets `--exec`, `netrc_cmd`, cookies or an external downloader (ADR-005, item 3), so several of these are not reachable through it. The filename and output sanitization advisories are, because `fetch` writes the file yt-dlp names, and the floor should not admit any of them.
 

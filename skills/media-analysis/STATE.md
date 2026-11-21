@@ -6,6 +6,7 @@ against the code, a command run or the GitHub API on that date; anything that co
 **unverified**.
 
 ## Version
+
 - Single source: `pyproject.toml` `version`. `media_analysis.VERSION` (`src/media_analysis/__init__.py`, PR #17)
   reads this checkout's `pyproject.toml` when run from source, otherwise the installed `media_analysis_skill-*.dist-info`
   METADATA; there is no hard-coded constant. `media-analysis --version`, `contract --json` → `version`, every tool /
@@ -22,41 +23,43 @@ against the code, a command run or the GitHub API on that date; anything that co
   returns 404; the publish step runs only when a `PYPI_API_TOKEN` secret exists). Install is `pip install -e .` from a clone.
 
 ## CURRENT (implemented, tested, on main)
+
 - CLI `media-analysis` (`media_analysis.cli:main`), subcommands: `probe`, `analyze`, `run` (canonical machine
   interface: `run <request.json | -> --json`, one response document on stdout), `doctor`, `contract`, `conformance`, `style` (`style profile <input> --out <file>`
   saves an `edit_style` profile, `style diff <ref> <cand>` compares two; ADR-030), `library` (`library index <folder>
-  --index <file>` / `library search`: a B-roll index with measured metadata and tags, incremental re-scan; ADR-031),
+--index <file>` / `library search`: a B-roll index with measured metadata and tags, incremental re-scan; ADR-031),
   `highlights` (candidates of a long recording on sentence boundaries, with reasons; applause / laughter spans come
   from the caller, for example this Skill's `audio_events` observation; ADR-032, ADR-036).
 - Contract `media-analysis/contract@1` (`schema_versions`: contract / request / response / observation all `1`).
   14 tools, 15 analysis kinds, derived from the analyzer registry:
 
-  | Tool | Kinds | Capability id (`provides`) |
-  |---|---|---|
-  | `media-analysis/probe` | `media_probe` | `measure.media.probe` |
-  | `media-analysis/streams` | `stream_layout` | `measure.media.stream_layout` |
-  | `media-analysis/video` | `video_format` | `measure.video.probe` |
-  | `media-analysis/audio` | `audio_format` | `measure.audio.probe` |
-  | `media-analysis/timing` | `duration`, `timing` | `measure.media.duration`, `measure.video.timing` |
-  | `media-analysis/silence` | `silence` | `measure.audio.silence` |
-  | `media-analysis/loudness` | `loudness` | `measure.audio.loudness` |
-  | `media-analysis/integrity` | `integrity` | `measure.audio.integrity` |
-  | `media-analysis/scenes` | `scene_detection` | `measure.video.scene_detection` |
-  | `media-analysis/noise` | `noise_floor` | `measure.audio.noise_floor` (ADR-029, roadmap step 3) |
-  | `media-analysis/style` | `edit_style` | `measure.video.edit_style` (ADR-030, roadmap step 7) |
-  | `media-analysis/vad` | `speech_regions` | `measure.audio.speech_regions` (ADR-035, roadmap step 4) |
-  | `media-analysis/events` | `audio_events` | `measure.audio.events` (ADR-036, roadmap step 5) |
-  | `media-analysis/signals` | `highlight_signals` | `measure.media.highlight_signals` (ADR-036, roadmap step 5) |
+  | Tool                       | Kinds                | Capability id (`provides`)                                  |
+  | -------------------------- | -------------------- | ----------------------------------------------------------- |
+  | `media-analysis/probe`     | `media_probe`        | `measure.media.probe`                                       |
+  | `media-analysis/streams`   | `stream_layout`      | `measure.media.stream_layout`                               |
+  | `media-analysis/video`     | `video_format`       | `measure.video.probe`                                       |
+  | `media-analysis/audio`     | `audio_format`       | `measure.audio.probe`                                       |
+  | `media-analysis/timing`    | `duration`, `timing` | `measure.media.duration`, `measure.video.timing`            |
+  | `media-analysis/silence`   | `silence`            | `measure.audio.silence`                                     |
+  | `media-analysis/loudness`  | `loudness`           | `measure.audio.loudness`                                    |
+  | `media-analysis/integrity` | `integrity`          | `measure.audio.integrity`                                   |
+  | `media-analysis/scenes`    | `scene_detection`    | `measure.video.scene_detection`                             |
+  | `media-analysis/noise`     | `noise_floor`        | `measure.audio.noise_floor` (ADR-029, roadmap step 3)       |
+  | `media-analysis/style`     | `edit_style`         | `measure.video.edit_style` (ADR-030, roadmap step 7)        |
+  | `media-analysis/vad`       | `speech_regions`     | `measure.audio.speech_regions` (ADR-035, roadmap step 4)    |
+  | `media-analysis/events`    | `audio_events`       | `measure.audio.events` (ADR-036, roadmap step 5)            |
+  | `media-analysis/signals`   | `highlight_signals`  | `measure.media.highlight_signals` (ADR-036, roadmap step 5) |
 
   All 15 `provides` entries are lifecycle `EXPERIMENTAL`. Required environment capabilities (`capability_names`):
   `ffmpeg`, `ffprobe`, `filter:astats`, `filter:ebur128`, `filter:edgedetect`, `filter:scdet`, `filter:silencedetect`.
+
 - Acceptance measurements (ADR-029, roadmap step 3): `noise_floor` (window-RMS noise floor / signal level /
   no-reference SNR estimate, one channel or all) for voice-enhance-skill's ISOLATE / BLEED_REDUCE acceptance, and
   `timing.av_start_offset` (audio vs video start time, ITU-R BT.1359-1 45 ms default tolerance) for remux / dubbing.
   `timing`'s, `style`'s and `scenes`' `algorithm_version` is `"2"`, every other analyzer's `"1"`.
 - Editing-style profile (ADR-030, roadmap step 7): `edit_style` (cuts per minute, shot lengths in frames / seconds and
   their distribution, soft-subtitle events / coverage / position, loudness, silence share); `media-analysis style
-  profile <input> --out <file>` saves it, `media-analysis style diff <ref> <cand>` compares two profiles per metric.
+profile <input> --out <file>` saves it, `media-analysis style diff <ref> <cand>` compares two profiles per metric.
   Burned-in subtitles are measured since ADR-033 (roadmap step 10: coverage, switches per minute, position, text height,
   regions / approximate characters, band / outline, from an edge map; no OCR); music-bed presence is listed as
   `unmeasured`.
@@ -73,7 +76,7 @@ against the code, a command run or the GitHub API on that date; anything that co
 - Errors: 12 codes with exit codes 2–13 (`INVALID_INPUT` … `CACHE_MISS`), each with a class `FATAL` / `RETRYABLE` /
   `BLOCKED` (ADR-023). Execution is `local_subprocess`, ffmpeg / ffprobe found by PATH lookup only, no shell, no
   network, no generative AI (the two models are the opt-in VAD and audio-event classifier above). Request denylist (recursive, case-insensitive): `command argv args shell cmd exec filter_complex
-  filter api_key token env` (ADR-024).
+filter api_key token env` (ADR-024).
 - Deterministic analysis identity, cache (use / bypass / only), budget, process-group timeout (POSIX `setsid` +
   `killpg`; Windows `CREATE_NEW_PROCESS_GROUP` + `taskkill /T /F`), verification, path policy.
 - `contract --check <file>` drift detection (22 mutation fixtures in `tests/contract/cases`, ADR-020).
@@ -88,6 +91,7 @@ against the code, a command run or the GitHub API on that date; anything that co
   `check_publishes_contract` / `check_lifecycle_declared` both PASS. This is a manual check, not a committed test.
 
 ## Who calls it
+
 - video-production-agent (`kajisho5/video-production-agent`, read-only check of `main` `33d739f`, 2026-10-30):
   - Adapter `src/video_agent/tools/media_analysis/` (`adapter.py` 297 lines, `locate.py`, pinned
     `contract_0.1.3.json`). Version gate `SUPPORTED_SKILL_VERSIONS = ("0.1.",)`, `SUPPORTED_CONTRACT_VERSIONS = ("1",)`.
@@ -102,6 +106,7 @@ against the code, a command run or the GitHub API on that date; anything that co
 - No other caller found in the sibling checkouts; whether anything outside them calls it is **unverified**.
 
 ## Tests and CI
+
 - `python -m pytest -q`: **165 passed** locally on 2026-11-13 (Python 3.11, FFmpeg 6.1.1, onnxruntime 1.31.1, Linux) —
   collected per file: `test_contract.py` 43, `test_integration.py` 52, `test_unit.py` 59, `test_evals.py` 2,
   `test_release_labels.py` 9.
@@ -114,6 +119,7 @@ against the code, a command run or the GitHub API on that date; anything that co
   `release.yml` (see Version). On `main` at `8a9964f` (the last code commit) `tests`, `codeql` and `release` all succeeded.
 
 ## KNOWN LIMITATIONS / GAPS
+
 - Reading is unrestricted unless `--allowed-input` is given (CLI default: "any readable regular file"); embedders must
   set roots.
 - `timing` (packet timestamps) parses one dict per packet into memory; no streaming for long files. The earlier
@@ -122,14 +128,17 @@ against the code, a command run or the GitHub API on that date; anything that co
 - No MCP transport (ADR-010: not before a consumer needs one).
 
 ## NOT DONE / PLANNED
+
 See `ECOSYSTEM_ROADMAP.md`. Steps 1–5 and 7–10 are done (step 5: `audio_events` and `highlight_signals`, ADR-036) (step 4: `speech_regions`, ADR-035) (step 3: `noise_floor` and `timing.av_start_offset`, ADR-029). Still
 not measured by anyone, recorded in ADR-029: a reverberation measure (voice-enhance DEREVERB) and picture sharpness /
 exposure (video-production-agent take selection).
 
 ## NOT IN SCOPE (by design)
+
 AI / inference (except the opt-in fixed-weight classifiers of `speech_regions`, ADR-035, and `audio_events`, ADR-036) / decisions, media editing, subtitles, transcription, semantic scene understanding, plugin loading.
 
 ## History (merged PRs)
+
 #1 Skill 0.1.0 + agent-ready contract · #2 sponsor link · #3 README landing page · #4 `provides` · #5 OS conformance
 hardening · #6 UTF-8 JSON protocol (ADR-026) · #8 STATE.md adapter note · #9 release / labeler / Dependabot / CodeQL ·
 #10 README header · #11 Python 3.9 on ubuntu-24.04 · #15 Actions bump + release-drafter v7 · #16 ECOSYSTEM_ROADMAP.md ·

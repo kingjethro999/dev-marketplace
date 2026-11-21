@@ -62,7 +62,7 @@ This change must not affect what is copied. NLEs (Premiere, Resolve, Catalyst, A
 - **Blackmagic Pocket Cinema Camera manual** ([documents.blackmagicdesign.com](https://documents.blackmagicdesign.com/UserManuals/BlackmagicPocketCinemaCameraManual.pdf), PDF dated 2025-03-23):
   - "File Naming Convention": `A001_08151512_C001` is camera index, reel number, month, day, hour, minute, clip number.
   - "Sidecar Files": the sidecar sits "in the same folder as the corresponding Blackmagic RAW file". It is "a human readable format", and the manual publishes no field list for it.
-- **Panasonic AG-CX350 operating instructions, "Handling the recording data"** ([pro-av.panasonic.net](https://pro-av.panasonic.net/manual/html/AG-CX350EJ(DVQP1833RA)_E/chapter03_06_07.htm)): MOV file names begin with a camera index (A–Z) and a three-digit card number, followed by the clip number.
+- **Panasonic AG-CX350 operating instructions, "Handling the recording data"** ([pro-av.panasonic.net](<https://pro-av.panasonic.net/manual/html/AG-CX350EJ(DVQP1833RA)_E/chapter03_06_07.htm>)): MOV file names begin with a camera index (A–Z) and a three-digit card number, followed by the clip number.
 - **Grass Valley EDIUS Neo 3 user manual**, AVCHD export ([manualsdir copy](https://www.manualsdir.com/manuals/795914/grass-valley-edius-neo-3.html?page=730)):
   - the card tree is `AVCHD/BDMV/{CLIPINF,PLAYLIST,STREAM}`, plus `INDEX.BDM` and `MOVIEOBJ.BDM`;
   - "a PRIVATE folder is created between the ROOT and AVCHD folders" on SD cards;
@@ -76,16 +76,16 @@ This change must not affect what is copied. NLEs (Premiere, Resolve, Catalyst, A
    - The one new effect on `offload` is opt-in: `--name-by reel` names the card's folder in each destination (item 5).
 2. **Recognised structures** (new module `cards.py`). Folder names are matched case-insensitively, wherever they sit under the folder.
 
-   | id | Detected by | One clip is | Sidecar read | Also listed with the clip |
-   |---|---|---|---|---|
-   | `sony_xdcam` | a folder with `MEDIAPRO.XML` and `Clip/`. The layout is reported as `XDROOT`, `M4ROOT` or `FAM` (e.g. a Professional Disc root) | `Clip/<name>.MXF` or `.MP4` | `Clip/<name>M01.XML` (`NonRealTimeMeta`), and its `MEDIAPRO.XML` entry | `Sub/<name>S<nn>.*` as **proxies** (not clips); `<name>[A-Z]<nn>.*` (e.g. `R01.BIM`, `M01.XMP`) as related |
-   | `sony_xdcam_ex` | `BPAV/CLPR/` | every `CLPR/<take>_<nn>/` of one take, **in `<nn>` order** (spanned) | each folder's `<take>_<nn>M01.XML` | `.SMI` / `.BIM` / `.PPN` and `TAKR/<take>/` as related |
-   | `avchd` | `BDMV/` with `STREAM/` (8.3 or long names) | the `STREAM/<n>.MTS` files of one recording, in playlist order (see 3) | — | `CLIPINF/<n>.CPI` (listed, not interpreted) |
-   | `blackmagic_raw` | `*.braw` | `<name>.braw` | — | `<name>.sidecar` beside it (listed, not interpreted) |
-   | `generic` | every other media file | the file | — | same-name non-media files beside it (e.g. `.THM`) |
-
+   | id               | Detected by                                                                                                                     | One clip is                                                            | Sidecar read                                                           | Also listed with the clip                                                                                  |
+   | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+   | `sony_xdcam`     | a folder with `MEDIAPRO.XML` and `Clip/`. The layout is reported as `XDROOT`, `M4ROOT` or `FAM` (e.g. a Professional Disc root) | `Clip/<name>.MXF` or `.MP4`                                            | `Clip/<name>M01.XML` (`NonRealTimeMeta`), and its `MEDIAPRO.XML` entry | `Sub/<name>S<nn>.*` as **proxies** (not clips); `<name>[A-Z]<nn>.*` (e.g. `R01.BIM`, `M01.XMP`) as related |
+   | `sony_xdcam_ex`  | `BPAV/CLPR/`                                                                                                                    | every `CLPR/<take>_<nn>/` of one take, **in `<nn>` order** (spanned)   | each folder's `<take>_<nn>M01.XML`                                     | `.SMI` / `.BIM` / `.PPN` and `TAKR/<take>/` as related                                                     |
+   | `avchd`          | `BDMV/` with `STREAM/` (8.3 or long names)                                                                                      | the `STREAM/<n>.MTS` files of one recording, in playlist order (see 3) | —                                                                      | `CLIPINF/<n>.CPI` (listed, not interpreted)                                                                |
+   | `blackmagic_raw` | `*.braw`                                                                                                                        | `<name>.braw`                                                          | —                                                                      | `<name>.sidecar` beside it (listed, not interpreted)                                                       |
+   | `generic`        | every other media file                                                                                                          | the file                                                               | —                                                                      | same-name non-media files beside it (e.g. `.THM`)                                                          |
    - Card-level files are listed under `card.index_files`. Examples: `MEDIAPRO.XML`, `DISCMETA.XML`, `CUEUP.XML`, `INDEX.BDM`, `MOVIEOBJ.BDM` and the playlists.
    - An essence file missing from `MEDIAPRO.XML` is reported as a warning. It is still listed.
+
 3. **AVCHD recordings come from the playlists, and nothing is grouped on a guess.**
    - Each `PLAYLIST/*.MPL` is parsed at the libbluray byte layout, with bounds checks, and is refused above 4 MB.
    - A recording starts at a PlayItem that an **entry mark** (type 1) points to.
@@ -123,6 +123,7 @@ This change must not affect what is copied. NLEs (Premiere, Resolve, Catalyst, A
       - Blackmagic `A001_08151512_C001`.
 
       If **any** recording does not match, this source is not used. If they name more than one reel, it is not used either, and a warning lists the reels found.
+
    4. **`fingerprint`**: `CARD-` followed by the first 8 hex digits of the sha256 of the sorted list of `path<TAB>size` of the files offload copies. It is deterministic: the same on the card and on every complete copy, and different when a file is added.
       - The source folder name was rejected as a fallback: cards mount as `Untitled` / `NO NAME`.
       - The volume label was rejected because the standard library cannot read it portably.
@@ -155,6 +156,7 @@ This change must not affect what is copied. NLEs (Premiere, Resolve, Catalyst, A
   - a sidecar containing a DTD.
 
   The playlist fixtures are written at the libbluray byte layout. A truncated playlist must be refused at every cut.
+
 - Each fixture card is offloaded, and every file must arrive byte-identical, with `verify` passing. The inventory of the copy must give the same clips and the same reel, now with source `manifest`.
 - `--name-by reel` and `--reel` are tested, including a resume into the reel-named folder and the `REEL_INVALID` refusals.
 

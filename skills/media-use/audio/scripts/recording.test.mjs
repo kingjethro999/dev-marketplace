@@ -1,7 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -34,14 +41,25 @@ test("a recording line with malformed words is omitted with the reason, not a cr
   try {
     const make = spawnSync(
       "ffmpeg",
-      ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=duration=1", join(dir, "take.wav")],
+      [
+        "-y",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=duration=1",
+        join(dir, "take.wav"),
+      ],
       { encoding: "utf8" },
     );
     assert.equal(make.status, 0, make.stderr);
     writeFileSync(
       join(dir, "audio_request.json"),
       JSON.stringify({
-        lines: [{ id: "01", audio: "take.wav", words: [{ text: "x", start: 0 }] }],
+        lines: [
+          { id: "01", audio: "take.wav", words: [{ text: "x", start: 0 }] },
+        ],
       }),
     );
     const run = spawnSync(
@@ -60,8 +78,14 @@ test("a recording line with malformed words is omitted with the reason, not a cr
       { encoding: "utf8", env: { ...process.env, HOME: dir } },
     );
     assert.equal(run.status, 0, run.stderr);
-    assert.match(run.stdout, /line 01: recording failed — omitted \(words\[0\] needs text/);
-    assert.deepEqual(JSON.parse(readFileSync(join(dir, "m.json"), "utf8")).voices, []);
+    assert.match(
+      run.stdout,
+      /line 01: recording failed — omitted \(words\[0\] needs text/,
+    );
+    assert.deepEqual(
+      JSON.parse(readFileSync(join(dir, "m.json"), "utf8")).voices,
+      [],
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -97,7 +121,13 @@ test("a recording at speed 2: the file is stretched and the words still land on 
       join(dir, "audio_request.json"),
       JSON.stringify({
         speed: 2,
-        lines: [{ id: "01", audio: "take.wav", words: [{ text: "tone", start: 1, end: 2 }] }],
+        lines: [
+          {
+            id: "01",
+            audio: "take.wav",
+            words: [{ text: "tone", start: 1, end: 2 }],
+          },
+        ],
       }),
     );
     const run = spawnSync(
@@ -121,11 +151,22 @@ test("a recording at speed 2: the file is stretched and the words still land on 
     assert.equal(meta.tts_provider, "recording");
     assert.equal(voice.source, "recording");
     assert.equal(meta.voice_credit, "Voice: your own recording");
-    assert.ok(Math.abs(voice.duration_s - 1) < 0.05, `duration ${voice.duration_s}`);
+    assert.ok(
+      Math.abs(voice.duration_s - 1) < 0.05,
+      `duration ${voice.duration_s}`,
+    );
     assert.deepEqual([voice.words[0].start, voice.words[0].end], [0.5, 1]);
     const probe = spawnSync(
       "ffmpeg",
-      ["-i", join(dir, voice.path), "-af", "silencedetect=noise=-40dB:d=0.2", "-f", "null", "-"],
+      [
+        "-i",
+        join(dir, voice.path),
+        "-af",
+        "silencedetect=noise=-40dB:d=0.2",
+        "-f",
+        "null",
+        "-",
+      ],
       { encoding: "utf8" },
     );
     const silenceEnd = Number(/silence_end: ([\d.]+)/.exec(probe.stderr)?.[1]);
@@ -168,14 +209,23 @@ for (const [label, line] of [
         );
         assert.equal(make.status, 0, make.stderr);
       }
-      const request = { lines: [{ ...line, audio: line.audio.replace("<outside>", outside) }] };
+      const request = {
+        lines: [{ ...line, audio: line.audio.replace("<outside>", outside) }],
+      };
       writeFileSync(join(dir, "audio_request.json"), JSON.stringify(request));
-      const run = spawnSync(process.execPath, [AUDIO, "--hyperframes", dir, "--only", "tts"], {
-        encoding: "utf8",
-        env: { ...process.env, HOME: dir },
-      });
+      const run = spawnSync(
+        process.execPath,
+        [AUDIO, "--hyperframes", dir, "--only", "tts"],
+        {
+          encoding: "utf8",
+          env: { ...process.env, HOME: dir },
+        },
+      );
       assert.equal(run.status, 1, run.stdout);
-      assert.match(run.stderr, /outside the project folder|must be a plain name/);
+      assert.match(
+        run.stderr,
+        /outside the project folder|must be a plain name/,
+      );
       assert.equal(existsSync(join(dir, "assets")), false);
       assert.equal(existsSync(join(base, "x.wav")), false);
       assert.equal(existsSync(join(dir, "audio_meta.json")), false);
@@ -186,10 +236,14 @@ for (const [label, line] of [
 }
 
 function runRecording(dir) {
-  return spawnSync(process.execPath, [AUDIO, "--hyperframes", dir, "--only", "tts"], {
-    encoding: "utf8",
-    env: { ...process.env, HOME: dir },
-  });
+  return spawnSync(
+    process.execPath,
+    [AUDIO, "--hyperframes", dir, "--only", "tts"],
+    {
+      encoding: "utf8",
+      env: { ...process.env, HOME: dir },
+    },
+  );
 }
 
 // A playlist or list inside the project that names media outside it is refused, and nothing is decoded.
@@ -198,7 +252,8 @@ for (const [label, name, list, reason] of [
   [
     "an HLS playlist",
     "take.m3u8",
-    (media) => `#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\n${media}\n#EXT-X-ENDLIST\n`,
+    (media) =>
+      `#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\n${media}\n#EXT-X-ENDLIST\n`,
     /is a hls list that points at other files/,
   ],
   [
@@ -216,7 +271,18 @@ for (const [label, name, list, reason] of [
       const media = join(base, "outside.ts");
       const make = spawnSync(
         "ffmpeg",
-        ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=duration=1", "-c:a", "aac", media],
+        [
+          "-y",
+          "-loglevel",
+          "error",
+          "-f",
+          "lavfi",
+          "-i",
+          "sine=duration=1",
+          "-c:a",
+          "aac",
+          media,
+        ],
         { encoding: "utf8" },
       );
       assert.equal(make.status, 0, make.stderr);
@@ -230,7 +296,10 @@ for (const [label, name, list, reason] of [
       assert.match(run.stdout, /line 01: recording failed — omitted/);
       assert.match(run.stdout, reason);
       assert.equal(existsSync(join(dir, "assets/voice/01.wav")), false);
-      assert.deepEqual(JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8")).voices, []);
+      assert.deepEqual(
+        JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8")).voices,
+        [],
+      );
     } finally {
       rmSync(base, { recursive: true, force: true });
     }
@@ -242,19 +311,38 @@ test("a recording in a container format with several demuxer names still convert
   try {
     const make = spawnSync(
       "ffmpeg",
-      ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=duration=1", join(dir, "take.m4a")],
+      [
+        "-y",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=duration=1",
+        join(dir, "take.m4a"),
+      ],
       { encoding: "utf8" },
     );
     assert.equal(make.status, 0, make.stderr);
     writeFileSync(
       join(dir, "audio_request.json"),
       JSON.stringify({
-        lines: [{ id: "01", audio: "take.m4a", words: [{ text: "a", start: 0, end: 1 }] }],
+        lines: [
+          {
+            id: "01",
+            audio: "take.m4a",
+            words: [{ text: "a", start: 0, end: 1 }],
+          },
+        ],
       }),
     );
     const run = runRecording(dir);
     assert.equal(run.status, 0, run.stderr);
-    assert.equal(JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8")).voices.length, 1);
+    assert.equal(
+      JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8")).voices
+        .length,
+      1,
+    );
     assert.ok(existsSync(join(dir, "assets/voice/01.wav")));
   } finally {
     rmSync(dir, { recursive: true, force: true });

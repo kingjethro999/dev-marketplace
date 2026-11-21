@@ -1,2 +1,8 @@
-{"name":"K","page":"kinetic.html","mode":"overlay","xf":0,"slow":1,"clips":[
- {"id":"K","beat":"K"}]}
+{
+  "name": "K",
+  "page": "kinetic.html",
+  "mode": "overlay",
+  "xf": 0,
+  "slow": 1,
+  "clips": [{ "id": "K", "beat": "K" }]
+}

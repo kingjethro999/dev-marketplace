@@ -23,14 +23,21 @@ function fixture(t) {
 
 test("updates the read file from byte zero, truncates, and retains its mode", (t) => {
   const path = join(fixture(t), "meta.json");
-  writeFileSync(path, JSON.stringify({ voices: ["long existing voice metadata"] }), {
-    mode: 0o600,
-  });
+  writeFileSync(
+    path,
+    JSON.stringify({ voices: ["long existing voice metadata"] }),
+    {
+      mode: 0o600,
+    },
+  );
   const originalMode = statSync(path).mode;
   const handle = openAudioMeta(path);
   assert.deepEqual(handle.value, { voices: ["long existing voice metadata"] });
   handle.write({ voices: ["声"] });
-  assert.equal(readFileSync(path, "utf8"), JSON.stringify({ voices: ["声"] }, null, 2));
+  assert.equal(
+    readFileSync(path, "utf8"),
+    JSON.stringify({ voices: ["声"] }, null, 2),
+  );
   assert.equal(statSync(path).mode, originalMode);
 });
 
@@ -132,5 +139,6 @@ test("CLI partial run retains unselected voices, BGM and SFX", (t) => {
   );
   assert.equal(result.status, 0, result.stderr);
   const actual = JSON.parse(readFileSync(path, "utf8"));
-  for (const key of Object.keys(previous)) assert.deepEqual(actual[key], previous[key]);
+  for (const key of Object.keys(previous))
+    assert.deepEqual(actual[key], previous[key]);
 });

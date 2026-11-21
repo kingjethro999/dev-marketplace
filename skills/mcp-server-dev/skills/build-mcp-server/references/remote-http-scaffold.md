@@ -22,14 +22,18 @@ import { z } from "zod";
 
 const server = new McpServer(
   { name: "my-service", version: "0.1.0" },
-  { instructions: "Prefer search_items before calling get_item directly — IDs aren't guessable." },
+  {
+    instructions:
+      "Prefer search_items before calling get_item directly — IDs aren't guessable.",
+  },
 );
 
 // Pattern A: one tool per action
 server.registerTool(
   "search_items",
   {
-    description: "Search items by keyword. Returns up to `limit` matches ranked by relevance.",
+    description:
+      "Search items by keyword. Returns up to `limit` matches ranked by relevance.",
     inputSchema: {
       query: z.string().describe("Search keywords"),
       limit: z.number().int().min(1).max(50).default(10),
@@ -122,27 +126,33 @@ const CATALOG = loadActionCatalog(); // { id, description, paramSchema }[]
 server.registerTool(
   "search_actions",
   {
-    description: "Find available actions matching an intent. Call this first to discover what's possible. Returns action IDs, descriptions, and parameter schemas.",
-    inputSchema: { intent: z.string().describe("What you want to do, in plain English") },
+    description:
+      "Find available actions matching an intent. Call this first to discover what's possible. Returns action IDs, descriptions, and parameter schemas.",
+    inputSchema: {
+      intent: z.string().describe("What you want to do, in plain English"),
+    },
     annotations: { readOnlyHint: true },
   },
   async ({ intent }) => {
     const matches = rankActions(CATALOG, intent).slice(0, 10);
-    return { content: [{ type: "text", text: JSON.stringify(matches, null, 2) }] };
+    return {
+      content: [{ type: "text", text: JSON.stringify(matches, null, 2) }],
+    };
   },
 );
 
 server.registerTool(
   "execute_action",
   {
-    description: "Execute an action by ID. Get the ID and params schema from search_actions first.",
+    description:
+      "Execute an action by ID. Get the ID and params schema from search_actions first.",
     inputSchema: {
       action_id: z.string(),
       params: z.record(z.unknown()),
     },
   },
   async ({ action_id, params }) => {
-    const action = CATALOG.find(a => a.id === action_id);
+    const action = CATALOG.find((a) => a.id === action_id);
     if (!action) throw new Error(`Unknown action: ${action_id}`);
     validate(params, action.paramSchema);
     const result = await dispatch(action, params);
@@ -181,11 +191,11 @@ npx @modelcontextprotocol/inspector --cli http://localhost:3000/mcp \
 
 Once deployed, users add the URL directly — no install step.
 
-| Surface | How |
-|---|---|
-| **Claude Code** | `claude mcp add --transport http <name> <url>` (add `--scope user` for global, `--header "Authorization: Bearer ..."` for auth) |
+| Surface                        | How                                                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Claude Code**                | `claude mcp add --transport http <name> <url>` (add `--scope user` for global, `--header "Authorization: Bearer ..."` for auth)   |
 | **Claude Desktop / Claude.ai** | Settings → Connectors → Add custom connector. **Not** `claude_desktop_config.json` — remote servers configured there are ignored. |
-| **Connector directory** | Anthropic maintains a submission guide for listing in the public connector directory. |
+| **Connector directory**        | Anthropic maintains a submission guide for listing in the public connector directory.                                             |
 
 ---
 

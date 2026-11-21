@@ -2,7 +2,14 @@
   "source": "kajisho5/video-production-agent src/video_agent/skills/contract.py (PR #7 head 9c2ae4a) — SkillPackage.validate() rules and ToolSpec fields",
   "note": "Rules of the consumer, copied once; the media-analysis contract under test is generated from the implementation, never hand-written here.",
   "skill_package": {
-    "required": ["skill_id", "name", "version", "description", "capabilities", "tools"],
+    "required": [
+      "skill_id",
+      "name",
+      "version",
+      "description",
+      "capabilities",
+      "tools"
+    ],
     "optional": ["repository", "role"],
     "rules": {
       "skill_id_no_slash": "skill_id must be a non-empty prefix without '/'",
@@ -13,7 +20,17 @@
     }
   },
   "tool_spec": {
-    "required": ["tool_id", "skill_id", "version", "description", "required_capabilities", "inputs", "produces_output", "deterministic", "result_keys"],
+    "required": [
+      "tool_id",
+      "skill_id",
+      "version",
+      "description",
+      "required_capabilities",
+      "inputs",
+      "produces_output",
+      "deterministic",
+      "result_keys"
+    ],
     "kind_rule": "kind is 'transform' when produces_output else 'measure'; media-analysis tools must all be 'measure'"
   },
   "observation": {

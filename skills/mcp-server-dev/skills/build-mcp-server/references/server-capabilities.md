@@ -11,7 +11,10 @@ One line of config, lands directly in Claude's system prompt. Use it for tool-us
 ```typescript
 const server = new McpServer(
   { name: "my-server", version: "1.0.0" },
-  { instructions: "Always call search_items before get_item — IDs aren't guessable." },
+  {
+    instructions:
+      "Always call search_items before get_item — IDs aren't guessable.",
+  },
 );
 ```
 
@@ -29,13 +32,18 @@ If your tool logic needs LLM inference (summarize, classify, generate), don't sh
 
 ```typescript
 // Inside a tool handler
-const result = await extra.sendRequest({
-  method: "sampling/createMessage",
-  params: {
-    messages: [{ role: "user", content: { type: "text", text: `Summarize: ${doc}` } }],
-    maxTokens: 500,
+const result = await extra.sendRequest(
+  {
+    method: "sampling/createMessage",
+    params: {
+      messages: [
+        { role: "user", content: { type: "text", text: `Summarize: ${doc}` } },
+      ],
+      maxTokens: 500,
+    },
   },
-}, CreateMessageResultSchema);
+  CreateMessageResultSchema,
+);
 ```
 
 ```python
@@ -75,7 +83,11 @@ Better than stderr for remote servers. Client can filter by level.
 // In a tool handler
 await extra.sendNotification({
   method: "notifications/message",
-  params: { level: "info", logger: "my-tool", data: { msg: "Processing", count: 42 } },
+  params: {
+    level: "info",
+    logger: "my-tool",
+    data: { msg: "Processing", count: 42 },
+  },
 });
 ```
 
@@ -98,13 +110,18 @@ async (args, extra) => {
     if (token !== undefined) {
       await extra.sendNotification({
         method: "notifications/progress",
-        params: { progressToken: token, progress: i, total: 100, message: `Step ${i}` },
+        params: {
+          progressToken: token,
+          progress: i,
+          total: 100,
+          message: `Step ${i}`,
+        },
       });
     }
     await doStep(i);
   }
   return { content: [{ type: "text", text: "Done" }] };
-}
+};
 ```
 
 ```python
@@ -127,7 +144,7 @@ async (args, extra) => {
     if (extra.signal.aborted) throw new Error("Cancelled");
     await process(item);
   }
-}
+};
 ```
 
 fastmcp handles this via asyncio cancellation — no explicit check needed if your handler is properly async.
@@ -152,13 +169,13 @@ Low priority unless your prompts have many valid values.
 
 ## Which capabilities need client support?
 
-| Feature | Server declares | Client must support | Fallback if not |
-|---|---|---|---|
-| `instructions` | implicit | — | — (always works) |
-| Logging | `logging: {}` | — | stderr |
-| Progress | — | sends `progressToken` | silently skip |
-| Sampling | — | `sampling: {}` | bring your own LLM |
-| Elicitation | — | `elicitation: {}` | return text, ask Claude to relay |
-| Roots | — | `roots: {}` | config env var |
+| Feature        | Server declares | Client must support   | Fallback if not                  |
+| -------------- | --------------- | --------------------- | -------------------------------- |
+| `instructions` | implicit        | —                     | — (always works)                 |
+| Logging        | `logging: {}`   | —                     | stderr                           |
+| Progress       | —               | sends `progressToken` | silently skip                    |
+| Sampling       | —               | `sampling: {}`        | bring your own LLM               |
+| Elicitation    | —               | `elicitation: {}`     | return text, ask Claude to relay |
+| Roots          | —               | `roots: {}`           | config env var                   |
 
 Check client caps via `server.getClientCapabilities()` (TS) or `ctx.session.client_params.capabilities` (fastmcp) before using the bottom three.

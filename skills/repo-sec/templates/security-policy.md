@@ -2,10 +2,10 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| Latest  | :white_check_mark: |
-| Previous| :white_check_mark: |
+| Version  | Supported          |
+| -------- | ------------------ |
+| Latest   | :white_check_mark: |
+| Previous | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
@@ -58,6 +58,7 @@ Instead, please report via:
 ## Security Tooling
 
 This repository uses:
+
 - **Periderm CLI** for secret scanning and deep review
 - **Dependabot** for dependency updates
 - **npm audit** / **OSV** / **Snyk** for vulnerability scanning

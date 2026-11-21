@@ -55,7 +55,7 @@ server.server.oninitialized = async () => {
   const caps = server.getClientCapabilities();
   if (caps?.roots) {
     const { roots } = await server.server.listRoots();
-    allowedRoots = roots.map(r => new URL(r.uri).pathname);
+    allowedRoots = roots.map((r) => new URL(r.uri).pathname);
   } else {
     allowedRoots = [process.env.ROOT_DIR ?? process.cwd()];
   }
@@ -118,11 +118,14 @@ const MAX_BYTES = 1_000_000;
 const buf = await readFile(path);
 if (buf.length > MAX_BYTES) {
   return {
-    content: [{
-      type: "text",
-      text: `File is ${buf.length} bytes — too large. Showing first ${MAX_BYTES}:\n\n`
-            + buf.subarray(0, MAX_BYTES).toString("utf8"),
-    }],
+    content: [
+      {
+        type: "text",
+        text:
+          `File is ${buf.length} bytes — too large. Showing first ${MAX_BYTES}:\n\n` +
+          buf.subarray(0, MAX_BYTES).toString("utf8"),
+      },
+    ],
   };
 }
 ```

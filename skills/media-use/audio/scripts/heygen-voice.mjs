@@ -6,7 +6,12 @@
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { parseArgs } from "node:util";
-import { heygenAuthHeaders, heygenJSON, heygenMessage, loadEnvFromDir } from "./lib/heygen.mjs";
+import {
+  heygenAuthHeaders,
+  heygenJSON,
+  heygenMessage,
+  loadEnvFromDir,
+} from "./lib/heygen.mjs";
 import { isMainModule } from "./lib/main-module.mjs";
 
 const MEDIA_TYPES = { ".mp3": "audio/mpeg", ".wav": "audio/wav" };
@@ -15,20 +20,26 @@ const DEADLINE_MS = 120_000;
 
 async function clone(file, name, headers, { sleep, now }) {
   const mediaType = MEDIA_TYPES[extname(file).toLowerCase()];
-  if (!mediaType) throw new Error(`unsupported audio file ${file}: use .mp3 or .wav`);
+  if (!mediaType)
+    throw new Error(`unsupported audio file ${file}: use .mp3 or .wav`);
   const data = readFileSync(file).toString("base64");
   const created = await heygenJSON("/voices/clone", {
     method: "POST",
     headers,
-    body: { voice_name: name, audio: { type: "base64", media_type: mediaType, data } },
+    body: {
+      voice_name: name,
+      audio: { type: "base64", media_type: mediaType, data },
+    },
   });
   const id = created.data.voice_clone_id;
   const deadline = now() + DEADLINE_MS;
   for (;;) {
     const { data: voice } = await heygenJSON(`/voices/${id}`, { headers });
     if (voice.status === "complete") return { voice_id: voice.voice_id ?? id };
-    if (voice.status === "failed") throw new Error(voice.failure_message || "voice clone failed");
-    if (now() >= deadline) throw new Error(`voice clone ${id} not ready after 120 s`);
+    if (voice.status === "failed")
+      throw new Error(voice.failure_message || "voice clone failed");
+    if (now() >= deadline)
+      throw new Error(`voice clone ${id} not ready after 120 s`);
     await sleep(POLL_MS);
   }
 }
@@ -38,7 +49,8 @@ async function list(prefix, headers) {
   const seen = new Set();
   let token;
   do {
-    if (token && seen.has(token)) throw new Error(`HeyGen returned page token ${token} twice`);
+    if (token && seen.has(token))
+      throw new Error(`HeyGen returned page token ${token} twice`);
     if (token) seen.add(token);
     const query = new URLSearchParams({ type: "private", limit: "100" });
     if (token) query.set("token", token);
@@ -68,12 +80,20 @@ export async function main(
     const { positionals, values } = parseArgs({
       args: argv,
       allowPositionals: true,
-      options: { name: { type: "string" }, prefix: { type: "string", default: "" } },
+      options: {
+        name: { type: "string" },
+        prefix: { type: "string", default: "" },
+      },
     });
     const [command, arg] = positionals;
     if (command === "clone") {
-      if (!arg || !values.name) throw new Error("usage: clone <audio-file> --name <name>");
-      out(JSON.stringify(await clone(arg, values.name, heygenAuthHeaders(), { sleep, now })));
+      if (!arg || !values.name)
+        throw new Error("usage: clone <audio-file> --name <name>");
+      out(
+        JSON.stringify(
+          await clone(arg, values.name, heygenAuthHeaders(), { sleep, now }),
+        ),
+      );
     } else if (command === "delete") {
       if (!arg) throw new Error("usage: delete <voice_id>");
       await heygenJSON(`/voices/${encodeURIComponent(arg)}`, {
@@ -83,7 +103,9 @@ export async function main(
     } else if (command === "list") {
       out(JSON.stringify(await list(values.prefix, heygenAuthHeaders())));
     } else {
-      throw new Error("usage: heygen-voice.mjs clone|delete|list (see the header of this file)");
+      throw new Error(
+        "usage: heygen-voice.mjs clone|delete|list (see the header of this file)",
+      );
     }
     return 0;
   } catch (e) {

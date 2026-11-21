@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { appendRecord } from "../../../scripts/lib/manifest.mjs";
@@ -52,7 +59,10 @@ test("offline: copies and references a present bundled file", async () => {
     assert.equal(sfx.length, 1);
     assert.equal(sfx[0].file, "assets/sfx/whoosh.mp3");
     assert.equal(sfx[0].source, "local");
-    assert.ok(existsSync(join(projDir, "assets/sfx/whoosh.mp3")), "mp3 copied into project");
+    assert.ok(
+      existsSync(join(projDir, "assets/sfx/whoosh.mp3")),
+      "mp3 copied into project",
+    );
     assert.deepEqual(anomalies, [UNREACHABLE]);
   });
 });
@@ -69,10 +79,17 @@ test("offline: a matched-but-missing bundled file yields an anomaly and NO dangl
       hyperframesDir: projDir,
       sfxLibDir: libDir,
     });
-    assert.equal(sfx.length, 0, "no dangling entry for a file that was never copied");
+    assert.equal(
+      sfx.length,
+      0,
+      "no dangling entry for a file that was never copied",
+    );
     assert.equal(anomalies.length, 2);
     assert.match(anomalies[1], /missing from the offline library/);
-    assert.ok(!existsSync(join(projDir, "assets/sfx/whoosh.mp3")), "nothing copied");
+    assert.ok(
+      !existsSync(join(projDir, "assets/sfx/whoosh.mp3")),
+      "nothing copied",
+    );
   });
 });
 
@@ -84,7 +101,12 @@ const whooshLibrary = (libDir, withFile) => {
   if (withFile) writeFileSync(join(libDir, "whoosh.mp3"), "ID3-library-bytes");
 };
 const record = (projDir, source) =>
-  appendRecord(projDir, { id: "sfx_001", type: "sfx", path: "assets/sfx/whoosh.mp3", source });
+  appendRecord(projDir, {
+    id: "sfx_001",
+    type: "sfx",
+    path: "assets/sfx/whoosh.mp3",
+    source,
+  });
 const bundledOnly = (libDir, projDir) =>
   resolveSfx({
     cues: [{ id: "s1", name: "whoosh" }],
@@ -122,7 +144,10 @@ test("offline: a person's file with the library's bytes stays theirs once record
       sfx.map(({ file }) => file),
       ["assets/sfx/whoosh-2.mp3"],
     );
-    assert.equal(readFileSync(join(projDir, "assets/sfx/whoosh.mp3"), "utf8"), "ID3-library-bytes");
+    assert.equal(
+      readFileSync(join(projDir, "assets/sfx/whoosh.mp3"), "utf8"),
+      "ID3-library-bytes",
+    );
   });
 });
 
@@ -151,7 +176,8 @@ function openverse(answer) {
   const searches = [];
   serve = async (url) => {
     const query = new URL(url).searchParams.get("q");
-    if (!url.startsWith("https://api.openverse.org/")) return new Response(`bytes of ${url}`);
+    if (!url.startsWith("https://api.openverse.org/"))
+      return new Response(`bytes of ${url}`);
     searches.push(query);
     return answer(query);
   };
@@ -201,7 +227,9 @@ test("openverse: each cue gets the best licensed sound, with its licence and cre
 test("openverse: a rate limit sends this and every later cue to the bundled library, asking once", async () => {
   await withDirs(async ({ libDir, projDir }) => {
     libraryWith(libDir, ["whoosh", "pop"]);
-    const searches = openverse(() => new Response("slow down", { status: 429 }));
+    const searches = openverse(
+      () => new Response("slow down", { status: 429 }),
+    );
     try {
       const { sfx, anomalies } = await run(libDir, projDir, ["whoosh", "pop"]);
       assert.deepEqual(searches, ["whoosh"]);
@@ -212,7 +240,10 @@ test("openverse: a rate limit sends this and every later cue to the bundled libr
           ["assets/sfx/pop.mp3", "local"],
         ],
       );
-      assert.equal(readFileSync(join(projDir, "assets/sfx/pop.mp3"), "utf8"), "library pop");
+      assert.equal(
+        readFileSync(join(projDir, "assets/sfx/pop.mp3"), "utf8"),
+        "library pop",
+      );
       assert.deepEqual(anomalies, [
         "Openverse rate limit reached (HTTP 429): the remaining SFX cues use the bundled library",
       ]);
@@ -226,7 +257,9 @@ test("openverse: a cue with no licensed match falls back to the bundled library 
   await withDirs(async ({ libDir, projDir }) => {
     libraryWith(libDir, ["pop"]);
     const searches = openverse((query) =>
-      Response.json({ results: query === "pop" ? [sound({ license: "by-nc" })] : [sound()] }),
+      Response.json({
+        results: query === "pop" ? [sound({ license: "by-nc" })] : [sound()],
+      }),
     );
     try {
       const { sfx } = await run(libDir, projDir, ["pop", "swoosh"]);
@@ -257,7 +290,10 @@ test("openverse: a failed download falls back to the bundled file with an anomal
         sfx.map(({ file, source }) => [file, source]),
         [["assets/sfx/whoosh.mp3", "local"]],
       );
-      assert.match(anomalies[0], /Openverse download failed — download HTTP 404/);
+      assert.match(
+        anomalies[0],
+        /Openverse download failed — download HTTP 404/,
+      );
     } finally {
       serve = offline;
     }
@@ -267,7 +303,9 @@ test("openverse: a failed download falls back to the bundled file with an anomal
 test("openverse: one effect named in two lines is searched and downloaded once", async () => {
   await withDirs(async ({ libDir, projDir }) => {
     libraryWith(libDir, []);
-    const searches = openverse(() => Response.json({ results: [sound({ license: "cc0" })] }));
+    const searches = openverse(() =>
+      Response.json({ results: [sound({ license: "cc0" })] }),
+    );
     try {
       const { sfx } = await run(libDir, projDir, ["whoosh", "whoosh"]);
       assert.deepEqual(searches, ["whoosh"]);
@@ -293,16 +331,19 @@ test("findSoundEffect: a host gets the saved file, licence, credit and duration 
   await withDirs(async ({ projDir }) => {
     const searches = openverse(() => Response.json({ results: [sound()] }));
     try {
-      assert.deepEqual(await findSoundEffect("whoosh", { hyperframesDir: projDir }), {
-        sound: {
-          file: "assets/sfx/whoosh.mp3",
-          source: "openverse",
-          duration_s: 0.82,
-          license: "by",
-          credit: '"Swoosh" by Ana is licensed under CC BY 4.0.',
+      assert.deepEqual(
+        await findSoundEffect("whoosh", { hyperframesDir: projDir }),
+        {
+          sound: {
+            file: "assets/sfx/whoosh.mp3",
+            source: "openverse",
+            duration_s: 0.82,
+            license: "by",
+            credit: '"Swoosh" by Ana is licensed under CC BY 4.0.',
+          },
+          anomalies: [],
         },
-        anomalies: [],
-      });
+      );
       assert.deepEqual(searches, ["whoosh"]);
     } finally {
       serve = offline;
@@ -312,7 +353,9 @@ test("findSoundEffect: a host gets the saved file, licence, credit and duration 
 
 test("findSoundEffect: offline, the skill's own bundled library answers", async () => {
   await withDirs(async ({ projDir }) => {
-    const { sound, anomalies } = await findSoundEffect("whoosh", { hyperframesDir: projDir });
+    const { sound, anomalies } = await findSoundEffect("whoosh", {
+      hyperframesDir: projDir,
+    });
     assert.deepEqual(sound, {
       file: "assets/sfx/whoosh.mp3",
       source: "local",
@@ -324,7 +367,11 @@ test("findSoundEffect: offline, the skill's own bundled library answers", async 
     );
     assert.deepEqual(anomalies, [UNREACHABLE]);
     assert.equal(
-      (await findSoundEffect("no such sound at all", { hyperframesDir: projDir })).sound,
+      (
+        await findSoundEffect("no such sound at all", {
+          hyperframesDir: projDir,
+        })
+      ).sound,
       null,
     );
   });

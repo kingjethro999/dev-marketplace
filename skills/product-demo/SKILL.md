@@ -1,6 +1,6 @@
 ---
 name: product-demo
-description: "Record a short, polished product demo video of the running app for social media, ScreenStudio-style — the real UI in a rounded window on a soft wallpaper, a drawn cursor that glides, hovers and clicks like a hand would (arrow over content, pointing hand over anything clickable, a ripple on click), captured frame by frame at 2x and encoded to a square (or any aspect) MP4 with a poster frame. Use when asked to record a demo, a walkthrough, a screen recording, a \"video of the modal/page/flow\", a clip for X/LinkedIn/Product Hunt, or anything \"like ScreenStudio\" of the product's own interface."
+description: 'Record a short, polished product demo video of the running app for social media, ScreenStudio-style — the real UI in a rounded window on a soft wallpaper, a drawn cursor that glides, hovers and clicks like a hand would (arrow over content, pointing hand over anything clickable, a ripple on click), captured frame by frame at 2x and encoded to a square (or any aspect) MP4 with a poster frame. Use when asked to record a demo, a walkthrough, a screen recording, a "video of the modal/page/flow", a clip for X/LinkedIn/Product Hunt, or anything "like ScreenStudio" of the product''s own interface.'
 ---
 
 # Video demo
@@ -38,9 +38,10 @@ CSS transitions are slowed to the per-frame capture cost, so hover states and di
 `out/product-demo/takes/<name>.mjs` in the project (create the folder):
 
 ```js
-export const url = "http://localhost:3000/app/page";   // the page to record
+export const url = "http://localhost:3000/app/page"; // the page to record
 
-export async function prepare(page) {                  // optional: sign in on the real origin
+export async function prepare(page) {
+  // optional: sign in on the real origin
   await page.goto("http://localhost:3000/login");
   await page.getByPlaceholder("Email").fill(process.env.DEMO_EMAIL);
   await page.getByPlaceholder("Password").fill(process.env.DEMO_PASSWORD);
@@ -48,47 +49,55 @@ export async function prepare(page) {                  // optional: sign in on t
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
 }
 
-export const css = ``;                                 // optional: presentation-only CSS for the app
+export const css = ``; // optional: presentation-only CSS for the app
 
-export async function ready(t) {                       // optional: wait for the app; default 1.5s after network idle
+export async function ready(t) {
+  // optional: wait for the app; default 1.5s after network idle
   await t.frame.getByRole("button", { name: "Run" }).waitFor();
   await t.page.waitForTimeout(1200);
 }
 
-export async function still(t) {                       // optional: the state to check with --still
+export async function still(t) {
+  // optional: the state to check with --still
   await t.frame.getByRole("button", { name: "Run" }).click();
   await t.page.waitForTimeout(1000);
 }
 
 export default async function take(t) {
-  await t.hold(500);                                            // settle on the resting state
-  await t.clickOn(t.frame.getByRole("button", { name: "Run" }), { settle: 500 });
-  await t.sweep(t.frame.locator("[role=option]"), {             // hover the visible cards in order
-    within: t.frame.locator("[role=listbox]"), max: 4,
+  await t.hold(500); // settle on the resting state
+  await t.clickOn(t.frame.getByRole("button", { name: "Run" }), {
+    settle: 500,
   });
-  await t.clickOn(t.frame.getByRole("button", { name: "Content", exact: true }));
-  t.poster();                                                   // this frame becomes the PNG
-  await t.moveTo(t.width * 0.6, t.height * 0.5, { ms: 700 });   // drift off and hold to end
+  await t.sweep(t.frame.locator("[role=option]"), {
+    // hover the visible cards in order
+    within: t.frame.locator("[role=listbox]"),
+    max: 4,
+  });
+  await t.clickOn(
+    t.frame.getByRole("button", { name: "Content", exact: true }),
+  );
+  t.poster(); // this frame becomes the PNG
+  await t.moveTo(t.width * 0.6, t.height * 0.5, { ms: 700 }); // drift off and hold to end
   await t.hold(900);
 }
 ```
 
 `t` gives you:
 
-| Verb | What it does |
-|---|---|
-| `t.frame` / `t.app` / `t.page` | The app as a Playwright `FrameLocator` / `Frame`, and the stage page. Locators come from `t.frame`. |
-| `t.hold(ms)` | Stay still. |
-| `t.moveTo(x, y, { ms, bow })` | Glide to a canvas point (duration from distance unless `ms`). |
-| `t.hover(target, { fx, fy, dwell, ms })` | Glide to a point inside a locator or box (`fx`/`fy` are fractions, default center) and dwell (360ms). |
-| `t.clickOn(target, { fx, fy, dwell, settle })` | Hover briefly, press with a ripple, wait `settle` (180ms). |
-| `t.click()` | Press where the cursor is. |
-| `t.sweep(items, { within, max, dwell, fx, fy })` | Hover each item fully visible inside `within`, in DOM order. |
-| `t.type(text, { perChar })` | Type with a human cadence into whatever is focused. |
-| `t.wheel(dy, { ms })` | Scroll with the wheel at the cursor. |
-| `t.visibleBoxes(items, { within, max })` / `t.box(locator)` / `t.aim(box, fx, fy)` | Geometry, when you need to plan a path yourself. |
-| `t.poster()` | Mark the current frame as the poster PNG (default: the middle frame). |
-| `t.width`, `t.height`, `t.pad`, `t.fps`, `t.position`, `t.random()` | Canvas facts and seeded randomness. |
+| Verb                                                                               | What it does                                                                                          |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `t.frame` / `t.app` / `t.page`                                                     | The app as a Playwright `FrameLocator` / `Frame`, and the stage page. Locators come from `t.frame`.   |
+| `t.hold(ms)`                                                                       | Stay still.                                                                                           |
+| `t.moveTo(x, y, { ms, bow })`                                                      | Glide to a canvas point (duration from distance unless `ms`).                                         |
+| `t.hover(target, { fx, fy, dwell, ms })`                                           | Glide to a point inside a locator or box (`fx`/`fy` are fractions, default center) and dwell (360ms). |
+| `t.clickOn(target, { fx, fy, dwell, settle })`                                     | Hover briefly, press with a ripple, wait `settle` (180ms).                                            |
+| `t.click()`                                                                        | Press where the cursor is.                                                                            |
+| `t.sweep(items, { within, max, dwell, fx, fy })`                                   | Hover each item fully visible inside `within`, in DOM order.                                          |
+| `t.type(text, { perChar })`                                                        | Type with a human cadence into whatever is focused.                                                   |
+| `t.wheel(dy, { ms })`                                                              | Scroll with the wheel at the cursor.                                                                  |
+| `t.visibleBoxes(items, { within, max })` / `t.box(locator)` / `t.aim(box, fx, fy)` | Geometry, when you need to plan a path yourself.                                                      |
+| `t.poster()`                                                                       | Mark the current frame as the poster PNG (default: the middle frame).                                 |
+| `t.width`, `t.height`, `t.pad`, `t.fps`, `t.position`, `t.random()`                | Canvas facts and seeded randomness.                                                                   |
 
 Pacing that reads well: 500ms before the first move; the first click ~1.5s in; 350–420ms hover dwell on cards, ~280ms on list rows; 150–200ms settle after a click; end with a 700ms drift away and a 900ms hold so a loop doesn't snap.
 

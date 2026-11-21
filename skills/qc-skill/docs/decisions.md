@@ -9,7 +9,7 @@ Short rationale for choices that would otherwise look arbitrary.
 `Inference`, or `ProductionPlan`. A `FAIL` is data, not an instruction to
 block, re-render, or delete anything. This keeps the responsibility
 boundary from STEP 13 of the task spec unambiguous: measurement and
-judgment against an explicit rule stay in `qc-skill`; what to *do* about a
+judgment against an explicit rule stay in `qc-skill`; what to _do_ about a
 finding is always the agent's call.
 
 ## ADR-002: Measurement / Rule / Finding are separate types
@@ -43,10 +43,10 @@ below `FAIL`: a confirmed violation is always the worst outcome.
 ## ADR-005: detection sensitivity vs. policy are different kinds of parameters
 
 `black_min_duration_sec`, `silence_threshold_db`, `clipping_threshold_dbfs`,
-etc. are *detection* parameters - "how sensitive is the measurement",
+etc. are _detection_ parameters - "how sensitive is the measurement",
 with a sensible, documented default. `expected_width`,
 `integrated_loudness_target_lufs`, `max_single_black_sec`, etc. are
-*policy* - "is this measurement acceptable", and have **no** default: a
+_policy_ - "is this measurement acceptable", and have **no** default: a
 `Rule` field left `None` means "no opinion," and the corresponding check
 simply isn't produced. Mixing the two would either force a policy default
 qc-skill has no business choosing (STEP 5 of the task spec explicitly
@@ -93,28 +93,28 @@ repos). Summary of the decision:
 - "Agent-native QC" is **not** a differentiator - `uploadcheck-mcp` and
   Kinocut already ship that, and copying either would not close a real
   gap. The genuinely open gaps, confirmed by direct comparison, are:
-  cross-artifact validation across a *multi-skill* pipeline's
+  cross-artifact validation across a _multi-skill_ pipeline's
   heterogeneous outputs; genuine timeline-awareness of edit history
   (source-timeline -> delivery-timeline, not just source-file checks);
-  deterministic evidence chained across *multiple* tools' outputs, not
+  deterministic evidence chained across _multiple_ tools' outputs, not
   one tool's own steps; and an orchestrator-facing evidence graph tying a
   QC verdict into the agent's Decision loop.
 - The ecosystem read confirmed there is no existing owner for any of
   these: every execution skill (`color-grading-skill`,
   `motion-graphics-skill`, `thumbnail-skill`, `video-editing-skill`,
   `subtitle-skill`) does only narrow, creation-time self-verification of
-  its own output; nothing in the ecosystem validates *across* skills'
+  its own output; nothing in the ecosystem validates _across_ skills'
   outputs today.
 - This is additive to, not a replacement for, everything qc-skill already
   does. ADR-001 through ADR-008 stand unchanged: qc-skill still never
   produces a Decision, still keeps Measurement/Rule/Finding separate,
-  still never hard-codes policy. The evolution is in *what* gets
+  still never hard-codes policy. The evolution is in _what_ gets
   measured and checked (multiple related artifacts, and timing across an
   edit history) - not in who decides what to do about a `FAIL`.
 - Explicit non-goals, restated because they are exactly what "cross-
   artifact" and "timeline-aware" QC could be mistaken for scope creep
   into: no subjective/LLM quality judgment of any kind; no editing
-  algorithm implemented inside qc-skill (Phase 3 may only *compare*
+  algorithm implemented inside qc-skill (Phase 3 may only _compare_
   against an existing timeline record, never construct or reconstruct
   one); no image-recognition AI embedded directly (any future visual-
   layout finding must arrive via `media-analysis-skill`'s
@@ -141,7 +141,7 @@ Reasons, in order of weight:
    pinned.** `video-production-agent`'s adapter
    (`tools/qc/adapter.py`) checks compatibility against a frozen
    `contract_0.1.0.json` snapshot via a `"0.1."` version-prefix gate.
-   Changing what `kind: "delivery"` *means* - even additively - risks that
+   Changing what `kind: "delivery"` _means_ - even additively - risks that
    existing, already-shipped integration in a way a new, separate kind
    cannot: old callers of `kind: "delivery"` get exactly the same checks,
    measurements and rule shape they always have, forever.
@@ -171,7 +171,7 @@ not a replacement.
 ## ADR-011: cross-artifact validation is typed relationship rules over already-gathered measurements, never string comparison or LLM judgment
 
 Phase 2 (`feature/cross-artifact-qc`) adds the first checks that compare
-*different* artifacts in a `delivery_package` against each other -
+_different_ artifacts in a `delivery_package` against each other -
 duration consistency, and "if artifact A is present, artifact B must be
 too." The evolution plan is explicit that this must never become simple
 string comparison or LLM judgment; the design keeps that boundary by
@@ -200,7 +200,7 @@ construction:
   this file (ADR guidance carried forward, not a new exception for this
   feature).
 - This still is not, and must never become, a place to compare anything
-  *semantic* (does the subtitle's wording match the video's content,
+  _semantic_ (does the subtitle's wording match the video's content,
   does the thumbnail "look like" the video) - that would require exactly
   the AI/LLM judgment this skill is built to exclude (see `not_provided`
   in `contract.py`). Duration and presence are the only relationships
@@ -208,10 +208,10 @@ construction:
   numeric/boolean comparison over existing measurements; anything else
   stays out of scope until it can be expressed the same way.
 
-## ADR-012: timeline integrity is a read-only TimelineMap *consumer*, never a competing editing model
+## ADR-012: timeline integrity is a read-only TimelineMap _consumer_, never a competing editing model
 
 Phase 3 (`feature/timeline-integrity-qc`) needs to check whether a
-delivery's subtitle cue timing is still correct *after* a trim/concat/
+delivery's subtitle cue timing is still correct _after_ a trim/concat/
 speed edit, not just "correct relative to the source." The ecosystem read
 (Step 0 of the evolution plan) confirmed there is no single reusable
 general timeline object to adopt: `video_agent/temporal/timeline.py`'s
@@ -296,9 +296,9 @@ detection (ADR-005):
   used only to decide what counts as an "excursion" worth recording as a
   segment. This mirrors `black_pixel_threshold`/`freeze_noise_db`
   exactly: a detection default is fine because it does not assert
-  anything is *unacceptable*, only what is *worth measuring*.
+  anything is _unacceptable_, only what is _worth measuring_.
 - **Measurement**: `video.luminance_excursions` - `[{start, end,
-  duration, min_y, max_y}]`, built the same way `black_segments`/
+duration, min_y, max_y}]`, built the same way `black_segments`/
   `freeze_segments` already are (contiguous runs of qualifying frames
   merged into segments, from the same single decode pass - ADR-006 still
   holds, `signalstats,metadata=print` is added to the existing filter
@@ -311,7 +311,7 @@ detection (ADR-005):
   per ADR-005): `max_single_luminance_excursion_sec`/
   `max_total_luminance_excursion_sec` on `VideoRule`, evaluated only when
   set, exactly mirroring `max_single_black_sec`/`max_total_black_sec`.
-  Whether *any* excursion is acceptable is a delivery-context decision
+  Whether _any_ excursion is acceptable is a delivery-context decision
   (broadcast-safe vs. full-range web/streaming delivery legitimately
   differ) - qc-skill still never asserts "16-235 is required," only "here
   is where and how far outside 16-235 the signal went, if you care."
@@ -371,7 +371,7 @@ hard-coded threshold):
   `VIDEO_DURATION_EXCEEDED`). `UNKNOWN` when duration could not be
   measured, exactly like every other policy check here.
 - **Delivery size ceiling** - `DeliveryRule.max_size_bytes`, alongside the
-  pre-existing `min_size_bytes` floor. Both now feed the *same*
+  pre-existing `min_size_bytes` floor. Both now feed the _same_
   `delivery.file_size_within_limit` check (mirroring how
   `max_single_black_sec`/`max_total_black_sec` already share one check) -
   a size that is simultaneously below the floor and above the ceiling
@@ -391,7 +391,7 @@ hard-coded threshold):
 - **VFR detection** - a new measurement,
   `video.variable_frame_rate_suspected`, computed the same way
   ffmpeg-skill's own `variable_frame_rate_suspected` is:
-  `|r_frame_rate - avg_frame_rate| > 0.01` fps (a *detection* threshold,
+  `|r_frame_rate - avg_frame_rate| > 0.01` fps (a _detection_ threshold,
   ADR-005 - it decides what counts as suspicious timing, not whether VFR
   is acceptable). Unlike ffmpeg-skill, which defaults to `False` when a
   rate is missing, the measurement is `None` here when either rate
@@ -416,7 +416,7 @@ disk), not a `Rule` field, and is a larger, separate change.
 Inspiration (ideas only, no code taken): `win4r/video-director`'s
 `video-director/scripts/qa_video.py` (MIT) checks a render for flashes,
 planned cuts and on-screen text size/contrast. qc-skill takes the three
-*questions* and answers each against a named standard or a caller's own
+_questions_ and answers each against a named standard or a caller's own
 data, in this repository's measurement/rule/finding idiom.
 
 A flash check is only worth shipping if it follows a published
@@ -424,16 +424,16 @@ definition, not a home-made "frame differs from its neighbours"
 heuristic. The thresholds were taken from the primary source, read
 directly (2026-10-30):
 
-- ITU-R BT.1702-3 (11/2023), *Guidance for the reduction of
-  photosensitive epileptic seizures caused by television*,
+- ITU-R BT.1702-3 (11/2023), _Guidance for the reduction of
+  photosensitive epileptic seizures caused by television_,
   https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.1702-3-202311-I!!PDF-E.pdf
   - Guideline 1: a potentially harmful flash is a pair of opposing
     luminance changes; when the darker image is below 160 cd/m2, a
     change is a difference of 20 cd/m2 or more (SDR and HDR); when the
     darker image is not below 160 cd/m2, a Michelson contrast above 1/17
     applies, **for HDR programmes only**. A sequence is not permitted
-    when *both* the concurrently flashing area exceeds **25% of the
-    displayed screen area** *and* there are **more than three flashes
+    when _both_ the concurrently flashing area exceeds **25% of the
+    displayed screen area** _and_ there are **more than three flashes
     (i.e. six changes) within any one-second period**. Flashes whose
     leading edges are >= 360 ms (50 Hz) / 334 ms (60 Hz) apart are
     acceptable irrespective of brightness or area.
@@ -472,7 +472,7 @@ Decisions:
   not implemented, and qc-skill does not guess.
 - **Area**: luma is area-averaged by ffmpeg onto a 32x32 grid (each cell
   1/1024 of the screen); "more than 25%" is evaluated strictly. The
-  25% is a *detection* parameter (`flash_area_fraction`, ADR-005: it
+  25% is a _detection_ parameter (`flash_area_fraction`, ADR-005: it
   defines what counts as a screen flash); `max_flashes_per_second`
   (default 3, the standard's number) is the policy rule. Averaging code
   values rather than light is exact for uniform cells and an
@@ -484,7 +484,7 @@ Decisions:
   a consequence of the same limit, not separately evaluated.
 - **Red flash**: not implemented; `video.red_flash_count` is always
   `null` with the reason, and the check evidence says
-  `red_flash: UNKNOWN`. It is deliberately *not* a separate check whose
+  `red_flash: UNKNOWN`. It is deliberately _not_ a separate check whose
   status is always UNKNOWN - under worst-wins aggregation (ADR-004) that
   would turn every report that asks for flash analysis UNKNOWN. A
   caller that needs a red-flash verdict has none from qc-skill and
@@ -531,7 +531,7 @@ facts in pure Python:
 
 - **Contrast**: Otsu's threshold on gamma-encoded luma splits the box
   into two classes (minority = ink); contrast ratio is the WCAG 2.x
-  definition `(L1 + 0.05) / (L2 + 0.05)` on the two classes' *median*
+  definition `(L1 + 0.05) / (L2 + 0.05)` on the two classes' _median_
   relative luminance (sRGB-linearised, 0.2126/0.7152/0.0722), per
   https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio and
   https://www.w3.org/TR/WCAG22/#dfn-relative-luminance. Medians, not
@@ -550,7 +550,7 @@ facts in pure Python:
 `TEXT_ILLEGIBLE` when any region is below a minimum; a region that
 cannot be measured (box outside the frame, no frame at `t`) is
 `measured: false` with a reason, and the check is UNKNOWN unless another
-region already failed. What the text *says* is never read - OCR and
+region already failed. What the text _says_ is never read - OCR and
 semantic judgement stay out of scope (`not_provided`).
 
 None of the three new checks joins a `provides` Capability group:
@@ -577,13 +577,13 @@ running ffmpeg/ffprobe behind.
   (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on
   Windows). When the budget runs out mid-child, the whole group is killed
   - `os.killpg(pid, SIGKILL)` on POSIX, `taskkill /T /F /PID` (from
-  `%SYSTEMROOT%\System32`) on Windows, which walks the process tree -
-  followed by a direct `kill()` of the child, and the child is reaped
-  before `TIMEOUT` is raised, so nothing qc started outlives the call.
-  SIGKILL, not SIGTERM first: ffmpeg/ffprobe here only read and write to
-  `-f null` or a pipe, so there is no partial output to flush. Same
-  pattern as hyperframes-skill `lib/proc.mjs` and transcription-skill
-  ADR-003.
+    `%SYSTEMROOT%\System32`) on Windows, which walks the process tree -
+    followed by a direct `kill()` of the child, and the child is reaped
+    before `TIMEOUT` is raised, so nothing qc started outlives the call.
+    SIGKILL, not SIGTERM first: ffmpeg/ffprobe here only read and write to
+    `-f null` or a pipe, so there is no partial output to flush. Same
+    pattern as hyperframes-skill `lib/proc.mjs` and transcription-skill
+    ADR-003.
 - **Error.** A new code `TIMEOUT`, exit code 15, `retryable: true`, in
   the existing `qc/response@1` failure envelope; `details` carries
   `timeout` (the budget), `stage` (the executable or check point that ran
@@ -677,10 +677,10 @@ opt-in, and every default request behaves exactly as before.
   is missing). Otherwise `video.reference_alignment` is
   `{status: "refused", code, reason, distorted, reference}` with `code` in
   `FRAME_RATE_MISMATCH | FRAME_COUNT_MISMATCH | DURATION_MISMATCH |
-  FRAME_RATE_UNKNOWN | LENGTH_UNKNOWN | REFERENCE_NO_VIDEO |
-  DISTORTED_NO_VIDEO`, the scores are `null`, and each requested check is
+FRAME_RATE_UNKNOWN | LENGTH_UNKNOWN | REFERENCE_NO_VIDEO |
+DISTORTED_NO_VIDEO`, the scores are `null`, and each requested check is
   UNKNOWN with that code in its `reason` and the record in its evidence.
-  *Not chosen: a request-level error.* An `INVALID_INPUT` failure would
+  _Not chosen: a request-level error._ An `INVALID_INPUT` failure would
   throw away every other check in the same report (format, black frames,
   loudness) for a problem that concerns one opt-in comparison, would turn a
   property of the media into an execution failure (README: errors are for
@@ -726,11 +726,11 @@ opt-in, and every default request behaves exactly as before.
     read 2026-10-30), which tabulates the
     SSIM mapping of T. Zinner et al., "Towards QoE Management for Scalable
     Video Streaming", ITC Specialist Seminar 2010 (>= 0.99 excellent,
-    >= 0.95 good, >= 0.88 fair) and the PSNR mapping of C.-H. Ke et al.,
-    "An Evaluation Framework for More Realistic Simulations of MPEG Video
-    Transmission", JISE 24(2), 2008 (> 37 dB excellent, 31-37 good, 25-31
-    fair). Zinner et al.'s own PSNR mapping puts "good" at 33 dB - the
-    caller who prefers it sets `min_psnr_db: 33`.
+    > = 0.95 good, >= 0.88 fair) and the PSNR mapping of C.-H. Ke et al.,
+    > "An Evaluation Framework for More Realistic Simulations of MPEG Video
+    > Transmission", JISE 24(2), 2008 (> 37 dB excellent, 31-37 good, 25-31
+    > fair). Zinner et al.'s own PSNR mapping puts "good" at 33 dB - the
+    > caller who prefers it sets `min_psnr_db: 33`.
 - **Capability grouping.** `CAPABILITY_MATRIX.md` assigns no id for
   full-reference quality metrics, so the three checks are in
   `contract.UNGROUPED_CHECKS` (ADR-014 precedent).
@@ -768,7 +768,7 @@ can publish ids every consumer can join on.
   Each non-alias operation maps to exactly one tool
   (`tests/test_contract_completeness.py`).
 - **`provides[]` entry shape.** `tool_id` is now `qc/check`: every entry
-  is a group of *checks*, and only `check` evaluates them. `tool_ids`
+  is a group of _checks_, and only `check` evaluates them. `tool_ids`
   lists every per-operation tool that serves the Capability
   (`["qc/check", "qc/inspect"]`: inspect returns the same measurements
   without a verdict). `alias_tool_ids: ["qc/run"]` keeps the old id
@@ -871,7 +871,7 @@ stinger cut-point check as an acceptance point, on the stinger and on
 the edited result. qc-skill had none.
 
 - **Rule.** `VideoRule.stinger: {cut_point, cover?, file?, cut_at?,
-  max_cut_frame_difference?}`. `cut_point` and `cover` are the stinger
+max_cut_frame_difference?}`. `cut_point` and `cover` are the stinger
   maker's statement (stinger.json); the caller passes them, as it does to
   video-editing-skill, and qc-skill opens no sidecar. Without `file` the
   input is the stinger. With `file` the input is a delivered video: the
@@ -944,8 +944,8 @@ seam to judge is the wrap, and a file made of repeats has seams inside it
 as well.
 
 - **Rule.** `AudioRule.loop_seam: {window_sec?, seams?, include_wrap
-  (default true), max_click_ratio?, max_level_diff_db?,
-  max_band_diff_db?}`. Declaring the file loopable is the rule's
+(default true), max_click_ratio?, max_level_diff_db?,
+max_band_diff_db?}`. Declaring the file loopable is the rule's
   presence. Each limit runs its own check only when set (ADR-005): none is
   a standard, so none has a default, and docs/checks.md gives measured
   starting points instead. `window_sec` has no default either: the level
@@ -1017,7 +1017,7 @@ check (ADR-025) is for audio. A loop is seen end -> start, so the step to
 judge is the loop's last frame to its first.
 
 - **Rule.** `VideoRule.loop_seam: {window_frames?, segments?,
-  max_seam_ratio?}`. Declaring the file a loop is the rule's presence.
+max_seam_ratio?}`. Declaring the file a loop is the rule's presence.
   `max_seam_ratio` has no default (ADR-005: none is a standard); without
   it the seam is measured and reported, not judged. `window_frames`
   (1-12, default 4) is a measuring window, not a limit, so it has one;
@@ -1056,7 +1056,7 @@ placed in. title.json / stinger.json state the mode (`alpha`); nothing
 checked it.
 
 - **Rule.** `VideoRule.alpha_edge: {alpha_mode, times?,
-  max_fringe_px?}`. `alpha_mode` is required: it is the material's
+max_fringe_px?}`. `alpha_mode` is required: it is the material's
   statement and is never guessed from the pixels. `times` picks the
   frames; by default 5 spread from the first to the last (the edges of a
   title exist in most of its frames, and every frame of a long clip in
@@ -1099,7 +1099,7 @@ flash or an outline on a broadcast switcher. ffmpeg-skill's
 from anywhere else, or after a transfer, had no check.
 
 - **Rule.** `VideoRule.key_fill: {key_file, tolerance?,
-  max_off_fraction?, key_range?}`; the input is the fill. The key is a
+max_off_fraction?, key_range?}`; the input is the fill. The key is a
   second input like the stinger file (ADR-024): resolved through the path
   policy, fingerprinted by content (`key:<sha256>`, path replaced in the
   rules payload), `provenance.key_input`.

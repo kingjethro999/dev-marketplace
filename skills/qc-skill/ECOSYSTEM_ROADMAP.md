@@ -11,9 +11,9 @@ v1.4.0, Python 3.9+ stdlib. contract, doctor, run (inspect/check/validate; video
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 規格判定(QC) | done | VMAF/SSIM/PSNR added (step 3); its own receipt still open (docs/qc-evolution-gap-analysis.md). Judgement against the plan or spec; the split with ffmpeg-skill `check` is settled by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O13), see Boundaries |
+| Owned job    | Status | Note                                                                                                                                                                                                                                                                                                |
+| ------------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 規格判定(QC) | done   | VMAF/SSIM/PSNR added (step 3); its own receipt still open (docs/qc-evolution-gap-analysis.md). Judgement against the plan or spec; the split with ffmpeg-skill `check` is settled by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O13), see Boundaries |
 
 ## Wiring
 
@@ -56,4 +56,5 @@ Agent wires qc/check and qc/inspect (ADR-032); provides[] publishes qc/check as 
 The split with ffmpeg-skill is settled by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O13), no wiring change: ffmpeg-skill `check` is the engine's preflight (fixed platform tables and thresholds, with fix commands; its owned job renamed `書き出し前の規格点検`), and qc judges against the plan or spec (rules from the caller, UNKNOWN when it cannot tell). media-analysis-skill reports facts without verdicts (its `integrity` aside). Same measure.audio.* ids as media-analysis. The checks on title, stinger and loop material (steps 9-13) judge what hyperframes-skill renders, motion-graphics-skill places and video-editing-skill cuts; qc never fixes or re-renders.
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (42 tools, treated as complete). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

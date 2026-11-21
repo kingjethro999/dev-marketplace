@@ -6,13 +6,8 @@
       "op": "set_tool_field",
       "tool_id": "media-analysis/silence",
       "field": "kinds",
-      "value": [
-        "loudness"
-      ]
+      "value": ["loudness"]
     }
   ],
-  "expect_problems": [
-    "tools[media-analysis/silence].kinds",
-    "kinds covered"
-  ]
+  "expect_problems": ["tools[media-analysis/silence].kinds", "kinds covered"]
 }

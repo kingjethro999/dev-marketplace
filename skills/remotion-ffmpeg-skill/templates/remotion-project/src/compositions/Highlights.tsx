@@ -1,8 +1,23 @@
 import React from "react";
-import { AbsoluteFill, Series, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Series,
+  interpolate,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { SourceVideo } from "../lib/SourceVideo";
 import { useStagedFont } from "../lib/useStagedFont";
-import { Props, fontStack, highlightRanges, outputFrame, resolveOptions, secToFrames, type Options } from "../timeline";
+import {
+  Props,
+  fontStack,
+  highlightRanges,
+  outputFrame,
+  resolveOptions,
+  secToFrames,
+  type Options,
+} from "../timeline";
 
 /**
  * Highlights: the highlight ranges ffmpeg-skill ranked (analyze.py --highlights, audio energy) played
@@ -24,11 +39,27 @@ export const Highlights: React.FC<Props> = (props) => {
           const a = secToFrames(s, fps);
           const len = Math.max(1, secToFrames(e, fps) - a);
           return (
-            <Series.Sequence key={i} durationInFrames={len} name={`highlight ${i + 1}`}>
-              <SourceVideo source={timeline.source} fit={fit} trimBefore={a} trimAfter={a + len} />
+            <Series.Sequence
+              key={i}
+              durationInFrames={len}
+              name={`highlight ${i + 1}`}
+            >
+              <SourceVideo
+                source={timeline.source}
+                fit={fit}
+                trimBefore={a}
+                trimAfter={a + len}
+              />
               {i > 0 ? <CutFlash /> : null}
-              <Counter index={i} total={ranges.length} o={o} fontFamily={family} />
-              {i === 0 && o.title ? <Title text={o.title} len={len} o={o} fontFamily={family} /> : null}
+              <Counter
+                index={i}
+                total={ranges.length}
+                o={o}
+                fontFamily={family}
+              />
+              {i === 0 && o.title ? (
+                <Title text={o.title} len={len} o={o} fontFamily={family} />
+              ) : null}
             </Series.Sequence>
           );
         })}
@@ -40,16 +71,31 @@ export const Highlights: React.FC<Props> = (props) => {
 const CutFlash: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const a = interpolate(frame, [0, fps * 0.2], [0.5, 0], { extrapolateRight: "clamp" });
-  return a > 0 ? <AbsoluteFill style={{ backgroundColor: "white", opacity: a }} /> : null;
+  const a = interpolate(frame, [0, fps * 0.2], [0.5, 0], {
+    extrapolateRight: "clamp",
+  });
+  return a > 0 ? (
+    <AbsoluteFill style={{ backgroundColor: "white", opacity: a }} />
+  ) : null;
 };
 
-const Counter: React.FC<{ index: number; total: number; o: Options; fontFamily: string }> = ({ index, total, o, fontFamily }) => {
+const Counter: React.FC<{
+  index: number;
+  total: number;
+  o: Options;
+  fontFamily: string;
+}> = ({ index, total, o, fontFamily }) => {
   const { width, height } = useVideoConfig();
   if (total <= 1) return null;
   const size = Math.round(Math.min(width, height) * 0.035);
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "flex-end", padding: size }}>
+    <AbsoluteFill
+      style={{
+        justifyContent: "flex-start",
+        alignItems: "flex-end",
+        padding: size,
+      }}
+    >
       <div
         style={{
           fontFamily,
@@ -67,12 +113,20 @@ const Counter: React.FC<{ index: number; total: number; o: Options; fontFamily: 
   );
 };
 
-const Title: React.FC<{ text: string; len: number; o: Options; fontFamily: string }> = ({ text, len, o, fontFamily }) => {
+const Title: React.FC<{
+  text: string;
+  len: number;
+  o: Options;
+  fontFamily: string;
+}> = ({ text, len, o, fontFamily }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const enter = spring({ frame, fps, config: { damping: 15 } });
   const shown = Math.min(len, Math.round(fps * 2.5));
-  const exit = interpolate(frame, [shown - 8, shown], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const exit = interpolate(frame, [shown - 8, shown], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   const size = Math.round(Math.min(width, height) * 0.075);
   return (
     <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>

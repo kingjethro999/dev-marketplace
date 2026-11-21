@@ -1,11 +1,18 @@
 import { wordListsFromMediaMeta } from "./words.mjs";
 
 // audio_meta.json word times are relative to each line's own file.
-export function speechSpans(meta, { mergeGap = 0.6, offsets, sequential = false, gap = 0 } = {}) {
+export function speechSpans(
+  meta,
+  { mergeGap = 0.6, offsets, sequential = false, gap = 0 } = {},
+) {
   const merge = Number(mergeGap);
   const lists = wordListsFromMediaMeta(meta);
   const voices = Array.isArray(meta?.voices) ? meta.voices : [];
-  if (lists.filter((words) => words.length > 0).length > 1 && !offsets && !sequential) {
+  if (
+    lists.filter((words) => words.length > 0).length > 1 &&
+    !offsets &&
+    !sequential
+  ) {
     throw new Error(
       "audio_meta has multiple voice lines with file-relative times; pass --sequential or --offsets so spans land at composition time",
     );
@@ -18,11 +25,13 @@ export function speechSpans(meta, { mergeGap = 0.6, offsets, sequential = false,
     if (offsets) {
       if (lists[i].length === 0) continue;
       const id = voice?.id ?? String(i);
-      if (!(id in offsets)) throw new Error(`--offsets is missing voice "${id}"`);
+      if (!(id in offsets))
+        throw new Error(`--offsets is missing voice "${id}"`);
       offset = Number(offsets[id]) || 0;
     } else if (sequential) {
       offset = cursor;
-      const lineDuration = Number(voice?.duration_s) || Math.max(...lists[i].map((w) => w.end), 0);
+      const lineDuration =
+        Number(voice?.duration_s) || Math.max(...lists[i].map((w) => w.end), 0);
       cursor += lineDuration + (Number(gap) || 0);
     }
     for (const word of lists[i]) {
@@ -30,7 +39,10 @@ export function speechSpans(meta, { mergeGap = 0.6, offsets, sequential = false,
         intervals.push({ start: word.start + offset, end: word.end + offset });
     }
   }
-  return mergeIntervals(intervals, Number.isFinite(merge) && merge >= 0 ? merge : 0.6);
+  return mergeIntervals(
+    intervals,
+    Number.isFinite(merge) && merge >= 0 ? merge : 0.6,
+  );
 }
 
 export function duckKeyframes(
@@ -75,7 +87,8 @@ export function duckLane(keyframes, { clipStart = 0, baseVolume = 1 } = {}) {
     next === 0
       ? points[0].v
       : after
-        ? before.v + ((after.v - before.v) * (start - before.t)) / (after.t - before.t)
+        ? before.v +
+          ((after.v - before.v) * (start - before.t)) / (after.t - before.t)
         : before.v;
   const localPoints = [
     { t: 0, v: initial },
@@ -93,7 +106,10 @@ function mergeIntervals(intervals, mergeGap) {
   const merged = [];
   for (const range of sorted) {
     const prev = merged.at(-1);
-    if (prev && (range.start <= prev.end || range.start - prev.end < mergeGap)) {
+    if (
+      prev &&
+      (range.start <= prev.end || range.start - prev.end < mergeGap)
+    ) {
       prev.end = Math.max(prev.end, range.end);
     } else {
       merged.push({ ...range });

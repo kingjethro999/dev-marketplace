@@ -15,7 +15,14 @@ export const GEMINI_TTS_MODELS = [
 // 3.8 returns WAV; older models return PCM that we wrap without resampling.
 // The shared engine transcribes the saved audio for word timings.
 export async function synthesizeGemini(
-  { text, voiceId = "Kore", model = GEMINI_TTS_MODEL, style, speed = 1, wavAbs },
+  {
+    text,
+    voiceId = "Kore",
+    model = GEMINI_TTS_MODEL,
+    style,
+    speed = 1,
+    wavAbs,
+  },
   { fetchImpl = fetch, authenticate = geminiAuth } = {},
 ) {
   let secret;
@@ -23,7 +30,8 @@ export async function synthesizeGemini(
     if (!GEMINI_TTS_MODELS.includes(model)) {
       throw new Error(`Unsupported Gemini TTS model: ${model}`);
     }
-    if (speed !== 1) throw new Error("Gemini TTS uses style for pacing; omit speed or use 1");
+    if (speed !== 1)
+      throw new Error("Gemini TTS uses style for pacing; omit speed or use 1");
     const modern = model.startsWith("gemini-3.8-");
     if (!modern && /^(voice_|voicekey_)/.test(voiceId)) {
       throw new Error(
@@ -35,9 +43,12 @@ export async function synthesizeGemini(
     const content = {
       type: "text",
       text:
-        !modern && style ? `Read the following text with this delivery: ${style}\n\n${text}` : text,
+        !modern && style
+          ? `Read the following text with this delivery: ${style}\n\n${text}`
+          : text,
     };
-    if (modern && style) content.annotations = [{ type: "speech_metadata", style }];
+    if (modern && style)
+      content.annotations = [{ type: "speech_metadata", style }];
     const response = await fetchImpl(
       "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
@@ -47,7 +58,9 @@ export async function synthesizeGemini(
         body: JSON.stringify({
           model,
           input: [{ type: "user_input", content: [content] }],
-          response_format: modern ? { type: "audio", mime_type: "audio/wav" } : { type: "audio" },
+          response_format: modern
+            ? { type: "audio", mime_type: "audio/wav" }
+            : { type: "audio" },
           generation_config: { speech_config: [{ voice: voiceId }] },
           store: false,
         }),
@@ -59,7 +72,9 @@ export async function synthesizeGemini(
     }
     const payload = await response.json();
     if (payload.status !== "completed") {
-      throw new Error(`Gemini TTS did not complete (${payload.status ?? "missing status"})`);
+      throw new Error(
+        `Gemini TTS did not complete (${payload.status ?? "missing status"})`,
+      );
     }
     const audio = (payload.steps ?? [])
       .filter((step) => step.type === "model_output")
@@ -101,7 +116,10 @@ function withCause(error) {
   const message = String(error?.message ?? error);
   const cause = error?.cause;
   if (!cause) return message;
-  const detail = [cause.code, cause.message ?? (typeof cause === "string" ? cause : "")]
+  const detail = [
+    cause.code,
+    cause.message ?? (typeof cause === "string" ? cause : ""),
+  ]
     .filter(Boolean)
     .join(": ");
   return detail ? `${message} (${detail})` : message;
@@ -111,10 +129,19 @@ function pcmToWav(pcm, mime) {
   const rate = Number(/(?:^|;)\s*rate=(\d+)(?:;|$)/i.exec(mime)?.[1]);
   const channels = /(?:^|;)\s*channels=([^;]+)/i.exec(mime)?.[1];
   const codec = /(?:^|;)\s*codec=([^;]+)/i.exec(mime)?.[1];
-  if ((channels && channels.trim() !== "1") || (codec && codec.trim() !== "pcm")) {
+  if (
+    (channels && channels.trim() !== "1") ||
+    (codec && codec.trim() !== "pcm")
+  ) {
     throw new Error("Gemini TTS returned unsupported PCM channels or codec");
   }
-  if (!Number.isInteger(rate) || rate < 8000 || rate > 96000 || !pcm.length || pcm.length % 2) {
+  if (
+    !Number.isInteger(rate) ||
+    rate < 8000 ||
+    rate > 96000 ||
+    !pcm.length ||
+    pcm.length % 2
+  ) {
     throw new Error("Gemini TTS returned invalid PCM audio or sample rate");
   }
   const header = Buffer.alloc(44);

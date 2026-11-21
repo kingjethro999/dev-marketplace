@@ -91,11 +91,20 @@ test("records locally made music as generated once it is ready", () => {
       }),
     );
     const script = new URL("./wait-bgm.mjs", import.meta.url).pathname;
-    const args = ["--audio-meta", join(dir, "audio_meta.json"), "--hyperframes", dir];
+    const args = [
+      "--audio-meta",
+      join(dir, "audio_meta.json"),
+      "--hyperframes",
+      dir,
+    ];
 
-    const run = spawnSync(process.execPath, [script, ...args, "--timeout-ms", "1000"], {
-      encoding: "utf8",
-    });
+    const run = spawnSync(
+      process.execPath,
+      [script, ...args, "--timeout-ms", "1000"],
+      {
+        encoding: "utf8",
+      },
+    );
 
     assert.equal(run.status, 0, run.stderr);
     const records = readFileSync(join(dir, ".media/manifest.jsonl"), "utf8")
@@ -155,12 +164,18 @@ function waitWithLog(bgmLog, files = {}) {
 }
 
 for (const [label, bgmLog, files] of [
-  ["an absolute path outside the project", (_dir, base) => join(base, "secret.txt")],
+  [
+    "an absolute path outside the project",
+    (_dir, base) => join(base, "secret.txt"),
+  ],
   ["a path that climbs out of the project", () => "../secret.txt"],
   [
     "a link in assets/bgm under the engine's log name",
     () => "assets/bgm/bgm-1.log",
-    { "assets/bgm/bgm-1.log": (at, base) => symlinkSync(join(base, "secret.txt"), at) },
+    {
+      "assets/bgm/bgm-1.log": (at, base) =>
+        symlinkSync(join(base, "secret.txt"), at),
+    },
   ],
 ]) {
   test(`a bgm_log at ${label} is never read into bgm_status.json`, () => {
@@ -213,8 +228,14 @@ test("a link planted at bgm_status.json is replaced, and the file it named is un
     symlinkSync(join(base, "theirs.txt"), join(dir, "bgm_status.json"));
     runWait(dir, { bgm: null });
     assert.equal(readFileSync(join(base, "theirs.txt"), "utf8"), "theirs");
-    assert.equal(lstatSync(join(dir, "bgm_status.json")).isSymbolicLink(), false);
-    assert.equal(JSON.parse(readFileSync(join(dir, "bgm_status.json"), "utf8")).status, "disabled");
+    assert.equal(
+      lstatSync(join(dir, "bgm_status.json")).isSymbolicLink(),
+      false,
+    );
+    assert.equal(
+      JSON.parse(readFileSync(join(dir, "bgm_status.json"), "utf8")).status,
+      "disabled",
+    );
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
@@ -226,8 +247,14 @@ test("a track path outside the project is never reported ready or recorded", () 
   try {
     mkdirSync(dir);
     writeFileSync(join(base, "theirs.wav"), "not ours");
-    runWait(dir, { bgm: { path: "../theirs.wav" }, bgm_pending: true, bgm_provider: "musicgen" });
-    const status = JSON.parse(readFileSync(join(dir, "bgm_status.json"), "utf8"));
+    runWait(dir, {
+      bgm: { path: "../theirs.wav" },
+      bgm_pending: true,
+      bgm_provider: "musicgen",
+    });
+    const status = JSON.parse(
+      readFileSync(join(dir, "bgm_status.json"), "utf8"),
+    );
     assert.equal(status.ready, false);
     assert.equal(status.path, null);
     assert.equal(existsSync(join(dir, ".media/manifest.jsonl")), false);
@@ -246,7 +273,9 @@ test("a pid whose log is not the engine's own is dropped with the log", () => {
       bgm_pid: process.pid,
       bgm_log: "/etc/hosts",
     });
-    const status = JSON.parse(readFileSync(join(dir, "bgm_status.json"), "utf8"));
+    const status = JSON.parse(
+      readFileSync(join(dir, "bgm_status.json"), "utf8"),
+    );
     assert.equal(status.pid, null);
     assert.equal(status.process_alive, false);
   } finally {

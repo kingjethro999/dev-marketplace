@@ -30,14 +30,21 @@ const dbfs = (linear) => 20 * Math.log10(linear);
 // "facebook/musicgen-small" as a folder when the working directory has one.
 test(
   "local MusicGen starts in the home folder, so a project folder named like the model is never read",
-  { skip: process.platform === "win32" ? "the stand-in python is an sh script" : false },
+  {
+    skip:
+      process.platform === "win32"
+        ? "the stand-in python is an sh script"
+        : false,
+  },
   async () => {
     const root = mkdtempSync(join(tmpdir(), "bgm-musicgen-cwd-"));
     try {
       const home = join(root, "home");
       const project = join(root, "project");
       mkdirSync(home);
-      mkdirSync(join(project, "facebook", "musicgen-small"), { recursive: true });
+      mkdirSync(join(project, "facebook", "musicgen-small"), {
+        recursive: true,
+      });
       const python = join(root, "python");
       const record = join(root, "record");
       writeFileSync(
@@ -82,7 +89,10 @@ test("BGM under narration is a bed near -18 dB", () => {
   assert.equal(bgmDefaultVolume(true), BGM_BED_VOLUME);
   assert.equal(BGM_BED_VOLUME, 0.12);
   const db = dbfs(BGM_BED_VOLUME);
-  assert.ok(db < -17 && db > -19, `bed should be ≈ -18 dB, got ${db.toFixed(1)} dB`);
+  assert.ok(
+    db < -17 && db > -19,
+    `bed should be ≈ -18 dB, got ${db.toFixed(1)} dB`,
+  );
 });
 
 test("a silent film (no voice) keeps BGM forward", () => {
@@ -111,7 +121,9 @@ test(
     });
     mkdirSync(join(dir, "bin"));
     for (const name of ["python3", "python"])
-      writeFileSync(join(dir, "bin", name), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+      writeFileSync(join(dir, "bin", name), "#!/bin/sh\nexit 0\n", {
+        mode: 0o755,
+      });
     process.env.PATH = `${join(dir, "bin")}:${path}`;
     mkdirSync(join(dir, "assets/bgm"), { recursive: true });
     writeFileSync(join(dir, "assets/bgm/track.wav"), "last run's track");

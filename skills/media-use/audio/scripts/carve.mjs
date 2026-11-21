@@ -64,7 +64,11 @@ export function parseArgs(argv) {
     else fail(`unknown flag: ${flag}\n\n${usage}`);
   }
   if (!args.comp) fail(`--comp is required\n\n${usage}`);
-  if (!Number.isFinite(args.strength) || args.strength < 0 || args.strength > 1) {
+  if (
+    !Number.isFinite(args.strength) ||
+    args.strength < 0 ||
+    args.strength > 1
+  ) {
     fail("--strength must be a number from 0 to 1");
   }
   return args;
@@ -107,7 +111,9 @@ function fail(message, code = 1) {
  */
 export function carveSources(voices, bed, members) {
   const group = sharedVoiceGroup(voices);
-  return group && !groupSourceRefusal(voices, bed, members) ? [group] : voices.map((v) => v.id);
+  return group && !groupSourceRefusal(voices, bed, members)
+    ? [group]
+    : voices.map((v) => v.id);
 }
 
 /** The one group every voice belongs to, or null if they do not share exactly one. */
@@ -198,7 +204,8 @@ function decode(path) {
   return new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4);
 }
 
-const attrOf = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`, "i"))?.[1] ?? null;
+const attrOf = (tag, name) =>
+  tag.match(new RegExp(`\\s${name}="([^"]*)"`, "i"))?.[1] ?? null;
 
 const unescapeAttr = (value) =>
   value
@@ -206,7 +213,8 @@ const unescapeAttr = (value) =>
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, "&");
 
-const escapeAttr = (value) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+const escapeAttr = (value) =>
+  value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
 /** Every media element with a src, as {id, tag, kind}. */
 function mediaElements(html) {
@@ -215,7 +223,8 @@ function mediaElements(html) {
     const tag = match[0];
     // `\sid=` and not `id=`: `data-hf-id` would match first.
     const id = tag.match(/\sid="([^"]+)"/)?.[1];
-    if (id && attrOf(tag, "src")) found.push({ id, tag, kind: match[1].toLowerCase() });
+    if (id && attrOf(tag, "src"))
+      found.push({ id, tag, kind: match[1].toLowerCase() });
   }
   return found;
 }
@@ -238,7 +247,8 @@ function mediaElements(html) {
  */
 function detectTracks(html, given, classify, overlaps) {
   const all = mediaElements(html);
-  const kindOf = (el) => classify(el.id, unescapeAttr(attrOf(el.tag, "src") ?? ""));
+  const kindOf = (el) =>
+    classify(el.id, unescapeAttr(attrOf(el.tag, "src") ?? ""));
   const spanOf = (el) => {
     const raw = attrOf(el.tag, "data-duration");
     const n = raw === null ? Number.NaN : Number(raw);
@@ -278,7 +288,10 @@ function detectTracks(html, given, classify, overlaps) {
   const bedSpan = spanOf(bed);
   const overlapping = (el) => overlaps(bedSpan, spanOf(el));
   const plausible = all
-    .filter((el) => el.id !== bed.id && kindOf(el) !== "music" && kindOf(el) !== "sfx")
+    .filter(
+      (el) =>
+        el.id !== bed.id && kindOf(el) !== "music" && kindOf(el) !== "sfx",
+    )
     .filter(overlapping);
   // A voiceover is normally its own <audio>. Video counts only when no audio track
   // is left to be the voice — a talking-head recut — because otherwise every B-roll
@@ -289,7 +302,10 @@ function detectTracks(html, given, classify, overlaps) {
     ? named
     : pool.map((el) => ({
         ...el,
-        why: kindOf(el) === "voice" ? "name looks like a voice" : "plays over the bed",
+        why:
+          kindOf(el) === "voice"
+            ? "name looks like a voice"
+            : "plays over the bed",
       }));
 
   const usable = voices.filter((el) => attrOf(el.tag, "src"));
@@ -318,7 +334,12 @@ async function main() {
     bed: bedEl,
     voices,
     all: media,
-  } = detectTracks(html, args, carveApi.classifyAudioName, carveApi.clipsOverlap);
+  } = detectTracks(
+    html,
+    args,
+    carveApi.classifyAudioName,
+    carveApi.clipsOverlap,
+  );
   // Group membership + name classification for every audio track, so the source
   // decision can see what the group will resolve to later and not just what this
   // run analysed.
@@ -327,7 +348,10 @@ async function main() {
     .map((el) => ({
       id: el.id,
       group: attrOf(el.tag, "data-audio-group"),
-      nameKind: carveApi.classifyAudioName(el.id, unescapeAttr(attrOf(el.tag, "src") ?? "")),
+      nameKind: carveApi.classifyAudioName(
+        el.id,
+        unescapeAttr(attrOf(el.tag, "src") ?? ""),
+      ),
     }));
   const bedTag = bedEl.tag;
   const bedSrc = attrOf(bedTag, "src");
@@ -348,14 +372,18 @@ async function main() {
     })),
     SAMPLE_RATE,
   );
-  if (voice.length === 0) fail("the voices do not overlap the bed, so there is nothing to carve");
+  if (voice.length === 0)
+    fail("the voices do not overlap the bed, so there is nothing to carve");
   const bands = carveApi.analyseCarveBands(voice, SAMPLE_RATE, profile);
 
   // The level half of the carve needs both sides: "how far over the speech is this
   // bed" cannot be answered by listening to one of them. No offset — the mix is
   // already on the bed's clock.
-  const bed = profile.duckDb > 0 ? decode(resolve(compDir, unescapeAttr(bedSrc))) : null;
-  const duck = bed ? carveApi.analyseCarveDuck(voice, bed, SAMPLE_RATE, profile, 0) : [];
+  const bed =
+    profile.duckDb > 0 ? decode(resolve(compDir, unescapeAttr(bedSrc))) : null;
+  const duck = bed
+    ? carveApi.analyseCarveDuck(voice, bed, SAMPLE_RATE, profile, 0)
+    : [];
 
   // Anything the author built by hand survives a carve; only the previous
   // carve's own nodes are replaced. That is what `fromCarve` is for.
@@ -368,15 +396,23 @@ async function main() {
   // nodes had. Taken before anything is minted: those ids are freed by the
   // replacement and a new node can be handed one of them, so reading them off the
   // new chain would keep exactly the stale lanes it is supposed to drop.
-  const stalePrefixes = existingNodes.filter((n) => n.fromCarve && n.id).map((n) => `fx.${n.id}.`);
+  const stalePrefixes = existingNodes
+    .filter((n) => n.fromCarve && n.id)
+    .map((n) => `fx.${n.id}.`);
 
   let claimed = { version: 1, nodes: kept };
   const mint = (node) => {
-    const withId = { ...node, id: carveApi.mintAudioFxNodeId(claimed), fromCarve: true };
+    const withId = {
+      ...node,
+      id: carveApi.mintAudioFxNodeId(claimed),
+      fromCarve: true,
+    };
     claimed = { version: 1, nodes: [...claimed.nodes, withId] };
     return withId;
   };
-  const bandNodes = bands.map((band) => mint(carveApi.carveBandsToChain([band]).nodes[0]));
+  const bandNodes = bands.map((band) =>
+    mint(carveApi.carveBandsToChain([band]).nodes[0]),
+  );
 
   const duckNode =
     duck.length > 0
@@ -414,7 +450,9 @@ async function main() {
   const carvedLanes = [
     ...carveApi
       .analyseCarveDynamics(voice, SAMPLE_RATE, bands)
-      .flatMap((dyn, i) => (bandNodes[i]?.id ? laneFor(bandNodes[i].id, dyn.points) : [])),
+      .flatMap((dyn, i) =>
+        bandNodes[i]?.id ? laneFor(bandNodes[i].id, dyn.points) : [],
+      ),
     ...(duckNode?.id && duck.length > 0 ? laneFor(duckNode.id, duck) : []),
   ];
 
@@ -423,7 +461,10 @@ async function main() {
   const existingAutomation = attrOf(bedTag, "data-automation");
   const carriedLanes = existingAutomation
     ? (JSON.parse(unescapeAttr(existingAutomation)).lanes ?? []).filter(
-        (lane) => !stalePrefixes.some((prefix) => String(lane.target).startsWith(prefix)),
+        (lane) =>
+          !stalePrefixes.some((prefix) =>
+            String(lane.target).startsWith(prefix),
+          ),
       )
     : [];
   const lanes = [...carriedLanes, ...carvedLanes];
@@ -477,7 +518,8 @@ async function main() {
   // Inserted before the tag's own closing ">", which is the only place they can
   // go: `stripped` is the opening tag alone, so appending would land outside it.
   const nextTag = stripped.replace(/\/?>$/, (close) => `${written}${close}`);
-  if (nextTag === stripped) fail("attribute write produced no change — refusing to save");
+  if (nextTag === stripped)
+    fail("attribute write produced no change — refusing to save");
   writeFileSync(compPath, html.replace(bedTag, nextTag));
   process.stdout.write(`wrote ${args.comp} (id="${bedEl.id}")\n`);
 }

@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import * as fs from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { withFileLock } from "./config-lock.mjs";
@@ -99,7 +105,9 @@ export function preferenceKeyFor(key, workflow) {
 }
 
 function validEntry(entry) {
-  return isRecord(entry) && typeof entry.value === "string" && entry.value.length > 0;
+  return (
+    isRecord(entry) && typeof entry.value === "string" && entry.value.length > 0
+  );
 }
 
 /**
@@ -134,11 +142,17 @@ function recordProjectTier(projectDir, fullKey, value, projectName, now) {
     const keepProvenance = validEntry(previous) && previous.value === value;
     const confirmedIn = keepProvenance
       ? dedupe([
-          ...(Array.isArray(previous.confirmed_in) ? previous.confirmed_in : []),
+          ...(Array.isArray(previous.confirmed_in)
+            ? previous.confirmed_in
+            : []),
           projectName,
         ])
       : [projectName];
-    file.preferences[fullKey] = { value, confirmed_in: confirmedIn, updated_at: now };
+    file.preferences[fullKey] = {
+      value,
+      confirmed_in: confirmedIn,
+      updated_at: now,
+    };
     return confirmedIn;
   });
 }
@@ -149,7 +163,9 @@ function recordProjectTier(projectDir, fullKey, value, projectName, now) {
  */
 function recordUserSighting(fullKey, value, projectName, now) {
   return updatePrefsFile(userPrefsPath(), (file) => {
-    const keySightings = isRecord(file.sightings[fullKey]) ? file.sightings[fullKey] : {};
+    const keySightings = isRecord(file.sightings[fullKey])
+      ? file.sightings[fullKey]
+      : {};
     const seenIn = dedupe([
       ...(Array.isArray(keySightings[value]) ? keySightings[value] : []),
       projectName,
@@ -158,7 +174,11 @@ function recordUserSighting(fullKey, value, projectName, now) {
     file.sightings[fullKey] = keySightings;
     const promoted = seenIn.length >= PROMOTE_AT;
     if (promoted) {
-      file.preferences[fullKey] = { value, confirmed_in: seenIn, updated_at: now };
+      file.preferences[fullKey] = {
+        value,
+        confirmed_in: seenIn,
+        updated_at: now,
+      };
     }
     return promoted;
   });
@@ -171,20 +191,30 @@ function recordUserSighting(fullKey, value, projectName, now) {
  */
 export function recordPreference({ projectDir, key, value, workflow }) {
   if (!PREFERENCE_KEYS.includes(key)) {
-    throw new Error(`unknown preference key: "${key}" (known: ${PREFERENCE_KEYS.join(", ")})`);
+    throw new Error(
+      `unknown preference key: "${key}" (known: ${PREFERENCE_KEYS.join(", ")})`,
+    );
   }
   if (typeof value !== "string" || !value.trim()) {
     throw new Error("a preference needs a non-empty string value");
   }
   if (key === "style_preset" && (!workflow || !String(workflow).trim())) {
-    throw new Error("style_preset is stored per workflow — pass --workflow <w>");
+    throw new Error(
+      "style_preset is stored per workflow — pass --workflow <w>",
+    );
   }
   const fullKey = preferenceKeyFor(key, workflow);
   const projectName = basename(resolve(projectDir));
   const trimmed = value.trim();
   const now = new Date().toISOString();
 
-  const confirmedIn = recordProjectTier(projectDir, fullKey, trimmed, projectName, now);
+  const confirmedIn = recordProjectTier(
+    projectDir,
+    fullKey,
+    trimmed,
+    projectName,
+    now,
+  );
 
   // Best-effort — a read-only home directory must never fail a brief.
   let promoted = false;

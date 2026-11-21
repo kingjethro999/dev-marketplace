@@ -48,22 +48,23 @@ What a download adds to an offload, and what it must not change:
    - yt-dlp's output goes to a logger, so `--json` stays the only thing on stdout. Warnings are kept, redacted, in the report.
 4. **What is recorded**: the `"fetch"` object (`ingest/fetch@1`), in the fetch report, in each destination's `ingest-manifest.json`, and in `ingest inventory` (`"fetch": null` for a card).
 
-   | Key | Value |
-   |---|---|
-   | `source_url` | the URL as given, redacted (item 5) |
-   | `webpage_url` | yt-dlp's page URL, redacted |
-   | `redacted` | the names (never the values) of what was removed: `userinfo`, query parameter names, `#name` for the fragment, `;name` for path parameters |
-   | `extractor`, `extractor_key` | yt-dlp's extractor (e.g. `youtube` / `Youtube`, `generic` / `Generic`) |
-   | `downloader` | `{"name": "yt-dlp", "version": …}`. yt-dlp's extractors ship inside yt-dlp and have no version of their own: the yt-dlp version **is** the extractor version |
-   | `format_selector`, `format_id` | the selector used, and the format yt-dlp picked (e.g. `137+140`) |
-   | `id`, `title`, `duration` | as yt-dlp reported them |
-   | `is_live`, `was_live`, `live_from_start` | yt-dlp's live flags, and whether the capture started at the stream's beginning |
-   | `files` | the downloaded files, relative to the card folder |
-   | `started_at`, `fetched_at` | UTC, when the download started and when it finished |
+   | Key                                      | Value                                                                                                                                                        |
+   | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `source_url`                             | the URL as given, redacted (item 5)                                                                                                                          |
+   | `webpage_url`                            | yt-dlp's page URL, redacted                                                                                                                                  |
+   | `redacted`                               | the names (never the values) of what was removed: `userinfo`, query parameter names, `#name` for the fragment, `;name` for path parameters                   |
+   | `extractor`, `extractor_key`             | yt-dlp's extractor (e.g. `youtube` / `Youtube`, `generic` / `Generic`)                                                                                       |
+   | `downloader`                             | `{"name": "yt-dlp", "version": …}`. yt-dlp's extractors ship inside yt-dlp and have no version of their own: the yt-dlp version **is** the extractor version |
+   | `format_selector`, `format_id`           | the selector used, and the format yt-dlp picked (e.g. `137+140`)                                                                                             |
+   | `id`, `title`, `duration`                | as yt-dlp reported them                                                                                                                                      |
+   | `is_live`, `was_live`, `live_from_start` | yt-dlp's live flags, and whether the capture started at the stream's beginning                                                                               |
+   | `files`                                  | the downloaded files, relative to the card folder                                                                                                            |
+   | `started_at`, `fetched_at`               | UTC, when the download started and when it finished                                                                                                          |
 
    The manifest's existing `source` key is the staging folder the copy was made from (removed after a verified run). The origin of the material is in `fetch`.
 
    **Never recorded:** cookies, request headers, the signed media URL yt-dlp downloaded from, and credential values in either URL. The manifest schema stays `ingest/manifest@1` and the inventory stays `ingest/inventory@2`, because readers ignore unknown keys (as for `"card"` in ADR-003 and `"failed"` in ADR-004).
+
 5. **Redaction rules** (`fetch.redact_url`). Over-redacting a harmless parameter is the accepted cost.
    - `user:password@` in the host part is removed.
    - A query, fragment (`#a=b&…`) or path (`;name=value`) parameter whose value is non-empty has its value replaced by `REDACTED` when its name, case-insensitively, contains `token`, `sig`, `key`, `secret`, `passw`, `auth`, `credential`, `session`, `cookie`, `jwt`, `hmac` or `policy`, or is `pass`, `pwd`, `code`, `sid`, `st`, `hdnts`, `hdnea` or `otp`. This covers the AWS (`X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`), CloudFront (`Signature`, `Policy`, `Key-Pair-Id`), Akamai (`hdnts`, `hdnea`) and OAuth (`access_token`, `code`) forms.

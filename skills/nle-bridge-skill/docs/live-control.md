@@ -6,25 +6,25 @@ Checked on 2026-10-31 against the servers' own repositories at the pinned tags a
 
 ## The two servers
 
-| | DaVinci Resolve | Premiere Pro |
-|---|---|---|
-| Server | [samuelgursky/davinci-resolve-mcp](https://github.com/samuelgursky/davinci-resolve-mcp) | [leancoderkavy/premiere-pro-mcp](https://github.com/leancoderkavy/premiere-pro-mcp) |
-| Licence | MIT (`LICENSE`, `package.json`) | MIT (`LICENSE`, `package.json`) |
-| Pin | **4.17.0**: tag `v4.17.0` = commit `6dea2f3dd2524a81dff18d8eafc8711f90108964`, npm `davinci-resolve-mcp@4.17.0` (published 2026-10-29) | **1.27.0**: tag `v1.27.0` = commit `c2370d77215fa8acf444a0a95e4b62a5f17347cb`, npm `premiere-pro-mcp@1.27.0` (published 2026-10-31) |
-| Maintenance | Active: releases every few days (4.15.3 to 4.17.0 in October 2026), a test suite, a security policy | Active: releases every few days (1.24.3 to 1.27.0 in October 2026), a test suite, a security policy |
-| NLE requirement | **Resolve Studio** (external scripting is Studio-only); Preferences > General > External scripting using: **Local** | Premiere Pro with the server's CEP panel (`--install-cep`); the UXP bridge needs Premiere 25.6+ |
-| Arbitrary-code tools | **None.** Since v3.0.0 the server does not execute caller-supplied code: `script_plugin run_inline` / `execute` were removed, the probe refuses `execute=true`, and a test AST-scans `src/` for `exec` / `eval` / `RunScript` (CHANGELOG "v3.0.0") | `execute_extendscript` and `evaluate_expression` exist, but are hidden from discovery and refused at call time unless `PREMIERE_MCP_CAPABILITIES` contains `unsafe-script` (default `inspect,edit,export,filesystem`; README "Security", SECURITY.md) |
-| Telemetry / network | No telemetry found in `src/`. On start it checks GitHub for a newer release (`src/utils/update_check.py`); `DAVINCI_RESOLVE_MCP_UPDATE_CHECK=0` turns that off | PostHog telemetry exists (`src/telemetry.ts`) but is **off unless `POSTHOG_API_KEY` is set** |
-| Importing this skill's files | `media_pool` action `import_timeline(path, options?)`, or `timeline` action `import_timeline_checked(path, ..., dry_run?)`: both call Resolve's `ImportTimelineFromFile`, which takes **OTIO, FCP7 XML, EDL** (and AAF / FCPXML) | `import_fcp_xml` (CEP `app.openFCPXML`, into a new project or the open one) takes the **FCP7 XML**. 1.27.0 has no OTIO import tool (its `src/` exports OTIO through `export_interchange_uxp` only), and `import_edl` refuses by design. Import the `.otio` by hand (File > Import) when OTIO is wanted |
+|                              | DaVinci Resolve                                                                                                                                                                                                                                    | Premiere Pro                                                                                                                                                                                                                                                                                           |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server                       | [samuelgursky/davinci-resolve-mcp](https://github.com/samuelgursky/davinci-resolve-mcp)                                                                                                                                                            | [leancoderkavy/premiere-pro-mcp](https://github.com/leancoderkavy/premiere-pro-mcp)                                                                                                                                                                                                                    |
+| Licence                      | MIT (`LICENSE`, `package.json`)                                                                                                                                                                                                                    | MIT (`LICENSE`, `package.json`)                                                                                                                                                                                                                                                                        |
+| Pin                          | **4.17.0**: tag `v4.17.0` = commit `6dea2f3dd2524a81dff18d8eafc8711f90108964`, npm `davinci-resolve-mcp@4.17.0` (published 2026-10-29)                                                                                                             | **1.27.0**: tag `v1.27.0` = commit `c2370d77215fa8acf444a0a95e4b62a5f17347cb`, npm `premiere-pro-mcp@1.27.0` (published 2026-10-31)                                                                                                                                                                    |
+| Maintenance                  | Active: releases every few days (4.15.3 to 4.17.0 in October 2026), a test suite, a security policy                                                                                                                                                | Active: releases every few days (1.24.3 to 1.27.0 in October 2026), a test suite, a security policy                                                                                                                                                                                                    |
+| NLE requirement              | **Resolve Studio** (external scripting is Studio-only); Preferences > General > External scripting using: **Local**                                                                                                                                | Premiere Pro with the server's CEP panel (`--install-cep`); the UXP bridge needs Premiere 25.6+                                                                                                                                                                                                        |
+| Arbitrary-code tools         | **None.** Since v3.0.0 the server does not execute caller-supplied code: `script_plugin run_inline` / `execute` were removed, the probe refuses `execute=true`, and a test AST-scans `src/` for `exec` / `eval` / `RunScript` (CHANGELOG "v3.0.0") | `execute_extendscript` and `evaluate_expression` exist, but are hidden from discovery and refused at call time unless `PREMIERE_MCP_CAPABILITIES` contains `unsafe-script` (default `inspect,edit,export,filesystem`; README "Security", SECURITY.md)                                                  |
+| Telemetry / network          | No telemetry found in `src/`. On start it checks GitHub for a newer release (`src/utils/update_check.py`); `DAVINCI_RESOLVE_MCP_UPDATE_CHECK=0` turns that off                                                                                     | PostHog telemetry exists (`src/telemetry.ts`) but is **off unless `POSTHOG_API_KEY` is set**                                                                                                                                                                                                           |
+| Importing this skill's files | `media_pool` action `import_timeline(path, options?)`, or `timeline` action `import_timeline_checked(path, ..., dry_run?)`: both call Resolve's `ImportTimelineFromFile`, which takes **OTIO, FCP7 XML, EDL** (and AAF / FCPXML)                   | `import_fcp_xml` (CEP `app.openFCPXML`, into a new project or the open one) takes the **FCP7 XML**. 1.27.0 has no OTIO import tool (its `src/` exports OTIO through `export_interchange_uxp` only), and `import_edl` refuses by design. Import the `.otio` by hand (File > Import) when OTIO is wanted |
 
 Not used: servers whose licence is missing or unclear, or whose main tool runs arbitrary code. Checked the same day:
 
-| Server | Licence at HEAD | Last commit | Why not |
-|---|---|---|---|
-| Tooflex/davinci-resolve-mcp | **no licence file** (HEAD `e8b3d92`) | 2026-07-26 | No licence (nothing may be reused); has `execute_lua` |
-| apvlv/davinci-resolve-mcp | `LICENSE` says MIT (HEAD `33678a6`); a directory site lists GPL-3.0 | 2026-10-22 | `execute_python` and `execute_lua` tools; licence statements disagree |
-| nepfaff/premiere-pro-mcp | **no licence file** (HEAD `63215d3`) | 2026-02-09 | No licence; its one tool `eval()`s arbitrary UXP JavaScript (`allowCodeGenerationFromStrings`) |
-| tro2789/scout-premiere-mcp | proprietary | 2026-09-01 | Not open source; `execute_extendscript` |
+| Server                      | Licence at HEAD                                                     | Last commit | Why not                                                                                        |
+| --------------------------- | ------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------- |
+| Tooflex/davinci-resolve-mcp | **no licence file** (HEAD `e8b3d92`)                                | 2026-07-26  | No licence (nothing may be reused); has `execute_lua`                                          |
+| apvlv/davinci-resolve-mcp   | `LICENSE` says MIT (HEAD `33678a6`); a directory site lists GPL-3.0 | 2026-10-22  | `execute_python` and `execute_lua` tools; licence statements disagree                          |
+| nepfaff/premiere-pro-mcp    | **no licence file** (HEAD `63215d3`)                                | 2026-02-09  | No licence; its one tool `eval()`s arbitrary UXP JavaScript (`allowCodeGenerationFromStrings`) |
+| tro2789/scout-premiere-mcp  | proprietary                                                         | 2026-09-01  | Not open source; `execute_extendscript`                                                        |
 
 Velisa's roadmap notes that one Resolve server has no licence and another is GPL-3.0. Whatever the server, the rule here is the same: **do not copy code from any of them**, including the two used. This repository only names them and their switches.
 
@@ -37,17 +37,30 @@ Velisa's roadmap notes that one Resolve server has no licence and another is GPL
 3. Configure the chat app. A Claude Desktop config with this skill's agent and both servers (paths are placeholders):
 
 ```json
-{"mcpServers": {
-  "video-agent": {"command": "/abs/path/video-agent-mcp", "args": ["--workspace", "/abs/path/video-agent-work"]},
-  "davinci-resolve": {
-    "command": "npx", "args": ["-y", "davinci-resolve-mcp@4.17.0", "server"],
-    "env": {"DAVINCI_RESOLVE_MCP_UPDATE_CHECK": "0", "DAVINCI_RESOLVE_MCP_UPDATE_MODE": "never"}
-  },
-  "premiere-pro": {
-    "command": "npx", "args": ["-y", "premiere-pro-mcp@1.27.0"],
-    "env": {"PREMIERE_MCP_CAPABILITIES": "inspect,edit,export,filesystem", "PREMIERE_CONTEXT_BACKEND": "memory"}
+{
+  "mcpServers": {
+    "video-agent": {
+      "command": "/abs/path/video-agent-mcp",
+      "args": ["--workspace", "/abs/path/video-agent-work"]
+    },
+    "davinci-resolve": {
+      "command": "npx",
+      "args": ["-y", "davinci-resolve-mcp@4.17.0", "server"],
+      "env": {
+        "DAVINCI_RESOLVE_MCP_UPDATE_CHECK": "0",
+        "DAVINCI_RESOLVE_MCP_UPDATE_MODE": "never"
+      }
+    },
+    "premiere-pro": {
+      "command": "npx",
+      "args": ["-y", "premiere-pro-mcp@1.27.0"],
+      "env": {
+        "PREMIERE_MCP_CAPABILITIES": "inspect,edit,export,filesystem",
+        "PREMIERE_CONTEXT_BACKEND": "memory"
+      }
+    }
   }
-}}
+}
 ```
 
 4. Keep the switches:

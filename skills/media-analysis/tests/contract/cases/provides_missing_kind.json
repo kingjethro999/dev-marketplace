@@ -7,7 +7,5 @@
       "kind": "loudness"
     }
   ],
-  "expect_problems": [
-    "provides: analysis kind loudness has no Capability id"
-  ]
+  "expect_problems": ["provides: analysis kind loudness has no Capability id"]
 }

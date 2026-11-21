@@ -9,6 +9,8 @@ export async function mapWithConcurrency(items, limit, fn) {
       results[i] = await fn(items[i], i);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
   return results;
 }

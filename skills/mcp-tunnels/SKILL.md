@@ -9,7 +9,9 @@ category: Connectors & LSP
 Connect Claude to an MCP server running inside your private network through an
 
 ## Overview
+
 This connector provides seamless integration and agent capabilities for `mcp-tunnels`.
 
 ## Usage
+
 Refer to the included documentation and configuration files in this directory.

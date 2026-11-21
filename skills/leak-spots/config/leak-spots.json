@@ -7,12 +7,7 @@
   "review": {
     "deep": true
   },
-  "allowList": [
-    "EXAMPLE_KEY",
-    "test-key-123",
-    "placeholder",
-    "dummy"
-  ],
+  "allowList": ["EXAMPLE_KEY", "test-key-123", "placeholder", "dummy"],
   "ignorePaths": [
     "*.lock",
     "package-lock.json",

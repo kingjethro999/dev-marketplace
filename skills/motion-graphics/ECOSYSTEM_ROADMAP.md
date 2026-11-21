@@ -11,11 +11,11 @@ Written from a read-only audit of this repository on 2026-10-30. Each step below
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| タイトル・テロップ | done | titles burned into a programme; title and stinger material files are hyperframes-skill's |
-| ロゴ・PiP・クロマキー合成 | done | added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O10): `logo`, `image_overlay` as a graphic, `video_overlay` with `chromakey` (ADR-15). Plain still compositing as part of an edit stays video-editing-skill's `静止画オーバーレイ` |
-| 動くグラフィックの配置 | done | added by the same decisions (O1, O10): `rendered_layer` (step 7, ADR-25) is the animated-overlay path and reads the clip's `title.json` (step 12, ADR-33) |
+| Owned job                 | Status | Note                                                                                                                                                                                                                                                                                  |
+| ------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| タイトル・テロップ        | done   | titles burned into a programme; title and stinger material files are hyperframes-skill's                                                                                                                                                                                              |
+| ロゴ・PiP・クロマキー合成 | done   | added by the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156) (O10): `logo`, `image_overlay` as a graphic, `video_overlay` with `chromakey` (ADR-15). Plain still compositing as part of an edit stays video-editing-skill's `静止画オーバーレイ` |
+| 動くグラフィックの配置    | done   | added by the same decisions (O1, O10): `rendered_layer` (step 7, ADR-25) is the animated-overlay path and reads the clip's `title.json` (step 12, ADR-33)                                                                                                                             |
 
 ## Wiring
 
@@ -77,4 +77,5 @@ Agent wires all 12 elements with every parameter, first from a pinned 0.2.8 cont
 Under the [Velisa ownership decisions 2026-11-12](https://github.com/kajisho5/Velisa/pull/156): burned-in titles (`タイトル・テロップ`) are here; title and stinger material files are hyperframes-skill's; remotion-ffmpeg-skill's titles stay inside its compositions (O9). Logos, PiP, chroma key and the placement of moving graphics are here; plain still compositing in an edit is video-editing-skill's; ffmpeg-skill is the engine (O10). Animated overlays are hyperframes-skill material placed by `rendered_layer` (O1).
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

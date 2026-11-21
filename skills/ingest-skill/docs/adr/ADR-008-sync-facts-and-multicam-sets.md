@@ -16,26 +16,27 @@ What must not change: inventory reads only; a fact that no source gives is unkno
 
 1. **Every inventory clip gets a `sync` object** (`sync.clip_sync`). Each fact names its source under `sync.sources`.
 
-   | Fact | Sources, in order |
-   |---|---|
-   | `frame_rate` (`"25/1"`, `"30000/1001"`) | ffprobe's `avg_frame_rate` of the video stream; the Sony NonRealTimeMeta `formatFps` (`"59.94i"` is fields: 29.97 frames) |
-   | `timecode_rate` | Sony `LtcChangeTable@tcFps`; iXML `SPEED/TIMECODE_RATE`; else the frame rate |
-   | `start_timecode` | ffprobe's `timecode` tag (MOV `tmcd`, MXF); the first Sony `LtcChange` (frame 0); for a BWF file, its `bext` time reference written as a non-drop label at the timecode rate |
-   | `start_tod_s` | seconds since midnight: the start timecode at the timecode rate (drop-frame labels counted back to real frames), or the BWF `bext` TimeReference ÷ sample rate |
+   | Fact                                                   | Sources, in order                                                                                                                                                                                                                                                                  |
+   | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `frame_rate` (`"25/1"`, `"30000/1001"`)                | ffprobe's `avg_frame_rate` of the video stream; the Sony NonRealTimeMeta `formatFps` (`"59.94i"` is fields: 29.97 frames)                                                                                                                                                          |
+   | `timecode_rate`                                        | Sony `LtcChangeTable@tcFps`; iXML `SPEED/TIMECODE_RATE`; else the frame rate                                                                                                                                                                                                       |
+   | `start_timecode`                                       | ffprobe's `timecode` tag (MOV `tmcd`, MXF); the first Sony `LtcChange` (frame 0); for a BWF file, its `bext` time reference written as a non-drop label at the timecode rate                                                                                                       |
+   | `start_tod_s`                                          | seconds since midnight: the start timecode at the timecode rate (drop-frame labels counted back to real frames), or the BWF `bext` TimeReference ÷ sample rate                                                                                                                     |
    | `wall_clock_start` (`value`, `utc`, `local`, `source`) | the Sony `CreationDate` (with its UTC offset, so both `utc` and `local`); the BWF `bext` OriginationDate + OriginationTime (local, no zone: `utc` null); ffprobe's `creation_time` (UTC only: cameras disagree on whether it is local or UTC, start or end, so `local` stays null) |
-   | `duration_s` | ffprobe; Sony `Duration` frames ÷ frame rate; the WAV data chunk ÷ byte rate |
-   | `device` | `kind` (`recorder` for an audio-only file, else `camera`); Sony `Device` (manufacturer, model, serial); BWF `bext` Originator and OriginatorReference; iXML `TAPE`; ffprobe's `make` / `model` tags |
-   | `ltc` | `checked`, and the channels that carry LTC as `{"stream", "channel"}` (1-based channel) |
-
+   | `duration_s`                                           | ffprobe; Sony `Duration` frames ÷ frame rate; the WAV data chunk ÷ byte rate                                                                                                                                                                                                       |
+   | `device`                                               | `kind` (`recorder` for an audio-only file, else `camera`); Sony `Device` (manufacturer, model, serial); BWF `bext` Originator and OriginatorReference; iXML `TAPE`; ffprobe's `make` / `model` tags                                                                                |
+   | `ltc`                                                  | `checked`, and the channels that carry LTC as `{"stream", "channel"}` (1-based channel)                                                                                                                                                                                            |
    - The `bext` and `iXML` chunks of a WAV / BWF file are read here with the standard library (EBU Tech 3285 field offsets; iXML refused if it carries a DTD or entity, like the camera XML of ADR-003).
    - A `bext` TimeReference of 0 is read as unknown. It is what recorders write when no timecode is set; a recording that really starts at exactly midnight loses its time of day.
    - The Sony `LtcChange@value` is 8 hex digits: the frames, seconds, minutes and hours bytes in that order, BCD, with the SMPTE ST 12-1 flag bits masked (bit 6 of the frames byte marks drop frame). This order matches the repository's own fixture and is consistent with the LTC frame. It was not checked against a file from a real card, so the raw value stays in `metadata.ltc_start` next to the decoded label.
+
 2. **LTC is detected from the signal, never decoded** (`sync.detect_ltc`). The first 4 s of each channel are read. LTC is a biphase-mark square wave of 80 bits per frame. Its zero crossings (with hysteresis at a quarter of the peak) fall at one bit period (a 0 bit) or half a bit period (a 1 bit). A channel is LTC when:
    - it has 1,700–5,200 crossings per second;
    - the long-interval cluster gives 21–33 frames per second;
    - at least 90 % of the intervals are within the long or the short cluster, and each cluster holds at least 10 %. The sync word has twelve 1 bits in a row, so real LTC always has both.
 
    A 1 kHz tone (one interval only), a square wave, noise and silence are not LTC. Below 16 kHz sampling, nothing is claimed. PCM WAV files (16, 24 or 32-bit integer) are read with the standard library. For the audio inside other files, each audio stream is decoded to 16-bit PCM at 48 kHz with `ffmpeg` when it is on PATH, reading 4 s and writing nothing. Without ffmpeg, `ltc.checked` is false with the reason. `doctor` reports `ffmpeg` as `degraded`, and the contract lists it under `capabilities.optional`.
+
 3. **`ingest inventory <folder> <folder> ...` gives an inventory set** (`ingest/inventory-set@1`): each folder's inventory under `cards`, and `sync_groups`.
    - Two clips of **different** cards are linked when their intervals (start + duration) overlap by at least 1 s on a shared basis. The bases, in order of preference:
      - `timecode`: time of day, for jam-synced devices;

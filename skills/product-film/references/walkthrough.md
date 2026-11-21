@@ -15,19 +15,19 @@ every rule below built in.
 
 The cinematic defaults of Routes A and B were rejected for this kind of film, one review round at a time.
 
-| Rule | Why |
-|---|---|
-| Neutral plate `#F3F3F3` with a static background image. No color glows, particles, grain or vignette. | Color glows tinted the UI. |
-| Default background: the engraved chart background (`tools/chart-background.html`; `node tools/make-chart-bg.mjs` renders it in the brand accent to `backgrounds/`, where `beats.html` picks it up). The alternative is a static halftone field in the brand accent. Either way, the center stays clear (valley shape), and the image is the same in every clip. | Chosen after 27 options. |
-| Only the subject moves. No camera drift, no slow scale-up on cards or titles, no push while nothing happens, no tilt. | Floating items read as unsteady. |
-| A 2D camera, not a 3D rig. | 3D perspective made text soft at 1.8×. |
-| One base framing per scene. Zoom 1.4–1.9× only onto the item the step is about, then go back to base. Leave some steps wide. | The same zoom on every beat reads as a template; with no zooms the key items were lost. |
-| Pointer and highlight move as one. A selection highlight's width comes from the pointer tip, and a drag is a straight line. | A highlight that trails the pointer reads as a bug. |
-| Editing never shifts the layout. The caret is always in the DOM and blinks by opacity; edited text keeps a min-height. | The text flickered and jumped vertically while it was typed. |
-| Slow enough to read (see the numbers). | Text and key items were not on screen long enough to read. |
-| The UI is the current UI. | The film showed UI the product had already removed. |
-| The pointer never stops in the middle of a move, and never waits long before the next one. | A pause mid-move, or before the next move, reads as a stuck pointer. |
-| A newly opened panel stays on screen long enough to read. | A panel that closed at once could not be read. |
+| Rule                                                                                                                                                                                                                                                                                                                                                            | Why                                                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Neutral plate `#F3F3F3` with a static background image. No color glows, particles, grain or vignette.                                                                                                                                                                                                                                                           | Color glows tinted the UI.                                                              |
+| Default background: the engraved chart background (`tools/chart-background.html`; `node tools/make-chart-bg.mjs` renders it in the brand accent to `backgrounds/`, where `beats.html` picks it up). The alternative is a static halftone field in the brand accent. Either way, the center stays clear (valley shape), and the image is the same in every clip. | Chosen after 27 options.                                                                |
+| Only the subject moves. No camera drift, no slow scale-up on cards or titles, no push while nothing happens, no tilt.                                                                                                                                                                                                                                           | Floating items read as unsteady.                                                        |
+| A 2D camera, not a 3D rig.                                                                                                                                                                                                                                                                                                                                      | 3D perspective made text soft at 1.8×.                                                  |
+| One base framing per scene. Zoom 1.4–1.9× only onto the item the step is about, then go back to base. Leave some steps wide.                                                                                                                                                                                                                                    | The same zoom on every beat reads as a template; with no zooms the key items were lost. |
+| Pointer and highlight move as one. A selection highlight's width comes from the pointer tip, and a drag is a straight line.                                                                                                                                                                                                                                     | A highlight that trails the pointer reads as a bug.                                     |
+| Editing never shifts the layout. The caret is always in the DOM and blinks by opacity; edited text keeps a min-height.                                                                                                                                                                                                                                          | The text flickered and jumped vertically while it was typed.                            |
+| Slow enough to read (see the numbers).                                                                                                                                                                                                                                                                                                                          | Text and key items were not on screen long enough to read.                              |
+| The UI is the current UI.                                                                                                                                                                                                                                                                                                                                       | The film showed UI the product had already removed.                                     |
+| The pointer never stops in the middle of a move, and never waits long before the next one.                                                                                                                                                                                                                                                                      | A pause mid-move, or before the next move, reads as a stuck pointer.                    |
+| A newly opened panel stays on screen long enough to read.                                                                                                                                                                                                                                                                                                       | A panel that closed at once could not be read.                                          |
 
 These look rules apply to the captions and cards cuts. The kinetic style replaces them and is the default; its
 example engine, `templates/walkthrough/kinetic.html`, runs on the same pipeline. The pointer, flicker, current-UI and
@@ -67,26 +67,26 @@ A scene list that worked: title 2.4 · main take about 17 (scene seconds) · age
 
 ## The numbers
 
-| What | Value |
-|---|---|
-| Frames | 1920×1080, device scale factor 2, 60 fps, JPEG q93; x264 CRF 15 per clip, CRF 14 master |
-| Dissolve | 0.5 s (A), 0.45 s (B) |
-| Global slowdown | scene time × 1.2 (`slow`) |
-| Holds | 0.5–1.0 s on each thing worth reading, only where the pointer rests; 0.4 s after a state-changing click |
-| New panel before a cut | ≥ 2 s on screen (use a plan `tail` to hold the last frame) |
-| Cards | 2.6 s; 2.9 s with a subline. Title 2.4 s, end card 5 s |
-| Caption | 76 px, weight 800, −0.045em, top 74 px; subline 28 px at 170 px; band 174 px solid + 20 px fade |
-| Caption timing | First caption starts 0.3 s (scene) into the clip, after the dissolve midpoint. The last one fades out before the dissolve is half done. Text never dissolves into text. |
-| Base framing | browser 1500×810 at (210, 228), camera m 1.1 |
-| Zoom | 1.4–1.9×, 0.5–0.8 s cubic in-out, scale interpolated in log space, clamped so the browser fills the frame |
-| Entrances | fade + 12–20 px rise + scale 0.98→1 over 0.3–0.5 s ease-out; chips pop 0.7→1 with a back-ease over 0.34 s |
-| Ground | page blur 0.9 px and 5 % darker behind a popover or dialog |
-| Pointer travel | 0.3–0.7 s for a hop, 1.1–1.7 s for a glide across the frame; slight arc (≤ 60 px) |
-| Drag | straight, 0.35–0.7 s |
-| Click | arrive, then press ≥ 0.05 s later; press dips to scale 0.84 over 0.08 s and releases over 0.16 s |
-| Idle before the next move | about 0.5 s, unless a hold or typing is the point. Start the next move while the UI changes. |
-| Typing | 25–32 characters per second of real time. Caret blink 2.2 Hz, 55 % on. |
-| Closer ("No screenshots. No email threads.") | 116 px, line-height 1.36, strike bars 0.085em at 53 % |
+| What                                         | Value                                                                                                                                                                   |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frames                                       | 1920×1080, device scale factor 2, 60 fps, JPEG q93; x264 CRF 15 per clip, CRF 14 master                                                                                 |
+| Dissolve                                     | 0.5 s (A), 0.45 s (B)                                                                                                                                                   |
+| Global slowdown                              | scene time × 1.2 (`slow`)                                                                                                                                               |
+| Holds                                        | 0.5–1.0 s on each thing worth reading, only where the pointer rests; 0.4 s after a state-changing click                                                                 |
+| New panel before a cut                       | ≥ 2 s on screen (use a plan `tail` to hold the last frame)                                                                                                              |
+| Cards                                        | 2.6 s; 2.9 s with a subline. Title 2.4 s, end card 5 s                                                                                                                  |
+| Caption                                      | 76 px, weight 800, −0.045em, top 74 px; subline 28 px at 170 px; band 174 px solid + 20 px fade                                                                         |
+| Caption timing                               | First caption starts 0.3 s (scene) into the clip, after the dissolve midpoint. The last one fades out before the dissolve is half done. Text never dissolves into text. |
+| Base framing                                 | browser 1500×810 at (210, 228), camera m 1.1                                                                                                                            |
+| Zoom                                         | 1.4–1.9×, 0.5–0.8 s cubic in-out, scale interpolated in log space, clamped so the browser fills the frame                                                               |
+| Entrances                                    | fade + 12–20 px rise + scale 0.98→1 over 0.3–0.5 s ease-out; chips pop 0.7→1 with a back-ease over 0.34 s                                                               |
+| Ground                                       | page blur 0.9 px and 5 % darker behind a popover or dialog                                                                                                              |
+| Pointer travel                               | 0.3–0.7 s for a hop, 1.1–1.7 s for a glide across the frame; slight arc (≤ 60 px)                                                                                       |
+| Drag                                         | straight, 0.35–0.7 s                                                                                                                                                    |
+| Click                                        | arrive, then press ≥ 0.05 s later; press dips to scale 0.84 over 0.08 s and releases over 0.16 s                                                                        |
+| Idle before the next move                    | about 0.5 s, unless a hold or typing is the point. Start the next move while the UI changes.                                                                            |
+| Typing                                       | 25–32 characters per second of real time. Caret blink 2.2 Hz, 55 % on.                                                                                                  |
+| Closer ("No screenshots. No email threads.") | 116 px, line-height 1.36, strike bars 0.085em at 53 %                                                                                                                   |
 
 ## Engine patterns
 

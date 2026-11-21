@@ -78,10 +78,7 @@ See [`InteractivitySchema`](https://www.remotion.dev/docs/interactivity-schema) 
 Every HTML and SVG element (except `<Img>`, it already is interactive) such as `<div>` can be turned interactive using `Interactive`:
 
 ```tsx title="Interactive elements"
-<Interactive.Div
-  name="Greeting card"
-  style={{fontSize: 80, padding: 24}}
->
+<Interactive.Div name="Greeting card" style={{ fontSize: 80, padding: 24 }}>
   Hello
 </Interactive.Div>
 ```
@@ -96,9 +93,7 @@ If text is fixed and only used once, write it directly inside the interactive el
 
 ```tsx title="Inline text"
 // 👍 Fixed copy stays editable
-<Interactive.Div name="Title">
-  Remotion Best Practices
-</Interactive.Div>
+<Interactive.Div name="Title">Remotion Best Practices</Interactive.Div>
 ```
 
 Use a prop or variable only when the text is dynamic or reused.
@@ -110,14 +105,12 @@ Avoid computed names, hardcode them.
 
 ```tsx title="Interactive names"
 <>
-  <Interactive.Div name="Hero title" style={{fontSize: 80}}>
+  <Interactive.Div name="Hero title" style={{ fontSize: 80 }}>
     Launch day
   </Interactive.Div>
   <Img name="Avatar" src="https://remotion.media/image.jpeg" />
   <Video name="Background" src="https://remotion.media/video.mp4" />
-  <Interactive.Div name="Title">
-    Launch day
-  </Interactive.Div>
+  <Interactive.Div name="Title">Launch day</Interactive.Div>
 </>
 ```
 
@@ -129,7 +122,7 @@ The best way is to just pass a plain object to `style` - no referring to constan
 <Interactive.Div
   style={{
     fontSize: 80,
-    color: 'red',
+    color: "red",
   }}
 >
   Hello World!
@@ -139,19 +132,19 @@ The best way is to just pass a plain object to `style` - no referring to constan
 ```tsx title="❌ Bad for interactivity"
 const baseStyle = useMemo(() => {
   return {
-    fontSize: 12 // ❌ Non-inline styles are not supported
-  }
+    fontSize: 12, // ❌ Non-inline styles are not supported
+  };
 }, []);
 
 <Interactive.Div
   style={{
     ...baseStyle, // ❌ Spreading is not supported
     color: RED, // ❌ Referring to constants is not supported
-    scale: frame * 10 // ❌ Math is not supported
+    scale: frame * 10, // ❌ Math is not supported
   }}
 >
   Hello World!
-</Interactive.Div>
+</Interactive.Div>;
 ```
 
 ## Animate using `interpolate()`
@@ -162,37 +155,37 @@ The output range, easing, extrapolation and `output` property should use hardcod
 The input range may additionally use `durationInFrames`, `fps`, `width` and `height` destructured directly from `useVideoConfig()`. Bare identifiers such as `durationInFrames`, multiplication with a number such as `2 * fps` or `fps * 2`, and subtraction of a number such as `durationInFrames - 1` are supported.
 
 ```tsx title="Inline values"
-const {fps, durationInFrames} = useVideoConfig();
+const { fps, durationInFrames } = useVideoConfig();
 
 // 👍 Inline values can be standardized and keyframed
 <Interactive.Div
   name="Product card"
   style={{
-    color: 'white',
+    color: "white",
     fontSize: 80,
     scale: interpolate(frame, [0, fps], [0, 1], {
-      easing: Easing.spring({damping: 200}),
-      output: 'perceptual-scale',
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp'
+      easing: Easing.spring({ damping: 200 }),
+      output: "perceptual-scale",
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
     }),
-    rotate: interpolate(frame, [0, 1 * fps], ['0deg', '20deg'], {
-      easing: Easing.spring({damping: 200}),
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp'
+    rotate: interpolate(frame, [0, 1 * fps], ["0deg", "20deg"], {
+      easing: Easing.spring({ damping: 200 }),
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
     }),
     translate: interpolate(
       frame,
       [durationInFrames - 30, durationInFrames],
-      ['0px 0px', '0px 120px'],
+      ["0px 0px", "0px 120px"],
       {
-        easing: Easing.spring({damping: 200}),
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp'
-      }
+        easing: Easing.spring({ damping: 200 }),
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      },
     ),
   }}
-/>
+/>;
 ```
 
 ```tsx title="❌ Bad interactivity"
@@ -203,9 +196,9 @@ const translateY = interpolate(frame, [0, 30], [0, 120]); // ❌ Math should be 
   style={{
     translate: translateY, // ❌ Only inline interpolate() calls are supported,
     rotate: interpolate(frame, [start, start + 10], [0, Math.PI]), // ❌ Cannot use math with arbitrary variables, cannot use constants
-    scale: interpolate(anyVariable, [0, 30], [0, 1]) // ❌ Can only interpret the `frame` variable.
+    scale: interpolate(anyVariable, [0, 30], [0, 1]), // ❌ Can only interpret the `frame` variable.
   }}
-/>
+/>;
 ```
 
 ## Keep SVG paths editable with `Interactive.Path`
@@ -224,7 +217,7 @@ pnpm exec remotion add @remotion/paths # If project uses pnpm
 If the geometry is meant to be static, put the path string directly in the `d` prop. Do not extract it into a constant.
 
 ```tsx title="Editable static path"
-import {Interactive} from 'remotion';
+import { Interactive } from "remotion";
 
 <Interactive.Svg width={300} height={300} viewBox="0 0 300 300">
   <Interactive.Path
@@ -232,7 +225,7 @@ import {Interactive} from 'remotion';
     d="M 40 40 L 260 40 L 150 260 Z"
     fill="#0b84f3"
   />
-</Interactive.Svg>
+</Interactive.Svg>;
 ```
 
 ### Morph paths using inline `interpolatePaths()`
@@ -243,8 +236,8 @@ Keep the output paths, ranges, and options inline, following the same input-rang
 Do not use `interpolatePath()` API or extract the interpolated result into a variable when the path keyframes should remain editable in Studio.
 
 ```tsx title="Editable path keyframes"
-import {interpolatePaths} from '@remotion/paths';
-import {Easing, Interactive, useCurrentFrame} from 'remotion';
+import { interpolatePaths } from "@remotion/paths";
+import { Easing, Interactive, useCurrentFrame } from "remotion";
 
 export const MorphingPath = () => {
   const frame = useCurrentFrame();
@@ -257,14 +250,14 @@ export const MorphingPath = () => {
           frame,
           [0, 30, 60],
           [
-            'M 40 40 L 260 40 L 150 260 Z',
-            'M 40 150 L 150 40 L 260 150 Z',
-            'M 40 260 L 150 40 L 260 260 Z',
+            "M 40 40 L 260 40 L 150 260 Z",
+            "M 40 150 L 150 40 L 260 150 Z",
+            "M 40 260 L 150 40 L 260 260 Z",
           ],
           {
             easing: Easing.bezier(0.42, 0, 0.58, 1),
-            extrapolateLeft: 'clamp',
-            extrapolateRight: 'clamp',
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
           },
         )}
         fill="#0b84f3"
@@ -289,13 +282,13 @@ When scaffolding a composition, use a JSX string literal for `id`, keep `width`,
 The Props editor can save visual edits back to your code when `defaultProps` is an inline object literal on `<Composition>` or `<Still>`.
 
 ```tsx
-import {Composition, type CalculateMetadataFunction} from 'remotion';
-import {MyComponent, type Props} from './MyComponent';
+import { Composition, type CalculateMetadataFunction } from "remotion";
+import { MyComponent, type Props } from "./MyComponent";
 
 // 👍 Static values are in <Composition>, dynamic values are in calculateMetadata()
 const calculateMetadata: CalculateMetadataFunction<Props> = async () => {
   const dimensions = await getDimensions(); // just an example
-  return {width: dimensions.width, height: dimensions.height};
+  return { width: dimensions.width, height: dimensions.height };
 };
 
 <Composition
@@ -304,25 +297,27 @@ const calculateMetadata: CalculateMetadataFunction<Props> = async () => {
   durationInFrames={150}
   fps={30}
   calculateMetadata={calculateMetadata}
-  defaultProps={{title: 'Hello', color: '#0b84ff'}}
-/>
+  defaultProps={{ title: "Hello", color: "#0b84ff" }}
+/>;
 ```
 
 ```tsx title="Negative examples"
-const defaultProps = {title: 'Hello', color: '#0b84ff'}; // ❌ Don't extract defaultProps, must be inline
+const defaultProps = { title: "Hello", color: "#0b84ff" }; // ❌ Don't extract defaultProps, must be inline
 const calculateMetadata: CalculateMetadataFunction<Props> = () => {
   // ❌ Unnecessary because no calculation is being done,
-  return {durationInFrames: 150, fps: 30, width: 1920, height: 1080};
+  return { durationInFrames: 150, fps: 30, width: 1920, height: 1080 };
 };
 
 <Composition
   id="my-video"
   component={MyComponent}
   calculateMetadata={calculateMetadata}
-  defaultProps={{
-    title: 'Hello',
-  } as Props} // ❌ Don't have type assertions, instead type MyComponent correctly
-/>
+  defaultProps={
+    {
+      title: "Hello",
+    } as Props
+  } // ❌ Don't have type assertions, instead type MyComponent correctly
+/>;
 ```
 
 Use only `calculateMetadata()` for the part of the metadata that is dynamic.

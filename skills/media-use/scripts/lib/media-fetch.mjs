@@ -49,18 +49,27 @@ export function isPublicMediaUrl(value) {
       return false;
     const address = host.replace(/^\[|\]$/g, "");
     const family = isIP(address);
-    return family === 0 || !blocked.check(address, family === 4 ? "ipv4" : "ipv6");
+    return (
+      family === 0 || !blocked.check(address, family === 4 ? "ipv4" : "ipv6")
+    );
   } catch {
     return false;
   }
 }
 
-export async function fetchMedia(url, { method = "GET", signal, fetchImpl = fetch } = {}) {
+export async function fetchMedia(
+  url,
+  { method = "GET", signal, fetchImpl = fetch } = {},
+) {
   let current = String(url);
   for (let hop = 0; hop <= 5; hop++) {
     if (!isPublicMediaUrl(current))
       throw new Error("Media download blocked: URL is not public HTTP(S)");
-    const response = await fetchImpl(current, { method, signal, redirect: "manual" });
+    const response = await fetchImpl(current, {
+      method,
+      signal,
+      redirect: "manual",
+    });
     if (!(response.status >= 300 && response.status < 400)) return response;
     const location = response.headers.get("location");
     if (!location) return response;
@@ -73,12 +82,14 @@ export async function fetchMedia(url, { method = "GET", signal, fetchImpl = fetc
 // Stream and abort once the cap is crossed, so a lying or chunked body can't buffer past it.
 export async function readCappedBody(res, maxBytes, label) {
   const declared = Number(res.headers.get("content-length"));
-  if (declared > maxBytes) throw new Error(`${label}: ${declared} bytes exceeds ${maxBytes} cap`);
+  if (declared > maxBytes)
+    throw new Error(`${label}: ${declared} bytes exceeds ${maxBytes} cap`);
   const chunks = [];
   let total = 0;
   for await (const chunk of res.body) {
     total += chunk.length;
-    if (total > maxBytes) throw new Error(`${label}: stream exceeds ${maxBytes} cap`);
+    if (total > maxBytes)
+      throw new Error(`${label}: stream exceeds ${maxBytes} cap`);
     chunks.push(chunk);
   }
   return Buffer.concat(chunks, total);

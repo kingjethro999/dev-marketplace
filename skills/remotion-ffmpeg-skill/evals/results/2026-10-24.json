@@ -25,10 +25,7 @@
       {
         "check": {
           "type": "reply_mentions",
-          "any": [
-            "sheet.png",
-            "Look:"
-          ]
+          "any": ["sheet.png", "Look:"]
         },
         "ok": true,
         "detail": "found ['sheet.png', 'Look:']"
@@ -78,11 +75,7 @@
       {
         "check": {
           "type": "reply_mentions",
-          "any": [
-            "sheet.png",
-            "Look:",
-            "コマ"
-          ]
+          "any": ["sheet.png", "Look:", "コマ"]
         },
         "ok": true,
         "detail": "found ['sheet.png', 'コマ']"
@@ -120,12 +113,7 @@
       {
         "check": {
           "type": "reply_mentions",
-          "any": [
-            "name",
-            "名前",
-            "?",
-            "？"
-          ]
+          "any": ["name", "名前", "?", "？"]
         },
         "ok": true,
         "detail": "found ['名前']"
@@ -134,11 +122,7 @@
         "check": {
           "type": "no_file",
           "glob": "*Titled*.mp4",
-          "unless_reply_has": [
-            "Sample",
-            "placeholder",
-            "仮"
-          ]
+          "unless_reply_has": ["Sample", "placeholder", "仮"]
         },
         "ok": true,
         "detail": "0 match(es) for *Titled*.mp4"

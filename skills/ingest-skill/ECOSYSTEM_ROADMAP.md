@@ -11,12 +11,12 @@ v0.1.0 on main, SKILL.md on the default branch. Python 3.9+ stdlib (`xxhash` and
 
 `ecosystem.json` gives each job to exactly one repository. Work outside this list belongs to its owner and is handed over, not re-implemented.
 
-| Owned job | Status | Note |
-|---|---|---|
-| 素材取り込み(検証付きコピー) | done |  |
-| 二重バックアップ | done | the source is read once per file and written to every destination in parallel; each destination read back and verified on its own; a failed drive does not stop the others (ADR-004) |
-| 素材台帳 | done | one clip per recording (Sony XDCAM / XAVC, XDCAM EX, AVCHD, BRAW, generic), camera sidecars, reel / card id, ffprobe facts, sync facts and multicam sync-group candidates; P2 / Canon XF / RED listed file by file |
-| URL素材取得 | done | `ingest fetch <url>` ([#9](https://github.com/kajisho5/ingest-skill/pull/9), ADR-005); the agent calls `ingest fetch` instead of its own yt-dlp (video-production-agent#77, its ADR-059) |
+| Owned job                    | Status | Note                                                                                                                                                                                                               |
+| ---------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 素材取り込み(検証付きコピー) | done   |                                                                                                                                                                                                                    |
+| 二重バックアップ             | done   | the source is read once per file and written to every destination in parallel; each destination read back and verified on its own; a failed drive does not stop the others (ADR-004)                               |
+| 素材台帳                     | done   | one clip per recording (Sony XDCAM / XAVC, XDCAM EX, AVCHD, BRAW, generic), camera sidecars, reel / card id, ffprobe facts, sync facts and multicam sync-group candidates; P2 / Canon XF / RED listed file by file |
+| URL素材取得                  | done   | `ingest fetch <url>` ([#9](https://github.com/kajisho5/ingest-skill/pull/9), ADR-005); the agent calls `ingest fetch` instead of its own yt-dlp (video-production-agent#77, its ADR-059)                           |
 
 ## Wiring
 
@@ -61,4 +61,5 @@ The agent's adapter runs `offload` / `inventory` (step 6, video-production-agent
 URL download (URL素材取得) is owned here since 2026-10-30 (owner decision) and ships as `ingest fetch` (step 7); the agent has switched to `ingest fetch ... --json` (its ADR-059).
 
 ---
+
 Engine for every media operation: [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) (3.x, 42 tools, contract_version 2.0; treated as complete, proposals go to Velisa's ROADMAP). Orchestrator: [video-production-agent](https://github.com/kajisho5/video-production-agent).

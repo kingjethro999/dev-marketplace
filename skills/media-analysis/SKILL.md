@@ -31,22 +31,22 @@ Engine options: `--timeout S`, `--max-analysis-calls N`, `--max-total-seconds S`
 
 ## Analysis kinds and parameters
 
-| kind | parameters (defaults) |
-|---|---|
-| `media_probe` | – |
-| `stream_layout` | – |
-| `video_format` | `stream` (0) video stream ordinal |
-| `audio_format` | `stream` (0) audio stream ordinal |
-| `duration` | – |
-| `silence` | `stream` (0), `threshold_db` (-40), `min_duration` (0.5 s), `edge_tolerance` (0.1 s) |
-| `loudness` | `stream` (0) |
-| `integrity` | `max_error_lines` (200) |
-| `scene_detection` | `stream` (0), `threshold` (10, scdet score 0-100), `min_scene_duration` (0.5 s) |
-| `timing` | `gap_factor` (2.5 × median interval), `av_mismatch_tolerance` (0.1 s), `av_start_offset_tolerance` (0.045 s) |
-| `noise_floor` | `stream` (0), `channel` (-1 = all channels, else one channel), `window` (0.05 s), `noise_percentile` (10), `signal_percentile` (95) |
-| `edit_style` | `video_stream` (0), `audio_stream` (0), `threshold` (10, scdet score), `min_shot_duration` (0.25 s), `silence_threshold_db` (-50), `silence_min_duration` (0.5 s), `burned_in_interval` (1.0 s between sampled frames; 0 = off) |
-| `speech_regions` | `stream` (0), `channel` (-1 = all channels downmixed), `threshold` (0.5), `min_speech_duration` (0.25 s), `min_silence_duration` (0.1 s), `speech_pad` (0.03 s); needs the optional extra `vad`, else `status: UNKNOWN` (ADR-035) |
-| `audio_events` | `stream` (0), `channel` (-1 = all channels downmixed), `hop` (0.1 s), `applause_threshold` (0.3), `laughter_threshold` (0.3), `min_duration` (0.5 s), `merge_gap` (1.0 s); applause and laughter spans with a score; needs the optional extra `events`, else `status: UNKNOWN` (ADR-036) |
+| kind                | parameters (defaults)                                                                                                                                                                                                                                                                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `media_probe`       | –                                                                                                                                                                                                                                                                                                                                                             |
+| `stream_layout`     | –                                                                                                                                                                                                                                                                                                                                                             |
+| `video_format`      | `stream` (0) video stream ordinal                                                                                                                                                                                                                                                                                                                             |
+| `audio_format`      | `stream` (0) audio stream ordinal                                                                                                                                                                                                                                                                                                                             |
+| `duration`          | –                                                                                                                                                                                                                                                                                                                                                             |
+| `silence`           | `stream` (0), `threshold_db` (-40), `min_duration` (0.5 s), `edge_tolerance` (0.1 s)                                                                                                                                                                                                                                                                          |
+| `loudness`          | `stream` (0)                                                                                                                                                                                                                                                                                                                                                  |
+| `integrity`         | `max_error_lines` (200)                                                                                                                                                                                                                                                                                                                                       |
+| `scene_detection`   | `stream` (0), `threshold` (10, scdet score 0-100), `min_scene_duration` (0.5 s)                                                                                                                                                                                                                                                                               |
+| `timing`            | `gap_factor` (2.5 × median interval), `av_mismatch_tolerance` (0.1 s), `av_start_offset_tolerance` (0.045 s)                                                                                                                                                                                                                                                  |
+| `noise_floor`       | `stream` (0), `channel` (-1 = all channels, else one channel), `window` (0.05 s), `noise_percentile` (10), `signal_percentile` (95)                                                                                                                                                                                                                           |
+| `edit_style`        | `video_stream` (0), `audio_stream` (0), `threshold` (10, scdet score), `min_shot_duration` (0.25 s), `silence_threshold_db` (-50), `silence_min_duration` (0.5 s), `burned_in_interval` (1.0 s between sampled frames; 0 = off)                                                                                                                               |
+| `speech_regions`    | `stream` (0), `channel` (-1 = all channels downmixed), `threshold` (0.5), `min_speech_duration` (0.25 s), `min_silence_duration` (0.1 s), `speech_pad` (0.03 s); needs the optional extra `vad`, else `status: UNKNOWN` (ADR-035)                                                                                                                             |
+| `audio_events`      | `stream` (0), `channel` (-1 = all channels downmixed), `hop` (0.1 s), `applause_threshold` (0.3), `laughter_threshold` (0.3), `min_duration` (0.5 s), `merge_gap` (1.0 s); applause and laughter spans with a score; needs the optional extra `events`, else `status: UNKNOWN` (ADR-036)                                                                      |
 | `highlight_signals` | `audio_stream` (0), `video_stream` (0), `energy_window` (0.5 s), `peak_db` (6), `active_floor_db` (-60), `rate_window` (3 s), `rate_hop` (0.5 s), `rate_change` (0.25), `nucleus_db` (4), `scene_threshold` (10), `burst_gap` (1.5 s), `burst_min_cuts` (3); speech-energy peaks, speaking-rate changes, screen-change bursts as spans with a score (ADR-036) |
 
 `media-analysis style profile <input> --out profile.json` saves an `edit_style` Observation; `media-analysis style diff
@@ -67,8 +67,15 @@ Unknown kinds, unknown parameters, out-of-range values and any `command` / `argv
 ## AnalysisRequest (structured input)
 
 ```json
-{"analysis_id": "analysis-001", "asset_id": "asset-001", "input": "sample.mp4", "kind": "silence",
- "parameters": {"threshold_db": -45, "min_duration": 1.0}, "timeout": 120, "output_policy": {"round": 3}}
+{
+  "analysis_id": "analysis-001",
+  "asset_id": "asset-001",
+  "input": "sample.mp4",
+  "kind": "silence",
+  "parameters": { "threshold_db": -45, "min_duration": 1.0 },
+  "timeout": 120,
+  "output_policy": { "round": 3 }
+}
 ```
 
 `media-analysis run` accepts one request, a list of requests, or a batch `{"requests": [...], "budget": {"max_analysis_calls": 4}}`
@@ -80,20 +87,79 @@ parameters always yields the same id. `cache_policy`: `use` (read + write, defau
 ## Response (structured output)
 
 ```json
-{"schema": "media-analysis/response@1", "skill": {"id": "media-analysis", "version": "<version>"}, "status": "ok", "dry_run": false,
- "results": [{"analysis_id": "analysis-001", "asset_id": "asset-001", "kind": "silence", "status": "ok",
-              "observation": {"id": "obs_…", "asset_id": "asset-001", "kind": "silence",
-                              "data": {"segments": [{"start": 0.0, "end": 2.0, "duration": 2.0, "type": "leading", "runs_to_end": false}], "...": "..."},
-                              "source": "media-analysis/silence@<version>", "analysis_id": "analysis-001", "observed_at": "2026-09-04T10:00:00Z",
-                              "analysis": {"identity": "…", "analyzer": "media-analysis/silence", "analyzer_version": "<version>", "algorithm_version": "1",
-                                           "parameters": {"stream": 0, "threshold_db": -45.0, "min_duration": 1.0, "edge_tolerance": 0.1}, "seconds": 0.3},
-                              "asset": {"path": "/abs/sample.mp4", "fingerprint": "<sha256>", "size": 208685}},
-              "cache": {"status": "miss", "policy": "use", "key": "…"},
-              "usage": {"analyzer_calls": 1, "seconds": 0.3, "operations": [{"executable": "ffprobe", "purpose": "…"}, {"executable": "ffmpeg", "purpose": "…"}]}}],
- "observations": ["…the ok observations in request order…"],
- "usage": {"analyzer_calls": 1, "cache_hits": 0, "seconds": 0.3},
- "budget": {"calls": 1, "seconds": 0.3, "budget": {"max_analysis_calls": null, "timeout": 600.0, "max_total_seconds": null}},
- "warnings": []}
+{
+  "schema": "media-analysis/response@1",
+  "skill": { "id": "media-analysis", "version": "<version>" },
+  "status": "ok",
+  "dry_run": false,
+  "results": [
+    {
+      "analysis_id": "analysis-001",
+      "asset_id": "asset-001",
+      "kind": "silence",
+      "status": "ok",
+      "observation": {
+        "id": "obs_…",
+        "asset_id": "asset-001",
+        "kind": "silence",
+        "data": {
+          "segments": [
+            {
+              "start": 0.0,
+              "end": 2.0,
+              "duration": 2.0,
+              "type": "leading",
+              "runs_to_end": false
+            }
+          ],
+          "...": "..."
+        },
+        "source": "media-analysis/silence@<version>",
+        "analysis_id": "analysis-001",
+        "observed_at": "2026-09-04T10:00:00Z",
+        "analysis": {
+          "identity": "…",
+          "analyzer": "media-analysis/silence",
+          "analyzer_version": "<version>",
+          "algorithm_version": "1",
+          "parameters": {
+            "stream": 0,
+            "threshold_db": -45.0,
+            "min_duration": 1.0,
+            "edge_tolerance": 0.1
+          },
+          "seconds": 0.3
+        },
+        "asset": {
+          "path": "/abs/sample.mp4",
+          "fingerprint": "<sha256>",
+          "size": 208685
+        }
+      },
+      "cache": { "status": "miss", "policy": "use", "key": "…" },
+      "usage": {
+        "analyzer_calls": 1,
+        "seconds": 0.3,
+        "operations": [
+          { "executable": "ffprobe", "purpose": "…" },
+          { "executable": "ffmpeg", "purpose": "…" }
+        ]
+      }
+    }
+  ],
+  "observations": ["…the ok observations in request order…"],
+  "usage": { "analyzer_calls": 1, "cache_hits": 0, "seconds": 0.3 },
+  "budget": {
+    "calls": 1,
+    "seconds": 0.3,
+    "budget": {
+      "max_analysis_calls": null,
+      "timeout": 600.0,
+      "max_total_seconds": null
+    }
+  },
+  "warnings": []
+}
 ```
 
 A failed result has `"status": "error"`, `"error": {"code", "message", "details"}` and `"error_kind"`; the response

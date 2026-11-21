@@ -8,7 +8,9 @@
 // (see words.mjs / cutlist.mjs).
 
 export function mergeTokensToWords(parakeet) {
-  const sentences = Array.isArray(parakeet?.sentences) ? parakeet.sentences : [];
+  const sentences = Array.isArray(parakeet?.sentences)
+    ? parakeet.sentences
+    : [];
   const words = [];
   for (const s of sentences) {
     for (const t of s.tokens ?? []) {
@@ -23,5 +25,8 @@ export function mergeTokensToWords(parakeet) {
       }
     }
   }
-  return { text: (parakeet?.text ?? "").trim(), words: words.filter((w) => w.text.length > 0) };
+  return {
+    text: (parakeet?.text ?? "").trim(),
+    words: words.filter((w) => w.text.length > 0),
+  };
 }

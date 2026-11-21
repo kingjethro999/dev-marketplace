@@ -20,44 +20,44 @@ SRT file (`tests/test_integration.make_fixture`). For each render we compared th
 `remotion.config.ts` pointed `Config.setBrowserExecutable` at the machine's chrome-headless-shell, because this machine
 cannot download one. CI uses the build Remotion downloads.
 
-| What | Renders | Result |
-|---|---|---|
-| All 9 compositions, H.264 full size, twice per run, two separate runs | 36 | identical per composition: frames, audio and file |
-| Captioned, PeakPulse, Karaoke with `--concurrency 1` and with `--fast` | 24 | identical to each other and across runs; `--concurrency 1` gave the same bytes as all cores |
-| Captioned, PeakPulse with `--codec prores` and with `--overlay` | 16 | identical |
-| Graphics actually drawn: Titled with titles and a lower third, Karaoke / Emphasis / Captioned from transcript word timings (CJK auto font), Highlights / BeatMontage / PeakPulse on a beat fixture, Pip with a camera; twice each | 16 | identical |
-| `still.py`, every composition, two frames, twice per run, two runs | 36 runs, 72 PNGs | identical |
-| `pipeline.py --platform youtube --fast`, twice per run, two runs | 4 | render and deliverable identical; `timeline.json` differs only in `source.path` (another folder) |
-| `analyze.py` twice on the same file | 2 | identical `timeline.json` |
-| `init.py` twice (without `--install`) | 2 | identical folders |
+| What                                                                                                                                                                                                                              | Renders          | Result                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| All 9 compositions, H.264 full size, twice per run, two separate runs                                                                                                                                                             | 36               | identical per composition: frames, audio and file                                                |
+| Captioned, PeakPulse, Karaoke with `--concurrency 1` and with `--fast`                                                                                                                                                            | 24               | identical to each other and across runs; `--concurrency 1` gave the same bytes as all cores      |
+| Captioned, PeakPulse with `--codec prores` and with `--overlay`                                                                                                                                                                   | 16               | identical                                                                                        |
+| Graphics actually drawn: Titled with titles and a lower third, Karaoke / Emphasis / Captioned from transcript word timings (CJK auto font), Highlights / BeatMontage / PeakPulse on a beat fixture, Pip with a camera; twice each | 16               | identical                                                                                        |
+| `still.py`, every composition, two frames, twice per run, two runs                                                                                                                                                                | 36 runs, 72 PNGs | identical                                                                                        |
+| `pipeline.py --platform youtube --fast`, twice per run, two runs                                                                                                                                                                  | 4                | render and deliverable identical; `timeline.json` differs only in `source.path` (another folder) |
+| `analyze.py` twice on the same file                                                                                                                                                                                               | 2                | identical `timeline.json`                                                                        |
+| `init.py` twice (without `--install`)                                                                                                                                                                                             | 2                | identical folders                                                                                |
 
 On the first fixture, Pip (no camera), Titled (no titles) and Highlights (no highlights) draw no graphics of their
 own, which is why the drawn-graphics row exists.
 
 What makes runs differ, measured on Captioned with CJK word captions at `--fast`:
 
-| Change | Frames differing | PSNR (average / lowest) |
-|---|---|---|
-| chrome-headless-shell 153.0.8010.12 instead of 156.0.8078.4 | 240 / 240 | 43.3 dB / 37.9 dB |
-| `Config.setChromiumOpenGlRenderer("swangle")` | 240 / 240 | 42.1 dB / 38.0 dB |
-| `angle`, `egl`, `swiftshader`, `vulkan` (no GPU on this machine) | 0 | identical to the default |
-| `--font-file` FreeSans instead of the auto Noto Sans CJK | every frame with a caption | 29.2 dB / 25.1 dB |
-| `--concurrency 1` instead of all cores | 0 | identical |
+| Change                                                           | Frames differing           | PSNR (average / lowest)  |
+| ---------------------------------------------------------------- | -------------------------- | ------------------------ |
+| chrome-headless-shell 153.0.8010.12 instead of 156.0.8078.4      | 240 / 240                  | 43.3 dB / 37.9 dB        |
+| `Config.setChromiumOpenGlRenderer("swangle")`                    | 240 / 240                  | 42.1 dB / 38.0 dB        |
+| `angle`, `egl`, `swiftshader`, `vulkan` (no GPU on this machine) | 0                          | identical to the default |
+| `--font-file` FreeSans instead of the auto Noto Sans CJK         | every frame with a caption | 29.2 dB / 25.1 dB        |
+| `--concurrency 1` instead of all cores                           | 0                          | identical                |
 
 ## Decision
 
 Per tool, in `contract --json` (`tools[].deterministic`, `tools[].idempotency_hint`), with the conditions under the
 top-level `determinism` key. Both are additive: `contract_version` stays `1.0`.
 
-| Tool | deterministic | idempotency_hint | Why |
-|---|---|---|---|
-| analyze | yes | `content_equivalent` | byte-identical when run twice on the same file; `timeline.json` records the input's absolute path, and the `--conform` and several-input join copies were not compared |
-| init | yes | `content_equivalent` | the copied project is identical; `--install` resolves the npm registry at that moment |
-| still | yes | `bit_exact` | PNGs byte-identical, every composition |
-| render | yes | `bit_exact` | files byte-identical, every composition, every mode measured |
-| deliver | yes | `bit_exact` | the deliverable was byte-identical |
-| pipeline | yes | `content_equivalent` | render and deliverable byte-identical; its `timeline.json` records paths |
-| doctor | no | `environment_dependent` | it reports the machine |
+| Tool     | deterministic | idempotency_hint        | Why                                                                                                                                                                    |
+| -------- | ------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| analyze  | yes           | `content_equivalent`    | byte-identical when run twice on the same file; `timeline.json` records the input's absolute path, and the `--conform` and several-input join copies were not compared |
+| init     | yes           | `content_equivalent`    | the copied project is identical; `--install` resolves the npm registry at that moment                                                                                  |
+| still    | yes           | `bit_exact`             | PNGs byte-identical, every composition                                                                                                                                 |
+| render   | yes           | `bit_exact`             | files byte-identical, every composition, every mode measured                                                                                                           |
+| deliver  | yes           | `bit_exact`             | the deliverable was byte-identical                                                                                                                                     |
+| pipeline | yes           | `content_equivalent`    | render and deliverable byte-identical; its `timeline.json` records paths                                                                                               |
+| doctor   | no            | `environment_dependent` | it reports the machine                                                                                                                                                 |
 
 No built-in composition was found not reproducible, so `determinism.not_reproducible_compositions` is empty. A
 composition that ever fails the check is named there, and the CI test skips it by name. A skill-wide claim does not

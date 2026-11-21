@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { delimiter, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -10,24 +17,37 @@ function pluginShim(t) {
   const dir = mkdtempSync(join(tmpdir(), "hf-resolve-plugin-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   mkdirSync(join(dir, "lib"));
-  for (const file of ["resolve.mjs", "lib/npx-sync.mjs", "lib/windows-exe-search.mjs"]) {
-    copyFileSync(fileURLToPath(new URL(file, import.meta.url)), join(dir, file));
+  for (const file of [
+    "resolve.mjs",
+    "lib/npx-sync.mjs",
+    "lib/windows-exe-search.mjs",
+  ]) {
+    copyFileSync(
+      fileURLToPath(new URL(file, import.meta.url)),
+      join(dir, file),
+    );
   }
   const marker = join(dir, "npx-ran");
-  writeFileSync(join(dir, "npx"), `#!/bin/sh\ntouch "${marker}"\nexit 9\n`, { mode: 0o755 });
+  writeFileSync(join(dir, "npx"), `#!/bin/sh\ntouch "${marker}"\nexit 9\n`, {
+    mode: 0o755,
+  });
   const run = (env) =>
-    spawnSync(process.execPath, [join(dir, "resolve.mjs"), "--intent", "a & b"], {
-      cwd: dir,
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        PATH: `${dir}${delimiter}${process.env.PATH}`,
-        HYPERFRAMES_PLUGIN_VERSION: "1.2.3",
-        HYPERFRAMES_SKIP_SKILLS: "1",
-        HYPERFRAMES_CLI_ENTRY: "",
-        ...env,
+    spawnSync(
+      process.execPath,
+      [join(dir, "resolve.mjs"), "--intent", "a & b"],
+      {
+        cwd: dir,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: `${dir}${delimiter}${process.env.PATH}`,
+          HYPERFRAMES_PLUGIN_VERSION: "1.2.3",
+          HYPERFRAMES_SKIP_SKILLS: "1",
+          HYPERFRAMES_CLI_ENTRY: "",
+          ...env,
+        },
       },
-    });
+    );
   return { dir, marker, run };
 }
 
@@ -69,10 +89,20 @@ test("helper package override keeps a contributor's local CLI", (t) => {
   const scripts = join(root, "skills/media-use/scripts");
   mkdirSync(join(scripts, "lib"), { recursive: true });
   mkdirSync(join(root, "packages/cli/dist"), { recursive: true });
-  for (const file of ["resolve.mjs", "lib/npx-sync.mjs", "lib/windows-exe-search.mjs"]) {
-    copyFileSync(fileURLToPath(new URL(file, import.meta.url)), join(scripts, file));
+  for (const file of [
+    "resolve.mjs",
+    "lib/npx-sync.mjs",
+    "lib/windows-exe-search.mjs",
+  ]) {
+    copyFileSync(
+      fileURLToPath(new URL(file, import.meta.url)),
+      join(scripts, file),
+    );
   }
-  writeFileSync(join(root, "packages/cli/dist/cli.js"), 'console.log("local-cli");');
+  writeFileSync(
+    join(root, "packages/cli/dist/cli.js"),
+    'console.log("local-cli");',
+  );
   const result = spawnSync(process.execPath, [join(scripts, "resolve.mjs")], {
     encoding: "utf8",
     env: {

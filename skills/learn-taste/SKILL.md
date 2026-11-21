@@ -13,7 +13,7 @@ It does ONE thing: write rules. It never changes component code, and it never ad
 ## Hard Rules
 
 1. **Only the user's taste.** Every rule traces back to something the user said, edited, or confirmed. Never add a rule because it seems like good practice. That's your taste, and your taste is what the user was correcting.
-2. **Never invent a why.** If the user gave no reason, propose one marked *inferred* and get it confirmed before writing. A wrong why is worse than none: the next agent extends the reasoning to cases it doesn't fit.
+2. **Never invent a why.** If the user gave no reason, propose one marked _inferred_ and get it confirmed before writing. A wrong why is worse than none: the next agent extends the reasoning to cases it doesn't fit.
 3. **Propose, then stop.** Present every candidate and write only what the user approves. A wrong rule repeats in every future session, exactly like the mistake would have.
 4. **A check beats a sentence.** If a violation can be found by matching code (a banned value, a raw hex instead of a token, a forbidden property), propose a lint rule, a token restriction, or a test. A check runs every time. A sentence in a long file gets skipped when the agent's context is full.
 5. **Write for an agent that wasn't here.** No "like we discussed" or "the card from earlier". Name the class of component, the value, the token, the file.
@@ -26,13 +26,13 @@ Read the current conversation from the first turn. If the user names earlier ses
 
 Explicit corrections are the minority. Look for all five signals:
 
-| Signal | Example | What it tells you |
-| --- | --- | --- |
-| Explicit correction | "No, semi-transparent shadow, not a border" | The rule, often with the why |
-| Silent edit | User changed `duration: 400` to `200` in a file you wrote | Your default was wrong and their value is the rule. Find these through notices that a file changed outside your edits, or by diffing a file against what you last wrote |
-| Repeated nudge | "Smaller." → "Still too big." → "Ok" | Your default was off by the total distance. Record where they landed, not the steps |
-| Revert or rejection | "Undo that", picking variant B over A, deleting something you added | What not to do. The why is usually missing, so it goes to Phase 3's questions |
-| Confirmed non-obvious choice | "Yes, keep the icon outside the button" | A choice a fresh agent might not repeat. Record it only if a fresh agent would plausibly do otherwise |
+| Signal                       | Example                                                             | What it tells you                                                                                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Explicit correction          | "No, semi-transparent shadow, not a border"                         | The rule, often with the why                                                                                                                                            |
+| Silent edit                  | User changed `duration: 400` to `200` in a file you wrote           | Your default was wrong and their value is the rule. Find these through notices that a file changed outside your edits, or by diffing a file against what you last wrote |
+| Repeated nudge               | "Smaller." → "Still too big." → "Ok"                                | Your default was off by the total distance. Record where they landed, not the steps                                                                                     |
+| Revert or rejection          | "Undo that", picking variant B over A, deleting something you added | What not to do. The why is usually missing, so it goes to Phase 3's questions                                                                                           |
+| Confirmed non-obvious choice | "Yes, keep the icon outside the button"                             | A choice a fresh agent might not repeat. Record it only if a fresh agent would plausibly do otherwise                                                                   |
 
 For each one, capture the user's exact words (or the diff), what you had done, what they wanted instead, and any reason they gave.
 
@@ -65,21 +65,21 @@ Would a fresh agent building a DIFFERENT component in this repo make the same mi
 
 Pick the narrowest level that would have prevented the mistake on the next, different component:
 
-| Level | Example | Verdict |
-| --- | --- | --- |
-| Instance | "The pricing card gets a shadow, not a border" | Too narrow: it only protects this card |
-| Class | "Raised surfaces (cards, popovers, menus) separate from the background with `shadow-raised`, never a solid border" | Write this |
-| Universal | "Never use borders" | Too broad: breaks inputs, dividers, tables |
+| Level     | Example                                                                                                            | Verdict                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| Instance  | "The pricing card gets a shadow, not a border"                                                                     | Too narrow: it only protects this card     |
+| Class     | "Raised surfaces (cards, popovers, menus) separate from the background with `shadow-raised`, never a solid border" | Write this                                 |
+| Universal | "Never use borders"                                                                                                | Too broad: breaks inputs, dividers, tables |
 
 If the same correction came up on two or more different components, that's evidence for the class level. If two levels both seem right, ask.
 
 Write the rule strictly: values and token names from this codebase, "always" or "never", no "prefer" or "try to". Use softer wording only when the user framed it as a preference.
 
-Then the why. Use the user's reason, in their words, when they gave one. Otherwise write your best candidate, mark it *inferred*, and put it in the questions for the user.
+Then the why. Use the user's reason, in their words, when they gave one. Otherwise write your best candidate, mark it _inferred_, and put it in the questions for the user.
 
 **Self-test before proposing:** read only the rule and its why, then picture the original task. Would an agent that knows nothing else produce what the user wanted? If it could still produce the wrong version, the rule is too vague. Add the value, the token, or the exception.
 
-**Completion criterion:** every kept rule has a level and a why marked as the user's or *inferred*.
+**Completion criterion:** every kept rule has a level and a why marked as the user's or _inferred_.
 
 ### Phase 4: Decide where it goes
 
@@ -122,14 +122,14 @@ Write only the approved items. Show the resulting diff of DESIGN.md (and any ski
 
 ### Rules to add
 
-| # | You said | Rule | Why | Where |
-| --- | --- | --- | --- | --- |
-| 1 | "no, semi-transparent shadow, not a border" | Raised surfaces use `shadow-raised`, never a solid border | Solid borders look flat and heavy; shadows adapt to both themes | DESIGN.md › Surfaces |
-| 2 | Changed `duration: 400` → `200` in `Dropdown.tsx` | Dropdowns open in 200ms | *inferred:* 400ms felt sluggish on a surface opened many times a day | DESIGN.md › Motion |
+| #   | You said                                          | Rule                                                      | Why                                                                  | Where                |
+| --- | ------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------- | -------------------- |
+| 1   | "no, semi-transparent shadow, not a border"       | Raised surfaces use `shadow-raised`, never a solid border | Solid borders look flat and heavy; shadows adapt to both themes      | DESIGN.md › Surfaces |
+| 2   | Changed `duration: 400` → `200` in `Dropdown.tsx` | Dropdowns open in 200ms                                   | _inferred:_ 400ms felt sluggish on a surface opened many times a day | DESIGN.md › Motion   |
 
 ### Needs your answer
 
-Each *inferred* why, each ambiguous generalization level, and each global-or-project question. One line each, with your recommendation.
+Each _inferred_ why, each ambiguous generalization level, and each global-or-project question. One line each, with your recommendation.
 
 ### Conflicts
 
@@ -149,9 +149,9 @@ If the session had no taste corrections, say so in one line. That's a good resul
 
 ## Invocation Variants
 
-| Invocation | Behavior |
-| --- | --- |
-| `/learn-taste` | Current session, full workflow, stop at the report |
-| `/learn-taste <sessions>` | Also read the named or most recent N session transcripts |
-| `write all` / `write 1, 3` | Write the approved items from the last report |
-| `/learn-taste prune` | Read DESIGN.md and propose merges for duplicates, fixes for contradictions, and stricter wording for vague rules. Same propose-then-stop rule |
+| Invocation                 | Behavior                                                                                                                                      |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/learn-taste`             | Current session, full workflow, stop at the report                                                                                            |
+| `/learn-taste <sessions>`  | Also read the named or most recent N session transcripts                                                                                      |
+| `write all` / `write 1, 3` | Write the approved items from the last report                                                                                                 |
+| `/learn-taste prune`       | Read DESIGN.md and propose merges for duplicates, fixes for contradictions, and stricter wording for vague rules. Same propose-then-stop rule |

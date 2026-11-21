@@ -12,54 +12,55 @@ The contract also exposes two machine-readable sections not repeated in
 full here: `contract["rules"]` - the accepted field name/type/default for
 `VideoRule`/`AudioRule`/`SubtitleRule`/`DeliveryRule`, generated directly
 from the dataclasses in `rules.py` (so it is never a stale second copy)
+
 - and `contract["findings"]` - every finding code this skill can emit,
-with its category and default severity.
+  with its category and default severity.
 
 ## Video (`kind: "video"`, and `kind: "delivery"` when a video stream is present)
 
 **Measurements** (`src/qc_skill/measurements/video.py`):
 
-| id | source | notes |
-|---|---|---|
-| `container.format_name`, `container.duration_sec`, `container.size_bytes`, `container.bit_rate` | ffprobe | |
-| `video.stream_present`, `video.stream_count` | ffprobe | |
-| `video.codec`, `video.width`, `video.height`, `video.pixel_format` | ffprobe | |
-| `video.aspect_ratio` | ffprobe (or derived from width/height, `estimated: true`) | |
-| `video.frame_rate` | ffprobe | |
-| `video.variable_frame_rate_suspected` | ffprobe:derived | `true` when `\|r_frame_rate - avg_frame_rate\| > 0.01` fps (mirrors ffmpeg-skill's own `variable_frame_rate_suspected` heuristic); `null` when either rate is unavailable - never guessed |
-| `video.frame_count` | ffprobe `nb_frames`, or derived from `duration * frame_rate` (`estimated: true`) when absent | |
-| `video.color_range`, `video.color_space`, `video.color_transfer`, `video.color_primaries`, `video.field_order` | ffprobe | `null` when the container doesn't carry it - never guessed |
-| `video.black_segments` | ffmpeg `blackdetect` | `[{start, end, duration}]` |
-| `video.freeze_segments` | ffmpeg `freezedetect` | a segment still frozen at end-of-stream has `end: null, duration: null` (not fabricated) |
-| `video.luminance_excursions` | ffmpeg `signalstats` | `[{start, end, duration, min_y, max_y}]` - contiguous runs where Y fell outside `[luminance_legal_min, luminance_legal_max]` (default 16/235); a literal per-frame pixel readout, not a heuristic classifier (ADR-013) |
-| `video.decoded_frame_count`, `video.decode_error_count`, `video.decode_errors`, `video.frame_count_delta` | ffmpeg full decode | one decode pass produces black/freeze/luminance/integrity together |
+| id                                                                                                             | source                                                                                       | notes                                                                                                                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `container.format_name`, `container.duration_sec`, `container.size_bytes`, `container.bit_rate`                | ffprobe                                                                                      |                                                                                                                                                                                                                        |
+| `video.stream_present`, `video.stream_count`                                                                   | ffprobe                                                                                      |                                                                                                                                                                                                                        |
+| `video.codec`, `video.width`, `video.height`, `video.pixel_format`                                             | ffprobe                                                                                      |                                                                                                                                                                                                                        |
+| `video.aspect_ratio`                                                                                           | ffprobe (or derived from width/height, `estimated: true`)                                    |                                                                                                                                                                                                                        |
+| `video.frame_rate`                                                                                             | ffprobe                                                                                      |                                                                                                                                                                                                                        |
+| `video.variable_frame_rate_suspected`                                                                          | ffprobe:derived                                                                              | `true` when `\|r_frame_rate - avg_frame_rate\| > 0.01` fps (mirrors ffmpeg-skill's own `variable_frame_rate_suspected` heuristic); `null` when either rate is unavailable - never guessed                              |
+| `video.frame_count`                                                                                            | ffprobe `nb_frames`, or derived from `duration * frame_rate` (`estimated: true`) when absent |                                                                                                                                                                                                                        |
+| `video.color_range`, `video.color_space`, `video.color_transfer`, `video.color_primaries`, `video.field_order` | ffprobe                                                                                      | `null` when the container doesn't carry it - never guessed                                                                                                                                                             |
+| `video.black_segments`                                                                                         | ffmpeg `blackdetect`                                                                         | `[{start, end, duration}]`                                                                                                                                                                                             |
+| `video.freeze_segments`                                                                                        | ffmpeg `freezedetect`                                                                        | a segment still frozen at end-of-stream has `end: null, duration: null` (not fabricated)                                                                                                                               |
+| `video.luminance_excursions`                                                                                   | ffmpeg `signalstats`                                                                         | `[{start, end, duration, min_y, max_y}]` - contiguous runs where Y fell outside `[luminance_legal_min, luminance_legal_max]` (default 16/235); a literal per-frame pixel readout, not a heuristic classifier (ADR-013) |
+| `video.decoded_frame_count`, `video.decode_error_count`, `video.decode_errors`, `video.frame_count_delta`      | ffmpeg full decode                                                                           | one decode pass produces black/freeze/luminance/integrity together                                                                                                                                                     |
 
 **Baseline checks** (always run for `check`/`validate`, no rule needed):
 
-| check_id | fails when | finding |
-|---|---|---|
-| `video.stream_present` | no video stream (standalone `kind: video`; overridable via `delivery.require_video` for delivery) | `VIDEO_STREAM_MISSING` |
-| `video.decodes_without_errors` | decode error count exceeds `VideoRule.max_decode_errors` (default 0) | `VIDEO_DECODE_ERROR` |
+| check_id                       | fails when                                                                                        | finding                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------- |
+| `video.stream_present`         | no video stream (standalone `kind: video`; overridable via `delivery.require_video` for delivery) | `VIDEO_STREAM_MISSING` |
+| `video.decodes_without_errors` | decode error count exceeds `VideoRule.max_decode_errors` (default 0)                              | `VIDEO_DECODE_ERROR`   |
 
 **Policy checks** (only when the matching `VideoRule` field is set):
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `video.duration_within_limit` | `max_duration_sec` | `VIDEO_DURATION_EXCEEDED` |
-| `video.resolution_matches_expected` | `expected_width`, `expected_height` | `VIDEO_RESOLUTION_MISMATCH` |
-| `video.resolution_meets_minimum` | `min_width`, `min_height` (an "at least" form alongside the exact-equality check above, e.g. "short side >= 1080, any exact size") | `VIDEO_RESOLUTION_BELOW_MINIMUM` |
-| `video.frame_rate_matches_expected` | `expected_frame_rate`, `frame_rate_tolerance` | `VIDEO_FPS_MISMATCH` |
-| `video.frame_rate_is_constant` | `disallow_vfr` | `VIDEO_VARIABLE_FRAME_RATE` |
-| `video.codec_matches_expected` | `expected_codec` | `VIDEO_CODEC_MISMATCH` |
-| `video.pixel_format_matches_expected` | `expected_pixel_format` | `VIDEO_PIXEL_FORMAT_MISMATCH` |
-| `video.aspect_ratio_matches_expected` | `expected_aspect_ratio` | `VIDEO_ASPECT_MISMATCH` |
-| `video.color_range_matches_expected` | `expected_color_range` | `VIDEO_COLOR_RANGE_MISMATCH` |
-| `video.color_space_matches_expected` | `expected_color_space` | `VIDEO_COLOR_SPACE_MISMATCH` |
-| `video.color_transfer_matches_expected` | `expected_color_transfer` | `VIDEO_COLOR_TRANSFER_MISMATCH` |
-| `video.color_primaries_matches_expected` | `expected_color_primaries` | `VIDEO_COLOR_PRIMARIES_MISMATCH` |
-| `video.black_frames_within_tolerance` | `max_single_black_sec`, `max_total_black_sec` | `VIDEO_BLACK_FRAMES_EXCEEDED` |
-| `video.freeze_frames_within_tolerance` | `max_single_freeze_sec`, `max_total_freeze_sec` | `VIDEO_FREEZE_EXCEEDED` (or `UNKNOWN` if an unresolved freeze-to-EOF segment exists and no violation was found from the resolvable segments) |
-| `video.luminance_within_legal_range` | `max_single_luminance_excursion_sec`, `max_total_luminance_excursion_sec` | `VIDEO_LUMINANCE_OUT_OF_RANGE` |
+| check_id                                 | rule field(s)                                                                                                                      | finding                                                                                                                                      |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video.duration_within_limit`            | `max_duration_sec`                                                                                                                 | `VIDEO_DURATION_EXCEEDED`                                                                                                                    |
+| `video.resolution_matches_expected`      | `expected_width`, `expected_height`                                                                                                | `VIDEO_RESOLUTION_MISMATCH`                                                                                                                  |
+| `video.resolution_meets_minimum`         | `min_width`, `min_height` (an "at least" form alongside the exact-equality check above, e.g. "short side >= 1080, any exact size") | `VIDEO_RESOLUTION_BELOW_MINIMUM`                                                                                                             |
+| `video.frame_rate_matches_expected`      | `expected_frame_rate`, `frame_rate_tolerance`                                                                                      | `VIDEO_FPS_MISMATCH`                                                                                                                         |
+| `video.frame_rate_is_constant`           | `disallow_vfr`                                                                                                                     | `VIDEO_VARIABLE_FRAME_RATE`                                                                                                                  |
+| `video.codec_matches_expected`           | `expected_codec`                                                                                                                   | `VIDEO_CODEC_MISMATCH`                                                                                                                       |
+| `video.pixel_format_matches_expected`    | `expected_pixel_format`                                                                                                            | `VIDEO_PIXEL_FORMAT_MISMATCH`                                                                                                                |
+| `video.aspect_ratio_matches_expected`    | `expected_aspect_ratio`                                                                                                            | `VIDEO_ASPECT_MISMATCH`                                                                                                                      |
+| `video.color_range_matches_expected`     | `expected_color_range`                                                                                                             | `VIDEO_COLOR_RANGE_MISMATCH`                                                                                                                 |
+| `video.color_space_matches_expected`     | `expected_color_space`                                                                                                             | `VIDEO_COLOR_SPACE_MISMATCH`                                                                                                                 |
+| `video.color_transfer_matches_expected`  | `expected_color_transfer`                                                                                                          | `VIDEO_COLOR_TRANSFER_MISMATCH`                                                                                                              |
+| `video.color_primaries_matches_expected` | `expected_color_primaries`                                                                                                         | `VIDEO_COLOR_PRIMARIES_MISMATCH`                                                                                                             |
+| `video.black_frames_within_tolerance`    | `max_single_black_sec`, `max_total_black_sec`                                                                                      | `VIDEO_BLACK_FRAMES_EXCEEDED`                                                                                                                |
+| `video.freeze_frames_within_tolerance`   | `max_single_freeze_sec`, `max_total_freeze_sec`                                                                                    | `VIDEO_FREEZE_EXCEEDED` (or `UNKNOWN` if an unresolved freeze-to-EOF segment exists and no violation was found from the resolvable segments) |
+| `video.luminance_within_legal_range`     | `max_single_luminance_excursion_sec`, `max_total_luminance_excursion_sec`                                                          | `VIDEO_LUMINANCE_OUT_OF_RANGE`                                                                                                               |
 
 The color/HDR checks are plain exact-equality comparisons against
 `video.color_range`/`color_space`/`color_transfer`/`color_primaries` -
@@ -75,7 +76,7 @@ a guessed PASS/FAIL) when the underlying rates could not both be
 measured.
 
 `luminance_legal_min`/`luminance_legal_max` (default 16/235, the
-near-universal legal range for 8-bit limited-range video) are *detection*
+near-universal legal range for 8-bit limited-range video) are _detection_
 parameters (`parameters`, like `black_pixel_threshold`) - they decide
 what counts as an excursion worth measuring, not whether one is
 acceptable. Whether any excursion is acceptable is always the caller's
@@ -95,27 +96,28 @@ decode one frame per region. Pure Python + ffmpeg, no numpy.
 
 **Measurements** (`src/qc_skill/measurements/temporal.py`, `text_legibility.py`):
 
-| id | source | notes |
-|---|---|---|
-| `video.flash_per_second` | ffmpeg `extractplanes` + area scale to a 32x32 grid | `[{start, end, flashes, changes}]` per 1-second bin, area-qualified (see below); `null` for HDR (PQ/HLG) transfer - no BT.1702 HDR mapping is implemented |
-| `video.flash_worst_window` | same | `{start, end, flashes, changes, area_fraction}` - the sliding 1-second window (starting at every frame) with the most area-qualified changes |
-| `video.red_flash_count` | not measured | always `null`: BT.1702-3 names "a transition to or from a saturated red" but does not define saturated red (its Annex 3 says more explicit definitions are still required), so qc-skill reports UNKNOWN rather than invent one |
-| `video.scene_cuts` | ffmpeg `scdet` | `[{time, frame, score}]` - time/frame index of the first frame of each new shot |
-| `video.text_regions` | ffmpeg `crop` of one RGB frame per region | per region: `{index, t, box, role, measured, contrast_ratio, ink_luminance, background_luminance, ink_fraction, text_height_px, line_heights_px, text_height_px_at_1080}` or `{measured: false, reason}` |
+| id                         | source                                              | notes                                                                                                                                                                                                                          |
+| -------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `video.flash_per_second`   | ffmpeg `extractplanes` + area scale to a 32x32 grid | `[{start, end, flashes, changes}]` per 1-second bin, area-qualified (see below); `null` for HDR (PQ/HLG) transfer - no BT.1702 HDR mapping is implemented                                                                      |
+| `video.flash_worst_window` | same                                                | `{start, end, flashes, changes, area_fraction}` - the sliding 1-second window (starting at every frame) with the most area-qualified changes                                                                                   |
+| `video.red_flash_count`    | not measured                                        | always `null`: BT.1702-3 names "a transition to or from a saturated red" but does not define saturated red (its Annex 3 says more explicit definitions are still required), so qc-skill reports UNKNOWN rather than invent one |
+| `video.scene_cuts`         | ffmpeg `scdet`                                      | `[{time, frame, score}]` - time/frame index of the first frame of each new shot                                                                                                                                                |
+| `video.text_regions`       | ffmpeg `crop` of one RGB frame per region           | per region: `{index, t, box, role, measured, contrast_ratio, ink_luminance, background_luminance, ink_fraction, text_height_px, line_heights_px, text_height_px_at_1080}` or `{measured: false, reason}`                       |
 
 Flash measurement - ITU-R BT.1702-3 Guideline 1 (general flash, SDR):
 screen luminance `L = 200 * V^2.4` cd/m2 (Annex 2/Table 1: BT.1886,
 200 cd/m2 peak white) with `V = (Y - 16) / 219` on 8-bit limited-range
 luma (full-range input is converted to limited range first). Per grid
-cell, a *change* is an opposing excursion of >= 20 cd/m2 whose darker
-side is below 160 cd/m2; a *flash* is a pair of changes
+cell, a _change_ is an opposing excursion of >= 20 cd/m2 whose darker
+side is below 160 cd/m2; a _flash_ is a pair of changes
 (`flashes = changes / 2`, so 7 changes = 3.5 flashes, "more than three").
 A window's area-qualified count is the largest `c` such that cells with
->= `c` changes cover **more than** `flash_area_fraction` (detection
-parameter, default 0.25 = BT.1702's 25% of the screen). The grid cell
-luminance comes from an area average of code values (gamma domain): exact
-for uniform cells, an approximation at edges. These are stated
-assumptions about the display, not measurements of one.
+
+> = `c` changes cover **more than** `flash_area_fraction` (detection
+> parameter, default 0.25 = BT.1702's 25% of the screen). The grid cell
+> luminance comes from an area average of code values (gamma domain): exact
+> for uniform cells, an approximation at edges. These are stated
+> assumptions about the display, not measurements of one.
 
 Text measurement - one frame at `t`, cropped to `box` `[x, y, w, h]`
 (the video's own pixel grid). Otsu's threshold on gamma-encoded luma
@@ -129,11 +131,11 @@ the intended use). `text_height_px_at_1080` scales it by
 
 **Policy checks:**
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `video.photosensitive_flash_within_limit` | `check_photosensitivity: true` (opt-in), `max_flashes_per_second` (default 3, BT.1702) | `VIDEO_FLASH_RISK` when the worst window's area-qualified flashes exceed the limit; evidence carries `red_flash: UNKNOWN` |
-| `video.cuts_match_expected` | `expected_cuts` (seconds), `max_cut_error_frames` (default 1), `allow_extra_cuts` (default true), `cut_match_window_sec` (default 0.5) | `VIDEO_CUT_MISMATCH` when an expected cut has no detected cut within the window, the max matched error exceeds `max_cut_error_frames`, or (with `allow_extra_cuts: false`) an unplanned cut was detected |
-| `video.text_legible` | `text_regions: [{t, box: [x, y, w, h], role: hook\|cta\|caption\|term}]`, `min_contrast_ratio` (default 4.5 = WCAG AA normal text; 7.0 = AAA), `min_text_height_px` (per role, px at a 1080 short side; no default - no opinion) | `TEXT_ILLEGIBLE` when any measured region is below a minimum; `UNKNOWN` when a region could not be measured (box outside the frame, no frame at `t`) and none failed |
+| check_id                                  | rule field(s)                                                                                                                                                                                                                    | finding                                                                                                                                                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video.photosensitive_flash_within_limit` | `check_photosensitivity: true` (opt-in), `max_flashes_per_second` (default 3, BT.1702)                                                                                                                                           | `VIDEO_FLASH_RISK` when the worst window's area-qualified flashes exceed the limit; evidence carries `red_flash: UNKNOWN`                                                                                |
+| `video.cuts_match_expected`               | `expected_cuts` (seconds), `max_cut_error_frames` (default 1), `allow_extra_cuts` (default true), `cut_match_window_sec` (default 0.5)                                                                                           | `VIDEO_CUT_MISMATCH` when an expected cut has no detected cut within the window, the max matched error exceeds `max_cut_error_frames`, or (with `allow_extra_cuts: false`) an unplanned cut was detected |
+| `video.text_legible`                      | `text_regions: [{t, box: [x, y, w, h], role: hook\|cta\|caption\|term}]`, `min_contrast_ratio` (default 4.5 = WCAG AA normal text; 7.0 = AAA), `min_text_height_px` (per role, px at a 1080 short side; no default - no opinion) | `TEXT_ILLEGIBLE` when any measured region is below a minimum; `UNKNOWN` when a region could not be measured (box outside the frame, no frame at `t`) and none failed                                     |
 
 Cut matching is deterministic: expected cuts in time order each take the
 nearest still-unmatched detected cut within `cut_match_window_sec`; the
@@ -155,12 +157,12 @@ pair to `libvmaf`/`ssim`/`psnr` together.
 
 **Measurements** (`src/qc_skill/measurements/reference.py`):
 
-| id | source | notes |
-|---|---|---|
+| id                          | source                | notes                                                                                                                                                                                                                                    |
+| --------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `video.reference_alignment` | ffprobe of both files | `{status: "aligned", compared_size, scaled_distorted_to, pix_fmt, frame_rate, frame_rule, distorted, reference[, psnr_capped]}` or `{status: "refused", code, reason, distorted, reference}`; `null` when no `reference_video` was given |
-| `video.vmaf` | ffmpeg `libvmaf` | pooled mean, libvmaf's default model (vmaf_v0.6.1 in libvmaf 2.x); `null` when this ffmpeg has no libvmaf |
-| `video.ssim` | ffmpeg `ssim` | `All` mean SSIM (0-1) |
-| `video.psnr_db` | ffmpeg `psnr` | `average` PSNR in dB; a bit-identical pair (infinite PSNR) is reported as libvmaf's PSNR ceiling: 60 dB at 8 bit, 72 dB at 10 bit, with `psnr_capped: true` in the alignment |
+| `video.vmaf`                | ffmpeg `libvmaf`      | pooled mean, libvmaf's default model (vmaf_v0.6.1 in libvmaf 2.x); `null` when this ffmpeg has no libvmaf                                                                                                                                |
+| `video.ssim`                | ffmpeg `ssim`         | `All` mean SSIM (0-1)                                                                                                                                                                                                                    |
+| `video.psnr_db`             | ffmpeg `psnr`         | `average` PSNR in dB; a bit-identical pair (infinite PSNR) is reported as libvmaf's PSNR ceiling: 60 dB at 8 bit, 72 dB at 10 bit, with `psnr_capped: true` in the alignment                                                             |
 
 Alignment rule: both streams are re-timed to start at 0 and compared
 frame by frame up to the shorter one. Frame rates must agree within
@@ -177,11 +179,11 @@ pixel format when libvmaf accepts it (planar YUV 4:2:0/4:2:2/4:4:4,
 
 **Policy checks** (defaults apply only once `reference_metrics` opts in):
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `video.vmaf_meets_minimum` | `reference_metrics` includes `"vmaf"`, `min_vmaf` (default 93 - Rassool, *VMAF Reproducibility*, RealNetworks 2017: about 93 = "indistinguishable from original or with noticeable but not annoying distortion") | `VIDEO_VMAF_BELOW_MINIMUM`; `UNKNOWN` (reason names libvmaf) when this ffmpeg has no libvmaf filter - see `qc doctor` `filter:libvmaf` |
-| `video.ssim_meets_minimum` | `"ssim"`, `min_ssim` (default 0.95 - the SSIM-to-MOS mapping of Zinner et al. 2010, as tabulated in Moldovan et al. 2014 Table I: >= 0.95 = MOS 4 "Good") | `VIDEO_SSIM_BELOW_MINIMUM` |
-| `video.psnr_meets_minimum` | `"psnr"`, `min_psnr_db` (default 31 - the PSNR-to-MOS mapping of Ke et al. 2008, Moldovan et al. 2014 Table I: >= 31 dB = MOS 4 "Good") | `VIDEO_PSNR_BELOW_MINIMUM` |
+| check_id                   | rule field(s)                                                                                                                                                                                                    | finding                                                                                                                                |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `video.vmaf_meets_minimum` | `reference_metrics` includes `"vmaf"`, `min_vmaf` (default 93 - Rassool, _VMAF Reproducibility_, RealNetworks 2017: about 93 = "indistinguishable from original or with noticeable but not annoying distortion") | `VIDEO_VMAF_BELOW_MINIMUM`; `UNKNOWN` (reason names libvmaf) when this ffmpeg has no libvmaf filter - see `qc doctor` `filter:libvmaf` |
+| `video.ssim_meets_minimum` | `"ssim"`, `min_ssim` (default 0.95 - the SSIM-to-MOS mapping of Zinner et al. 2010, as tabulated in Moldovan et al. 2014 Table I: >= 0.95 = MOS 4 "Good")                                                        | `VIDEO_SSIM_BELOW_MINIMUM`                                                                                                             |
+| `video.psnr_meets_minimum` | `"psnr"`, `min_psnr_db` (default 31 - the PSNR-to-MOS mapping of Ke et al. 2008, Moldovan et al. 2014 Table I: >= 31 dB = MOS 4 "Good")                                                                          | `VIDEO_PSNR_BELOW_MINIMUM`                                                                                                             |
 
 A refused alignment, a missing `reference_video` or a missing libvmaf is
 `UNKNOWN`, never `PASS` or `FAIL`; a missing libvmaf does not stop SSIM
@@ -196,20 +198,20 @@ its cut point, the frame where the graphic covers the whole picture.
 are the stinger maker's statement (stinger.json); the caller reads the
 sidecar and passes both - qc-skill opens no sidecar.
 
-| field | meaning |
-|---|---|
-| `cut_point` | required. Seconds on the stinger's own timeline (from its first frame). It must name a frame: `cut_point * frame_rate` within 1/1000 of a whole frame, else UNKNOWN |
-| `cover` | optional `{start, end}`, the window the maker says is fully covered: the frames at `start <= t < end` |
-| `file` | optional path to the stinger, resolved and fingerprinted like `input` (its content, not its path, joins the identity; `provenance.stinger_input`). Without it the input **is** the stinger; with it the input is a delivered video and the alpha is read from `file` |
-| `cut_at` | optional, needs `file`: seconds on the delivered video's timeline, one per join (video-editing-skill's `stinger.joins[].cut_at`) |
-| `max_cut_frame_difference` | needed with `cut_at`, no default: the largest mean absolute difference (8-bit RGB, 0-255) allowed between the delivered frame at a cut and the stinger's frame at its cut point |
+| field                      | meaning                                                                                                                                                                                                                                                              |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cut_point`                | required. Seconds on the stinger's own timeline (from its first frame). It must name a frame: `cut_point * frame_rate` within 1/1000 of a whole frame, else UNKNOWN                                                                                                  |
+| `cover`                    | optional `{start, end}`, the window the maker says is fully covered: the frames at `start <= t < end`                                                                                                                                                                |
+| `file`                     | optional path to the stinger, resolved and fingerprinted like `input` (its content, not its path, joins the identity; `provenance.stinger_input`). Without it the input **is** the stinger; with it the input is a delivered video and the alpha is read from `file` |
+| `cut_at`                   | optional, needs `file`: seconds on the delivered video's timeline, one per join (video-editing-skill's `stinger.joins[].cut_at`)                                                                                                                                     |
+| `max_cut_frame_difference` | needed with `cut_at`, no default: the largest mean absolute difference (8-bit RGB, 0-255) allowed between the delivered frame at a cut and the stinger's frame at its cut point                                                                                      |
 
 **Measurements** (`src/qc_skill/measurements/stinger.py`):
 
-| id | source | notes |
-|---|---|---|
+| id                              | source                                | notes                                                                                                                                                                                                                                                                                                |
+| ------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `video.stinger_cut_point_alpha` | ffmpeg `extractplanes=a` of one frame | `{source: input\|stinger_file, cut_point, frame, frame_time, frame_rate, pix_fmt, alpha_format, alpha_bit_depth, width, height, pixels, pixels_below, below_fraction, min_alpha, min_alpha_255, threshold: {min_alpha_255: 253, scale: 255, native}, measured: true}` or `{measured: false, reason}` |
-| `video.stinger_cut_frames` | ffmpeg rawvideo RGB of single frames | `{stinger_frame: {frame, frame_time, scaled_to, source_size}, cuts: [{cut_at, frame, frame_time, difference, difference_before, difference_after, measured}]}`; an unmeasurable cut has `{measured: false, reason}` |
+| `video.stinger_cut_frames`      | ffmpeg rawvideo RGB of single frames  | `{stinger_frame: {frame, frame_time, scaled_to, source_size}, cuts: [{cut_at, frame, frame_time, difference, difference_before, difference_after, measured}]}`; an unmeasurable cut has `{measured: false, reason}`                                                                                  |
 
 The frame at a time `t` is frame `round(t * frame_rate)` of the stream
 (exact fractions from ffprobe's `r_frame_rate`). It is decoded by an
@@ -234,11 +236,11 @@ stinger placed off the cut shows the clips through it.
 
 **Policy checks:**
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `video.stinger_cut_point_in_cover` | `stinger.cover` | `VIDEO_STINGER_CUT_POINT_OUTSIDE_COVER` when `cut_point` is not in `[start, end)` (the statement contradicts itself; nothing is measured) |
-| `video.stinger_opaque_at_cut_point` | `stinger.cut_point` | `VIDEO_STINGER_NOT_OPAQUE` when any pixel of that frame is below 253/255 (evidence: frame, pixels, pixels_below, min_alpha); UNKNOWN when the frame or its alpha could not be read |
-| `video.stinger_cut_frame_matches` | `stinger.file`, `cut_at`, `max_cut_frame_difference` | `VIDEO_STINGER_CUT_FRAME_MISMATCH` when a cut frame differs from the stinger's frame by more than the limit (exactly the limit passes); UNKNOWN when a cut frame could not be read and none failed |
+| check_id                            | rule field(s)                                        | finding                                                                                                                                                                                            |
+| ----------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video.stinger_cut_point_in_cover`  | `stinger.cover`                                      | `VIDEO_STINGER_CUT_POINT_OUTSIDE_COVER` when `cut_point` is not in `[start, end)` (the statement contradicts itself; nothing is measured)                                                          |
+| `video.stinger_opaque_at_cut_point` | `stinger.cut_point`                                  | `VIDEO_STINGER_NOT_OPAQUE` when any pixel of that frame is below 253/255 (evidence: frame, pixels, pixels_below, min_alpha); UNKNOWN when the frame or its alpha could not be read                 |
+| `video.stinger_cut_frame_matches`   | `stinger.file`, `cut_at`, `max_cut_frame_difference` | `VIDEO_STINGER_CUT_FRAME_MISMATCH` when a cut frame differs from the stinger's frame by more than the limit (exactly the limit passes); UNKNOWN when a cut frame could not be read and none failed |
 
 Every finding carries the cut time in seconds (`timestamp`) and the
 measured values; a violation's `description` reads like `2.000s frame 60
@@ -268,11 +270,11 @@ and passes the values on; qc-skill opens no sidecar.
 
 #### Loop seam (`VideoRule.loop_seam`, ADR-026)
 
-| field | meaning |
-|---|---|
-| `window_frames` | optional, 1-12, default 4: how many frames on each side of the seam the motion inside the loop is read from |
-| `segments` | optional, title.json's `{in, loop, out}` in seconds: the loop is the frames `in <= t < in + loop` of the clip; both ends must be on a frame (within 1/1000 of one), else UNKNOWN. Without it the whole file is the loop (a `--segments` loop file, ffmpeg-skill `loop --crossfade`, remotion-ffmpeg-skill `--loop`) |
-| `max_seam_ratio` | no default: without it the seam is measured and reported, not judged |
+| field            | meaning                                                                                                                                                                                                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `window_frames`  | optional, 1-12, default 4: how many frames on each side of the seam the motion inside the loop is read from                                                                                                                                                                                                         |
+| `segments`       | optional, title.json's `{in, loop, out}` in seconds: the loop is the frames `in <= t < in + loop` of the clip; both ends must be on a frame (within 1/1000 of one), else UNKNOWN. Without it the whole file is the loop (a `--segments` loop file, ffmpeg-skill `loop --crossfade`, remotion-ffmpeg-skill `--loop`) |
+| `max_seam_ratio` | no default: without it the seam is measured and reported, not judged                                                                                                                                                                                                                                                |
 
 `video.loop_seam` (`src/qc_skill/measurements/video_loop_seam.py`):
 `{source: file|segments, frame_rate, window_frames, loop: {first_frame,
@@ -292,8 +294,8 @@ frame count is ffprobe's packet count; if the file holds more frames than
 that, or the stream ends early, or a frame cannot be decoded, the
 measurement is refused with the reason. A loop needs at least 3 frames.
 
-| check_id | rule field | finding |
-|---|---|---|
+| check_id                       | rule field                 | finding                                                                                                                                                                                                                                                   |
+| ------------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `video.loop_seam_within_limit` | `loop_seam.max_seam_ratio` | `VIDEO_LOOP_SEAM_JUMP` when the ratio is above the limit (exactly the limit passes) or the seam jumps out of a still picture; evidence: the seam's frames and times, the ratio, the reference and every inside step; `timestamp` is the loop's last frame |
 
 Suggested `max_seam_ratio`: on the 64x36 test loops (lossless H.264) a
@@ -302,11 +304,11 @@ the same loops one frame short measure 1.70 and 1.99. Start at 1.3.
 
 #### Alpha edges (`VideoRule.alpha_edge`, ADR-027)
 
-| field | meaning |
-|---|---|
-| `alpha_mode` | required, `straight` or `premultiplied`: the mode the material declares (`title.json` / `stinger.json` `alpha`, or yours) |
-| `times` | optional list of 1 to 100 times in seconds (0 or more): the frames to read (each the nearest frame). Default 5 frames spread evenly from the first to the last |
-| `max_fringe_px` | optional whole number, no default: without it the fringe is measured, not judged |
+| field           | meaning                                                                                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `alpha_mode`    | required, `straight` or `premultiplied`: the mode the material declares (`title.json` / `stinger.json` `alpha`, or yours)                                      |
+| `times`         | optional list of 1 to 100 times in seconds (0 or more): the frames to read (each the nearest frame). Default 5 frames spread evenly from the first to the last |
+| `max_fringe_px` | optional whole number, no default: without it the fringe is measured, not judged                                                                               |
 
 `video.alpha_edges` (`src/qc_skill/measurements/alpha_edge.py`):
 `{alpha_mode, pix_fmt, frame_rate, frames: [{frame, time, width, height,
@@ -323,7 +325,7 @@ read as 8-bit RGBA.
 - **fringe**: the partly transparent pixels (0 < alpha < 255) at the
   graphic's edge, composited over black and over white at the declared
   mode (straight: `c * a + bg * (1 - a)`, premultiplied: `c + bg * (1 -
-  a)`), against the graphic's own colour composited at the same alpha.
+a)`), against the graphic's own colour composited at the same alpha.
   The graphic's colour is carried in from the opaque pixels: a partly
   transparent pixel touching opaque ones (8 neighbours) takes their mean
   colour, the next ring the mean of the ring before, up to 8 px deep. A
@@ -332,10 +334,10 @@ read as 8-bit RGBA.
   the largest, over its fringe pixels, of the shorter of the horizontal
   and vertical runs of fringe pixels through it.
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `video.alpha_mode_consistent` | `alpha_edge.alpha_mode` | `VIDEO_ALPHA_MODE_MISMATCH` when the mode is `premultiplied` and a sampled frame has a colour above its alpha (evidence: every sampled frame's count and worst pixel). `straight` constrains no pixel and passes once the frames are read: a premultiplied file declared straight is told by the fringe check |
-| `video.alpha_edge_clean` | `alpha_edge.max_fringe_px` | `VIDEO_ALPHA_FRINGE` when a sampled frame's fringe is wider than the limit (exactly the limit passes), with the width, the pixel count, dark or light and the first fringe pixel; UNKNOWN when a frame has partly transparent pixels but none within 8 px of an opaque one (a soft glow or shadow alone) |
+| check_id                      | rule field(s)              | finding                                                                                                                                                                                                                                                                                                       |
+| ----------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video.alpha_mode_consistent` | `alpha_edge.alpha_mode`    | `VIDEO_ALPHA_MODE_MISMATCH` when the mode is `premultiplied` and a sampled frame has a colour above its alpha (evidence: every sampled frame's count and worst pixel). `straight` constrains no pixel and passes once the frames are read: a premultiplied file declared straight is told by the fringe check |
+| `video.alpha_edge_clean`      | `alpha_edge.max_fringe_px` | `VIDEO_ALPHA_FRINGE` when a sampled frame's fringe is wider than the limit (exactly the limit passes), with the width, the pixel count, dark or light and the first fringe pixel; UNKNOWN when a frame has partly transparent pixels but none within 8 px of an opaque one (a soft glow or shadow alone)      |
 
 Both are UNKNOWN when the stream's pixel format has no alpha (ffprobe's
 own flags), or a sampled frame cannot be read and no frame failed. A
@@ -353,19 +355,19 @@ premultiplied a 5 px light one (up to 192/255).
 
 The input is the fill; the key is `key_fill.key_file`.
 
-| field | meaning |
-|---|---|
-| `key_file` | required: the key's path, resolved and fingerprinted like `input` (`provenance.key_input`) |
-| `tolerance` | optional, of 255, default 2 (ffmpeg-skill's `key_level` tolerance) |
-| `max_off_fraction` | optional, default 0: the share of a frame's pixels that may be off before the frame differs |
-| `key_range` | optional, `limited` or `full`: how the key's luma maps to 0-255. Default: the key stream's `color_range` (`pc` is full); unknown is read as limited (video black is transparent, video white opaque) |
+| field              | meaning                                                                                                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key_file`         | required: the key's path, resolved and fingerprinted like `input` (`provenance.key_input`)                                                                                                           |
+| `tolerance`        | optional, of 255, default 2 (ffmpeg-skill's `key_level` tolerance)                                                                                                                                   |
+| `max_off_fraction` | optional, default 0: the share of a frame's pixels that may be off before the frame differs                                                                                                          |
+| `key_range`        | optional, `limited` or `full`: how the key's luma maps to 0-255. Default: the key stream's `color_range` (`pc` is full); unknown is read as limited (video black is transparent, video white opaque) |
 
 **Measurements** (`src/qc_skill/measurements/key_fill.py`):
 
-| id | source | notes |
-|---|---|---|
-| `video.key_fill_pair` | ffprobe | `{fill: {width, height, frame_rate, frames, start_time, timecode, pix_fmt, alpha, color_range}, key: {...}, mismatches: [{field, fill, key}], measured: true}`; frames are packets counted by demuxing, nothing decoded. The timecode is the stream's (else the file's) `timecode` tag; start times half a frame or more apart differ |
-| `video.key_fill_frames` | ffmpeg rawvideo, every frame | `{mode: alpha\|black_outside_key, key_range, fill_range?, tolerance, max_off_fraction, frames_compared, pixels_per_frame, differing_frames, first_differing: {frame, time, off_pixels, off_fraction}, listed_differing (first 10), worst}`; `{measured: false, reason}` when the pair does not match or a frame cannot be read |
+| id                      | source                       | notes                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video.key_fill_pair`   | ffprobe                      | `{fill: {width, height, frame_rate, frames, start_time, timecode, pix_fmt, alpha, color_range}, key: {...}, mismatches: [{field, fill, key}], measured: true}`; frames are packets counted by demuxing, nothing decoded. The timecode is the stream's (else the file's) `timecode` tag; start times half a frame or more apart differ |
+| `video.key_fill_frames` | ffmpeg rawvideo, every frame | `{mode: alpha\|black_outside_key, key_range, fill_range?, tolerance, max_off_fraction, frames_compared, pixels_per_frame, differing_frames, first_differing: {frame, time, off_pixels, off_fraction}, listed_differing (first 10), worst}`; `{measured: false, reason}` when the pair does not match or a frame cannot be read        |
 
 Frames are decoded in chunks of at most 32 MiB, each frame's timestamp
 checked. A YUV or gray key (or fill) is read from its Y plane as stored
@@ -380,8 +382,8 @@ is off when the key is at most `tolerance` and the fill's luma (read to
 construction, which measured 4% of the pixels "lit" on the moving-box
 test pair that a keyer shows clean.
 
-| check_id | rule field | finding |
-|---|---|---|
+| check_id               | rule field          | finding                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `video.key_fill_match` | `key_fill.key_file` | `VIDEO_KEY_FILL_MISMATCH` when the size, frame rate, frame count, start time or timecode differ (before any pixel is read; evidence lists each field), or when a frame's share of pixels off is above `max_off_fraction` (the first differing frame, its time and share, how many frames differ); UNKNOWN when the key cannot be read or a frame cannot be decoded |
 
 Measured on ffmpeg-skill's `export --preset key-fill` chain (ProRes 422
@@ -397,13 +399,13 @@ convert it for the ProRes encoder): read as limited it fails, with
 
 **Measurements** (`src/qc_skill/measurements/audio.py`):
 
-| id | source |
-|---|---|
-| `audio.stream_present`, `audio.stream_count`, `audio.codec`, `audio.sample_rate`, `audio.channels`, `audio.channel_layout`, `audio.duration_sec` | ffprobe |
-| `audio.peak_level_dbfs`, `audio.rms_level_dbfs`, `audio.clipping_detected`, `audio.per_channel_levels` | ffmpeg `astats` |
-| `audio.integrated_loudness_lufs`, `audio.loudness_range_lu`, `audio.true_peak_dbfs` | ffmpeg `ebur128` |
-| `audio.silence_segments`, `audio.leading_silence_sec`, `audio.trailing_silence_sec`, `audio.internal_silence_segments` | ffmpeg `silencedetect`, classified into leading/trailing/internal |
-| `audio.decode_error_count`, `audio.decode_errors` | ffmpeg decode | one ffmpeg pass produces astats+ebur128+silencedetect+decode-errors together |
+| id                                                                                                                                               | source                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `audio.stream_present`, `audio.stream_count`, `audio.codec`, `audio.sample_rate`, `audio.channels`, `audio.channel_layout`, `audio.duration_sec` | ffprobe                                                           |
+| `audio.peak_level_dbfs`, `audio.rms_level_dbfs`, `audio.clipping_detected`, `audio.per_channel_levels`                                           | ffmpeg `astats`                                                   |
+| `audio.integrated_loudness_lufs`, `audio.loudness_range_lu`, `audio.true_peak_dbfs`                                                              | ffmpeg `ebur128`                                                  |
+| `audio.silence_segments`, `audio.leading_silence_sec`, `audio.trailing_silence_sec`, `audio.internal_silence_segments`                           | ffmpeg `silencedetect`, classified into leading/trailing/internal |
+| `audio.decode_error_count`, `audio.decode_errors`                                                                                                | ffmpeg decode                                                     | one ffmpeg pass produces astats+ebur128+silencedetect+decode-errors together |
 
 Clipping is a heuristic: `peak_level_dbfs >= clipping_threshold_dbfs`
 (default `-0.1`, a detection-sensitivity parameter, not a policy) - this
@@ -412,26 +414,26 @@ count.
 
 **Baseline checks:**
 
-| check_id | fails when | finding |
-|---|---|---|
-| `audio.decodes_without_errors` | decode error count exceeds `AudioRule.max_decode_errors` (default 0) | `AUDIO_DECODE_ERROR` |
-| `audio.no_clipping` | `audio.clipping_detected` is true | `AUDIO_CLIPPING_DETECTED` |
+| check_id                       | fails when                                                           | finding                   |
+| ------------------------------ | -------------------------------------------------------------------- | ------------------------- |
+| `audio.decodes_without_errors` | decode error count exceeds `AudioRule.max_decode_errors` (default 0) | `AUDIO_DECODE_ERROR`      |
+| `audio.no_clipping`            | `audio.clipping_detected` is true                                    | `AUDIO_CLIPPING_DETECTED` |
 
 **Policy checks:**
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `audio.stream_present_matches_expected` | `require_audio_stream` | `AUDIO_STREAM_MISSING` / `AUDIO_STREAM_UNEXPECTED` |
-| `audio.sample_rate_matches_expected` | `expected_sample_rate` | `AUDIO_SAMPLE_RATE_MISMATCH` |
-| `audio.channels_match_expected` | `expected_channels` | `AUDIO_CHANNELS_MISMATCH` |
-| `audio.channel_layout_matches_expected` | `expected_channel_layout` | `AUDIO_CHANNEL_LAYOUT_MISMATCH` |
-| `audio.leading_silence_within_tolerance` | `max_leading_silence_sec` | `AUDIO_LEADING_SILENCE_EXCEEDED` |
-| `audio.trailing_silence_within_tolerance` | `max_trailing_silence_sec` | `AUDIO_TRAILING_SILENCE_EXCEEDED` |
-| `audio.internal_silence_within_tolerance` | `max_internal_silence_sec` | `AUDIO_INTERNAL_SILENCE_EXCEEDED` |
-| `audio.integrated_loudness_within_tolerance` | `integrated_loudness_target_lufs`, `integrated_loudness_tolerance_lu` | `AUDIO_LOUDNESS_OUT_OF_RANGE` |
-| `audio.true_peak_within_tolerance` | `max_true_peak_dbfs` | `AUDIO_TRUE_PEAK_EXCEEDED` |
-| `audio.loudness_range_within_tolerance` | `max_loudness_range_lu` | `AUDIO_LOUDNESS_RANGE_EXCEEDED` |
-| `audio.channel_balance_within_tolerance` | `max_channel_level_diff_db` | `AUDIO_CHANNEL_IMBALANCE` (or `AUDIO_CHANNEL_MISSING` when the quieter channel is at/below -90 dBFS RMS) |
+| check_id                                     | rule field(s)                                                         | finding                                                                                                  |
+| -------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `audio.stream_present_matches_expected`      | `require_audio_stream`                                                | `AUDIO_STREAM_MISSING` / `AUDIO_STREAM_UNEXPECTED`                                                       |
+| `audio.sample_rate_matches_expected`         | `expected_sample_rate`                                                | `AUDIO_SAMPLE_RATE_MISMATCH`                                                                             |
+| `audio.channels_match_expected`              | `expected_channels`                                                   | `AUDIO_CHANNELS_MISMATCH`                                                                                |
+| `audio.channel_layout_matches_expected`      | `expected_channel_layout`                                             | `AUDIO_CHANNEL_LAYOUT_MISMATCH`                                                                          |
+| `audio.leading_silence_within_tolerance`     | `max_leading_silence_sec`                                             | `AUDIO_LEADING_SILENCE_EXCEEDED`                                                                         |
+| `audio.trailing_silence_within_tolerance`    | `max_trailing_silence_sec`                                            | `AUDIO_TRAILING_SILENCE_EXCEEDED`                                                                        |
+| `audio.internal_silence_within_tolerance`    | `max_internal_silence_sec`                                            | `AUDIO_INTERNAL_SILENCE_EXCEEDED`                                                                        |
+| `audio.integrated_loudness_within_tolerance` | `integrated_loudness_target_lufs`, `integrated_loudness_tolerance_lu` | `AUDIO_LOUDNESS_OUT_OF_RANGE`                                                                            |
+| `audio.true_peak_within_tolerance`           | `max_true_peak_dbfs`                                                  | `AUDIO_TRUE_PEAK_EXCEEDED`                                                                               |
+| `audio.loudness_range_within_tolerance`      | `max_loudness_range_lu`                                               | `AUDIO_LOUDNESS_RANGE_EXCEEDED`                                                                          |
+| `audio.channel_balance_within_tolerance`     | `max_channel_level_diff_db`                                           | `AUDIO_CHANNEL_IMBALANCE` (or `AUDIO_CHANNEL_MISSING` when the quieter channel is at/below -90 dBFS RMS) |
 
 `qc-skill` never hard-codes a loudness target (e.g. "-14 LUFS for
 YouTube") - `integrated_loudness_target_lufs` and every other target must
@@ -441,19 +443,19 @@ come from the request.
 
 For audio declared loopable, `AudioRule.loop_seam` (any `AudioRule`:
 `kind: audio`, `delivery.audio`, a `delivery_package` artifact's `audio`)
-measures the seam where the end runs into the start (the *wrap*) and any
+measures the seam where the end runs into the start (the _wrap_) and any
 seam times listed inside the file (a bed repeated N times has one every
 period). One extra decode to 32-bit float samples at the file's own rate
 and channel count; the rest is pure Python.
 
-| field | meaning |
-|---|---|
-| `include_wrap` | default `true`: measure the wrap (end -> start, joined in memory) |
-| `seams` | optional seconds of seams inside the file, e.g. `[8, 16, ..., 72]` for an 8 s loop repeated 10 times |
-| `window_sec` | the level/spectrum windows: this long on each side of a seam; no default, needed by the two limits below |
-| `max_click_ratio` | limit for `audio.loop_seam_click_within_limit`; no default |
-| `max_level_diff_db` | limit for `audio.loop_seam_level_within_limit`; no default |
-| `max_band_diff_db` | limit for `audio.loop_seam_spectrum_within_limit`; no default |
+| field               | meaning                                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `include_wrap`      | default `true`: measure the wrap (end -> start, joined in memory)                                        |
+| `seams`             | optional seconds of seams inside the file, e.g. `[8, 16, ..., 72]` for an 8 s loop repeated 10 times     |
+| `window_sec`        | the level/spectrum windows: this long on each side of a seam; no default, needed by the two limits below |
+| `max_click_ratio`   | limit for `audio.loop_seam_click_within_limit`; no default                                               |
+| `max_level_diff_db` | limit for `audio.loop_seam_level_within_limit`; no default                                               |
+| `max_band_diff_db`  | limit for `audio.loop_seam_spectrum_within_limit`; no default                                            |
 
 **Measurement** (`src/qc_skill/measurements/loop_seam.py`):
 `audio.loop_seams` = `{measured, sample_rate, channels, samples,
@@ -475,8 +477,8 @@ reason}` on its own:
   `window_sec` before the seam and the first `window_sec` after it, in
   dBFS (`20 log10 rms`, floored at -120). Worst channel.
 - **spectrum** `{max_diff_db, bands: [{centre_hz, before_db, after_db,
-  diff_db, compared}], bands_compared, frame_samples, before_total_db,
-  after_total_db, channel}`: octave bands centred on 62.5 Hz * 2^k (each a
+diff_db, compared}], bands_compared, frame_samples, before_total_db,
+after_total_db, channel}`: octave bands centred on 62.5 Hz * 2^k (each a
   factor of two wide; the top one may be cut off at the Nyquist
   frequency, so every frequency up to it is in a band) from Hann-windowed,
   non-overlapping frames of a power of two near a tenth of a second, the
@@ -496,11 +498,11 @@ not measured for that fact, with the reason. Nothing is padded.
 **Policy checks** (each only when its limit is set; exactly the limit
 passes; values are compared as reported):
 
-| check_id | rule field | finding |
-|---|---|---|
-| `audio.loop_seam_click_within_limit` | `max_click_ratio` | `AUDIO_LOOP_SEAM_CLICK` |
-| `audio.loop_seam_level_within_limit` | `max_level_diff_db` (+ `window_sec`) | `AUDIO_LOOP_SEAM_LEVEL_MISMATCH` |
-| `audio.loop_seam_spectrum_within_limit` | `max_band_diff_db` (+ `window_sec`) | `AUDIO_LOOP_SEAM_SPECTRUM_MISMATCH` |
+| check_id                                | rule field                           | finding                             |
+| --------------------------------------- | ------------------------------------ | ----------------------------------- |
+| `audio.loop_seam_click_within_limit`    | `max_click_ratio`                    | `AUDIO_LOOP_SEAM_CLICK`             |
+| `audio.loop_seam_level_within_limit`    | `max_level_diff_db` (+ `window_sec`) | `AUDIO_LOOP_SEAM_LEVEL_MISMATCH`    |
+| `audio.loop_seam_spectrum_within_limit` | `max_band_diff_db` (+ `window_sec`)  | `AUDIO_LOOP_SEAM_SPECTRUM_MISMATCH` |
 
 Each check covers every seam: FAIL when any seam is over the limit,
 UNKNOWN when none is but a seam could not be measured (or nothing could
@@ -538,39 +540,39 @@ per-cue `{index, start, end}`, in file order), `subtitle.invalid_timestamps`,
 **Baseline checks** (structurally malformed cues are always a defect,
 regardless of policy):
 
-| check_id | fails when | finding |
-|---|---|---|
-| `subtitle.timestamps_valid` | any cue has an invalid/unparsable timestamp or start > end | `SUBTITLE_INVALID_TIMESTAMP` |
-| `subtitle.no_empty_cues` | any cue has no visible text (WARN) | `SUBTITLE_EMPTY_CUE` |
-| `subtitle.no_duplicate_ids` | duplicate explicit cue identifiers (unless `allow_duplicate_ids`) | `SUBTITLE_DUPLICATE_ID` |
-| `subtitle.no_control_characters` | a cue contains control characters | `SUBTITLE_CONTROL_CHARACTER` |
-| `subtitle.no_overlapping_cues` | two cues overlap in time (unless `allow_overlapping_cues`) | `SUBTITLE_OVERLAPPING_CUES` |
+| check_id                         | fails when                                                        | finding                      |
+| -------------------------------- | ----------------------------------------------------------------- | ---------------------------- |
+| `subtitle.timestamps_valid`      | any cue has an invalid/unparsable timestamp or start > end        | `SUBTITLE_INVALID_TIMESTAMP` |
+| `subtitle.no_empty_cues`         | any cue has no visible text (WARN)                                | `SUBTITLE_EMPTY_CUE`         |
+| `subtitle.no_duplicate_ids`      | duplicate explicit cue identifiers (unless `allow_duplicate_ids`) | `SUBTITLE_DUPLICATE_ID`      |
+| `subtitle.no_control_characters` | a cue contains control characters                                 | `SUBTITLE_CONTROL_CHARACTER` |
+| `subtitle.no_overlapping_cues`   | two cues overlap in time (unless `allow_overlapping_cues`)        | `SUBTITLE_OVERLAPPING_CUES`  |
 
 **Policy checks:**
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `subtitle.presence_matches_expected` | `require_subtitle` | `SUBTITLE_MISSING` |
-| `subtitle.line_length_within_limit` | `max_line_length` | `SUBTITLE_LINE_TOO_LONG` |
-| `subtitle.cue_duration_within_limit` | `max_cue_duration_sec` | `SUBTITLE_CUE_TOO_LONG` |
-| `subtitle.gaps_within_limit` | `max_gap_sec` | `SUBTITLE_GAP_EXCEEDED` |
-| `subtitle.duration_matches_video` | `max_duration_delta_sec` (needs `reference_video`) | `SUBTITLE_DURATION_MISMATCH` |
-| `subtitle.coverage_within_limit` | `min_coverage_ratio` (needs `reference_video`) | `SUBTITLE_COVERAGE_LOW` |
+| check_id                             | rule field(s)                                      | finding                      |
+| ------------------------------------ | -------------------------------------------------- | ---------------------------- |
+| `subtitle.presence_matches_expected` | `require_subtitle`                                 | `SUBTITLE_MISSING`           |
+| `subtitle.line_length_within_limit`  | `max_line_length`                                  | `SUBTITLE_LINE_TOO_LONG`     |
+| `subtitle.cue_duration_within_limit` | `max_cue_duration_sec`                             | `SUBTITLE_CUE_TOO_LONG`      |
+| `subtitle.gaps_within_limit`         | `max_gap_sec`                                      | `SUBTITLE_GAP_EXCEEDED`      |
+| `subtitle.duration_matches_video`    | `max_duration_delta_sec` (needs `reference_video`) | `SUBTITLE_DURATION_MISMATCH` |
+| `subtitle.coverage_within_limit`     | `min_coverage_ratio` (needs `reference_video`)     | `SUBTITLE_COVERAGE_LOW`      |
 
 ### Timeline integrity (`timeline_integrity`, Phase 3, ADR-012)
 
 `SubtitleRule.timeline_integrity` (`TimelineIntegrityRule`: `timeline` -
 a caller-supplied list of `TimelineSegment {source_start, source_end,
 delivery_start, speed}`; `source_cues` - the cue timing as authored
-against the *source* timeline before the edit; `tolerance_sec`) checks
+against the _source_ timeline before the edit; `tolerance_sec`) checks
 whether this subtitle's actual delivery-timeline cue timing
 (`subtitle.cues`) still matches what the supplied timeline mapping says
 it should be, after a trim/concat/speed edit. qc-skill never constructs
 or infers the timeline itself - it only maps a given source timestamp
 through segments it was handed.
 
-| check_id | fails when | finding |
-|---|---|---|
+| check_id                                   | fails when                                                                                                                                                      | finding                                                                       |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `subtitle.timeline_mapping_matches_source` | actual cue count differs from `source_cues` count, or any mapped cue's expected delivery position differs from its actual position by more than `tolerance_sec` | `SUBTITLE_TIMELINE_CUE_COUNT_MISMATCH` / `SUBTITLE_TIMELINE_MAPPING_MISMATCH` |
 
 `UNKNOWN` (never a guessed `PASS`/`FAIL`) when a source cue falls
@@ -608,8 +610,8 @@ tolerant of older and newer files:
   all word entries, so it equals `index` when the file has one;
 - `pos` is read when present (lower-cased) and never inferred; the
   labels qc-skill knows are `noun, pronoun, verb, adjective, adverb,
-  particle, auxiliary, conjunction, interjection, prefix, suffix, symbol,
-  other`;
+particle, auxiliary, conjunction, interjection, prefix, suffix, symbol,
+other`;
 - `timing: "interpolated"` (transcription-skill 0.9.0+, a
   character-share estimate on dictionary-segmented words) marks an
   estimated timing; `"measured"` or no `timing` key is a measured /
@@ -634,12 +636,12 @@ interpolated}]`, or `null` with the read error in `notes`),
 
 **How cues and words are matched.**
 
-- *Time:* a word belongs to the cue on screen at the word's midpoint
+- _Time:_ a word belongs to the cue on screen at the word's midpoint
   (`start <= midpoint < end`; with overlapping cues, the latest-starting
   one). A word between cues belongs to none.
-- *Text:* cue lines and words are compared after NFKC normalisation and
+- _Text:_ cue lines and words are compared after NFKC normalisation and
   case folding, with every punctuation, symbol, space and control
-  character removed. A cue is *aligned* when its words, in transcript
+  character removed. A cue is _aligned_ when its words, in transcript
   order, spell its text exactly in that form; then each line's start
   maps to the word that starts there. A cue whose words differ in any
   way (edited wording, numerals written differently, a word cut by the
@@ -655,14 +657,14 @@ counting (raw code points per line, markup included).
 
 **Policy checks:**
 
-| check_id | rule field(s) | status / finding |
-|---|---|---|
-| `subtitle.cue_boundaries_on_word_boundaries` | `transcript`, `word_boundary_tolerance_sec` | FAIL `SUBTITLE_CUE_BOUNDARY_INSIDE_WORD` when a cue start or end lies inside a word by more than the tolerance at both edges (`word.start + tol < t < word.end - tol`) |
-| `subtitle.cue_not_early` | `transcript`, `max_cue_lead_sec` | FAIL `SUBTITLE_CUE_EARLY` when the first word assigned to a cue starts more than `max_cue_lead_sec` after the cue appears (exactly the limit passes); cues with no words are counted in `cues_without_speech` |
-| `subtitle.speech_covered` | `transcript`, `max_uncovered_speech_sec`, `extra_covered_intervals: [{start, end, label?}]` | FAIL `SUBTITLE_SPEECH_UNCOVERED` when, inside a stretch with no cue and no extra covered interval, speech runs longer than `max_uncovered_speech_sec` (first word start to last word end, clipped to the stretch) |
-| `subtitle.no_forbidden_line_start` | `forbidden_line_start_pos` (any of the labels above), `forbidden_line_start_phrases` | FAIL `SUBTITLE_FORBIDDEN_LINE_START` when a line starts with a word whose `pos` is listed, or with a listed phrase |
-| `subtitle.total_chars_within_limit` | `max_total_chars` | FAIL `SUBTITLE_CUE_TOO_MANY_CHARS` when a cue has more characters |
-| `subtitle.cue_chars_meet_minimum` | `min_cue_chars` | **WARN** `SUBTITLE_CUE_TOO_FEW_CHARS` when a non-empty cue has fewer characters (short replies are legitimate; empty cues are `subtitle.no_empty_cues`' job) |
+| check_id                                     | rule field(s)                                                                               | status / finding                                                                                                                                                                                                  |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `subtitle.cue_boundaries_on_word_boundaries` | `transcript`, `word_boundary_tolerance_sec`                                                 | FAIL `SUBTITLE_CUE_BOUNDARY_INSIDE_WORD` when a cue start or end lies inside a word by more than the tolerance at both edges (`word.start + tol < t < word.end - tol`)                                            |
+| `subtitle.cue_not_early`                     | `transcript`, `max_cue_lead_sec`                                                            | FAIL `SUBTITLE_CUE_EARLY` when the first word assigned to a cue starts more than `max_cue_lead_sec` after the cue appears (exactly the limit passes); cues with no words are counted in `cues_without_speech`     |
+| `subtitle.speech_covered`                    | `transcript`, `max_uncovered_speech_sec`, `extra_covered_intervals: [{start, end, label?}]` | FAIL `SUBTITLE_SPEECH_UNCOVERED` when, inside a stretch with no cue and no extra covered interval, speech runs longer than `max_uncovered_speech_sec` (first word start to last word end, clipped to the stretch) |
+| `subtitle.no_forbidden_line_start`           | `forbidden_line_start_pos` (any of the labels above), `forbidden_line_start_phrases`        | FAIL `SUBTITLE_FORBIDDEN_LINE_START` when a line starts with a word whose `pos` is listed, or with a listed phrase                                                                                                |
+| `subtitle.total_chars_within_limit`          | `max_total_chars`                                                                           | FAIL `SUBTITLE_CUE_TOO_MANY_CHARS` when a cue has more characters                                                                                                                                                 |
+| `subtitle.cue_chars_meet_minimum`            | `min_cue_chars`                                                                             | **WARN** `SUBTITLE_CUE_TOO_FEW_CHARS` when a non-empty cue has fewer characters (short replies are legitimate; empty cues are `subtitle.no_empty_cues`' job)                                                      |
 
 `subtitle.no_forbidden_line_start` looks at **each line** of each cue,
 not only the first. The phrase part needs no transcript: a phrase
@@ -708,11 +710,11 @@ Combines the video/audio/subtitle checks above (each only if the caller
 supplies `require_video`/`require_audio`/`require_subtitle` and/or a
 nested `video`/`audio`/`subtitle` rule) with delivery-specific checks:
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `delivery.file_size_within_limit` | `min_size_bytes`, `max_size_bytes` | `DELIVERY_FILE_TOO_SMALL` / `DELIVERY_FILE_TOO_LARGE` |
-| `delivery.extension_matches_expected` | `expected_extension` | `DELIVERY_EXTENSION_MISMATCH` |
-| `delivery.container_matches_expected` | `expected_container` | `DELIVERY_CONTAINER_MISMATCH` |
+| check_id                              | rule field(s)                      | finding                                               |
+| ------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
+| `delivery.file_size_within_limit`     | `min_size_bytes`, `max_size_bytes` | `DELIVERY_FILE_TOO_SMALL` / `DELIVERY_FILE_TOO_LARGE` |
+| `delivery.extension_matches_expected` | `expected_extension`               | `DELIVERY_EXTENSION_MISMATCH`                         |
+| `delivery.container_matches_expected` | `expected_container`               | `DELIVERY_CONTAINER_MISMATCH`                         |
 
 A delivery-level `require_video` / `require_audio` / `require_subtitle`
 folds into the corresponding sub-rule's own requirement field unless the
@@ -743,11 +745,11 @@ e.g., two subtitle artifacts in the same package don't collide.
 **Checks** (per artifact, only for artifact ids named in
 `rules.delivery_package.artifacts`):
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `delivery_package.artifact_present` | `required` (default `true`) | `DELIVERY_PACKAGE_ARTIFACT_MISSING` |
-| `delivery_package.artifact_size_within_limit` | `min_size_bytes` | `DELIVERY_PACKAGE_ARTIFACT_TOO_SMALL` |
-| `delivery_package.artifact_extension_matches_expected` | `expected_extension` | `DELIVERY_PACKAGE_ARTIFACT_EXTENSION_MISMATCH` |
+| check_id                                               | rule field(s)               | finding                                        |
+| ------------------------------------------------------ | --------------------------- | ---------------------------------------------- |
+| `delivery_package.artifact_present`                    | `required` (default `true`) | `DELIVERY_PACKAGE_ARTIFACT_MISSING`            |
+| `delivery_package.artifact_size_within_limit`          | `min_size_bytes`            | `DELIVERY_PACKAGE_ARTIFACT_TOO_SMALL`          |
+| `delivery_package.artifact_extension_matches_expected` | `expected_extension`        | `DELIVERY_PACKAGE_ARTIFACT_EXTENSION_MISMATCH` |
 
 A nested `video` / `audio` / `subtitle` rule on a `DeliveryArtifactRule`
 runs the same checks as the standalone `kind`s above, against that one
@@ -756,15 +758,15 @@ artifact in the package.
 
 ### Cross-artifact validation (`rules.delivery_package.cross_artifact`)
 
-Typed relationship rules comparing *different* artifacts against each
+Typed relationship rules comparing _different_ artifacts against each
 other - never a string comparison or LLM judgment (ADR-011,
 `docs/decisions.md`). Both operate purely on measurements each artifact's
 own gathering already produced.
 
-| check_id | rule field(s) | finding |
-|---|---|---|
-| `delivery_package.duration_consistent` | `cross_artifact.duration_consistency[].{artifact_ids, max_delta_sec}` | `DELIVERY_PACKAGE_DURATION_MISMATCH` |
-| `delivery_package.dependency_satisfied` | `cross_artifact.dependencies[].{artifact_id, requires_artifact_id}` | `DELIVERY_PACKAGE_DEPENDENCY_MISSING` |
+| check_id                                | rule field(s)                                                         | finding                               |
+| --------------------------------------- | --------------------------------------------------------------------- | ------------------------------------- |
+| `delivery_package.duration_consistent`  | `cross_artifact.duration_consistency[].{artifact_ids, max_delta_sec}` | `DELIVERY_PACKAGE_DURATION_MISMATCH`  |
+| `delivery_package.dependency_satisfied` | `cross_artifact.dependencies[].{artifact_id, requires_artifact_id}`   | `DELIVERY_PACKAGE_DEPENDENCY_MISSING` |
 
 `duration_consistency` compares `container.duration_sec`
 (video/audio artifacts) or `subtitle.duration_sec` (subtitle artifacts)

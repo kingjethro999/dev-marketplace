@@ -13,8 +13,17 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
-import { AGENT_SOURCES, findByPrompt, readManifest } from "../../../scripts/lib/manifest.mjs";
-import { agentWritePath, recordInManifest, voicePaths, writtenAssets } from "./media-record.mjs";
+import {
+  AGENT_SOURCES,
+  findByPrompt,
+  readManifest,
+} from "../../../scripts/lib/manifest.mjs";
+import {
+  agentWritePath,
+  recordInManifest,
+  voicePaths,
+  writtenAssets,
+} from "./media-record.mjs";
 
 const noBgm = { bgm: null, bgmFields: { bgm_pending: false } };
 
@@ -38,14 +47,16 @@ test("a voice run leaves a manifest entry marked generated", (t) => {
   assert.deepEqual(recordInManifest(dir, assets), []);
 
   assert.deepEqual(
-    readManifest(dir).map(({ path, type, source, description, duration, provenance }) => ({
-      path,
-      type,
-      source,
-      description,
-      duration,
-      provenance,
-    })),
+    readManifest(dir).map(
+      ({ path, type, source, description, duration, provenance }) => ({
+        path,
+        type,
+        source,
+        description,
+        duration,
+        provenance,
+      }),
+    ),
     [
       {
         path: "assets/voice/01.wav",
@@ -60,7 +71,13 @@ test("a voice run leaves a manifest entry marked generated", (t) => {
 });
 
 const voiceLine = (intent, duration) => [
-  { path: "assets/voice/01.wav", type: "voice", source: "generated", intent, duration },
+  {
+    path: "assets/voice/01.wav",
+    type: "voice",
+    source: "generated",
+    intent,
+    duration,
+  },
 ];
 
 test("a rerun that writes the same take keeps one record, and a new length is a new take", (t) => {
@@ -84,7 +101,10 @@ test("a rerun with new text records the new take, and the old text no longer fin
   recordInManifest(dir, voiceLine("Welcome back to the show", 3.5));
 
   assert.deepEqual(
-    readManifest(dir).map(({ description, duration }) => [description, duration]),
+    readManifest(dir).map(({ description, duration }) => [
+      description,
+      duration,
+    ]),
     [
       ["Hello world", 1.3],
       ["Welcome back to the show", 3.5],
@@ -94,7 +114,10 @@ test("a rerun with new text records the new take, and the old text no longer fin
   const index = readFileSync(join(dir, ".media/index.md"), "utf8");
   assert.match(index, /Welcome back to the show/);
   assert.doesNotMatch(index, /Hello world/);
-  assert.equal(findByPrompt(dir, "Welcome back to the show", "voice")?.path, "assets/voice/01.wav");
+  assert.equal(
+    findByPrompt(dir, "Welcome back to the show", "voice")?.path,
+    "assets/voice/01.wav",
+  );
 });
 
 test("music and sound effects are marked by where they came from", () => {
@@ -126,12 +149,22 @@ test("a rerun of an Openverse sound effect writes over its own file, not a numbe
   mkdirSync(join(dir, "assets/sfx"), { recursive: true });
   const anomalies = [];
   for (let run = 0; run < 3; run++) {
-    const file = agentWritePath(dir, "assets/sfx/door-knock.mp3", { anomalies });
+    const file = agentWritePath(dir, "assets/sfx/door-knock.mp3", {
+      anomalies,
+    });
     writeFileSync(join(dir, file), "knock");
-    const sfx = [{ file, name: "door knock", source: "openverse", duration_s: 1 }];
+    const sfx = [
+      { file, name: "door knock", source: "openverse", duration_s: 1 },
+    ];
     recordInManifest(
       dir,
-      writtenAssets({ only: new Set(["sfx"]), lines: [], voices: [], sfx, ...noBgm }),
+      writtenAssets({
+        only: new Set(["sfx"]),
+        lines: [],
+        voices: [],
+        sfx,
+        ...noBgm,
+      }),
     );
   }
 
@@ -164,17 +197,31 @@ test("a file that cannot be recorded becomes an anomaly, not a failure", (t) => 
   ]);
 
   assert.equal(anomalies.length, 1);
-  assert.match(anomalies[0], /^assets\/voice\/01\.wav: not recorded in the media manifest/);
+  assert.match(
+    anomalies[0],
+    /^assets\/voice\/01\.wav: not recorded in the media manifest/,
+  );
 });
 
 test("the engine writes over only its own files, else the next free name", (t) => {
   const dir = project(t);
   mkdirSync(join(dir, "assets/sfx"), { recursive: true });
-  const names = ["mine", "made", "adopted", "twice", "twice-2", "kept", "kept-2"];
-  for (const name of names) writeFileSync(join(dir, `assets/sfx/${name}.mp3`), name);
+  const names = [
+    "mine",
+    "made",
+    "adopted",
+    "twice",
+    "twice-2",
+    "kept",
+    "kept-2",
+  ];
+  for (const name of names)
+    writeFileSync(join(dir, `assets/sfx/${name}.mp3`), name);
   for (const path of ["assets/sfx/made.mp3", "assets/sfx/kept-2.mp3"])
     recordInManifest(dir, [{ path, type: "sfx", source: "search" }]);
-  recordInManifest(dir, [{ path: "assets/sfx/adopted.mp3", type: "sfx", source: "existing" }]);
+  recordInManifest(dir, [
+    { path: "assets/sfx/adopted.mp3", type: "sfx", source: "existing" },
+  ]);
   const anomalies = [];
   const at = (name, reusable) =>
     agentWritePath(dir, `assets/sfx/${name}.mp3`, { anomalies, reusable });
@@ -223,7 +270,11 @@ test("two spoken lines never share a file when one's name is taken by the person
 test("a line id that is not a plain file name stops the run before any file is picked", (t) => {
   const dir = project(t);
   for (const id of ["../../x", "a/b", "a\\b", "C:x", "..", "."]) {
-    assert.throws(() => voicePaths(dir, [{ id, text: "Hello" }], []), /must be a plain name/, id);
+    assert.throws(
+      () => voicePaths(dir, [{ id, text: "Hello" }], []),
+      /must be a plain name/,
+      id,
+    );
   }
   assert.equal(existsSync(join(dirname(dir), "x.wav")), false);
   assert.equal(existsSync(join(dir, "assets")), false);
@@ -262,7 +313,9 @@ test("a link where a voice file goes is not written through, whatever the manife
   writeFileSync(join(outside, "theirs.wav"), "another project's voice");
   mkdirSync(join(dir, "assets/voice"), { recursive: true });
   symlinkSync(join(outside, "theirs.wav"), join(dir, "assets/voice/01.wav"));
-  recordInManifest(dir, [{ path: "assets/voice/01.wav", type: "voice", source: "generated" }]);
+  recordInManifest(dir, [
+    { path: "assets/voice/01.wav", type: "voice", source: "generated" },
+  ]);
   const anomalies = [];
   const paths = voicePaths(dir, [{ id: "01", text: "Hello" }], anomalies);
   assert.equal(paths.get("01"), "assets/voice/01-2.wav");
@@ -274,7 +327,9 @@ test("a record never takes the id of a download still in flight", (t) => {
   mkdirSync(join(dir, ".media/audio/bgm"), { recursive: true });
   writeFileSync(join(dir, ".media/audio/bgm/bgm_001.mp3"), "");
 
-  recordInManifest(dir, [{ path: "assets/bgm/track.wav", type: "bgm", source: "generated" }]);
+  recordInManifest(dir, [
+    { path: "assets/bgm/track.wav", type: "bgm", source: "generated" },
+  ]);
 
   assert.deepEqual(
     readManifest(dir).map(({ id }) => id),
@@ -288,7 +343,14 @@ test("a recording line is recorded as your own recording, still an engine-writte
   const [asset] = writtenAssets({
     only: new Set(["tts"]),
     lines: [{ id: "01", audio: "take.m4a" }],
-    voices: [{ id: "01", path: "assets/voice/01.wav", duration_s: 2, source: "recording" }],
+    voices: [
+      {
+        id: "01",
+        path: "assets/voice/01.wav",
+        duration_s: 2,
+        source: "recording",
+      },
+    ],
     ttsProvider: "recording",
   });
 
@@ -321,7 +383,10 @@ test("a link at .media/index.md is replaced, and the file it named is untouched"
   assert.deepEqual(recordInManifest(dir, [voiceAsset("Hello")]), []);
   assert.equal(readFileSync(file, "utf8"), "theirs");
   assert.equal(lstatSync(join(dir, ".media/index.md")).isSymbolicLink(), false);
-  assert.match(readFileSync(join(dir, ".media/index.md"), "utf8"), /assets\/voice\/01\.wav +Hello/);
+  assert.match(
+    readFileSync(join(dir, ".media/index.md"), "utf8"),
+    /assets\/voice\/01\.wav +Hello/,
+  );
 });
 
 test("a link at .media/manifest.jsonl is not appended through", (t) => {
@@ -346,8 +411,12 @@ test("a .media folder that links out of the project gets nothing written", (t) =
 
 test("a line break in a description stays on its record's line of the index", (t) => {
   const dir = project(t);
-  recordInManifest(dir, [voiceAsset("Hello\nvoice_999  voice  —  —  forged.wav  injected")]);
-  const index = readFileSync(join(dir, ".media/index.md"), "utf8").split("\n").filter(Boolean);
+  recordInManifest(dir, [
+    voiceAsset("Hello\nvoice_999  voice  —  —  forged.wav  injected"),
+  ]);
+  const index = readFileSync(join(dir, ".media/index.md"), "utf8")
+    .split("\n")
+    .filter(Boolean);
   assert.equal(index.length, 3);
   assert.match(index[2], /Hello voice_999 .*injected$/);
 });

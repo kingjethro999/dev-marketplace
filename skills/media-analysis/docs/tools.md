@@ -6,22 +6,22 @@ publishes `algorithm_version`, the measurement version that keys its cache (READ
 Only implemented tools are declared (`media-analysis contract --json`); the registry refuses to start if the code
 and the contract disagree.
 
-| tool id | kinds | required capabilities | executes |
-|---|---|---|---|
-| `media-analysis/probe` | `media_probe` | ffprobe | ffprobe `-show_entries format,stream` |
-| `media-analysis/streams` | `stream_layout` | ffprobe | same probe |
-| `media-analysis/video` | `video_format` | ffprobe | probe + ffprobe `-show_packets` of the selected video stream |
-| `media-analysis/audio` | `audio_format` | ffprobe | probe |
-| `media-analysis/timing` | `duration`, `timing` | ffprobe | probe (+ `-show_packets` of all streams for `timing`) |
-| `media-analysis/silence` | `silence` | ffprobe, ffmpeg, filter:silencedetect | probe + ffmpeg `-af silencedetect -f null -` |
-| `media-analysis/loudness` | `loudness` | ffprobe, ffmpeg, filter:ebur128 | probe + ffmpeg `-af ebur128=peak=true -f null -` |
-| `media-analysis/integrity` | `integrity` | ffprobe, ffmpeg | probe + ffmpeg full decode `-f null -` + `-show_packets` |
-| `media-analysis/scenes` | `scene_detection` | ffprobe, ffmpeg, filter:scdet | probe + ffmpeg `-vf scdet,metadata=print -f null -` |
-| `media-analysis/noise` | `noise_floor` | ffprobe, ffmpeg, filter:astats | probe + ffmpeg `-af [pan,]asetnsamples,astats=reset=1,ametadata=print -f null -` |
-| `media-analysis/style` | `edit_style` | ffprobe, ffmpeg, filter:scdet, filter:ebur128, filter:silencedetect, filter:edgedetect | probe + ffmpeg `-vf scdet,metadata=print -f null -` + each text subtitle stream `-c:s ass -f ass -` (stdout) + `-af ebur128,silencedetect -f null -` + frames `fps,scale,edgedetect,hstack -f rawvideo -` (stdout) |
-| `media-analysis/vad` | `speech_regions` | ffprobe, ffmpeg (+ optional extra `vad`: onnxruntime, numpy) | probe + ffmpeg `-af [pan,]aresample=16000 -ac 1 -f f32le -` (stdout) into the voice-activity model in-process |
-| `media-analysis/events` | `audio_events` | ffprobe, ffmpeg (+ optional extra `events`: onnxruntime, numpy) | probe + ffmpeg `-af [pan,]aresample=16000 -ac 1 -f f32le -` (stdout) into the audio-event classifier in-process |
-| `media-analysis/signals` | `highlight_signals` | ffprobe, ffmpeg, filter:astats, filter:scdet | probe + ffmpeg `-af aresample,aformat,highpass,lowpass,asetnsamples,astats=reset=1,ametadata=print -f null -` + `-vf scdet,metadata=print -f null -` |
+| tool id                    | kinds                | required capabilities                                                                  | executes                                                                                                                                                                                                           |
+| -------------------------- | -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `media-analysis/probe`     | `media_probe`        | ffprobe                                                                                | ffprobe `-show_entries format,stream`                                                                                                                                                                              |
+| `media-analysis/streams`   | `stream_layout`      | ffprobe                                                                                | same probe                                                                                                                                                                                                         |
+| `media-analysis/video`     | `video_format`       | ffprobe                                                                                | probe + ffprobe `-show_packets` of the selected video stream                                                                                                                                                       |
+| `media-analysis/audio`     | `audio_format`       | ffprobe                                                                                | probe                                                                                                                                                                                                              |
+| `media-analysis/timing`    | `duration`, `timing` | ffprobe                                                                                | probe (+ `-show_packets` of all streams for `timing`)                                                                                                                                                              |
+| `media-analysis/silence`   | `silence`            | ffprobe, ffmpeg, filter:silencedetect                                                  | probe + ffmpeg `-af silencedetect -f null -`                                                                                                                                                                       |
+| `media-analysis/loudness`  | `loudness`           | ffprobe, ffmpeg, filter:ebur128                                                        | probe + ffmpeg `-af ebur128=peak=true -f null -`                                                                                                                                                                   |
+| `media-analysis/integrity` | `integrity`          | ffprobe, ffmpeg                                                                        | probe + ffmpeg full decode `-f null -` + `-show_packets`                                                                                                                                                           |
+| `media-analysis/scenes`    | `scene_detection`    | ffprobe, ffmpeg, filter:scdet                                                          | probe + ffmpeg `-vf scdet,metadata=print -f null -`                                                                                                                                                                |
+| `media-analysis/noise`     | `noise_floor`        | ffprobe, ffmpeg, filter:astats                                                         | probe + ffmpeg `-af [pan,]asetnsamples,astats=reset=1,ametadata=print -f null -`                                                                                                                                   |
+| `media-analysis/style`     | `edit_style`         | ffprobe, ffmpeg, filter:scdet, filter:ebur128, filter:silencedetect, filter:edgedetect | probe + ffmpeg `-vf scdet,metadata=print -f null -` + each text subtitle stream `-c:s ass -f ass -` (stdout) + `-af ebur128,silencedetect -f null -` + frames `fps,scale,edgedetect,hstack -f rawvideo -` (stdout) |
+| `media-analysis/vad`       | `speech_regions`     | ffprobe, ffmpeg (+ optional extra `vad`: onnxruntime, numpy)                           | probe + ffmpeg `-af [pan,]aresample=16000 -ac 1 -f f32le -` (stdout) into the voice-activity model in-process                                                                                                      |
+| `media-analysis/events`    | `audio_events`       | ffprobe, ffmpeg (+ optional extra `events`: onnxruntime, numpy)                        | probe + ffmpeg `-af [pan,]aresample=16000 -ac 1 -f f32le -` (stdout) into the audio-event classifier in-process                                                                                                    |
+| `media-analysis/signals`   | `highlight_signals`  | ffprobe, ffmpeg, filter:astats, filter:scdet                                           | probe + ffmpeg `-af aresample,aformat,highpass,lowpass,asetnsamples,astats=reset=1,ametadata=print -f null -` + `-vf scdet,metadata=print -f null -`                                                               |
 
 Every analyzer runs ffprobe at most once per request (shared context). Stream ordinals (`stream` parameter) follow
 ffmpeg's `0:v:N` / `0:a:N` numbering; attached pictures (cover art) are not video streams.
@@ -98,7 +98,7 @@ never normalised (ffmpeg-skill/loudness does that).
 `status` (PASS / WARN / FAIL), `reasons[]`, `checks{decode, frames, timestamps}`.
 
 - `decode`: full decode of all streams; `exit_code`, `errors{error_line_count, categories{missing_reference,
-  corrupt_data, timestamp, packet_submit, other}, samples[]}` (pointer addresses stripped, ≤ `max_error_lines` samples).
+corrupt_data, timestamp, packet_submit, other}, samples[]}` (pointer addresses stripped, ≤ `max_error_lines` samples).
   Any error line or a non-zero exit → FAIL.
 - `frames`: `expected_video_frames` (container `nb_frames` of the first video stream), `decoded_video_frames`,
   `decoded_time`; fewer decoded than declared → WARN; `not_performed` without a video stream or without `nb_frames`.
@@ -211,37 +211,37 @@ threshold, burst_gap, burst_min_cuts, unit}, method` (ADR-036). No model.
 
 - `video`: `status` (`measured` / `not_performed` with `reason` when the stream is missing or has no frame rate),
   `stream_index, stream_ordinal, fps, frame_count` (frames scdet saw), `duration`, `threshold, min_shot_duration,
-  min_shot_frames`, `cut_count, cuts_per_minute, shot_count`, `shot_frames` and `shot_seconds` (`min, p10, p25,
-  median, p75, p90, max, mean`: the median averages the two middle shots, the other percentiles are nearest-rank),
+min_shot_frames`, `cut_count, cuts_per_minute, shot_count`, `shot_frames` and `shot_seconds` (`min, p10, p25,
+median, p75, p90, max, mean`: the median averages the two middle shots, the other percentiles are nearest-rank),
   `shot_length_histogram[{from_seconds, to_seconds, count}]` (edges 0, 0.5, 1, 2, 4, 8, 16 s, the last open),
   `shots[{index, start_frame, frames, start, end, seconds}]`. A cut is the frame scdet flags; a cut closer than
   `min_shot_duration` (rounded to frames) to the previous kept cut is dropped. Shot lengths are frame counts, so the
   measurement is exact to the frame on hard cuts.
 - `subtitles`: `soft_stream_count`, `present` (a text subtitle stream with at least one event), `streams[{stream_index,
-  stream_ordinal, codec, language, status, events, events_per_minute, coverage_share, event_seconds, positions{bottom,
-  middle, top}, dominant_position}]`, and the first measured stream's `events_per_minute, coverage_share,
-  dominant_position` (`summary_stream_index`). Text streams (SubRip, ASS / SSA, mov_text, WebVTT) are read as ASS;
+stream_ordinal, codec, language, status, events, events_per_minute, coverage_share, event_seconds, positions{bottom,
+middle, top}, dominant_position}]`, and the first measured stream's `events_per_minute, coverage_share,
+dominant_position` (`summary_stream_index`). Text streams (SubRip, ASS / SSA, mov_text, WebVTT) are read as ASS;
   the position of an event is its style's `Alignment`, overridden by `\an` / `\a` and by `\pos` / `\move` (y / PlayResY:
   top third, middle, bottom third). Bitmap streams (PGS, DVD) are `not_performed`.
   `burned_in` (ADR-033, parameter `burned_in_interval`, default 1.0 s, 0 = off → `not_performed`; a stream shorter than
   the interval yields no sampled frame → `not_performed` with `frames_sampled: 0`, never zeros): `status, interval,
-  frames_sampled, frames_with_text, present, coverage_share` (share of sampled frames with text), `switches,
-  switches_per_minute` (text appearing, or its regions moving / changing in number), `positions{vertical{top, middle,
-  bottom}, horizontal{left, center, right}}` (per region and frame), `dominant_position`, `text_height_ratio{median,
-  min, max}` (text height over frame height, outline included), `regions_per_frame{mean, max}`,
+frames_sampled, frames_with_text, present, coverage_share` (share of sampled frames with text), `switches,
+switches_per_minute` (text appearing, or its regions moving / changing in number), `positions{vertical{top, middle,
+bottom}, horizontal{left, center, right}}` (per region and frame), `dominant_position`, `text_height_ratio{median,
+min, max}` (text height over frame height, outline included), `regions_per_frame{mean, max}`,
   `approx_chars_per_frame{median, max}` (width / 0.55 line heights: an estimate), `band_share` / `outline_share` (share
   of regions with a box behind the text / a rim around it, among those where it could be told), `analysis_width,
-  analysis_height, stream_index, method`. Frames are scaled to 480 px wide; an edge map (`edgedetect`) gives rows
+analysis_height, stream_index, method`. Frames are scaled to 480 px wide; an edge map (`edgedetect`) gives rows
   with many separate edge runs (text lines, 2–20 % of the height), whose edge columns, joined across word-sized gaps,
   are regions. No OCR: any text in the picture counts, and very detailed pictures can look like text.
 - `audio`: `status, stream_index, stream_ordinal, duration, integrated_lufs, loudness_range_lu, true_peak_dbtp,
-  integrated_below_absolute_gate, silence_threshold_db, silence_min_duration, silence_share, active_share,
-  longest_silence, silence_count`, `music_bed` (always `not_measured`).
+integrated_below_absolute_gate, silence_threshold_db, silence_min_duration, silence_share, active_share,
+longest_silence, silence_count`, `music_bed` (always `not_measured`).
 - The diff also compares `subtitles.burned_in.{coverage_share, switches_per_minute, text_height_ratio.median,
-  regions_per_frame.mean, approx_chars_per_frame.median, band_share, outline_share}` and `{present, dominant_position}`.
+regions_per_frame.mean, approx_chars_per_frame.median, band_share, outline_share}` and `{present, dominant_position}`.
 - `media-analysis style diff <reference> <candidate> --json` → `{schema: media-analysis/edit-style-diff@1, direction:
-  "candidate - reference", compared, different[], items[{metric, status, reference, candidate, difference, relative,
-  equal}]}`; a metric missing on either side is `status: unavailable` with `missing_in`, never 0. Inputs may be a
+"candidate - reference", compared, different[], items[{metric, status, reference, candidate, difference, relative,
+equal}]}`; a metric missing on either side is `status: unavailable` with `missing_in`, never 0. Inputs may be a
   saved profile Observation (`style profile --out`), its `data`, or a response document with one `edit_style`
   Observation. The diff states differences; it does not say which edit is better.
 
@@ -253,11 +253,11 @@ allowed input root and the index confined to the workspace.
 
 - `library index <folder> --index <file> [--tags <file>] [--cache-dir DIR] [--timeout S] [--workspace DIR] --json` →
   `{schema: media-analysis/library-scan@1, index, root, clip_count, report{analysed[], reused[], removed[],
-  failed[{path, code, message}], external_tags_dropped[]}, analyzer_executions}`.
+failed[{path, code, message}], external_tags_dropped[]}, analyzer_executions}`.
 - Index (`media-analysis/library-index@1`): `root, updated_at, skill_version, clip_count, clips[], external_tags{path:
-  {tags, source, fingerprint}}, failed[]`. A clip: `path` (relative, `/`), `fingerprint` (sha256), `file_size`,
+{tags, source, fingerprint}}, failed[]`. A clip: `path` (relative, `/`), `fingerprint` (sha256), `file_size`,
   `mtime_ns`, `duration`, `container`, `size`, `video{codec, width, height, fps, orientation, resolution_class,
-  fps_class}` or null, `shots{count, cut_count, longest_shot_seconds}` or null, `representative_time` (middle of the
+fps_class}` or null, `shots{count, cut_count, longest_shot_seconds}` or null, `representative_time` (middle of the
   longest shot; a time, no image is written), `scene_type` (`single_shot` / `multi_shot` / `audio_only`),
   `audio{codec, channels, sample_rate, integrated_lufs, silent}` or null, `measured_tags[]`, `external_tags[]`,
   `tags[]` (both), `name_words[]` (words of the relative path), `analysed_with{kinds, skill_version}`.
@@ -273,9 +273,9 @@ allowed input root and the index confined to the workspace.
   hashed; anything else is measured again; files no longer present are removed. Hidden files and folders are skipped;
   only media extensions are scanned.
 - `library search --index <file> [--query W]... [--tag T]... [--min-duration S] [--max-duration S] [--orientation O]
-  [--min-height PX] [--has-audio | --no-audio] [--scene-type T] [--limit N] --json` →
+[--min-height PX] [--has-audio | --no-audio] [--scene-type T] [--limit N] --json` →
   `{schema: media-analysis/library-search@1, root, result_count, results[{path, score, matched[{word, tags,
-  name_words}], duration, representative_time, tags}], conditions}`. Every condition must hold; every query word must
+name_words}], duration, representative_time, tags}], conditions}`. Every condition must hold; every query word must
   prefix-match a tag or a path word. `score` = matched words + exact tag matches; ties by path.
 
 ## `highlights` (CLI workflow, ADR-032)
@@ -290,8 +290,8 @@ speaker_changes, keywords}, candidate_count, candidates[], not_measured[{item, r
   Sentences end at a word / segment whose text ends with `. ! ? … 。 ！ ？` (closing quotes and brackets allowed) and
   at every speaker change; with word times the boundaries are word times, otherwise segment times.
 - Candidate = a run of whole sentences lasting `min_length`..`max_length` (default 15..60 s): `{rank, start, end,
-  duration, score, components{energy, energy_lift_db, applause, laughter, keywords, keyword_hits, speaker_edges,
-  speaker_turns_inside}, reasons[], first_sentence, last_sentence, sentence_count, text}`. `start` is the first
+duration, score, components{energy, energy_lift_db, applause, laughter, keywords, keyword_hits, speaker_edges,
+speaker_turns_inside}, reasons[], first_sentence, last_sentence, sentence_count, text}`. `start` is the first
   sentence's start and `end` the last sentence's end, so every boundary is a sentence boundary.
 - Score = Σ weight × component, weights `energy` 1, `applause` 1, `laughter` 1, `keywords` 1, `speaker_edges` 0.25:
   energy = lift / (lift + 6 dB), lift = mean window RMS (dBFS, `--window` 0.5 s, digital silence as −120) of the span

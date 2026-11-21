@@ -15,18 +15,18 @@ qc run <request.json | -> --json [--workspace DIR] [--allowed-input-root DIR]...
 
 ## Request parameters
 
-| Field | Type | Meaning |
-|---|---|---|
-| `operation` | `inspect` \| `check` \| `validate` | measure only, or measure+evaluate rules |
-| `kind` | `video` \| `audio` \| `subtitle` \| `delivery` \| `delivery_package` | what `input` (or `artifacts`) is |
-| `input` | string | path to the primary artifact (not accepted for `kind: delivery_package`) |
-| `subtitle` | string, optional | companion subtitle path (`kind: delivery` only) |
-| `reference_video` | string, optional | companion video path, for duration comparison (`kind: subtitle` only) |
-| `artifacts` | array, optional | `[{artifact_id, artifact_type, path}, ...]` - N named artifacts validated together as one delivery (`kind: delivery_package` only, required and non-empty for it) |
-| `parameters` | object, optional | detection sensitivity overrides (e.g. `silence_threshold_db`) |
-| `rules` | object, optional | typed expectations: `{video, audio, subtitle, delivery, delivery_package}` (see `src/qc_skill/rules.py`) |
-| `cache_policy` | `use` \| `bypass` \| `only` | default `use` |
-| `timeout` | number, optional | seconds of wall clock for the whole request; when it runs out every running ffprobe/ffmpeg is killed with its process group and the call fails with `TIMEOUT` (exit 15, retryable) - ADR-019 |
+| Field             | Type                                                                 | Meaning                                                                                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `operation`       | `inspect` \| `check` \| `validate`                                   | measure only, or measure+evaluate rules                                                                                                                                                      |
+| `kind`            | `video` \| `audio` \| `subtitle` \| `delivery` \| `delivery_package` | what `input` (or `artifacts`) is                                                                                                                                                             |
+| `input`           | string                                                               | path to the primary artifact (not accepted for `kind: delivery_package`)                                                                                                                     |
+| `subtitle`        | string, optional                                                     | companion subtitle path (`kind: delivery` only)                                                                                                                                              |
+| `reference_video` | string, optional                                                     | companion video path, for duration comparison (`kind: subtitle` only)                                                                                                                        |
+| `artifacts`       | array, optional                                                      | `[{artifact_id, artifact_type, path}, ...]` - N named artifacts validated together as one delivery (`kind: delivery_package` only, required and non-empty for it)                            |
+| `parameters`      | object, optional                                                     | detection sensitivity overrides (e.g. `silence_threshold_db`)                                                                                                                                |
+| `rules`           | object, optional                                                     | typed expectations: `{video, audio, subtitle, delivery, delivery_package}` (see `src/qc_skill/rules.py`)                                                                                     |
+| `cache_policy`    | `use` \| `bypass` \| `only`                                          | default `use`                                                                                                                                                                                |
+| `timeout`         | number, optional                                                     | seconds of wall clock for the whole request; when it runs out every running ffprobe/ffmpeg is killed with its process group and the call fails with `TIMEOUT` (exit 15, retryable) - ADR-019 |
 
 Never send `command`, `argv`, `args`, `shell`, `cmd`, `exec`, `executable`,
 `filter`, `filter_complex`, or `env` - the request schema rejects all of
@@ -79,7 +79,7 @@ None has a default threshold; each runs only when its field is set:
   (`SUBTITLE_CUE_BOUNDARY_INSIDE_WORD`), `max_cue_lead_sec` ->
   `subtitle.cue_not_early` (`SUBTITLE_CUE_EARLY`),
   `max_uncovered_speech_sec` (+ `extra_covered_intervals: [{start, end,
-  label?}]` for e.g. emphasis graphics) -> `subtitle.speech_covered`
+label?}]` for e.g. emphasis graphics) -> `subtitle.speech_covered`
   (`SUBTITLE_SPEECH_UNCOVERED`).
 - `forbidden_line_start_pos` (pos labels; needs a transcript with `pos`,
   else UNKNOWN - never guessed) and `forbidden_line_start_phrases`
@@ -120,7 +120,7 @@ and `cover` from the stinger's stinger.json:
 One opt-in loop-seam check for audio (ADR-025), any `AudioRule`:
 
 - `loop_seam: {include_wrap (default true), seams?: [seconds], window_sec?,
-  max_click_ratio?, max_level_diff_db?, max_band_diff_db?}` measures the
+max_click_ratio?, max_level_diff_db?, max_band_diff_db?}` measures the
   wrap (end -> start) and each listed seam: a click ratio (second
   difference at the seam over its 99th percentile around it) ->
   `audio.loop_seam_click_within_limit` (`AUDIO_LOOP_SEAM_CLICK`), the RMS
@@ -136,19 +136,19 @@ any `VideoRule`; pass the values from the material's title.json /
 stinger.json:
 
 - `loop_seam: {window_frames? (default 4), segments?: {in, loop, out},
-  max_seam_ratio?}` -> `video.loop_seam_within_limit`
+max_seam_ratio?}` -> `video.loop_seam_within_limit`
   (`VIDEO_LOOP_SEAM_JUMP`): the loop's last -> first frame step (mean
   |RGB|) over the median step inside it; about 1 when seamless, 2 when a
   frame short. No default limit; a one-frame or undecodable loop is
   UNKNOWN.
 - `alpha_edge: {alpha_mode: straight|premultiplied, times?,
-  max_fringe_px?}` -> `video.alpha_mode_consistent`
+max_fringe_px?}` -> `video.alpha_mode_consistent`
   (`VIDEO_ALPHA_MODE_MISMATCH`: a colour above its alpha in a file
   declared premultiplied) and `video.alpha_edge_clean`
   (`VIDEO_ALPHA_FRINGE`: a dark or light edge wider than the limit when
   composited at the declared mode). No alpha is UNKNOWN.
 - `key_fill: {key_file, tolerance? (default 2/255), max_off_fraction?,
-  key_range?: limited|full}` on the fill -> `video.key_fill_match`
+key_range?: limited|full}` on the fill -> `video.key_fill_match`
   (`VIDEO_KEY_FILL_MISMATCH`): size, rate, frame count, start time and
   timecode first, then every frame (key vs the fill's alpha, or the fill
   black outside the key), with the first differing frame.
@@ -160,7 +160,13 @@ stinger.json:
   "operation": "check",
   "kind": "audio",
   "input": "/workspace/mix.wav",
-  "rules": {"audio": {"integrated_loudness_target_lufs": -16, "integrated_loudness_tolerance_lu": 1.0, "max_true_peak_dbfs": -1.0}}
+  "rules": {
+    "audio": {
+      "integrated_loudness_target_lufs": -16,
+      "integrated_loudness_tolerance_lu": 1.0,
+      "max_true_peak_dbfs": -1.0
+    }
+  }
 }
 ```
 

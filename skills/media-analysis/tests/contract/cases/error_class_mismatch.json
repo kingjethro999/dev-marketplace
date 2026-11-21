@@ -10,7 +10,5 @@
       "value": "FATAL"
     }
   ],
-  "expect_problems": [
-    "errors.classes"
-  ]
+  "expect_problems": ["errors.classes"]
 }

@@ -26,11 +26,15 @@ const TitleCard: React.FC = () => {
     console.log("mounted");
   }, []);
   const _picked = pick("x", [frame]);
-  const opacity = interpolate(frame, [0, 15], [0, 1], { extrapolateRight: "clamp" });
+  const opacity = interpolate(frame, [0, 15], [0, 1], {
+    extrapolateRight: "clamp",
+  });
   const scale = spring({ frame, fps, config: { damping: 12 } });
   return (
     <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
-      <div style={{ fontSize: 72, opacity, transform: `scale(${scale})` }}>Hello</div>
+      <div style={{ fontSize: 72, opacity, transform: `scale(${scale})` }}>
+        Hello
+      </div>
       <Img src={staticFile("logo.png")} />
     </AbsoluteFill>
   );

@@ -6,13 +6,8 @@
       "op": "set_map",
       "path": "security",
       "key": "forbidden_keys",
-      "value": [
-        "command",
-        "argv"
-      ]
+      "value": ["command", "argv"]
     }
   ],
-  "expect_problems": [
-    "security"
-  ]
+  "expect_problems": ["security"]
 }

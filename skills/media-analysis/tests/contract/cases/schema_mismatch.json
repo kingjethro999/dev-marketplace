@@ -8,7 +8,5 @@
       "property": "asset"
     }
   ],
-  "expect_problems": [
-    "schemas.observation: differs"
-  ]
+  "expect_problems": ["schemas.observation: differs"]
 }

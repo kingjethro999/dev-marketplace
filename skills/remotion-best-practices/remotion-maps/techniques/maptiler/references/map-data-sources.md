@@ -35,14 +35,17 @@ Common layer categories include `waterway`, `water`, `transportation`, `boundary
 Replace `YOUR_API_KEY` in `../assets/MapTilerVectorElement.ts` with a MapTiler key.
 
 ```ts
-import {addMapTilerVectorElement, setVectorElementPaint} from "./MapTilerVectorElement";
+import {
+  addMapTilerVectorElement,
+  setVectorElementPaint,
+} from "./MapTilerVectorElement";
 
 addMapTilerVectorElement(map, {
   id: "story-roads",
   sourceLayer: "transportation",
   type: "line",
   filter: ["==", ["get", "class"], "motorway"],
-  layout: {"line-cap": "round", "line-join": "round"},
+  layout: { "line-cap": "round", "line-join": "round" },
   paint: {
     "line-color": "#E8F7FF",
     "line-width": 3,

@@ -4,7 +4,9 @@ import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 
-process.env.HYPERFRAMES_MEDIA_HOME = mkdtempSync(join(tmpdir(), "media-use-compat-home-"));
+process.env.HYPERFRAMES_MEDIA_HOME = mkdtempSync(
+  join(tmpdir(), "media-use-compat-home-"),
+);
 
 function run(scriptsDir, script, args) {
   return execFileSync(process.execPath, [join(scriptsDir, script), ...args], {
@@ -20,8 +22,18 @@ test("published memory scripts run without reaching outside the skill", () => {
   const scriptsDir = join(skillDir, "scripts");
   const projectDir = join(scratchDir, "project");
   try {
-    run(scriptsDir, "prefs.mjs", ["get", "--hyperframes", projectDir, "--json"]);
-    run(scriptsDir, "recipe.mjs", ["list", "--hyperframes", projectDir, "--json"]);
+    run(scriptsDir, "prefs.mjs", [
+      "get",
+      "--hyperframes",
+      projectDir,
+      "--json",
+    ]);
+    run(scriptsDir, "recipe.mjs", [
+      "list",
+      "--hyperframes",
+      projectDir,
+      "--json",
+    ]);
     run(scriptsDir, "transcribe.mjs", ["--help"]);
   } finally {
     rmSync(scratchDir, { recursive: true, force: true });

@@ -8,7 +8,5 @@
       "value": "INFERRED"
     }
   ],
-  "expect_problems": [
-    "provenance"
-  ]
+  "expect_problems": ["provenance"]
 }

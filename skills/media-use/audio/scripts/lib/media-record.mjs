@@ -1,6 +1,10 @@
 import { existsSync, lstatSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
-import { AGENT_SOURCES, latestRecordFor, recordInPlace } from "../../../scripts/lib/manifest.mjs";
+import {
+  AGENT_SOURCES,
+  latestRecordFor,
+  recordInPlace,
+} from "../../../scripts/lib/manifest.mjs";
 import { regenerateIndex } from "../../../scripts/lib/index-gen.mjs";
 import { isPlainProjectPath } from "./project-path.mjs";
 
@@ -15,11 +19,15 @@ export function agentWritePath(
   { anomalies, taken = new Set(), reusable = () => false },
 ) {
   if (!isPlainProjectPath(hyperframesDir, dirname(rel))) {
-    throw new Error(`${dirname(rel)} leads outside the project folder; nothing was written there`);
+    throw new Error(
+      `${dirname(rel)} leads outside the project folder; nothing was written there`,
+    );
   }
   const free = (path) =>
     !taken.has(path) &&
-    !lstatSync(join(hyperframesDir, path), { throwIfNoEntry: false })?.isSymbolicLink() &&
+    !lstatSync(join(hyperframesDir, path), {
+      throwIfNoEntry: false,
+    })?.isSymbolicLink() &&
     (!existsSync(join(hyperframesDir, path)) ||
       reusable(path) ||
       AGENT_SOURCES.includes(latestRecordFor(hyperframesDir, path)?.source));
@@ -38,7 +46,8 @@ export function agentWritePath(
 }
 
 // A line id names its voice file, so it must be one plain file name: no folder, drive or `..`.
-const isPlainFileName = (id) => id !== "" && id !== "." && id !== ".." && !/[/\\:]/.test(id);
+const isPlainFileName = (id) =>
+  id !== "" && id !== "." && id !== ".." && !/[/\\:]/.test(id);
 
 /**
  * Each spoken line's file, picked before lines synthesize concurrently so two never land on one free name.
@@ -47,14 +56,19 @@ const isPlainFileName = (id) => id !== "" && id !== "." && id !== ".." && !/[/\\
 export function voicePaths(hyperframesDir, lines, anomalies) {
   const taken = new Set();
   const paths = new Map();
-  for (const line of lines.filter((l) => String(l.text ?? "").trim() || l.audio)) {
+  for (const line of lines.filter(
+    (l) => String(l.text ?? "").trim() || l.audio,
+  )) {
     const id = String(line.id);
     if (!isPlainFileName(id)) {
       throw new Error(
         `line id ${JSON.stringify(id)} names its voice file, so it must be a plain name: no "/", "\\" or ":", and not empty, "." or ".."`,
       );
     }
-    const rel = agentWritePath(hyperframesDir, `assets/voice/${id}.wav`, { anomalies, taken });
+    const rel = agentWritePath(hyperframesDir, `assets/voice/${id}.wav`, {
+      anomalies,
+      taken,
+    });
     taken.add(rel);
     paths.set(id, rel);
   }
@@ -69,8 +83,18 @@ const SFX_SOURCES = {
 };
 
 // The files one engine run wrote, each with how it was made, for the project's media manifest.
-export function writtenAssets({ only, lines, voices, ttsProvider, bgm, bgmFields, sfx }) {
-  const textById = new Map(lines.map((line) => [String(line.id), String(line.text ?? "").trim()]));
+export function writtenAssets({
+  only,
+  lines,
+  voices,
+  ttsProvider,
+  bgm,
+  bgmFields,
+  sfx,
+}) {
+  const textById = new Map(
+    lines.map((line) => [String(line.id), String(line.text ?? "").trim()]),
+  );
   const assets = [];
   if (only.has("tts")) {
     for (const voice of voices) {
@@ -95,7 +119,9 @@ export function writtenAssets({ only, lines, voices, ttsProvider, bgm, bgmFields
     });
   }
   if (only.has("sfx")) {
-    for (const cue of new Map(sfx.map((entry) => [entry.file, entry])).values()) {
+    for (const cue of new Map(
+      sfx.map((entry) => [entry.file, entry]),
+    ).values()) {
       const { source, provider } = SFX_SOURCES[cue.source];
       assets.push({
         path: cue.file,
@@ -121,10 +147,15 @@ export function recordInManifest(hyperframesDir, assets) {
         source,
         description: intent,
         duration,
-        provenance: { provider: provider || "local", ...(intent && { prompt: intent }) },
+        provenance: {
+          provider: provider || "local",
+          ...(intent && { prompt: intent }),
+        },
       });
     } catch (error) {
-      anomalies.push(`${path}: not recorded in the media manifest (${error.message})`);
+      anomalies.push(
+        `${path}: not recorded in the media manifest (${error.message})`,
+      );
     }
   }
   try {

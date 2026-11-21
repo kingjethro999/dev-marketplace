@@ -9,9 +9,7 @@
   "lspServers": {
     "pyright": {
       "command": "pyright-langserver",
-      "args": [
-        "--stdio"
-      ],
+      "args": ["--stdio"],
       "extensionToLanguage": {
         ".py": "python",
         ".pyi": "python"

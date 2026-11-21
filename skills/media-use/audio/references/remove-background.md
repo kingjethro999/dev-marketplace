@@ -59,7 +59,10 @@ Putting a headline behind a presenter cutout:
 
 <h1 id="headline" style="z-index:2; ...">MAKE IT IN HYPERFRAMES</h1>
 
-<div class="cutout-wrap" style="position:absolute; inset:0; z-index:3; opacity:0">
+<div
+  class="cutout-wrap"
+  style="position:absolute; inset:0; z-index:3; opacity:0"
+>
   <video
     src="presenter.webm"
     data-start="0"

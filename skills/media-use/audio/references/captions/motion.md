@@ -34,7 +34,10 @@ GROUPS.forEach(function (group, gi) {
 
   // Read peak energy for this group's time range
   var startFrame = Math.floor(group.start * AUDIO.fps);
-  var endFrame = Math.min(Math.floor(group.end * AUDIO.fps), AUDIO.totalFrames - 1);
+  var endFrame = Math.min(
+    Math.floor(group.end * AUDIO.fps),
+    AUDIO.totalFrames - 1,
+  );
   var peakBass = 0;
   var peakTreble = 0;
   for (var f = startFrame; f <= endFrame; f++) {
@@ -50,7 +53,11 @@ GROUPS.forEach(function (group, gi) {
     {
       scale: 1 + peakBass * 0.06,
       textShadow:
-        "0 0 " + Math.round(peakTreble * 12) + "px rgba(255,255,255," + peakTreble * 0.4 + ")",
+        "0 0 " +
+        Math.round(peakTreble * 12) +
+        "px rgba(255,255,255," +
+        peakTreble * 0.4 +
+        ")",
       duration: 0.3,
       ease: "power2.out",
     },

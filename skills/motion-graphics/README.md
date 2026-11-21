@@ -57,12 +57,24 @@ A request document (`document.video`/`document.output` are always required; ever
 ```json
 {
   "schema": "motion-graphics/request@1",
-  "video": {"path": "input.mp4"},
-  "output": {"path": "out/output.mp4"},
+  "video": { "path": "input.mp4" },
+  "output": { "path": "out/output.mp4" },
   "elements": [
-    {"id": "title1", "type": "title", "start": 0, "end": 3, "parameters": {"title": "Episode 12", "subtitle": "The math of video"}},
-    {"id": "logo1", "type": "image_overlay", "start": 0, "end": 999, "parameters": {"image_path": "logo.png", "position": "top-right"},
-     "animation": {"kind": "fade", "parameters": {"duration": 1.0}}}
+    {
+      "id": "title1",
+      "type": "title",
+      "start": 0,
+      "end": 3,
+      "parameters": { "title": "Episode 12", "subtitle": "The math of video" }
+    },
+    {
+      "id": "logo1",
+      "type": "image_overlay",
+      "start": 0,
+      "end": 999,
+      "parameters": { "image_path": "logo.png", "position": "top-right" },
+      "animation": { "kind": "fade", "parameters": { "duration": 1.0 } }
+    }
   ]
 }
 ```
@@ -90,14 +102,14 @@ video-production-agent                         motion-graphics-skill
                                                        -> structured response + provenance
 ```
 
-| Skill | Responsibility |
-|---|---|
-| `video-production-agent` | Decides *what* to show, *when*, and *how it should look* (design/timing/content decisions). |
-| **`motion-graphics-skill`** (this repo) | Renders a *given* graphics specification deterministically. No design judgement. |
-| `video-editing-skill` | Cuts, trims, and assembles video. |
-| `color-grading-skill` | Color grading. |
-| `subtitle-skill` | Subtitle generation/translation. |
-| `ffmpeg-skill` | The deterministic media-processing engine every skill above delegates actual ffmpeg execution to. |
+| Skill                                   | Responsibility                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `video-production-agent`                | Decides _what_ to show, _when_, and _how it should look_ (design/timing/content decisions).       |
+| **`motion-graphics-skill`** (this repo) | Renders a _given_ graphics specification deterministically. No design judgement.                  |
+| `video-editing-skill`                   | Cuts, trims, and assembles video.                                                                 |
+| `color-grading-skill`                   | Color grading.                                                                                    |
+| `subtitle-skill`                        | Subtitle generation/translation.                                                                  |
+| `ffmpeg-skill`                          | The deterministic media-processing engine every skill above delegates actual ffmpeg execution to. |
 
 This skill never talks to ffmpeg/ffprobe directly: every render is a typed, argv-only call into ffmpeg-skill's
 `graphics.py` (the title, lower-third, bug, chapter, progress, countdown, sticker, hook and meme templates) or `overlay.py`
@@ -122,21 +134,21 @@ This skill never talks to ffmpeg/ffprobe directly: every render is a typed, argv
 Supported element types today — see `motion-graphics skill --json` (`element_types`) for the authoritative,
 generated list:
 
-| type | delegate | built-in animation |
-|---|---|---|
-| `title` | `ffmpeg-skill/graphics --template title` | fixed 0.3s fade in/out (not configurable) |
-| `lower_third` | `ffmpeg-skill/graphics --template lower-third` | fixed slide-in/out + fade (not configurable) |
-| `text_overlay` | `ffmpeg-skill/overlay --text` | none, or a configurable `fade` |
-| `image_overlay` | `ffmpeg-skill/overlay --image` | none, or a configurable `fade` |
-| `video_overlay` | `ffmpeg-skill/overlay --video` (+ `--chromakey*`) | none at all -- `--video` never applies a fade |
-| `bug` | `ffmpeg-skill/graphics --template bug` | fixed 0.3s fade in/out (not configurable) |
-| `chapter` | `ffmpeg-skill/graphics --template chapter` | fixed 0.3s fade in/out (not configurable) |
-| `progress` | `ffmpeg-skill/graphics --template progress` | none at all -- driven entirely by its own start/end fill, no alpha |
-| `countdown` | `ffmpeg-skill/graphics --template countdown` | fixed, per-digit 0.5s pulse (not configurable) |
-| `sticker` | `ffmpeg-skill/graphics --template sticker` | fixed pop-in (0.25s fade up + rise) and 0.3s fade-out (not configurable) |
-| `hook` | `ffmpeg-skill/graphics --template hook` | none at all -- a bar that empties across the window, no fade |
-| `meme` | `ffmpeg-skill/graphics --template meme` | none at all |
-| `shape` | `ffmpeg-skill/background` (the rectangle as a clip), then `ffmpeg-skill/overlay --video` | none at all -- `--video` never applies a fade |
+| type            | delegate                                                                                 | built-in animation                                                       |
+| --------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `title`         | `ffmpeg-skill/graphics --template title`                                                 | fixed 0.3s fade in/out (not configurable)                                |
+| `lower_third`   | `ffmpeg-skill/graphics --template lower-third`                                           | fixed slide-in/out + fade (not configurable)                             |
+| `text_overlay`  | `ffmpeg-skill/overlay --text`                                                            | none, or a configurable `fade`                                           |
+| `image_overlay` | `ffmpeg-skill/overlay --image`                                                           | none, or a configurable `fade`                                           |
+| `video_overlay` | `ffmpeg-skill/overlay --video` (+ `--chromakey*`)                                        | none at all -- `--video` never applies a fade                            |
+| `bug`           | `ffmpeg-skill/graphics --template bug`                                                   | fixed 0.3s fade in/out (not configurable)                                |
+| `chapter`       | `ffmpeg-skill/graphics --template chapter`                                               | fixed 0.3s fade in/out (not configurable)                                |
+| `progress`      | `ffmpeg-skill/graphics --template progress`                                              | none at all -- driven entirely by its own start/end fill, no alpha       |
+| `countdown`     | `ffmpeg-skill/graphics --template countdown`                                             | fixed, per-digit 0.5s pulse (not configurable)                           |
+| `sticker`       | `ffmpeg-skill/graphics --template sticker`                                               | fixed pop-in (0.25s fade up + rise) and 0.3s fade-out (not configurable) |
+| `hook`          | `ffmpeg-skill/graphics --template hook`                                                  | none at all -- a bar that empties across the window, no fade             |
+| `meme`          | `ffmpeg-skill/graphics --template meme`                                                  | none at all                                                              |
+| `shape`         | `ffmpeg-skill/background` (the rectangle as a clip), then `ffmpeg-skill/overlay --video` | none at all -- `--video` never applies a fade                            |
 
 `bug` is a persistent text watermark in one of the four corners (e.g. `"LIVE"` or `"@handle"`) — its `position` is
 a closed vocabulary of just those four corners (`top-left`/`top-right`/`bottom-left`/`bottom-right`), a strict
@@ -197,10 +209,20 @@ from it (`style_presets`). See ADR-24.
 A theme file holds a brand's colours (primary, secondary, background, text), font, logo and spacing:
 
 ```json
-{"schema": "motion-graphics/theme@1", "name": "acme",
- "colors": {"primary": "0B5FFF", "secondary": "00A3E0", "background": "0F1C2E", "text": "FFFFFF"},
- "font": {"font_file": "fonts/Brand.ttf"}, "logo": {"path": "logo.png", "position": "top-right", "scale_width": 160},
- "spacing": {"margin": 40}, "base_style": "corporate"}
+{
+  "schema": "motion-graphics/theme@1",
+  "name": "acme",
+  "colors": {
+    "primary": "0B5FFF",
+    "secondary": "00A3E0",
+    "background": "0F1C2E",
+    "text": "FFFFFF"
+  },
+  "font": { "font_file": "fonts/Brand.ttf" },
+  "logo": { "path": "logo.png", "position": "top-right", "scale_width": 160 },
+  "spacing": { "margin": 40 },
+  "base_style": "corporate"
+}
 ```
 
 `options.themes` names the files a request may use and `options.theme` picks one; changing that name re-themes every
@@ -228,7 +250,7 @@ template follows it directly. An overlay element follows it when the request giv
 except that ffmpeg-skill treats an explicit `24` (its own default) as not given. Explicit `{x, y}` positions are unaffected.
 
 ```json
-{"options": {"platform": "broadcast"}}
+{ "options": { "platform": "broadcast" } }
 ```
 
 An ffmpeg-skill without `--platform` refuses such a request before anything renders (`ffmpeg_skill_lacks_platform_flag`).
@@ -312,7 +334,7 @@ font. No font is specified at all -> the explicit default `system:dejavu-sans` i
 
 The default DejaVu fonts do not include CJK glyphs — Unicode text renders (this skill never rejects or mangles
 it), but non-Latin scripts need a `font_file` pointing at a CJK-capable font (e.g. Noto Sans CJK) to display
-correctly. This is a font *content* limitation, not a rendering bug; it is the same behavior `ffmpeg-skill/overlay`
+correctly. This is a font _content_ limitation, not a rendering bug; it is the same behavior `ffmpeg-skill/overlay`
 documents for its own `--font-file` option.
 
 ## Text fit and lower thirds from a CSV
@@ -335,7 +357,7 @@ out.mp4 --fit-width 600` prints a request with one fitted lower third per row. S
 survives, threaded through to `--audio-stream` on every `graphics`/`overlay` invocation in the pipeline — useful
 for a dubbed-language or M&E-stem source that carries more than one audio track. Omitted entirely when not set
 (both delegate tools already default to track 0). Bounded structurally to `[0, 63]` to catch a typo; whether a
-*real* input actually has that many tracks is something only `ffmpeg-skill/{graphics,overlay}` can know, so an
+_real_ input actually has that many tracks is something only `ffmpeg-skill/{graphics,overlay}` can know, so an
 out-of-range value for the real input is a `TOOL_ERROR` from the delegate tool itself, never a guess made here
 (`docs/decisions.md` ADR-16).
 

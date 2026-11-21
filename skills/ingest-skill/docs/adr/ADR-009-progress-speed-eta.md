@@ -26,19 +26,20 @@ What constrains it:
    - It never fails the run: every copy is still verified. It runs in every offload, with or without `--progress`.
 3. **`offload --progress` writes JSON lines to stderr**, one event per line, flushed:
 
-   | Event | When | Fields |
-   |---|---|---|
-   | `start` | before the first file | |
-   | `progress` | after a chunk of the source is read, at most every 0.5 s | `file`, `file_bytes`, `file_size`, `destinations[]` (`root`, `bytes_written`, `mb_s`) |
-   | `file` | a file is done | `file`, `file_size`, `status`, `destinations[]` |
-   | `slow_destination` | item 2 | `root`, `dest_mb_s`, `median_mb_s`, `detail` |
-   | `done` | after the manifests and the ASC MHL | `ok`, `destinations[]` |
+   | Event              | When                                                     | Fields                                                                                |
+   | ------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+   | `start`            | before the first file                                    |                                                                                       |
+   | `progress`         | after a chunk of the source is read, at most every 0.5 s | `file`, `file_bytes`, `file_size`, `destinations[]` (`root`, `bytes_written`, `mb_s`) |
+   | `file`             | a file is done                                           | `file`, `file_size`, `status`, `destinations[]`                                       |
+   | `slow_destination` | item 2                                                   | `root`, `dest_mb_s`, `median_mb_s`, `detail`                                          |
+   | `done`             | after the manifests and the ASC MHL                      | `ok`, `destinations[]`                                                                |
 
    Every event also carries `elapsed_s`, `bytes_done`, `bytes_total`, `files_done`, `files_total`, `mb_s` (source bytes read ÷ elapsed) and `eta_s` (bytes left ÷ that rate).
    - `bytes_done` counts the source bytes read, which is also the work of a resume (identical files are read to be hashed).
    - A file that was not read in full (a failed read, a conflict) counts its remaining bytes when it is done. So `bytes_done` **only grows**, and ends at `bytes_total` with `eta_s` 0.
    - The rate includes the read-backs, because they are part of the elapsed time. The ETA is therefore the time the whole offload has left, not only the copying.
    - With `--follow` (ADR-007), `eta_s` is null: the end depends on the recording.
+
 4. **Programmatic use:** `offload(..., progress=callable)` receives each event as a dict. `progress_interval_s` and `slow_min_bytes` can be lowered (tests).
 5. **Not measured:** the speed of the source (the card reader) and of the read-backs, and the appended passes of a growing file under `--follow`.
 

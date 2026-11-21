@@ -64,8 +64,15 @@ to be downloaded and inlined at translation time.
 ### Custom `presentation` in `<TransitionSeries>`
 
 ```tsx
-const customPresentation: PresentationComponent = ({ children, presentationProgress }) => {
-  return <div style={{ filter: `blur(${(1 - presentationProgress) * 20}px)` }}>{children}</div>;
+const customPresentation: PresentationComponent = ({
+  children,
+  presentationProgress,
+}) => {
+  return (
+    <div style={{ filter: `blur(${(1 - presentationProgress) * 20}px)` }}>
+      {children}
+    </div>
+  );
 };
 ```
 

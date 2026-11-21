@@ -34,8 +34,18 @@ export type Emphasis = {
   by: "caller" | "numbers" | "names";
 };
 /** A speech bubble or a comment-style card: the user's text, timing in source seconds. */
-export type Bubble = { text: string; start: number; end: number; side?: "left" | "right" };
-export type CommentCard = { text: string; start: number; end: number; author?: string };
+export type Bubble = {
+  text: string;
+  start: number;
+  end: number;
+  side?: "left" | "right";
+};
+export type CommentCard = {
+  text: string;
+  start: number;
+  end: number;
+  author?: string;
+};
 /** A second recording shown picture-in-picture (analyze.py --pip). offset: seconds after the source's
  * start at which the camera's first frame belongs (measured from both audio tracks, or given). */
 export type Pip = {
@@ -56,15 +66,34 @@ export type Pip = {
  * ffmpeg-skill). The compositions never read it: the source above is already the conformed copy. */
 export type Conform = {
   reasons: ("vfr" | "hdr")[];
-  original: { path: string; name: string; fingerprint: string } & Record<string, unknown>;
+  original: { path: string; name: string; fingerprint: string } & Record<
+    string,
+    unknown
+  >;
   output: string;
-  steps: { reason: "vfr" | "hdr"; tool: string; args: string[]; command: string; notes: string[] }[];
+  steps: {
+    reason: "vfr" | "hdr";
+    tool: string;
+    args: string[];
+    command: string;
+    notes: string[];
+  }[];
   measured: Record<string, unknown>;
 };
-export type Beats = { times: number[]; tempo_bpm: number | null; confidence: number | null; usable: boolean };
+export type Beats = {
+  times: number[];
+  tempo_bpm: number | null;
+  confidence: number | null;
+  usable: boolean;
+};
 export type Highlight = { start: number; end: number };
 /** A lower third: text from the user (options), timing in source seconds. */
-export type LowerThird = { text: string; sub?: string; start: number; end: number };
+export type LowerThird = {
+  text: string;
+  sub?: string;
+  start: number;
+  end: number;
+};
 export type Peak = { time: number; rms: number };
 export type Scene = { start: number; end: number };
 
@@ -138,7 +167,8 @@ export type Options = {
 export const DEFAULT_OPTIONS: Options = {
   accent: "#ffcc00",
   textColor: "#ffffff",
-  fontFamily: "'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans', 'Helvetica Neue', Arial, sans-serif",
+  fontFamily:
+    "'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans', 'Helvetica Neue', Arial, sans-serif",
   captionSize: 0.055,
   captionMargin: null,
   punchIn: 1.12,
@@ -160,7 +190,11 @@ export const DEFAULT_OPTIONS: Options = {
 };
 
 /** Where the camera plays on the source timeline: [from, durationInFrames, trimBefore] in frames. */
-export const pipFrames = (p: Pip, fps: number, total: number): [number, number, number] => {
+export const pipFrames = (
+  p: Pip,
+  fps: number,
+  total: number,
+): [number, number, number] => {
   const from = Math.max(0, secToFrames(p.offset, fps));
   const trimBefore = Math.max(0, secToFrames(-p.offset, fps));
   const end = Math.min(total, secToFrames(p.offset + p.duration, fps));
@@ -168,9 +202,20 @@ export const pipFrames = (p: Pip, fps: number, total: number): [number, number, 
 };
 
 /** [from, durationInFrames] of the card at the start of a chapter (Titled). render.py mirrors this. */
-export const chapterCardFrames = (c: Chapter, fps: number, seconds: number): [number, number] => {
+export const chapterCardFrames = (
+  c: Chapter,
+  fps: number,
+  seconds: number,
+): [number, number] => {
   const from = secToFrames(c.start, fps);
-  return [from, Math.max(1, Math.min(secToFrames(c.end, fps), from + Math.round(fps * seconds)) - from)];
+  return [
+    from,
+    Math.max(
+      1,
+      Math.min(secToFrames(c.end, fps), from + Math.round(fps * seconds)) -
+        from,
+    ),
+  ];
 };
 
 /**
@@ -196,16 +241,24 @@ export type Props = {
   overlay?: boolean;
 };
 
-export const resolveOptions = (o?: Partial<Options>): Options => ({ ...DEFAULT_OPTIONS, ...(o ?? {}) });
+export const resolveOptions = (o?: Partial<Options>): Options => ({
+  ...DEFAULT_OPTIONS,
+  ...(o ?? {}),
+});
 
 export const outputFrame = (p: Props): Frame =>
-  p.frame ?? { width: p.timeline.source.width, height: p.timeline.source.height, fit: "contain" };
+  p.frame ?? {
+    width: p.timeline.source.width,
+    height: p.timeline.source.height,
+    fit: "contain",
+  };
 
 /** Font stack with the staged font (if any) first. */
 export const fontStack = (o: Options, font?: FontAsset | null): string =>
   font ? `'${font.family}', ${o.fontFamily}` : o.fontFamily;
 
-export const secToFrames = (seconds: number, fps: number): number => Math.round(seconds * fps);
+export const secToFrames = (seconds: number, fps: number): number =>
+  Math.round(seconds * fps);
 
 /** Speech ranges, or the whole source when analyze.py found no silence. */
 export const speechRanges = (t: Timeline): Range[] =>
@@ -218,7 +271,8 @@ export const fullLengthFrames = (t: Timeline): number =>
 export const jumpcutFrames = (t: Timeline): number => {
   const fps = t.source.fps;
   const total = speechRanges(t).reduce(
-    (sum, [s, e]) => sum + Math.max(1, secToFrames(e, fps) - secToFrames(s, fps)),
+    (sum, [s, e]) =>
+      sum + Math.max(1, secToFrames(e, fps) - secToFrames(s, fps)),
     0,
   );
   return Math.max(1, total);
@@ -244,7 +298,11 @@ export const retimeCaptions = (t: Timeline): TimedCue[] => {
       if (cb <= ca) continue;
       const from = offset + (ca - a);
       const last = out[out.length - 1];
-      if (last && last.text === c.text && last.from + last.durationInFrames === from) {
+      if (
+        last &&
+        last.text === c.text &&
+        last.from + last.durationInFrames === from
+      ) {
         last.durationInFrames += cb - ca;
       } else {
         out.push({ from, durationInFrames: cb - ca, text: c.text });
@@ -257,19 +315,23 @@ export const retimeCaptions = (t: Timeline): TimedCue[] => {
 
 /** Highlight ranges, or the whole source when analyze.py was not asked for any. */
 export const highlightRanges = (t: Timeline): Range[] =>
-  t.highlights && t.highlights.length > 0 ? t.highlights.map((h) => [h.start, h.end] as Range) : [[0, t.source.duration]];
+  t.highlights && t.highlights.length > 0
+    ? t.highlights.map((h) => [h.start, h.end] as Range)
+    : [[0, t.source.duration]];
 
 export const highlightFrames = (t: Timeline): number => {
   const fps = t.source.fps;
   const total = highlightRanges(t).reduce(
-    (sum, [s, e]) => sum + Math.max(1, secToFrames(e, fps) - secToFrames(s, fps)),
+    (sum, [s, e]) =>
+      sum + Math.max(1, secToFrames(e, fps) - secToFrames(s, fps)),
     0,
   );
   return Math.max(1, total);
 };
 
 /** Usable measured beat times (empty when the grid was not measured or not confident). */
-export const beatTimes = (t: Timeline): number[] => (t.beats && t.beats.usable ? t.beats.times : []);
+export const beatTimes = (t: Timeline): number[] =>
+  t.beats && t.beats.usable ? t.beats.times : [];
 
 /** Fictional sample for Remotion Studio previews; real renders always pass a measured timeline. */
 export const SAMPLE_TIMELINE: Timeline = {

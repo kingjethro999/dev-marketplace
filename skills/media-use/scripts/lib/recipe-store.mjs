@@ -15,7 +15,11 @@ import { regenerateIndex } from "./index-gen.mjs";
 import { mergedPreferences } from "./prefs-store.mjs";
 
 // A filter keeps Node 22 off its native copy, which writes nothing under a non-ASCII path on Windows.
-const NON_ASCII_SAFE_DIR_COPY = { recursive: true, force: true, filter: () => true };
+const NON_ASCII_SAFE_DIR_COPY = {
+  recursive: true,
+  force: true,
+  filter: () => true,
+};
 
 /**
  * Recipes — the heavyweight tier of HyperFrames user memory.
@@ -39,7 +43,12 @@ const FRONTMATTER_CONTENT_KEYS = new Set(["message", "audience", "mode"]);
 
 /** BRIEF.md frontmatter keys that describe this run, not the reusable type —
  * a recipe never locks the run's shape, so these are always asked again. */
-const BRIEF_CONTENT_KEYS = new Set(["flow", "storyboard", "message", "audience"]);
+const BRIEF_CONTENT_KEYS = new Set([
+  "flow",
+  "storyboard",
+  "message",
+  "audience",
+]);
 
 /** Per-frame metadata that is content, not structure. */
 const FRAME_CONTENT_KEYS = new Set([
@@ -83,7 +92,11 @@ function frameTitle(headingLine) {
 }
 
 /** Frontmatter: drop the content keys, keep structure/style keys verbatim. */
-function skeletonFrontmatter(lines, out, contentKeys = FRONTMATTER_CONTENT_KEYS) {
+function skeletonFrontmatter(
+  lines,
+  out,
+  contentKeys = FRONTMATTER_CONTENT_KEYS,
+) {
   if (lines[0]?.trim() !== "---") return 0;
   out.push(lines[0]);
   let i = 1;
@@ -187,7 +200,11 @@ function briefWorkflow(root) {
 function readRecipeJson(dir) {
   try {
     const parsed = JSON.parse(readFileSync(join(dir, "recipe.json"), "utf8"));
-    if (typeof parsed !== "object" || parsed === null || typeof parsed.name !== "string") {
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof parsed.name !== "string"
+    ) {
       return null;
     }
     return parsed;
@@ -209,15 +226,19 @@ export function freezeRecipe({ projectDir, name, workflow, blocks }) {
   const slug = slugifyRecipeName(name);
   const root = resolve(projectDir);
   const fromBrief = briefWorkflow(root);
-  const fromFlag = workflow && String(workflow).trim() ? String(workflow).trim() : undefined;
+  const fromFlag =
+    workflow && String(workflow).trim() ? String(workflow).trim() : undefined;
   // BRIEF.md decides; the flag only covers projects briefed before it existed.
   const resolvedWorkflow = fromBrief ?? fromFlag;
   if (!resolvedWorkflow) {
-    throw new Error("no workflow found — BRIEF.md names none and no --workflow was given");
+    throw new Error(
+      "no workflow found — BRIEF.md names none and no --workflow was given",
+    );
   }
   const frameSpec = join(root, "frame.md");
   const storyboard = join(root, "STORYBOARD.md");
-  if (!existsSync(frameSpec)) throw new Error("no frame.md to freeze — run the design step first");
+  if (!existsSync(frameSpec))
+    throw new Error("no frame.md to freeze — run the design step first");
   if (!existsSync(storyboard)) throw new Error("no STORYBOARD.md to freeze");
 
   const dir = join(projectRecipesDir(root), slug);
@@ -245,11 +266,15 @@ export function freezeRecipe({ projectDir, name, workflow, blocks }) {
     // The bare-key fallback tolerates records made before the store required
     // style_preset to be workflow-scoped.
     style_preset:
-      prefValue(prefs, `style_preset.${resolvedWorkflow}`) ?? prefValue(prefs, "style_preset"),
+      prefValue(prefs, `style_preset.${resolvedWorkflow}`) ??
+      prefValue(prefs, "style_preset"),
     blocks: Array.isArray(blocks) && blocks.length > 0 ? blocks : undefined,
   };
 
-  writeFileSync(join(dir, "recipe.json"), `${JSON.stringify(recipe, null, 2)}\n`);
+  writeFileSync(
+    join(dir, "recipe.json"),
+    `${JSON.stringify(recipe, null, 2)}\n`,
+  );
   cpSync(frameSpec, join(dir, "frame.md"));
   writeFileSync(
     join(dir, "storyboard-skeleton.md"),
@@ -274,7 +299,11 @@ export function freezeRecipe({ projectDir, name, workflow, blocks }) {
     path: `.media/recipes/${slug}/recipe.json`,
     entity: slug,
     description: `recipe: ${slug} (${recipe.workflow}, v${version})`,
-    provenance: { provider: "recipe.freeze", version, source_project: recipe.source_project },
+    provenance: {
+      provider: "recipe.freeze",
+      version,
+      source_project: recipe.source_project,
+    },
   });
   regenerateIndex(root);
 
@@ -283,7 +312,8 @@ export function freezeRecipe({ projectDir, name, workflow, blocks }) {
     const userDir = join(userRecipesDir(), slug);
     mkdirSync(userDir, { recursive: true });
     cpSync(dir, userDir, NON_ASCII_SAFE_DIR_COPY);
-    if (!briefSkeleton) rmSync(join(userDir, "brief-skeleton.md"), { force: true });
+    if (!briefSkeleton)
+      rmSync(join(userDir, "brief-skeleton.md"), { force: true });
   } catch {
     // The project-tier freeze already landed.
   }
@@ -295,7 +325,9 @@ export function freezeRecipe({ projectDir, name, workflow, blocks }) {
     dir,
     briefSkeleton,
     workflow: resolvedWorkflow,
-    workflowOverridden: Boolean(fromBrief && fromFlag && fromBrief !== fromFlag),
+    workflowOverridden: Boolean(
+      fromBrief && fromFlag && fromBrief !== fromFlag,
+    ),
   };
 }
 
@@ -313,8 +345,12 @@ function scanRecipesDir(dir, source) {
 /** Two-tier merged listing (project wins), newest approval first. */
 export function listRecipes({ projectDir, workflow }) {
   const merged = new Map();
-  for (const recipe of scanRecipesDir(userRecipesDir(), "user")) merged.set(recipe.name, recipe);
-  for (const recipe of scanRecipesDir(projectRecipesDir(resolve(projectDir)), "project")) {
+  for (const recipe of scanRecipesDir(userRecipesDir(), "user"))
+    merged.set(recipe.name, recipe);
+  for (const recipe of scanRecipesDir(
+    projectRecipesDir(resolve(projectDir)),
+    "project",
+  )) {
     merged.set(recipe.name, recipe);
   }
   let list = [...merged.values()];

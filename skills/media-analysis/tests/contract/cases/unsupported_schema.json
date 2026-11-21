@@ -8,7 +8,5 @@
       "value": "media-analysis/contract@2"
     }
   ],
-  "expect_problems": [
-    "unsupported schema"
-  ]
+  "expect_problems": ["unsupported schema"]
 }

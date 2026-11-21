@@ -30,20 +30,34 @@ function fixture(t) {
   wav.writeUInt16LE(16, 34);
   wav.write("data", 36);
   wav.writeUInt32LE(4, 40);
-  const audio = { type: "audio", mime_type: "audio/wav", data: wav.toString("base64") };
-  const payload = { status: "completed", steps: [{ type: "model_output", content: [audio] }] };
+  const audio = {
+    type: "audio",
+    mime_type: "audio/wav",
+    data: wav.toString("base64"),
+  };
+  const payload = {
+    status: "completed",
+    steps: [{ type: "model_output", content: [audio] }],
+  };
   return {
     wav,
     audio,
     payload,
-    args: { text: "Hello there.", voiceId: "Kore", wavAbs: join(dir, "voice", "one.wav") },
+    args: {
+      text: "Hello there.",
+      voiceId: "Kore",
+      wavAbs: join(dir, "voice", "one.wav"),
+    },
   };
 }
 
 test("Gemini preserves verbatim text, directs style separately, saves WAV and requests transcription", async (t) => {
   const { wav, payload, args } = fixture(t);
   t.mock.method(globalThis, "fetch", async (url, options) => {
-    assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/interactions");
+    assert.equal(
+      url,
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
+    );
     assert.equal(options.headers["x-goog-api-key"], "test-gemini-key");
     const body = JSON.parse(options.body);
     assert.equal(body.model, GEMINI_TTS_MODEL);
@@ -59,7 +73,11 @@ test("Gemini preserves verbatim text, directs style separately, saves WAV and re
     assert.equal(body.response_format.mime_type, "audio/wav");
     return Response.json(payload);
   });
-  const result = await synthesizeOne({ ...args, provider: "gemini", style: "Warm and calm" });
+  const result = await synthesizeOne({
+    ...args,
+    provider: "gemini",
+    style: "Warm and calm",
+  });
   assert.deepEqual(result, { ok: true, words: null });
   assert.deepEqual(readFileSync(args.wavAbs), wav);
 });
@@ -93,7 +111,10 @@ test("Gemini remains opt-in even with a key and preserves explicitly chosen voic
     "voice_custom",
   );
   delete process.env.GEMINI_API_KEY;
-  assert.throws(() => pickProvider("gemini"), /GEMINI_API_KEY or GOOGLE_API_KEY/);
+  assert.throws(
+    () => pickProvider("gemini"),
+    /GEMINI_API_KEY or GOOGLE_API_KEY/,
+  );
 });
 
 test("invalid config fails before spending a generation request", async (t) => {
@@ -105,14 +126,18 @@ test("invalid config fails before spending a generation request", async (t) => {
     assert.ok(result.error);
   }
   delete process.env.GEMINI_API_KEY;
-  assert.match((await synthesizeGemini(args, deps)).error, /needs GEMINI_API_KEY/);
+  assert.match(
+    (await synthesizeGemini(args, deps)).error,
+    /needs GEMINI_API_KEY/,
+  );
   assert.equal(existsSync(args.wavAbs), false);
 });
 
 test("HTTP and network failures stay actionable without leaking the key", async (t) => {
   const { args } = fixture(t);
   const result = await synthesizeGemini(args, {
-    fetchImpl: async () => new Response("quota exceeded test-gemini-key", { status: 429 }),
+    fetchImpl: async () =>
+      new Response("quota exceeded test-gemini-key", { status: 429 }),
   });
   assert.equal(result.ok, false);
   assert.match(result.error, /HTTP 429: quota exceeded/);
@@ -125,13 +150,19 @@ test("HTTP and network failures stay actionable without leaking the key", async 
   assert.match(timeout.error, /timed out/);
   const socket = await synthesizeGemini(args, {
     fetchImpl: async () => {
-      const cause = Object.assign(new Error("other side closed test-gemini-key"), {
-        code: "UND_ERR_SOCKET",
-      });
+      const cause = Object.assign(
+        new Error("other side closed test-gemini-key"),
+        {
+          code: "UND_ERR_SOCKET",
+        },
+      );
       throw new TypeError("fetch failed", { cause });
     },
   });
-  assert.match(socket.error, /fetch failed \(UND_ERR_SOCKET: other side closed/);
+  assert.match(
+    socket.error,
+    /fetch failed \(UND_ERR_SOCKET: other side closed/,
+  );
   assert.ok(!socket.error.includes("test-gemini-key"));
   assert.equal(existsSync(args.wavAbs), false);
 });
@@ -141,15 +172,21 @@ test("incomplete, missing, raw PCM and malformed audio cannot become a successfu
   const cases = [
     { ...payload, status: "incomplete" },
     { status: "completed", steps: [] },
-    ...[{ ...audio, mime_type: "audio/l16" }, { ...audio, data: "not audio" }, audio].map(
-      (part, i) => ({
-        status: "completed",
-        steps: [{ type: "model_output", content: i === 2 ? [part, part] : [part] }],
-      }),
-    ),
+    ...[
+      { ...audio, mime_type: "audio/l16" },
+      { ...audio, data: "not audio" },
+      audio,
+    ].map((part, i) => ({
+      status: "completed",
+      steps: [
+        { type: "model_output", content: i === 2 ? [part, part] : [part] },
+      ],
+    })),
   ];
   for (const body of cases) {
-    const result = await synthesizeGemini(args, { fetchImpl: async () => Response.json(body) });
+    const result = await synthesizeGemini(args, {
+      fetchImpl: async () => Response.json(body),
+    });
     assert.equal(result.ok, false);
     assert.equal(existsSync(args.wavAbs), false);
   }
@@ -198,7 +235,10 @@ for (const model of [
 test("service-account bearer and quota project reach synthesis, and token errors are redacted", async (t) => {
   const { args, payload } = fixture(t);
   const authenticate = () => ({
-    headers: { Authorization: "Bearer secret-token", "x-goog-user-project": "test-project" },
+    headers: {
+      Authorization: "Bearer secret-token",
+      "x-goog-user-project": "test-project",
+    },
     secret: "secret-token",
   });
   const ok = await synthesizeGemini(args, {

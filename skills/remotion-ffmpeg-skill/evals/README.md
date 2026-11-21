@@ -7,17 +7,17 @@ it said — not how it got there.
 
 What the tasks probe:
 
-| Task | What a pass means |
-|---|---|
-| `captions-youtube` | measured first, captions carried as written, delivered at 1920×1080, the contact sheet reported, the source untouched |
-| `jumpcut-reels-ja` | Japanese request: silences cut (shorter than the source), Japanese captions, rendered 9:16 so the Reels delivery is 1080×1920 |
-| `beat-montage` | the beat grid measured (`--beats`) and a full-length BeatMontage |
-| `lower-third-asks-for-text` | no name given → asks for it (or clearly marks a placeholder), never invents a person |
-| `plain-trim-not-this-skill` | a plain trim is ffmpeg-skill's job: no timeline, no Remotion project |
-| `highlights-square` | highlights measured (`--highlights`) and a square Highlights render |
-| `graphics-layer-for-editor` | a transparent layer (alpha) matching the source |
-| `join-then-titles` | both clips in one video with the two titles (this skill's join, or ffmpeg-skill alone) |
-| `karaoke-from-words` | words lit at their measured times (Karaoke, or ffmpeg-skill `caption.py --karaoke`) |
+| Task                        | What a pass means                                                                                                             |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `captions-youtube`          | measured first, captions carried as written, delivered at 1920×1080, the contact sheet reported, the source untouched         |
+| `jumpcut-reels-ja`          | Japanese request: silences cut (shorter than the source), Japanese captions, rendered 9:16 so the Reels delivery is 1080×1920 |
+| `beat-montage`              | the beat grid measured (`--beats`) and a full-length BeatMontage                                                              |
+| `lower-third-asks-for-text` | no name given → asks for it (or clearly marks a placeholder), never invents a person                                          |
+| `plain-trim-not-this-skill` | a plain trim is ffmpeg-skill's job: no timeline, no Remotion project                                                          |
+| `highlights-square`         | highlights measured (`--highlights`) and a square Highlights render                                                           |
+| `graphics-layer-for-editor` | a transparent layer (alpha) matching the source                                                                               |
+| `join-then-titles`          | both clips in one video with the two titles (this skill's join, or ffmpeg-skill alone)                                        |
+| `karaoke-from-words`        | words lit at their measured times (Karaoke, or ffmpeg-skill `caption.py --karaoke`)                                           |
 
 Where ffmpeg-skill alone is a valid answer, a task lists both routes in an `any_of` check; the
 ffmpeg-skill route has to state its trade-off where there is one (a centre-cropped Reel).

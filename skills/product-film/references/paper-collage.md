@@ -8,11 +8,11 @@ Silent first, with synthesized pen-and-paper sound and empty voice and music tra
 The numbers and rules below come from a 59.6 s build that took five cuts; every rule closed a failure in that build
 or a note from its review. The template's example is a 22.8 s Tidewell story that exercises every engine primitive.
 
-| Read | When |
-|---|---|
-| This file | Before anything else |
-| `paper-capture.md` | At the capture step, and before any new product screen |
-| `paper-lessons.md` | Before you build scenes, and again before every review |
+| Read               | When                                                                       |
+| ------------------ | -------------------------------------------------------------------------- |
+| This file          | Before anything else                                                       |
+| `paper-capture.md` | At the capture step, and before any new product screen                     |
+| `paper-lessons.md` | Before you build scenes, and again before every review                     |
 | `templates/paper/` | Start every film from it with `new-film.sh paper`; never from a blank file |
 
 ## When to use it
@@ -80,43 +80,43 @@ step until it passes.
    `git status --short` of its repository now; it must be the same at the end. Check the template runs before you
    change it: the commands `setup.sh` prints.
 1. **Truth.** Read the sources in brief item 3, plus `VOICE.md`, `DESIGN.md` and `PRODUCT.md` if the project has them.
-   Write the truth sheet under "Truth sheet" in `notes/DECISIONS.md`. *Gate: every planned claim has a source line.*
-1b. **Beat sheet.** In `notes/SCRIPT.md`, list each beat with its caption draft, the shot it needs (which harness,
+   Write the truth sheet under "Truth sheet" in `notes/DECISIONS.md`. _Gate: every planned claim has a source line._
+   1b. **Beat sheet.** In `notes/SCRIPT.md`, list each beat with its caption draft, the shot it needs (which harness,
    which state, which viewport) and the character's pose. Block the film out with placeholder scenes in `film.js` (the
    engine draws a labeled placeholder for a missing shot) and preview it, so the capture list comes from the story and
-   not the other way round. *Gate: every beat names its shot and harness.*
+   not the other way round. _Gate: every beat names its shot and harness._
 2. **Brand and fixture story.** Put the product's tokens in `film/timeline.json` `brand` and in the brand blocks of the
    capture templates. Write `capture/story.json` (people, org, page, versions, the change, the one-time code) and the
-   fictional artifact (`capture/artifact/template.html`); build it with `build.py`; run `check-layout.mjs`. *Gate: no
-   reflow between versions at 1280×800.*
-3. **Capture** the real UI with the harnesses in `paper-capture.md`. *Gate: zero unmocked API calls, no blocked
-   requests, no leak warnings, the product repository's `git status` unchanged, nothing published.* Write what the
+   fictional artifact (`capture/artifact/template.html`); build it with `build.py`; run `check-layout.mjs`. _Gate: no
+   reflow between versions at 1280×800._
+3. **Capture** the real UI with the harnesses in `paper-capture.md`. _Gate: zero unmocked API calls, no blocked
+   requests, no leak warnings, the product repository's `git status` unchanged, nothing published._ Write what the
    captures taught you under "Facts the captures surfaced": they change the film.
 4. **Kit.** Add the cast to `CAST` in `kit/puppet.js` (the file header says how), and any poses. Only full-body
    characters take poses; busts change faces. New props (a lock, a door, a stamp) are paper pieces in
-   `kit/export.html`. Run `node <film>/kit/build-kit.mjs`, then `build-sheet.mjs 0`, `1` and `2`. *Gate: each
+   `kit/export.html`. Run `node <film>/kit/build-kit.mjs`, then `build-sheet.mjs 0`, `1` and `2`. _Gate: each
    character reads as one character in every pose and boil variant; colors are muted; no garment shares the accent's
-   hue.*
+   hue._
 5. **Script.** Fill `film/timeline.json`: set `name`, `title`, `summary`, `formats` and `outputs` for this film (they
    flow into file names and the review page), the `copy` rules (§ Quality gates), then scenes with named cues,
    captions, labels, SFX cues, and list every harness manifest you captured under `manifests`. Replace the example
    constants at the top of `film/film.js`. Keep a caption table in `notes/SCRIPT.md` (caption, words, minimum hold,
-   hold). *Gate: `python3 <film>/tools/check-copy.py` passes.*
+   hold). _Gate: `python3 <film>/tools/check-copy.py` passes._
 6. **Script review.** An independent review of the script, storyboard, truth sheet and brief by another agent or model
    when one is available (a subagent or a second model). Adjudicate every finding in `DECISIONS.md` as adopted or not
    adopted, with the reason.
 7. **Scenes.** Write `film/film.js`, one scene at a time, every format at once (`V({...})`). Preview with the guides
-   on: `node <film>/film/preview.mjs 9x16 1,4,7 "" 1 1 1`. *Gate: no warnings in the preview output (a missing shot,
-   box or cue is an error in the render).*
+   on: `node <film>/film/preview.mjs 9x16 1,4,7 "" 1 1 1`. _Gate: no warnings in the preview output (a missing shot,
+   box or cue is an error in the render)._
 8. **Render.** `bash <film>/film/render-all.sh v1 [workers]` renders and assembles every output in `timeline.json`
-   `"outputs"`. *Gate: each `out/v1/checks.txt` line has the exact frame count and zero timing jumps.*
+   `"outputs"`. _Gate: each `out/v1/checks.txt` line has the exact frame count and zero timing jumps._
 9. **Self-review.** Transition strips are cut around scene starts and cues whose names match `review.markCues` in
    `timeline.json` (a regex; the default covers `in`, `zoom…`, `pan`, `back`, `swap`, `click`, `editor`, `out`,
    `v1`…); add your cue names there. Then, for each output: `<film>/.venv/bin/python <film>/tools/review.py
-   <film>/out/v1/<name>-<fmt>-v1_master.mov <fmt> <film>/review/v1-<fmt>`; for full-size stills, `bash
-   <film>/tools/stills.sh <master> <outdir> [step seconds] [width]`. Look at the phone sheet, every transition strip
-   and the difference trace. Fix, re-render and repeat. *Gate: `python3 <film>/tools/gates.py v1` exits 0 and you have
-   answered its judgment checklist in `DECISIONS.md`.*
+<film>/out/v1/<name>-<fmt>-v1_master.mov <fmt> <film>/review/v1-<fmt>`; for full-size stills, `bash
+<film>/tools/stills.sh <master> <outdir> [step seconds] [width]`. Look at the phone sheet, every transition strip
+   and the difference trace. Fix, re-render and repeat. _Gate: `python3 <film>/tools/gates.py v1` exits 0 and you have
+   answered its judgment checklist in `DECISIONS.md`._
 10. **Independent review of the cut.** Another agent or model, when one is available, reviews the contact sheets,
     transition strips, difference trace and full-size stills (reviewers read frames, not video). Adjudicate, fix,
     re-render as the next version, and pass the gates again. Run at least two full improvement rounds.
@@ -138,21 +138,21 @@ deterministically, from `timeline.json`, the frozen kit and the captures. Scenes
 `draw(tq, s, t)`, `shots()`, and optional `pre`/`post` overlap; `s.cue('name')` gives a cue's absolute time. The
 example `film.js` shows every primitive in a five-scene story.
 
-| Primitive | Use |
-|---|---|
-| `print({ shot, crop, x, y, w, url, kind })` | A capture in a clean window: `browser` (title bar, URL pill), `photo` (card), `raw` (the capture is the window, for the agent window). Returns a layout for `toWorld`/`boxWorld`. |
-| `layoutBox(L, box)`, `box(file, name)` | World box of a named capture element, before drawing (cameras, labels). Boxes come from the capture manifests. |
-| `phone({ shot, x, y, s })`, `phoneBox` | A clean black phone with a 390×844 capture on its screen. |
-| `character(id, x, y, s, t, poses, { look, blinks, face })` | A full-body CAST puppet; `poses = [[t, 'pose', dur?], …]`, eased and stepped. |
-| `bust(id, x, y, s, { face, look, tilt })` | Any CAST character as head and shoulders. |
-| `hop(t, t0, d, from, to)` | Walk a character in stepped hops: how the hero crosses a cut. |
-| `cam(zoomTo(t, in, out, box, s))`, `camOn`, `camFit`, `kf` | One zoom onto the item, a hold, and back. `kf` keys with `'hold'` keep a framing. |
-| `captions(t)` | Automatic from the timeline: typewriter strips, one accent word, stepped drop-in. |
-| `label(text, x, y, { size, write })`, `note(text, lx, ly, ax, ay, t, t0)` | Hand lettering that writes on; an arrow plus label. |
-| `ink(doodle.circle/underline/cross/tick/question/arrow(...), { progress })` | Marker doodles that draw on and boil. |
-| `cursor(x, y, { clickAt })`, `pathAt(t, keys)`, `tap(...)` | The paper pointer: straight moves, rests, clicks; taps on a phone. |
-| `swapAt(t, [[t, shot, lift?], …])`, `stateAt(t, states)` | Replace a print (lift and land), or step UI states in place (`lift: false` for typing). |
-| `slideIn`, `slideOut`, `piece(name, …)`, `wordmark(x, y, h, { align })` | Entrances and exits, any kit piece (speech bubbles, tags, tape), the text wordmark for the end card. |
+| Primitive                                                                   | Use                                                                                                                                                                               |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `print({ shot, crop, x, y, w, url, kind })`                                 | A capture in a clean window: `browser` (title bar, URL pill), `photo` (card), `raw` (the capture is the window, for the agent window). Returns a layout for `toWorld`/`boxWorld`. |
+| `layoutBox(L, box)`, `box(file, name)`                                      | World box of a named capture element, before drawing (cameras, labels). Boxes come from the capture manifests.                                                                    |
+| `phone({ shot, x, y, s })`, `phoneBox`                                      | A clean black phone with a 390×844 capture on its screen.                                                                                                                         |
+| `character(id, x, y, s, t, poses, { look, blinks, face })`                  | A full-body CAST puppet; `poses = [[t, 'pose', dur?], …]`, eased and stepped.                                                                                                     |
+| `bust(id, x, y, s, { face, look, tilt })`                                   | Any CAST character as head and shoulders.                                                                                                                                         |
+| `hop(t, t0, d, from, to)`                                                   | Walk a character in stepped hops: how the hero crosses a cut.                                                                                                                     |
+| `cam(zoomTo(t, in, out, box, s))`, `camOn`, `camFit`, `kf`                  | One zoom onto the item, a hold, and back. `kf` keys with `'hold'` keep a framing.                                                                                                 |
+| `captions(t)`                                                               | Automatic from the timeline: typewriter strips, one accent word, stepped drop-in.                                                                                                 |
+| `label(text, x, y, { size, write })`, `note(text, lx, ly, ax, ay, t, t0)`   | Hand lettering that writes on; an arrow plus label.                                                                                                                               |
+| `ink(doodle.circle/underline/cross/tick/question/arrow(...), { progress })` | Marker doodles that draw on and boil.                                                                                                                                             |
+| `cursor(x, y, { clickAt })`, `pathAt(t, keys)`, `tap(...)`                  | The paper pointer: straight moves, rests, clicks; taps on a phone.                                                                                                                |
+| `swapAt(t, [[t, shot, lift?], …])`, `stateAt(t, states)`                    | Replace a print (lift and land), or step UI states in place (`lift: false` for typing).                                                                                           |
+| `slideIn`, `slideOut`, `piece(name, …)`, `wordmark(x, y, h, { align })`     | Entrances and exits, any kit piece (speech bubbles, tags, tape), the text wordmark for the end card.                                                                              |
 
 Query flags: `fmt`, `cap=0` (no captions), `guides=1` (safe-zone box and camera area), `strict=1` (missing shot,
 box or cue throws; the render sets it), `tl=<file>` (another timeline), `t0`/`t1` (preload only a range).
@@ -174,26 +174,26 @@ bottom). `setup.sh` runs both. Without them the engine uses a flat plate, which 
 
 These held in a 59.6 s build. Start here and change one at a time.
 
-| What | Value |
-|---|---|
-| Frames | 30 fps; the canvas renders at device scale 2 (3840×2160 for 16:9), JPEG q95, downscaled once in the master |
-| Stop motion | Motion on 2s (15 poses a second); marker lines and labels boil on 3s with 3 seeded variants; UI prints never boil |
-| Captures | Desktop 1280×800 at DSF 3; phone 390×844 at DSF 3; popups at their real size (a share popup, for example 420×480) |
-| Zoom | 1.12–1.9×, only onto the item the beat is about; in 0.45 s, hold, out 0.45 s; a label written during a zoom lands off screen |
-| Holds | 0.5–1.0 s on each key moment with the pointer at rest; a newly opened panel about 2 s; full-screen text about 2.6 s; end card about 4 s |
-| Captions | At most 7 words; hold ≥ 1.5 s + 0.3 s per word + 0.5 s margin; one accent word; about 60 words per minute of film (62 in 59.6 s) |
-| Caption type | Geist Mono 500 (the accent word 600, in the brand accent) on torn strips: 16:9 56 px centered, bottom 1040; 9:16 58 px, left 34, bottom 1432; 4:5 54 px centered, bottom 1300 |
-| Labels | Caveat Brush 44–58 px (46 typical, 52–56 for the key label), arrow 0.3 s, write-on 0.35 s |
-| Pacing | Scene boundaries at least 1 s apart; each beat lands 0.5–1 s before the next section; problem inside 5 s |
-| Entrances | Slides 0.4 s (ease-out in, ease-in out); hops 0.5 s; caption strips drop in two stepped poses |
-| Phone | Scale 1.0 and zoom 1.7× in 16:9 (1.18× showed a phone as two black bars) |
-| Cast | Full-body hero about 620 px tall at scale 1; 0.64–0.98 in 16:9, 0.42–0.64 in 9:16 |
-| Masters | ProRes 422 HQ, 10-bit 4:2:2, BT.709 limited range with matching tags, PCM 48 kHz |
-| Upload copies | H.264 High, level 4.1, CRF 18, faststart, AAC; VMAF ≥ 95 against the master (96.9 in both full builds) |
-| Web set | One click-to-play H.264 for the site's video pipeline; AV1, HEVC and H.264 at VMAF ≥ 96, smallest first (4.7, 4.9 and 6.3 MB for 59.6 s). Check the order in `deliver/web/vmaf.txt` and adjust CRFs if it is wrong. |
-| Sound | True peak ≤ −1.5 dBTP (mix.py scales to −2.0); integrated ≤ −14 LUFS; an SFX-only track sits at −20 to −23 LUFS, which is fine |
-| SFX gains | Caption strip (tape) −17 dB; slide −10; place −9 to −13; circle −13; lettering −17 to −19; click −15; key −19; pop −13 |
-| Render | One worker per two cores; about 145 ms per 4K frame per worker (the example's 684 frames × 3 outputs took 3 minutes on 10 cores, with assembly and checks) |
+| What          | Value                                                                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frames        | 30 fps; the canvas renders at device scale 2 (3840×2160 for 16:9), JPEG q95, downscaled once in the master                                                                                                          |
+| Stop motion   | Motion on 2s (15 poses a second); marker lines and labels boil on 3s with 3 seeded variants; UI prints never boil                                                                                                   |
+| Captures      | Desktop 1280×800 at DSF 3; phone 390×844 at DSF 3; popups at their real size (a share popup, for example 420×480)                                                                                                   |
+| Zoom          | 1.12–1.9×, only onto the item the beat is about; in 0.45 s, hold, out 0.45 s; a label written during a zoom lands off screen                                                                                        |
+| Holds         | 0.5–1.0 s on each key moment with the pointer at rest; a newly opened panel about 2 s; full-screen text about 2.6 s; end card about 4 s                                                                             |
+| Captions      | At most 7 words; hold ≥ 1.5 s + 0.3 s per word + 0.5 s margin; one accent word; about 60 words per minute of film (62 in 59.6 s)                                                                                    |
+| Caption type  | Geist Mono 500 (the accent word 600, in the brand accent) on torn strips: 16:9 56 px centered, bottom 1040; 9:16 58 px, left 34, bottom 1432; 4:5 54 px centered, bottom 1300                                       |
+| Labels        | Caveat Brush 44–58 px (46 typical, 52–56 for the key label), arrow 0.3 s, write-on 0.35 s                                                                                                                           |
+| Pacing        | Scene boundaries at least 1 s apart; each beat lands 0.5–1 s before the next section; problem inside 5 s                                                                                                            |
+| Entrances     | Slides 0.4 s (ease-out in, ease-in out); hops 0.5 s; caption strips drop in two stepped poses                                                                                                                       |
+| Phone         | Scale 1.0 and zoom 1.7× in 16:9 (1.18× showed a phone as two black bars)                                                                                                                                            |
+| Cast          | Full-body hero about 620 px tall at scale 1; 0.64–0.98 in 16:9, 0.42–0.64 in 9:16                                                                                                                                   |
+| Masters       | ProRes 422 HQ, 10-bit 4:2:2, BT.709 limited range with matching tags, PCM 48 kHz                                                                                                                                    |
+| Upload copies | H.264 High, level 4.1, CRF 18, faststart, AAC; VMAF ≥ 95 against the master (96.9 in both full builds)                                                                                                              |
+| Web set       | One click-to-play H.264 for the site's video pipeline; AV1, HEVC and H.264 at VMAF ≥ 96, smallest first (4.7, 4.9 and 6.3 MB for 59.6 s). Check the order in `deliver/web/vmaf.txt` and adjust CRFs if it is wrong. |
+| Sound         | True peak ≤ −1.5 dBTP (mix.py scales to −2.0); integrated ≤ −14 LUFS; an SFX-only track sits at −20 to −23 LUFS, which is fine                                                                                      |
+| SFX gains     | Caption strip (tape) −17 dB; slide −10; place −9 to −13; circle −13; lettering −17 to −19; click −15; key −19; pop −13                                                                                              |
+| Render        | One worker per two cores; about 145 ms per 4K frame per worker (the example's 684 frames × 3 outputs took 3 minutes on 10 cores, with assembly and checks)                                                          |
 
 ## Formats
 

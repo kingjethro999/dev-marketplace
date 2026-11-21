@@ -30,21 +30,21 @@ Use the connected `Chapter` scene from the
 [composition example](../remotion-interactivity/timeline-structure.md).
 
 ```tsx title="TransitionVideo.tsx"
-import {TransitionSeries, linearTiming} from '@remotion/transitions';
-import {fade} from '@remotion/transitions/fade';
-import {Chapter} from './Chapter';
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { fade } from "@remotion/transitions/fade";
+import { Chapter } from "./Chapter";
 
 export const TransitionVideo = () => (
   <TransitionSeries>
     <TransitionSeries.Sequence name="Opening" durationInFrames={60}>
-      <Chapter title="Introduction" style={{backgroundColor: '#111111'}} />
+      <Chapter title="Introduction" style={{ backgroundColor: "#111111" }} />
     </TransitionSeries.Sequence>
     <TransitionSeries.Transition
       presentation={fade()}
-      timing={linearTiming({durationInFrames: 15})}
+      timing={linearTiming({ durationInFrames: 15 })}
     />
     <TransitionSeries.Sequence name="Feature" durationInFrames={60}>
-      <Chapter title="New features" style={{backgroundColor: '#243b53'}} />
+      <Chapter title="New features" style={{ backgroundColor: "#243b53" }} />
     </TransitionSeries.Sequence>
   </TransitionSeries>
 );
@@ -53,22 +53,22 @@ export const TransitionVideo = () => (
 ## Custom presentation
 
 ```tsx title="SlideInPresentation.tsx"
-import type {TransitionPresentationComponentProps} from '@remotion/transitions';
+import type { TransitionPresentationComponentProps } from "@remotion/transitions";
 
 export const SlideInPresentation = ({
   children,
   presentationDirection,
   presentationProgress,
 }: TransitionPresentationComponentProps<Record<string, never>>) => {
-  if (presentationDirection === 'exiting') {
+  if (presentationDirection === "exiting") {
     return <>{children}</>;
   }
 
   return (
-    <div style={{position: 'absolute', inset: 0, overflow: 'hidden'}}>
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
           translate: `${(1 - presentationProgress) * 100}% 0`,
         }}
@@ -83,25 +83,35 @@ export const SlideInPresentation = ({
 Use it in place of `fade()` in `TransitionVideo.tsx`:
 
 ```tsx
-import {TransitionSeries, linearTiming} from '@remotion/transitions';
-import {SlideInPresentation} from './SlideInPresentation';
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { SlideInPresentation } from "./SlideInPresentation";
 
 <TransitionSeries.Transition
-  presentation={{component: SlideInPresentation, props: {}}}
-  timing={linearTiming({durationInFrames: 15})}
+  presentation={{ component: SlideInPresentation, props: {} }}
+  timing={linearTiming({ durationInFrames: 15 })}
 />;
 ```
 
 ## Overlay example
 
 ```tsx title="LightLeakOverlay.tsx"
-import {lightLeak} from '@remotion/effects/light-leak';
-import type {CSSProperties} from 'react';
-import {Interactive, interpolate, Solid, useCurrentFrame, useVideoConfig} from 'remotion';
+import { lightLeak } from "@remotion/effects/light-leak";
+import type { CSSProperties } from "react";
+import {
+  Interactive,
+  interpolate,
+  Solid,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 
-const LightLeakOverlayInner = ({style}: {readonly style?: CSSProperties}) => {
+const LightLeakOverlayInner = ({
+  style,
+}: {
+  readonly style?: CSSProperties;
+}) => {
   const frame = useCurrentFrame();
-  const {durationInFrames, height, width} = useVideoConfig();
+  const { durationInFrames, height, width } = useVideoConfig();
 
   return (
     <Solid
@@ -111,8 +121,8 @@ const LightLeakOverlayInner = ({style}: {readonly style?: CSSProperties}) => {
       effects={[
         lightLeak({
           progress: interpolate(frame, [0, durationInFrames - 1], [0, 1], {
-            extrapolateLeft: 'clamp',
-            extrapolateRight: 'clamp',
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
           }),
         }),
       ]}
@@ -122,25 +132,25 @@ const LightLeakOverlayInner = ({style}: {readonly style?: CSSProperties}) => {
 
 export const LightLeakOverlay = Interactive.create({
   Component: LightLeakOverlayInner,
-  layout: 'none',
+  layout: "none",
 });
 ```
 
 ```tsx title="OverlayVideo.tsx"
-import {TransitionSeries} from '@remotion/transitions';
-import {Chapter} from './Chapter';
-import {LightLeakOverlay} from './LightLeakOverlay';
+import { TransitionSeries } from "@remotion/transitions";
+import { Chapter } from "./Chapter";
+import { LightLeakOverlay } from "./LightLeakOverlay";
 
 export const OverlayVideo = () => (
   <TransitionSeries>
     <TransitionSeries.Sequence name="Opening" durationInFrames={60}>
-      <Chapter title="Introduction" style={{backgroundColor: '#111111'}} />
+      <Chapter title="Introduction" style={{ backgroundColor: "#111111" }} />
     </TransitionSeries.Sequence>
     <TransitionSeries.Overlay durationInFrames={20}>
       <LightLeakOverlay name="Light leak" />
     </TransitionSeries.Overlay>
     <TransitionSeries.Sequence name="Feature" durationInFrames={60}>
-      <Chapter title="New features" style={{backgroundColor: '#243b53'}} />
+      <Chapter title="New features" style={{ backgroundColor: "#243b53" }} />
     </TransitionSeries.Sequence>
   </TransitionSeries>
 );
@@ -151,28 +161,28 @@ export const OverlayVideo = () => (
 Separate overlays and transitions with a scene.
 
 ```tsx title="MixedVideo.tsx"
-import {TransitionSeries, linearTiming} from '@remotion/transitions';
-import {fade} from '@remotion/transitions/fade';
-import {Chapter} from './Chapter';
-import {LightLeakOverlay} from './LightLeakOverlay';
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { fade } from "@remotion/transitions/fade";
+import { Chapter } from "./Chapter";
+import { LightLeakOverlay } from "./LightLeakOverlay";
 
 export const MixedVideo = () => (
   <TransitionSeries>
     <TransitionSeries.Sequence name="Opening" durationInFrames={60}>
-      <Chapter title="Introduction" style={{backgroundColor: '#111111'}} />
+      <Chapter title="Introduction" style={{ backgroundColor: "#111111" }} />
     </TransitionSeries.Sequence>
     <TransitionSeries.Overlay durationInFrames={30}>
       <LightLeakOverlay name="Light leak" />
     </TransitionSeries.Overlay>
     <TransitionSeries.Sequence name="Feature" durationInFrames={60}>
-      <Chapter title="New features" style={{backgroundColor: '#243b53'}} />
+      <Chapter title="New features" style={{ backgroundColor: "#243b53" }} />
     </TransitionSeries.Sequence>
     <TransitionSeries.Transition
       presentation={fade()}
-      timing={linearTiming({durationInFrames: 15})}
+      timing={linearTiming({ durationInFrames: 15 })}
     />
     <TransitionSeries.Sequence name="Closing" durationInFrames={60}>
-      <Chapter title="Thank you" style={{backgroundColor: '#382345'}} />
+      <Chapter title="Thank you" style={{ backgroundColor: "#382345" }} />
     </TransitionSeries.Sequence>
   </TransitionSeries>
 );
@@ -212,7 +222,7 @@ import { clockWipe } from "@remotion/transitions/clock-wipe";
 ## Slide transition with direction
 
 ```tsx
-import {TransitionSeries, linearTiming} from "@remotion/transitions";
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { slide } from "@remotion/transitions/slide";
 
 <TransitionSeries.Transition

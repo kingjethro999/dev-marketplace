@@ -87,11 +87,14 @@ function writeStatus(status) {
   return payload;
 }
 
-if (!existsSync(audioMetaPath)) die(`audio_meta.json missing at ${audioMetaPath}`);
+if (!existsSync(audioMetaPath))
+  die(`audio_meta.json missing at ${audioMetaPath}`);
 
 const audioMeta = JSON.parse(readFileSync(audioMetaPath, "utf8"));
 // A track path that leads outside the project counts as no track.
-const bgmAbsPath = (audioMeta.bgm?.path && projectPath(hyperframesDir, audioMeta.bgm.path)) || "";
+const bgmAbsPath =
+  (audioMeta.bgm?.path && projectPath(hyperframesDir, audioMeta.bgm.path)) ||
+  "";
 const bgmPath = bgmAbsPath ? audioMeta.bgm.path : "";
 // Only the engine's own log in assets/bgm is read; any other bgm_log counts as no log, and its pid goes with it.
 const logPath = engineBgmLog(hyperframesDir, audioMeta.bgm_log) || "";
@@ -138,7 +141,12 @@ while (Date.now() - started <= timeoutMs) {
       message: `BGM ready at ${bgmPath}.`,
     });
     console.log(`✓ bgm: ready (${bgmPath}, ${size}B)`);
-    const generated = { path: bgmPath, type: "bgm", source: "generated", provider: base.provider };
+    const generated = {
+      path: bgmPath,
+      type: "bgm",
+      source: "generated",
+      provider: base.provider,
+    };
     for (const anomaly of recordInManifest(hyperframesDir, [generated]))
       console.error(`  ${anomaly}`);
     process.exit(0);
@@ -165,7 +173,9 @@ while (Date.now() - started <= timeoutMs) {
   }
 
   if (timeoutMs === 0) break;
-  await sleep(Math.min(intervalMs, Math.max(0, timeoutMs - (Date.now() - started))));
+  await sleep(
+    Math.min(intervalMs, Math.max(0, timeoutMs - (Date.now() - started))),
+  );
 }
 
 const status = writeStatus({

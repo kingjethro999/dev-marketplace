@@ -32,13 +32,13 @@ group affects all its layers. For consecutive shots, use the existing
 `TransitionSeries.Sequence` for the same purpose:
 
 ```tsx
-import {Video} from '@remotion/media';
-import {TransitionSeries} from '@remotion/transitions';
-import {staticFile, useVideoConfig} from 'remotion';
-import {BasicCaptions} from './basic-captions.element';
+import { Video } from "@remotion/media";
+import { TransitionSeries } from "@remotion/transitions";
+import { staticFile, useVideoConfig } from "remotion";
+import { BasicCaptions } from "./basic-captions.element";
 
 export const Interview = () => {
-  const {fps} = useVideoConfig();
+  const { fps } = useVideoConfig();
   return (
     <TransitionSeries name="Interview shots">
       <TransitionSeries.Sequence
@@ -46,21 +46,21 @@ export const Interview = () => {
         trimBefore={4 * fps}
         durationInFrames={3 * fps}
       >
-        <Video name="Opening footage" src={staticFile('interview.mp4')} />
+        <Video name="Opening footage" src={staticFile("interview.mp4")} />
         <BasicCaptions
           name="Opening captions"
           width={900}
-          style={{position: 'absolute', bottom: 80, translate: '510px 0px'}}
+          style={{ position: "absolute", bottom: 80, translate: "510px 0px" }}
           captions={[
             {
-              text: 'Hello',
+              text: "Hello",
               startMs: 4500,
               endMs: 4900,
               timestampMs: 4700,
               confidence: null,
             },
             {
-              text: ' world',
+              text: " world",
               startMs: 4900,
               endMs: 5400,
               timestampMs: 5150,
@@ -74,14 +74,14 @@ export const Interview = () => {
         trimBefore={10 * fps}
         durationInFrames={2 * fps}
       >
-        <Video name="Next footage" src={staticFile('interview.mp4')} />
+        <Video name="Next footage" src={staticFile("interview.mp4")} />
         <BasicCaptions
           name="Next captions"
           width={900}
-          style={{position: 'absolute', bottom: 80, translate: '510px 0px'}}
+          style={{ position: "absolute", bottom: 80, translate: "510px 0px" }}
           captions={[
             {
-              text: 'Next',
+              text: "Next",
               startMs: 10500,
               endMs: 11000,
               timestampMs: 10750,

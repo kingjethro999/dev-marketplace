@@ -62,9 +62,7 @@ import { Video } from "@remotion/media";
 
 const { fps } = useVideoConfig();
 
-return (
-  <Video from={fps} src={staticFile("video.mp4")} />
-);
+return <Video from={fps} src={staticFile("video.mp4")} />;
 ```
 
 The video will appear after 1 second.
@@ -99,7 +97,12 @@ Use `useCurrentFrame()` and `interpolate()` for keyframed volume:
 
 ```tsx
 import { Video } from "@remotion/media";
-import { interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  interpolate,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 
 const frame = useCurrentFrame();
 const { fps } = useVideoConfig();
@@ -157,7 +160,7 @@ const frame = useCurrentFrame();
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   })}
-/>
+/>;
 ```
 
 ## Pitch

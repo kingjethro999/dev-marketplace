@@ -85,11 +85,11 @@ scp <deployment-dir>/data/ca.crt <user>@<devbox-host>:~/
 
 A small container stack on your host:
 
-| Container | Role |
-|---|---|
-| **mcp-proxy** | Anthropic's proxy. Terminates inner TLS with a cert you control, validates upstream IPs, routes by hostname. |
-| **cloudflared** | The tunnel agent. Outbound-only to the Anthropic tunnel edge; shares the proxy's network namespace. |
-| **hello-mcp** *(optional)* | A FastMCP sample server, only if you don't have an MCP server to expose yet. |
+| Container                  | Role                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **mcp-proxy**              | Anthropic's proxy. Terminates inner TLS with a cert you control, validates upstream IPs, routes by hostname. |
+| **cloudflared**            | The tunnel agent. Outbound-only to the Anthropic tunnel edge; shares the proxy's network namespace.          |
+| **hello-mcp** _(optional)_ | A FastMCP sample server, only if you don't have an MCP server to expose yet.                                 |
 
 When it's running, the routed server is reachable from Claude at
 `https://<subdomain>.<your-tunnel-domain>/<path>` with nothing listening on a

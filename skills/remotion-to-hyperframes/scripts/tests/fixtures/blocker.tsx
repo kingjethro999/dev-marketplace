@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
-import { useCurrentFrame, AbsoluteFill, delayRender, continueRender } from "remotion";
+import {
+  useCurrentFrame,
+  AbsoluteFill,
+  delayRender,
+  continueRender,
+} from "remotion";
 import { Button } from "@mui/material";
 
 // Custom hook in `export const useFoo = ...` form — earlier custom-hook

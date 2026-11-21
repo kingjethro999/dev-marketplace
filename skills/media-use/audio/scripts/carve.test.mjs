@@ -13,7 +13,12 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_STRENGTH, carveSources, groupSourceRefusal, parseArgs } from "./carve.mjs";
+import {
+  DEFAULT_STRENGTH,
+  carveSources,
+  groupSourceRefusal,
+  parseArgs,
+} from "./carve.mjs";
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -31,7 +36,11 @@ function member(id, group, nameKind) {
 /** A bed as `mediaElements` yields it: `kind` is what decides group membership. */
 function bed(id, group, kind = "audio") {
   const attr = group === undefined ? "" : ` data-audio-group="${group}"`;
-  return { id, kind, tag: `<${kind} id="${id}"${attr} src="${id}.mp3"></${kind}>` };
+  return {
+    id,
+    kind,
+    tag: `<${kind} id="${id}"${attr} src="${id}.mp3"></${kind}>`,
+  };
 }
 
 async function inTempDir(run) {
@@ -47,18 +56,27 @@ test("voices sharing one group carve against the group, not their ids", () => {
   // SKILL.md's invariant: "A carve against more than one clip id is wrong.
   // Group the clips and carve against the group." Naming the group lets
   // membership resolve at analysis time, so a voice added later is covered.
-  const voices = [voice("vo1", "voiceover"), voice("vo2", "voiceover"), voice("vo3", "voiceover")];
+  const voices = [
+    voice("vo1", "voiceover"),
+    voice("vo2", "voiceover"),
+    voice("vo3", "voiceover"),
+  ];
   assert.deepEqual(carveSources(voices, undefined, []), ["voiceover"]);
 });
 
 test("a single grouped voice still records the group", () => {
-  assert.deepEqual(carveSources([voice("vo1", "voiceover")], undefined, []), ["voiceover"]);
+  assert.deepEqual(carveSources([voice("vo1", "voiceover")], undefined, []), [
+    "voiceover",
+  ]);
 });
 
 test("ungrouped voices keep their ids, so the lint rule can still say so", () => {
   // Not silently inventing a group: `audio_carve_ungrouped_sources` is the
   // right signal here, and it needs the ids to fire on.
-  assert.deepEqual(carveSources([voice("vo1"), voice("vo2")], undefined, []), ["vo1", "vo2"]);
+  assert.deepEqual(carveSources([voice("vo1"), voice("vo2")], undefined, []), [
+    "vo1",
+    "vo2",
+  ]);
 });
 
 test("voices in DIFFERENT groups keep their ids", () => {
@@ -74,10 +92,10 @@ test("a partially grouped set keeps its ids", () => {
 });
 
 test("an empty group attribute is not a group", () => {
-  assert.deepEqual(carveSources([voice("vo1", ""), voice("vo2", "")], undefined, []), [
-    "vo1",
-    "vo2",
-  ]);
+  assert.deepEqual(
+    carveSources([voice("vo1", ""), voice("vo2", "")], undefined, []),
+    ["vo1", "vo2"],
+  );
 });
 
 // The nine cases above pass `[]` explicitly because they predate the membership
@@ -98,18 +116,24 @@ test("a bed inside the voices' group keeps clip ids, so it is never its own sour
 
 test("a bed in a DIFFERENT group leaves the group form alone", () => {
   const voices = [voice("vo1", "voiceover"), voice("vo2", "voiceover")];
-  assert.deepEqual(carveSources(voices, bed("bgm", "music"), []), ["voiceover"]);
+  assert.deepEqual(carveSources(voices, bed("bgm", "music"), []), [
+    "voiceover",
+  ]);
 });
 
 test("an ungrouped bed leaves the group form alone", () => {
-  assert.deepEqual(carveSources([voice("vo1", "voiceover")], bed("bgm"), []), ["voiceover"]);
+  assert.deepEqual(carveSources([voice("vo1", "voiceover")], bed("bgm"), []), [
+    "voiceover",
+  ]);
 });
 
 test("a VIDEO bed is immune — group membership is audio-only", () => {
   // `data-audio-group` on a <video> is ignored by core, so expanding the group
   // can never pull this bed in and declining would be a false positive.
   const voices = [voice("vo1", "mix"), voice("vo2", "mix")];
-  assert.deepEqual(carveSources(voices, bed("clip", "mix", "video"), []), ["mix"]);
+  assert.deepEqual(carveSources(voices, bed("clip", "mix", "video"), []), [
+    "mix",
+  ]);
 });
 
 test("an sfx member of the voices' group blocks the group form", () => {
@@ -125,12 +149,18 @@ test("an sfx member of the voices' group blocks the group form", () => {
     member("whoosh", "voiceover", "sfx"),
     member("bgm", "music", "music"),
   ];
-  assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), ["vo1", "vo2"]);
+  assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), [
+    "vo1",
+    "vo2",
+  ]);
 });
 
 test("a music member of the voices' group blocks it too", () => {
   const voices = [voice("vo1", "voiceover")];
-  const members = [member("vo1", "voiceover", "voice"), member("pad", "voiceover", "music")];
+  const members = [
+    member("vo1", "voiceover", "voice"),
+    member("pad", "voiceover", "music"),
+  ];
   assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), ["vo1"]);
 });
 
@@ -146,7 +176,9 @@ test("a voice member this run did NOT analyse keeps the group form", () => {
     member("vo2", "voiceover", "voice"),
     member("vo-outro", "voiceover", "voice"),
   ];
-  assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), ["voiceover"]);
+  assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), [
+    "voiceover",
+  ]);
 });
 
 test("an unclassifiable member keeps the group form", () => {
@@ -154,14 +186,24 @@ test("an unclassifiable member keeps the group form", () => {
   // not evidence of a non-voice member — loose in the safe direction, same as
   // detection.
   const voices = [voice("vo1", "voiceover")];
-  const members = [member("vo1", "voiceover", "voice"), member("track7", "voiceover", "unknown")];
-  assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), ["voiceover"]);
+  const members = [
+    member("vo1", "voiceover", "voice"),
+    member("track7", "voiceover", "unknown"),
+  ];
+  assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), [
+    "voiceover",
+  ]);
 });
 
 test("an sfx member of a DIFFERENT group is irrelevant", () => {
   const voices = [voice("vo1", "voiceover")];
-  const members = [member("vo1", "voiceover", "voice"), member("whoosh", "sfx", "sfx")];
-  assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), ["voiceover"]);
+  const members = [
+    member("vo1", "voiceover", "voice"),
+    member("whoosh", "sfx", "sfx"),
+  ];
+  assert.deepEqual(carveSources(voices, bed("bgm", "music"), members), [
+    "voiceover",
+  ]);
 });
 
 test("groupSourceRefusal names which member blocked the group, and why", () => {
@@ -170,7 +212,9 @@ test("groupSourceRefusal names which member blocked the group, and why", () => {
   // who did group their clips.
   const voices = [voice("vo1", "voiceover"), voice("vo2", "voiceover")];
   assert.deepEqual(
-    groupSourceRefusal(voices, bed("bgm", "music"), [member("whoosh", "voiceover", "sfx")]),
+    groupSourceRefusal(voices, bed("bgm", "music"), [
+      member("whoosh", "voiceover", "sfx"),
+    ]),
     { group: "voiceover", reason: "mixed", ids: ["whoosh"] },
   );
   assert.deepEqual(groupSourceRefusal(voices, bed("bgm", "voiceover"), []), {
@@ -192,7 +236,9 @@ test("the CLI still runs when invoked through a symlinked path", () => {
     let status = 0;
     let stderr = "";
     try {
-      execFileSync(process.execPath, [join(link, "carve.mjs")], { encoding: "utf-8" });
+      execFileSync(process.execPath, [join(link, "carve.mjs")], {
+        encoding: "utf-8",
+      });
     } catch (error) {
       status = error.status;
       stderr = String(error.stderr);
@@ -209,7 +255,10 @@ test("carve never loads @hyperframes/core from the composition's project", () =>
   return inTempDir(async (dir) => {
     const pkgDir = join(dir, "node_modules", "@hyperframes", "core");
     mkdirSync(pkgDir, { recursive: true });
-    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "received-project" }));
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "received-project" }),
+    );
     const planted =
       'import { writeFileSync } from "node:fs";\nwriteFileSync(new URL("./RAN", import.meta.url), "");\n';
     writeFileSync(join(pkgDir, "planted.mjs"), planted);
@@ -240,7 +289,11 @@ test("carve never loads @hyperframes/core from the composition's project", () =>
     } catch (error) {
       stderr = String(error.stderr);
     }
-    assert.equal(existsSync(join(pkgDir, "RAN")), false, "the project's @hyperframes/core ran");
+    assert.equal(
+      existsSync(join(pkgDir, "RAN")),
+      false,
+      "the project's @hyperframes/core ran",
+    );
     assert.match(
       stderr,
       /media in the composition/,
@@ -251,7 +304,9 @@ test("carve never loads @hyperframes/core from the composition's project", () =>
 
 test("the bundled core exports every function carve.mjs calls", async () => {
   const source = readFileSync(join(SCRIPTS_DIR, "carve.mjs"), "utf-8");
-  const called = new Set([...source.matchAll(/carveApi\s*\.\s*(\w+)/g)].map((m) => m[1]));
+  const called = new Set(
+    [...source.matchAll(/carveApi\s*\.\s*(\w+)/g)].map((m) => m[1]),
+  );
   const bundle = await import("./lib/audio-carve.mjs");
   assert.ok(called.size > 0);
   assert.deepEqual(
@@ -269,7 +324,10 @@ test("members is required, so dropping it cannot silently restore the group form
   // attribute wrong, nothing red. Omitting it now throws instead.
   const voices = [voice("vo1", "voiceover"), voice("vo2", "voiceover")];
   assert.throws(() => carveSources(voices, bed("bgm", "music")), TypeError);
-  assert.throws(() => groupSourceRefusal(voices, bed("bgm", "music")), TypeError);
+  assert.throws(
+    () => groupSourceRefusal(voices, bed("bgm", "music")),
+    TypeError,
+  );
 });
 
 test("the default strength is 0.8, and --strength still overrides it", () => {
@@ -278,5 +336,8 @@ test("the default strength is 0.8, and --strength still overrides it", () => {
   // unnoticed — core pins its own DEFAULT_CARVE the same way.
   assert.equal(DEFAULT_STRENGTH, 0.8);
   assert.equal(parseArgs(["--comp", "x.html"]).strength, 0.8);
-  assert.equal(parseArgs(["--comp", "x.html", "--strength", "0.25"]).strength, 0.25);
+  assert.equal(
+    parseArgs(["--comp", "x.html", "--strength", "0.25"]).strength,
+    0.25,
+  );
 });

@@ -9,9 +9,7 @@
   "lspServers": {
     "kotlin-lsp": {
       "command": "kotlin-lsp",
-      "args": [
-        "--stdio"
-      ],
+      "args": ["--stdio"],
       "extensionToLanguage": {
         ".kt": "kotlin",
         ".kts": "kotlin"

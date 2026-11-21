@@ -1,5 +1,10 @@
 <template id="scene-3-template">
-  <div data-composition-id="scene-3" data-width="1280" data-height="720" data-duration="3">
+  <div
+    data-composition-id="scene-3"
+    data-width="1280"
+    data-height="720"
+    data-duration="3"
+  >
     <style>
       .scene {
         position: absolute;
@@ -40,7 +45,11 @@
       const tl = gsap.timeline({ paused: true });
       const scene = document.querySelector(".scene-3");
       tl.set(scene, { opacity: 1 }, 0);
-      tl.to(scene.querySelector(".outro-wrap"), { opacity: 1, duration: 0.4, ease: "none" }, 0);
+      tl.to(
+        scene.querySelector(".outro-wrap"),
+        { opacity: 1, duration: 0.4, ease: "none" },
+        0,
+      );
       // interpolate(frame, [10,40], [0,1]) for the underline -> starts 0.333s, 1s long
       tl.fromTo(
         scene.querySelector(".outro-underline"),

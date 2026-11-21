@@ -16,12 +16,12 @@ Velisa's roadmap gives this repository the timeline hand-over to Premiere Pro an
 
 ### Libraries
 
-| Candidate | Licence | Notes | Verdict |
-|---|---|---|---|
-| **Standard library writers and readers** (`json`, `xml.etree`, `fractions`) | - | OTIO JSON, xmeml and CMX 3600 are small, documented text formats. Full control over rates, timecode and what is written; Python 3.9 on every OS with nothing to install | **Chosen** for every file written and read |
-| **opentimelineio** | Apache-2.0 | The reference implementation. Wheels for CPython 3.9-3.13 on Linux, macOS and Windows. Since 0.17 its core ships only the OTIO-native adapters (otio_json, otioz, otiod) | **Optional extra `otio`**: `export` re-reads each written .otio with it (`verification`). Not needed to write or read |
-| **otio-fcp-adapter, otio-cmx3600-adapter** | Apache-2.0 | OTIO's FCP7 XML and CMX 3600 adapters, split out of core | **Test-only (`test` extra)**: an independent second reader of this skill's .xml and .edl, and a second writer of files this skill must read. CI installs them and fails if those tests skip |
-| A community Resolve / Premiere MCP server's timeline code | none / GPL-3.0 / MIT | Live control, not interchange | Rejected here (licence, and it is the later "reuse" step) |
+| Candidate                                                                   | Licence              | Notes                                                                                                                                                                    | Verdict                                                                                                                                                                                     |
+| --------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Standard library writers and readers** (`json`, `xml.etree`, `fractions`) | -                    | OTIO JSON, xmeml and CMX 3600 are small, documented text formats. Full control over rates, timecode and what is written; Python 3.9 on every OS with nothing to install  | **Chosen** for every file written and read                                                                                                                                                  |
+| **opentimelineio**                                                          | Apache-2.0           | The reference implementation. Wheels for CPython 3.9-3.13 on Linux, macOS and Windows. Since 0.17 its core ships only the OTIO-native adapters (otio_json, otioz, otiod) | **Optional extra `otio`**: `export` re-reads each written .otio with it (`verification`). Not needed to write or read                                                                       |
+| **otio-fcp-adapter, otio-cmx3600-adapter**                                  | Apache-2.0           | OTIO's FCP7 XML and CMX 3600 adapters, split out of core                                                                                                                 | **Test-only (`test` extra)**: an independent second reader of this skill's .xml and .edl, and a second writer of files this skill must read. CI installs them and fails if those tests skip |
+| A community Resolve / Premiere MCP server's timeline code                   | none / GPL-3.0 / MIT | Live control, not interchange                                                                                                                                            | Rejected here (licence, and it is the later "reuse" step)                                                                                                                                   |
 
 ### Decision
 
@@ -101,14 +101,14 @@ Velisa's roadmap: live NLE control is reuse. Do not fork the community servers; 
 
 ### Candidates
 
-| Server | Licence | Maintenance | Code-execution tools | Telemetry | Verdict |
-|---|---|---|---|---|---|
-| samuelgursky/davinci-resolve-mcp 4.17.0 | MIT | releases every few days, tests, SECURITY.md | none since v3.0.0 (removed; an AST test keeps `exec` / `eval` / `RunScript` out of `src/`) | none; a GitHub release check on start, can be turned off | **Used for Resolve** |
-| leancoderkavy/premiere-pro-mcp 1.27.0 | MIT | releases every few days, tests, SECURITY.md | `execute_extendscript`, `evaluate_expression`, refused unless the `unsafe-script` capability is granted | PostHog, only when `POSTHOG_API_KEY` is set | **Used for Premiere** |
-| Tooflex/davinci-resolve-mcp | none (no licence file) | last commit 2026-07-26 | `execute_lua` | - | Rejected |
-| apvlv/davinci-resolve-mcp | `LICENSE` MIT, a directory says GPL-3.0 | last commit 2026-10-22 | `execute_python`, `execute_lua` | - | Rejected |
-| nepfaff/premiere-pro-mcp | none (no licence file) | last commit 2026-02-09 | one tool that `eval()`s UXP JavaScript | - | Rejected |
-| tro2789/scout-premiere-mcp | proprietary | last commit 2026-09-01 | `execute_extendscript` | - | Rejected |
+| Server                                  | Licence                                 | Maintenance                                 | Code-execution tools                                                                                    | Telemetry                                                | Verdict               |
+| --------------------------------------- | --------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------- |
+| samuelgursky/davinci-resolve-mcp 4.17.0 | MIT                                     | releases every few days, tests, SECURITY.md | none since v3.0.0 (removed; an AST test keeps `exec` / `eval` / `RunScript` out of `src/`)              | none; a GitHub release check on start, can be turned off | **Used for Resolve**  |
+| leancoderkavy/premiere-pro-mcp 1.27.0   | MIT                                     | releases every few days, tests, SECURITY.md | `execute_extendscript`, `evaluate_expression`, refused unless the `unsafe-script` capability is granted | PostHog, only when `POSTHOG_API_KEY` is set              | **Used for Premiere** |
+| Tooflex/davinci-resolve-mcp             | none (no licence file)                  | last commit 2026-07-26                      | `execute_lua`                                                                                           | -                                                        | Rejected              |
+| apvlv/davinci-resolve-mcp               | `LICENSE` MIT, a directory says GPL-3.0 | last commit 2026-10-22                      | `execute_python`, `execute_lua`                                                                         | -                                                        | Rejected              |
+| nepfaff/premiere-pro-mcp                | none (no licence file)                  | last commit 2026-02-09                      | one tool that `eval()`s UXP JavaScript                                                                  | -                                                        | Rejected              |
+| tro2789/scout-premiere-mcp              | proprietary                             | last commit 2026-09-01                      | `execute_extendscript`                                                                                  | -                                                        | Rejected              |
 
 ### Decision
 
@@ -238,19 +238,19 @@ Checked 2026-11-06 against auto-editor 29.3.1 (Unlicense; tag `29.3.1`, `43d47dc
 
 ### What auto-editor writes, and what happens to it
 
-| Element | Read as |
-|---|---|
-| `xmeml version="5"`, `sequence explodedTracks="true"`, no sequence `<timecode>` | the version is not checked; the start is 00:00:00:00 (it states none) |
-| sequence `rate` (`timebase` 30 + `ntsc` TRUE = 30000/1001; 25 + FALSE) | the exact rate; NDF (no timecode, so no DF) |
-| video `format` width / height / `pixelaspectratio` square | kept; a non-square ratio would be `PIXEL_ASPECT_NOT_IMPORTED` |
-| `clipitem` name, enabled, start, end, in, out | kept (the cut) |
+| Element                                                                                                                                                                                   | Read as                                                                                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `xmeml version="5"`, `sequence explodedTracks="true"`, no sequence `<timecode>`                                                                                                           | the version is not checked; the start is 00:00:00:00 (it states none)                                                                                                                    |
+| sequence `rate` (`timebase` 30 + `ntsc` TRUE = 30000/1001; 25 + FALSE)                                                                                                                    | the exact rate; NDF (no timecode, so no DF)                                                                                                                                              |
+| video `format` width / height / `pixelaspectratio` square                                                                                                                                 | kept; a non-square ratio would be `PIXEL_ASPECT_NOT_IMPORTED`                                                                                                                            |
+| `clipitem` name, enabled, start, end, in, out                                                                                                                                             | kept (the cut)                                                                                                                                                                           |
 | `file` name, `pathurl` (a bare absolute path, not a `file://` URL), its `timecode` 00:00:00:00 NDF, rate, empty `duration`, media width / height / sample characteristics / channel count | path and picture size kept; the start 00:00:00:00 is "none"; the length stays unknown; the audio facts are the media's, which `conform` reads from the file through ffmpeg-skill `probe` |
-| `compositemode` normal | the default; any other mode is `COMPOSITE_NOT_IMPORTED` |
-| `link` (picture to both sound channels) | `LINKS_NOT_IMPORTED`: the plan has no links, `diff` pairs by media and range |
-| audio `format` samplerate / depth | `AUDIO_FORMAT_NOT_IMPORTED` |
-| audio tracks one per channel (`currentExplodedTrackIndex`, `premiereTrackType="Stereo"`, `outputchannelindex`, `premiereChannelType`) | `CHANNEL_TRACKS_NOT_IMPORTED`: A1 and A2 are each read as whole clips of the file; `diff` folds the copies into one clip (ADR-007) |
-| `labels/label2` (Iris) | `LABEL_NOT_IMPORTED`, once per track and label |
-| `filter` Time Remap (with `--when-silent speed:...`) | `SPEED_NOT_IMPORTED`, as before |
+| `compositemode` normal                                                                                                                                                                    | the default; any other mode is `COMPOSITE_NOT_IMPORTED`                                                                                                                                  |
+| `link` (picture to both sound channels)                                                                                                                                                   | `LINKS_NOT_IMPORTED`: the plan has no links, `diff` pairs by media and range                                                                                                             |
+| audio `format` samplerate / depth                                                                                                                                                         | `AUDIO_FORMAT_NOT_IMPORTED`                                                                                                                                                              |
+| audio tracks one per channel (`currentExplodedTrackIndex`, `premiereTrackType="Stereo"`, `outputchannelindex`, `premiereChannelType`)                                                     | `CHANNEL_TRACKS_NOT_IMPORTED`: A1 and A2 are each read as whole clips of the file; `diff` folds the copies into one clip (ADR-007)                                                       |
+| `labels/label2` (Iris)                                                                                                                                                                    | `LABEL_NOT_IMPORTED`, once per track and label                                                                                                                                           |
+| `filter` Time Remap (with `--when-silent speed:...`)                                                                                                                                      | `SPEED_NOT_IMPORTED`, as before                                                                                                                                                          |
 
 The reader is the same FCP7 XML reader for every NLE: these checks are generic (any FCP7 XML with labels, links, an audio format or exploded tracks gets them), nothing keys on auto-editor's name.
 

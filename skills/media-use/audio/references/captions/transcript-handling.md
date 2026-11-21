@@ -52,7 +52,8 @@ var raw = JSON.parse(transcriptJson);
 var words = raw.filter(function (w) {
   if (!w.text || w.text.trim().length === 0) return false;
   if (/^[♪�\u266a\u266b\u266c\u266d\u266e\u266f]+$/.test(w.text)) return false;
-  if (/^(huh|uh|um|ah|oh)$/i.test(w.text) && w.end - w.start < 0.1) return false;
+  if (/^(huh|uh|um|ah|oh)$/i.test(w.text) && w.end - w.start < 0.1)
+    return false;
   return true;
 });
 ```

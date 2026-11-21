@@ -32,7 +32,9 @@ Remotion's render page sets `* { box-sizing: border-box }`, so a `width` there a
     box-sizing: border-box;
   }
 </style>
-<div style="width:200px;height:100px;padding:20px;border:10px solid #fff">…</div>
+<div style="width:200px;height:100px;padding:20px;border:10px solid #fff">
+  …
+</div>
 ```
 
 ## Sequencing

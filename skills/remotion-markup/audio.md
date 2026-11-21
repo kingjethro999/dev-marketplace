@@ -40,7 +40,7 @@ Remote URLs are also supported:
 ```tsx
 import { Audio } from "@remotion/media";
 
-<Audio src="https://remotion.media/audio.mp3" />
+<Audio src="https://remotion.media/audio.mp3" />;
 ```
 
 By default, audio plays from the start, at full volume and full length.
@@ -76,9 +76,7 @@ import { Audio } from "@remotion/media";
 
 const { fps } = useVideoConfig();
 
-return (
-  <Audio from={fps} src={staticFile("audio.mp3")} />
-);
+return <Audio from={fps} src={staticFile("audio.mp3")} />;
 ```
 
 The audio will start playing after 1 second.
@@ -90,14 +88,19 @@ Set a static volume (0 to 1):
 ```tsx
 import { Audio } from "@remotion/media";
 
-<Audio src={staticFile("audio.mp3")} volume={0.5} />
+<Audio src={staticFile("audio.mp3")} volume={0.5} />;
 ```
 
 Use `useCurrentFrame()` and `interpolate()` for keyframed volume:
 
 ```tsx
 import { Audio } from "@remotion/media";
-import { interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  interpolate,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 
 const frame = useCurrentFrame();
 const { fps } = useVideoConfig();
@@ -155,7 +158,7 @@ Use `loop` to loop the audio indefinitely:
 ```tsx
 import { Audio } from "@remotion/media";
 
-<Audio src={staticFile("audio.mp3")} loop />
+<Audio src={staticFile("audio.mp3")} loop />;
 ```
 
 Put `name`, `from`, `loop`, and `volume` directly on `<Audio>`.
@@ -173,7 +176,7 @@ const frame = useCurrentFrame();
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   })}
-/>
+/>;
 ```
 
 ## Pitch

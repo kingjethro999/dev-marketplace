@@ -144,7 +144,10 @@ Save this as `audio_request.json` in the project:
   "lang": "en",
   "style": "Warm, clear, conversational. Leave a short pause between sentences.",
   "lines": [
-    { "id": "intro", "text": "Every word has a moment. Let the picture follow the voice." }
+    {
+      "id": "intro",
+      "text": "Every word has a moment. Let the picture follow the voice."
+    }
   ],
   "bgm": { "mode": "none" }
 }

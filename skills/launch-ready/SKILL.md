@@ -52,15 +52,15 @@ node .agents/skills/launch-ready/scripts/launch-ready.js --skip-install
 
 ### What It Runs (Exact Sequence)
 
-| Step | Command | Purpose |
-|------|---------|---------|
-| 1 | `npm i -g periderm-cli` | Ensure latest Periderm CLI |
-| 2 | `periderm --help` | Verify CLI responsive |
-| 3 | `periderm --version` | Log version for audit trail |
-| 4 | `periderm auth status` | Check authentication |
-| 5 | `periderm scan --json` | Full security/quality scan |
-| 6 | `periderm review --deep --json` | Deep AI review |
-| 7 | **AI Decision** | Analyze all results, decide LAUNCH/BLOCK |
+| Step | Command                         | Purpose                                  |
+| ---- | ------------------------------- | ---------------------------------------- |
+| 1    | `npm i -g periderm-cli`         | Ensure latest Periderm CLI               |
+| 2    | `periderm --help`               | Verify CLI responsive                    |
+| 3    | `periderm --version`            | Log version for audit trail              |
+| 4    | `periderm auth status`          | Check authentication                     |
+| 5    | `periderm scan --json`          | Full security/quality scan               |
+| 6    | `periderm review --deep --json` | Deep AI review                           |
+| 7    | **AI Decision**                 | Analyze all results, decide LAUNCH/BLOCK |
 
 ### Configuration
 

@@ -58,7 +58,9 @@ if (verb === "get") {
       workflow: args.workflow,
     });
     const promotion = result.promoted ? "; promoted to user tier" : "";
-    console.log(`recorded ${result.key} = ${result.value} (project${promotion})`);
+    console.log(
+      `recorded ${result.key} = ${result.value} (project${promotion})`,
+    );
   } catch (err) {
     fail(err instanceof Error ? err.message : String(err));
   }

@@ -41,7 +41,10 @@ didn't specify trim.
 ### Volume ramps
 
 ```tsx
-<Audio src={staticFile("music.wav")} volume={(f) => interpolate(f, [0, 30], [0, 1])} />
+<Audio
+  src={staticFile("music.wav")}
+  volume={(f) => interpolate(f, [0, 30], [0, 1])}
+/>
 ```
 
 Volume ramps become a `data-automation` volume lane on the `<audio>`
@@ -51,7 +54,12 @@ is the static baseline.
 ### Trim / playbackRate
 
 ```tsx
-<Audio src={staticFile("music.wav")} startFrom={60} endAt={180} playbackRate={1.5} />
+<Audio
+  src={staticFile("music.wav")}
+  startFrom={60}
+  endAt={180}
+  playbackRate={1.5}
+/>
 ```
 
 ```html

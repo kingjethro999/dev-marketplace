@@ -2,19 +2,11 @@
   "source": "kajisho5/AI-video-production-OS registry/contract.py + docs/SKILL_SPEC.md sections 3.1, 8 + docs/CAPABILITY_MODEL.md (branch claude/ai-video-production-os-arch-fck6fy, 2026-09-05)",
   "note": "Rules of the OS consumer, copied once; the media-analysis contract under test is generated from the implementation.",
   "skill_identity": {
-    "accepted_shapes": [
-      "skill_id",
-      "skill.id",
-      "id"
-    ],
+    "accepted_shapes": ["skill_id", "skill.id", "id"],
     "rule": "flat skill_id is canonical when present"
   },
   "provides_entry": {
-    "required": [
-      "id",
-      "lifecycle",
-      "tool_id"
-    ],
+    "required": ["id", "lifecycle", "tool_id"],
     "lifecycles": [
       "PROPOSED",
       "EXPERIMENTAL",
@@ -22,9 +14,7 @@
       "DEPRECATED",
       "RETIRED"
     ],
-    "extra_fields_permitted": [
-      "kind"
-    ],
+    "extra_fields_permitted": ["kind"],
     "rule": "every real provides entry carries id, lifecycle, tool_id; Skill-specific extras are ignored by the registry"
   },
   "denylist": {

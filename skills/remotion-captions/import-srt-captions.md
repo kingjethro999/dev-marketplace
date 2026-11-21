@@ -58,11 +58,7 @@ export const MyComponent: React.FC = () => {
     return null;
   }
 
-  return (
-    <>
-      {/* Use captions here */}
-    </>
-  );
+  return <>{/* Use captions here */}</>;
 };
 ```
 

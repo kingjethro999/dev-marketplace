@@ -44,11 +44,28 @@ scores the project at chosen times with no render.
 ```json
 {
   "pass": true,
-  "ssim": { "frames": 90, "mean": 0.974, "p05": 0.972, "min": 0.971, "cell_p05": 0.93 },
+  "ssim": {
+    "frames": 90,
+    "mean": 0.974,
+    "p05": 0.972,
+    "min": 0.971,
+    "cell_p05": 0.93
+  },
   "worst": [
-    { "t": 1.2, "frame": 36, "ssim": 0.971, "cell": { "roi": [480, 270, 480, 270], "ssim": 0.88 } }
+    {
+      "t": 1.2,
+      "frame": 36,
+      "ssim": 0.971,
+      "cell": { "roi": [480, 270, 480, 270], "ssim": 0.88 }
+    }
   ],
-  "cuts": { "reference": [1.5], "yours": [1.5], "missing": [], "extra": [], "pass": true },
+  "cuts": {
+    "reference": [1.5],
+    "yours": [1.5],
+    "missing": [],
+    "extra": [],
+    "pass": true
+  },
   "duration": { "reference": 3, "yours": 3, "pass": true },
   "sheet": "diff/worst.jpg"
 }

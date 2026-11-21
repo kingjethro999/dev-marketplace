@@ -20,18 +20,18 @@ CLI (cli.py)  ──▶  AnalysisEngine.run(document) (engine.py)   document = r
 
 ## Layers
 
-| module | responsibility | knows about |
-|---|---|---|
-| `contract.py` | Skill / Tool contract (tools derived from the registry), `ANALYSIS_KINDS`, parameter schemas, `AnalysisRequest`, Observation envelope, analysis identity | registry (lazily, for the contract only) |
-| `schemas.py` | transport-independent JSON schemas of request / batch / result / response / observation + a minimal validator | nothing |
-| `engine.py` | the single pipeline above; `run()` builds the response document, `exit_code_for()` maps it to a process exit code | everything |
-| `registry.py` | fixed list of analyzers; refuses to start if it disagrees with the contract | analyzers, contract |
-| `analyzers/` | one class per tool: `plan()` (dry-run description) and `analyze()` (measurement) | `probe.py`, `packets.py`, `runner.py` |
-| `probe.py`, `packets.py` | ffprobe execution + pure parsers (format / streams, packet timestamps) | runner |
-| `runner.py` | argv-only subprocess execution with timeout, process-group kill, minimal environment | nothing |
-| `capabilities.py` | detection of ffmpeg / ffprobe / filters (`doctor`) | runner |
-| `cache.py`, `budget.py`, `verify.py`, `security.py` | Observation reuse, enforced limits, result verification, path policy | contract / canonical |
-| `canonical.py` | canonical JSON, sha256 | nothing |
+| module                                              | responsibility                                                                                                                                           | knows about                              |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `contract.py`                                       | Skill / Tool contract (tools derived from the registry), `ANALYSIS_KINDS`, parameter schemas, `AnalysisRequest`, Observation envelope, analysis identity | registry (lazily, for the contract only) |
+| `schemas.py`                                        | transport-independent JSON schemas of request / batch / result / response / observation + a minimal validator                                            | nothing                                  |
+| `engine.py`                                         | the single pipeline above; `run()` builds the response document, `exit_code_for()` maps it to a process exit code                                        | everything                               |
+| `registry.py`                                       | fixed list of analyzers; refuses to start if it disagrees with the contract                                                                              | analyzers, contract                      |
+| `analyzers/`                                        | one class per tool: `plan()` (dry-run description) and `analyze()` (measurement)                                                                         | `probe.py`, `packets.py`, `runner.py`    |
+| `probe.py`, `packets.py`                            | ffprobe execution + pure parsers (format / streams, packet timestamps)                                                                                   | runner                                   |
+| `runner.py`                                         | argv-only subprocess execution with timeout, process-group kill, minimal environment                                                                     | nothing                                  |
+| `capabilities.py`                                   | detection of ffmpeg / ffprobe / filters (`doctor`)                                                                                                       | runner                                   |
+| `cache.py`, `budget.py`, `verify.py`, `security.py` | Observation reuse, enforced limits, result verification, path policy                                                                                     | contract / canonical                     |
+| `canonical.py`                                      | canonical JSON, sha256                                                                                                                                   | nothing                                  |
 
 ## Analyzer contract
 
@@ -67,7 +67,7 @@ one audio stream (the `noise_floor` method) and scores runs of transcript senten
 
 - `asset_fingerprint` is the sha256 of the file content (not path, not mtime): a moved file keeps its identity, an
   edited file loses it.
-- `parameters` are the *effective* parameters (defaults applied, validated), so `{}` and `{"stream": 0}` are the
+- `parameters` are the _effective_ parameters (defaults applied, validated), so `{}` and `{"stream": 0}` are the
   same analysis and `{"threshold_db": -40}` and `{"threshold_db": -40.0}` are the same analysis.
 - The derived `analysis_id` (`analysis-<identity[:16]>`) and the observation id (`obs_<identity[:16]>`) follow from
   it. A caller-supplied `analysis_id` is a label and does not enter the identity.
@@ -139,7 +139,7 @@ schema versions, kinds, `kind_to_tool`, every ToolSpec (from the registry), capa
 invocation flags, schemas, error / exit / class tables, cache / budget / identity / security sections and the
 `provides` list. `contract --check FILE`
 exposes it (exit 0 = identical, 1 = drift, `status: ok | drift`), `doctor` runs it on the live document, and
-`tests/contract/cases/*.json` are drift fixtures expressed as *mutations* of the live contract (never a second copy)
+`tests/contract/cases/*.json` are drift fixtures expressed as _mutations_ of the live contract (never a second copy)
 with the problems each must raise.
 
 ## Connecting to video-production-agent

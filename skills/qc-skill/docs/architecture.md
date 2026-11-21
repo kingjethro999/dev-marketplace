@@ -18,7 +18,7 @@ Skill (invokes qc-skill, among others)
 
 `qc-skill` produces a `QCReport`; it never produces an `Observation`,
 `Inference`, `Decision`, or `ProductionPlan` object itself (those are
-`video-production-agent` concepts). A `QCReport` is *input* to the
+`video-production-agent` concepts). A `QCReport` is _input_ to the
 agent's own `Observation`/`Decision` pipeline - typically wrapped as one
 `Observation` whose `data` is the report, with `source =
 "qc/<kind>@<version>"`.
@@ -61,9 +61,9 @@ of `QCCheck`:
 
 ## Execution vs. QC status
 
-`response.status` ("completed" | "failed") describes whether the *QC run
-itself* succeeded. `report.overall_status` (PASS/WARN/FAIL/UNKNOWN)
-describes what was *found*. A completed run with `overall_status: "FAIL"`
+`response.status` ("completed" | "failed") describes whether the _QC run
+itself_ succeeded. `report.overall_status` (PASS/WARN/FAIL/UNKNOWN)
+describes what was _found_. A completed run with `overall_status: "FAIL"`
 is the normal, correct outcome of checking a bad file - it is not an
 error and must not be treated as one by a caller.
 
@@ -81,7 +81,7 @@ Recorded on every report (`provenance` object, top-level and echoed inside
 - `operation`
 - `engine.ffmpeg_version`, `engine.ffprobe_version` - the actual binaries
   used, not just "ffmpeg is installed"
-- `input.fingerprint` (sha256 of file *content*), `input.size_bytes`
+- `input.fingerprint` (sha256 of file _content_), `input.size_bytes`
 - `identity` - see below
 - `observed_at` - UTC, second precision, `Z` suffix
 - `measurement_source: "OBSERVED"` - qc-skill never fabricates a
@@ -113,12 +113,13 @@ run (see `tests/test_provenance_determinism.py`).
 `QCReportCache` (`src/qc_skill/cache.py`) stores one JSON file per
 identity hash, sharded by the first two hex characters. A read is a hit
 only if the stored metadata (skill version, fingerprints, kind, operation,
-effective parameters, engine versions) matches the current request *and*
+effective parameters, engine versions) matches the current request _and_
 the stored report's hash matches a freshly recomputed `stable_hash` of its
 own content - a corrupted or hand-edited cache file is deleted and treated
 as a miss, never returned as a successful reuse.
 
 `cache_policy`:
+
 - `use` (default) - read on hit, write on miss.
 - `bypass` - never read or write the cache for this call.
 - `only` - read only; raises `VALIDATION_ERROR` if there is no cached
@@ -129,7 +130,7 @@ as a miss, never returned as a successful reuse.
 
 A delivery is often more than one file - a video plus a subtitle plus a
 thumbnail plus a metadata sidecar - produced independently by several
-skills. `kind: "delivery_package"` validates N *named* artifacts as one
+skills. `kind: "delivery_package"` validates N _named_ artifacts as one
 unit, without qc-skill ever importing a `ProductionPlan`/agent-side type
 directly (ADR-010, `docs/decisions.md`):
 
@@ -149,8 +150,9 @@ A required artifact that is genuinely absent is a normal, reportable
 `PathPolicy.resolve_input(path, must_exist=False)` still enforces every
 other boundary (traversal, control characters, not-a-regular-file,
 outside the allowed input roots) exactly as it does for every other kind
+
 - only "the file does not exist" is downgraded from an exception to a
-measurement, and only for this kind.
+  measurement, and only for this kind.
 
 Because several artifacts in one report can produce a measurement with
 the same id (two subtitle artifacts both have `subtitle.cue_count`),
@@ -164,7 +166,7 @@ those checks on its own - never compared against anything else in the
 package.
 
 **Cross-artifact validation** (`rules.delivery_package.cross_artifact`,
-Phase 2, ADR-011) compares *different* artifacts against each other:
+Phase 2, ADR-011) compares _different_ artifacts against each other:
 duration consistency (`ArtifactDurationConsistencyRule`) and
 presence dependency (`ArtifactDependencyRule`). Both are typed
 relationship rules over measurements the per-artifact gathering already
@@ -182,12 +184,12 @@ capability.
 
 - **`ffmpeg-skill` / `media-analysis-skill`** - general-purpose
   probing/analysis. `qc-skill` uses the same engines (ffmpeg/ffprobe) but
-  is the dedicated, rule-driven *validation* domain: it always produces a
+  is the dedicated, rule-driven _validation_ domain: it always produces a
   PASS/WARN/FAIL/UNKNOWN verdict against an explicit spec, which those
   skills' own `check.py`/analyzers do not attempt to standardize across
   video/audio/subtitle/delivery in one contract.
 - **`video-editing-skill` / `audio-production-skill` / `subtitle-skill`** -
-  execution skills. They *act* on media; `qc-skill` only ever *reads* it.
+  execution skills. They _act_ on media; `qc-skill` only ever _reads_ it.
 - **`video-production-agent`** - the only place a QC finding becomes a
   `Decision`. `qc-skill` is designed to be called once per artifact/kind
   and to return everything the agent needs to reason about the result

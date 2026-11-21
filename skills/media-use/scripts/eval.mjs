@@ -49,7 +49,11 @@ function run(args, opts = {}) {
       }).trim(),
     };
   } catch (err) {
-    return { ok: false, output: (err.stdout || "") + (err.stderr || ""), code: err.status };
+    return {
+      ok: false,
+      output: (err.stdout || "") + (err.stderr || ""),
+      code: err.status,
+    };
   }
 }
 
@@ -95,7 +99,12 @@ function evalBlock(blockPath) {
       const urlMatches = html.matchAll(/url\(["']?([^"')]+?)["']?\)/g);
       for (const m of urlMatches) {
         const ref = m[1];
-        if (ref.startsWith("data:") || ref.startsWith("http") || ref.startsWith("#")) continue;
+        if (
+          ref.startsWith("data:") ||
+          ref.startsWith("http") ||
+          ref.startsWith("#")
+        )
+          continue;
         assetRefs.push({ composition: hf, ref });
       }
     }
@@ -138,7 +147,15 @@ function evalBlock(blockPath) {
     if (manifest.length > 0) {
       const first = manifest[0];
       const prompt = first.provenance?.prompt || first.description;
-      const r = run(["--type", first.type, "--intent", prompt, "--project", tmp, "--json"]);
+      const r = run([
+        "--type",
+        first.type,
+        "--intent",
+        prompt,
+        "--project",
+        tmp,
+        "--json",
+      ]);
       if (r.ok) {
         try {
           resolveTest = JSON.parse(r.output);
@@ -176,7 +193,11 @@ function evalBlock(blockPath) {
 
     return {
       name,
-      baseline: { fileCount: baseline.count, files: baseline.files, htmlCount: htmlFiles.length },
+      baseline: {
+        fileCount: baseline.count,
+        files: baseline.files,
+        htmlCount: htmlFiles.length,
+      },
       compositions: htmlFiles,
       assetRefs: coverage,
       adopted: { count: adopted.adopted, assets: adopted.assets || [] },
@@ -226,7 +247,8 @@ function generateReport(results) {
 
       const coveredCount = r.assetRefs.filter((c) => c.covered).length;
       const totalRefs = r.assetRefs.length;
-      const coveragePct = totalRefs > 0 ? Math.round((coveredCount / totalRefs) * 100) : 100;
+      const coveragePct =
+        totalRefs > 0 ? Math.round((coveredCount / totalRefs) * 100) : 100;
 
       const refRows = r.assetRefs
         .map(
@@ -315,7 +337,9 @@ pre.index { white-space: pre; }
   <div class="stat"><div class="num">${(() => {
     const refs = all.flatMap((r) => r.assetRefs);
     const covered = refs.filter((c) => c.covered).length;
-    return refs.length > 0 ? Math.round((covered / refs.length) * 100) + "%" : "—";
+    return refs.length > 0
+      ? Math.round((covered / refs.length) * 100) + "%"
+      : "—";
   })()}</div><div class="label">composition coverage</div></div>
 </div>
 

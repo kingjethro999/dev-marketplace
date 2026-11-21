@@ -38,7 +38,9 @@ test("parseFfmpegDurationBanner handles an hours component", () => {
 });
 
 test("parseFfmpegDurationBanner returns NaN when there is no Duration line", () => {
-  assert.ok(Number.isNaN(parseFfmpegDurationBanner("ffmpeg: command not found")));
+  assert.ok(
+    Number.isNaN(parseFfmpegDurationBanner("ffmpeg: command not found")),
+  );
   assert.ok(Number.isNaN(parseFfmpegDurationBanner("")));
   assert.ok(Number.isNaN(parseFfmpegDurationBanner(undefined)));
 });
@@ -97,7 +99,10 @@ test("synthesizeOne(elevenlabs) creates the output dir before writing", async ()
       wavAbs,
       hyperframesDir: dir,
     });
-    assert.ok(existsSync(dirname(wavAbs)), "output directory should be created");
+    assert.ok(
+      existsSync(dirname(wavAbs)),
+      "output directory should be created",
+    );
   } finally {
     if (savedKey === undefined) delete process.env.ELEVENLABS_API_KEY;
     else process.env.ELEVENLABS_API_KEY = savedKey;
@@ -111,7 +116,9 @@ test("synthesizeHeygen surfaces a thrown HTTP error (e.g. 402) instead of swallo
     {
       heygenAuthHeaders: () => ({}),
       heygenJSON: async () => {
-        throw new Error("HeyGen POST /voices/speech → HTTP 402\nplan_upgrade_required");
+        throw new Error(
+          "HeyGen POST /voices/speech → HTTP 402\nplan_upgrade_required",
+        );
       },
     },
   );
@@ -125,7 +132,9 @@ test("synthesizeHeygen surfaces a failed audio_url fetch with its status", async
     { text: "hi", voiceId: "v1", lang: "en", speed: 1, wavAbs: "/tmp/x.wav" },
     {
       heygenAuthHeaders: () => ({}),
-      heygenJSON: async () => ({ data: { audio_url: "http://audio.example/x" } }),
+      heygenJSON: async () => ({
+        data: { audio_url: "http://audio.example/x" },
+      }),
       fetch: async () => ({ ok: false, status: 403 }),
     },
   );
@@ -146,11 +155,23 @@ test("synthesizeHeygen reports wav transcode failures", async () => {
   const dir = mkdtempSync(join(tmpdir(), "hf-tts-test-"));
   try {
     const res = await synthesizeHeygen(
-      { text: "hi", voiceId: "v1", lang: "en", speed: 1, wavAbs: join(dir, "voice.wav") },
+      {
+        text: "hi",
+        voiceId: "v1",
+        lang: "en",
+        speed: 1,
+        wavAbs: join(dir, "voice.wav"),
+      },
       {
         heygenAuthHeaders: () => ({}),
-        heygenJSON: async () => ({ data: { audio_url: "http://audio.example/x" } }),
-        fetch: async () => ({ ok: true, status: 200, arrayBuffer: async () => new ArrayBuffer(0) }),
+        heygenJSON: async () => ({
+          data: { audio_url: "http://audio.example/x" },
+        }),
+        fetch: async () => ({
+          ok: true,
+          status: 200,
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }),
         transcodeToWav: () => false,
       },
     );
@@ -162,7 +183,11 @@ test("synthesizeHeygen reports wav transcode failures", async () => {
 });
 
 test("synthResult names a non-zero subprocess exit", () => {
-  const res = synthResult({ status: 2 }, "/tmp/none.wav", "kokoro (npx hyperframes tts)");
+  const res = synthResult(
+    { status: 2 },
+    "/tmp/none.wav",
+    "kokoro (npx hyperframes tts)",
+  );
   assert.equal(res.ok, false);
   assert.match(res.error, /kokoro .* exited with status 2/);
 });
@@ -215,7 +240,10 @@ test(
     const marker = join(dir, "npx-ran");
     writeFileSync(join(dir, "npx"), `#!/bin/sh\ntouch "${marker}"\n`);
     chmodSync(join(dir, "npx"), 0o755);
-    const saved = { PATH: process.env.PATH, entry: process.env.HYPERFRAMES_CLI_ENTRY };
+    const saved = {
+      PATH: process.env.PATH,
+      entry: process.env.HYPERFRAMES_CLI_ENTRY,
+    };
     const originalError = console.error;
     const errors = [];
     try {
@@ -232,23 +260,28 @@ test(
       });
       assert.equal(res.ok, false);
       assert.match(res.error, /HYPERFRAMES_CLI_ENTRY/);
-      assert.equal(await transcribeWav({ wavRel: "line-0.wav", hyperframesDir: dir }), null);
+      assert.equal(
+        await transcribeWav({ wavRel: "line-0.wav", hyperframesDir: dir }),
+        null,
+      );
       assert.equal(existsSync(marker), false);
       assert.equal(errors.length, 1);
     } finally {
       console.error = originalError;
       process.env.PATH = saved.PATH;
-      if (saved.entry !== undefined) process.env.HYPERFRAMES_CLI_ENTRY = saved.entry;
+      if (saved.entry !== undefined)
+        process.env.HYPERFRAMES_CLI_ENTRY = saved.entry;
       rmSync(dir, { recursive: true, force: true });
     }
   },
 );
 
 test("pickProvider heygen with an unreadable credentials path says to fix that path", () => {
-  const saved = ["HEYGEN_API_KEY", "HYPERFRAMES_API_KEY", "HYPERFRAMES_CONFIG_DIR"].map((k) => [
-    k,
-    process.env[k],
-  ]);
+  const saved = [
+    "HEYGEN_API_KEY",
+    "HYPERFRAMES_API_KEY",
+    "HYPERFRAMES_CONFIG_DIR",
+  ].map((k) => [k, process.env[k]]);
   const dir = mkdtempSync(join(tmpdir(), "tts-cred-"));
   try {
     delete process.env.HEYGEN_API_KEY;
@@ -268,10 +301,19 @@ test("pickProvider heygen with an unreadable credentials path says to fix that p
 test("synthesizeHeygen refuses under a credit limit before any request", async () => {
   const dir = mkdtempSync(join(tmpdir(), "hf-tts-limit-"));
   mkdirSync(join(dir, ".hyperframes"));
-  writeFileSync(join(dir, ".hyperframes", "credit-limit.json"), '{"credits": 5}');
+  writeFileSync(
+    join(dir, ".hyperframes", "credit-limit.json"),
+    '{"credits": 5}',
+  );
   let asked = false;
   const r = await synthesizeHeygen(
-    { text: "hi", voiceId: "v", lang: "en", speed: 1, wavAbs: join(dir, "a.wav") },
+    {
+      text: "hi",
+      voiceId: "v",
+      lang: "en",
+      speed: 1,
+      wavAbs: join(dir, "a.wav"),
+    },
     { projectDir: dir, heygenJSON: async () => ((asked = true), {}) },
   );
   assert.equal(r.ok, false);

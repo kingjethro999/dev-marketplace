@@ -17,7 +17,7 @@
   `ffmpeg_analysis_argv`. Detection filters (`blackdetect`,
   `freezedetect`, `ebur128`, `astats`, `silencedetect`) are always
   constructed internally from numeric parameters (thresholds,
-  min-durations) - a caller can tune *sensitivity*, never inject arbitrary
+  min-durations) - a caller can tune _sensitivity_, never inject arbitrary
   filter syntax.
 - The one two-input invocation (`ffmpeg_two_input_argv`, full-reference
   metrics, ADR-021) takes exactly two resolved, validated paths (`input`
@@ -40,26 +40,26 @@
 `src/qc_skill/security.py::PathPolicy`:
 
 - **Input** (`resolve_input`): rejects empty strings, NUL bytes, control
-  characters, and any `..` path segment in the *raw* string before any
+  characters, and any `..` path segment in the _raw_ string before any
   filesystem resolution happens. The path is then resolved with symlinks
   followed (`Path.resolve(strict=True)`), must be an existing regular
   file, and - when `allowed_input_roots` is configured - must be a
   descendant of one of those roots using component-wise comparison
   (`Path.relative_to`), never a string prefix check (so `/w/media` never
   matches `/w/media_evil`). A symlink inside an allowed root that points
-  outside it is rejected, because containment is checked *after*
+  outside it is rejected, because containment is checked _after_
   resolution. `kind: "delivery_package"` calls `resolve_input(...,
-  must_exist=False)`: every check above still applies exactly as written
+must_exist=False)`: every check above still applies exactly as written
   - only "the file does not exist" is downgraded from an exception to
-  `None` (reported as a normal `delivery_package.artifact_present: false`
-  measurement), because a named artifact genuinely being absent is a
-  reportable QC fact for this kind, not a malformed request.
+    `None` (reported as a normal `delivery_package.artifact_present: false`
+    measurement), because a named artifact genuinely being absent is a
+    reportable QC fact for this kind, not a malformed request.
 - **Output/report** (`resolve_output`): rejects absolute paths and `..`
   segments outright, validates the filename (`check_filename`: rejects
   Windows-reserved device names `CON`/`PRN`/`AUX`/`NUL`/`COM1-9`/`LPT1-9`,
   control characters, a trailing space or dot, an argument that looks like
   an option flag, and Windows-reserved characters `<>:"|?*`), then
-  resolves the *parent* directory (following any symlinks that already
+  resolves the _parent_ directory (following any symlinks that already
   exist) before re-appending the leaf name - so a symlinked directory
   cannot be used to smuggle the final path outside the workspace.
 - **Default posture**: when `allowed_input_roots` is not configured, any
@@ -84,7 +84,7 @@ the process invoking `qc run` - never fields inside the JSON request. This
 means a request can never grant itself a wider filesystem view than its
 caller already intended.
 
-## What is *not* enforced
+## What is _not_ enforced
 
 - Resource limits (memory, disk, CPU) beyond wall-clock time: a fixed
   ceiling per ffmpeg/ffprobe invocation plus the request's own `timeout`
@@ -93,7 +93,7 @@ caller already intended.
 - Confidentiality of the report cache directory - paths and fingerprints
   inside cached reports are plaintext (though tamper-detected via a stored
   content hash; see `docs/architecture.md#reuse--cache`).
-- Validation of *media content* safety (e.g. decoder CVEs) - `qc-skill`
+- Validation of _media content_ safety (e.g. decoder CVEs) - `qc-skill`
   relies on the ffmpeg/ffprobe build on `PATH` being reasonably current;
   `doctor --json` reports the exact version in use so a caller can decide
   whether it is acceptable.

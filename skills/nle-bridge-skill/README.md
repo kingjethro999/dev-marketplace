@@ -34,25 +34,25 @@ nle-bridge import from_editor.xml -o plan_v2.json
 
 ## Inputs
 
-| Input | How it is read |
-|---|---|
-| `nle-bridge/timeline@1` (JSON) | Assets (path, fps, size, length, start timecode), video and audio tracks of clips, markers, captions. Times in frames, or in seconds (`in` / `out` / `at`); clips without a position follow each other. See `src/nle_bridge/model.py` |
-| video-production-agent project IR | `delivery.timelines[]` (agent ADR-052), picked with `--subject` when there are several: the kept source ranges in programme order, the assets' paths and probe facts, the subject's caption cues; what the agent's `timeline.export` decision lists as `not_exported` becomes a warning |
-| A plan's `layers` (`nle-bridge/layers@1`) | Graphics rendered on their own with alpha (motion-graphics-skill, hyperframes-skill, remotion-ffmpeg-skill), each on its own video track above the picture at its start / end; see [docs/handover-layer-manifest.md](docs/handover-layer-manifest.md) and [ADR-010](docs/decisions.md) |
-| A plan's `audio_delivery` (audio-production-skill `response@1`) | Its stems on their own audio tracks from the programme's first frame; its loudness versions listed in the package with their targets and measurements ([ADR-012](docs/decisions.md)) |
-| ffmpeg-skill multicam result (`multicam.py --json`) | The cameras as the angles of one multicam at their measured sync offsets, the switch list as the initial cut: an FCP7 multiclip per cut, an OTIO stack per cut, the plain cut in the EDL ([ADR-011](docs/decisions.md)) |
-| ffmpeg-skill render project | The document `render --export-timeline` reads (`clips[{src, in, out, speed}]`, `frame`, `chapters`, `audio.music`, `captions` as an .srt): chapters become markers, the music bed an audio track; project keys a timeline cannot carry are warnings, worded as ffmpeg-skill words them |
-| `.otio`, FCP7 `.xml`, `.edl` | An editor's timeline (`import`, and the returned side of `diff`). An EDL states no frame rate: `--fps`, or the plan's rate in `diff` |
-| auto-editor's FCP7 `.xml` (`--export premiere`) | Read as any FCP7 XML: the cut list auto-editor reports, frame for frame (checked against auto-editor 29.3.1's own files, [ADR-009](docs/decisions.md)); its clip labels, links, audio format and one-track-per-channel audio are named in the warnings |
+| Input                                                           | How it is read                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nle-bridge/timeline@1` (JSON)                                  | Assets (path, fps, size, length, start timecode), video and audio tracks of clips, markers, captions. Times in frames, or in seconds (`in` / `out` / `at`); clips without a position follow each other. See `src/nle_bridge/model.py`                                                   |
+| video-production-agent project IR                               | `delivery.timelines[]` (agent ADR-052), picked with `--subject` when there are several: the kept source ranges in programme order, the assets' paths and probe facts, the subject's caption cues; what the agent's `timeline.export` decision lists as `not_exported` becomes a warning |
+| A plan's `layers` (`nle-bridge/layers@1`)                       | Graphics rendered on their own with alpha (motion-graphics-skill, hyperframes-skill, remotion-ffmpeg-skill), each on its own video track above the picture at its start / end; see [docs/handover-layer-manifest.md](docs/handover-layer-manifest.md) and [ADR-010](docs/decisions.md)  |
+| A plan's `audio_delivery` (audio-production-skill `response@1`) | Its stems on their own audio tracks from the programme's first frame; its loudness versions listed in the package with their targets and measurements ([ADR-012](docs/decisions.md))                                                                                                    |
+| ffmpeg-skill multicam result (`multicam.py --json`)             | The cameras as the angles of one multicam at their measured sync offsets, the switch list as the initial cut: an FCP7 multiclip per cut, an OTIO stack per cut, the plain cut in the EDL ([ADR-011](docs/decisions.md))                                                                 |
+| ffmpeg-skill render project                                     | The document `render --export-timeline` reads (`clips[{src, in, out, speed}]`, `frame`, `chapters`, `audio.music`, `captions` as an .srt): chapters become markers, the music bed an audio track; project keys a timeline cannot carry are warnings, worded as ffmpeg-skill words them  |
+| `.otio`, FCP7 `.xml`, `.edl`                                    | An editor's timeline (`import`, and the returned side of `diff`). An EDL states no frame rate: `--fps`, or the plan's rate in `diff`                                                                                                                                                    |
+| auto-editor's FCP7 `.xml` (`--export premiere`)                 | Read as any FCP7 XML: the cut list auto-editor reports, frame for frame (checked against auto-editor 29.3.1's own files, [ADR-009](docs/decisions.md)); its clip labels, links, audio format and one-track-per-channel audio are named in the warnings                                  |
 
 ## Outputs
 
-| Format | Carries | Does not carry |
-|---|---|---|
-| OTIO (`.otio`) | Cuts, video and audio tracks, gaps, markers with colour, the media's start timecode, plan ids in metadata | Audio levels (kept as metadata only) |
-| FCP7 XML (`.xml`, xmeml 4, for Premiere) | Cuts, video and audio tracks, markers, audio levels (`audiolevels`), DF / NDF, file paths as `file://localhost/...` | Marker colours (FCP7 has none; bars and beats are told apart by name) |
-| CMX 3600 EDL (`.edl`) | Cuts on one picture track and up to 4 audio tracks, markers with colour (`* LOC:`), DF / NDF, files in `* FROM CLIP NAME` / `* SOURCE FILE` | Other video tracks, levels, marker durations |
-| SRT (`.srt`) | Captions in programme time | |
+| Format                                   | Carries                                                                                                                                     | Does not carry                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| OTIO (`.otio`)                           | Cuts, video and audio tracks, gaps, markers with colour, the media's start timecode, plan ids in metadata                                   | Audio levels (kept as metadata only)                                  |
+| FCP7 XML (`.xml`, xmeml 4, for Premiere) | Cuts, video and audio tracks, markers, audio levels (`audiolevels`), DF / NDF, file paths as `file://localhost/...`                         | Marker colours (FCP7 has none; bars and beats are told apart by name) |
+| CMX 3600 EDL (`.edl`)                    | Cuts on one picture track and up to 4 audio tracks, markers with colour (`* LOC:`), DF / NDF, files in `* FROM CLIP NAME` / `* SOURCE FILE` | Other video tracks, levels, marker durations                          |
+| SRT (`.srt`)                             | Captions in programme time                                                                                                                  |                                                                       |
 
 **Never dropped silently.** Effects, speed changes, titles / generators and transitions do not survive interchange. Each one is a warning naming the item (`SPEED_NOT_EXPORTED`, `EFFECT_NOT_EXPORTED`, `TITLE_NOT_EXPORTED`, `TRANSITION_NOT_EXPORTED`), and so is every format-specific loss (`TRACK_NOT_EXPORTED`, `LEVEL_NOT_EXPORTED`, `MARKER_COLOR_NOT_EXPORTED`, ...). `--strict` exits 5 instead of writing. A clip with a speed change is written at 100 % from its in point for its planned length, so the cut points stay where the plan put them.
 
@@ -95,14 +95,14 @@ Picture size, rate and length come from ffmpeg-skill `probe` when ffmpeg-skill i
 
 ## Commands
 
-| Command | What it does |
-|---|---|
+| Command                                                                                                                                                                              | What it does                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | `export <plan> -o <dir> [--formats otio,fcp7,edl,srt] [--name stem] [--subject s] [--fps r] [--drop-frame] [--dissolves] [--beats grid] [--beat-markers all\|bars\|none] [--strict]` | The timelines and the SRT; `files` with sha256 and the independent re-read (`verification`), `warnings`, `timeline` summary |
-| `conform <plan> -o <dir> [--copy-media] [--zip] [--no-hash] [--no-probe] [--ffmpeg-skill dir] ...` | The conform package above |
-| `diff <plan> <returned> [-o diff.json] [--timeline-out plan.json] [--dissolves] [--beats grid] [--beat-tolerance 0.5]` | `nle-bridge/diff@1` |
-| `import <file> [-o timeline.json] [--fps r] [--subject s]` | Any input as `nle-bridge/timeline@1` |
-| `contract --json` | Machine-readable contract in Velisa's registry shape |
-| `doctor --json` | Python, ffmpeg-skill (optional), opentimelineio (optional) |
+| `conform <plan> -o <dir> [--copy-media] [--zip] [--no-hash] [--no-probe] [--ffmpeg-skill dir] ...`                                                                                   | The conform package above                                                                                                   |
+| `diff <plan> <returned> [-o diff.json] [--timeline-out plan.json] [--dissolves] [--beats grid] [--beat-tolerance 0.5]`                                                               | `nle-bridge/diff@1`                                                                                                         |
+| `import <file> [-o timeline.json] [--fps r] [--subject s]`                                                                                                                           | Any input as `nle-bridge/timeline@1`                                                                                        |
+| `contract --json`                                                                                                                                                                    | Machine-readable contract in Velisa's registry shape                                                                        |
+| `doctor --json`                                                                                                                                                                      | Python, ffmpeg-skill (optional), opentimelineio (optional)                                                                  |
 
 Every command prints one JSON document with `--json`. Existing outputs are refused without `--overwrite`, and an output equal to an input is refused. Exit codes: 0 ok, 2 invalid input or arguments, 3 ffmpeg-skill lacks `probe`, 4 ffmpeg-skill failed, 5 `--strict` and something would be dropped.
 

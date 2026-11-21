@@ -45,13 +45,17 @@ function heygenOwnBase() {
 // A host gateway: the host pointed the API base away from HeyGen and set the key that base accepts. It pays for every
 // call, so it wins over any other credential the environment carries.
 const hostGatewayKey = () =>
-  !heygenOwnBase() && process.env.HEYGEN_API_KEY ? process.env.HEYGEN_API_KEY : null;
+  !heygenOwnBase() && process.env.HEYGEN_API_KEY
+    ? process.env.HEYGEN_API_KEY
+    : null;
 export const HEYGEN_CLI_SOURCE_HEADERS = { "X-HeyGen-Source": "cli" };
 // Tool-attribution sent on EVERY media-use HeyGen call regardless of auth type, so
 // the backend can isolate media-use consumption from other free TTS / avatar video.
 // Unconditional — a paying user's media-use call is still media-use — unlike the
 // OAuth-only cli-source header above, which also gates the free allowance.
-export const HEYGEN_CLIENT_SOURCE_HEADERS = { "X-HeyGen-Client-Source": "media-use" };
+export const HEYGEN_CLIENT_SOURCE_HEADERS = {
+  "X-HeyGen-Client-Source": "media-use",
+};
 
 // A missing `.env`, or a `.env` folder (some home dirs have one), is no env file: null. Read without checking first,
 // so the file cannot change between a check and the read.
@@ -85,7 +89,9 @@ let projectKeyNoted = false;
 // The folder whose .env set `name`, while the environment still holds the value it set.
 function projectKeyDir(name) {
   const set = projectEnvValues.get(name);
-  return set !== undefined && set.val === process.env[name] ? set.dir : undefined;
+  return set !== undefined && set.val === process.env[name]
+    ? set.dir
+    : undefined;
 }
 
 // Walk up ≤5 dirs from startDir; load the first .env (shell env always wins).
@@ -135,8 +141,11 @@ function resolveCredential() {
   // Every other credential belongs to HeyGen: a base on any other host gets none of them.
   if (!heygenOwnBase()) return null;
   const accessToken = process.env.HEYGEN_ACCESS_TOKEN;
-  if (accessToken) return { headers: { Authorization: `Bearer ${accessToken}` } };
-  const envNames = ["HEYGEN_API_KEY", "HYPERFRAMES_API_KEY"].filter((name) => process.env[name]);
+  if (accessToken)
+    return { headers: { Authorization: `Bearer ${accessToken}` } };
+  const envNames = ["HEYGEN_API_KEY", "HYPERFRAMES_API_KEY"].filter(
+    (name) => process.env[name],
+  );
   const shellName = envNames.find((name) => projectKeyDir(name) === undefined);
   const stored = storedCredential();
   // A live login wins over a shell key; an expired, foreign or unreadable store gives way only to a shell key.
@@ -156,13 +165,20 @@ function resolveCredential() {
 
 // The credential saved in ~/.hyperframes/credentials: { headers } | { expired: true, foreign? } | { unreadable } | null.
 function storedCredential() {
-  const root = process.env.HYPERFRAMES_CONFIG_DIR || join(homedir(), ".hyperframes");
-  const file = join(root, ...(process.env.HYPERFRAMES_ENV === "dev" ? ["dev"] : []), "credentials");
+  const root =
+    process.env.HYPERFRAMES_CONFIG_DIR || join(homedir(), ".hyperframes");
+  const file = join(
+    root,
+    ...(process.env.HYPERFRAMES_ENV === "dev" ? ["dev"] : []),
+    "credentials",
+  );
   let raw;
   try {
     raw = readFileSync(file, "utf8").trim();
   } catch (error) {
-    return error.code === "ENOENT" ? null : { unreadable: { file, code: error.code } };
+    return error.code === "ENOENT"
+      ? null
+      : { unreadable: { file, code: error.code } };
   }
   if (!raw) return null;
   if (!raw.startsWith("{")) return { headers: { "X-Api-Key": raw } };
@@ -176,17 +192,22 @@ function storedCredential() {
   }
   const oauth = cred.oauth;
   if (oauth?.access_token) {
-    const expectedClient = process.env.HYPERFRAMES_OAUTH_CLIENT_ID || "Zg3LF4FCLoeJoGs2YqMtZ17g";
+    const expectedClient =
+      process.env.HYPERFRAMES_OAUTH_CLIENT_ID || "Zg3LF4FCLoeJoGs2YqMtZ17g";
     const expectedTokenEndpoint =
-      process.env.HYPERFRAMES_OAUTH_TOKEN_URL || "https://api2.heygen.com/v1/oauth/token";
+      process.env.HYPERFRAMES_OAUTH_TOKEN_URL ||
+      "https://api2.heygen.com/v1/oauth/token";
     if (
       !expectedClient ||
       oauth.client_id !== expectedClient ||
       oauth.token_endpoint !== expectedTokenEndpoint
     )
       return { expired: true, foreign: true };
-    const expired = oauth.expires_at && new Date(oauth.expires_at).getTime() - 60_000 < Date.now();
-    if (!expired) return { headers: { Authorization: `Bearer ${oauth.access_token}` } };
+    const expired =
+      oauth.expires_at &&
+      new Date(oauth.expires_at).getTime() - 60_000 < Date.now();
+    if (!expired)
+      return { headers: { Authorization: `Bearer ${oauth.access_token}` } };
     return { expired: true };
   }
   if (cred.api_key) return { headers: { "X-Api-Key": cred.api_key } };
@@ -213,7 +234,11 @@ export function heygenAuthHeaders() {
     // (X-Api-Key) traffic, where it's dead metadata.
     const isOauth = "Authorization" in cred.headers;
     return isOauth
-      ? { ...cred.headers, ...HEYGEN_CLI_SOURCE_HEADERS, ...HEYGEN_CLIENT_SOURCE_HEADERS }
+      ? {
+          ...cred.headers,
+          ...HEYGEN_CLI_SOURCE_HEADERS,
+          ...HEYGEN_CLIENT_SOURCE_HEADERS,
+        }
       : { ...cred.headers, ...HEYGEN_CLIENT_SOURCE_HEADERS };
   }
   if (cred?.unreadable)
@@ -234,8 +259,14 @@ export function heygenAuthHeaders() {
 }
 
 // Authed JSON request against the v3 API; throws on a non-OK status.
-export async function heygenJSON(path, { method = "GET", headers = {}, body } = {}) {
-  const opts = { method, headers: { ...HEYGEN_CLIENT_SOURCE_HEADERS, ...headers } };
+export async function heygenJSON(
+  path,
+  { method = "GET", headers = {}, body } = {},
+) {
+  const opts = {
+    method,
+    headers: { ...HEYGEN_CLIENT_SOURCE_HEADERS, ...headers },
+  };
   if (body !== undefined) {
     opts.headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
@@ -244,7 +275,10 @@ export async function heygenJSON(path, { method = "GET", headers = {}, body } = 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     const message = `HeyGen ${method} ${path} → HTTP ${res.status}${detail ? `\n${detail.slice(0, 300)}` : ""}`;
-    throw Object.assign(new Error(message), { status: res.status, body: detail });
+    throw Object.assign(new Error(message), {
+      status: res.status,
+      body: detail,
+    });
   }
   // A DELETE may answer 204 with no body.
   const text = await res.text();
@@ -289,7 +323,8 @@ export function heygenMessage(e) {
 // Download a (presigned) URL to destPath; returns byte length.
 export async function downloadTo(url, destPath) {
   const res = await fetchMedia(url);
-  if (!res.ok) throw new Error(`download HTTP ${res.status}: ${String(url).slice(0, 80)}`);
+  if (!res.ok)
+    throw new Error(`download HTTP ${res.status}: ${String(url).slice(0, 80)}`);
   const bytes = Buffer.from(await res.arrayBuffer());
   mkdirSync(dirname(destPath), { recursive: true });
   writeFileSync(destPath, bytes);
@@ -303,10 +338,17 @@ export async function downloadTo(url, destPath) {
 // `minScore`: omit to use the server default (0.7). That default is TOO HIGH for
 // sound_effects — good SFX hits score ~0.5–0.67, so callers wanting SFX should
 // pass a lower floor (~0.4); music scores high and is fine at the default.
-export async function searchSounds(query, type, headers, { limit = 5, minScore } = {}) {
+export async function searchSounds(
+  query,
+  type,
+  headers,
+  { limit = 5, minScore } = {},
+) {
   const params = new URLSearchParams({ query, type, limit: String(limit) });
   if (minScore != null) params.set("min_score", String(minScore));
-  const payload = await heygenJSON(`/audio/sounds?${params.toString()}`, { headers });
+  const payload = await heygenJSON(`/audio/sounds?${params.toString()}`, {
+    headers,
+  });
   // `data` comes back as a ranked array (best first). Older responses keyed it by
   // numeric index ("0","1",…); normalize both shapes to an array (empty → []).
   const data = payload?.data ?? payload;

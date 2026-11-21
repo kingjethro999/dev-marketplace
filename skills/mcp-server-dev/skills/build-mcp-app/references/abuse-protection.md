@@ -18,7 +18,7 @@ user arrives from the same small set of IPs:
 (See https://platform.claude.com/docs/en/api/ip-addresses.)
 
 Claude Desktop, Claude Code, and other hosts connect **directly from the
-user's machine**, so those *do* have distinct per-user IPs. Per-IP limiting
+user's machine**, so those _do_ have distinct per-user IPs. Per-IP limiting
 therefore works for direct-connect clients; for claude.ai you can only limit
 the aggregate Anthropic pool. If true per-user limits matter, that's the
 trigger to add OAuth.
@@ -29,7 +29,7 @@ trigger to add OAuth.
 const ANTHROPIC_CIDRS = ["160.79.104.0/21", "2607:6bc0::/48"];
 const TIERS = {
   anthropic: { capacity: 600, refillPerSec: 100 }, // shared pool
-  other:     { capacity: 30,  refillPerSec: 2   }, // per-IP
+  other: { capacity: 30, refillPerSec: 2 }, // per-IP
 };
 ```
 

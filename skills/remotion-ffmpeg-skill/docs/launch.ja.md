@@ -5,12 +5,12 @@
 
 ## 登録先の候補
 
-| 登録先 | 種類 | 出し方 |
-|---|---|---|
-| Remotion 公式「List of resources」 https://www.remotion.dev/docs/resources | Remotion の公式ドキュメント内のコミュニティ資料一覧 | remotion-dev/remotion の docs に PR（掲載基準は未確認） |
-| hesreallyhim/awesome-claude-code https://github.com/hesreallyhim/awesome-claude-code | Claude Code 関連のまとめ | リポジトリの案内に従って提出 |
-| ComposioHQ/awesome-claude-skills https://github.com/ComposioHQ/awesome-claude-skills | Claude Skills のまとめ | PR |
-| BehiSecc/awesome-claude-skills https://github.com/BehiSecc/awesome-claude-skills | Claude Skills のまとめ | PR |
+| 登録先                                                                               | 種類                                                | 出し方                                                  |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------- |
+| Remotion 公式「List of resources」 https://www.remotion.dev/docs/resources           | Remotion の公式ドキュメント内のコミュニティ資料一覧 | remotion-dev/remotion の docs に PR（掲載基準は未確認） |
+| hesreallyhim/awesome-claude-code https://github.com/hesreallyhim/awesome-claude-code | Claude Code 関連のまとめ                            | リポジトリの案内に従って提出                            |
+| ComposioHQ/awesome-claude-skills https://github.com/ComposioHQ/awesome-claude-skills | Claude Skills のまとめ                              | PR                                                      |
+| BehiSecc/awesome-claude-skills https://github.com/BehiSecc/awesome-claude-skills     | Claude Skills のまとめ                              | PR                                                      |
 
 ## まとめリスト用の1行（英語）
 
@@ -61,6 +61,7 @@ Python stdlib + Node, runs locally.
 ```
 
 ## 載せるときの注意
+
 - デモ GIF は架空素材（テストパターン）。実在の人物・案件の映像は使わない。
 - Remotion は 4 人以上の会社では有料ライセンスが要る旨を、聞かれたら必ず添える（README に記載済み）。
 - 「Remotion 公式ではない」ことを明記する（README に記載済み）。

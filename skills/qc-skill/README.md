@@ -39,26 +39,27 @@ evidence behind each one.
 It never decides whether a video may ship, whether it should be
 re-rendered, or whether a defect should be fixed. It answers exactly one
 question - "what did we measure, and did it pass the rules we were given?"
+
 - and returns that as data. Turning a QC result into a decision (block
-delivery, re-render, ask a human) belongs to `video-production-agent`.
+  delivery, re-render, ask a human) belongs to `video-production-agent`.
 
 ## Ecosystem and responsibilities
 
-| Skill | Responsibility |
-|---|---|
-| `ffmpeg-skill` | low-level ffmpeg/ffprobe execution primitives |
-| `media-analysis-skill` | general-purpose media observation/analysis |
-| `audio-production-skill` | audio processing **execution** (gain, trim, normalize, mix, ...) |
-| `video-editing-skill` / `subtitle-skill` | editing and subtitle **execution** |
-| **`qc-skill`** | **measurement + rule evaluation + structured verdicts. Never decides, never edits.** |
-| `video-production-agent` | turns Observations (including QC reports) into Decisions and a ProductionPlan |
+| Skill                                    | Responsibility                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| `ffmpeg-skill`                           | low-level ffmpeg/ffprobe execution primitives                                        |
+| `media-analysis-skill`                   | general-purpose media observation/analysis                                           |
+| `audio-production-skill`                 | audio processing **execution** (gain, trim, normalize, mix, ...)                     |
+| `video-editing-skill` / `subtitle-skill` | editing and subtitle **execution**                                                   |
+| **`qc-skill`**                           | **measurement + rule evaluation + structured verdicts. Never decides, never edits.** |
+| `video-production-agent`                 | turns Observations (including QC reports) into Decisions and a ProductionPlan        |
 
 A QC `FAIL` is not an error. Running `qc check` against a broken file and
 getting back `{"status": "completed", ..., "overall_status": "FAIL"}` is
-qc-skill working correctly - the *execution* succeeded, and the *finding*
+qc-skill working correctly - the _execution_ succeeded, and the _finding_
 is that the media does not meet the rule it was checked against. Only a
 genuine execution problem (bad request, missing ffmpeg, a file that
-doesn't exist, a corrupted cache) is a structured *error* with a non-zero
+doesn't exist, a corrupted cache) is a structured _error_ with a non-zero
 exit code. See [docs/architecture.md](docs/architecture.md).
 
 ## CLI usage
@@ -97,28 +98,62 @@ whoever invokes the process - never by the request body itself (see
 {
   "schema": "qc/response@1",
   "status": "completed",
-  "skill": {"id": "qc", "version": "0.1.0"},
+  "skill": { "id": "qc", "version": "0.1.0" },
   "reused": false,
-  "cache": {"status": "miss", "policy": "use", "key": "..."},
+  "cache": { "status": "miss", "policy": "use", "key": "..." },
   "provenance": {
-    "skill": "qc", "skill_version": "0.1.0", "operation": "check",
-    "engine": {"ffmpeg_version": "6.1.1", "ffprobe_version": "6.1.1"},
-    "input": {"fingerprint": "sha256:...", "size_bytes": 12345678},
-    "identity": "...", "observed_at": "2026-01-01T00:00:00Z",
+    "skill": "qc",
+    "skill_version": "0.1.0",
+    "operation": "check",
+    "engine": { "ffmpeg_version": "6.1.1", "ffprobe_version": "6.1.1" },
+    "input": { "fingerprint": "sha256:...", "size_bytes": 12345678 },
+    "identity": "...",
+    "observed_at": "2026-01-01T00:00:00Z",
     "measurement_source": "OBSERVED"
   },
   "report": {
-    "id": "qcreport_...", "version": "1", "operation": "check", "kind": "video",
+    "id": "qcreport_...",
+    "version": "1",
+    "operation": "check",
+    "kind": "video",
     "overall_status": "FAIL",
     "checks": [
-      {"check_id": "video.resolution_matches_expected", "category": "video", "status": "PASS", "measurement_ids": ["video.width", "video.height"], "finding_codes": [], "evidence": {}},
-      {"check_id": "video.black_frames_within_tolerance", "category": "video", "status": "FAIL", "measurement_ids": ["video.black_segments"], "finding_codes": ["VIDEO_BLACK_FRAMES_EXCEEDED"], "evidence": {"total_sec": 3.2, "longest_sec": 2.1}}
+      {
+        "check_id": "video.resolution_matches_expected",
+        "category": "video",
+        "status": "PASS",
+        "measurement_ids": ["video.width", "video.height"],
+        "finding_codes": [],
+        "evidence": {}
+      },
+      {
+        "check_id": "video.black_frames_within_tolerance",
+        "category": "video",
+        "status": "FAIL",
+        "measurement_ids": ["video.black_segments"],
+        "finding_codes": ["VIDEO_BLACK_FRAMES_EXCEEDED"],
+        "evidence": { "total_sec": 3.2, "longest_sec": 2.1 }
+      }
     ],
     "measurements": [
-      {"id": "video.width", "category": "video", "name": "width", "value": 1920, "unit": "px", "source": "ffprobe", "estimated": false}
+      {
+        "id": "video.width",
+        "category": "video",
+        "name": "width",
+        "value": 1920,
+        "unit": "px",
+        "source": "ffprobe",
+        "estimated": false
+      }
     ],
     "findings": [
-      {"code": "VIDEO_BLACK_FRAMES_EXCEEDED", "severity": "FAIL", "message": "longest black segment 2.1s exceeds 2.0s", "evidence": {"...": "..."}, "measurement_ids": ["video.black_segments"]}
+      {
+        "code": "VIDEO_BLACK_FRAMES_EXCEEDED",
+        "severity": "FAIL",
+        "message": "longest black segment 2.1s exceeds 2.0s",
+        "evidence": { "...": "..." },
+        "measurement_ids": ["video.black_segments"]
+      }
     ]
   }
 }
@@ -246,7 +281,7 @@ could not run. Aggregation is worst-wins: `FAIL` > `UNKNOWN` > `WARN` >
   containment check.
 
 See [docs/security.md](docs/security.md) for the full boundary and what is
-deliberately *not* enforced (e.g. resource/memory limits).
+deliberately _not_ enforced (e.g. resource/memory limits).
 
 ## Provenance and reuse
 

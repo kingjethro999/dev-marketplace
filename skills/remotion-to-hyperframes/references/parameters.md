@@ -72,7 +72,9 @@ defaultProps={{
 Translate to `data-*` attributes on the root `#stage` div:
 
 ```html
-<div id="stage" data-title="Hello" data-subtitle="World" data-count="42">...</div>
+<div id="stage" data-title="Hello" data-subtitle="World" data-count="42">
+  ...
+</div>
 ```
 
 Convention: `propName` → `data-prop-name` (kebab-case). Inside the GSAP
@@ -94,11 +96,21 @@ doesn't parse those. Materialize the array as **repeated HTML markup**:
 
 ```html
 <div id="scene-stats">
-  <div class="stat-card" data-stat-index="0" data-stat-value="1247" style="--card-color:#fbbf24">
+  <div
+    class="stat-card"
+    data-stat-index="0"
+    data-stat-value="1247"
+    style="--card-color:#fbbf24"
+  >
     <div class="number">0</div>
     <div class="label">Stars</div>
   </div>
-  <div class="stat-card" data-stat-index="1" data-stat-value="312" style="--card-color:#60a5fa">
+  <div
+    class="stat-card"
+    data-stat-index="1"
+    data-stat-value="312"
+    style="--card-color:#60a5fa"
+  >
     <div class="number">0</div>
     <div class="label">Forks</div>
   </div>

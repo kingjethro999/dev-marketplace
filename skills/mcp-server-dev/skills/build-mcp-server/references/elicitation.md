@@ -10,41 +10,54 @@ Elicitation lets a server pause mid-tool-call and ask the user for structured in
 
 Host support is very recent:
 
-| Host | Status |
-|---|---|
-| Claude Code | ✅ since v2.1.76 (both `form` and `url` modes) |
-| Claude Desktop | Unconfirmed — likely not yet or very recent |
-| claude.ai | Unknown |
+| Host           | Status                                         |
+| -------------- | ---------------------------------------------- |
+| Claude Code    | ✅ since v2.1.76 (both `form` and `url` modes) |
+| Claude Desktop | Unconfirmed — likely not yet or very recent    |
+| claude.ai      | Unknown                                        |
 
 **The SDK throws `CapabilityNotSupported` if the client doesn't advertise elicitation.** There is no graceful degradation built in. You MUST check and have a fallback.
 
 ### The canonical pattern
 
 ```typescript
-server.registerTool("delete_all", {
-  description: "Delete all items after confirmation",
-  inputSchema: {},
-}, async ({}, extra) => {
-  const caps = server.getClientCapabilities();
-  if (caps?.elicitation) {
-    const r = await server.elicitInput({
-      mode: "form",
-      message: "Delete all items? This cannot be undone.",
-      requestedSchema: {
-        type: "object",
-        properties: { confirm: { type: "boolean", title: "Confirm deletion" } },
-        required: ["confirm"],
-      },
-    });
-    if (r.action === "accept" && r.content?.confirm) {
-      await deleteAll();
-      return { content: [{ type: "text", text: "Deleted." }] };
+server.registerTool(
+  "delete_all",
+  {
+    description: "Delete all items after confirmation",
+    inputSchema: {},
+  },
+  async ({}, extra) => {
+    const caps = server.getClientCapabilities();
+    if (caps?.elicitation) {
+      const r = await server.elicitInput({
+        mode: "form",
+        message: "Delete all items? This cannot be undone.",
+        requestedSchema: {
+          type: "object",
+          properties: {
+            confirm: { type: "boolean", title: "Confirm deletion" },
+          },
+          required: ["confirm"],
+        },
+      });
+      if (r.action === "accept" && r.content?.confirm) {
+        await deleteAll();
+        return { content: [{ type: "text", text: "Deleted." }] };
+      }
+      return { content: [{ type: "text", text: "Cancelled." }] };
     }
-    return { content: [{ type: "text", text: "Cancelled." }] };
-  }
-  // Fallback: return text asking Claude to relay the question
-  return { content: [{ type: "text", text: "Confirmation required. Please ask the user: 'Delete all items? This cannot be undone.' Then call this tool again with their answer." }] };
-});
+    // Fallback: return text asking Claude to relay the question
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Confirmation required. Please ask the user: 'Delete all items? This cannot be undone.' Then call this tool again with their answer.",
+        },
+      ],
+    };
+  },
+);
 ```
 
 ```python
@@ -81,11 +94,11 @@ If your data doesn't fit these constraints, that's the signal to escalate to a w
 
 ## Three-state response
 
-| Action | Meaning | `content` present? |
-|---|---|---|
-| `accept` | User submitted the form | ✅ validated against your schema |
-| `decline` | User explicitly said no | ❌ |
-| `cancel` | User dismissed (escape, clicked away) | ❌ |
+| Action    | Meaning                               | `content` present?               |
+| --------- | ------------------------------------- | -------------------------------- |
+| `accept`  | User submitted the form               | ✅ validated against your schema |
+| `decline` | User explicitly said no               | ❌                               |
+| `cancel`  | User dismissed (escape, clicked away) | ❌                               |
 
 Treat `decline` and `cancel` differently if it matters — `decline` is intentional, `cancel` might be accidental.
 
@@ -122,6 +135,7 @@ Accepts: primitives, `list[str]` (becomes enum), dataclass, TypedDict, Pydantic 
 Elicitation handles: confirm dialogs, enum pickers, short flat forms.
 
 Reach for `build-mcp-app` widgets when you need:
+
 - Nested or complex data structures
 - Scrollable/searchable lists (100+ items)
 - Visual preview before choosing (image thumbnails, file tree)

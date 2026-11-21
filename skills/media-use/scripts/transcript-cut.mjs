@@ -2,7 +2,14 @@
 
 import "./lib/windows-exe-search.mjs";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -102,8 +109,15 @@ function run() {
       // The video container is .mov, not .mkv: ffmpeg writes Matroska
       // timestamps in whole milliseconds, which moves frames off the source's
       // frame grid, and the concat copy below carries that into the output.
-      const ext = args.copy ? extname(outPath) || ".mp4" : isAudioOnly(outPath) ? ".wav" : ".mov";
-      const out = join(tmpDir, `segment-${String(index).padStart(4, "0")}${ext}`);
+      const ext = args.copy
+        ? extname(outPath) || ".mp4"
+        : isAudioOnly(outPath)
+          ? ".wav"
+          : ".mov";
+      const out = join(
+        tmpDir,
+        `segment-${String(index).padStart(4, "0")}${ext}`,
+      );
       // --copy stays fade-free (stream copy cannot filter). A segment's true
       // start/end (index 0's start, the last segment's end) borders nothing
       // kept, so only an interior splice edge gets a ramp.
@@ -130,10 +144,29 @@ function run() {
       ? ["-c", "copy"]
       : isAudioOnly(outPath)
         ? encodeArgsFor(extname(outPath).toLowerCase())
-        : ["-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"];
+        : [
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
+          ];
     execFileSync(
       "ffmpeg",
-      ["-y", "-f", "concat", "-safe", "0", "-i", listPath, ...concatCodecs, tmpOut],
+      [
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        listPath,
+        ...concatCodecs,
+        tmpOut,
+      ],
       {
         stdio: "ignore",
       },
@@ -150,7 +183,10 @@ function run() {
   if (args.copy) {
     const outSeconds = probeDuration(outPath);
     if (Math.abs(outSeconds - keptSeconds) > 1) {
-      copyDrift = { produced_s: round3(outSeconds), expected_s: round3(keptSeconds) };
+      copyDrift = {
+        produced_s: round3(outSeconds),
+        expected_s: round3(keptSeconds),
+      };
       if (!args.json) {
         console.error(
           `warning: --copy keyframe snapping produced ${round3(outSeconds)}s instead of ${round3(keptSeconds)}s kept; drop --copy for frame-accurate cuts`,
@@ -200,7 +236,16 @@ function cutSegment(inputPath, segment, outPath, copy, fade) {
     // waveform steps discontinuously at every boundary and you hear a click.
     if (fade) argv.push("-af", fade);
     // Video intermediate: keep the picture cheap and the audio uncompressed.
-    argv.push("-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-c:a", "pcm_s16le");
+    argv.push(
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "18",
+      "-c:a",
+      "pcm_s16le",
+    );
     // A keyframe every second. The renderer seeks into this footage, and x264
     // on its own leaves up to 250 frames between keyframes.
     argv.push("-force_key_frames", "expr:gte(t,n_forced)");
@@ -219,7 +264,9 @@ function cutSegment(inputPath, segment, outPath, copy, fade) {
 // Codec set per output container. Audio-only outputs must not get the
 // video-centric aac/x264 set (aac inside .wav breaks timing entirely).
 function isAudioOnly(filePath) {
-  return [".wav", ".mp3", ".m4a", ".aac", ".flac"].includes(extname(filePath).toLowerCase());
+  return [".wav", ".mp3", ".m4a", ".aac", ".flac"].includes(
+    extname(filePath).toLowerCase(),
+  );
 }
 
 function encodeArgsFor(ext) {
@@ -267,7 +314,10 @@ function escapeConcatPath(filePath) {
 }
 
 function sumDurations(segments) {
-  return segments.reduce((sum, segment) => sum + (segment.end - segment.start), 0);
+  return segments.reduce(
+    (sum, segment) => sum + (segment.end - segment.start),
+    0,
+  );
 }
 
 function fmt(n) {

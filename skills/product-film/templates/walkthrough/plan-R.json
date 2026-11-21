@@ -1,2 +1,8 @@
-{"name":"R","page":"reel.html","mode":"overlay","xf":0,"slow":1,"clips":[
- {"id":"R","beat":"R"}]}
+{
+  "name": "R",
+  "page": "reel.html",
+  "mode": "overlay",
+  "xf": 0,
+  "slow": 1,
+  "clips": [{ "id": "R", "beat": "R" }]
+}

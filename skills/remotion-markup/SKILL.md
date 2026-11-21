@@ -44,11 +44,17 @@ registrations. For source-editable styles, schemas, and keyframes, see
 Remotion Interactivity (`remotion-interactivity` skill).
 
 ```tsx
-import { useCurrentFrame, useVideoConfig, Easing, interpolate, Interactive } from "remotion";
+import {
+  useCurrentFrame,
+  useVideoConfig,
+  Easing,
+  interpolate,
+  Interactive,
+} from "remotion";
 
 export const FadeIn = () => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const { fps } = useVideoConfig();
 
   return (
     <Interactive.Div
@@ -125,7 +131,7 @@ export const MyComposition = () => {
         style={{ width: 100, height: 100 }}
       />
       <Video src="https://remotion.media/video.mp4" />
-      <AnimatedImage src={staticFile('nyancat.gif')} />
+      <AnimatedImage src={staticFile("nyancat.gif")} />
     </>
   );
 };

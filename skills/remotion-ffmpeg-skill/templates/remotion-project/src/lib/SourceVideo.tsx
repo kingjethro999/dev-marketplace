@@ -1,5 +1,12 @@
 import React from "react";
-import { AbsoluteFill, Audio, OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Audio,
+  OffthreadVideo,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import type { Fit, Source } from "../timeline";
 
 type Props = {
@@ -19,7 +26,13 @@ type Props = {
  * - audio only: a neutral placeholder picture with the audio playing under it
  * - nothing staged: the placeholder alone (Studio previews)
  */
-export const SourceVideo: React.FC<Props> = ({ source, fit = "contain", trimBefore, trimAfter, style }) => {
+export const SourceVideo: React.FC<Props> = ({
+  source,
+  fit = "contain",
+  trimBefore,
+  trimAfter,
+  style,
+}) => {
   if (!source.src) {
     return <Placeholder label={source.name} />;
   }
@@ -28,11 +41,17 @@ export const SourceVideo: React.FC<Props> = ({ source, fit = "contain", trimBefo
     return (
       <AbsoluteFill style={style}>
         <Placeholder label={source.name} />
-        {source.has_audio ? <Audio src={src} trimBefore={trimBefore} trimAfter={trimAfter} /> : null}
+        {source.has_audio ? (
+          <Audio src={src} trimBefore={trimBefore} trimAfter={trimAfter} />
+        ) : null}
       </AbsoluteFill>
     );
   }
-  const layer = (objectFit: "contain" | "cover", extra: React.CSSProperties = {}, muted = !source.has_audio) => (
+  const layer = (
+    objectFit: "contain" | "cover",
+    extra: React.CSSProperties = {},
+    muted = !source.has_audio,
+  ) => (
     <OffthreadVideo
       src={src}
       trimBefore={trimBefore}
@@ -46,13 +65,21 @@ export const SourceVideo: React.FC<Props> = ({ source, fit = "contain", trimBefo
       <AbsoluteFill style={style}>
         <AbsoluteFill style={{ overflow: "hidden" }}>
           {/* The background copy is silent: the foreground carries the audio once. */}
-          {layer("cover", { filter: "blur(40px) brightness(0.55)", transform: "scale(1.15)" }, true)}
+          {layer(
+            "cover",
+            { filter: "blur(40px) brightness(0.55)", transform: "scale(1.15)" },
+            true,
+          )}
         </AbsoluteFill>
         <AbsoluteFill>{layer("contain")}</AbsoluteFill>
       </AbsoluteFill>
     );
   }
-  return <AbsoluteFill style={style}>{layer(fit === "cover" ? "cover" : "contain")}</AbsoluteFill>;
+  return (
+    <AbsoluteFill style={style}>
+      {layer(fit === "cover" ? "cover" : "contain")}
+    </AbsoluteFill>
+  );
 };
 
 const Placeholder: React.FC<{ label: string }> = ({ label }) => {
@@ -76,7 +103,9 @@ const Placeholder: React.FC<{ label: string }> = ({ label }) => {
       }}
     >
       <div>{label}</div>
-      <div style={{ fontSize: Math.round(short * 0.028), marginTop: short * 0.01 }}>
+      <div
+        style={{ fontSize: Math.round(short * 0.028), marginTop: short * 0.01 }}
+      >
         {width}x{height} · {(frame / fps).toFixed(2)}s
       </div>
     </AbsoluteFill>

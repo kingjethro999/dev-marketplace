@@ -20,7 +20,10 @@ const python = ["python3", "python"]
   .map((name) =>
     spawnSync(
       name,
-      ["-c", "import sys; assert sys.version_info >= (3, 9); print(sys.executable)"],
+      [
+        "-c",
+        "import sys; assert sys.version_info >= (3, 9); print(sys.executable)",
+      ],
       {
         encoding: "utf8",
       },
@@ -28,7 +31,8 @@ const python = ["python3", "python"]
   )
   .find((result) => result.status === 0)
   ?.stdout.trim();
-const hasNumpy = python && spawnSync(python, ["-c", "import numpy"]).status === 0;
+const hasNumpy =
+  python && spawnSync(python, ["-c", "import numpy"]).status === 0;
 const exe = process.platform === "win32" ? ".exe" : "";
 
 function program(dir, name, marker) {
@@ -44,12 +48,32 @@ function fixture(t) {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const project = join(root, "project");
   const plantedRan = join(root, "planted-ran");
-  for (const dir of [project, join(project, "bin"), join(project, "node_modules", ".bin")]) {
+  for (const dir of [
+    project,
+    join(project, "bin"),
+    join(project, "node_modules", ".bin"),
+  ]) {
     program(dir, "ffmpeg", plantedRan);
   }
-  const trusted = program(join(root, "tools"), "ffmpeg", join(root, "trusted-ran"));
-  const projectOnly = ["", ".", "bin", "node_modules/.bin", join(project, "bin")].join(delimiter);
-  return { project, plantedRan, trusted, projectOnly, tools: join(root, "tools") };
+  const trusted = program(
+    join(root, "tools"),
+    "ffmpeg",
+    join(root, "trusted-ran"),
+  );
+  const projectOnly = [
+    "",
+    ".",
+    "bin",
+    "node_modules/.bin",
+    join(project, "bin"),
+  ].join(delimiter);
+  return {
+    project,
+    plantedRan,
+    trusted,
+    projectOnly,
+    tools: join(root, "tools"),
+  };
 }
 
 function find(cwd, path) {
@@ -97,7 +121,11 @@ test(
     const result = spawnSync(
       python,
       [join(scripts, "extract-audio-data.py"), "in.mp3", "-o", "out.json"],
-      { cwd: project, encoding: "utf8", env: { ...process.env, PATH: projectOnly } },
+      {
+        cwd: project,
+        encoding: "utf8",
+        env: { ...process.env, PATH: projectOnly },
+      },
     );
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /No such file or directory: 'ffmpeg'/);

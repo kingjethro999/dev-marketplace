@@ -57,8 +57,8 @@ The title is one editable element. Its scene has a connected timeline, while
 independently timed scenes and music segments each share a named track.
 
 ```tsx title="Title.tsx"
-import type React from 'react';
-import {Interactive} from 'remotion';
+import type React from "react";
+import { Interactive } from "remotion";
 
 const TitleInner = ({
   children,
@@ -66,11 +66,11 @@ const TitleInner = ({
 }: {
   readonly children: React.ReactNode;
   readonly style: React.CSSProperties;
-}) => <h1 style={{margin: 0, ...style}}>{children}</h1>;
+}) => <h1 style={{ margin: 0, ...style }}>{children}</h1>;
 
 export const Title = Interactive.create({
   Component: TitleInner,
-  layout: 'none',
+  layout: "none",
   schema: {
     ...Interactive.textSchema,
     ...Interactive.childrenSchema,
@@ -79,14 +79,14 @@ export const Title = Interactive.create({
 ```
 
 ```tsx title="Chapter.tsx"
-import {Interactive} from 'remotion';
-import {Title} from './Title';
+import { Interactive } from "remotion";
+import { Title } from "./Title";
 
-const ChapterInner = ({title}: {readonly title: string}) => (
+const ChapterInner = ({ title }: { readonly title: string }) => (
   <>
     <Title
       name="Chapter title"
-      style={{fontFamily: 'Arial, sans-serif', fontSize: 96, color: 'white'}}
+      style={{ fontFamily: "Arial, sans-serif", fontSize: 96, color: "white" }}
     >
       {title}
     </Title>
@@ -95,21 +95,21 @@ const ChapterInner = ({title}: {readonly title: string}) => (
 
 export const Chapter = Interactive.create({
   Component: ChapterInner,
-  layout: 'absolute-fill',
+  layout: "absolute-fill",
   schema: {
     ...Interactive.backgroundSchema,
-    title: {type: 'string', default: '', description: 'Title'},
+    title: { type: "string", default: "", description: "Title" },
   },
 });
 ```
 
 ```tsx title="MyVideo.tsx"
-import {Audio} from '@remotion/media';
-import {staticFile, Track, useVideoConfig} from 'remotion';
-import {Chapter} from './Chapter';
+import { Audio } from "@remotion/media";
+import { staticFile, Track, useVideoConfig } from "remotion";
+import { Chapter } from "./Chapter";
 
 export const MyVideo = () => {
-  const {fps} = useVideoConfig();
+  const { fps } = useVideoConfig();
   return (
     <>
       <Track name="Chapters">
@@ -118,9 +118,9 @@ export const MyVideo = () => {
           durationInFrames={3 * fps}
           title="Introduction"
           style={{
-            backgroundColor: '#111111',
-            justifyContent: 'center',
-            alignItems: 'center',
+            backgroundColor: "#111111",
+            justifyContent: "center",
+            alignItems: "center",
           }}
         />
         <Chapter
@@ -129,21 +129,21 @@ export const MyVideo = () => {
           durationInFrames={4 * fps}
           title="New features"
           style={{
-            backgroundColor: '#243b53',
-            justifyContent: 'center',
-            alignItems: 'center',
+            backgroundColor: "#243b53",
+            justifyContent: "center",
+            alignItems: "center",
           }}
         />
       </Track>
       <Track name="Music">
         <Audio
           name="Opening music"
-          src={staticFile('music.mp3')}
+          src={staticFile("music.mp3")}
           durationInFrames={2 * fps}
         />
         <Audio
           name="Closing music"
-          src={staticFile('music.mp3')}
+          src={staticFile("music.mp3")}
           from={4 * fps}
           trimBefore={10 * fps}
           durationInFrames={3 * fps}
@@ -155,10 +155,10 @@ export const MyVideo = () => {
 ```
 
 ```tsx title="Root.tsx"
-import {Composition, Folder} from 'remotion';
-import {Chapter} from './Chapter';
-import {MyVideo} from './MyVideo';
-import {Title} from './Title';
+import { Composition, Folder } from "remotion";
+import { Chapter } from "./Chapter";
+import { MyVideo } from "./MyVideo";
+import { Title } from "./Title";
 
 export const RemotionRoot = () => (
   <>
@@ -179,11 +179,11 @@ export const RemotionRoot = () => (
         fps={30}
         durationInFrames={90}
         defaultProps={{
-          title: 'Introduction',
+          title: "Introduction",
           style: {
-            backgroundColor: '#111111',
-            justifyContent: 'center',
-            alignItems: 'center',
+            backgroundColor: "#111111",
+            justifyContent: "center",
+            alignItems: "center",
           },
         }}
       />
@@ -197,11 +197,11 @@ export const RemotionRoot = () => (
         fps={30}
         durationInFrames={90}
         defaultProps={{
-          children: 'Introduction',
+          children: "Introduction",
           style: {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: "Arial, sans-serif",
             fontSize: 96,
-            color: 'white',
+            color: "white",
           },
         }}
       />

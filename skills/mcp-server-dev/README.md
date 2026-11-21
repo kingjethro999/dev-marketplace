@@ -6,11 +6,11 @@ Skills for designing and building MCP servers that work seamlessly with Claude.
 
 Three skills that compose into a full build path:
 
-| Skill | Purpose |
-|---|---|
+| Skill                  | Purpose                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **`build-mcp-server`** | Entry point. Interrogates the use case, picks deployment model (remote HTTP / MCPB / local stdio), picks tool-design pattern, routes to a specialized skill. |
-| **`build-mcp-app`** | Adds interactive UI widgets (forms, pickers, confirm dialogs) rendered inline in chat. Works on remote servers and MCPB bundles. |
-| **`build-mcpb`** | Packages a local stdio server with its runtime so users can install it without Node/Python. For servers that must touch the local machine. |
+| **`build-mcp-app`**    | Adds interactive UI widgets (forms, pickers, confirm dialogs) rendered inline in chat. Works on remote servers and MCPB bundles.                             |
+| **`build-mcpb`**       | Packages a local stdio server with its runtime so users can install it without Node/Python. For servers that must touch the local machine.                   |
 
 ## How it works
 

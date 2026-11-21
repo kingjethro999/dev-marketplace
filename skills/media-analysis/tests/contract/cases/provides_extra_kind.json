@@ -12,7 +12,5 @@
       }
     }
   ],
-  "expect_problems": [
-    "is not an analysis kind"
-  ]
+  "expect_problems": ["is not an analysis kind"]
 }

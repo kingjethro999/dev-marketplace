@@ -9,7 +9,15 @@ import { BeatMontage } from "./compositions/BeatMontage";
 import { Karaoke } from "./compositions/Karaoke";
 import { Pip } from "./compositions/Pip";
 import { Emphasis } from "./compositions/Emphasis";
-import { SAMPLE_TIMELINE, fullLengthFrames, highlightFrames, jumpcutFrames, outputFrame, type Props, type Timeline } from "./timeline";
+import {
+  SAMPLE_TIMELINE,
+  fullLengthFrames,
+  highlightFrames,
+  jumpcutFrames,
+  outputFrame,
+  type Props,
+  type Timeline,
+} from "./timeline";
 
 // Length and fps come from the measured timeline, never from constants; the frame is the
 // source's probed size unless render.py was given another shape (--aspect).
@@ -17,22 +25,83 @@ const metadataFrom =
   (frames: (t: Timeline) => number): CalculateMetadataFunction<Props> =>
   ({ props }) => {
     const f = outputFrame(props);
-    return { durationInFrames: frames(props.timeline), fps: props.timeline.source.fps, width: f.width, height: f.height };
+    return {
+      durationInFrames: frames(props.timeline),
+      fps: props.timeline.source.fps,
+      width: f.width,
+      height: f.height,
+    };
   };
 
-const defaultProps: Props = { timeline: SAMPLE_TIMELINE, options: {}, frame: null, font: null };
-const base = { durationInFrames: 240, fps: 30, width: 1280, height: 720, defaultProps };
+const defaultProps: Props = {
+  timeline: SAMPLE_TIMELINE,
+  options: {},
+  frame: null,
+  font: null,
+};
+const base = {
+  durationInFrames: 240,
+  fps: 30,
+  width: 1280,
+  height: 720,
+  defaultProps,
+};
 
 export const RemotionRoot: React.FC = () => (
   <>
-    <Composition id="Captioned" component={Captioned} {...base} calculateMetadata={metadataFrom(fullLengthFrames)} />
-    <Composition id="Jumpcut" component={Jumpcut} {...base} calculateMetadata={metadataFrom(jumpcutFrames)} />
-    <Composition id="PeakPulse" component={PeakPulse} {...base} calculateMetadata={metadataFrom(fullLengthFrames)} />
-    <Composition id="Titled" component={Titled} {...base} calculateMetadata={metadataFrom(fullLengthFrames)} />
-    <Composition id="Highlights" component={Highlights} {...base} calculateMetadata={metadataFrom(highlightFrames)} />
-    <Composition id="BeatMontage" component={BeatMontage} {...base} calculateMetadata={metadataFrom(fullLengthFrames)} />
-    <Composition id="Karaoke" component={Karaoke} {...base} calculateMetadata={metadataFrom(fullLengthFrames)} />
-    <Composition id="Pip" component={Pip} {...base} calculateMetadata={metadataFrom(fullLengthFrames)} />
-    <Composition id="Emphasis" component={Emphasis} {...base} calculateMetadata={metadataFrom(fullLengthFrames)} />
+    <Composition
+      id="Captioned"
+      component={Captioned}
+      {...base}
+      calculateMetadata={metadataFrom(fullLengthFrames)}
+    />
+    <Composition
+      id="Jumpcut"
+      component={Jumpcut}
+      {...base}
+      calculateMetadata={metadataFrom(jumpcutFrames)}
+    />
+    <Composition
+      id="PeakPulse"
+      component={PeakPulse}
+      {...base}
+      calculateMetadata={metadataFrom(fullLengthFrames)}
+    />
+    <Composition
+      id="Titled"
+      component={Titled}
+      {...base}
+      calculateMetadata={metadataFrom(fullLengthFrames)}
+    />
+    <Composition
+      id="Highlights"
+      component={Highlights}
+      {...base}
+      calculateMetadata={metadataFrom(highlightFrames)}
+    />
+    <Composition
+      id="BeatMontage"
+      component={BeatMontage}
+      {...base}
+      calculateMetadata={metadataFrom(fullLengthFrames)}
+    />
+    <Composition
+      id="Karaoke"
+      component={Karaoke}
+      {...base}
+      calculateMetadata={metadataFrom(fullLengthFrames)}
+    />
+    <Composition
+      id="Pip"
+      component={Pip}
+      {...base}
+      calculateMetadata={metadataFrom(fullLengthFrames)}
+    />
+    <Composition
+      id="Emphasis"
+      component={Emphasis}
+      {...base}
+      calculateMetadata={metadataFrom(fullLengthFrames)}
+    />
   </>
 );

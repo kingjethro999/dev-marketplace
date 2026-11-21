@@ -33,7 +33,12 @@ Then drive the transition with GSAP:
 ```js
 // Manual fade (presentation={fade()})
 tl.to(sceneA, { opacity: 0, duration: 0.5, ease: "none" }, 1.5);
-tl.fromTo(sceneB, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "none" }, 1.5);
+tl.fromTo(
+  sceneB,
+  { opacity: 0 },
+  { opacity: 1, duration: 0.5, ease: "none" },
+  1.5,
+);
 ```
 
 ## Presentation table
@@ -72,7 +77,12 @@ npx hyperframes add sdf-iris
 Then in the composition:
 
 ```html
-<div id="iris-transition" class="hf-shader-transition" data-start="1.5" data-duration="0.5">
+<div
+  id="iris-transition"
+  class="hf-shader-transition"
+  data-start="1.5"
+  data-duration="0.5"
+>
   <!-- bound scenes via the shader-transition's data-from / data-to -->
 </div>
 ```
@@ -90,17 +100,7 @@ const customPresentation: PresentationComponent = ({
   presentationProgress,
   presentationDirection,
 }) => {
-  return (
-    <div
-      style={
-        {
-          /* compute transform from progress */
-        }
-      }
-    >
-      {children}
-    </div>
-  );
+  return <div style={{/* compute transform from progress */}}>{children}</div>;
 };
 ```
 

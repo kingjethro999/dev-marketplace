@@ -23,7 +23,11 @@ export function geminiAuth({ run = spawnSync } = {}) {
   const { cmd, args } = pythonInvocation([
     fileURLToPath(new URL("./gemini-auth.py", import.meta.url)),
   ]);
-  const result = run(cmd, args, { encoding: "utf8", timeout: 60_000, maxBuffer: 1024 * 1024 });
+  const result = run(cmd, args, {
+    encoding: "utf8",
+    timeout: 60_000,
+    maxBuffer: 1024 * 1024,
+  });
   let data;
   try {
     data = JSON.parse(result.stdout);

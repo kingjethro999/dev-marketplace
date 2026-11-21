@@ -5,13 +5,13 @@ there, each new cut becomes a new version of the same page, and feedback arrives
 step that reaches an external service, so where it goes is settled once per film (`SKILL.md` § Inputs, 6): the
 project's `FILM.md` answers it, or the agent asks once at kickoff. The answer lives in `review/.publish`:
 
-| `review/.publish` | What every cut does |
-|---|---|
-| `company` | Publish for the team (company visibility). The default answer to offer. |
-| `share:<email>,<email>` | Company visibility plus the named reviewers. |
-| `private` / `public` | That visibility. `public` only when the user chose it. |
-| `anonymous` | A 30-day preview link with no account behind it (tier 3). Only on an explicit yes; it cannot be versioned. |
-| `no` | Build the page and publish nothing; the reply gives the file's path. |
+| `review/.publish`       | What every cut does                                                                                        |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `company`               | Publish for the team (company visibility). The default answer to offer.                                    |
+| `share:<email>,<email>` | Company visibility plus the named reviewers.                                                               |
+| `private` / `public`    | That visibility. `public` only when the user chose it.                                                     |
+| `anonymous`             | A 30-day preview link with no account behind it (tier 3). Only on an explicit yes; it cannot be versioned. |
+| `no`                    | Build the page and publish nothing; the reply gives the file's path.                                       |
 
 With an answer recorded, every cut follows it without asking again. `tools/review.sh` in every film folder reads it and
 does the build and the publish in one step (tiers 2 and 3 below; `--build-only` for tier 1); with no answer recorded it
@@ -62,6 +62,7 @@ it (the page keeps its visibility).
 
   `--base-version` must equal the current version; a mismatch means someone else published since, so read the page
   before overwriting it.
+
 - Record the shortId in the film's `NOTES.md`, next to the current cut.
 
 ## The review page

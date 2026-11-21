@@ -6,13 +6,13 @@ Auth is the reason most people end up needing a **remote** server even when a lo
 
 Claude's MCP client supports a specific set of auth types — not every spec-compliant flow works. Full reference: https://claude.com/docs/connectors/building/authentication
 
-| Type | Notes |
-|---|---|
-| `oauth_dcr` | Supported. For high-volume directory entries, prefer CIMD or Anthropic-held creds — DCR registers a new client on every fresh connection. |
-| `oauth_cimd` | Supported, recommended over DCR for directory entries. |
-| `oauth_anthropic_creds` | Partner provides `client_id`/`client_secret` to Anthropic; user-consent-gated. Contact `mcp-review@anthropic.com`. |
-| `custom_connection` | User supplies URL/creds at connect time (Snowflake-style). Contact `mcp-review@anthropic.com`. |
-| `none` | Authless. |
+| Type                    | Notes                                                                                                                                     |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `oauth_dcr`             | Supported. For high-volume directory entries, prefer CIMD or Anthropic-held creds — DCR registers a new client on every fresh connection. |
+| `oauth_cimd`            | Supported, recommended over DCR for directory entries.                                                                                    |
+| `oauth_anthropic_creds` | Partner provides `client_id`/`client_secret` to Anthropic; user-consent-gated. Contact `mcp-review@anthropic.com`.                        |
+| `custom_connection`     | User supplies URL/creds at connect time (Snowflake-style). Contact `mcp-review@anthropic.com`.                                            |
+| `none`                  | Authless.                                                                                                                                 |
 
 **Not supported:** user-pasted bearer tokens (`static_bearer`); pure machine-to-machine `client_credentials` grant without user consent.
 
@@ -35,7 +35,7 @@ Works for local stdio, MCPB, and remote servers alike. If this is all you need, 
 
 ### Tier 2: OAuth 2.0 via CIMD (preferred per spec 2025-11-25)
 
-**Client ID Metadata Document.** The MCP host publishes its client metadata at an HTTPS URL and uses that URL *as* its `client_id`. Your authorization server fetches the document, validates it, and proceeds with the auth-code flow. No registration endpoint, no stored client records.
+**Client ID Metadata Document.** The MCP host publishes its client metadata at an HTTPS URL and uses that URL _as_ its `client_id`. Your authorization server fetches the document, validates it, and proceeds with the auth-code flow. No registration endpoint, no stored client records.
 
 Spec 2025-11-25 promoted CIMD to SHOULD (preferred). Advertise support via `client_id_metadata_document_supported: true` in your OAuth AS metadata.
 
@@ -76,23 +76,23 @@ Local stdio servers **can** do OAuth (open a browser, catch the redirect on a lo
 - Every user re-does the dance
 - No central token refresh or revocation
 
-If OAuth is required, lean hard toward remote HTTP. If you *must* ship local + OAuth, the `@modelcontextprotocol/sdk` includes a localhost-redirect helper, and MCPB is the right packaging so at least the runtime is predictable.
+If OAuth is required, lean hard toward remote HTTP. If you _must_ ship local + OAuth, the `@modelcontextprotocol/sdk` includes a localhost-redirect helper, and MCPB is the right packaging so at least the runtime is predictable.
 
 ---
 
 ## Token storage
 
-| Deployment | Store tokens in |
-|---|---|
-| Remote, stateless | Nowhere — host sends bearer each request |
-| Remote, stateful | Session store keyed by MCP session ID (Redis, etc.) |
-| MCPB / local | OS keychain (`keytar` on Node, `keyring` on Python). **Never plaintext on disk.** |
+| Deployment        | Store tokens in                                                                   |
+| ----------------- | --------------------------------------------------------------------------------- |
+| Remote, stateless | Nowhere — host sends bearer each request                                          |
+| Remote, stateful  | Session store keyed by MCP session ID (Redis, etc.)                               |
+| MCPB / local      | OS keychain (`keytar` on Node, `keyring` on Python). **Never plaintext on disk.** |
 
 ---
 
 ## Token audience validation (spec MUST)
 
-Validating "is this a valid bearer token" isn't enough. The spec requires validating "was this token minted *for this server*" — RFC 8707 audience. A token issued for `api.other-service.com` must be rejected even if the signature checks out.
+Validating "is this a valid bearer token" isn't enough. The spec requires validating "was this token minted _for this server_" — RFC 8707 audience. A token issued for `api.other-service.com` must be rejected even if the signature checks out.
 
 **Token passthrough is explicitly forbidden.** Don't accept a token, then forward it upstream. If your server needs to call another service, exchange the token or use its own credentials.
 
@@ -101,6 +101,7 @@ Validating "is this a valid bearer token" isn't enough. The spec requires valida
 ## SDK helpers — don't hand-roll
 
 `@modelcontextprotocol/sdk/server/auth` ships:
+
 - `mcpAuthRouter()` — Express router for the full OAuth AS surface (metadata, authorize, token)
 - `bearerAuth` — middleware that validates bearer tokens against your verifier
 - `proxyProvider` — forward auth to an upstream IdP

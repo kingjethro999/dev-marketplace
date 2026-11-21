@@ -56,7 +56,8 @@ try {
 }
 
 function run() {
-  if (!args.meta || !args.target) throw new Error("--meta and --target are required");
+  if (!args.meta || !args.target)
+    throw new Error("--meta and --target are required");
   const meta = JSON.parse(readFileSync(resolve(args.meta), "utf8"));
   const target = args.target;
   const { baseVolume, clipStart } = readTargetAttrs(args.composition, target);
@@ -88,18 +89,24 @@ function run() {
     return;
   }
 
-  console.log(`<!-- auto-duck: ${target} under narration; add to its <audio> element -->`);
+  console.log(
+    `<!-- auto-duck: ${target} under narration; add to its <audio> element -->`,
+  );
   console.log(`data-automation='${JSON.stringify(lane)}'`);
 }
 
 function readTargetAttrs(composition, target) {
-  if (!composition || !target.startsWith("#")) return { baseVolume: 1, clipStart: 0 };
+  if (!composition || !target.startsWith("#"))
+    return { baseVolume: 1, clipStart: 0 };
   const id = target.slice(1);
   const html = readFileSync(resolve(composition), "utf8");
   // ponytail: regex is enough here because this only reads one attribute from
   // one user-authored composition element, not arbitrary HTML.
-  const tag = html.match(new RegExp(`<[^>]*\\bid=["']${escapeRegExp(id)}["'][^>]*>`, "i"))?.[0];
-  const attr = (name) => Number(tag?.match(new RegExp(`\\b${name}=["']([^"']+)["']`, "i"))?.[1]);
+  const tag = html.match(
+    new RegExp(`<[^>]*\\bid=["']${escapeRegExp(id)}["'][^>]*>`, "i"),
+  )?.[0];
+  const attr = (name) =>
+    Number(tag?.match(new RegExp(`\\b${name}=["']([^"']+)["']`, "i"))?.[1]);
   const volume = attr("data-volume");
   const start = attr("data-start");
   return {

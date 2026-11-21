@@ -63,8 +63,13 @@ const OUT_WIDTH = Number(args["out-width"] ?? 1080);
 const FORMATS = new Set((args.formats ?? "mp4,png").split(","));
 const STILL = args.still === "true";
 const KEEP = args["keep-frames"] === "true";
-const takeName = args.take.split("/").at(-1).replace(/\.m?js$/, "");
-const out = resolve((args.out ?? `out/product-demo/${takeName}`).replace(/\.(mp4|png)$/, ""));
+const takeName = args.take
+  .split("/")
+  .at(-1)
+  .replace(/\.m?js$/, "");
+const out = resolve(
+  (args.out ?? `out/product-demo/${takeName}`).replace(/\.(mp4|png)$/, ""),
+);
 const here = dirname(fileURLToPath(import.meta.url));
 
 // ---- dependencies ------------------------------------------------------------
@@ -76,8 +81,13 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 function loadPlaywright() {
   const path = join(HERE, "node_modules", "playwright");
   if (!existsSync(path)) {
-    console.error("Installing Playwright into this skill's folder (first run)...");
-    execFileSync("npm", ["install", "--silent", "--no-audit", "--no-fund"], { cwd: HERE, stdio: ["ignore", 2, 2] });
+    console.error(
+      "Installing Playwright into this skill's folder (first run)...",
+    );
+    execFileSync("npm", ["install", "--silent", "--no-audit", "--no-fund"], {
+      cwd: HERE,
+      stdio: ["ignore", 2, 2],
+    });
   }
   return createRequire(import.meta.url)(path);
 }
@@ -87,7 +97,11 @@ async function launchBrowser(chromium, options = {}) {
   try {
     return await chromium.launch(options);
   } catch {
-    execFileSync(join(HERE, "node_modules", ".bin", "playwright"), ["install", "chromium"], { stdio: ["ignore", 2, 2] });
+    execFileSync(
+      join(HERE, "node_modules", ".bin", "playwright"),
+      ["install", "chromium"],
+      { stdio: ["ignore", 2, 2] },
+    );
     return chromium.launch(options);
   }
 }

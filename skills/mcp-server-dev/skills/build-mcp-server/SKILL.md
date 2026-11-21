@@ -20,17 +20,17 @@ Ask these questions conversationally (batch them into one message, don't interro
 
 ### 1. What does it connect to?
 
-| If it connects to… | Likely direction |
-|---|---|
-| A cloud API (SaaS, REST, GraphQL) | Remote HTTP server |
-| A local process, filesystem, or desktop app | MCPB or local stdio |
-| Hardware, OS-level APIs, or user-specific state | MCPB |
-| Nothing external — pure logic / computation | Either — default to remote |
+| If it connects to…                              | Likely direction           |
+| ----------------------------------------------- | -------------------------- |
+| A cloud API (SaaS, REST, GraphQL)               | Remote HTTP server         |
+| A local process, filesystem, or desktop app     | MCPB or local stdio        |
+| Hardware, OS-level APIs, or user-specific state | MCPB                       |
+| Nothing external — pure logic / computation     | Either — default to remote |
 
 ### 2. Who will use it?
 
 - **Just me / my team, on our machines** → Local stdio is acceptable (easiest to prototype)
-- **Anyone who installs it** → Remote HTTP (strongly preferred) or MCPB (if it *must* be local)
+- **Anyone who installs it** → Remote HTTP (strongly preferred) or MCPB (if it _must_ be local)
 - **Users of Claude desktop who want UI widgets** → MCP app (remote or MCPB)
 
 ### 3. How many distinct actions does it expose?
@@ -42,7 +42,7 @@ This determines the tool-design pattern — see Phase 3.
 
 ### 4. Does a tool need mid-call user input or rich display?
 
-- **Simple structured input** (pick from list, enter a value, confirm) → **Elicitation** — spec-native, zero UI code. *Host support is rolling out* (Claude Code ≥2.1.76) — always pair with a capability check and fallback. See `references/elicitation.md`.
+- **Simple structured input** (pick from list, enter a value, confirm) → **Elicitation** — spec-native, zero UI code. _Host support is rolling out_ (Claude Code ≥2.1.76) — always pair with a capability check and fallback. See `references/elicitation.md`.
 - **Rich/visual UI** (charts, custom pickers with search, live dashboards) → **MCP app widgets** — iframe-based, needs `@modelcontextprotocol/ext-apps`. See `build-mcp-app` skill.
 - **Neither** → plain tool returning text/JSON.
 
@@ -62,12 +62,13 @@ Based on the answers, recommend **one** path. Be opinionated. The ranked options
 A hosted service speaking MCP over streamable HTTP. This is the **recommended path** for anything wrapping a cloud API.
 
 **Why it wins:**
+
 - Zero install friction — users add a URL, done
 - One deployment serves all users; you control upgrades
 - OAuth flows work properly (the server can handle redirects, DCR, token storage)
 - Works across Claude desktop, Claude Code, Claude.ai, and third-party MCP hosts
 
-**Choose this unless** the server *must* touch the user's local machine.
+**Choose this unless** the server _must_ touch the user's local machine.
 
 → **Fastest deploy:** Cloudflare Workers — `references/deploy-cloudflare-workers.md` (zero to live URL in two commands)
 → **Portable Node/Python:** `references/remote-http-scaffold.md` (Express or FastMCP, runs on any host)
@@ -82,7 +83,7 @@ Escalate to `build-mcp-app` widgets when you need: nested/complex data, scrollab
 
 ### MCP app (remote HTTP + interactive UI)
 
-Same as above, plus **UI resources** — interactive widgets rendered in chat. Rich pickers with search, charts, live dashboards, visual previews. Built once, renders in Claude *and* ChatGPT.
+Same as above, plus **UI resources** — interactive widgets rendered in chat. Rich pickers with search, charts, live dashboards, visual previews. Built once, renders in Claude _and_ ChatGPT.
 
 **Choose this when** elicitation's flat-form constraints don't fit — you need custom layout, large searchable lists, visual content, or live updates.
 
@@ -94,11 +95,11 @@ Usually remote, but can be shipped as MCPB if the UI needs to drive a local app.
 
 A local MCP server **packaged with its runtime** so users don't need Node/Python installed. The sanctioned way to ship local servers.
 
-**Choose this when** the server *must* run on the user's machine — it reads local files, drives a desktop app, talks to localhost services, or needs OS-level access.
+**Choose this when** the server _must_ run on the user's machine — it reads local files, drives a desktop app, talks to localhost services, or needs OS-level access.
 
 → Hand off to the **`build-mcpb`** skill.
 
-### Local stdio (npx / uvx) — *not recommended for distribution*
+### Local stdio (npx / uvx) — _not recommended for distribution_
 
 A script launched via `npx` / `uvx` on the user's machine. Fine for **personal tools and prototypes**. Painful to distribute: users need the right runtime, you can't push updates, and the only distribution channel is Claude Code plugins.
 
@@ -147,10 +148,10 @@ The server holds the full catalog internally. Claude searches, picks, executes. 
 
 Recommend one of these two. Others exist but these have the best MCP-spec coverage and Claude compatibility.
 
-| Framework | Language | Use when |
-|---|---|---|
-| **Official TypeScript SDK** (`@modelcontextprotocol/sdk`) | TS/JS | Default choice. Best spec coverage, first to get new features. |
-| **FastMCP 3.x** (`fastmcp` on PyPI) | Python | User prefers Python, or wrapping a Python library. Decorator-based, very low boilerplate. This is jlowin's package — not the frozen FastMCP 1.0 bundled in the official `mcp` SDK. |
+| Framework                                                 | Language | Use when                                                                                                                                                                           |
+| --------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Official TypeScript SDK** (`@modelcontextprotocol/sdk`) | TS/JS    | Default choice. Best spec coverage, first to get new features.                                                                                                                     |
+| **FastMCP 3.x** (`fastmcp` on PyPI)                       | Python   | User prefers Python, or wrapping a Python library. Decorator-based, very low boilerplate. This is jlowin's package — not the frozen FastMCP 1.0 bundled in the official `mcp` SDK. |
 
 If the user already has a language/stack in mind, go with it — both produce identical wire protocol.
 
@@ -173,12 +174,12 @@ When handing off, restate the design brief in one paragraph so the next skill do
 
 Tools are one of three server primitives. Most servers start with tools and never need the others, but knowing they exist prevents reinventing wheels:
 
-| Primitive | Who triggers it | Use when |
-|---|---|---|
-| **Resources** | Host app (not Claude) | Exposing docs/files/data as browsable context |
-| **Prompts** | User (slash command) | Canned workflows ("/summarize-thread") |
-| **Elicitation** | Server, mid-tool | Asking user for input without building UI |
-| **Sampling** | Server, mid-tool | Need LLM inference in your tool logic |
+| Primitive       | Who triggers it       | Use when                                      |
+| --------------- | --------------------- | --------------------------------------------- |
+| **Resources**   | Host app (not Claude) | Exposing docs/files/data as browsable context |
+| **Prompts**     | User (slash command)  | Canned workflows ("/summarize-thread")        |
+| **Elicitation** | Server, mid-tool      | Asking user for input without building UI     |
+| **Sampling**    | Server, mid-tool      | Need LLM inference in your tool logic         |
 
 → `references/resources-and-prompts.md`, `references/elicitation.md`, `references/server-capabilities.md`
 
@@ -197,15 +198,15 @@ Once the server runs:
 
 ## Quick reference: decision matrix
 
-| Scenario | Deployment | Tool pattern |
-|---|---|---|
-| Wrap a small SaaS API | Remote HTTP | One-per-action |
-| Wrap a large SaaS API (50+ endpoints) | Remote HTTP | Search + execute |
-| SaaS API with rich forms / pickers | MCP app (remote) | One-per-action |
-| Drive a local desktop app | MCPB | One-per-action |
-| Local desktop app with in-chat UI | MCP app (MCPB) | One-per-action |
-| Read/write local filesystem | MCPB | Depends on surface |
-| Personal prototype | Local stdio | Whatever's fastest |
+| Scenario                              | Deployment       | Tool pattern       |
+| ------------------------------------- | ---------------- | ------------------ |
+| Wrap a small SaaS API                 | Remote HTTP      | One-per-action     |
+| Wrap a large SaaS API (50+ endpoints) | Remote HTTP      | Search + execute   |
+| SaaS API with rich forms / pickers    | MCP app (remote) | One-per-action     |
+| Drive a local desktop app             | MCPB             | One-per-action     |
+| Local desktop app with in-chat UI     | MCP app (MCPB)   | One-per-action     |
+| Read/write local filesystem           | MCPB             | Depends on surface |
+| Personal prototype                    | Local stdio      | Whatever's fastest |
 
 ---
 

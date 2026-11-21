@@ -35,7 +35,12 @@ A crossfade is two clips on different tracks that overlap, each with a fade.
 {
   "version": 1,
   "nodes": [
-    { "type": "highpass", "id": "n1", "label": "Remove rumble", "params": { "frequency": 80 } },
+    {
+      "type": "highpass",
+      "id": "n1",
+      "label": "Remove rumble",
+      "params": { "frequency": 80 }
+    },
     {
       "type": "peaking",
       "id": "n2",

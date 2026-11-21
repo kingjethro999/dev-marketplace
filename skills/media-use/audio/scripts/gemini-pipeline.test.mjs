@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  writeFileSync,
+  readFileSync,
+  mkdirSync,
+  rmSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -10,13 +16,18 @@ import { spawnSync } from "node:child_process";
 for (const expired of [false, true]) {
   for (const only of ["tts", "tts,bgm,sfx"]) {
     // With expired credentials the person already has an assets/voice/intro.wav, which the engine must keep.
-    const voicePath = expired ? "assets/voice/intro-2.wav" : "assets/voice/intro.wav";
+    const voicePath = expired
+      ? "assets/voice/intro-2.wav"
+      : "assets/voice/intro.wav";
     test(`Gemini engine returns caption metadata with ${expired ? "expired" : "absent"} HeyGen credentials (${only})`, (t) => {
       const dir = mkdtempSync(join(tmpdir(), "hf-gemini-pipeline-"));
       t.after(() => rmSync(dir, { recursive: true, force: true }));
       if (expired) {
         mkdirSync(join(dir, "assets/voice"), { recursive: true });
-        writeFileSync(join(dir, "assets/voice/intro.wav"), "the person's own intro");
+        writeFileSync(
+          join(dir, "assets/voice/intro.wav"),
+          "the person's own intro",
+        );
       }
       const config = join(dir, "heygen");
       mkdirSync(config);
@@ -24,7 +35,10 @@ for (const expired of [false, true]) {
         writeFileSync(
           join(config, "credentials"),
           JSON.stringify({
-            oauth: { access_token: "expired-fixture", expires_at: "2000-01-01T00:00:00Z" },
+            oauth: {
+              access_token: "expired-fixture",
+              expires_at: "2000-01-01T00:00:00Z",
+            },
           }),
         );
       const bin = join(dir, "bin");
@@ -62,7 +76,9 @@ fs.writeFileSync(path.join(args[args.indexOf('--dir')+1], 'transcript.json'), JS
 ]));
 `,
       );
-      writeFileSync(join(bin, "ffprobe"), "#!/bin/sh\necho 1.25\n", { mode: 0o755 });
+      writeFileSync(join(bin, "ffprobe"), "#!/bin/sh\necho 1.25\n", {
+        mode: 0o755,
+      });
       writeFileSync(join(dir, ".env"), "");
       writeFileSync(
         join(dir, "audio_request.json"),
@@ -70,7 +86,9 @@ fs.writeFileSync(path.join(args[args.indexOf('--dir')+1], 'transcript.json'), JS
           provider: "gemini",
           tts_model: "gemini-3.8-flash-lite-tts",
           style: "Global direction",
-          lines: [{ id: "intro", text: "Hello there.", style: "Line direction" }],
+          lines: [
+            { id: "intro", text: "Hello there.", style: "Line direction" },
+          ],
           bgm: { mode: "none" },
         }),
       );
@@ -99,7 +117,9 @@ fs.writeFileSync(path.join(args[args.indexOf('--dir')+1], 'transcript.json'), JS
         },
       );
       assert.equal(result.status, 0, result.stderr);
-      const meta = JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8"));
+      const meta = JSON.parse(
+        readFileSync(join(dir, "audio_meta.json"), "utf8"),
+      );
       assert.equal(meta.tts_provider, "gemini");
       assert.equal(meta.voice_id, "Kore");
       assert.deepEqual(meta.voices, [
@@ -114,7 +134,9 @@ fs.writeFileSync(path.join(args[args.indexOf('--dir')+1], 'transcript.json'), JS
         },
       ]);
       assert.equal(meta.total_duration_s, 1.25);
-      const manifest = readFileSync(join(dir, ".media/manifest.jsonl"), "utf8").trim().split("\n");
+      const manifest = readFileSync(join(dir, ".media/manifest.jsonl"), "utf8")
+        .trim()
+        .split("\n");
       assert.deepEqual(
         manifest
           .map((line) => JSON.parse(line))

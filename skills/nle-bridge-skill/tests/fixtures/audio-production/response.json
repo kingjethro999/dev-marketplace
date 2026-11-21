@@ -41,9 +41,7 @@
         {
           "node_id": "op:dx",
           "type": "GAIN",
-          "inputs": [
-            "track:dialogue"
-          ],
+          "inputs": ["track:dialogue"],
           "parameters": {
             "gain_db": 0.0,
             "audio_stream": 0
@@ -66,9 +64,7 @@
         {
           "node_id": "op:fx",
           "type": "GAIN",
-          "inputs": [
-            "track:effects"
-          ],
+          "inputs": ["track:effects"],
           "parameters": {
             "gain_db": 0.0,
             "audio_stream": 0
@@ -91,9 +87,7 @@
         {
           "node_id": "op:mx",
           "type": "GAIN",
-          "inputs": [
-            "track:music"
-          ],
+          "inputs": ["track:music"],
           "parameters": {
             "gain_db": 0.0,
             "audio_stream": 0
@@ -103,11 +97,7 @@
         {
           "node_id": "op:mix",
           "type": "MIX",
-          "inputs": [
-            "op:dx",
-            "op:mx",
-            "op:fx"
-          ],
+          "inputs": ["op:dx", "op:mx", "op:fx"],
           "parameters": {
             "levels": [
               {
@@ -129,9 +119,7 @@
         {
           "node_id": "op:atsc",
           "type": "NORMALIZE",
-          "inputs": [
-            "op:mix"
-          ],
+          "inputs": ["op:mix"],
           "parameters": {
             "target_lufs": -24.0,
             "true_peak_db": -2.0,
@@ -143,9 +131,7 @@
         {
           "node_id": "op:ebu",
           "type": "NORMALIZE",
-          "inputs": [
-            "op:mix"
-          ],
+          "inputs": ["op:mix"],
           "parameters": {
             "target_lufs": -23.0,
             "true_peak_db": -1.0,
@@ -157,9 +143,7 @@
         {
           "node_id": "op:web",
           "type": "NORMALIZE",
-          "inputs": [
-            "op:mix"
-          ],
+          "inputs": ["op:mix"],
           "parameters": {
             "target_lufs": -14.0,
             "true_peak_db": -1.0,
@@ -222,9 +206,7 @@
         "operation_id": "ca16e19006c53baf8a545ed9abb589e1e481af60c429468966bd2512c9a36451",
         "type": "GAIN",
         "tool": "ffmpeg-skill/audio",
-        "inputs": [
-          "track:dialogue"
-        ],
+        "inputs": ["track:dialogue"],
         "parameters": {
           "gain_db": 0.0,
           "audio_stream": 0
@@ -237,9 +219,7 @@
         "operation_id": "c9cf50a51522aea4b365b49859c18c67b78751fb4810fce31662f582564fe618",
         "type": "GAIN",
         "tool": "ffmpeg-skill/audio",
-        "inputs": [
-          "track:effects"
-        ],
+        "inputs": ["track:effects"],
         "parameters": {
           "gain_db": 0.0,
           "audio_stream": 0
@@ -252,9 +232,7 @@
         "operation_id": "ce00c4b544c409361aa3bf9cf3576d1b12d4139a3bc6b2387e3d52895684357f",
         "type": "GAIN",
         "tool": "ffmpeg-skill/audio",
-        "inputs": [
-          "track:music"
-        ],
+        "inputs": ["track:music"],
         "parameters": {
           "gain_db": 0.0,
           "audio_stream": 0
@@ -267,11 +245,7 @@
         "operation_id": "3e50a32ba934057f999f3812586e522686ca677a582281e1972a1538fb564123",
         "type": "MIX",
         "tool": "ffmpeg-skill/audio",
-        "inputs": [
-          "op:dx",
-          "op:mx",
-          "op:fx"
-        ],
+        "inputs": ["op:dx", "op:mx", "op:fx"],
         "parameters": {
           "levels": [
             {
@@ -296,9 +270,7 @@
         "operation_id": "7f7bcddf2781bb4cef7a4a1c248be3c19d3ec7f854697587ddf47d3e72b0b961",
         "type": "NORMALIZE",
         "tool": "ffmpeg-skill/loudness",
-        "inputs": [
-          "op:mix"
-        ],
+        "inputs": ["op:mix"],
         "parameters": {
           "target_lufs": -24.0,
           "true_peak_db": -2.0,
@@ -313,9 +285,7 @@
         "operation_id": "125d4fa4b8a11aa44a98878f5d800ecf10d1991a21cdc11047e7228797c135c6",
         "type": "NORMALIZE",
         "tool": "ffmpeg-skill/loudness",
-        "inputs": [
-          "op:mix"
-        ],
+        "inputs": ["op:mix"],
         "parameters": {
           "target_lufs": -23.0,
           "true_peak_db": -1.0,
@@ -330,9 +300,7 @@
         "operation_id": "fdda8d3a596265c4cb32c7da6ed21a7605505039c4db353f23eae282187de63b",
         "type": "NORMALIZE",
         "tool": "ffmpeg-skill/loudness",
-        "inputs": [
-          "op:mix"
-        ],
+        "inputs": ["op:mix"],
         "parameters": {
           "target_lufs": -14.0,
           "true_peak_db": -1.0,
@@ -350,9 +318,7 @@
         "path": "deliver/talk_dialogue.wav",
         "format": "wav",
         "tool": "ffmpeg-skill/audio",
-        "required_capabilities": [
-          "encoder:pcm_s16le"
-        ],
+        "required_capabilities": ["encoder:pcm_s16le"],
         "expect": {},
         "expected_duration": 4.0
       },
@@ -362,9 +328,7 @@
         "path": "deliver/talk_music.wav",
         "format": "wav",
         "tool": "ffmpeg-skill/audio",
-        "required_capabilities": [
-          "encoder:pcm_s16le"
-        ],
+        "required_capabilities": ["encoder:pcm_s16le"],
         "expect": {},
         "expected_duration": 4.0
       },
@@ -374,9 +338,7 @@
         "path": "deliver/talk_effects.wav",
         "format": "wav",
         "tool": "ffmpeg-skill/audio",
-        "required_capabilities": [
-          "encoder:pcm_s16le"
-        ],
+        "required_capabilities": ["encoder:pcm_s16le"],
         "expect": {},
         "expected_duration": 4.0
       },
@@ -386,9 +348,7 @@
         "path": "deliver/talk_ebu_r128.wav",
         "format": "wav",
         "tool": "ffmpeg-skill/audio",
-        "required_capabilities": [
-          "encoder:pcm_s16le"
-        ],
+        "required_capabilities": ["encoder:pcm_s16le"],
         "expect": {},
         "expected_duration": 4.0
       },
@@ -398,9 +358,7 @@
         "path": "deliver/talk_atsc_a85.wav",
         "format": "wav",
         "tool": "ffmpeg-skill/audio",
-        "required_capabilities": [
-          "encoder:pcm_s16le"
-        ],
+        "required_capabilities": ["encoder:pcm_s16le"],
         "expect": {},
         "expected_duration": 4.0
       },
@@ -410,9 +368,7 @@
         "path": "deliver/talk_streaming.wav",
         "format": "wav",
         "tool": "ffmpeg-skill/audio",
-        "required_capabilities": [
-          "encoder:pcm_s16le"
-        ],
+        "required_capabilities": ["encoder:pcm_s16le"],
         "expect": {},
         "expected_duration": 4.0
       }
@@ -442,11 +398,7 @@
       "type": "SOURCE_TRACK",
       "implicit": false,
       "tool": "ffmpeg-skill/probe",
-      "required_capabilities": [
-        "ffmpeg-skill",
-        "ffmpeg",
-        "ffprobe"
-      ],
+      "required_capabilities": ["ffmpeg-skill", "ffmpeg", "ffprobe"],
       "inputs": [],
       "parameters": {
         "source_id": "dx",
@@ -504,9 +456,7 @@
         "filter:volume",
         "encoder:pcm_s16le"
       ],
-      "inputs": [
-        "track:dialogue"
-      ],
+      "inputs": ["track:dialogue"],
       "parameters": {
         "gain_db": 0.0,
         "audio_stream": 0
@@ -552,11 +502,7 @@
       "type": "SOURCE_TRACK",
       "implicit": false,
       "tool": "ffmpeg-skill/probe",
-      "required_capabilities": [
-        "ffmpeg-skill",
-        "ffmpeg",
-        "ffprobe"
-      ],
+      "required_capabilities": ["ffmpeg-skill", "ffmpeg", "ffprobe"],
       "inputs": [],
       "parameters": {
         "source_id": "fx",
@@ -614,9 +560,7 @@
         "filter:volume",
         "encoder:pcm_s16le"
       ],
-      "inputs": [
-        "track:effects"
-      ],
+      "inputs": ["track:effects"],
       "parameters": {
         "gain_db": 0.0,
         "audio_stream": 0
@@ -662,11 +606,7 @@
       "type": "SOURCE_TRACK",
       "implicit": false,
       "tool": "ffmpeg-skill/probe",
-      "required_capabilities": [
-        "ffmpeg-skill",
-        "ffmpeg",
-        "ffprobe"
-      ],
+      "required_capabilities": ["ffmpeg-skill", "ffmpeg", "ffprobe"],
       "inputs": [],
       "parameters": {
         "source_id": "mx",
@@ -724,9 +664,7 @@
         "filter:volume",
         "encoder:pcm_s16le"
       ],
-      "inputs": [
-        "track:music"
-      ],
+      "inputs": ["track:music"],
       "parameters": {
         "gain_db": 0.0,
         "audio_stream": 0
@@ -779,11 +717,7 @@
         "filter:amix",
         "encoder:pcm_s16le"
       ],
-      "inputs": [
-        "op:dx",
-        "op:mx",
-        "op:fx"
-      ],
+      "inputs": ["op:dx", "op:mx", "op:fx"],
       "parameters": {
         "levels": [
           {
@@ -875,9 +809,7 @@
         "filter:loudnorm",
         "encoder:pcm_s16le"
       ],
-      "inputs": [
-        "op:mix"
-      ],
+      "inputs": ["op:mix"],
       "parameters": {
         "target_lufs": -24.0,
         "true_peak_db": -2.0,
@@ -969,9 +901,7 @@
         "filter:loudnorm",
         "encoder:pcm_s16le"
       ],
-      "inputs": [
-        "op:mix"
-      ],
+      "inputs": ["op:mix"],
       "parameters": {
         "target_lufs": -23.0,
         "true_peak_db": -1.0,
@@ -1063,9 +993,7 @@
         "filter:loudnorm",
         "encoder:pcm_s16le"
       ],
-      "inputs": [
-        "op:mix"
-      ],
+      "inputs": ["op:mix"],
       "parameters": {
         "target_lufs": -14.0,
         "true_peak_db": -1.0,

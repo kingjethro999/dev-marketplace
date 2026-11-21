@@ -16,8 +16,8 @@ bunx remotion add @remotion/motion-blur
 Child calls to `useCurrentFrame()` receive each sample's frame.
 
 ```tsx title="MyComposition.tsx"
-import {HtmlInCanvasMotionBlur} from '@remotion/motion-blur';
-import {useCurrentFrame, useVideoConfig} from 'remotion';
+import { HtmlInCanvasMotionBlur } from "@remotion/motion-blur";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 
 const MovingBox = () => {
   const frame = useCurrentFrame();
@@ -25,19 +25,19 @@ const MovingBox = () => {
   return (
     <div
       style={{
-        position: 'absolute',
+        position: "absolute",
         left: frame * 10,
         top: 300,
         width: 120,
         height: 120,
-        backgroundColor: '#ff6b6b',
+        backgroundColor: "#ff6b6b",
       }}
     />
   );
 };
 
 export const MyComposition = () => {
-  const {width, height} = useVideoConfig();
+  const { width, height } = useVideoConfig();
 
   return (
     <HtmlInCanvasMotionBlur
@@ -64,23 +64,23 @@ bunx remotion add @remotion/transitions
 ```
 
 ```tsx title="TransitionVideo.tsx"
-import {springTiming, TransitionSeries} from '@remotion/transitions';
-import {slide} from '@remotion/transitions/slide';
-import {AbsoluteFill} from 'remotion';
+import { springTiming, TransitionSeries } from "@remotion/transitions";
+import { slide } from "@remotion/transitions/slide";
+import { AbsoluteFill } from "remotion";
 
 export const TransitionVideo = () => {
   return (
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={60}>
-        <AbsoluteFill style={{backgroundColor: '#0b84f3'}} />
+        <AbsoluteFill style={{ backgroundColor: "#0b84f3" }} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
-        presentation={slide({direction: 'from-bottom'})}
-        timing={springTiming({durationInFrames: 20})}
-        motionBlur={{shutterAngle: 180, samples: 16}}
+        presentation={slide({ direction: "from-bottom" })}
+        timing={springTiming({ durationInFrames: 20 })}
+        motionBlur={{ shutterAngle: 180, samples: 16 }}
       />
       <TransitionSeries.Sequence durationInFrames={60}>
-        <AbsoluteFill style={{backgroundColor: '#2ecc71'}} />
+        <AbsoluteFill style={{ backgroundColor: "#2ecc71" }} />
       </TransitionSeries.Sequence>
     </TransitionSeries>
   );

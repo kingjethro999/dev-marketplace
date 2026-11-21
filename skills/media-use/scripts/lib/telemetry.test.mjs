@@ -77,7 +77,10 @@ test("optedOut reads the shared config from HYPERFRAMES_CONFIG_DIR when it is se
   writeConfig(null);
   const configDir = join(home, "elsewhere");
   mkdirSync(configDir, { recursive: true });
-  writeFileSync(join(configDir, "config.json"), JSON.stringify({ telemetryEnabled: false }));
+  writeFileSync(
+    join(configDir, "config.json"),
+    JSON.stringify({ telemetryEnabled: false }),
+  );
   process.env.HYPERFRAMES_CONFIG_DIR = configDir;
   try {
     assert.equal(optedOut(), true);

@@ -28,20 +28,20 @@ Columns are the 12 dimensions the evolution plan asked to compare against.
 "—" means not applicable/not claimed by that tool; this is not a criticism,
 most of these tools were never trying to do the other 11 things.
 
-| Dimension | QCTools | MediaConch | VMAF | rendercheck | uploadcheck-mcp | Kinocut | **qc-skill (current, PR #1)** | **qc-skill (target)** |
-|---|---|---|---|---|---|---|---|---|
-| Measurement (typed, tool-attributed) | yes (interactive graphs) | yes (MediaInfo-based) | yes (single metric) | yes | yes | yes | **yes** (`QCMeasurement`, ffprobe/ffmpeg-attributed) | unchanged |
-| Rule (typed, caller-supplied, no baked policy) | no (visual inspection) | yes (MediaConformance policy XML) | no (raw score only) | partial (hardcoded thresholds) | yes (config-driven gates) | yes (workflow-defined gates) | **yes** (`VideoRule`/`AudioRule`/`SubtitleRule`/`DeliveryRule`) | unchanged |
-| Finding (typed, evidence-linked, not just pass/fail) | no | partial | no | partial (log lines) | yes | yes | **yes** (`QCFinding` w/ `measurement_ids`) | unchanged |
-| Timestamp-level evidence | yes (frame-accurate plots) | no | no (whole-asset score) | partial | no | partial | **yes** (black/freeze segments, silence segments) | strengthen (Phase 4) |
-| Delivery gate (N named artifacts as ONE unit) | no | no | no | no | partial (single-file gate) | yes (package-level) | **partial** (`delivery` = 1 primary + optional companions, not N-artifact) | **Phase 1** |
-| Cross-artifact validation (typed relationship rules across artifacts, not string compare) | no | no | no | no | no | partial | **no** | **Phase 2** |
-| Timeline-awareness (post-edit delivery timing vs. source cue timing) | no | no | no | no | no | **yes** (workflow-engine aware) | **no** | **Phase 3** |
-| Deterministic identity (same input+rules+tool-versions -> same result id) | no | no | no | no | unclear (not published) | yes (hash-based receipts) | **yes** (`provenance.identity`, ADR excludes timestamps/paths/request_id) | unchanged |
-| Agent/orchestrator integration (native tool contract, not a CLI wrapper) | no | no | no | no | yes (MCP-native) | yes | **yes** (already integrated into video-production-agent, ADR-032, zero contract drift) | strengthen (Phase 6 receipt) |
-| Remediation / auto-fix | no | no | no | no | no | no | **no (by design, ADR-001)** | **stays no, permanently** |
-| Multi-tool evidence chaining (QC evidence spans MULTIPLE upstream skills' outputs, not one tool's own steps) | no | no | no | no | no | no | **no** | **Phase 1-2, and the eventual Evidence Graph** |
-| Full audit trail ("why did this pass", tool versions + hashes + rules) | no | no | no | no | partial | yes (Video Receipts) | **yes** (provenance block) but not yet a standalone receipt object | **Phase 6** |
+| Dimension                                                                                                    | QCTools                    | MediaConch                        | VMAF                   | rendercheck                    | uploadcheck-mcp            | Kinocut                         | **qc-skill (current, PR #1)**                                                          | **qc-skill (target)**                          |
+| ------------------------------------------------------------------------------------------------------------ | -------------------------- | --------------------------------- | ---------------------- | ------------------------------ | -------------------------- | ------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Measurement (typed, tool-attributed)                                                                         | yes (interactive graphs)   | yes (MediaInfo-based)             | yes (single metric)    | yes                            | yes                        | yes                             | **yes** (`QCMeasurement`, ffprobe/ffmpeg-attributed)                                   | unchanged                                      |
+| Rule (typed, caller-supplied, no baked policy)                                                               | no (visual inspection)     | yes (MediaConformance policy XML) | no (raw score only)    | partial (hardcoded thresholds) | yes (config-driven gates)  | yes (workflow-defined gates)    | **yes** (`VideoRule`/`AudioRule`/`SubtitleRule`/`DeliveryRule`)                        | unchanged                                      |
+| Finding (typed, evidence-linked, not just pass/fail)                                                         | no                         | partial                           | no                     | partial (log lines)            | yes                        | yes                             | **yes** (`QCFinding` w/ `measurement_ids`)                                             | unchanged                                      |
+| Timestamp-level evidence                                                                                     | yes (frame-accurate plots) | no                                | no (whole-asset score) | partial                        | no                         | partial                         | **yes** (black/freeze segments, silence segments)                                      | strengthen (Phase 4)                           |
+| Delivery gate (N named artifacts as ONE unit)                                                                | no                         | no                                | no                     | no                             | partial (single-file gate) | yes (package-level)             | **partial** (`delivery` = 1 primary + optional companions, not N-artifact)             | **Phase 1**                                    |
+| Cross-artifact validation (typed relationship rules across artifacts, not string compare)                    | no                         | no                                | no                     | no                             | no                         | partial                         | **no**                                                                                 | **Phase 2**                                    |
+| Timeline-awareness (post-edit delivery timing vs. source cue timing)                                         | no                         | no                                | no                     | no                             | no                         | **yes** (workflow-engine aware) | **no**                                                                                 | **Phase 3**                                    |
+| Deterministic identity (same input+rules+tool-versions -> same result id)                                    | no                         | no                                | no                     | no                             | unclear (not published)    | yes (hash-based receipts)       | **yes** (`provenance.identity`, ADR excludes timestamps/paths/request_id)              | unchanged                                      |
+| Agent/orchestrator integration (native tool contract, not a CLI wrapper)                                     | no                         | no                                | no                     | no                             | yes (MCP-native)           | yes                             | **yes** (already integrated into video-production-agent, ADR-032, zero contract drift) | strengthen (Phase 6 receipt)                   |
+| Remediation / auto-fix                                                                                       | no                         | no                                | no                     | no                             | no                         | no                              | **no (by design, ADR-001)**                                                            | **stays no, permanently**                      |
+| Multi-tool evidence chaining (QC evidence spans MULTIPLE upstream skills' outputs, not one tool's own steps) | no                         | no                                | no                     | no                             | no                         | no                              | **no**                                                                                 | **Phase 1-2, and the eventual Evidence Graph** |
+| Full audit trail ("why did this pass", tool versions + hashes + rules)                                       | no                         | no                                | no                     | no                             | partial                    | yes (Video Receipts)            | **yes** (provenance block) but not yet a standalone receipt object                     | **Phase 6**                                    |
 
 ## What this rules out as a differentiator
 
@@ -56,8 +56,8 @@ forbidden").
 1. **Cross-artifact validation across a multi-skill pipeline's
    heterogeneous outputs.** Every tool surveyed either checks one file, or
    (Kinocut) checks a package it itself produced. None of them validate
-   *"does this video's audio duration, this SRT's last cue, and this
-   thumbnail's aspect ratio agree with each other"* when those three files
+   _"does this video's audio duration, this SRT's last cue, and this
+   thumbnail's aspect ratio agree with each other"_ when those three files
    were produced by three independent tools (video-editing-skill,
    subtitle-skill, thumbnail-skill) that never talk to each other.
 2. **Genuine timeline-awareness of edit history**, not just source-file
@@ -74,13 +74,13 @@ forbidden").
 3. **Deterministic evidence chained across multiple tools' outputs**, not
    just one tool's own steps. qc-skill's own `provenance.identity` is
    already deterministic per-request; the gap is upstream of that -
-   nothing ties *this* QC verdict to *which* upstream Operation/Skill
+   nothing ties _this_ QC verdict to _which_ upstream Operation/Skill
    produced each artifact it measured.
 4. **An orchestrator-facing evidence graph** tying a QC verdict into the
    agent's Decision loop as one auditable object spanning every skill's
    output - Finding -> Check -> Measurement -> Artifact -> Operation ->
    Skill -> ProductionPlan. Confirmed nothing surveyed (including
-   Kinocut's per-package receipt) does this across a *multi-skill*
+   Kinocut's per-package receipt) does this across a _multi-skill_
    pipeline; qc-skill's existing provenance block is the right foundation
    but stops at a single request's own inputs.
 
@@ -94,11 +94,11 @@ forbidden").
   renegotiation, unless a change is unavoidable and justified.
 - **No "delivery package" (N named artifacts validated as one unit)
   concept exists anywhere in the ecosystem.** qc-skill's own single-video
-  + optional-subtitle-companion `delivery` kind is the closest (narrow)
-  precedent. There is no naming collision to avoid, but also no existing
-  convention to copy - Phase 1 has to name and shape this itself. See
-  ADR-010 for the resulting decision (new `kind`, not an extension of
-  `delivery`).
+  - optional-subtitle-companion `delivery` kind is the closest (narrow)
+    precedent. There is no naming collision to avoid, but also no existing
+    convention to copy - Phase 1 has to name and shape this itself. See
+    ADR-010 for the resulting decision (new `kind`, not an extension of
+    `delivery`).
 - qc-skill **must never import `video_production_agent`/`ProductionPlan`
   types directly** - the existing adapter pattern
   (`tools/skill_process.py` + per-skill `contract_X.Y.Z.json` pin) is how
@@ -114,12 +114,12 @@ forbidden").
 
 ## Mapping to phases
 
-| Gap | Phase |
-|---|---|
-| Delivery gate (N named artifacts, one unit) | Phase 1 - `feature/delivery-gate-foundation` |
-| Cross-artifact relationship rules | Phase 2 - `feature/cross-artifact-qc` |
-| Timeline-aware delivery-timing validation | Phase 3 - `feature/timeline-integrity-qc` |
-| Additional timestamped visual-defect evidence | Phase 4 - `feature/visual-defect-qc` |
-| Reference-based perceptual metrics (VMAF/SSIM/PSNR) | Phase 5 - `feature/perceptual-quality-qc` |
-| Full multi-tool audit trail (Production Receipt) | Phase 6 - `feature/production-receipt` |
-| Full orchestrator-facing Evidence Graph | Not scheduled - explicit future goal, not built until Phases 1-3 exist to hang it off of |
+| Gap                                                 | Phase                                                                                    |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Delivery gate (N named artifacts, one unit)         | Phase 1 - `feature/delivery-gate-foundation`                                             |
+| Cross-artifact relationship rules                   | Phase 2 - `feature/cross-artifact-qc`                                                    |
+| Timeline-aware delivery-timing validation           | Phase 3 - `feature/timeline-integrity-qc`                                                |
+| Additional timestamped visual-defect evidence       | Phase 4 - `feature/visual-defect-qc`                                                     |
+| Reference-based perceptual metrics (VMAF/SSIM/PSNR) | Phase 5 - `feature/perceptual-quality-qc`                                                |
+| Full multi-tool audit trail (Production Receipt)    | Phase 6 - `feature/production-receipt`                                                   |
+| Full orchestrator-facing Evidence Graph             | Not scheduled - explicit future goal, not built until Phases 1-3 exist to hang it off of |

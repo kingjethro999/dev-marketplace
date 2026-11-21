@@ -10,15 +10,15 @@ no voice. `templates/walkthrough/kinetic.html` is a working example engine (§ E
 
 ## What it does, measured
 
-| Measure | Value |
-|---|---|
-| Hard cuts | 4 in 65 s. Every other change is a morph, a whip or a focus pull. |
-| Still frames | 6 %. The only hold is the end card (2.6 s). No hold anywhere else. |
-| Ideas | about 17 in 62 s, 2.5–5 s each |
-| Rhythm | a slow move while you read (1–3 s), then a fast transition (0.3–0.6 s), then repeat |
-| Typing | about 16 characters per second, with the text 60–100 px tall |
-| Plate | pure white, no texture, no browser frame |
-| Loudness | steady music bed at about −16 dBFS; it has no voice and nothing depends on sound |
+| Measure      | Value                                                                               |
+| ------------ | ----------------------------------------------------------------------------------- |
+| Hard cuts    | 4 in 65 s. Every other change is a morph, a whip or a focus pull.                   |
+| Still frames | 6 %. The only hold is the end card (2.6 s). No hold anywhere else.                  |
+| Ideas        | about 17 in 62 s, 2.5–5 s each                                                      |
+| Rhythm       | a slow move while you read (1–3 s), then a fast transition (0.3–0.6 s), then repeat |
+| Typing       | about 16 characters per second, with the text 60–100 px tall                        |
+| Plate        | pure white, no texture, no browser frame                                            |
+| Loudness     | steady music bed at about −16 dBFS; it has no voice and nothing depends on sound    |
 
 It stays readable with almost no holds because of the way it frames text. Few words are on screen at a time and
 they are very large. The camera follows the reading point, so the eye never has to search. A walkthrough fixes
@@ -26,29 +26,29 @@ readability with holds; this style fixes it with scale.
 
 ## Beat list of the reference
 
-| Time (s) | Beat |
-|---|---|
-| 0–1.5 | A two-brand lockup builds letter by letter. |
-| 1.5–4.5 | Close-up of an empty chat prompt. The cursor clicks and types a three-word command. |
-| 4.5–6.5 | The text slides off. The app icon and wordmark build, then the wordmark leaves. |
-| 7–8.5 | A ring of halftone dots in the brand color opens around the icon and reveals the chat window (iris). |
-| 8.6–9 | The camera dives from the window into the prompt box, to one "@" character. |
-| 9–18 | A long, multi-step command is typed at huge size and the camera tracks the caret. |
+| Time (s)  | Beat                                                                                                                                    |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 0–1.5     | A two-brand lockup builds letter by letter.                                                                                             |
+| 1.5–4.5   | Close-up of an empty chat prompt. The cursor clicks and types a three-word command.                                                     |
+| 4.5–6.5   | The text slides off. The app icon and wordmark build, then the wordmark leaves.                                                         |
+| 7–8.5     | A ring of halftone dots in the brand color opens around the icon and reveals the chat window (iris).                                    |
+| 8.6–9     | The camera dives from the window into the prompt box, to one "@" character.                                                             |
+| 9–18      | A long, multi-step command is typed at huge size and the camera tracks the caret.                                                       |
 | 18.5–20.5 | The send button is pressed and breaks into squares in the brand colors (pixel burst). They re-form as the message card with "Working…". |
-| 21–23.5 | A whip with horizontal motion blur. Real avatars fly past at several depths, tagged "Analysing lead…". |
-| 24–26 | One avatar lands, and its profile card fills in field by field. |
-| 26.5–28 | Caption: "Brings the right context into every message". It exits with motion blur. |
-| 29–35.5 | A messaging app's chat. A greeting, then a push-in to one huge bubble, then typing dots. |
-| 35.5–37 | The "Launch" button multiplies into brand-color blocks, and the blocks turn into avatars. |
-| 37.5–39 | "Right here" with mixed sizes and baselines. A gap opens, a pill drops into it, and the line ends with the host app's name. |
-| 39.5–40.5 | The pill morphs into the prompt, where the next command is typed. |
-| 41–44.5 | A caption names the next step. The prospect replies; a chip reads "Thinking of the best reply". |
-| 44.5–46 | The reply is sent. A focus pull: the chat blurs while a green check pops sharp in front. |
-| 46.5–48 | Calendar close-up; the meeting block draws in under the cursor. |
-| 48–51.5 | A caption names the host app as the interface. Its pill outline becomes a line, then a node, then three branches, one per capability. |
-| 52–54 | "From one prompt". Then the prospect's confirmation. |
-| 54.5–60 | An install button is clicked. The last prompt is typed huge and sent. |
-| 60–65 | A spark, then the logo builds with the tagline. Hold 2.6 s. |
+| 21–23.5   | A whip with horizontal motion blur. Real avatars fly past at several depths, tagged "Analysing lead…".                                  |
+| 24–26     | One avatar lands, and its profile card fills in field by field.                                                                         |
+| 26.5–28   | Caption: "Brings the right context into every message". It exits with motion blur.                                                      |
+| 29–35.5   | A messaging app's chat. A greeting, then a push-in to one huge bubble, then typing dots.                                                |
+| 35.5–37   | The "Launch" button multiplies into brand-color blocks, and the blocks turn into avatars.                                               |
+| 37.5–39   | "Right here" with mixed sizes and baselines. A gap opens, a pill drops into it, and the line ends with the host app's name.             |
+| 39.5–40.5 | The pill morphs into the prompt, where the next command is typed.                                                                       |
+| 41–44.5   | A caption names the next step. The prospect replies; a chip reads "Thinking of the best reply".                                         |
+| 44.5–46   | The reply is sent. A focus pull: the chat blurs while a green check pops sharp in front.                                                |
+| 46.5–48   | Calendar close-up; the meeting block draws in under the cursor.                                                                         |
+| 48–51.5   | A caption names the host app as the interface. Its pill outline becomes a line, then a node, then three branches, one per capability.   |
+| 52–54     | "From one prompt". Then the prospect's confirmation.                                                                                    |
+| 54.5–60   | An install button is clicked. The last prompt is typed huge and sent.                                                                   |
+| 60–65     | A spark, then the logo builds with the tagline. Hold 2.6 s.                                                                             |
 
 ## Techniques to reuse
 
@@ -65,12 +65,12 @@ readability with holds; this style fixes it with scale.
    from blurred to sharp, sometimes at mixed sizes and baselines. They exit with motion blur along the direction
    of travel.
 6. **Transitions without cuts.**
-   - *Morph:* the last object of one beat becomes the first object of the next (a button to squares to a card, a
+   - _Morph:_ the last object of one beat becomes the first object of the next (a button to squares to a card, a
      pill to a prompt, blocks to avatars, an outline to a line to a node diagram).
-   - *Whip:* a 0.2–0.35 s move with directional motion blur.
-   - *Focus pull:* the outgoing beat blurs from 0 to about 12 px while the incoming subject pops in sharp in front.
-   - *Halftone iris:* a ring of brand-color dots opens and reveals the next shot inside it.
-   - *Pixel burst:* the clicked control breaks into brand-color squares that re-form as the result.
+   - _Whip:_ a 0.2–0.35 s move with directional motion blur.
+   - _Focus pull:_ the outgoing beat blurs from 0 to about 12 px while the incoming subject pops in sharp in front.
+   - _Halftone iris:_ a ring of brand-color dots opens and reveals the next shot inside it.
+   - _Pixel burst:_ the clicked control breaks into brand-color squares that re-form as the result.
 7. **Real content as particles.** Fly avatars and cards past at several depths, with size, blur and speed set by
    depth. Never abstract dots or glows.
 8. **Flat surfaces.** Cards are white with a faint warm tint and a hairline edge, and have little or no shadow.
@@ -101,16 +101,16 @@ readability with holds; this style fixes it with scale.
 
 The second kinetic build was a feature launch film: five cuts, all kept. Each row closed one review note.
 
-| Rule | Why |
-|---|---|
+| Rule                                                                                                                                                                                                                                                                                                   | Why                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | Say the promise in words at the start and at the end. The opening types the feature's name ("Introducing <Feature>"); then the name shrinks into the start of the value-proposition sentence and the rest types in (4.6 s). The end card is the same sentence, then the brand line and one scope line. | The first cut showed the feature without saying what it does for the viewer. |
-| When two things belong together (a figure in the lede and the same figure in a tile), frame both with one push. Never pan to one, then the other, then back. | Panning to one and back read as a left-to-right flicker. |
-| A changed value needs different digits, not transposed ones (94.6 → 96.4 read as unchanged). Shoot it at 3.3–3.7× and hold the new value in the accent for about 1.4 s (`ink(…, settle)`). | The change was not obvious. |
-| Show the path the audience will take. Drop capabilities they won't use, even when they exist, from the film and the copy. | An option the audience would not use took screen time. |
-| The struck-through "No X. No Y." closer is optional; default it off for feature launches. | It read as filler in a feature launch; a walkthrough promo kept it. |
-| After the main flow, give two or three features a one-word caption beat ("Checklists.") and a short shot of the real UI doing it. Then a slot reel spins through the rest and lands on "And more." Every word on the reel must be a feature that works today. | One flow undersold what the feature can do. |
-| Fixture data must look real at a glance. | "ext. 214" read as a placeholder; a shift time ("06:00–14:00") did not. |
-| Close-ups on a control show its real hover state before the press. Take the hover values from the capture. | At 3× a header that differs from the shipped one is obvious. |
+| When two things belong together (a figure in the lede and the same figure in a tile), frame both with one push. Never pan to one, then the other, then back.                                                                                                                                           | Panning to one and back read as a left-to-right flicker.                     |
+| A changed value needs different digits, not transposed ones (94.6 → 96.4 read as unchanged). Shoot it at 3.3–3.7× and hold the new value in the accent for about 1.4 s (`ink(…, settle)`).                                                                                                             | The change was not obvious.                                                  |
+| Show the path the audience will take. Drop capabilities they won't use, even when they exist, from the film and the copy.                                                                                                                                                                              | An option the audience would not use took screen time.                       |
+| The struck-through "No X. No Y." closer is optional; default it off for feature launches.                                                                                                                                                                                                              | It read as filler in a feature launch; a walkthrough promo kept it.          |
+| After the main flow, give two or three features a one-word caption beat ("Checklists.") and a short shot of the real UI doing it. Then a slot reel spins through the rest and lands on "And more." Every word on the reel must be a feature that works today.                                          | One flow undersold what the feature can do.                                  |
+| Fixture data must look real at a glance.                                                                                                                                                                                                                                                               | "ext. 214" read as a placeholder; a shift time ("06:00–14:00") did not.      |
+| Close-ups on a control show its real hover state before the press. Take the hover values from the capture.                                                                                                                                                                                             | At 3× a header that differs from the shipped one is obvious.                 |
 
 Beats that worked and were kept through every cut:
 
@@ -170,15 +170,15 @@ that happens out of sight (agents read a document in a machine format). It runs 
 problem, "so we built", how, benefit, name again, logo. Words take about 56 % of the film. Use these patterns when the
 film has to make an argument rather than show one flow. A walkthrough keeps the rules above.
 
-| Pattern | Measured | The bad film it prevents |
-|---|---|---|
-| **Plant a question, answer it on the product.** A character asks a short question in a bubble over the real UI ("Who is Sarah?", next to the highlighted word). 12–15 s later the camera closes in on the exact answer in the product. | Question at 17.8 s, answer at 32 s, same name in both. | A feature shown as a capability list: the viewer sees it work but not why it matters. |
-| **One fixed card unit.** Each sentence card types in 1.2–1.5 s whatever its length, holds about 1.5 s, and runs 3.0 s. Product shots run 3–5 s between cards. | 8 of 11 cuts on the 3.0 s grid. Cards of 5–11 words. | Sentences that carry the argument leave before the viewer finishes them. Use this unit only for argument films; a walkthrough gets readability from scale. |
-| **Keep the motion vector across a hard cut.** The card drifts up, then accelerates out (top edge 416 → 390 → 312 px over 1.35 s). The next surface enters from below. | Every card exit, and both document entries. | A hard cut that reads as a jump, or a morph forced between two shots that have nothing in common. |
-| **A figure as a zoom-out.** "Over N documents …" becomes one decelerating pull back from the hero document to a wall of about 20 × 12 real documents. | 9.0–12.6 s, one move. | A large number shown as type alone, which reads as a claim. |
-| **Dim to isolate.** At close range, all lines except the answer drop to about 30 %, and a selection block sweeps the answer (0.9 s, then a hold of about 1.5 s). | 31.7–34.1 s. | A second zoom on top of a close-up, which makes the text soft and leaves the eye to search. |
-| **One accent for the mark and the end.** The highlighter on the word the character touches is the same color as the end plate. | One color in both. | An accent that means nothing; here it links "the word in question" to the brand. |
-| **Repeat the name with one scope line.** The end repeats the opening sentence with a full stop and adds one small line on where the feature is available. | 37.6–41 s. | A viewer who likes the film and does not know where to get the feature. Also put a URL or next step on the end card, which the reference did not. |
+| Pattern                                                                                                                                                                                                                                | Measured                                               | The bad film it prevents                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Plant a question, answer it on the product.** A character asks a short question in a bubble over the real UI ("Who is Sarah?", next to the highlighted word). 12–15 s later the camera closes in on the exact answer in the product. | Question at 17.8 s, answer at 32 s, same name in both. | A feature shown as a capability list: the viewer sees it work but not why it matters.                                                                      |
+| **One fixed card unit.** Each sentence card types in 1.2–1.5 s whatever its length, holds about 1.5 s, and runs 3.0 s. Product shots run 3–5 s between cards.                                                                          | 8 of 11 cuts on the 3.0 s grid. Cards of 5–11 words.   | Sentences that carry the argument leave before the viewer finishes them. Use this unit only for argument films; a walkthrough gets readability from scale. |
+| **Keep the motion vector across a hard cut.** The card drifts up, then accelerates out (top edge 416 → 390 → 312 px over 1.35 s). The next surface enters from below.                                                                  | Every card exit, and both document entries.            | A hard cut that reads as a jump, or a morph forced between two shots that have nothing in common.                                                          |
+| **A figure as a zoom-out.** "Over N documents …" becomes one decelerating pull back from the hero document to a wall of about 20 × 12 real documents.                                                                                  | 9.0–12.6 s, one move.                                  | A large number shown as type alone, which reads as a claim.                                                                                                |
+| **Dim to isolate.** At close range, all lines except the answer drop to about 30 %, and a selection block sweeps the answer (0.9 s, then a hold of about 1.5 s).                                                                       | 31.7–34.1 s.                                           | A second zoom on top of a close-up, which makes the text soft and leaves the eye to search.                                                                |
+| **One accent for the mark and the end.** The highlighter on the word the character touches is the same color as the end plate.                                                                                                         | One color in both.                                     | An accent that means nothing; here it links "the word in question" to the brand.                                                                           |
+| **Repeat the name with one scope line.** The end repeats the opening sentence with a full stop and adds one small line on where the feature is available.                                                                              | 37.6–41 s.                                             | A viewer who likes the film and does not know where to get the feature. Also put a URL or next step on the end card, which the reference did not.          |
 
 What the reference got wrong, so do not copy it:
 

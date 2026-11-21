@@ -13,7 +13,11 @@ import {
 const TitleScene = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const scale = spring({ frame, fps, config: { damping: 12, stiffness: 100, mass: 1 } });
+  const scale = spring({
+    frame,
+    fps,
+    config: { damping: 12, stiffness: 100, mass: 1 },
+  });
   return (
     <AbsoluteFill
       style={{
@@ -40,8 +44,12 @@ const TitleScene = () => {
 
 const ImageScene = () => {
   const frame = useCurrentFrame();
-  const opacity = interpolate(frame, [0, 15], [0, 1], { extrapolateRight: "clamp" });
-  const scale = interpolate(frame, [0, 60], [0.8, 1.0], { extrapolateRight: "clamp" });
+  const opacity = interpolate(frame, [0, 15], [0, 1], {
+    extrapolateRight: "clamp",
+  });
+  const scale = interpolate(frame, [0, 60], [0.8, 1.0], {
+    extrapolateRight: "clamp",
+  });
   return (
     <AbsoluteFill
       style={{
@@ -65,7 +73,9 @@ const ImageScene = () => {
 
 const OutroScene = () => {
   const frame = useCurrentFrame();
-  const opacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: "clamp" });
+  const opacity = interpolate(frame, [0, 30], [0, 1], {
+    extrapolateRight: "clamp",
+  });
   return (
     <AbsoluteFill
       style={{

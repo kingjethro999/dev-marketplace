@@ -24,15 +24,15 @@ npx remotion add @remotion/effects
 Keep the `progress` calculation inline so it is editable in Remotion Studio:
 
 ```tsx
-import {lightLeak} from '@remotion/effects/light-leak';
-import {interpolate, Solid, useCurrentFrame, useVideoConfig} from 'remotion';
+import { lightLeak } from "@remotion/effects/light-leak";
+import { interpolate, Solid, useCurrentFrame, useVideoConfig } from "remotion";
 
 const LightLeakOverlay: React.FC<{
   seed?: number;
   hueShift?: number;
-}> = ({seed = 0, hueShift = 0}) => {
+}> = ({ seed = 0, hueShift = 0 }) => {
   const frame = useCurrentFrame();
-  const {durationInFrames, height, width} = useVideoConfig();
+  const { durationInFrames, height, width } = useVideoConfig();
 
   return (
     <Solid
@@ -43,8 +43,8 @@ const LightLeakOverlay: React.FC<{
           seed,
           hueShift,
           progress: interpolate(frame, [0, durationInFrames - 1], [0, 1], {
-            extrapolateLeft: 'clamp',
-            extrapolateRight: 'clamp',
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
           }),
         }),
       ]}
@@ -56,7 +56,7 @@ const LightLeakOverlay: React.FC<{
 ## Basic usage with TransitionSeries
 
 ```tsx
-import {TransitionSeries} from '@remotion/transitions';
+import { TransitionSeries } from "@remotion/transitions";
 
 <TransitionSeries>
   <TransitionSeries.Sequence durationInFrames={60}>

@@ -9,7 +9,5 @@
       "value": "0"
     }
   ],
-  "expect_problems": [
-    "tools[media-analysis/loudness].algorithm_version"
-  ]
+  "expect_problems": ["tools[media-analysis/loudness].algorithm_version"]
 }

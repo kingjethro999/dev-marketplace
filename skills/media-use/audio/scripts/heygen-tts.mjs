@@ -17,8 +17,17 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { heygenAuthHeaders, heygenJSON, loadEnvFromDir } from "./lib/heygen.mjs";
-import { ffprobeDuration, resolveVoiceId, synthesizeOne, withWordIds } from "./lib/tts.mjs";
+import {
+  heygenAuthHeaders,
+  heygenJSON,
+  loadEnvFromDir,
+} from "./lib/heygen.mjs";
+import {
+  ffprobeDuration,
+  resolveVoiceId,
+  synthesizeOne,
+  withWordIds,
+} from "./lib/tts.mjs";
 
 const argv = process.argv.slice(2);
 function flag(name, def) {
@@ -56,9 +65,11 @@ const output = resolve(
     (argv.includes("-o") && argv[argv.indexOf("-o") + 1]) ||
     "narration.wav",
 );
-const wordsPath = typeof flag("words") === "string" ? resolve(flag("words")) : null;
+const wordsPath =
+  typeof flag("words") === "string" ? resolve(flag("words")) : null;
 const userVoice = typeof flag("voice") === "string" ? flag("voice") : null;
-const speedRaw = typeof flag("speed") === "string" ? Number(flag("speed")) : 1.0;
+const speedRaw =
+  typeof flag("speed") === "string" ? Number(flag("speed")) : 1.0;
 const speed = isFinite(speedRaw) && speedRaw > 0 ? speedRaw : 1.0;
 const lang = typeof flag("lang") === "string" ? flag("lang") : "en";
 const listOnly = flag("list") === true;
@@ -73,9 +84,12 @@ try {
 
 // ---------- --list ----------
 if (listOnly) {
-  const payload = await heygenJSON(`/voices?engine=starfish&type=public&limit=50`, {
-    headers: authHeaders,
-  });
+  const payload = await heygenJSON(
+    `/voices?engine=starfish&type=public&limit=50`,
+    {
+      headers: authHeaders,
+    },
+  );
   for (const v of payload.data ?? payload.voices ?? []) {
     console.log(`${v.voice_id}\t${v.name}\t${v.language ?? ""}`);
   }
@@ -83,7 +97,8 @@ if (listOnly) {
 }
 
 // ---------- resolve text + voice ----------
-if (!positional) die("no text given. Pass a string or a .txt path, or use --list.");
+if (!positional)
+  die("no text given. Pass a string or a .txt path, or use --list.");
 const text =
   positional.endsWith(".txt") && existsSync(resolve(positional))
     ? readFileSync(resolve(positional), "utf8").trim()
@@ -113,10 +128,14 @@ if (wordsPath) {
     writeFileSync(wordsPath, JSON.stringify(withWordIds(words), null, 2));
     wordCount = words.length;
   } else {
-    console.error("⚠ no word_timestamps in response — run `hyperframes transcribe` instead");
+    console.error(
+      "⚠ no word_timestamps in response — run `hyperframes transcribe` instead",
+    );
   }
 }
 
 const dur = ffprobeDuration(output);
 const durStr = isFinite(dur) ? ` (${dur.toFixed(2)}s)` : "";
-console.log(`✓ ${output}${durStr}${wordCount ? ` · ${wordsPath} (${wordCount} words)` : ""}`);
+console.log(
+  `✓ ${output}${durStr}${wordCount ? ` · ${wordsPath} (${wordCount} words)` : ""}`,
+);

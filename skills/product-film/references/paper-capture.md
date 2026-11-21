@@ -10,13 +10,13 @@ per harness (`shots/manifest-<name>.json`, entries merged by file, so a partial 
 any directory. Each ships with an example that runs as copied: Tidewell, a fictional shared-docs app, with its own
 example web app and CLI.
 
-| Harness | Renders | Command |
-|---|---|---|
+| Harness                                  | Renders                                                                          | Command                                                                                     |
+| ---------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `artifact/build.py` + `check-layout.mjs` | The fictional artifact's versions, one self-contained file each; the reflow gate | `python3 <film>/capture/artifact/build.py && node <film>/capture/artifact/check-layout.mjs` |
-| `shoot-page.mjs` + `shoot.json` | Any local page with named boxes (the raw draft before it is published) | `node <film>/capture/shoot-page.mjs` |
-| `agent/` | The agent window, every state, wide (1200×582) and narrow (720×652, for 9:16) | `node <film>/capture/agent/capture.mjs` and `… capture.mjs narrow` |
-| `app/` | Your app on its own dev server, every API call answered by `fixtures.mjs` | `node <film>/capture/app/capture.mjs [scene …] [--dom]` |
-| `cli/` | Your real CLI against a local fixture API, its output rendered in xterm.js | `node <film>/capture/cli/capture.mjs [run …]` |
+| `shoot-page.mjs` + `shoot.json`          | Any local page with named boxes (the raw draft before it is published)           | `node <film>/capture/shoot-page.mjs`                                                        |
+| `agent/`                                 | The agent window, every state, wide (1200×582) and narrow (720×652, for 9:16)    | `node <film>/capture/agent/capture.mjs` and `… capture.mjs narrow`                          |
+| `app/`                                   | Your app on its own dev server, every API call answered by `fixtures.mjs`        | `node <film>/capture/app/capture.mjs [scene …] [--dom]`                                     |
+| `cli/`                                   | Your real CLI against a local fixture API, its output rendered in xterm.js       | `node <film>/capture/cli/capture.mjs [run …]`                                               |
 
 Run them in that order: the agent window's card shows the draft screenshot, and the app and CLI serve the built
 artifact versions. Fonts for the artifact go in `capture/fonts/`: `node <film>/tools/fetch-fonts.mjs --to
@@ -42,7 +42,7 @@ example's.
   harness does it), so relative times read like the story ("2 min ago"). Fast-forward it to fire a poll instead of
   waiting (`clock.fastForward('00:31')`). Pause it to hold a timed state for a shot (`clock.pauseAt(…)`, then
   `resume()`); a paused clock also pauses `requestAnimationFrame`, so settle without it (`settle(page, ms, { raf:
-  false })`).
+false })`).
 - **In-flight states.** Hold a fixture response on a `gate()` to capture "Saving…", "Sending…" or "Verifying…"; open it
   for the next state.
 - **Millisecond states.** A state that lasts milliseconds ("Saved. Opening…") is taken with `captureWhile()`: raw CDP
@@ -137,19 +137,19 @@ window to show an AI agent at work; use a terminal when the film is about the CL
 `capture/lib.mjs` is shared by every route (new-film.sh copies it into each film folder). It imports no Playwright:
 harnesses pass in their page, context, CDP session and browser.
 
-| Export | Use |
-|---|---|
-| `loadStory()`, `CAPTURE`, `FILM`, `SHOTS` | The story and the folders |
-| `KINDS`, `contextOptions(kind, extra)` | The desktop and phone capture contexts (light, en-US, UTC, service workers blocked) |
-| `INIT_SCRIPT` | Hides carets and forces every shadow root open; add it before the first navigation |
-| `hygiene(cdp, css)`, `settle(page, ms)`, `parkMouse(page)` | Clean frames |
-| `typeSlow`, `clickCenter` | Trusted input |
-| `measure(frame, spec)`, `frameOffset(frame)`, `inkBoxes(browser, png, dsf, regions)`, `MEASURE` | Boxes |
-| `manifest(name)` | A manifest merged by file |
-| `routeApi(context, opts)`, `gate()` | Fixtures, host rules, in-flight states |
-| `assertCleanText(page, extra)` | Leak warnings |
-| `captureWhile(cdp, expression, opts)` | Millisecond states over raw CDP |
-| `snapshot(page, file, opts)` | A static DOM copy of the page for live-DOM films |
+| Export                                                                                          | Use                                                                                 |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `loadStory()`, `CAPTURE`, `FILM`, `SHOTS`                                                       | The story and the folders                                                           |
+| `KINDS`, `contextOptions(kind, extra)`                                                          | The desktop and phone capture contexts (light, en-US, UTC, service workers blocked) |
+| `INIT_SCRIPT`                                                                                   | Hides carets and forces every shadow root open; add it before the first navigation  |
+| `hygiene(cdp, css)`, `settle(page, ms)`, `parkMouse(page)`                                      | Clean frames                                                                        |
+| `typeSlow`, `clickCenter`                                                                       | Trusted input                                                                       |
+| `measure(frame, spec)`, `frameOffset(frame)`, `inkBoxes(browser, png, dsf, regions)`, `MEASURE` | Boxes                                                                               |
+| `manifest(name)`                                                                                | A manifest merged by file                                                           |
+| `routeApi(context, opts)`, `gate()`                                                             | Fixtures, host rules, in-flight states                                              |
+| `assertCleanText(page, extra)`                                                                  | Leak warnings                                                                       |
+| `captureWhile(cdp, expression, opts)`                                                           | Millisecond states over raw CDP                                                     |
+| `snapshot(page, file, opts)`                                                                    | A static DOM copy of the page for live-DOM films                                    |
 
 `snapshot()` saves the page as one HTML file that renders like the live page when opened from disk: every stylesheet
 inlined (linked, adopted, and CSSOM-only rules written back as text), open shadow roots as `<template

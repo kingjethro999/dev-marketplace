@@ -9,9 +9,7 @@
   "lspServers": {
     "intelephense": {
       "command": "intelephense",
-      "args": [
-        "--stdio"
-      ],
+      "args": ["--stdio"],
       "extensionToLanguage": {
         ".php": "php"
       }

@@ -9,14 +9,25 @@ import { fileURLToPath } from "node:url";
 const script = fileURLToPath(new URL("./heygen-tts.mjs", import.meta.url));
 // Every fetch answers as HeyGen does for a voice that no longer exists.
 const refusing = `data:text/javascript,globalThis.fetch = async () => new Response(${JSON.stringify(
-  JSON.stringify({ error: { code: "voice_not_found", message: "Voice not found: vc_gone" } }),
+  JSON.stringify({
+    error: { code: "voice_not_found", message: "Voice not found: vc_gone" },
+  }),
 )}, { status: 404, headers: { "content-type": "application/json" } });`;
 
 test("a refused speech prints HeyGen's own message, so a caller can act on it", () => {
   const dir = mkdtempSync(join(tmpdir(), "heygen-tts-"));
   const run = spawnSync(
     process.execPath,
-    ["--import", refusing, script, "Hello", "--voice", "vc_gone", "-o", join(dir, "out.mp3")],
+    [
+      "--import",
+      refusing,
+      script,
+      "Hello",
+      "--voice",
+      "vc_gone",
+      "-o",
+      join(dir, "out.mp3"),
+    ],
     {
       cwd: dir,
       encoding: "utf8",

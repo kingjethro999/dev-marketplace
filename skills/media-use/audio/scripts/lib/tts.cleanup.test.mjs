@@ -1,7 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -120,7 +126,8 @@ assert.equal(fs.readFileSync(join(preexisting, "marker"), "utf8"), "keep");
 function runCase(provider, mode) {
   const root = mkdtempSync(join(tmpdir(), "tts-cleanup-test-"));
   try {
-    for (const dir of ["home", "tmp", "bin", "project"]) mkdirSync(join(root, dir));
+    for (const dir of ["home", "tmp", "bin", "project"])
+      mkdirSync(join(root, dir));
     if (mode !== "enoent") {
       const python = join(root, "bin", "python3");
       writeFileSync(python, stub);
@@ -131,23 +138,27 @@ function runCase(provider, mode) {
         'process.argv.splice(2, 0, "hyperframes");\nrequire("./python3");\n',
       );
     }
-    const result = spawnSync(process.execPath, ["--input-type=module", "-e", exercise], {
-      encoding: "utf8",
-      timeout: 15000,
-      env: {
-        HOME: join(root, "home"),
-        USERPROFILE: join(root, "home"),
-        TMPDIR: join(root, "tmp"),
-        TMP: join(root, "tmp"),
-        TEMP: join(root, "tmp"),
-        PATH: join(root, "bin"),
-        HYPERFRAMES_CLI_ENTRY: join(root, "bin", "cli.cjs"),
-        CASE_ROOT: root,
-        CASE_PROVIDER: provider,
-        CASE_MODE: mode,
-        RELEASE_FILE: join(root, "release"),
+    const result = spawnSync(
+      process.execPath,
+      ["--input-type=module", "-e", exercise],
+      {
+        encoding: "utf8",
+        timeout: 15000,
+        env: {
+          HOME: join(root, "home"),
+          USERPROFILE: join(root, "home"),
+          TMPDIR: join(root, "tmp"),
+          TMP: join(root, "tmp"),
+          TEMP: join(root, "tmp"),
+          PATH: join(root, "bin"),
+          HYPERFRAMES_CLI_ENTRY: join(root, "bin", "cli.cjs"),
+          CASE_ROOT: root,
+          CASE_PROVIDER: provider,
+          CASE_MODE: mode,
+          RELEASE_FILE: join(root, "release"),
+        },
       },
-    });
+    );
     assert.equal(result.error, undefined);
     assert.equal(result.status, 0, result.stdout + result.stderr);
   } finally {

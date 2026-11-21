@@ -84,7 +84,9 @@ export function ownMediaDir(projectDir) {
     lstatSync(dir).isSymbolicLink() ||
     realpathSync(dir) !== join(realpathSync(projectDir), ".media")
   ) {
-    throw new Error(`${dir} leads outside the project folder; nothing was written there`);
+    throw new Error(
+      `${dir} leads outside the project folder; nothing was written there`,
+    );
   }
   return dir;
 }
@@ -117,7 +119,10 @@ export function appendRecord(projectDir, record) {
   refuseLink(p);
   const fd = openSync(
     p,
-    constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT | (constants.O_NOFOLLOW ?? 0),
+    constants.O_WRONLY |
+      constants.O_APPEND |
+      constants.O_CREAT |
+      (constants.O_NOFOLLOW ?? 0),
     0o666,
   );
   try {
@@ -139,7 +144,9 @@ export function latestRecordFor(projectDir, path) {
 export function currentRecords(projectDir) {
   const records = readManifest(projectDir);
   const last = new Map(records.map((record, index) => [record.path, index]));
-  return records.filter((record, index) => !record.path || last.get(record.path) === index);
+  return records.filter(
+    (record, index) => !record.path || last.get(record.path) === index,
+  );
 }
 
 /** Records a file already in the project where it is, unless its current record already says the same thing. */
@@ -183,7 +190,9 @@ export function findByPrompt(projectDir, prompt, type) {
   const records = currentRecords(projectDir);
   return (
     records.find(
-      (r) => normalizePrompt(r.provenance?.prompt) === key && (type == null || r.type === type),
+      (r) =>
+        normalizePrompt(r.provenance?.prompt) === key &&
+        (type == null || r.type === type),
     ) || null
   );
 }
@@ -191,7 +200,9 @@ export function findByPrompt(projectDir, prompt, type) {
 export function findByEntity(projectDir, entity) {
   const lower = entity.toLowerCase();
   const records = currentRecords(projectDir);
-  return records.find((r) => r.entity && r.entity.toLowerCase() === lower) || null;
+  return (
+    records.find((r) => r.entity && r.entity.toLowerCase() === lower) || null
+  );
 }
 
 export function nextId(projectDir, type) {

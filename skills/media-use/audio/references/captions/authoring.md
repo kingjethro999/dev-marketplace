@@ -92,7 +92,11 @@ CSS safety nets: `max-width` on container, `overflow: visible` (**not** `hidden`
 Every group **must** have a hard kill after exit animation:
 
 ```js
-tl.to(groupEl, { opacity: 0, scale: 0.95, duration: 0.12, ease: "power2.in" }, group.end - 0.12);
+tl.to(
+  groupEl,
+  { opacity: 0, scale: 0.95, duration: 0.12, ease: "power2.in" },
+  group.end - 0.12,
+);
 // `tl.set` is an instant flip, not a tween — safe to set `visibility` here (core's "no animating
 // visibility" rule applies to tweens, which can't smoothly interpolate non-numeric values anyway).
 tl.set(groupEl, { opacity: 0, visibility: "hidden" }, group.end);
@@ -108,7 +112,11 @@ GROUPS.forEach(function (group, gi) {
   var computed = window.getComputedStyle(el);
   if (computed.opacity !== "0" && computed.visibility !== "hidden") {
     console.warn(
-      "[caption-lint] group " + gi + " still visible at t=" + (group.end + 0.01).toFixed(2) + "s",
+      "[caption-lint] group " +
+        gi +
+        " still visible at t=" +
+        (group.end + 0.01).toFixed(2) +
+        "s",
     );
   }
 });

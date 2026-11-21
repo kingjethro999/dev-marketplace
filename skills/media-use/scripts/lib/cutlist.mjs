@@ -12,7 +12,9 @@ export function compileCutList(transcript, opts = {}) {
   if (opts.keep != null) {
     const duration = durationFrom(words, opts);
     const ranges = parseTimeRanges(opts.keep);
-    return finalizeKept(duration != null ? clampRanges(ranges, duration) : ranges);
+    return finalizeKept(
+      duration != null ? clampRanges(ranges, duration) : ranges,
+    );
   }
 
   const duration = durationFrom(words, opts);
@@ -53,9 +55,11 @@ function parseTimeRanges(value) {
       .filter(Boolean)
       .map(parseRangeString);
   }
-  if (!Array.isArray(value)) throw new Error("range list must be a string or array");
+  if (!Array.isArray(value))
+    throw new Error("range list must be a string or array");
   return value.map((range) => {
-    if (Array.isArray(range)) return cleanRange(Number(range[0]), Number(range[1]));
+    if (Array.isArray(range))
+      return cleanRange(Number(range[0]), Number(range[1]));
     return cleanRange(Number(range?.start), Number(range?.end));
   });
 }
@@ -77,13 +81,16 @@ function cleanRange(start, end) {
 function wordIndexRanges(words, value) {
   if (value == null || value === false || value === "") return [];
   const ranges = typeof value === "string" ? value.split(",") : value;
-  if (!Array.isArray(ranges)) throw new Error("--remove-words must be a string or array");
+  if (!Array.isArray(ranges))
+    throw new Error("--remove-words must be a string or array");
   return ranges
     .map((range) => (typeof range === "string" ? range.trim() : range))
     .filter(Boolean)
     .map((range) => {
       const [first, last = first] =
-        typeof range === "string" ? range.split("-").map((n) => n.trim()) : range;
+        typeof range === "string"
+          ? range.split("-").map((n) => n.trim())
+          : range;
       const startIndex = Number(first);
       const endIndex = Number(last);
       if (!Number.isInteger(startIndex) || !Number.isInteger(endIndex)) {

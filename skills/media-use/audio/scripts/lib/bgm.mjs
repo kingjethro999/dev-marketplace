@@ -21,10 +21,15 @@ import { agentWritePath } from "./media-record.mjs";
 import { pythonInvocation } from "./python.mjs";
 
 const r3 = (x) => Number(x.toFixed(3));
-const lyriaKey = () => process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+const lyriaKey = () =>
+  process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
 import { bgmDefaultVolume } from "./bgm-volume.mjs";
-export { BGM_BED_VOLUME, BGM_SILENT_VOLUME, bgmDefaultVolume } from "./bgm-volume.mjs";
+export {
+  BGM_BED_VOLUME,
+  BGM_SILENT_VOLUME,
+  bgmDefaultVolume,
+} from "./bgm-volume.mjs";
 
 const BGM_PY_DEPS = ["transformers", "torch", "soundfile", "numpy"];
 const BGM_PY_PROBE =
@@ -43,17 +48,31 @@ function pyOk(probe) {
 // interpreter pyOk() probes — a bare `pip`/`pip3` could resolve to a
 // different Python installation than `python3` if more than one is on PATH.
 function pipInstall(deps) {
-  const { cmd, args } = pythonInvocation(["-m", "pip", "install", "-q", ...deps]);
+  const { cmd, args } = pythonInvocation([
+    "-m",
+    "pip",
+    "install",
+    "-q",
+    ...deps,
+  ]);
   return spawnSync(cmd, args, { stdio: "ignore" }).status === 0;
 }
 
 // ── retrieval (HeyGen music library) ──────────────────────────────────────────
-export async function retrieveBgm({ query, headers, hyperframesDir, hasVoice, anomalies }) {
+export async function retrieveBgm({
+  query,
+  headers,
+  hyperframesDir,
+  hasVoice,
+  anomalies,
+}) {
   const q = query || "calm cinematic underscore";
   const results = await searchSounds(q, "music", headers, { limit: 5 });
   if (!results.length) return null;
   const top = results[0];
-  const rel = agentWritePath(hyperframesDir, "assets/bgm/track.mp3", { anomalies });
+  const rel = agentWritePath(hyperframesDir, "assets/bgm/track.mp3", {
+    anomalies,
+  });
   await downloadTo(top.audio_url, join(hyperframesDir, rel));
   return {
     path: rel,
@@ -68,18 +87,32 @@ export async function retrieveBgm({ query, headers, hyperframesDir, hasVoice, an
 // Industry base → archetype shape → emotional-arc tiebreaker. Exported so a
 // workflow adapter can build a rich prompt from its own narrative metadata; the
 // engine also calls it when generate has only a plain mood query.
-export function inferBgmPrompt({ blob = "", archetype = "", arc = "", userPrompt = "" } = {}) {
+export function inferBgmPrompt({
+  blob = "",
+  archetype = "",
+  arc = "",
+  userPrompt = "",
+} = {}) {
   if (userPrompt) return userPrompt;
   const b = String(blob).toLowerCase();
   let base;
   let bpm;
-  if (/\b(crypto|nft|web3|defi|token|blockchain|exchange|wallet|dao)\b/.test(b)) {
-    base = "atmospheric electronic, deep bass, futuristic synths, restrained percussion";
+  if (
+    /\b(crypto|nft|web3|defi|token|blockchain|exchange|wallet|dao)\b/.test(b)
+  ) {
+    base =
+      "atmospheric electronic, deep bass, futuristic synths, restrained percussion";
     bpm = 100;
-  } else if (/\b(finance|fintech|bank|payment|invest|wealth|insurance|treasury)\b/.test(b)) {
+  } else if (
+    /\b(finance|fintech|bank|payment|invest|wealth|insurance|treasury)\b/.test(
+      b,
+    )
+  ) {
     base = "calm cinematic, soft strings, subtle piano, restrained percussion";
     bpm = 92;
-  } else if (/\b(creative|agency|design|studio|art|brand|marketing|content)\b/.test(b)) {
+  } else if (
+    /\b(creative|agency|design|studio|art|brand|marketing|content)\b/.test(b)
+  ) {
     base = "playful electronic, warm pads, light percussion";
     bpm = 115;
   } else {
@@ -96,7 +129,10 @@ export function inferBgmPrompt({ blob = "", archetype = "", arc = "", userPrompt
     return `${base}, energetic and driving, consistent momentum, BPM ${Math.min(bpm + 10, 128)}, MAJOR`;
   if (/demo.loop|question.+answer/.test(at))
     return `${base}, clean and focused, minimal arrangement, BPM ${Math.max(bpm - 8, 88)}`;
-  if (/frustrat|anxiety|overwhelm|tension/.test(ar) && /relief|excite|triumph/.test(ar))
+  if (
+    /frustrat|anxiety|overwhelm|tension/.test(ar) &&
+    /relief|excite|triumph/.test(ar)
+  )
     return `${base}, builds from understated tension to uplifting resolution, BPM ${bpm}, MINOR to MAJOR`;
   if (/excit|awe|power|triumph/.test(ar))
     return `${base}, energetic and confident, BPM ${bpm}, MAJOR`;
@@ -118,14 +154,22 @@ export function generateBgmDetached({
   hasVoice,
   anomalies,
 }) {
-  const rel = agentWritePath(hyperframesDir, "assets/bgm/track.wav", { anomalies });
+  const rel = agentWritePath(hyperframesDir, "assets/bgm/track.wav", {
+    anomalies,
+  });
   const abs = join(hyperframesDir, rel);
   mkdirSync(join(hyperframesDir, "assets", "bgm"), { recursive: true });
   const log = join(hyperframesDir, "assets", "bgm", `bgm-${Date.now()}.log`);
   const targetS = Math.max(1, durationS);
-  const baseMeta = { path: rel, mode: null, volume: bgmDefaultVolume(hasVoice), pending: true };
+  const baseMeta = {
+    path: rel,
+    mode: null,
+    volume: bgmDefaultVolume(hasVoice),
+    pending: true,
+  };
 
-  const lyriaConfigured = !!lyriaKey() && !!lyriaRecipe && existsSync(lyriaRecipe);
+  const lyriaConfigured =
+    !!lyriaKey() && !!lyriaRecipe && existsSync(lyriaRecipe);
 
   // Make a backend runnable: prefer Lyria when configured (install google-genai
   // on demand), else ensure local MusicGen deps. Installs are synchronous here —
@@ -146,7 +190,10 @@ export function generateBgmDetached({
       prompt,
     ]);
     rmSync(abs, { force: true }); // wait-bgm takes any file here as the finished track
-    const proc = spawn(cmd, args, { detached: true, stdio: ["ignore", fd, fd] });
+    const proc = spawn(cmd, args, {
+      detached: true,
+      stdio: ["ignore", fd, fd],
+    });
     proc.unref();
     closeSync(fd);
     return {
@@ -167,7 +214,11 @@ export function generateBgmDetached({
     rmSync(abs, { force: true });
     // transformers reads "facebook/musicgen-small" as a folder when one exists in the working
     // directory, so the model is never looked up in the project.
-    const proc = spawn(cmd, args, { cwd: homedir(), detached: true, stdio: ["ignore", fd, fd] });
+    const proc = spawn(cmd, args, {
+      cwd: homedir(),
+      detached: true,
+      stdio: ["ignore", fd, fd],
+    });
     proc.unref();
     closeSync(fd);
     return {

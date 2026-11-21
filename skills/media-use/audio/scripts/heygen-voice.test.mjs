@@ -37,7 +37,9 @@ function mockFetch(routes) {
     const queue = routes[key];
     if (!queue) throw new Error(`unexpected request ${key}`);
     const [status, body] = queue.length > 1 ? queue.shift() : queue[0];
-    return new Response(body === undefined ? null : JSON.stringify(body), { status });
+    return new Response(body === undefined ? null : JSON.stringify(body), {
+      status,
+    });
   };
 }
 
@@ -88,7 +90,9 @@ test("clone uploads base64 audio, polls until complete, prints the voice id", as
 test("clone sends audio/wav for a .wav file", async () => {
   mockFetch({
     "POST /voices/clone": [[200, { data: { voice_clone_id: "vc1" } }]],
-    "GET /voices/vc1": [[200, { data: { status: "complete", voice_id: "vc1" } }]],
+    "GET /voices/vc1": [
+      [200, { data: { status: "complete", voice_id: "vc1" } }],
+    ],
   });
   const r = await run(["clone", audioFile("take.WAV"), "--name", "Me"]);
   assert.equal(r.code, 0);
@@ -99,7 +103,9 @@ test("clone prints HeyGen's refusal verbatim and exits 1", async () => {
   const message =
     "Voice clone limit reached (10). Delete unused clones or contact support to increase your limit.";
   mockFetch({
-    "POST /voices/clone": [[400, { error: { code: "resource_limit_reached", message } }]],
+    "POST /voices/clone": [
+      [400, { error: { code: "resource_limit_reached", message } }],
+    ],
   });
   const r = await run(["clone", audioFile(), "--name", "Me"]);
   assert.deepEqual(r, { code: 1, out: "", err: message });
@@ -108,7 +114,9 @@ test("clone prints HeyGen's refusal verbatim and exits 1", async () => {
 test("clone surfaces a failed clone's failure_message", async () => {
   mockFetch({
     "POST /voices/clone": [[200, { data: { voice_clone_id: "vc1" } }]],
-    "GET /voices/vc1": [[200, { data: { status: "failed", failure_message: "Audio too noisy" } }]],
+    "GET /voices/vc1": [
+      [200, { data: { status: "failed", failure_message: "Audio too noisy" } }],
+    ],
   });
   const r = await run(["clone", audioFile(), "--name", "Me"]);
   assert.deepEqual(r, { code: 1, out: "", err: "Audio too noisy" });
@@ -126,7 +134,11 @@ test("clone gives up after the 120 s deadline", async () => {
       clock += ms;
     },
   });
-  assert.deepEqual(r, { code: 1, out: "", err: "voice clone vc1 not ready after 120 s" });
+  assert.deepEqual(r, {
+    code: 1,
+    out: "",
+    err: "voice clone vc1 not ready after 120 s",
+  });
   assert.equal(calls.filter((c) => c.key === "GET /voices/vc1").length, 61);
 });
 
@@ -162,7 +174,14 @@ test("clone falls back to the clone id when the finished voice has no voice_id",
 test("list skips a nameless voice and stops on a page token HeyGen repeats", async () => {
   mockFetch({
     "GET /voices?type=private&limit=100": [
-      [200, { data: [{ voice_id: "n", name: null }], has_more: true, next_token: "t2" }],
+      [
+        200,
+        {
+          data: [{ voice_id: "n", name: null }],
+          has_more: true,
+          next_token: "t2",
+        },
+      ],
     ],
     "GET /voices?type=private&limit=100&token=t2": [
       [200, { data: [], has_more: true, next_token: "t2" }],
@@ -171,15 +190,26 @@ test("list skips a nameless voice and stops on a page token HeyGen repeats", asy
   // A fake answers at once, so a list that never stops would starve any timeout: cap the calls instead.
   const answer = globalThis.fetch;
   globalThis.fetch = (...args) =>
-    calls.length >= 10 ? Promise.reject(new Error("paged forever")) : answer(...args);
+    calls.length >= 10
+      ? Promise.reject(new Error("paged forever"))
+      : answer(...args);
   const r = await run(["list", "--prefix", "desk-"]);
-  assert.deepEqual(r, { code: 1, out: "", err: "HeyGen returned page token t2 twice" });
+  assert.deepEqual(r, {
+    code: 1,
+    out: "",
+    err: "HeyGen returned page token t2 twice",
+  });
 });
 
 test("delete prints HeyGen's 404 message verbatim and exits 1", async () => {
   mockFetch({
     "DELETE /voices/gone": [
-      [404, { error: { code: "voice_not_found", message: "Voice not found: gone" } }],
+      [
+        404,
+        {
+          error: { code: "voice_not_found", message: "Voice not found: gone" },
+        },
+      ],
     ],
   });
   const r = await run(["delete", "gone"]);
@@ -204,8 +234,12 @@ test("list pages through private voices and returns prefix matches with created_
     "GET /voices?type=private&limit=100&token=t2": [
       [200, { data: [{ voice_id: "c", name: "desk-2" }], has_more: false }],
     ],
-    "GET /voices/a": [[200, { data: { voice_id: "a", created_at: 1700000000 } }]],
-    "GET /voices/c": [[200, { data: { voice_id: "c", created_at: 1700000100 } }]],
+    "GET /voices/a": [
+      [200, { data: { voice_id: "a", created_at: 1700000000 } }],
+    ],
+    "GET /voices/c": [
+      [200, { data: { voice_id: "c", created_at: 1700000100 } }],
+    ],
   });
   const r = await run(["list", "--prefix", "desk-"]);
   assert.equal(r.code, 0);
@@ -218,7 +252,9 @@ test("list pages through private voices and returns prefix matches with created_
 test("list prints HeyGen's refusal verbatim and exits 1", async () => {
   const message = "Invalid or expired API key. Verify your x-api-key header.";
   mockFetch({
-    "GET /voices?type=private&limit=100": [[401, { error: { code: "unauthorized", message } }]],
+    "GET /voices?type=private&limit=100": [
+      [401, { error: { code: "unauthorized", message } }],
+    ],
   });
   const r = await run(["list", "--prefix", "desk-"]);
   assert.deepEqual(r, { code: 1, out: "", err: message });

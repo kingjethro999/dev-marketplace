@@ -10,7 +10,11 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { downloadTo } from "./heygen.mjs";
-import { OpenverseUnavailableError, searchOpenverseSfx, writeSfxCredit } from "./openverse.mjs";
+import {
+  OpenverseUnavailableError,
+  searchOpenverseSfx,
+  writeSfxCredit,
+} from "./openverse.mjs";
 import { latestRecordFor } from "../../../scripts/lib/manifest.mjs";
 import { agentWritePath } from "./media-record.mjs";
 
@@ -34,7 +38,8 @@ const r3 = (x) => Number(x.toFixed(3));
 // "whoosh", "whoosh.mp3", or "ui click" (→ slug match). { error } when unusable.
 function loadBundledLibrary(sfxLibDir) {
   const manifestPath = join(sfxLibDir, "manifest.json");
-  if (!existsSync(manifestPath)) return { error: `no bundled SFX library at ${sfxLibDir}` };
+  if (!existsSync(manifestPath))
+    return { error: `no bundled SFX library at ${sfxLibDir}` };
   let manifest;
   try {
     manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -55,7 +60,11 @@ function loadBundledLibrary(sfxLibDir) {
 
 // cues: [{ id, name }] (id = the line/frame/scene the cue fires in). Returns
 // { sfx: [{ id, name, file, source, offset_s, duration_s, volume, license?, credit? }], anomalies }.
-export async function resolveSfx({ cues, hyperframesDir, sfxLibDir = BUNDLED_SFX_DIR }) {
+export async function resolveSfx({
+  cues,
+  hyperframesDir,
+  sfxLibDir = BUNDLED_SFX_DIR,
+}) {
   const sfx = [];
   const anomalies = [];
   const destDir = join(hyperframesDir, "assets", "sfx");
@@ -83,14 +92,20 @@ export async function resolveSfx({ cues, hyperframesDir, sfxLibDir = BUNDLED_SFX
     if (!entry) {
       const sound = await searchOpenverseSfx(name);
       if (!sound) return null;
-      const file = agentWritePath(hyperframesDir, `assets/sfx/${slug(name)}${sound.ext}`, {
-        anomalies,
-        taken: taken(),
-      });
+      const file = agentWritePath(
+        hyperframesDir,
+        `assets/sfx/${slug(name)}${sound.ext}`,
+        {
+          anomalies,
+          taken: taken(),
+        },
+      );
       try {
         await downloadTo(sound.url, join(hyperframesDir, file));
       } catch (e) {
-        anomalies.push(`sfx "${name}" (id ${id}): Openverse download failed — ${e.message}`);
+        anomalies.push(
+          `sfx "${name}" (id ${id}): Openverse download failed — ${e.message}`,
+        );
         return null;
       }
       fileFor.set(key, file);
@@ -116,7 +131,9 @@ export async function resolveSfx({ cues, hyperframesDir, sfxLibDir = BUNDLED_SFX
     const { byKey } = library;
     const hit = byKey.get(name) ?? byKey.get(slug(name));
     if (!hit) {
-      const known = [...new Set([...byKey.values()].map((v) => v.key))].slice(0, 8).join(", ");
+      const known = [...new Set([...byKey.values()].map((v) => v.key))]
+        .slice(0, 8)
+        .join(", ");
       anomalies.push(
         `sfx "${name}" (id ${id}): not in bundled library — skipped (have: ${known}…)`,
       );
@@ -135,7 +152,8 @@ export async function resolveSfx({ cues, hyperframesDir, sfxLibDir = BUNDLED_SFX
         anomalies,
         taken: taken(),
         // An unrecorded copy of the library file is one an engine run made before the manifest had it.
-        reusable: (rel) => !latestRecordFor(hyperframesDir, rel) && isLibraryCopy(rel),
+        reusable: (rel) =>
+          !latestRecordFor(hyperframesDir, rel) && isLibraryCopy(rel),
       });
     const dest = join(hyperframesDir, destRel);
     // Some installs of the skill ship manifest.json without the mp3s. An entry
@@ -171,7 +189,9 @@ export async function resolveSfx({ cues, hyperframesDir, sfxLibDir = BUNDLED_SFX
       } catch (e) {
         if (!(e instanceof OpenverseUnavailableError)) throw e;
         openverseDown = true;
-        anomalies.push(`${e.message}: the remaining SFX cues use the bundled library`);
+        anomalies.push(
+          `${e.message}: the remaining SFX cues use the bundled library`,
+        );
       }
     }
     entry ??= fromBundled(cue);
@@ -184,7 +204,10 @@ export async function resolveSfx({ cues, hyperframesDir, sfxLibDir = BUNDLED_SFX
  * One sound effect for `query`, saved under the project's assets/sfx/ (the entry point for hosts).
  * { sound: { file, source, duration_s, license?, credit? } | null, anomalies }.
  */
-export async function findSoundEffect(query, { hyperframesDir, sfxLibDir = BUNDLED_SFX_DIR }) {
+export async function findSoundEffect(
+  query,
+  { hyperframesDir, sfxLibDir = BUNDLED_SFX_DIR },
+) {
   const { sfx, anomalies } = await resolveSfx({
     cues: [{ id: "1", name: query }],
     hyperframesDir,
@@ -192,5 +215,8 @@ export async function findSoundEffect(query, { hyperframesDir, sfxLibDir = BUNDL
   });
   if (!sfx.length) return { sound: null, anomalies };
   const { file, source, duration_s, license, credit } = sfx[0];
-  return { sound: { file, source, duration_s, ...(license && { license, credit }) }, anomalies };
+  return {
+    sound: { file, source, duration_s, ...(license && { license, credit }) },
+    anomalies,
+  };
 }

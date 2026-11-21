@@ -41,7 +41,11 @@
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { heygenAuthHeaders, heygenCredential, loadEnvFromDir } from "./lib/heygen.mjs";
+import {
+  heygenAuthHeaders,
+  heygenCredential,
+  loadEnvFromDir,
+} from "./lib/heygen.mjs";
 import {
   ffprobeDuration,
   pickProvider,
@@ -50,13 +54,26 @@ import {
   transcribeWav,
   withWordIds,
 } from "./lib/tts.mjs";
-import { generateBgmDetached, inferBgmPrompt, retrieveBgm } from "./lib/bgm.mjs";
+import {
+  generateBgmDetached,
+  inferBgmPrompt,
+  retrieveBgm,
+} from "./lib/bgm.mjs";
 import { BUNDLED_SFX_DIR, resolveSfx } from "./lib/sfx.mjs";
 import { voiceCredit } from "./lib/voice-credit.mjs";
-import { parseWords, recordingSource, scaleWords, stretchToWav } from "./lib/recording.mjs";
+import {
+  parseWords,
+  recordingSource,
+  scaleWords,
+  stretchToWav,
+} from "./lib/recording.mjs";
 import { mapWithConcurrency } from "./lib/concurrency.mjs";
 import { openAudioMeta } from "./lib/audio-meta.mjs";
-import { recordInManifest, voicePaths, writtenAssets } from "./lib/media-record.mjs";
+import {
+  recordInManifest,
+  voicePaths,
+  writtenAssets,
+} from "./lib/media-record.mjs";
 import { engineBgmLog, projectPath } from "./lib/project-path.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -80,13 +97,20 @@ const r3 = (x) => Number(x.toFixed(3));
 // model per subprocess, so firing every line at once multiplies that cost by
 // the line count. mapWithConcurrency caps how many run at once — still
 // parallel, just bounded.
-const ttsConcurrency = Math.max(1, Number(process.env.HYPERFRAMES_TTS_CONCURRENCY) || 4);
+const ttsConcurrency = Math.max(
+  1,
+  Number(process.env.HYPERFRAMES_TTS_CONCURRENCY) || 4,
+);
 
 const hyperframesDir = resolve(flag("hyperframes", "."));
-const requestPath = resolve(flag("request", join(hyperframesDir, "audio_request.json")));
+const requestPath = resolve(
+  flag("request", join(hyperframesDir, "audio_request.json")),
+);
 const outPath = resolve(flag("out", join(hyperframesDir, "audio_meta.json")));
 const sfxLibDir = resolve(flag("sfx-lib", BUNDLED_SFX_DIR));
-const lyriaRecipe = resolve(flag("lyria-recipe", join(HERE, "lyria-recipe.py")));
+const lyriaRecipe = resolve(
+  flag("lyria-recipe", join(HERE, "lyria-recipe.py")),
+);
 const onlyArg = flag("only", "tts,bgm,sfx");
 const only = new Set(
   onlyArg
@@ -102,7 +126,8 @@ const speedOverride = flag("speed", null);
 const langOverride = flag("lang", null);
 const seedSeconds = Number(flag("seed-seconds", "28")) || 28;
 
-if (!existsSync(requestPath)) die(`audio_request.json not found at ${requestPath}`);
+if (!existsSync(requestPath))
+  die(`audio_request.json not found at ${requestPath}`);
 let request;
 try {
   request = JSON.parse(readFileSync(requestPath, "utf8"));
@@ -123,9 +148,12 @@ const heygenOK = heygenCredential() !== null;
 // ── merge base: preserve sections not selected by --only ──────────────────────
 // An output inside the project must stay there: a link planted at audio_meta.json must not lead outside.
 const outRel = relative(hyperframesDir, outPath);
-const outInProject = outRel !== ".." && !outRel.startsWith(`..${sep}`) && !isAbsolute(outRel);
+const outInProject =
+  outRel !== ".." && !outRel.startsWith(`..${sep}`) && !isAbsolute(outRel);
 if (outInProject && !projectPath(hyperframesDir, outRel))
-  die(`${outPath} leads outside the project folder; replace it with a regular file`);
+  die(
+    `${outPath} leads outside the project folder; replace it with a regular file`,
+  );
 const audioMeta = openAudioMeta(outPath);
 const prev = audioMeta.value;
 const anomalies = [];
@@ -141,14 +169,18 @@ if (only.has("tts") && lines.length) {
   try {
     paths = voicePaths(hyperframesDir, lines, anomalies);
     for (const line of lines.filter((l) => l.audio))
-      recordings.set(String(line.id), recordingSource(hyperframesDir, line.audio));
+      recordings.set(
+        String(line.id),
+        recordingSource(hyperframesDir, line.audio),
+      );
   } catch (e) {
     die(e.message);
   }
   if (lines.some((l) => !l.audio)) {
     try {
       ttsProvider = pickProvider(
-        providerOverride || (request.provider === "auto" ? null : request.provider),
+        providerOverride ||
+          (request.provider === "auto" ? null : request.provider),
       );
     } catch (e) {
       die(e.message);
@@ -162,7 +194,9 @@ if (only.has("tts") && lines.length) {
     ttsProvider = "recording"; // every line is the person's own recording: no TTS provider to pick
     voiceId = null;
   }
-  console.error(`· tts: ${ttsProvider} · voice ${voiceId} · ${lines.length} line(s)`);
+  console.error(
+    `· tts: ${ttsProvider} · voice ${voiceId} · ${lines.length} line(s)`,
+  );
   // A line with `audio` is the person's own recording (path inside the project), with optional
   // `words`; `speed` applies to it like to a generated voice. Returns synthesizeOne's shape.
   const useRecording = (line, abs) => {
@@ -170,7 +204,11 @@ if (only.has("tts") && lines.length) {
     if (!made.ok) return made;
     try {
       const given = parseWords(line.words);
-      return { ok: true, words: given && scaleWords(given, speed), source: "recording" };
+      return {
+        ok: true,
+        words: given && scaleWords(given, speed),
+        source: "recording",
+      };
     } catch (e) {
       return { ok: false, error: e.message };
     }
@@ -204,7 +242,8 @@ if (only.has("tts") && lines.length) {
       return null;
     }
     let wordArr = words; // heygen: native; else transcribe
-    if (!wordArr) wordArr = await transcribeWav({ wavRel: rel, lang, hyperframesDir });
+    if (!wordArr)
+      wordArr = await transcribeWav({ wavRel: rel, lang, hyperframesDir });
     const dur = ffprobeDuration(abs);
     if (!isFinite(dur) || dur <= 0) {
       anomalies.push(`line ${id}: bad voice duration — omitted`);
@@ -221,7 +260,9 @@ if (only.has("tts") && lines.length) {
   const results = await mapWithConcurrency(lines, ttsConcurrency, synthLine);
   voices = results.filter(Boolean);
   for (const v of voices)
-    console.error(`  voice ${v.id}: ${v.path} (${v.duration_s}s, ${v.words.length} words)`);
+    console.error(
+      `  voice ${v.id}: ${v.path} (${v.duration_s}s, ${v.words.length} words)`,
+    );
 }
 const hasVoice = voices.length > 0;
 const totalDuration = r3(voices.reduce((a, v) => a + (v.duration_s || 0), 0));
@@ -242,14 +283,18 @@ const bgmFields = {
 };
 if (only.has("bgm")) {
   bgm = null;
-  Object.keys(bgmFields).forEach((k) => (bgmFields[k] = k === "bgm_pending" ? false : null));
+  Object.keys(bgmFields).forEach(
+    (k) => (bgmFields[k] = k === "bgm_pending" ? false : null),
+  );
   // Mode resolution. An EXPLICIT mode (flag or request.bgm.mode) is strict:
   // "retrieve" means retrieve-or-nothing — it never silently starts a detached
   // generate (a caller with no wait-bgm step must not get a pending job it
   // can't await). Only the UNSET/auto default picks generate
   // when HeyGen is absent.
   const explicitMode = bgmModeOverride || request.bgm?.mode || null;
-  let mode = noBgm ? "none" : explicitMode || (heygenOK ? "retrieve" : "generate");
+  let mode = noBgm
+    ? "none"
+    : explicitMode || (heygenOK ? "retrieve" : "generate");
   if (mode === "retrieve" && !heygenOK) {
     anomalies.push(
       "bgm: retrieve requires a HeyGen credential — skipped (no generate fallback for an explicit retrieve)",
@@ -273,7 +318,9 @@ if (only.has("bgm")) {
         bgmFields.bgm_mode = "retrieve";
         console.error(`  bgm: ${bgm.path} (retrieve "${bgm.query}")`);
       } else {
-        anomalies.push(`bgm: no music match for "${request.bgm?.query ?? ""}" — skipped`);
+        anomalies.push(
+          `bgm: no music match for "${request.bgm?.query ?? ""}" — skipped`,
+        );
       }
     } catch (e) {
       anomalies.push(`bgm retrieve failed: ${e.message} — skipped`);
@@ -298,7 +345,12 @@ if (only.has("bgm")) {
     if (gen.disabled) {
       anomalies.push(`bgm: ${gen.reason}`);
     } else {
-      bgm = { path: gen.path, volume: gen.volume, mode: gen.mode, duration_s: null };
+      bgm = {
+        path: gen.path,
+        volume: gen.volume,
+        mode: gen.mode,
+        duration_s: null,
+      };
       bgmFields.bgm_pending = true;
       bgmFields.bgm_provider = gen.provider;
       bgmFields.bgm_pid = gen.pid;
@@ -307,7 +359,9 @@ if (only.has("bgm")) {
       bgmFields.bgm_target_duration_s = gen.target_duration_s ?? null;
       bgmFields.bgm_seed_duration_s = gen.seed_duration_s ?? null;
       bgmFields.bgm_loop_count = gen.loop_count ?? null;
-      console.error(`  bgm: launched ${gen.provider} (detached, pid ${gen.pid}) → ${gen.path}`);
+      console.error(
+        `  bgm: launched ${gen.provider} (detached, pid ${gen.pid}) → ${gen.path}`,
+      );
     }
   }
 }
@@ -342,11 +396,21 @@ const meta = {
 };
 mkdirSync(dirname(outPath), { recursive: true });
 audioMeta.write(meta);
-const written = writtenAssets({ only, lines, voices, ttsProvider, bgm, bgmFields, sfx });
+const written = writtenAssets({
+  only,
+  lines,
+  voices,
+  ttsProvider,
+  bgm,
+  bgmFields,
+  sfx,
+});
 anomalies.push(...recordInManifest(hyperframesDir, written));
 
 console.log(`✓ audio engine → ${outPath}`);
-console.log(`  heygen: ${heygenOK ? "yes" : "no"}  ·  ran: ${[...only].join(",")}`);
+console.log(
+  `  heygen: ${heygenOK ? "yes" : "no"}  ·  ran: ${[...only].join(",")}`,
+);
 console.log(
   `  voices: ${voices.length}  ·  bgm: ${bgm ? `${bgmFields.bgm_provider}${bgmFields.bgm_pending ? " (pending)" : ""}` : "none"}  ·  sfx: ${sfx.length}`,
 );

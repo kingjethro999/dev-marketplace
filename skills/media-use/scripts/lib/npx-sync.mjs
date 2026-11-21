@@ -5,12 +5,24 @@ function resolveNpxCliPath(env, pathExists) {
   const npmExecPath = env.npm_execpath;
   const nodeExecPath = env.npm_node_execpath || process.execPath;
   if (npmExecPath) {
-    const fileName = npmExecPath.replace(/\\/g, "/").split("/").pop()?.toLowerCase();
+    const fileName = npmExecPath
+      .replace(/\\/g, "/")
+      .split("/")
+      .pop()
+      ?.toLowerCase();
     const candidate =
-      fileName === "npx-cli.js" ? npmExecPath : join(dirname(npmExecPath), "npx-cli.js");
+      fileName === "npx-cli.js"
+        ? npmExecPath
+        : join(dirname(npmExecPath), "npx-cli.js");
     if (pathExists(candidate)) return candidate;
   }
-  const besideNode = join(dirname(nodeExecPath), "node_modules", "npm", "bin", "npx-cli.js");
+  const besideNode = join(
+    dirname(nodeExecPath),
+    "node_modules",
+    "npm",
+    "bin",
+    "npx-cli.js",
+  );
   return pathExists(besideNode) ? besideNode : null;
 }
 

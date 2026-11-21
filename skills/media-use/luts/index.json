@@ -4,7 +4,14 @@
     {
       "id": "teal-orange-blockbuster",
       "description": "Teal shadows and warm orange highlights for blockbuster-style cinematic footage.",
-      "tags": ["teal", "orange", "blockbuster", "cinematic", "split tone", "movie"],
+      "tags": [
+        "teal",
+        "orange",
+        "blockbuster",
+        "cinematic",
+        "split tone",
+        "movie"
+      ],
       "intensity": 0.85,
       "url": "https://static.heygen.ai/luts/teal-orange-blockbuster.cube",
       "params": {
@@ -22,7 +29,14 @@
     {
       "id": "bleach-bypass",
       "description": "High-contrast desaturated bleach bypass look with strong blacks.",
-      "tags": ["bleach", "bypass", "desaturated", "high contrast", "gritty", "film"],
+      "tags": [
+        "bleach",
+        "bypass",
+        "desaturated",
+        "high contrast",
+        "gritty",
+        "film"
+      ],
       "intensity": 0.8,
       "url": "https://static.heygen.ai/luts/bleach-bypass.cube",
       "params": {

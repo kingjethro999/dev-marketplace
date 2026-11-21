@@ -28,7 +28,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const sfxLibDir = join(HERE, "..", "assets", "sfx"); // same offset the engine uses
 
 test("bundled SFX library resolves from the relocated path", async () => {
-  assert.ok(existsSync(join(sfxLibDir, "manifest.json")), "moved manifest is present");
+  assert.ok(
+    existsSync(join(sfxLibDir, "manifest.json")),
+    "moved manifest is present",
+  );
   const dir = mkdtempSync(join(tmpdir(), "mu-audio-"));
   try {
     const { sfx, anomalies } = await resolveSfx({
@@ -36,10 +39,17 @@ test("bundled SFX library resolves from the relocated path", async () => {
       hyperframesDir: dir,
       sfxLibDir,
     });
-    assert.equal(sfx.length, 1, `expected 1 resolved cue, got anomalies: ${anomalies.join("; ")}`);
+    assert.equal(
+      sfx.length,
+      1,
+      `expected 1 resolved cue, got anomalies: ${anomalies.join("; ")}`,
+    );
     assert.equal(sfx[0].source, "local");
     assert.match(sfx[0].file, /assets\/sfx\//);
-    assert.ok(existsSync(join(dir, sfx[0].file)), "matched SFX copied into the project");
+    assert.ok(
+      existsSync(join(dir, sfx[0].file)),
+      "matched SFX copied into the project",
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -97,7 +107,10 @@ test("two effects never share a file when one's name is taken by the person, run
   const dir = mkdtempSync(join(tmpdir(), "mu-audio-"));
   try {
     mkdirSync(join(dir, "assets", "sfx"), { recursive: true });
-    writeFileSync(join(dir, "assets", "sfx", "glitch.mp3"), "the person's own glitch");
+    writeFileSync(
+      join(dir, "assets", "sfx", "glitch.mp3"),
+      "the person's own glitch",
+    );
     globalThis.fetch = async (url) => {
       const query = new URL(url).searchParams.get("q");
       if (query)
@@ -122,7 +135,11 @@ test("two effects never share a file when one's name is taken by the person, run
       const files = sfx.map(({ file }) => file);
       recordInManifest(
         dir,
-        [...new Set(files)].map((path) => ({ path, type: "sfx", source: "search" })),
+        [...new Set(files)].map((path) => ({
+          path,
+          type: "sfx",
+          source: "search",
+        })),
       );
       return files;
     };
@@ -145,10 +162,17 @@ test("two effects never share a file when one's name is taken by the person, run
 function runEngineWith(request, ...args) {
   const dir = mkdtempSync(join(tmpdir(), "audio-speed-range-"));
   try {
-    writeFileSync(join(dir, "audio_request.json"), JSON.stringify({ lines: [], ...request }));
-    return spawnSync(process.execPath, [join(HERE, "audio.mjs"), "--hyperframes", dir, ...args], {
-      encoding: "utf8",
-    });
+    writeFileSync(
+      join(dir, "audio_request.json"),
+      JSON.stringify({ lines: [], ...request }),
+    );
+    return spawnSync(
+      process.execPath,
+      [join(HERE, "audio.mjs"), "--hyperframes", dir, ...args],
+      {
+        encoding: "utf8",
+      },
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -165,12 +189,18 @@ for (const [label, request, args, shown] of [
   test(`${label} stops the engine before any TTS runs`, () => {
     const r = runEngineWith(request, ...args);
     assert.equal(r.status, 1);
-    assert.ok(r.stderr.includes(`speed must be above 0 and at most 3, got ${shown}`), r.stderr);
+    assert.ok(
+      r.stderr.includes(`speed must be above 0 and at most 3, got ${shown}`),
+      r.stderr,
+    );
   });
 }
 
 test("a numeric string speed, as the adapters forward it, passes the check", () => {
-  assert.doesNotMatch(runEngineWith({ speed: "0.8" }, "--only", "tts").stderr, /speed must/);
+  assert.doesNotMatch(
+    runEngineWith({ speed: "0.8" }, "--only", "tts").stderr,
+    /speed must/,
+  );
 });
 
 // A BGM job carried over from audio_meta.json keeps its pid and log only when the log is the
@@ -178,14 +208,21 @@ test("a numeric string speed, as the adapters forward it, passes the check", () 
 for (const [label, bgmLog, kept] of [
   ["an outside log is dropped", () => "/etc/hosts", false],
   ["a climbing log is dropped", () => "../../.hyperframes/credentials", false],
-  ["the engine's own log is kept", (dir) => join(dir, "assets/bgm/bgm-1700000000000.log"), true],
+  [
+    "the engine's own log is kept",
+    (dir) => join(dir, "assets/bgm/bgm-1700000000000.log"),
+    true,
+  ],
 ]) {
   test(`a run without bgm: ${label}`, () => {
     const dir = mkdtempSync(join(tmpdir(), "audio-bgm-carry-"));
     try {
       mkdirSync(join(dir, "assets/bgm"), { recursive: true });
       writeFileSync(join(dir, "assets/bgm/bgm-1700000000000.log"), "rendering");
-      writeFileSync(join(dir, "audio_request.json"), JSON.stringify({ lines: [] }));
+      writeFileSync(
+        join(dir, "audio_request.json"),
+        JSON.stringify({ lines: [] }),
+      );
       const log = bgmLog(dir);
       writeFileSync(
         join(dir, "audio_meta.json"),
@@ -202,7 +239,9 @@ for (const [label, bgmLog, kept] of [
         { encoding: "utf8", env: { ...process.env, HOME: dir } },
       );
       assert.equal(run.status, 0, run.stderr);
-      const meta = JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8"));
+      const meta = JSON.parse(
+        readFileSync(join(dir, "audio_meta.json"), "utf8"),
+      );
       assert.equal(meta.bgm_pending, true);
       assert.equal(meta.bgm_log, kept ? log : null);
       assert.equal(meta.bgm_pid, kept ? 4242 : null);
@@ -219,14 +258,20 @@ test("an audio_meta.json in the project that links outside it is refused and lef
     mkdirSync(dir);
     writeFileSync(join(base, "theirs.json"), "{}");
     symlinkSync(join(base, "theirs.json"), join(dir, "audio_meta.json"));
-    writeFileSync(join(dir, "audio_request.json"), JSON.stringify({ lines: [] }));
+    writeFileSync(
+      join(dir, "audio_request.json"),
+      JSON.stringify({ lines: [] }),
+    );
     const run = spawnSync(
       process.execPath,
       [join(HERE, "audio.mjs"), "--hyperframes", dir, "--only", "sfx"],
       { encoding: "utf8", env: { ...process.env, HOME: dir } },
     );
     assert.equal(run.status, 1, run.stdout);
-    assert.match(run.stderr, /audio_meta\.json leads outside the project folder/);
+    assert.match(
+      run.stderr,
+      /audio_meta\.json leads outside the project folder/,
+    );
     assert.equal(readFileSync(join(base, "theirs.json"), "utf8"), "{}");
   } finally {
     rmSync(base, { recursive: true, force: true });

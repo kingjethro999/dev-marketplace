@@ -1,6 +1,7 @@
 # Architecture Decision Records
 
 ## ADR-001 Observation `source` is `media-analysis/<tool>@<version>`
+
 - Context: the task brief suggested `media-analysis@0.1.0`; video-production-agent PR #7 defines `Observation.source`
   as `<tool>@<version>` (e.g. `ffmpeg-skill/probe@0.8.4`), its validator requires `@` and rejects `ai*`, and its
   provenance code derives the package from the prefix before `/`.
@@ -8,6 +9,7 @@
   agent as is. `AI_GENERATED` never appears; the verifier rejects any observation claiming an AI source.
 
 ## ADR-002 One package version for all tools and analyzers
+
 - Every analyzer's `version` equals the package version. A change in how any value is measured bumps the package
   minor version, which changes every analysis identity and invalidates the cache. Simpler than per-tool versions and
   matches how the agent tracks `tool_versions` per package.
@@ -15,11 +17,13 @@
   or the cache key; a per-analyzer `algorithm_version` does.
 
 ## ADR-003 Static registry, no plugins, no stubs
+
 - Analyzers are a literal list. The registry refuses to start if it disagrees with the contract (`KIND_TO_TOOL`,
   `TOOL_CAPABILITIES`), so a kind cannot be declared without an analyzer, and an analyzer cannot exist undeclared.
   No dynamic import, no entry points, no future-tool placeholders.
 
 ## ADR-004 `asset_id` is a label; identity comes from file content
+
 - The cache key and analysis identity use the sha256 of the file content, the analyzer, its version, the kind and the
   effective parameters. `asset_id` (and a caller-supplied `analysis_id`) are echoed but do not enter the identity, so
   two callers labelling the same file differently share one measurement. Hashing the content costs one read of the
@@ -27,45 +31,54 @@
   across copies.
 
 ## ADR-005 Measurement filters, not processing filters
+
 - Loudness uses `ebur128` (a meter) rather than `loudnorm` (a normaliser with a measurement mode), silence uses
   `silencedetect`, scene detection uses `scdet`, integrity decodes to `-f null`. The package never writes media and
   never re-encodes, keeping the boundary with ffmpeg-skill mechanical rather than conventional.
 
 ## ADR-006 Certainty flags instead of guesses
+
 - `frame_rate_mode` is decided from measured packet intervals (constant / variable / unknown with a basis string),
   not from `r_frame_rate != avg_frame_rate`. `channel_layout` is null when the container does not declare it.
   Loudness of silent input reports nulls in `unmeasurable` and `integrated_below_absolute_gate`. Integrity checks
   that could not run are `not_performed`; PASS requires the checks to have run clean.
 
 ## ADR-007 Budget covers only what is enforced
+
 - `max_analysis_calls`, `timeout`, `max_total_seconds` exist because the engine enforces them (counter, process
   timeout with group kill, cumulative wall time). `max_storage`, `max_gpu_time`, `max_api_cost` from the agent's
   specification are not represented here because this package cannot measure or enforce them.
 
 ## ADR-008 Cache is Observation reuse only
+
 - The cache stores verified Observations keyed by analysis identity, with metadata to re-validate an entry. It has no
   notion of jobs, plans, resume or dependencies (the agent's Job / IR resume, ADR-014 there, is not reimplemented).
 
 ## ADR-009 Dry-run shows operations, not argv
+
 - `--dry-run` lists `{executable, purpose}` per operation. Printing argv would create a command-shaped artefact that
   invites command passthrough; the Observation verifier forbids `command` / `argv` keys for the same reason.
   ffmpeg-skill prints its commands in dry-run because its users copy them; this package's users are agents.
 
 ## ADR-010 No MCP server in 0.1.0
+
 - The CLI (`run` with an AnalysisRequest on stdin, `--json`) is the contract and is enough for a process-boundary
   adapter (the agent already uses that pattern for ffmpeg-skill, its ADR-001). An MCP transport can be added as a
   thin wrapper over `run` later; adding it now would widen the surface without a consumer.
 
 ## ADR-011 Leading negative pts is a fact, not an anomaly
+
 - AAC in MP4 carries a priming packet with a negative pts (edit list). `timing` reports `negative_pts` per stream but
   only lists non-monotonic DTS, gaps and duplicate pts as anomalies, so a normal file has `anomaly_count = 0`.
 
 ## ADR-012 Timestamp verification tolerance
+
 - Values in `data` named like timestamps must lie in `[0, duration + 1 s]`. `silencedetect` can report a trailing
   silence end slightly beyond the declared duration (codec padding) and that value is kept as measured; the 1 s
   tolerance is for verification, not a correction.
 
 ## ADR-013 One response document for every `--json` invocation
+
 - Context: PR #1 printed a bare result (or `{"results": [...]}`) and a bare `{"error": ...}`; an adapter had to
   branch on shape. Phase 2 PR 2 fixes the machine interface: `run`, `analyze` and `probe` all print exactly one
   `media-analysis/response@1` document with `status` ok / partial / error, `results[]`, `observations[]`, `usage`,
@@ -74,27 +87,32 @@
   conveniences that build the same request document.
 
 ## ADR-014 Cache policy is a request field with five result statuses
+
 - `cache_policy` `use` / `bypass` / `only`; result `cache.status` `hit` / `miss` / `invalid` / `bypass` / `disabled`.
   `only` never runs an analyzer (`CACHE_MISS`, exit 13) so an adapter can ask "what do we already know" at zero
   cost. `invalid` is reported (not folded into `miss`) so a tampered or stale entry is visible in provenance.
 
 ## ADR-015 Batch budget replaces the CLI budget; unknown budget names are errors
+
 - A batch document may carry `budget`; only `max_analysis_calls`, `timeout`, `max_total_seconds` exist. Any other
   name (`max_bytes_scanned`, GPU, cost, storage) is `INVALID_INPUT` for the whole document rather than silently
   ignored, so an agent cannot believe a budget is enforced when it is not.
 
 ## ADR-016 Schemas are published, minimal validator is in-tree
+
 - The request / batch / result / response / observation JSON Schemas live in `schemas.py` and are printed by
   `contract --json`. A ~60-line validator covering the subset used is included instead of a `jsonschema`
   dependency (the package stays standard-library only); tests and contract evals validate real responses with it.
 
 ## ADR-017 Consumer rules are a fixture, the contract is generated
+
 - `tests/contract/agent_skill_package_contract.json` records the video-production-agent rules (SkillPackage /
   ToolSpec / Observation / capability names) copied once from its `skills/contract.py`. The media-analysis contract
   under test is always generated from the registry (`tool_spec(analyzer)`), never hand-written, so the two cannot
   drift apart unnoticed; the agent repository is not installed or imported.
 
 ## ADR-018 CI covers Linux 3.9 / 3.11, Windows and macOS with a real FFmpeg
+
 - Each platform installs FFmpeg its own way (apt / choco / brew). The first Windows run found two real defects
   (`proc.kill()` leaves grandchildren alive; a 1 ns time budget is unmeasurable on a 16 ms clock): the runner now
   uses `CREATE_NEW_PROCESS_GROUP` + `taskkill /T /F` on Windows, and the budget test uses a measurable duration. Nothing is skipped on any platform; the one
@@ -102,6 +120,7 @@
   other path-policy case still runs there.
 
 ## ADR-019 A failed analyzer run is reported as usage
+
 - Context: an error result used to show `analyzer_calls = 0` even when ffprobe / ffmpeg had run before the
   failure (e.g. a stream ordinal out of range, a decode failure). The budget was charged, the report was not.
 - Decision: `run()` fills the error result's `usage` from the execution log when the analyzer ran, so what the
@@ -109,18 +128,21 @@
   call each time and says so.
 
 ## ADR-020 Contract drift is detected by mutation fixtures, not by a saved copy
+
 - `contract --check` and `contract_check.check_contract()` compare a document with the live implementation.
-  Fixtures in `tests/contract/cases` describe *mutations* of the live contract (delete a tool, change a capability,
+  Fixtures in `tests/contract/cases` describe _mutations_ of the live contract (delete a tool, change a capability,
   bump a version, add a kind) and the problems each must raise; a full hand-written "valid contract" fixture was
   rejected because it would be a second source of truth that drifts silently. `contract@1` is the only supported
   schema; a `@2` document is refused as a whole rather than half-validated.
 
 ## ADR-021 No confidence field
+
 - Observations carry measurements against recorded parameters. A `confidence` value would read as "probability the
   agent should act", which is inference. Scores that are measurements (`cut_score`, `probe_score`) keep their
   measurement names. A static test forbids confidence / recommendation vocabulary in the analyzers.
 
 ## ADR-022 `provides` publishes all ten analysis kinds as cross-repository Capability ids
+
 - `contract.py` adds a top-level `provides` list for `kajisho5/AI-video-production-OS`'s `CapabilityContract.provides`
   (`docs/SPEC.md` there), so a registry can resolve "who provides `measure.audio.loudness`" without hardcoding this
   repository. All ten kinds get an id, matching that project's own `docs/CAPABILITY_MATRIX.md` section 8 exactly:
@@ -140,7 +162,7 @@
   (qc-skill's pass/fail judgment against caller-supplied thresholds) measure genuinely different things - confirmed
   by comparing `analyzers/probe.py`'s `VideoAnalyzer` against qc-skill's `rules.py` check, not merely by their
   descriptions - so `video_format` got its own id, `measure.video.probe`, naming the distinction (`probe`, not
-  `format`) in the id itself; `ffmpeg-skill`'s `probe` tool overlap was already confirmed a base-layer *tool*
+  `format`) in the id itself; `ffmpeg-skill`'s `probe` tool overlap was already confirmed a base-layer _tool_
   overlap, never a Capability collision, since this Skill talks to `ffprobe` directly with no dependency on the
   `ffmpeg-skill` package - so the two ids never share a namespace (`measure.*` vs. `ffmpeg-skill.*`) regardless.
   `duration` gets its own id (`measure.media.duration`) too, consistent with every other analysis kind here, even
@@ -152,6 +174,7 @@
   there) and against `evals/contract_evals.py`'s `C11_contract_registry_consistency`.
 
 ## ADR-023 Error classes FATAL / RETRYABLE / BLOCKED, additive to codes
+
 - Context: AI-video-production-OS `FAILURE_RECOVERY.md` section 2 separates terminal failures (validation, security,
   missing Provider) from bounded-retryable ones (timeout, transient process failure) and proposes that terminal ones
   never consume a retry budget. A caller could derive that from our codes, but every caller would derive it
@@ -162,6 +185,7 @@
   failure" category; `CACHE_MISS` is FATAL because retrying `cache_policy: only` unchanged cannot succeed.
 
 ## ADR-024 The OS denylist, applied recursively, in addition to the parameter schemas
+
 - Context: unknown parameter names were already `INVALID_INPUT`, so `api_key` inside `parameters` was rejected — but
   as "unknown parameter", not as a security rejection, and only inside `parameters`. `SKILL_SPEC.md` section 3.1
   asks for the canonical list (`command, argv, shell, exec, filter_complex, filter, api_key, token, env`) to be
@@ -171,11 +195,13 @@
   contract and drift-checked; a contract claiming a narrower list is a `contract --check` failure.
 
 ## ADR-025 doctor reports per Capability, from `provides`
+
 - `doctor --json` → `capabilities[]` maps each published Capability id to AVAILABLE / MISSING through the tool that
   implements it. This is derived from `provides` and the analyzer availability rows, never a separate table, so it
   cannot disagree with the contract.
 
 ## ADR-026 The JSON protocol is UTF-8 bytes, not the platform text encoding
+
 - Context: `print(json.dumps(..., ensure_ascii=False))` went through Python's text layer, whose encoding on a
   Windows pipe is cp1252 (cp932 on a Japanese console). A Japanese file name in `asset.path` raised
   `UnicodeEncodeError`: no document on stdout, a traceback on stderr, exit 1 — the protocol was broken exactly for the
@@ -184,7 +210,9 @@
   `sys.stdin.buffer` and decoded as UTF-8 (`INVALID_INPUT` if they are not); human-readable streams are reconfigured
   with `errors="backslashreplace"` so they degrade instead of crashing. The contract's `execution.stdin` /
   `execution.stdout` state UTF-8. `ensure_ascii=False` is kept so paths stay readable.
+
 ## ADR-027 A self-conformance command, separate from contract drift checking
+
 - Context: AI-video-production-OS `SKILL_SPEC.md` section 8 defines 8 conformance checks; 3 (`publishes_contract`,
   `lifecycle_declared`, `dependency_version_ranges`) are answerable from a contract document alone and the OS's own
   `registry/conformance.py` already implements those; the other 5 need "a callable submitting a request... and
@@ -193,11 +221,12 @@
   this Skill already owns the request path being tested. Two checks are honestly `NOT_IMPLEMENTED` rather than
   forced to a vacuous PASS: `no_clobber_input` (no tool ever produces output — `produces_output` is false everywhere
   — so there is no output-path parameter that could equal an input) and `dependency_version_ranges` (no
-  `dependencies` field is published). This is separate from `contract_check.py`: that module asks whether a *saved*
+  `dependencies` field is published). This is separate from `contract_check.py`: that module asks whether a _saved_
   contract document still matches the implementation (drift); this one asks whether the implementation actually
   behaves as claimed, by submitting real requests and scanning real source. Neither replaces the other.
 
 ## ADR-028 The cache is keyed by a per-analyzer algorithm version, not the package version
+
 - Context: ADR-002 made every analyzer's `version` the package version and put it in the analysis identity, on the
   premise that the version moves when a measurement changes (README "Versioning": a measurement change bumps the
   minor version, "which invalidates cached Observations by design"). Since PR #17 the version is single-sourced from
@@ -230,24 +259,25 @@
   one last invalidation — identities computed under ADR-002 are not looked up again, and observation ids change
   once.
 
-
 ## ADR-029 Acceptance measurements for the new Skills: a noise floor / SNR estimate and the A/V start offset
+
 - Context: roadmap step 3 asks for "measurements new skills need for acceptance — noise floor / SNR (voice-enhance),
   A/V offset — only if not qc-skill's". Read on 2026-10-31 (read-only): every sibling `ECOSYSTEM_ROADMAP.md` in the
   ecosystem, `voice-enhance-skill/docs/decisions.md` ADR-001, qc-skill's contract (`measurements`, `provides`) and
   ffmpeg-skill's `_contract.py`. The acceptance criteria ("Done when") that need a measured value are:
 
-  | Skill / step | acceptance criterion | measurement it needs | who measures it today |
-  |---|---|---|---|
-  | voice-enhance 3 ISOLATE | "SNR rises on a synthetic voice+noise fixture" | SNR / noise floor | nobody: qc-skill has peak / RMS / clipping / true peak (`astats`, `ebur128`), no floor or SNR; ffmpeg-skill computes a 20th-percentile floor inside `caption.py` but does not publish it |
-  | voice-enhance 4 DEREVERB | "same pattern" (ADR-001: "SNR / reverberation measures") | a reverberation measure (RT60 / DRR / C50) | nobody |
-  | voice-enhance 5 BLEED_REDUCE | "lower cross-talk energy on a 2-track fixture" | energy of one track / channel | per channel: nobody (qc-skill's per-channel levels are whole-file peak / RMS, not a floor) |
-  | voice-enhance 6 remux, dubbing 4/5 | "video stream byte-identical", "A/V duration match" | A/V duration difference, A/V start offset | duration: here (`timing.av_mismatch`) and qc-skill; start offset: nobody |
-  | dubbing 3, sound-design 2 | "duration within tolerance" | duration | here (`duration`), qc-skill, ffmpeg-skill `probe` |
-  | video-production-agent 10 | sharpness / exposure scores for take selection | picture sharpness / exposure | nobody (named there as a gap) |
+  | Skill / step                       | acceptance criterion                                     | measurement it needs                       | who measures it today                                                                                                                                                                    |
+  | ---------------------------------- | -------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | voice-enhance 3 ISOLATE            | "SNR rises on a synthetic voice+noise fixture"           | SNR / noise floor                          | nobody: qc-skill has peak / RMS / clipping / true peak (`astats`, `ebur128`), no floor or SNR; ffmpeg-skill computes a 20th-percentile floor inside `caption.py` but does not publish it |
+  | voice-enhance 4 DEREVERB           | "same pattern" (ADR-001: "SNR / reverberation measures") | a reverberation measure (RT60 / DRR / C50) | nobody                                                                                                                                                                                   |
+  | voice-enhance 5 BLEED_REDUCE       | "lower cross-talk energy on a 2-track fixture"           | energy of one track / channel              | per channel: nobody (qc-skill's per-channel levels are whole-file peak / RMS, not a floor)                                                                                               |
+  | voice-enhance 6 remux, dubbing 4/5 | "video stream byte-identical", "A/V duration match"      | A/V duration difference, A/V start offset  | duration: here (`timing.av_mismatch`) and qc-skill; start offset: nobody                                                                                                                 |
+  | dubbing 3, sound-design 2          | "duration within tolerance"                              | duration                                   | here (`duration`), qc-skill, ffmpeg-skill `probe`                                                                                                                                        |
+  | video-production-agent 10          | sharpness / exposure scores for take selection           | picture sharpness / exposure               | nobody (named there as a gap)                                                                                                                                                            |
 
   The roadmap scopes this step to the first two rows' family (noise floor / SNR, A/V offset); sharpness / exposure is
   recorded as a further gap, not implemented here.
+
 - Decision 1 — new kind `noise_floor` (tool `media-analysis/noise`, Capability `measure.audio.noise_floor`): ffmpeg
   `astats` with `reset=1` after `asetnsamples` gives the RMS level of consecutive non-overlapping windows (default
   50 ms, sized from the stream's own sample rate); `ametadata=print` puts one value per window on stderr (log level
@@ -289,6 +319,7 @@
   new tool.
 
 ## ADR-030 An editing-style profile (`edit_style`) and a profile diff
+
 - Context: roadmap step 7. An editor matching a reference edit (a channel's house style, a client's sample) needs the
   reference's pacing, subtitle habits and audio level as numbers, and the same numbers for their own cut, so the gap
   is stated per item rather than by eye. Every input to that already exists as a filter this Skill runs (`scdet`,
@@ -326,6 +357,7 @@
   contract snapshot.
 
 ## ADR-031 A B-roll library index as a CLI workflow over the existing kinds
+
 - Context: roadmap step 8. An editor's own footage folder is searched again for every project ("a portrait clip under
   10 s with no sound", "the beach shots"). The facts needed to answer most of that are measurements this Skill already
   makes per file; what is missing is running them over a folder, keeping them, and querying them. Content labels
@@ -357,6 +389,7 @@
   `library` as a subprocess like `run`, but it is not part of the `run` protocol.
 
 ## ADR-032 Highlight candidates from a long recording, on sentence boundaries
+
 - Context: roadmap step 9. From a talk or a lecture, an editor wants a short list of spans that work on their own
   (for a Short or a trailer), with why each one was picked, and boundaries that do not cut a sentence in half.
   Picking the final clip and cutting it stay with the editor and the editing tools.
@@ -381,6 +414,7 @@
 - Contract unchanged (no tool, kind or `provides` entry); the agent pin is not affected.
 
 ## ADR-033 Burned-in subtitles in `edit_style`, from an edge map
+
 - Context: roadmap step 10. ADR-030 left `subtitles.burned_in` as `not_measured`. Most finished edits on video
   platforms carry their subtitles drawn into the picture, so a style profile without them misses the habit that is
   easiest to see: how much of the time text is on screen, where, how large, and whether it sits on a band or has an
@@ -420,6 +454,7 @@
   `check_contract` accepts it unchanged; a re-pin shows the new parameter and capability.
 
 ## ADR-034 `scene_detection` maps its video stream as `0:V:n`
+
 - Context: ADR-033 switched `edit_style` and burned-in sampling to `0:V:n`. `scene_detection` still mapped
   `0:v:n` while numbering streams with `select_stream()`, which skips attached pictures. With cover art before the
   real video, the reported `stream_index` named the video but scdet ran on the single cover frame (no cuts, one
@@ -432,8 +467,8 @@
   rule), so cached `scene_detection` Observations are recomputed once. A fix, released as a patch; no contract or
   parameter change.
 
-
 ## ADR-035 Speech regions from a voice-activity model, as the optional extra `vad`
+
 - Context: roadmap step 4. The agent's edit view, cut boundaries that must not land mid-word and dubbing gaps need
   to know where someone speaks. `silence` (and ffmpeg-skill `silence`) answers "where is it quiet", which on a
   recording with music or room noise under the voice is a different question; ffmpeg-skill `scenes --speech` reports
@@ -482,30 +517,30 @@
 - Results (Done when: F1 above 0.9 on speech over music and over noise). Frame-level F1 at 10 ms against the labels,
   default parameters, Linux, onnxruntime 1.31.1:
 
-  | fixture | F1 | precision | recall | regions |
-  |---|---|---|---|---|
-  | `speech.wav` (clean) | 0.973 | 0.949 | 0.998 | 3 |
-  | `speech_music.wav` | **0.943** | 0.899 | 0.992 | 3 |
-  | `speech_noise.wav` | **0.949** | 0.909 | 0.992 | 3 |
-  | `music.wav` | – | – | – | 0 (0 s of speech) |
+  | fixture              | F1        | precision | recall | regions           |
+  | -------------------- | --------- | --------- | ------ | ----------------- |
+  | `speech.wav` (clean) | 0.973     | 0.949     | 0.998  | 3                 |
+  | `speech_music.wav`   | **0.943** | 0.899     | 0.992  | 3                 |
+  | `speech_noise.wav`   | **0.949** | 0.909     | 0.992  | 3                 |
+  | `music.wav`          | –         | –         | –      | 0 (0 s of speech) |
 
   Every region starts within 0.03 s of its utterance; the precision loss is the model's hang-over of 0.1–0.25 s
   after each utterance ends. `test_speech_regions_f1_over_music_and_noise` asserts F1 > 0.9 on all three, and
   evals 16–18 pin region starts, share, longest pause and the empty music result.
+
 - Comparison with ffmpeg-skill on the same fixtures (ffmpeg-skill 2.21.0, `9deb226`, run read-only; ffmpeg-skill was
   not changed). `silence.py --list --json`: speech = its `keep` ranges (everything not silent). `scenes.py --speech
-  --json` (needs a video stream, so each WAV was muxed with a black 160x90 picture): speech = the 1 s windows whose
+--json` (needs a video stream, so each WAV was muxed with a black 160x90 picture): speech = the 1 s windows whose
   `speech_music_ratio` is above 1.0 (the file's own median); "best" is the cut-off chosen with the labels, an upper
   bound no caller has.
 
-  | fixture | `speech_regions` (defaults) | `silence.py` default (−35 dB, 0.6 s) | `silence.py` best threshold (−10 dB) | `scenes --speech` ratio > 1.0 (best) |
-  |---|---|---|---|---|
-  | `speech.wav` F1 | 0.973 | 0.924 | 0.943 | 0.828 (0.863) |
-  | `speech_music.wav` F1 | 0.943 | 0.610 | 0.937 | 0.766 (0.793) |
-  | `speech_noise.wav` F1 | 0.949 | 0.610 | 0.942 | 0.000 (0.610) |
-  | `music.wav`, seconds called speech (truth 0) | 0 | 12.0 | 0 | 4.0 |
-
-  - Level (silence) is good when the speech is clearly louder than the bed *and* the threshold is set for that file:
+  | fixture                                      | `speech_regions` (defaults) | `silence.py` default (−35 dB, 0.6 s) | `silence.py` best threshold (−10 dB) | `scenes --speech` ratio > 1.0 (best) |
+  | -------------------------------------------- | --------------------------- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
+  | `speech.wav` F1                              | 0.973                       | 0.924                                | 0.943                                | 0.828 (0.863)                        |
+  | `speech_music.wav` F1                        | 0.943                       | 0.610                                | 0.937                                | 0.766 (0.793)                        |
+  | `speech_noise.wav` F1                        | 0.949                       | 0.610                                | 0.942                                | 0.000 (0.610)                        |
+  | `music.wav`, seconds called speech (truth 0) | 0                           | 12.0                                 | 0                                    | 4.0                                  |
+  - Level (silence) is good when the speech is clearly louder than the bed _and_ the threshold is set for that file:
     at its default it calls the whole 12 s of the music and noise fixtures sound (F1 0.61 is "everything"), and the
     −10 dB that works here was picked from the answers; a quieter voice or a louder bed moves it. The model needed no
     per-file setting and is the only one of the three that tells music from speech at equal level (music alone: 0 s).
@@ -514,6 +549,7 @@
     it cannot place a cut between words. It was not designed to, and its own documentation says so.
   - So the three stay distinct measurements: `silence` = where it is quiet, `scenes --speech` = how the spectrum
     changes per second, `speech_regions` = where a voice is. No result here suggests a change to ffmpeg-skill.
+
 - Limits: synthetic speech, one voice at a time, no overlapping talkers, no singing (the engine may call singing
   speech), one language-independent model; region ends lag by up to ~0.25 s, so a cut placed exactly at `end` is
   conservative, not early. Real-speech accuracy rests on the engine's own published evaluation, not on this
@@ -524,6 +560,7 @@
   macOS; the integration tests fail, not skip, when the extra is missing.
 
 ## ADR-036 Highlight signals: applause / laughter from an audio-event classifier, and three signal measurements
+
 - Context: roadmap step 5. Picking Shorts candidates from a talk or a stream archive needs to know when the audience
   reacts and where the delivery changes. `highlights` (ADR-032) took applause and laughter only from the caller and
   measured nothing but window RMS. Measurement only: which span is a good clip stays with the caller (the agent,
@@ -595,26 +632,26 @@
   envelope that goes to 8 per second for 7–10 s, and +12 dB for 11–12.5 s.
 - Results (Done when: both spans within 0.5 s). Linux, onnxruntime 1.31.1, default parameters:
 
-  | fixture | laughter span (truth 3.0–8.01) | applause span (truth 11.0–16.51) |
-  |---|---|---|
-  | `reactions.wav` (`hop` 0.1, default) | **3.05–7.95** (+0.05 / −0.06) | **11.05–16.25** (+0.05 / −0.26) |
-  | same, `hop` 0.24 | 3.48–8.04 | 11.16–16.20 |
-  | same, `hop` 0.48 (the reference hop) | 3.60–7.44 (outside 0.5 s) | 11.28–15.60 (outside) |
-  | pink noise at −54 dBFS RMS (SNR 32 dB) | 3.05–8.25 | 11.15–16.25 |
-  | pink noise at −46 dBFS (24 dB) | 3.55–7.95 | 11.05–16.25 |
-  | pink noise at −39 dBFS (17 dB) | 3.95–7.45 | 11.05–16.25 |
-  | pink noise at −34 dBFS (12 dB) | none | 11.05–16.25 |
+  | fixture                                | laughter span (truth 3.0–8.01) | applause span (truth 11.0–16.51) |
+  | -------------------------------------- | ------------------------------ | -------------------------------- |
+  | `reactions.wav` (`hop` 0.1, default)   | **3.05–7.95** (+0.05 / −0.06)  | **11.05–16.25** (+0.05 / −0.26)  |
+  | same, `hop` 0.24                       | 3.48–8.04                      | 11.16–16.20                      |
+  | same, `hop` 0.48 (the reference hop)   | 3.60–7.44 (outside 0.5 s)      | 11.28–15.60 (outside)            |
+  | pink noise at −54 dBFS RMS (SNR 32 dB) | 3.05–8.25                      | 11.15–16.25                      |
+  | pink noise at −46 dBFS (24 dB)         | 3.55–7.95                      | 11.05–16.25                      |
+  | pink noise at −39 dBFS (17 dB)         | 3.95–7.45                      | 11.05–16.25                      |
+  | pink noise at −34 dBFS (12 dB)         | none                           | 11.05–16.25                      |
 
   No span at all on the synthetic speech, speech over music, speech over noise, music, talk, tone-burst and silence
   fixtures (`test_audio_events_nothing_on_speech_music_tones_or_noise`). On eleven longer openly licensed recordings
   that are not committed (default parameters, seconds found):
 
-  | recording | applause | laughter |
-  |---|---|---|
-  | applause, four recordings (the last at a tennis match) | 8.5, 7.4, 7.0, 2.0 | 0 each |
-  | laughter then applause | 7.0 (from 2.85 s) | 1.6 (0.55–2.15 s) |
-  | cheering crowd / rhythmic clapping and cheers / applause with whistles | 0.5 / 0 / 0 | 0 / 0.5 / 0 |
-  | laughter, four recordings (women, men talking and laughing, mixed group, theatre audience) | 0 each | 86.5, 23.8, 22.9, 53.7 |
+  | recording                                                                                  | applause           | laughter               |
+  | ------------------------------------------------------------------------------------------ | ------------------ | ---------------------- |
+  | applause, four recordings (the last at a tennis match)                                     | 8.5, 7.4, 7.0, 2.0 | 0 each                 |
+  | laughter then applause                                                                     | 7.0 (from 2.85 s)  | 1.6 (0.55–2.15 s)      |
+  | cheering crowd / rhythmic clapping and cheers / applause with whistles                     | 0.5 / 0 / 0        | 0 / 0.5 / 0            |
+  | laughter, four recordings (women, men talking and laughing, mixed group, theatre audience) | 0 each             | 86.5, 23.8, 22.9, 53.7 |
 
   The two committed clips are cut from two of these. A speech passage at the end of one applause recording gave
   neither. Applause is the steadier class (scores 0.8–1.0); laughter scores 0.3–0.7 and loses its edges first as
@@ -622,6 +659,7 @@
   threshold is 0.3, and a recording with a loud bed may need a lower `laughter_threshold`. `highlight_signals`
   on `signals.mp4`: energy peak 11.0–12.5 s (+12.0 dB), rate change 6.75–10.25 s faster ×2.0, one burst 6.0–8.0 s of
   six cuts (3.0 per second).
+
 - Cost: about 1.5 ms per patch on one CPU thread, so `hop` 0.1 s is about 55 s per hour of audio and `hop` 0.24 s
   about 23 s; `highlight_signals` is two ffmpeg passes.
 - `highlights` (ADR-032) now takes an `audio_events` observation (or its `data`) as `--signals` unchanged; it still
