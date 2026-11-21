@@ -291,7 +291,7 @@
       "skills",
       "workflows"
     ],
-    "hash": "1112b17bf296f08cf0b408f921d71b429c99a370a8a9a31f8ef4710bfefd5146"
+    "hash": "73230dd89bf143c927c29d73ac8fd6d9fce6a84562e69b9552130b40f6f42650"
   },
   {
     "name": "code-modernization",
@@ -315,7 +315,7 @@
       "tsconfig.json",
       "workflows"
     ],
-    "hash": "da045b5e468211533a6c180f6b0d25ad5522cfd3471c7f0a1a594835a5e0b821"
+    "hash": "5fcb055a7ebdb67b40eb4b32a78d51f6d5d3a72201233db1c3dfa14f13e15b4a"
   },
   {
     "name": "color-grading",

@@ -6,9 +6,7 @@
 export type ReaderFs = {
   read: (path: string) => Promise<string>;
   /** An entry as it stands: a symbolic link is `other` (with `isLink`), whatever it leads to. `stat` says what that is. */
-  list: (
-    path: string,
-  ) => Promise<
+  list: (path: string) => Promise<
     {
       name: string;
       kind: "file" | "dir" | "other";
@@ -17,9 +15,7 @@ export type ReaderFs = {
     }[]
   >;
   exists: (path: string) => Promise<boolean>;
-  stat: (
-    path: string,
-  ) => Promise<{
+  stat: (path: string) => Promise<{
     kind: "file" | "dir" | "other";
     size: number;
     mtimeMs: number;

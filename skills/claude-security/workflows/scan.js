@@ -1990,14 +1990,12 @@ const jn = k
           l = n
             .map((e, t) => ({ group: e.group, result: a[t] }))
             .filter((e) => e.result);
-        return e
-          .concat(Ae ? [o] : [])
-          .map((e) => ({
-            component: e,
-            model: null,
-            account: null,
-            results: l.filter((t) => t.group === e).map((e) => e.result),
-          }));
+        return e.concat(Ae ? [o] : []).map((e) => ({
+          component: e,
+          model: null,
+          account: null,
+          results: l.filter((t) => t.group === e).map((e) => e.result),
+        }));
       })(gn)
     : await pipeline(
         gn,
